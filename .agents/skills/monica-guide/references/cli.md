@@ -27,7 +27,7 @@ $monica-guide <command> [options]
 | `unconfigure` | Remove recorded skill projections: `--workspace <path>` for one workspace's installations, `--target`/`--environment` for global ones, or everything when unscoped. A full unconfigure removes the product's ledger entry, locator, and desktop integration. |
 | `init --workspace <path>` | Write `.monica/guide.json` (profile, capabilities, optional `skillTargets`) and the managed `AGENTS.md` instruction block, and register the workspace in the engine registry. Requires an explicit `--profile`; the application profile additionally requires exactly one of `--capability microservice` or `--capability modular-monolith`. |
 | `forget --workspace <path>` | Remove exactly the guide-owned workspace artifacts: the managed block, the Guide-owned `@AGENTS.md` import, `.monica/guide.json`, the project skill installations recorded for that workspace, and its registry entry. |
-| `source bind --repository <repo>` | Add or replace one global binding from `--source-path <checkout> [--source-ref <tag\|commit>]`, or from `--source-ref <exact-ref>` resolved through the pinned `inspect-dependency-source` skill (discoverable via `--source-resolver <path>`). |
+| `source bind --repository <repo>` | Add or replace one global binding from `--source-path <checkout> [--source-ref <tag\|commit>]`, verified against the local canonical Git checkout. |
 | `source unbind --repository <repo>` | Remove that repository's global binding. |
 | `issue set --mode <prepare\|ask\|never>` | Set the machine-global issue-reporting mode. An immediate preference save like the wizard's toggle: it is not governed state, takes no plan digest, and never authorizes a remote action. |
 

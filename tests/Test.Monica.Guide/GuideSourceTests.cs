@@ -70,6 +70,12 @@ public sealed class GuideSourceTests
         Assert.Equal(GuideStatus.Error, withoutSource.Status);
         Assert.Contains(withoutSource.Checks, check => check.Status == GuideCheckStatus.Error);
 
+        // A ref without a local checkout cannot be verified, so it fails closed as well.
+        var refWithoutPath = await service.BindAsync(
+            new GuideSourceBindRequest("monica", null, SourceFixture.Commit), cancellationToken: CancellationToken);
+        Assert.Equal(GuideStatus.Error, refWithoutPath.Status);
+        Assert.Contains(refWithoutPath.Checks, check => check.Status == GuideCheckStatus.Error);
+
         var missingPath = await service.BindAsync(
             new GuideSourceBindRequest("monica", Path.Combine(fixture.Root, "absent"), null),
             cancellationToken: CancellationToken);
@@ -93,35 +99,6 @@ public sealed class GuideSourceTests
         var binding = Assert.Single(resolved.Checks, check => check.Id == "source.binding.Tairitsua/Monica.Docs");
         Assert.Equal(GuideCheckStatus.Ok, binding.Status);
         Assert.Equal("v1.4.0", binding.Details!["ref"]);
-    }
-
-    [Fact]
-    public async Task Bind_ResolvesCachedSourcesThroughThePinnedResolver()
-    {
-        using var fixture = new SourceFixture();
-        var cached = new GuideSourceBinding(
-            "Tairitsua/Monica", SourceFixture.Commit, SourceFixture.Commit, fixture.CheckoutPath, "exact-commit", "inspect-dependency-source");
-        var service = fixture.CreateService(resolver: new StubResolver(cached));
-        var request = new GuideSourceBindRequest("monica", null, SourceFixture.Commit);
-
-        var preview = await service.BindAsync(request, cancellationToken: CancellationToken);
-        Assert.Equal(GuideStatus.Ready, preview.Status);
-        var applied = await service.BindAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
-        Assert.True(applied.Plan!.Applied);
-        var resolved = service.Resolve("monica");
-        Assert.Equal(GuideStatus.Ready, resolved.Status);
-    }
-
-    [Fact]
-    public async Task Bind_FailsClosedWhenTheCachedResolverRejectsTheRef()
-    {
-        using var fixture = new SourceFixture();
-        var service = fixture.CreateService(resolver: new StubResolver(null));
-        var preview = await service.BindAsync(
-            new GuideSourceBindRequest("monica", null, new string('b', 40)),
-            cancellationToken: CancellationToken);
-        Assert.Equal(GuideStatus.Error, preview.Status);
-        Assert.Contains(preview.Checks, check => check.Status == GuideCheckStatus.Error);
     }
 
     [Fact]
@@ -298,8 +275,8 @@ public sealed class GuideSourceTests
         internal string Root => _root;
         internal string LedgerFile => Path.Combine(EnginePaths.StateDirectory, "source-bindings.json");
 
-        internal GuideSourceService CreateService(IGuideSourceResolver? resolver = null)
-            => new(EnginePaths, catalog: null, Git, resolver);
+        internal GuideSourceService CreateService()
+            => new(EnginePaths, catalog: null, Git);
 
         public void Dispose()
         {
@@ -333,11 +310,5 @@ public sealed class GuideSourceTests
 
         public string? ResolveTagCommit(string repositoryRoot, string tag)
             => TagCommits.TryGetValue(tag, out var commit) ? commit : null;
-    }
-
-    private sealed class StubResolver(GuideSourceBinding? binding) : IGuideSourceResolver
-    {
-        public GuideSourceBinding Resolve(string repository, string exactRef)
-            => binding ?? throw new GuideSourceException($"No cached source for {repository} at {exactRef}.");
     }
 }

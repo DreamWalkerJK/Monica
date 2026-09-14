@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 
 namespace Monica.Guide;
@@ -39,14 +38,13 @@ public sealed record GuideSourceRepositoryStatus(
 public sealed record GuideSourceBindRequest(
     string Repository,
     string? SourcePath,
-    string? SourceRef,
-    string? ResolverPath = null);
+    string? SourceRef);
 
 /// <summary>
 /// Global source bindings for first-party repositories (Monica, Monica.Docs). Bindings live
 /// in the guide engine data root beside the ownership ledger, are verified against a local
-/// canonical Git checkout or the pinned <c>inspect-dependency-source</c> resolver, and every
-/// mutation goes through the engine's preview-first, digest-locked plan flow.
+/// canonical Git checkout, and every mutation goes through the engine's preview-first,
+/// digest-locked plan flow.
 /// </summary>
 public sealed class GuideSourceService
 {
@@ -60,19 +58,16 @@ public sealed class GuideSourceService
     private readonly GuidePaths _enginePaths;
     private readonly SkillCatalog? _catalog;
     private readonly IGuideGitProbe _git;
-    private readonly IGuideSourceResolver? _resolver;
 
     public GuideSourceService(
         GuidePaths enginePaths,
         SkillCatalog? catalog = null,
-        IGuideGitProbe? git = null,
-        IGuideSourceResolver? resolver = null)
+        IGuideGitProbe? git = null)
     {
         ArgumentNullException.ThrowIfNull(enginePaths);
         _enginePaths = enginePaths;
         _catalog = catalog;
         _git = git ?? new GuideGitProbe();
-        _resolver = resolver;
     }
 
     private string LedgerFile => Path.Combine(_enginePaths.StateDirectory, "source-bindings.json");
@@ -231,7 +226,9 @@ public sealed class GuideSourceService
         {
             binding = request.SourcePath is not null
                 ? VerifyLocalBinding(repository, request.SourcePath, request.SourceRef)
-                : ResolveCachedBinding(repository, request.SourceRef, request.ResolverPath);
+                : throw new GuideSourceException(
+                    "Source binding requires --source-path <checkout>.",
+                    "Point the binding at a local canonical Git checkout of the repository.");
         }
         catch (GuideSourceException exception)
         {
@@ -402,31 +399,6 @@ public sealed class GuideSourceService
             "local-git");
     }
 
-    internal GuideSourceBinding ResolveCachedBinding(string repository, string? exactRef, string? resolverPath)
-    {
-        if (string.IsNullOrWhiteSpace(exactRef))
-        {
-            throw new GuideSourceException("Cached source binding requires --source-ref <exact-ref>.",
-                "Pass a 40-character commit or an existing tag of the pinned resolver cache.");
-        }
-
-        var activeResolver = _resolver;
-        if (activeResolver is null)
-        {
-            var discovered = InspectDependencySourceResolver.Discover(resolverPath);
-            if (discovered is null)
-            {
-                throw new GuideSourceException(
-                    "inspect-dependency-source is not installed or MONICA_INSPECT_SOURCE_CLI is unset.",
-                    "Install the pinned inspect-dependency-source agent skill, or bind a local checkout with --source-path.");
-            }
-
-            activeResolver = discovered;
-        }
-
-        return activeResolver.Resolve(repository, exactRef);
-    }
-
     internal GuideSourceObservation Observe(GuideSourceBinding binding)
     {
         var warnings = new List<GuideCheck>();
@@ -575,17 +547,7 @@ public sealed class GuideSourceService
     }
 }
 
-/// <summary>
-/// The pinned external <c>inspect-dependency-source</c> agent skill: resolves exact cached
-/// first-party source checkouts. The guide discovers its installed copy in the standard agent
-/// skill roots or through <c>MONICA_INSPECT_SOURCE_CLI</c>; it never fetches a substitute.
-/// </summary>
-public interface IGuideSourceResolver
-{
-    /// <summary>Resolves one exact ref to a verified cached checkout; throws on any drift.</summary>
-    GuideSourceBinding Resolve(string repository, string exactRef);
-}
-
+/// <summary>Thrown when a source binding cannot be verified or applied.</summary>
 public sealed class GuideSourceException(string message, string? remediation = null) : Exception(message)
 {
     public string? Remediation { get; } = remediation;
@@ -596,172 +558,4 @@ internal sealed record GuideSourceBindingLedger(
     IReadOnlyDictionary<string, GuideSourceBinding> Bindings)
 {
     public const int CurrentSchemaVersion = 1;
-}
-
-internal sealed class InspectDependencySourceResolver(string scriptPath, string pythonCommand) : IGuideSourceResolver
-{
-    private static readonly TimeSpan COMMAND_TIMEOUT = TimeSpan.FromSeconds(120);
-
-    // The pinned resolver CLI publishes a snake_case JSON contract.
-    private static readonly JsonSerializerOptions RESOLVER_JSON = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-    };
-
-    public static InspectDependencySourceResolver? Discover(string? explicitPath)
-    {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var candidates = new List<string>();
-        if (!string.IsNullOrWhiteSpace(explicitPath))
-        {
-            candidates.Add(explicitPath);
-        }
-
-        var environment = Environment.GetEnvironmentVariable("MONICA_INSPECT_SOURCE_CLI");
-        if (!string.IsNullOrWhiteSpace(environment))
-        {
-            candidates.Add(environment);
-        }
-
-        candidates.AddRange(
-        [
-            Path.Combine(home, ".agents", "skills", "inspect-dependency-source", "scripts", "inspect_dependency_source.py"),
-            Path.Combine(home, ".claude", "skills", "inspect-dependency-source", "scripts", "inspect_dependency_source.py"),
-            Path.Combine(home, ".codex", "skills", "inspect-dependency-source", "scripts", "inspect_dependency_source.py")
-        ]);
-        var script = candidates.FirstOrDefault(File.Exists);
-        if (script is null)
-        {
-            return null;
-        }
-
-        var python = new[] { Environment.GetEnvironmentVariable("MONICA_GUIDE_PYTHON"), "python3", "python" }
-            .FirstOrDefault(static command => !string.IsNullOrWhiteSpace(command));
-        return python is null ? null : new InspectDependencySourceResolver(script, python);
-    }
-
-    public GuideSourceBinding Resolve(string repository, string exactRef)
-    {
-        var output = RunResolve(repository, exactRef);
-        Payload payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize<Payload>(output, RESOLVER_JSON)
-                      ?? throw new GuideSourceException("inspect-dependency-source returned an empty resolution.");
-        }
-        catch (JsonException exception)
-        {
-            throw new GuideSourceException(
-                $"inspect-dependency-source returned invalid JSON: {exception.Message}");
-        }
-
-        if (!string.Equals(payload.Status, "ok", StringComparison.Ordinal)
-            || !string.Equals(payload.VerificationState, "verified", StringComparison.Ordinal))
-        {
-            throw new GuideSourceException(
-                $"Cached {repository} source does not have verified exact provenance ({payload.Status}/{payload.VerificationState}).");
-        }
-
-        if (payload.ResolutionKind is not ("exact-commit" or "exact-tag"))
-        {
-            throw new GuideSourceException(
-                $"Cached {repository} source resolution kind '{payload.ResolutionKind}' is not exact.");
-        }
-
-        var commit = payload.Artifact?.ActualCommit;
-        if (string.IsNullOrWhiteSpace(commit) || !GuideGitProbe.IsCommit(commit.ToLowerInvariant()))
-        {
-            throw new GuideSourceException("Cached source result has no exact observed commit.");
-        }
-
-        commit = commit.ToLowerInvariant();
-        if (GuideGitProbe.IsCommit(exactRef.ToLowerInvariant())
-            && !string.Equals(commit, exactRef.ToLowerInvariant(), StringComparison.Ordinal))
-        {
-            throw new GuideSourceException($"Cached source resolved {commit}, not requested commit {exactRef}.");
-        }
-
-        if (!string.Equals(payload.Repository?.CanonicalName, repository, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new GuideSourceException(
-                $"Resolved source is {payload.Repository?.CanonicalName ?? "unknown"}, not {repository}.");
-        }
-
-        var sourcePath = payload.SourcePath;
-        if (string.IsNullOrWhiteSpace(sourcePath) || !Path.IsPathRooted(sourcePath) || !Directory.Exists(sourcePath))
-        {
-            throw new GuideSourceException("Cached source path is not an available absolute directory.");
-        }
-
-        return new GuideSourceBinding(
-            repository,
-            payload.Artifact?.Ref ?? exactRef,
-            commit,
-            Path.GetFullPath(sourcePath),
-            payload.ResolutionKind!,
-            "inspect-dependency-source");
-    }
-
-    private string RunResolve(string repository, string exactRef)
-    {
-        try
-        {
-            using var process = Process.Start(new ProcessStartInfo
-            {
-                FileName = pythonCommand,
-                Arguments = $"\"{scriptPath}\" resolve {repository} --ref \"{exactRef}\" --json",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            });
-            if (process is null)
-            {
-                throw new GuideSourceException("inspect-dependency-source could not start.");
-            }
-
-            var output = process.StandardOutput.ReadToEndAsync();
-            if (!process.WaitForExit((int)COMMAND_TIMEOUT.TotalMilliseconds))
-            {
-                process.Kill();
-                throw new GuideSourceException(
-                    $"inspect-dependency-source timed out after {(int)COMMAND_TIMEOUT.TotalMilliseconds} ms while resolving cached {repository} source.");
-            }
-
-            if (process.ExitCode != 0)
-            {
-                throw new GuideSourceException(
-                    $"Exact cached {repository} source is unavailable (exit {process.ExitCode}).");
-            }
-
-            return output.GetAwaiter().GetResult();
-        }
-        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
-        {
-            throw new GuideSourceException(
-                $"The inspect-dependency-source runtime ('{pythonCommand}') is unavailable.");
-        }
-    }
-
-    private sealed class Payload
-    {
-        public string? Status { get; set; }
-        public string? VerificationState { get; set; }
-        public string? ResolutionKind { get; set; }
-        public string? SourcePath { get; set; }
-        public RepositoryInfo? Repository { get; set; }
-        public ArtifactInfo? Artifact { get; set; }
-    }
-
-    private sealed class RepositoryInfo
-    {
-        public string? CanonicalName { get; set; }
-    }
-
-    private sealed class ArtifactInfo
-    {
-        public string? ActualCommit { get; set; }
-        public string? ExpectedCommit { get; set; }
-        public string? Ref { get; set; }
-    }
 }

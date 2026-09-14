@@ -552,9 +552,8 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
     source_aliases: dict[str, str] = {}
     for repository, source_entry in source_repositories.items():
         validation.check(
-            source_entry.get("resolverQuery") == repository
-            and source_entry.get("aliases") == expected_source_aliases.get(repository),
-            f"source repository {repository}: canonical resolver identity or alias contract is invalid",
+            source_entry.get("aliases") == expected_source_aliases.get(repository),
+            f"source repository {repository}: canonical alias contract is invalid",
         )
         for alias in source_entry.get("aliases", []):
             validation.check(
@@ -608,46 +607,6 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
                 f"profile {profile_name}: duplicate source requirement for {repository!r}",
             )
             required_repositories.add(repository)
-
-    for external_name, external_entry in external.items():
-        distribution = external_entry.get("distribution")
-        if not distribution:
-            continue
-        commit = distribution.get("commit", "")
-        expected_url = (
-            f"https://github.com/{distribution.get('repository', '')}/tree/{commit}"
-        )
-        validation.check(
-            distribution.get("immutableSkillUrl") == expected_url,
-            f"external skill {external_name}: immutable URL must resolve by exact commit",
-        )
-        validation.check(
-            distribution.get("digestAlgorithm") == "sha256-file-manifest-v1"
-            and bool(SHA256_PATTERN.fullmatch(distribution.get("digest", ""))),
-            f"external skill {external_name}: immutable distribution digest is invalid",
-        )
-
-    immutable_binding = catalog.get("sourcePolicies", {}).get("immutableBinding", {})
-    source_resolver = external.get(immutable_binding.get("resolverSkill"), {})
-    validation.check(
-        source_resolver.get("distribution", {}).get("requiredFor")
-        == ["cached-source-resolution"],
-        "immutable source resolver must declare the cached-source-resolution capability",
-    )
-    validation.check(
-        immutable_binding.get("command")
-        == "resolve <repository> --ref <immutable-ref> --json"
-        and immutable_binding.get("storedFields")
-        == [
-            "repository",
-            "ref",
-            "commit",
-            "provenance",
-            "resolutionKind",
-            "sourcePath",
-        ],
-        "source policy must persist only the global lookup binding contract",
-    )
 
     for template_name, template in catalog.get("managedInstructions", {}).get("templates", {}).items():
         validation.check(template_name in catalog.get("profiles", {}), f"unknown instruction template {template_name}")

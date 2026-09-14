@@ -39,7 +39,6 @@ public static class GuideCommandParser
         string? repository = null;
         string? sourcePath = null;
         string? sourceRef = null;
-        string? sourceResolver = null;
         string? sourceAction = null;
         string? issueAction = null;
         string? issueMode = null;
@@ -101,9 +100,6 @@ public static class GuideCommandParser
                 case "--source-ref":
                     sourceRef = Next(arguments, ref index, option).Trim();
                     break;
-                case "--source-resolver":
-                    sourceResolver = Path.GetFullPath(Next(arguments, ref index, option));
-                    break;
                 case "--mode":
                     issueMode = Next(arguments, ref index, option).Trim().ToLowerInvariant();
                     break;
@@ -140,7 +136,7 @@ public static class GuideCommandParser
 
         ValidateOptions(
             command, sourceAction, issueAction, issueMode, targets, environments, skills, capabilities, profile, workspace,
-            repository, sourcePath, sourceRef, sourceResolver, port, apply, digest, locale, ruleSwitches);
+            repository, sourcePath, sourceRef, port, apply, digest, locale, ruleSwitches);
         if (targets.Distinct().Count() != targets.Count)
         {
             throw new GuideUsageException("Each --target selector may appear only once.");
@@ -155,7 +151,7 @@ public static class GuideCommandParser
         }
         return new GuideCommand(
             command, targets, environments, skills, profile, executable, releaseManifest, port, digest, apply, locale, json,
-            sourceAction, workspace, capabilities, repository, sourcePath, sourceRef, sourceResolver,
+            sourceAction, workspace, capabilities, repository, sourcePath, sourceRef,
             issueAction, issueMode, ruleSwitches);
     }
 
@@ -237,7 +233,6 @@ public static class GuideCommandParser
         string? repository,
         string? sourcePath,
         string? sourceRef,
-        string? sourceResolver,
         int? port,
         bool apply,
         string? digest,
@@ -321,11 +316,6 @@ public static class GuideCommandParser
         if (sourceRef is not null && command != "source")
         {
             throw new GuideUsageException("--source-ref is valid only for source.");
-        }
-
-        if (sourceResolver is not null && command != "source")
-        {
-            throw new GuideUsageException("--source-resolver is valid only for source.");
         }
 
         if (targets.Count > 0 && command is not ("configure" or "unconfigure"))
@@ -450,7 +440,6 @@ public sealed record GuideCommand(
     string? Repository = null,
     string? SourcePath = null,
     string? SourceRef = null,
-    string? ResolverPath = null,
     string? IssueAction = null,
     string? IssueMode = null,
     IReadOnlyList<GuideRuleSwitch>? RuleSwitches = null);

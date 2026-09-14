@@ -155,45 +155,7 @@
       "properties": {
         "ownership": { "type": "string", "const": "external" },
         "managed": { "type": "boolean", "const": false },
-        "purpose": { "type": "string", "minLength": 1 },
-        "distribution": { "$ref": "#/$defs/externalDistribution" }
-      }
-    },
-    "externalDistribution": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "repository",
-        "ref",
-        "commit",
-        "immutableSkillUrl",
-        "digest",
-        "digestAlgorithm",
-        "requiredFor"
-      ],
-      "properties": {
-        "repository": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
-        },
-        "ref": { "type": "string", "minLength": 1 },
-        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-        "immutableSkillUrl": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://github\\.com/"
-        },
-        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-        "digestAlgorithm": {
-          "type": "string",
-          "const": "sha256-file-manifest-v1"
-        },
-        "requiredFor": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/skillName" },
-          "minItems": 1,
-          "uniqueItems": true
-        }
+        "purpose": { "type": "string", "minLength": 1 }
       }
     },
     "profileSkills": {
@@ -212,17 +174,13 @@
     "sourceRepository": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["aliases", "resolverQuery"],
+      "required": ["aliases"],
       "properties": {
         "aliases": {
           "type": "array",
           "items": { "$ref": "#/$defs/skillName" },
           "minItems": 1,
           "uniqueItems": true
-        },
-        "resolverQuery": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
         }
       }
     },
@@ -298,7 +256,6 @@
         "bindingCardinality",
         "channels",
         "versionResolutionOrder",
-        "immutableBinding",
         "failClosedOn",
         "offline"
       ],
@@ -317,16 +274,6 @@
           "items": { "type": "string" },
           "minItems": 1,
           "uniqueItems": true
-        },
-        "immutableBinding": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["resolverSkill", "command", "storedFields"],
-          "properties": {
-            "resolverSkill": { "$ref": "#/$defs/skillName" },
-            "command": { "type": "string", "minLength": 1 },
-            "storedFields": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
-          }
         },
         "failClosedOn": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
         "offline": { "type": "string", "minLength": 1 }

@@ -13,7 +13,7 @@
         "required": [],
         "recommended": ["monica-contribution"],
         "conditional": [],
-        "external": ["inspect-dependency-source"]
+        "external": []
       }
     },
     "monica-contribution": {
@@ -290,7 +290,7 @@
         "required": ["monica-architecture", "monica-development"],
         "recommended": ["monica-ui-localization", "monica-ui-audit"],
         "conditional": [],
-        "external": ["inspect-dependency-source", "microsoft-code-reference", "microsoft-docs"]
+        "external": ["microsoft-code-reference", "microsoft-docs"]
       }
     },
     "monica-ui-localization": {
@@ -328,20 +328,6 @@
       "ownership": "external",
       "managed": false,
       "purpose": "Optional GitHub issue, discussion, pull request, and duplicate-search integration."
-    },
-    "inspect-dependency-source": {
-      "ownership": "external",
-      "managed": false,
-      "purpose": "Required for verified immutable source resolution through resolve --json.",
-      "distribution": {
-        "repository": "Tairitsua/inspect-dependency-source-skill",
-        "ref": "v1.0.0",
-        "commit": "bffe59e69be1d3e217783d41a0b84100ac5c3997",
-        "immutableSkillUrl": "https://github.com/Tairitsua/inspect-dependency-source-skill/tree/bffe59e69be1d3e217783d41a0b84100ac5c3997",
-        "digest": "sha256:b304ad7ad64e29527cb8b9b01373d242e95fcaa3965da360448c96986cc8666e",
-        "digestAlgorithm": "sha256-file-manifest-v1",
-        "requiredFor": ["cached-source-resolution"]
-      }
     },
     "microsoft-code-reference": {
       "ownership": "external",
@@ -534,12 +520,10 @@
   },
   "sourceRepositories": {
     "Tairitsua/Monica": {
-      "aliases": ["monica"],
-      "resolverQuery": "Tairitsua/Monica"
+      "aliases": ["monica"]
     },
     "Tairitsua/Monica.Docs": {
-      "aliases": ["docs"],
-      "resolverQuery": "Tairitsua/Monica.Docs"
+      "aliases": ["docs"]
     }
   },
   "sourcePolicies": {
@@ -553,20 +537,14 @@
       "Directory.Packages.props",
       "PackageReference"
     ],
-    "immutableBinding": {
-      "resolverSkill": "inspect-dependency-source",
-      "command": "resolve <repository> --ref <immutable-ref> --json",
-      "storedFields": ["repository", "ref", "commit", "provenance", "resolutionKind", "sourcePath"]
-    },
     "failClosedOn": [
       "mixed versions",
       "unresolved version ranges",
       "missing immutable releases",
       "unidentifiable source repository or commit",
-      "dirty or mismatched source when an operation requires exact parity",
-      "unverified cached artifacts"
+      "dirty or mismatched source when an operation requires exact parity"
     ],
-    "offline": "Use only verified cached catalogs and exact cached sources; never substitute another release or a default branch."
+    "offline": "Use only verified cached catalogs; never substitute another release or a default branch."
   },
   "aliases": {
     "mo-architecture": {

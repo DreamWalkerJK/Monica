@@ -13,8 +13,6 @@
 
 Offline operation uses the installed bundle, the local ledger, and local bindings only. The engine performs no network traffic except the explicit update check on the wizard's Update page (GitHub over HTTPS, digest-verified against the release `SHA256SUMS`). Never replace an unavailable immutable release with a branch or another version.
 
-`source bind` may consume `inspect-dependency-source resolve <repository> --ref <exact-ref> --json` for either first-party repository. The resolver operation revalidates an existing cached artifact and is safe offline; never invoke its add, refresh, or fetch workflows. Require a successful exit, `verification_state: verified`, exact provenance, a readable absolute path, and the matching commit. Never edit catalog-managed source.
-
 Global bindings are lookup locators, not authorization. Observe checkout dirtiness, path health, and identity on every `source resolve`. Return a usable dirty or moved binding with warnings; operations that need exact parity decide for themselves whether to reject it.
 
 ## Global release constraint

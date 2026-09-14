@@ -36,7 +36,7 @@ Monica skills install **into the project by default**, never globally unless the
    $monica-guide source resolve --repository docs --json
    ```
 
-   Treat a returned path as a verified lookup location, never as write authorization. Report dirty-checkout and commit-movement warnings instead of hiding the path. Bind or rebind with `source bind --repository <repo> --source-path <checkout>` (or `--source-ref <exact-ref>` through the pinned `inspect-dependency-source` resolver), always through preview and apply.
+   Treat a returned path as a verified lookup location, never as write authorization. Report dirty-checkout and commit-movement warnings instead of hiding the path. Bind or rebind with `source bind --repository <repo> --source-path <checkout>` (optionally `--source-ref <tag|commit>` to require an exact ref), always through preview and apply.
 
    Before preparing any upstream issue artifact, read the machine's issue-reporting mode with `issue status` and honor it: `prepare` allows local drafts (remote actions still need current-session approval), `ask` requires asking before drafting, and `never` forbids issue preparation entirely. A persisted mode is never authorization for a remote action.
 

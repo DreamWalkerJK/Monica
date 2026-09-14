@@ -279,25 +279,6 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             self.assertIn("$monica-guide source resolve", joined, profile_name)
             self.assertIn("not write permission", joined, profile_name)
 
-    def test_source_resolver_distribution_is_exact_and_capability_scoped(self) -> None:
-        distribution = self.catalog["externalSkills"]["inspect-dependency-source"][
-            "distribution"
-        ]
-        self.assertEqual(
-            "bffe59e69be1d3e217783d41a0b84100ac5c3997",
-            distribution["commit"],
-        )
-        self.assertEqual(
-            "https://github.com/Tairitsua/inspect-dependency-source-skill/tree/"
-            + distribution["commit"],
-            distribution["immutableSkillUrl"],
-        )
-        self.assertRegex(distribution["digest"], r"^sha256:[0-9a-f]{64}$")
-        self.assertEqual(
-            ["cached-source-resolution"],
-            distribution["requiredFor"],
-        )
-
     def test_router_skill_references_exactly_match_catalog_routes(self) -> None:
         for skill_name, entry in self.catalog["skills"].items():
             if entry["role"] != "router":

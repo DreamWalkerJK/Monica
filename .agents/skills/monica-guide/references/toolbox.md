@@ -18,7 +18,7 @@ Guide is useful before the user has chosen a repository, profile, source checkou
 
 Global bindings answer "where can this agent inspect the exact first-party source?" They do not change project dependencies and do not authorize edits. Application users may bind Monica, Monica.Docs, both, or neither.
 
-Return a healthy path even when the checkout is dirty or its observed commit moved; the binding check carries the stored and observed commits, ref, provenance, and health warnings. Refuse only when identity or an exact commit cannot be established or the path is gone. If no binding exists and an exact ref is known, `source bind --source-ref` can resolve through the pinned `inspect-dependency-source` cache — never clone, fetch, or select a default branch automatically.
+Return a healthy path even when the checkout is dirty or its observed commit moved; the binding check carries the stored and observed commits, ref, provenance, and health warnings. Refuse only when identity or an exact commit cannot be established or the path is gone. Bindings come only from a local canonical checkout supplied with `--source-path` — never clone, fetch, or select a default branch automatically.
 
 ## Repository setup behavior
 
