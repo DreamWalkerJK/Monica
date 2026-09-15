@@ -70,6 +70,7 @@ public class ModuleAutoControllers : MonicaModule<ModuleAutoControllersOption>, 
         services.AddTransient<IApiDescriptionProvider, RequestEndpointApiDescriptionProvider>();
         services.AddTransient<IConventionalRouteBuilder, ConventionalRouteBuilder>();
         services.AddSingleton<ResultEnvelopeMvcFilter>();
+        services.AddSingleton<InvalidModelStateMvcFilter>();
         services.AddEndpointsApiExplorer();
 
         // MVC option configuration is created by DI after the final provider exists, avoiding a temporary container.
