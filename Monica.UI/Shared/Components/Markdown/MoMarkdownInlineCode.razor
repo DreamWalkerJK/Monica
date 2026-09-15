@@ -1,0 +1,69 @@
+@implements IDisposable
+@inject IJSRuntime JS
+@inject IStringLocalizer<SharedResource> L
+
+<button type="button"
+        class="mo-markdown-code @(_copied is true ? "mo-markdown-code--copied" : _copied is false ? "mo-markdown-code--failed" : null)"
+        title="@(_copied is null ? L["Markdown:CopyHint"].Value : Feedback)"
+        aria-label="@L["Markdown:CopyCode", Text]"
+        @onclick="CopyAsync"><code>@Text<MudIcon Icon="@CopyIcon" Class="mo-markdown-code__icon" /></code><span class="mud-sr-only" role="status">@Feedback</span></button>
+
+@code {
+    /// <summary>The displayed code and exact clipboard payload; Markdown syntax delimiters are excluded.</summary>
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = string.Empty;
+
+    private string? _renderedText;
+    private bool? _copied;
+    private bool _disposed;
+    private long _copyVersion;
+
+    private string Feedback => _copied switch
+    {
+        true => L["Markdown:Copied"],
+        false => L["Markdown:CopyFailed"],
+        _ => string.Empty
+    };
+
+    private string CopyIcon => _copied switch
+    {
+        true => Icons.Material.Filled.Check,
+        false => Icons.Material.Filled.ErrorOutline,
+        _ => Icons.Material.Filled.ContentCopy
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (_renderedText == Text) return;
+        _renderedText = Text;
+        _copied = null;
+        _copyVersion++;
+    }
+
+    private async Task CopyAsync()
+    {
+        if (_disposed) return;
+        var version = ++_copyVersion;
+        var copied = false;
+        try
+        {
+            copied = await JS.InvokeAsync<bool>("MoClipboard.copyText", Text);
+        }
+        catch (JSDisconnectedException)
+        {
+            return;
+        }
+        catch (Exception exception) when (exception is JSException or TaskCanceledException)
+        {
+            // Report a refused clipboard write without claiming that the text was copied.
+        }
+
+        if (!_disposed && version == _copyVersion)
+        {
+            _copied = copied;
+        }
+    }
+
+    /// <inheritdoc />
+    public void Dispose() => _disposed = true;
+}

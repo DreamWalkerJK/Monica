@@ -13,6 +13,7 @@
                    HasTableOfContents="@HasTableOfContents"
                    TableOfContentsHeader="@TableOfContentsHeader"
                    EnableMermaid="@EnableMermaid"
+                   EnableCodeCopy="@EnableCodeCopy"
                    LinkTemplate="@LinkTemplate"
                    HeadingsChanged="@HeadingsChanged" />
 </div>
@@ -47,6 +48,13 @@
 
     [Parameter]
     public bool EnableMermaid { get; set; } = true;
+
+    /// <summary>
+    /// Enables click-to-copy for inline code and recognizable file paths in prose. Defaults to true.
+    /// Authored links and fenced code blocks retain their existing interactions.
+    /// </summary>
+    [Parameter]
+    public bool EnableCodeCopy { get; set; } = true;
 
     /// <summary>
     /// Gets or sets whether Markdig must treat raw HTML as plain Markdown text instead of renderable markup.

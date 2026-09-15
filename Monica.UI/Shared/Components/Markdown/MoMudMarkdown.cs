@@ -8,7 +8,7 @@ using MudBlazor;
 namespace Monica.UI.Shared.Components.Markdown;
 
 /// <summary>
-/// Extends <see cref="MudMarkdown"/> with Mermaid diagrams and selective link templates.
+/// Extends <see cref="MudMarkdown"/> with Mermaid diagrams, copyable code and selective link templates.
 /// </summary>
 public class MoMudMarkdown : MudMarkdown
 {
@@ -20,6 +20,13 @@ public class MoMudMarkdown : MudMarkdown
     /// </summary>
     [Parameter]
     public bool EnableMermaid { get; set; } = true;
+
+    /// <summary>
+    /// Enables click-to-copy for inline code and recognizable file paths in prose. Defaults to true.
+    /// Code inside links remains part of the link; fenced blocks retain their own copy control.
+    /// </summary>
+    [Parameter]
+    public bool EnableCodeCopy { get; set; } = true;
 
     /// <summary>
     /// Raised when the parsed markdown headings change.
@@ -84,7 +91,24 @@ public class MoMudMarkdown : MudMarkdown
                 var content = LinkTemplate(new MoMarkdownLink(link.Url, link.Title, label));
                 if (content is not null)
                 {
-                    link.ReplaceBy(new TemplatedLinkInline(content), copyChildren: false);
+                    link.ReplaceBy(new TemplatedInline(content), copyChildren: false);
+                }
+            }
+        }
+
+        if (EnableCodeCopy && !IsLinkOrHtmlContent(inlines))
+        {
+            foreach (var inline in inlines.ToArray())
+            {
+                RenderFragment? content = inline switch
+                {
+                    CodeInline code => builder => RenderCopyableCode(builder, code.Content),
+                    LiteralInline literal => MoMarkdownCodePaths.CreateContent(literal.Content.ToString()),
+                    _ => null
+                };
+                if (content is not null)
+                {
+                    inline.ReplaceBy(new TemplatedInline(content), copyChildren: false);
                 }
             }
         }
@@ -95,9 +119,9 @@ public class MoMudMarkdown : MudMarkdown
     /// <inheritdoc />
     protected override void OnRenderInlinesDefault(RenderTreeBuilder builder, ref int elementIndex, Inline inline)
     {
-        if (inline is TemplatedLinkInline link)
+        if (inline is TemplatedInline templated)
         {
-            builder.AddContent(0, link.Content);
+            builder.AddContent(0, templated.Content);
             elementIndex++;
             return;
         }
@@ -105,7 +129,27 @@ public class MoMudMarkdown : MudMarkdown
         base.OnRenderInlinesDefault(builder, ref elementIndex, inline);
     }
 
-    private sealed class TemplatedLinkInline(RenderFragment content) : Inline
+    private static bool IsLinkOrHtmlContent(ContainerInline inlines)
+    {
+        for (var container = inlines; container is not null; container = container.Parent)
+        {
+            if (container is LinkInline || container.Any(static inline => inline is HtmlInline))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static void RenderCopyableCode(RenderTreeBuilder builder, string text)
+    {
+        builder.OpenComponent<MoMarkdownInlineCode>(0);
+        builder.AddComponentParameter(1, nameof(MoMarkdownInlineCode.Text), text);
+        builder.CloseComponent();
+    }
+
+    private sealed class TemplatedInline(RenderFragment content) : Inline
     {
         public RenderFragment Content { get; } = content;
     }
