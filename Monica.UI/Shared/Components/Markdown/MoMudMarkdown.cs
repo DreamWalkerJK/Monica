@@ -1,5 +1,6 @@
 using System.Text;
 using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using MudBlazor;
@@ -7,7 +8,7 @@ using MudBlazor;
 namespace Monica.UI.Shared.Components.Markdown;
 
 /// <summary>
-/// Extends <see cref="MudMarkdown"/> with Mermaid fenced-code rendering.
+/// Extends <see cref="MudMarkdown"/> with Mermaid diagrams and selective link templates.
 /// </summary>
 public class MoMudMarkdown : MudMarkdown
 {
@@ -25,6 +26,13 @@ public class MoMudMarkdown : MudMarkdown
     /// </summary>
     [Parameter]
     public EventCallback<IReadOnlyList<MoMarkdownHeading>> HeadingsChanged { get; set; }
+
+    /// <summary>
+    /// Optionally renders selected non-image links before asset URL resolution.
+    /// Return null to preserve the default renderer for a link.
+    /// </summary>
+    [Parameter]
+    public Func<MoMarkdownLink, RenderFragment?>? LinkTemplate { get; set; }
 
     public override async Task SetParametersAsync(ParameterView parameters)
     {
@@ -59,6 +67,47 @@ public class MoMudMarkdown : MudMarkdown
         {
             HasTableOfContents = originalHasTableOfContents;
         }
+    }
+
+    /// <inheritdoc />
+    protected override void RenderInlines(RenderTreeBuilder builder, ref int elementIndex, ContainerInline inlines)
+    {
+        if (LinkTemplate is not null)
+        {
+            foreach (var link in inlines.OfType<LinkInline>().Where(static link => !link.IsImage).ToArray())
+            {
+                RenderFragment label = childBuilder =>
+                {
+                    var childIndex = 0;
+                    RenderInlines(childBuilder, ref childIndex, link);
+                };
+                var content = LinkTemplate(new MoMarkdownLink(link.Url, link.Title, label));
+                if (content is not null)
+                {
+                    link.ReplaceBy(new TemplatedLinkInline(content), copyChildren: false);
+                }
+            }
+        }
+
+        base.RenderInlines(builder, ref elementIndex, inlines);
+    }
+
+    /// <inheritdoc />
+    protected override void OnRenderInlinesDefault(RenderTreeBuilder builder, ref int elementIndex, Inline inline)
+    {
+        if (inline is TemplatedLinkInline link)
+        {
+            builder.AddContent(0, link.Content);
+            elementIndex++;
+            return;
+        }
+
+        base.OnRenderInlinesDefault(builder, ref elementIndex, inline);
+    }
+
+    private sealed class TemplatedLinkInline(RenderFragment content) : Inline
+    {
+        public RenderFragment Content { get; } = content;
     }
 
     protected override void RenderCodeBlock(in RenderTreeBuilder builder, ref int elementIndex, in CodeBlock code, in string? info)

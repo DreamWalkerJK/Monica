@@ -13,6 +13,7 @@
                    HasTableOfContents="@HasTableOfContents"
                    TableOfContentsHeader="@TableOfContentsHeader"
                    EnableMermaid="@EnableMermaid"
+                   LinkTemplate="@LinkTemplate"
                    HeadingsChanged="@HeadingsChanged" />
 </div>
 
@@ -55,6 +56,13 @@
 
     [Parameter]
     public EventCallback<IReadOnlyList<MoMarkdownHeading>> HeadingsChanged { get; set; }
+
+    /// <summary>
+    /// Optionally renders selected non-image links using their authored destination and formatted label.
+    /// Return null to retain ordinary URL resolution and navigation.
+    /// </summary>
+    [Parameter]
+    public Func<MoMarkdownLink, RenderFragment?>? LinkTemplate { get; set; }
 
     [Parameter]
     public MudMarkdownProps? Props { get; set; }
