@@ -95,3 +95,4 @@ jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/_content/
 - `Mermaid` `11.12.3` is bundled locally at `wwwroot/lib/mermaid/mermaid.min.js`.
 - The upstream license file is stored at `wwwroot/lib/mermaid/LICENSE`.
 - Mermaid rendering is loaded through `/_content/Monica.UI/js/mo-markdown-mermaid.js` so runtime usage stays offline-friendly.
+- Diagram labels use SVG text, and the canvas fits the rendered content after insertion to avoid stale browser measurements and oversized blank space.
