@@ -5,8 +5,10 @@ using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestServer;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Monica.Core.ExceptionHandling.Services;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Results;
 using Monica.Modules;
@@ -78,19 +80,71 @@ public sealed class ModuleExceptionHandlingIntegrationTests
         result.Message.Should().NotBeNullOrWhiteSpace();
     }
 
-    private static async Task<WebApplication> StartApplicationAsync(Action onEndpointInvoked)
+    [Fact]
+    public async Task UnexpectedException_InProduction_ReturnsSafeErrorWithoutExceptionDetails()
+    {
+        await using var application = await StartApplicationAsync(static () => { });
+
+        using var response = await application.GetTestClient().GetAsync(
+            "/throw", TestContext.Current.CancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        raw.Should().Contain("\"code\":\"internal.unexpected\"");
+        raw.Should().NotContain("secret-token");
+        raw.Should().NotContain("InvalidOperationException");
+        raw.Should().NotContain("StackTrace");
+    }
+
+    [Fact]
+    public async Task UnexpectedException_WhenDetailsEnabled_ResponseCarriesExceptionDiagnostics()
+    {
+        await using var application = await StartApplicationAsync(static () => { }, includeExceptionDetails: true);
+
+        using var response = await application.GetTestClient().GetAsync(
+            "/throw", TestContext.Current.CancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        raw.Should().Contain("\"code\":\"internal.unexpected\"");
+        raw.Should().Contain("secret-token");
+        raw.Should().Contain("InvalidOperationException");
+        raw.Should().Contain("\"exception\":{\"type\"");
+    }
+
+    [Fact]
+    public async Task UnexpectedException_InProduction_LogStillCarriesTheExceptionObject()
+    {
+        var loggerProvider = new CapturingLoggerProvider();
+        await using var application = await StartApplicationAsync(static () => { }, loggerProvider: loggerProvider);
+
+        using var response = await application.GetTestClient().GetAsync(
+            "/throw", TestContext.Current.CancellationToken);
+        await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        loggerProvider.Entries.Should().Contain(entry =>
+            entry.Category == typeof(ExceptionHandlerService).FullName &&
+            entry.Level == LogLevel.Error);
+        loggerProvider.Entries.Any(entry => entry.Exception is InvalidOperationException
+            { Message: "secret-token failure" }).Should().BeTrue();
+    }
+
+    private static async Task<WebApplication> StartApplicationAsync(Action onEndpointInvoked,
+        bool includeExceptionDetails = false, CapturingLoggerProvider? loggerProvider = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             EnvironmentName = Environments.Production
         });
         builder.WebHost.UseTestServer();
+        if (loggerProvider is not null) builder.Logging.AddProvider(loggerProvider);
         builder.AddMonica(monica =>
         {
             monica.ConfigureTypeDiscovery(options => options
                 .ExcludeDefault()
                 .Add(typeof(ModuleExceptionHandlingIntegrationTests).Assembly));
-            monica.AddExceptionHandling();
+            monica.AddExceptionHandling(options => options.IncludeExceptionDetails = includeExceptionDetails);
         });
 
         var application = builder.Build();
@@ -103,9 +157,31 @@ public sealed class ModuleExceptionHandlingIntegrationTests
         application.MapGet(
             "/empty-rejection/{statusCode:int}",
             (int statusCode) => Microsoft.AspNetCore.Http.Results.StatusCode(statusCode)).WithMonicaEndpoint();
+        application.MapGet("/throw", (HttpContext _) => throw new InvalidOperationException("secret-token failure"))
+            .WithMonicaEndpoint();
         application.MapMonica();
         await application.StartAsync(TestContext.Current.CancellationToken);
         return application;
+    }
+
+    private sealed class CapturingLoggerProvider : ILoggerProvider
+    {
+        public List<(string? Category, LogLevel Level, Exception? Exception)> Entries { get; } = [];
+
+        public ILogger CreateLogger(string categoryName) => new CapturingLogger(this, categoryName);
+
+        public void Dispose() { }
+
+        private sealed class CapturingLogger(CapturingLoggerProvider owner, string category) : ILogger
+        {
+            IDisposable? ILogger.BeginScope<TState>(TState state) { return null; }
+
+            public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Information;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+                Func<TState, Exception?, string> formatter) =>
+                owner.Entries.Add((category, logLevel, exception));
+        }
     }
 }
 

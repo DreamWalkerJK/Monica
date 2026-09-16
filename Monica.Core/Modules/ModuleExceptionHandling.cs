@@ -104,6 +104,11 @@ public class ModuleExceptionHandling : MonicaModule<ModuleExceptionHandlingOptio
                 Monica.Core.Results.Services.ResultHttpProjection.ToMvcResult(context.HttpContext.RequestServices
                     .GetRequiredService<IRequestRejectionFactory>().FromModelState(context).ToResult());
         });
+
+        // Exception details belong to this host's responses only when the host opted in; the envelope module owns
+        // the presentation switch so remote-call boundaries never expose another host's diagnostics.
+        services.PostConfigure<ModuleResultEnvelopeOption>(
+            envelope => envelope.ExposeDiagnosticDetails |= Option.IncludeExceptionDetails);
     }
 }
 
@@ -114,9 +119,10 @@ public class ModuleExceptionHandlingOption : ModuleOptions<ModuleExceptionHandli
     internal IReadOnlyCollection<Type> ExceptionMapperTypes => _exceptionMapperTypes;
 
     /// <summary>
-    /// Gets or sets whether operator logs include full exception objects. Defaults to false; responses always
-    /// contain safe public errors. Enable only for trusted development diagnostics because exception text can
-    /// contain application or request data. This option never enables response snapshots or stack traces.
+    /// Gets or sets whether unhandled-exception responses include technical details (exception type, message,
+    /// stack trace, and request target) under the reserved <c>metadata.exception</c> member. The default is
+    /// <see langword="false"/>. Enable it only on trusted development or test hosts so developers can diagnose
+    /// failures from the response; operator logs always contain the full exception object regardless of this option.
     /// </summary>
     public bool IncludeExceptionDetails { get; set; }
 

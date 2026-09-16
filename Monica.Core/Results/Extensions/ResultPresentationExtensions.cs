@@ -14,13 +14,19 @@ public static class ResultPresentationExtensions
     /// application metadata are retained. An existing error must use <see cref="ResultError"/>; mixed producers
     /// are a local contract defect. Capture the trace once at the owning boundary and use it in diagnostics too.
     /// </summary>
+    /// <param name="exposeReservedDiagnostics">
+    /// Retains reserved diagnostic members in the response. Only trusted development hosts may enable this;
+    /// remote-call boundaries always strip diagnostics.
+    /// </param>
     public static T PrepareForPresentation<T>(this T result, JsonSerializerOptions json,
-        IResultErrorMessageProvider messages, string traceId, string? service = null, string? operation = null)
+        IResultErrorMessageProvider messages, string traceId, string? service = null, string? operation = null,
+        bool exposeReservedDiagnostics = false)
         where T : IResultEnvelope
     {
         if (result.Metadata is IDictionary<string, object?> metadata)
         {
-            foreach (var key in metadata.Keys.Where(IsDiagnosticKey).ToArray()) metadata.Remove(key);
+            if (!exposeReservedDiagnostics)
+                foreach (var key in metadata.Keys.Where(IsDiagnosticKey).ToArray()) metadata.Remove(key);
             if (metadata.ContainsKey("error") && !result.TryGetError(json, out _))
                 throw new InvalidOperationException("The reserved metadata.error member must be a ResultError.");
             if (result.TryGetError(json, out var declaredError))

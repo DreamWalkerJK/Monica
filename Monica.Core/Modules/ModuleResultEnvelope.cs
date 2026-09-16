@@ -68,4 +68,13 @@ public class ModuleResultEnvelopeOption : ModuleOptions<ModuleResultEnvelope>
     /// </summary>
     public ResultEnvelopeFieldNames FieldNames { get; set; } = new();
 
+    /// <summary>
+    /// Gets or sets whether reserved diagnostic metadata (such as <c>metadata.exception</c> and <c>metadata.detail</c>)
+    /// is retained in HTTP responses. The default is <see langword="false"/>.
+    /// Enable it only on trusted development or test hosts so developers can inspect technical failure details;
+    /// <see cref="Monica.Modules.ModuleExceptionHandling"/> propagates its exception-detail switch here automatically.
+    /// Remote-call boundaries keep stripping diagnostics so they never cross hosts unintentionally.
+    /// </summary>
+    public bool ExposeDiagnosticDetails { get; set; }
+
 }

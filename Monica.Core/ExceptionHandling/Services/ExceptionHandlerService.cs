@@ -1,12 +1,15 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Exceptions;
+using Monica.Core.Extensions;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.Results;
 using Monica.Core.Results.Abstractions;
 using Monica.Modules;
+using Monica.Tool.Extensions;
 
 namespace Monica.Core.ExceptionHandling.Services;
 
@@ -26,8 +29,8 @@ internal class ExceptionHandlerService(
         var status = (int)(response.ToHttpStatusCode() ?? System.Net.HttpStatusCode.InternalServerError);
         response.TryGetError(serializer.SerializerOptions, out var error);
         var level = status >= 500 ? LogLevel.Error : LogLevel.Information;
-        // Detailed exception objects are opt-in operator diagnostics, never response metadata.
-        logger.Log(level, options.Value.IncludeExceptionDetails ? exception : null,
+        // Operator logs always keep the full exception object; the response-detail switch only affects the envelope.
+        logger.Log(level, exception,
             "Request failed: {ErrorCode}; HTTP {StatusCode}; exception {ExceptionType}; trace {TraceId}",
             error?.Code, status, exception.GetType().Name, error?.TraceId);
     }
@@ -51,14 +54,38 @@ internal class ExceptionHandlerService(
         result ??= exception switch
         {
             BusinessException business => Res.Fail(business.Message),
-            DisplayMessageException display => new Res(display.DisplayMessage, display.ResultStatus),
+            DisplayMessageException display => new Res(display.DisplayMessage, display.ResultStatus)
+                .WithDetail(display.TechnicalDetail),
             _ => Res.Fail("", ResStatus.InternalError)
         };
+        if (options.Value.IncludeExceptionDetails)
+            result.SetMetadata("exception", ExceptionDiagnostics.From(exception, httpContext));
 
         // All mappers pass through the same reserved-metadata policy. Outer context cannot replace an error.
         foreach (var entry in metadata.Where(entry => entry.Key != "error"))
             result.SetMetadata(entry.Key, entry.Value);
-        result.PrepareForPresentation(serializer.SerializerOptions, messages, ResultTraceId.Capture(httpContext));
+        result.PrepareForPresentation(serializer.SerializerOptions, messages, ResultTraceId.Capture(httpContext),
+            exposeReservedDiagnostics: options.Value.IncludeExceptionDetails);
         return Task.FromResult(result);
+    }
+
+    /// <summary>Bounded technical detail for development hosts; production presentation strips this member.</summary>
+    private sealed record ExceptionDiagnostics(
+        string Type,
+        string Message,
+        IReadOnlyList<string> StackTrace,
+        string? Method,
+        string? Path,
+        string? Endpoint,
+        DateTime UtcTime)
+    {
+        public static ExceptionDiagnostics From(Exception exception, HttpContext? httpContext) => new(
+            exception.GetType().GetCleanFullName(),
+            exception.GetMessageRecursively(),
+            exception.ToString().Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries),
+            httpContext?.Request.Method,
+            httpContext?.Request.Path,
+            httpContext?.GetEndpoint()?.DisplayName,
+            DateTime.UtcNow);
     }
 }

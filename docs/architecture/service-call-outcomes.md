@@ -105,7 +105,7 @@ A valid incoming error keeps its origin trace and reason across hops. The receiv
 
 `IResultErrorMessageProvider` supplies missing public messages. FIPS maps logical domains to their existing Chinese descriptions and gives timeout messages that acknowledge an unknown execution outcome. Declared safe application messages are retained. Unexpected exception text and provider prose are never used as fallback public messages.
 
-`IncludeExceptionDetails` controls detailed **operator logging only**. It never enables public exception metadata. FIPS no longer enables it unconditionally.
+Operator logs always carry the full exception object. `IncludeExceptionDetails` additionally exposes bounded technical details (exception type, recursive message, stack trace, and request target) under the reserved `metadata.exception` member **in that host's own responses**, for trusted development or test hosts; it propagates to the presentation switch on `ModuleResultEnvelopeOption.ExposeDiagnosticDetails`. Remote-call boundaries always strip reserved diagnostics, so one host's details never cross into another host's results. FIPS no longer enables it unconditionally.
 
 A classified dependency failure emits one structured warning containing reason, logical service and operation, route template, stage, transport, upstream HTTP status, validated `Retry-After`, duration, exception type, and trace. It excludes resolved addresses, query values, bodies, and headers. Dedicated RPC clients disable the standard HTTP loggers so those loggers do not reintroduce raw URLs.
 
