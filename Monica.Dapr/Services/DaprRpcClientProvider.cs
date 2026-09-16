@@ -5,8 +5,7 @@ using Monica.Modules;
 
 namespace Monica.Dapr.Services;
 
-public class DaprRpcClientProvider(
-    IOptions<ModuleDaprRpcClientOption> rpcClientOptionAccessor) : IRpcHttpClientRegisterProvider
+public class DaprRpcClientProvider : IRpcHttpClientRegisterProvider
 {
     public void ConfigureHttpClientFactoryOptions(HttpClientFactoryOptions options, string appid)
     {
@@ -21,7 +20,6 @@ public class DaprRpcClientProvider(
                 throw new ArgumentException("The appId must be a valid hostname.", nameof(appid), inner);
             }
 
-            client.Timeout = rpcClientOptionAccessor.Value.Timeout;
         });
 
         options.HttpMessageHandlerBuilderActions.Add(builder =>

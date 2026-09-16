@@ -11,6 +11,8 @@ using Monica.Tool.Extensions;
 using Monica.WebApi.RpcClient.Abstractions;
 using Monica.WebApi.RpcClient.Annotations;
 using Monica.WebApi.RpcClient.Models;
+using Monica.WebApi.RpcClient.Facades;
+using Monica.WebApi.RpcClient.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -63,7 +65,7 @@ public static class ModuleRpcClientBuilderExtensions
         public ModuleRegistration<ModuleRpcClient, ModuleRpcClientOption> ConfigHttpClientRegisterProvider<TProvider>()
             where TProvider : class, IRpcHttpClientRegisterProvider
         {
-            return registration.Configure(options => options.HttpClientRegisterProviderType = typeof(TProvider));
+            return registration.Configure(options => options.UseHttpClientProvider<TProvider>());
         }
 
         /// <summary>
@@ -87,6 +89,14 @@ public static class ModuleRpcClientBuilderExtensions
             ArgumentNullException.ThrowIfNull(configure);
             return registration.Configure(options => options.CustomHttpClientBuilder = configure);
         }
+
+        /// <summary>Binds provider-error classification to an explicitly selected transport.</summary>
+        public ModuleRegistration<ModuleRpcClient, ModuleRpcClientOption> ConfigResponseClassifier<TClassifier>(string transport)
+            where TClassifier : class, IRemoteResponseClassifier
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(transport);
+            return registration.Configure(options => options.UseResponseClassifier<TClassifier>(transport));
+        }
     }
 }
 
@@ -100,12 +110,21 @@ public class ModuleRpcClient : MonicaModule<ModuleRpcClientOption>
     {
         module.RequireFeature(ModuleRpcClientBuilderExtensions.DOMAIN_PROVIDER_FEATURE);
         module.Require<ModuleAuthentication, ModuleAuthenticationOption>();
+        module.Require<ModuleDependencyInjection, ModuleDependencyInjectionOption>();
         module.Require<ModuleResultEnvelope, ModuleResultEnvelopeOption>();
     }
 
     public override void ConfigureServices(ModuleContext<ModuleRpcClientOption> context)
     {
         var services = context.Services;
+        if (Option.CallTimeout <= TimeSpan.Zero || Option.CallTimeout.TotalMilliseconds > uint.MaxValue - 1 ||
+            Option.MaxResponseBodyBytes <= 0)
+            throw new InvalidOperationException("RPC timeout and response size must be positive and within supported limits.");
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<RemoteResponseDecoder>();
+        services.AddSingleton<IRemoteCallClient, RemoteCallFacade>();
+        if (Option.ResponseClassifierType is { } classifierType)
+            services.TryAddEnumerable(ServiceDescriptor.Singleton(typeof(IRemoteResponseClassifier), classifierType));
         services.AddHttpContextAccessor();
         services.AddTransient<AuthenticationDelegatingHandler>();
         if (Option.HttpClientRegisterProviderType is { } providerType)
@@ -290,10 +309,13 @@ public class ModuleRpcClient : MonicaModule<ModuleRpcClientOption>
             throw new InvalidOperationException("Please config MoRPC http client provider to use rpc client!");
         }
 
-        var appid = infoProvider.GetDomainRelatedAppId(domain);
+        var descriptor = infoProvider.GetDomain(domain);
+        var appid = descriptor.AppId;
+        var clientName = $"Monica.Rpc.{appid}";
         if (registeredAppIds.Add(appid))
         {
-            var httpClientBuilder = services.AddHttpClient(appid);
+            var httpClientBuilder = services.AddHttpClient(clientName);
+            httpClientBuilder.RemoveAllLoggers();
             httpClientBuilder.AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
             if (Option.CustomHttpClientBuilder is { } method)
@@ -302,18 +324,20 @@ public class ModuleRpcClient : MonicaModule<ModuleRpcClientOption>
             }
 
             services.AddSingleton<IConfigureOptions<HttpClientFactoryOptions>>(provider =>
-                new ConfigureNamedOptions<HttpClientFactoryOptions>(appid, options =>
+                new ConfigureNamedOptions<HttpClientFactoryOptions>(clientName, options =>
                 {
                     var httpClientRegisterProvider = (IRpcHttpClientRegisterProvider)provider.GetRequiredService(httpClientRegisterProviderType);
                     httpClientRegisterProvider.ConfigureHttpClientFactoryOptions(options, appid);
+                    // Only clients owned by this module use the complete-call deadline as their sole total timer.
+                    options.HttpClientActions.Add(client => client.Timeout = Timeout.InfiniteTimeSpan);
                 }));
         }
 
         services.TryAddTransient(rpcClient.InterfaceType, provider =>
         {
             var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
-            var client = httpClientFactory.CreateClient(appid);
-            return ActivatorUtilities.CreateInstance(provider, rpcClient.ClientType, client);
+            var client = httpClientFactory.CreateClient(clientName);
+            return ActivatorUtilities.CreateInstance(provider, rpcClient.ClientType, client, descriptor);
         });
 
         Logger.LogInformation(
@@ -401,6 +425,29 @@ public class ModuleRpcClient : MonicaModule<ModuleRpcClientOption>
 
 public class ModuleRpcClientOption : ModuleOptions<ModuleRpcClient>
 {
+    /// <summary>Chooses the provider that configures this module's dedicated HTTP clients.</summary>
+    /// <remarks>Provider modules can call this from Describe so transitive and direct registration agree.</remarks>
+    public void UseHttpClientProvider<TProvider>() where TProvider : class, IRpcHttpClientRegisterProvider =>
+        HttpClientRegisterProviderType = typeof(TProvider);
+
+    /// <summary>Binds response classification to an explicit transport. The classifier is registered as a singleton.</summary>
+    /// <remarks>The transport must equal the classifier's Transport value; direct HTTP has no classifier by default.</remarks>
+    public void UseResponseClassifier<TClassifier>(string transport) where TClassifier : class, IRemoteResponseClassifier
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(transport);
+        ProviderTransport = transport;
+        ResponseClassifierType = typeof(TClassifier);
+    }
+
+    /// <summary>Gets or sets the complete call deadline, including response-body reads. Defaults to 60 seconds.</summary>
+    /// <remarks>Borrowed clients retain their own timeout. A shorter client send timeout still takes effect.</remarks>
+    public TimeSpan CallTimeout { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>Gets or sets the decoded response limit. Defaults to 16 MiB; increase for known large response contracts.</summary>
+    public long MaxResponseBodyBytes { get; set; } = 16 * 1024 * 1024;
+
+    internal string ProviderTransport { get; set; } = "http";
+    internal Type? ResponseClassifierType { get; set; }
     /// <summary>
     /// Selects which generated RPC transport implementation should be registered.
     /// Defaults to <see cref="RpcTransportKind.Http"/> for distributed service-to-service calls.

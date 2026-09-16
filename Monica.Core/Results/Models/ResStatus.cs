@@ -56,6 +56,9 @@ public enum ResStatus
     /// </summary>
     UnsupportedMediaType = 415,
 
+    /// <summary>The responding service is limiting the request rate.</summary>
+    TooManyRequests = 429,
+
     /// <summary>
     /// Request validation failed.
     /// </summary>
@@ -80,4 +83,13 @@ public enum ResStatus
     /// An unexpected server error occurred.
     /// </summary>
     InternalError = 500,
+
+    /// <summary>A dependency returned an invalid or unsuccessful non-contract response.</summary>
+    BadGateway = 502,
+
+    /// <summary>A required dependency is unavailable.</summary>
+    ServiceUnavailable = 503,
+
+    /// <summary>A required dependency did not complete within the call deadline.</summary>
+    GatewayTimeout = 504,
 }

@@ -1,15 +1,13 @@
-using System.Dynamic;
+using Monica.Core.Results;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Monica.Core.Results.Abstractions;
 using Monica.Framework.ChainTracing.Abstractions;
-using Monica.Framework.ChainTracing.Models;
 using Monica.Framework.ChainTracing.Services.Support;
-using Monica.Tool.Extensions;
 
 namespace Monica.Framework.ChainTracing.Providers.AspNetCore;
 
 /// <summary>
-/// Attaches chain data to controller responses that implement <see cref="IResultEnvelope" />.
+/// Completes controller tracing and attaches a public correlation identifier to result envelopes.
 /// </summary>
 public class ChainTracingResultMetadataActionFilter(IChainTracing chainTracing) : IActionFilter
 {
@@ -32,22 +30,6 @@ public class ChainTracingResultMetadataActionFilter(IChainTracing chainTracing) 
         }
 
         chain.MarkComplete();
-        serviceResponse.Metadata ??= new ExpandoObject();
-        serviceResponse.Metadata.Append(ChainTraceContext.CHAIN_KEY, chain.Root);
-
-        if (chain.IsolatedNodes is not null)
-        {
-            serviceResponse.Metadata.Append($"{ChainTraceContext.CHAIN_KEY}_error", chain.IsolatedNodes.Select(p => new
-            {
-                p.Operation,
-                p.Handler,
-                p.Duration,
-                p.Type,
-                p.ExceptionMessage,
-                p.StartTime,
-                p.EndTime,
-                p.TraceId,
-            }));
-        }
+        serviceResponse.SetMetadata("traceId", ResultTraceId.Capture(context.HttpContext));
     }
 }

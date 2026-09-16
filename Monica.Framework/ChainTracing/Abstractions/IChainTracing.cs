@@ -57,10 +57,10 @@ public interface IChainTracing
     ChainTraceContext? GetCurrentChain();
 
     /// <summary>
-    /// Merges chain data returned from a remote call.
+    /// Links a remote public error to a local trace node using its origin trace identifier.
     /// </summary>
-    /// <param name="traceId">The local trace identifier that should receive the remote chain.</param>
-    /// <param name="remoteRes">The remote response carrying chain metadata.</param>
+    /// <param name="traceId">The local trace node that should receive the remote correlation details.</param>
+    /// <param name="remoteRes">The remote response carrying a typed error. Payloads and chain graphs are not copied.</param>
     void MergeRemoteChain(string traceId, IResultEnvelope remoteRes);
 
     /// <summary>

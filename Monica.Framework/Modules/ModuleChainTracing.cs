@@ -81,7 +81,7 @@ public static class ModuleChainTracingRegistrationExtensions
     }
 
     /// <summary>
-    /// Attaches completed chain-trace metadata to controller result envelopes.
+    /// Completes controller tracing and attaches a trace identifier to result envelopes. Full chain data stays in operator diagnostics.
     /// </summary>
     public static ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> AttachControllerTraceMetadata(
         this ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> module)
@@ -101,7 +101,7 @@ public static class ModuleChainTracingRegistrationExtensions
     }
 
     /// <summary>
-    /// Enables RPC response tracing middleware.
+    /// Enables actor invocation tracing without buffering or rewriting response bodies.
     /// </summary>
     public static ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> UseRpcTracing(this ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> module)
     {

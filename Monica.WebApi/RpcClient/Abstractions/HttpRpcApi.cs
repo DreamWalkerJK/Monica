@@ -3,6 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.DependencyInjection.Abstractions;
 using Monica.WebApi.RpcClient.Extensions;
+using Monica.Core.Results.Abstractions;
+using Monica.WebApi.RpcClient.Models;
+using Microsoft.Extensions.Options;
+using Monica.Modules;
 
 namespace Monica.WebApi.RpcClient.Abstractions;
 
@@ -17,6 +21,35 @@ public abstract class HttpRpcApi(ICachedServiceProvider serviceProvider, HttpCli
         .GetRequiredService<IJsonSerializerOptionsProvider>();
 
     protected readonly HttpClient HttpClient = httpClient;
+
+    /// <summary>Constructs an owned request, disposing partially created content on a local factory failure.</summary>
+    protected HttpRequestMessage CreateHttpRequest<TRequest>(TRequest request, HttpMethod method,
+        string routeTemplate, bool includeQueryString, bool includeBody)
+    {
+        var message = new HttpRequestMessage(method, CreateRequestUri(request, routeTemplate, includeQueryString));
+        try
+        {
+            if (includeBody) message.Content = CreateJsonRequestContent(request);
+            return message;
+        }
+        catch
+        {
+            message.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Executes a generated request through the host-owned remote boundary.</summary>
+    /// <remarks>The request factory transfers ownership when it returns. Caller cancellation propagates.</remarks>
+    protected Task<TResponse> ExecuteAsync<TResponse>(
+        Func<CancellationToken, ValueTask<HttpRequestMessage>> createRequest,
+        RemoteCallContext context, CancellationToken cancellationToken)
+        where TResponse : class, IRemoteResultEnvelope<TResponse>
+    {
+        var options = CachedServiceProvider.GetRequiredService<IOptions<ModuleRpcClientOption>>().Value;
+        return CachedServiceProvider.GetRequiredService<IRemoteCallClient>().InvokeAsync<TResponse>(
+            HttpClient, createRequest, context with { Transport = options.ProviderTransport }, cancellationToken);
+    }
 
     /// <summary>
     /// Creates a relative request URI using the date-time wire policy owned by the current Monica host.

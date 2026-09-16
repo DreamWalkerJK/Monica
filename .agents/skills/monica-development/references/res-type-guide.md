@@ -211,7 +211,7 @@ public class UserUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get user {UserId}", id);
-            return Res.Fail($"Failed to get user: {ex.Message}");
+            return Res.Fail("Unable to load the user.", ResStatus.InternalError);
         }
     }
 }
@@ -221,10 +221,22 @@ public class UserUIService(
 
 1. **Use at intentional result-envelope boundaries** — Facades return `Res`; internal services use standard returns + exceptions
 2. **Never return null** - Always return `Res.Fail()` or `Res.Ok()`
-3. **Catch exceptions** - Return `Res.Fail()` with meaningful error messages
+3. **Handle exceptions deliberately** - Let unexpected defects reach the host handler; an intentionally handled exception gets a safe public message and separate operator diagnostics
 4. **Use implicit conversions** - Makes code cleaner and more readable
 5. **Include using statement** - `using Monica.Core.Results;`
-6. **Attach structured error payloads** - use `AppendMetadata("error", payload)` when extra error detail is needed
+6. **Use the reserved error contract** - use `SetError(new ResultError(code, traceId, ...))`; `metadata.error` must never contain a legacy exception or validation object
+7. **Check remote data explicitly** - `IsOk` means 200 or 201, including an empty success; it does not prove that data exists. Use nullable payload types when absence is allowed.
+8. **Keep numeric compatibility** - existing 451/452/453/460 statuses and HTTP mappings remain in this release. Stable string reason codes evolve independently.
+
+## Public Errors and Remote Calls
+
+The host projects failures through `ResultError` with a stable `Code`, a nonempty origin `TraceId`, optional logical `Service`/`Operation`, and bounded request field errors. The `metadata.error` key has one shape per deployment unit; migrate all producers together.
+
+Use `GetResponse()` for Minimal APIs and `GetResponse(controller)` for explicit MVC results. The shared projection preserves application data and public metadata, fills missing failure presentation, and removes reserved diagnostic metadata (`request`, `response`, `originResponse`, `exception`, `deserializationError`, `detail`, `chain`, and `chain_error`, including numbered variants). `WithDetail` is only for in-process use; it is removed at public boundaries.
+
+Use `IRemoteCallClient` for custom forwarding and generated clients for declared RPC contracts. The call boundary owns the request and response, bounds decoded response bytes, and times request creation, sending, and body reads together. It preserves valid remote application failures, including 500, only when envelope and HTTP status agree. It propagates caller cancellation and local defects. Provider classification is selected explicitly by transport; message prose never determines classification.
+
+Downstream 429 uses `dependency.rate_limited` with a validated `Retry-After` in the diagnostic event. A timeout or rate limit does not establish whether a command executed; the boundary never retries automatically.
 
 ## API Response Integration
 

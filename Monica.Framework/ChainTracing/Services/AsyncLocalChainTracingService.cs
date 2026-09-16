@@ -1,3 +1,4 @@
+using Monica.Core.Results;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -222,44 +223,16 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
     }
 
     /// <summary>
-    /// Merges chain data returned from a remote call.
+    /// Links remote public error correlation to the current local trace node.
     /// </summary>
-    /// <param name="traceId">The local trace identifier that should receive the remote chain.</param>
-    /// <param name="remoteRes">The remote response carrying chain metadata.</param>
+    /// <param name="traceId">The local trace node that should receive the remote correlation.</param>
+    /// <param name="remoteRes">The response containing a typed public error.</param>
     public void MergeRemoteChain(string traceId, IResultEnvelope remoteRes)
     {
-        try
-        {
-            var context = _chainContext.Value;
-            if (context == null)
-            {
-                logger.LogWarning("Cannot merge remote chain into {TraceId} because no chain context is active.", traceId);
-                return;
-            }
-            var success = false;
-          
-            if (remoteRes.Metadata is { } expando)
-            {
-                if (expando.GetOrDefault(jsonSerializerOptionsProvider.UsingJsonDictionaryKeyPolicy(ChainTraceContext.CHAIN_KEY)) is JsonElement
-                        jsonElement && jsonElement.Deserialize<ChainTraceNode>(jsonSerializerOptionsProvider.SerializerOptions) is {} chainNode)
-                {
-                    chainNode.EndExtraInfo = expando.Unfold().Where(p => p.Key != ChainTraceContext.CHAIN_KEY).ToDictionary();
-                    success = context.MergeRemoteChain(traceId, chainNode, _options.MaxChainDepth);
-                }
-            }
-
-            if (success) return;
-
-            var remoteChainInfoStr = remoteRes.ToJsonString()?.LimitMaxLength(3000, "...");
-            logger.LogWarning("Failed to merge remote chain into {TraceId}. Remote chain: {RemoteChainInfo}",
-                traceId, remoteChainInfoStr);
-        }
-        catch (Exception ex)
-        {
-            var remoteChainInfoStr = remoteRes.ToJsonString()?.LimitMaxLength(3000, "...");
-            logger.LogError(ex, "An error occurred while merging a remote chain into {TraceId}. Remote chain: {RemoteChainInfo}",
-                traceId, remoteChainInfoStr);
-        }
+        // Remote responses carry correlation only. Distributed tracing owns the graph between services.
+        if (_chainContext.Value is not { } context || !context.NodeMap.TryGetValue(traceId, out var node)) return;
+        if (remoteRes.TryGetError(jsonSerializerOptionsProvider.SerializerOptions, out var error))
+            node.EndExtraInfo = new { RemoteTraceId = error.TraceId, error.Code, error.Service, error.Operation };
     }
 
     public void Init()

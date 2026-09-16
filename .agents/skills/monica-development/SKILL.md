@@ -247,8 +247,10 @@ if ((await service.GetDataAsync(id)).IsFailed(out var error, out var data))
 3. **Use implicit conversions** for cleaner code when returning success or error from result-envelope entry points
 4. **Handle responses** using the `IsFailed` pattern to extract error and data
 5. **Required using**: Include `using Monica.Core.Results;` where `Res` is used
-6. **Typed error details**: Use `AppendMetadata("error", payload)` rather than introducing a separate `ResError` model
-7. **Caught exceptions to `Res.Fail`**: When a UI service, Facade, or other result-envelope entry point converts a caught exception into `Res.Fail(...)`, return the full recursive message with `ex.GetMessageRecursively()` instead of only `ex.Message`, so nested exception details are preserved for diagnostics. This usually also requires `using Monica.Core.Extensions;`.
+6. **Typed public errors**: `metadata.error` is reserved for `ResultError`. Use `SetError(new ResultError(code, traceId, ...))`; never append arbitrary objects or numbered duplicate errors. Capture a nonempty trace once at the owning boundary and use it in diagnostics too. Public domain metadata uses separately named keys.
+7. **Exception presentation**: Keep exception text, stack traces, request/response dumps, and chain graphs in operator diagnostics. Return safe application messages; never interpolate `ex.Message` or `GetMessageRecursively()` into public results. Let unexpected defects reach the host exception handler. A facade that intentionally handles an exception must log it under the host's diagnostic policy and return a safe failure.
+8. **Success and payload**: `IsOk` accepts 200 and 201; it does not validate payload presence. Use `Res<T?>` when absence is part of the declared contract, and explicitly check data from remote calls before dereferencing it. Keep legacy 451/452/453/460 status values and HTTP mappings until the frontend-coordinated numeric migration is approved.
+9. **Remote calls**: Generated RPC and custom forwarders use `IRemoteCallClient` from `Monica.WebApi` for the complete exchange. Its request factory transfers ownership; the client remains borrowed, caller cancellation propagates, and no retry is added. Only `ModuleRpcClient`-owned clients receive an infinite `HttpClient.Timeout`; configure the complete-call deadline on `ModuleRpcClientOption.CallTimeout`.
 
 For detailed `Res` type documentation, see `references/res-type-guide.md`.
 

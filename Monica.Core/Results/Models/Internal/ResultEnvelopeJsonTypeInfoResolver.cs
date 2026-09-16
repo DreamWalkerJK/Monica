@@ -1,5 +1,7 @@
 using System.Text.Json;
+using System.Reflection;
 using System.Text.Json.Serialization.Metadata;
+using Monica.Core.Results.Abstractions;
 
 namespace Monica.Core.Results.Models.Internal;
 
@@ -30,14 +32,15 @@ internal sealed class ResultEnvelopeJsonTypeInfoResolver(
         ArgumentNullException.ThrowIfNull(options);
 
         var typeInfo = _innerResolver.GetTypeInfo(type, options);
-        if (typeInfo is null || typeInfo.Kind != JsonTypeInfoKind.Object || !IsBuiltInResultEnvelopeType(type))
+        if (typeInfo is null || typeInfo.Kind != JsonTypeInfoKind.Object || !typeof(IResultEnvelope).IsAssignableFrom(type))
         {
             return typeInfo;
         }
 
         foreach (var property in typeInfo.Properties)
         {
-            if (!_fieldNames.TryGetResolvedName(property.Name, options, out var resolvedName))
+            var memberName = (property.AttributeProvider as MemberInfo)?.Name ?? property.Name;
+            if (!_fieldNames.TryGetResolvedName(memberName, options, out var resolvedName))
             {
                 continue;
             }
@@ -48,19 +51,4 @@ internal sealed class ResultEnvelopeJsonTypeInfoResolver(
         return typeInfo;
     }
 
-    private static bool IsBuiltInResultEnvelopeType(Type type)
-    {
-        if (type == typeof(Res))
-        {
-            return true;
-        }
-
-        if (!type.IsGenericType)
-        {
-            return false;
-        }
-
-        var genericTypeDefinition = type.GetGenericTypeDefinition();
-        return genericTypeDefinition == typeof(Res<>) || genericTypeDefinition == typeof(ResPaged<>);
-    }
 }

@@ -5,7 +5,7 @@ using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.TestServer;
 using Microsoft.Extensions.Hosting;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Results;
@@ -33,7 +33,7 @@ public sealed class ModuleExceptionHandlingIntegrationTests
         result.Should().NotBeNull();
         result!.Status.Should().Be(ResStatus.BadRequest);
         result.Message.Should().NotBeNull();
-        Assert.Contains("requiredValue", result.Message!, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Required properties", result.Message!, StringComparison.OrdinalIgnoreCase);
         endpointInvoked.Should().BeFalse();
     }
 
@@ -99,10 +99,10 @@ public sealed class ModuleExceptionHandlingIntegrationTests
         {
             onEndpointInvoked();
             return Microsoft.AspNetCore.Http.Results.Ok();
-        });
+        }).WithMonicaEndpoint();
         application.MapGet(
             "/empty-rejection/{statusCode:int}",
-            (int statusCode) => Microsoft.AspNetCore.Http.Results.StatusCode(statusCode));
+            (int statusCode) => Microsoft.AspNetCore.Http.Results.StatusCode(statusCode)).WithMonicaEndpoint();
         application.MapMonica();
         await application.StartAsync(TestContext.Current.CancellationToken);
         return application;

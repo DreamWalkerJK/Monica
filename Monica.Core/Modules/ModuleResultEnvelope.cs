@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -35,15 +36,6 @@ public static class ModuleResultEnvelopeBuilderExtensions
             return registration.Configure(option => configure(option.FieldNames));
         }
 
-        /// <summary>
-        /// Limits how much remote request or response content is kept for diagnostics.
-        /// </summary>
-        public ModuleRegistration<ModuleResultEnvelope, ModuleResultEnvelopeOption> SetMaxRemoteDiagnosticBodyBytes(
-            int maxBodyBytes)
-        {
-            ArgumentOutOfRangeException.ThrowIfNegative(maxBodyBytes);
-            return registration.Configure(option => option.MaxRemoteDiagnosticBodyBytes = maxBodyBytes);
-        }
     }
 }
 
@@ -65,7 +57,7 @@ public class ModuleResultEnvelope : MonicaModule<ModuleResultEnvelopeOption>
     public override void ConfigureServices(ModuleContext<ModuleResultEnvelopeOption> context)
     {
         var services = context.Services;
-        services.AddSingleton<IResultEnvelopeReader, ResultEnvelopeProvider>();
+        services.TryAddSingleton<IResultErrorMessageProvider, DefaultResultErrorMessageProvider>();
     }
 }
 
@@ -76,8 +68,4 @@ public class ModuleResultEnvelopeOption : ModuleOptions<ModuleResultEnvelope>
     /// </summary>
     public ResultEnvelopeFieldNames FieldNames { get; set; } = new();
 
-    /// <summary>
-    /// Gets or sets the maximum number of request or response bytes captured for remote diagnostics.
-    /// </summary>
-    public int MaxRemoteDiagnosticBodyBytes { get; set; } = 32 * 1024;
 }

@@ -39,6 +39,11 @@ public static class ModuleExceptionHandlingBuilderExtensions
 
 public class ModuleExceptionHandling : MonicaModule<ModuleExceptionHandlingOption>, IWebHostRequiredModule
 {
+    /// <inheritdoc />
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleResultEnvelope, ModuleResultEnvelopeOption>();
+    }
     /// <summary>
     /// Adds ASP.NET Core exception handling and structured request-rejection responses.
     /// </summary>
@@ -48,6 +53,8 @@ public class ModuleExceptionHandling : MonicaModule<ModuleExceptionHandlingOptio
         // otherwise-empty framework responses into the same result envelope used for thrown binding failures.
         context.ApplicationBuilder.UseStatusCodePages(async statusCodeContext =>
         {
+            // Preserve the existing narrow empty-413/415 policy. Routing can reject content types using a
+            // synthetic 415 endpoint before the original endpoint's Monica metadata becomes available.
             var response = statusCodeContext.HttpContext.Response;
             var rejection = response.StatusCode switch
             {
@@ -62,6 +69,8 @@ public class ModuleExceptionHandling : MonicaModule<ModuleExceptionHandlingOptio
 
             if (rejection is not null)
             {
+                rejection.SetError(new ResultError(ResultErrorCodes.InvalidRequest,
+                    ResultTraceId.Capture(statusCodeContext.HttpContext)));
                 await response.WriteAsJsonAsync(rejection, statusCodeContext.HttpContext.RequestAborted);
             }
         });
@@ -72,8 +81,11 @@ public class ModuleExceptionHandling : MonicaModule<ModuleExceptionHandlingOptio
     {
         var services = context.Services;
         services.AddHttpContextAccessor();
+        // The default IProblemDetailsService selects the first writer that supports this endpoint.
+        services.Insert(0, ServiceDescriptor.Singleton<IProblemDetailsWriter, MonicaValidationProblemDetailsWriter>());
         services.AddProblemDetails();
         services.AddSingleton<IExceptionHandlerService, ExceptionHandlerService>();
+        services.AddSingleton<IRequestRejectionFactory, RequestRejectionFactory>();
         services.AddTransient<IExceptionResponseMapper, BadHttpRequestExceptionMapper>();
         foreach (var mapperType in Option.ExceptionMapperTypes)
         {
@@ -84,13 +96,13 @@ public class ModuleExceptionHandling : MonicaModule<ModuleExceptionHandlingOptio
 
         // Minimal API binding otherwise writes an empty 400 response outside Development before endpoint code runs.
         services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
+        services.Configure<MvcOptions>(RequestBindingMessages.Configure);
 
-        services.Configure<ApiBehaviorOptions>(options =>
+        services.PostConfigure<ApiBehaviorOptions>(options =>
         {
             options.InvalidModelStateResponseFactory = context =>
-                new BadRequestObjectResult(
-                    Res.Fail("Request validation failed.", ResStatus.ValidateError)
-                        .AppendMetadata("error", new SerializableError(context.ModelState)));
+                Monica.Core.Results.Services.ResultHttpProjection.ToMvcResult(context.HttpContext.RequestServices
+                    .GetRequiredService<IRequestRejectionFactory>().FromModelState(context).ToResult());
         });
     }
 }
@@ -102,9 +114,9 @@ public class ModuleExceptionHandlingOption : ModuleOptions<ModuleExceptionHandli
     internal IReadOnlyCollection<Type> ExceptionMapperTypes => _exceptionMapperTypes;
 
     /// <summary>
-    /// Gets or sets whether unhandled-exception responses include request snapshots, stack traces, and technical details.
-    /// The default is <see langword="false"/>. Enable this only for trusted development environments because the
-    /// diagnostic payload can contain sensitive application and request data.
+    /// Gets or sets whether operator logs include full exception objects. Defaults to false; responses always
+    /// contain safe public errors. Enable only for trusted development diagnostics because exception text can
+    /// contain application or request data. This option never enables response snapshots or stack traces.
     /// </summary>
     public bool IncludeExceptionDetails { get; set; }
 
