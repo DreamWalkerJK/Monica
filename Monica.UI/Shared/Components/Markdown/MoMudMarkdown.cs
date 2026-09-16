@@ -8,7 +8,7 @@ using MudBlazor;
 namespace Monica.UI.Shared.Components.Markdown;
 
 /// <summary>
-/// Extends <see cref="MudMarkdown"/> with Mermaid diagrams, copyable code and selective link templates.
+/// Extends <see cref="MudMarkdown"/> with Mermaid diagrams, copyable file paths and selective link templates.
 /// </summary>
 public class MoMudMarkdown : MudMarkdown
 {
@@ -22,7 +22,8 @@ public class MoMudMarkdown : MudMarkdown
     public bool EnableMermaid { get; set; } = true;
 
     /// <summary>
-    /// Enables click-to-copy for inline code and recognizable file paths in prose. Defaults to true.
+    /// Enables click-to-copy for recognizable file paths in prose or inline code. Defaults to true.
+    /// Other inline code, including identifiers and commands, keeps standard Markdown rendering.
     /// Code inside links remains part of the link; fenced blocks retain their own copy control.
     /// </summary>
     [Parameter]
@@ -102,7 +103,8 @@ public class MoMudMarkdown : MudMarkdown
             {
                 RenderFragment? content = inline switch
                 {
-                    CodeInline code => builder => RenderCopyableCode(builder, code.Content),
+                    CodeInline code when MoMarkdownCodePaths.IsFilePath(code.Content)
+                        => builder => RenderCopyableCode(builder, code.Content),
                     LiteralInline literal => MoMarkdownCodePaths.CreateContent(literal.Content.ToString()),
                     _ => null
                 };

@@ -24,8 +24,10 @@ public sealed class MoMarkdownCodeTests
     [InlineData(@"Read D:\Code\Orders\OrderService.cs.", @"D:\Code\Orders\OrderService.cs")]
     [InlineData("Read /home/dev/src/dispatch.ts.", "/home/dev/src/dispatch.ts")]
     [InlineData("Read **src/main.tsx**.", "src/main.tsx")]
-    [InlineData("Run `dotnet build src/Orders.csproj`.", "dotnet build src/Orders.csproj")]
-    public async Task CodeAndPaths_ShouldCopyOnlyTheRenderedValue(string markdown, string expected)
+    [InlineData("Read `src/Orders.csproj`.", "src/Orders.csproj")]
+    [InlineData("Read `../src/订单/OrderService.cs:52:4`.", "../src/订单/OrderService.cs:52:4")]
+    [InlineData(@"Read `D:\Code\Orders\OrderService.cs`.", @"D:\Code\Orders\OrderService.cs")]
+    public async Task FilePaths_ShouldCopyOnlyTheRenderedValue(string markdown, string expected)
     {
         await using var context = CreateContext();
         context.JSInterop.Setup<bool>("MoClipboard.copyText", expected).SetResult(true);
@@ -37,6 +39,25 @@ public sealed class MoMarkdownCodeTests
 
         context.JSInterop.VerifyInvoke("MoClipboard.copyText").Arguments.Should().Equal(expected);
         cut.Find("[role=status]").TextContent.Should().Be("Markdown:Copied");
+    }
+
+    [Theory]
+    [InlineData("BSSR / BSEC / BRWY / BRTA / BCWP")]
+    [InlineData("flight data exchange")]
+    [InlineData("data field / sub-field")]
+    [InlineData("Order.Id")]
+    [InlineData("Order.cs")]
+    [InlineData("dotnet build src/Orders.csproj")]
+    [InlineData("src/Orders.csproj --no-restore")]
+    [InlineData("https://example.test/src/Order.cs")]
+    public async Task OtherInlineCode_ShouldRemainPassive(string text)
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<MoMarkdown>(parameters => parameters.Add(item => item.Value,
+            $"| Term |\n| --- |\n| `{text}` |"));
+
+        cut.Find("td code").TextContent.Should().Be(text);
+        cut.FindAll(".mo-markdown-code").Should().BeEmpty();
     }
 
     [Fact]
@@ -60,7 +81,8 @@ public sealed class MoMarkdownCodeTests
         var cut = context.Render<MoMarkdown>(parameters => parameters.Add(item => item.Value,
             "- src/Order.cs and `Order.Id`\n\n| File |\n| --- |\n| src/main.ts |"));
 
-        cut.FindAll("li .mo-markdown-code").Should().HaveCount(2);
+        cut.FindAll("li .mo-markdown-code").Should().HaveCount(1);
+        cut.Find("li > p > code").TextContent.Should().Be("Order.Id");
         cut.FindAll("td .mo-markdown-code").Should().HaveCount(1);
 
         cut.Render(parameters => parameters.Add(item => item.EnableCodeCopy, false));

@@ -50,7 +50,8 @@
     public bool EnableMermaid { get; set; } = true;
 
     /// <summary>
-    /// Enables click-to-copy for inline code and recognizable file paths in prose. Defaults to true.
+    /// Enables click-to-copy for recognizable file paths in prose or inline code. Defaults to true.
+    /// Other inline code, including identifiers and commands, keeps standard Markdown rendering.
     /// Authored links and fenced code blocks retain their existing interactions.
     /// </summary>
     [Parameter]
