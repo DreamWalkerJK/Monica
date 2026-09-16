@@ -212,6 +212,41 @@ internal static class EndpointModelFactory
             config));
     }
 
+    public static DiagnosticSnapshot? TryCreateDeleteQueryBindingWarning(
+        EndpointModel endpoint,
+        INamedTypeSymbol request)
+    {
+        if (endpoint.HttpMethod != "Delete" || endpoint.Binding != "Query")
+        {
+            return null;
+        }
+
+        for (var current = request; current is not null; current = current.BaseType)
+        {
+            foreach (var property in current.GetMembers().OfType<IPropertySymbol>())
+            {
+                if (property.IsStatic || property.DeclaredAccessibility != Accessibility.Public ||
+                    IsQueryFriendly(property.Type))
+                {
+                    continue;
+                }
+
+                return DiagnosticSnapshot.Create(
+                    DiagnosticDescriptors.DeleteQueryBindingUnfit,
+                    request.Locations.FirstOrDefault(static candidate => candidate.IsInSource),
+                    endpoint.RequestDisplayName,
+                    property.Name);
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsQueryFriendly(ITypeSymbol type)
+    {
+        return type.SpecialType != SpecialType.None || type.TypeKind == TypeKind.Enum;
+    }
+
     public static AttributeData? GetEndpointAttribute(INamedTypeSymbol request)
     {
         return request.GetAttributes().FirstOrDefault(static attributeData =>

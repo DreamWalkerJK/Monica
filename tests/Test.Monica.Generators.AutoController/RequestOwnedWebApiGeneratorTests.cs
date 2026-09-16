@@ -139,6 +139,34 @@ public sealed class RequestOwnedWebApiGeneratorTests
         run.GeneratedSources.Keys.Should().NotContain("IOrderingCommandApi.g.cs");
     }
 
+    [Fact]
+    public void Run_WhenDeleteEndpointBindsCollectionsFromQuery_ShouldWarnButStillGenerate()
+    {
+        var run = RunGenerators(DeleteBulkQueryScenario);
+
+        run.OutputErrors.Should().BeEmpty();
+        run.RunResult.Diagnostics
+            .Should()
+            .ContainSingle(static diagnostic => diagnostic.Id == "AC1019");
+        var controller = run.GeneratedSources["HttpEndpointCommandOrdering.g.cs"];
+        controller.Should().Contain("HttpDelete");
+        controller.Should().Contain("ApiEndpointRequestAttribute(global::Monica.WebApi.Annotations.ApiRequestBinding.Query)");
+    }
+
+    [Fact]
+    public void Run_WhenDeleteEndpointDeclaresBodyBinding_ShouldNotWarn()
+    {
+        var run = RunGenerators(DeleteBulkBodyScenario);
+
+        run.OutputErrors.Should().BeEmpty();
+        run.RunResult.Diagnostics
+            .Select(static diagnostic => diagnostic.Id)
+            .Should()
+            .NotContain("AC1019");
+        var controller = run.GeneratedSources["HttpEndpointCommandOrdering.g.cs"];
+        controller.Should().Contain("ApiEndpointRequestAttribute(global::Monica.WebApi.Annotations.ApiRequestBinding.Body)");
+    }
+
     [Theory]
     [MemberData(nameof(InvalidScenarios))]
     public void Run_WhenContractIsInvalid_ShouldReportTheExpectedDiagnostic(
@@ -560,6 +588,64 @@ public sealed class RequestOwnedWebApiGeneratorTests
             public sealed class CommandHandlerUpload : ApplicationService<CommandUpload>
             {
                 public override Task<Res> Handle(CommandUpload request, CancellationToken cancellationToken) => throw new NotImplementedException();
+            }
+        }
+        """;
+
+    private const string DeleteBulkQueryScenario = """
+        using System;
+        using System.Collections.Generic;
+        using System.Threading;
+        using System.Threading.Tasks;
+        using Monica.Core.Results;
+        using Monica.WebApi.Abstractions;
+        using Monica.WebApi.Annotations;
+
+        [assembly: WebApiGenerationConfig("api/v1", DomainName = "Ordering")]
+
+        namespace Scenario.Local.Requests
+        {
+            /// <summary>Deletes items in bulk.</summary>
+            [ApiEndpoint(ApiHttpMethod.Delete, "items/bulk")]
+            public sealed record CommandDeleteItems(List<string> Ids) : IResultRequest;
+        }
+
+        namespace Scenario.Application
+        {
+            using Scenario.Local.Requests;
+
+            public sealed class CommandHandlerDeleteItems : ApplicationService<CommandDeleteItems>
+            {
+                public override Task<Res> Handle(CommandDeleteItems request, CancellationToken cancellationToken) => throw new NotImplementedException();
+            }
+        }
+        """;
+
+    private const string DeleteBulkBodyScenario = """
+        using System;
+        using System.Collections.Generic;
+        using System.Threading;
+        using System.Threading.Tasks;
+        using Monica.Core.Results;
+        using Monica.WebApi.Abstractions;
+        using Monica.WebApi.Annotations;
+
+        [assembly: WebApiGenerationConfig("api/v1", DomainName = "Ordering")]
+
+        namespace Scenario.Local.Requests
+        {
+            /// <summary>Deletes items in bulk.</summary>
+            [ApiEndpoint(ApiHttpMethod.Delete, "items/bulk", Binding = ApiRequestBinding.Body)]
+            public sealed record CommandDeleteItems(List<string> Ids) : IResultRequest;
+        }
+
+        namespace Scenario.Application
+        {
+            using Scenario.Local.Requests;
+
+            public sealed class CommandHandlerDeleteItems : ApplicationService<CommandDeleteItems>
+            {
+                public override Task<Res> Handle(CommandDeleteItems request, CancellationToken cancellationToken) => throw new NotImplementedException();
             }
         }
         """;
