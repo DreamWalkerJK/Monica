@@ -118,7 +118,7 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
         var issues = valuesEqual
             ? []
             : validationCoordinator.ValidateCapturedValue(definition, document.Json)
-                .Select(issue => CreateValidationIssue(definition, issue, schemaDrift))
+                .Select(issue => CreateValidationIssue(definition, issue))
                 .ToArray();
         if (issues.Length > 0)
         {
@@ -201,19 +201,23 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
 
     private static ConfigurationUnifiedVersionValidationIssue CreateValidationIssue(
         ConfigurationDefinition definition,
-        ConfigurationValueValidationIssue issue,
-        bool schemaDrift)
+        ConfigurationValueValidationIssue issue)
     {
-        var detailsHidden = schemaDrift
-                            || ConfigurationSchemaNavigator.IsSensitivePath(definition.Root, issue.LogicalPath);
+        // Schema drift alone must not hide the incompatibility reason: values captured by an older schema
+        // drift almost by definition, and hiding every reason made skipped definitions undiagnosable
+        // (a missing required property surfaced only as an opaque "hard incompatible"). Withhold details
+        // only when the current schema proves the path sensitive — or cannot resolve the path at all,
+        // in which case its sensitivity is unknown.
+        var isSensitive = ConfigurationSchemaNavigator.IsSensitivePath(definition.Root, issue.LogicalPath);
         return new ConfigurationUnifiedVersionValidationIssue
         {
-            LogicalPath = detailsHidden ? string.Empty : issue.LogicalPath.ToCanonicalString(),
-            Message = detailsHidden
+            LogicalPath = isSensitive ? string.Empty : issue.LogicalPath.ToCanonicalString(),
+            Message = isSensitive
                 ? "Validation details are hidden because the affected historical path may contain sensitive metadata."
                 : issue.Message,
-            ValidationRules = detailsHidden ? [] : issue.ValidationRules,
-            DetailsHidden = detailsHidden
+            ValidationRules = isSensitive ? [] : issue.ValidationRules,
+            IsSensitive = isSensitive,
+            DetailsHidden = isSensitive
         };
     }
 
