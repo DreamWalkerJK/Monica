@@ -32,12 +32,12 @@ internal class AuthorizationExceptionMapper(AuthorityMessageLocalizer authorityL
                 response = ResultsAuthorization.RefreshTokenExpired(authorityLocalizer);
                 return true;
 
-            case AuthorizationException { Type: AuthorizationException.ExceptionType.AccessTokenExpired } e:
-                response = ResultsAuthorization.AccessTokenExpired(authorityLocalizer, e.Reason);
+            case AuthorizationException { Type: AuthorizationException.ExceptionType.AccessTokenExpired }:
+                response = ResultsAuthorization.AccessTokenExpired(authorityLocalizer);
                 return true;
 
-            case SecurityTokenExpiredException expired:
-                response = ResultsAuthorization.AccessTokenExpired(authorityLocalizer, expired.Message);
+            case SecurityTokenExpiredException:
+                response = ResultsAuthorization.AccessTokenExpired(authorityLocalizer);
                 return true;
 
             case AuthorizationException authorizationException:
@@ -45,7 +45,7 @@ internal class AuthorizationExceptionMapper(AuthorityMessageLocalizer authorityL
                 response = Res.Fail(
                         authorizationException.GetTitle(authorityLocalizer),
                         ResStatus.Forbidden)
-                    .SetError(new ResultError("auth.forbidden", ResultTraceId.Capture(httpContext)));
+                    .SetError(new ResultError(ResultErrorCodes.Forbidden, ResultTraceId.Capture(httpContext)));
                 return true;
             }
 

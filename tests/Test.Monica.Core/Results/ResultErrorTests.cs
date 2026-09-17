@@ -20,13 +20,23 @@ public sealed class ResultErrorTests
     }
 
     [Theory]
-    [InlineData(ResStatus.ValidateError, 400)]
-    [InlineData(ResStatus.AccessTokenExpired, 401)]
-    [InlineData(ResStatus.RefreshTokenExpired, 401)]
-    [InlineData(ResStatus.ErrorWarning, 400)]
-    public void Projection_WhenStatusIsLegacy_ShouldRetainHttpMapping(ResStatus status, int http)
+    [InlineData(ResStatus.BadRequest)]
+    [InlineData(ResStatus.Unauthorized)]
+    [InlineData(ResStatus.Conflict)]
+    [InlineData(ResStatus.TooManyRequests)]
+    [InlineData(ResStatus.BadGateway)]
+    [InlineData(ResStatus.ServiceUnavailable)]
+    [InlineData(ResStatus.GatewayTimeout)]
+    public void Projection_WhenStatusIsSupported_ShouldMapOneToOneToItsHttpStatus(ResStatus status)
     {
-        Assert.Equal(http, ResultHttpProjection.GetStatusCode(new Res("", status)));
+        Assert.Equal((int)status, ResultHttpProjection.GetStatusCode(new Res("", status)));
+    }
+
+    [Fact]
+    public void Projection_WhenStatusIsOutsideTheWhitelist_ShouldRejectItAsAContractDefect()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ResultHttpProjection.GetStatusCode(new Res("", (ResStatus)460)));
     }
 
     [Fact]

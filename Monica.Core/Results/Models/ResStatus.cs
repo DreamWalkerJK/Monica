@@ -2,7 +2,10 @@
 namespace Monica.Core.Results;
 
 /// <summary>
-/// Defines the transport-neutral status carried by a Monica result envelope.
+/// Defines the transport outcome carried by a Monica result envelope. This enum is the closed whitelist of
+/// supported outcomes: every defined value maps one-to-one to its HTTP status, values outside this enum are
+/// contract defects at API boundaries, and business semantics belong to the <c>metadata.error</c> reason codes
+/// (<see cref="ResultErrorCodes"/>) rather than to these numbers.
 /// </summary>
 public enum ResStatus
 {
@@ -58,26 +61,6 @@ public enum ResStatus
 
     /// <summary>The responding service is limiting the request rate.</summary>
     TooManyRequests = 429,
-
-    /// <summary>
-    /// Request validation failed.
-    /// </summary>
-    ValidateError = 451,
-
-    /// <summary>
-    /// The refresh token has expired or is invalid.
-    /// </summary>
-    RefreshTokenExpired = 452,
-
-    /// <summary>
-    /// The access token has expired or is invalid.
-    /// </summary>
-    AccessTokenExpired = 453,
-
-    /// <summary>
-    /// The operation requires explicit user confirmation before it can continue.
-    /// </summary>
-    ErrorWarning = 460,
 
     /// <summary>
     /// An unexpected server error occurred.

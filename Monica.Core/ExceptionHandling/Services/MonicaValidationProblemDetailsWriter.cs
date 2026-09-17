@@ -19,8 +19,6 @@ internal sealed class MonicaValidationProblemDetailsWriter(IRequestRejectionFact
         var errors = validation.Errors.SelectMany(pair =>
             pair.Value.Select(message => new ValidationResult(message, [pair.Key])));
         var rejection = rejections.FromValidationErrors(context.HttpContext, errors).ToResult();
-        // AddValidation already uses 400. Keep that existing numeric result for this endpoint family.
-        rejection.Status = Core.Results.ResStatus.BadRequest;
         await ResultHttpProjection.ToMinimalApiResult(rejection).ExecuteAsync(context.HttpContext);
     }
 }

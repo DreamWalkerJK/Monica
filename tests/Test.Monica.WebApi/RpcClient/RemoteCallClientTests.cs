@@ -28,10 +28,8 @@ public sealed class RemoteCallClientTests
     [Theory]
     [InlineData(200, 200)]
     [InlineData(201, 201)]
-    [InlineData(400, 451)]
-    [InlineData(401, 452)]
-    [InlineData(401, 453)]
-    [InlineData(400, 460)]
+    [InlineData(400, 400)]
+    [InlineData(401, 401)]
     [InlineData(409, 409)]
     [InlineData(500, 500)]
     public async Task Invoke_WhenEnvelopeAgreesWithHttp_ShouldPreserveApplicationResult(int http, int status)

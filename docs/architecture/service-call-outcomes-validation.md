@@ -9,7 +9,7 @@ Design: [API and Service-Call Outcomes](service-call-outcomes.md)
 
 The working-tree implementation covers the shared public error contract, strict input rejection, HTTP/OpenAPI projection, complete remote-call ownership, generated RPC, Dapr classification, both FIPS primary-node proxy paths, and the separate DataComparison caller.
 
-The numeric migration is deferred. Existing 451/452/453/460 values, HTTP mappings, and consumer switches remain.
+The numeric migration completed on 2026-09-17: the synthetic 451/452/453/460 statuses are removed, producers emit standard statuses with typed reason codes, and off-whitelist numbers are contract defects at API boundaries.
 
 ## Automated verification
 

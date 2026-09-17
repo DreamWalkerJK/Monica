@@ -39,12 +39,8 @@ public static class ResultPresentationExtensions
             error = new ResultError(result.Status switch
             {
                 ResStatus.InternalError => ResultErrorCodes.UnexpectedError,
-                ResStatus.ValidateError => ResultErrorCodes.ValidationFailed,
-                ResStatus.AccessTokenExpired => "auth.access_token_expired",
-                ResStatus.RefreshTokenExpired => "auth.refresh_token_expired",
-                ResStatus.Unauthorized => "auth.unauthorized",
-                ResStatus.Forbidden => "auth.forbidden",
-                ResStatus.ErrorWarning => "operation.confirmation_required",
+                ResStatus.Unauthorized => ResultErrorCodes.Unauthorized,
+                ResStatus.Forbidden => ResultErrorCodes.Forbidden,
                 _ => ResultErrorCodes.OperationFailed
             }, traceId, service, operation);
             result.SetError(error);

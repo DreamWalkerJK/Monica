@@ -11,69 +11,17 @@ namespace Monica.Core.Results;
 public static class ResultExtensions
 {
     /// <summary>
-    /// Get the HttpStatusCode corresponding to the response code
+    /// Get the HttpStatusCode corresponding to the response status. Every supported status maps one-to-one;
+    /// values outside the <see cref="ResStatus"/> whitelist are local contract defects.
     /// </summary>
-    /// <returns></returns>
     public static HttpStatusCode? ToHttpStatusCode(this IResultEnvelope? response)
     {
         if (response == null) return null;
-        switch (response.Status)
-        {
-            case ResStatus.Ok:
-                return HttpStatusCode.OK;
-
-            case ResStatus.Created:
-                return HttpStatusCode.Created;
-
-            case ResStatus.NotFound:
-                return HttpStatusCode.NotFound;
-
-            case ResStatus.Conflict:
-                return HttpStatusCode.Conflict;
-
-            case ResStatus.Unauthorized:
-            case ResStatus.RefreshTokenExpired:
-            case ResStatus.AccessTokenExpired:
-                return HttpStatusCode.Unauthorized;
-
-
-            case ResStatus.Forbidden:
-                return HttpStatusCode.Forbidden;
-
-
-            case ResStatus.ValidateError:
-            case ResStatus.ErrorWarning:
-            case ResStatus.BadRequest:
-                return HttpStatusCode.BadRequest;
-
-            case ResStatus.PayloadTooLarge:
-                return HttpStatusCode.RequestEntityTooLarge;
-
-            case ResStatus.UnsupportedMediaType:
-                return HttpStatusCode.UnsupportedMediaType;
-
-            case ResStatus.TooManyRequests:
-                return HttpStatusCode.TooManyRequests;
-
-            case ResStatus.BadGateway:
-                return HttpStatusCode.BadGateway;
-
-            case ResStatus.ServiceUnavailable:
-                return HttpStatusCode.ServiceUnavailable;
-
-            case ResStatus.GatewayTimeout:
-                return HttpStatusCode.GatewayTimeout;
-
-
-            case ResStatus.InternalError:
-                return HttpStatusCode.InternalServerError;
-
-
-            case ResStatus.Unknown:
-                return null;
-            default:
-                throw new ArgumentOutOfRangeException(response.ToString(), $"No HTTP status code mapping is defined for status {response.Status}.");
-        }
+        if (response.Status == ResStatus.Unknown) return null;
+        return Enum.IsDefined(response.Status)
+            ? (HttpStatusCode)response.Status
+            : throw new ArgumentOutOfRangeException(response.ToString(),
+                $"No HTTP status code mapping is defined for status {response.Status}.");
     }
 
     /// <summary>

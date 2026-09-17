@@ -40,7 +40,7 @@ public sealed class RequestRejectionTests
     }
 
     [Theory]
-    [InlineData("/ingress/api/body", "{\"when\":\"secret-invalid-date\"}", "application/json", 400, 451)]
+    [InlineData("/ingress/api/body", "{\"when\":\"secret-invalid-date\"}", "application/json", 400, 400)]
     [InlineData("/ingress/crud/body", "{\"when\":\"secret-invalid-date\"}", "application/json", 400, 400)]
     [InlineData("/ingress/crud/body", "null", "application/json", 400, 400)]
     [InlineData("/ingress/api/body", "{}", "text/plain", 415, 415)]

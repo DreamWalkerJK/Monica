@@ -1,6 +1,6 @@
 # API and Service-Call Outcomes
 
-Status: implemented in the working tree, 2026-09-15. Numeric status migration is deferred.
+Status: implemented, 2026-09-15; numeric status migration completed 2026-09-17.
 
 This design unifies request rejection, HTTP result presentation, generated RPC, and FIPS primary-node forwarding. A valid remote application failure remains an application result. Transport failures and invalid responses become small, typed dependency errors.
 
@@ -8,22 +8,20 @@ The implementation incorporates Monica's request-binding fix at `71a816f4` and t
 
 ## 1. Compatibility boundary
 
-This release **retains** the existing numeric statuses and their HTTP mappings:
+The synthetic statuses 451/452/453/460 have been **removed**. `ResStatus` is now the closed whitelist of supported transport outcomes and every defined value maps one-to-one to its HTTP status:
 
 | Result status | HTTP status | Meaning |
 |---|---:|---|
 | 200 | 200 | Successful operation |
 | 201 | 201 | Resource created; data may be absent |
-| 451 | 400 | Existing validation rejection |
-| 452 | 401 | Refresh token expired |
-| 453 | 401 | Access token expired |
-| 460 | 400 | Existing confirmation/warning result |
+| 400 | 400 | Invalid request or failed validation (`request.invalid`, `validation.failed`) |
+| 401 | 401 | Authentication required; token expiry uses `auth.access_token_expired` / `auth.refresh_token_expired` |
+| 409 | 409 | Confirmation required (`operation.confirmation_required`) or state conflict |
+| 429/502/503/504 | 429/502/503/504 | Rate limiting and dependency outcomes |
 
-CRUD binding failures retain result 400. The existing `[ApiController]` and validation-exception paths retain 451. Minimal API binding and `AddValidation` use 400. Unsupported media and oversized requests retain 415 and 413.
+Producers set typed reason codes (`ResultErrorCodes`) alongside the standard status; the presentation layer fills `auth.unauthorized`/`auth.forbidden`/`internal.unexpected`/`operation.failed` only when a failure arrives without one. Unsupported media and oversized requests retain 415 and 413. A result status outside the whitelist — including the removed 451/452/453/460 numbers — is a local contract defect and a remote protocol violation.
 
-The future frontend-coordinated release can replace 451/452/453/460. This release introduces stable reason codes without changing those existing numbers or switches. It also adds standard 429/502/503/504 statuses for outcomes that previously lacked precise representation.
-
-The host's frozen JSON configuration remains authoritative. FIPS keeps its `code` alias. Status agreement means **mapped** agreement: result 451 with HTTP 400 is valid.
+The host's frozen JSON configuration remains authoritative. FIPS keeps its `code` alias. Status agreement means **exact** agreement: the envelope status equals the HTTP status.
 
 ## 2. Responsibilities
 
@@ -65,7 +63,7 @@ The reserved `metadata.error` member contains only `ResultError`:
 
 ```json
 {
-  "code": 451,
+  "code": 400,
   "message": "Check the request field when.",
   "metadata": {
     "error": {
@@ -211,7 +209,7 @@ No first-party Created producer was introduced. Regression tests explicitly acce
 
 The unit of rollout is a mutually calling service cohort, including shared libraries, generated clients, proxy adapters, and custom callers.
 
-- [x] Retain 451/452/453/460 values, existing mappings, and consumer switches.
+- [x] Remove the synthetic 451/452/453/460 statuses; producers emit standard statuses with typed reason codes and off-whitelist numbers are contract defects.
 - [x] Use one typed error producer at every migrated framework boundary.
 - [x] Remove first-party references to the obsolete reader/connector path.
 - [x] Verify strict rejection before action/proxy execution and valid optional defaults.

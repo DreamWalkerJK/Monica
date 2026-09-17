@@ -9,8 +9,18 @@ public static class ResultErrorCodes
     public const string ValidationFailed = "validation.failed";
     /// <summary>An application failure has no more specific declared reason.</summary>
     public const string OperationFailed = "operation.failed";
+    /// <summary>The operation requires explicit confirmation before it can proceed.</summary>
+    public const string ConfirmationRequired = "operation.confirmation_required";
     /// <summary>An unexpected local defect was handled at the host boundary.</summary>
     public const string UnexpectedError = "internal.unexpected";
+    /// <summary>Authentication is required or the caller is not authenticated.</summary>
+    public const string Unauthorized = "auth.unauthorized";
+    /// <summary>The authenticated caller is not allowed to perform the operation.</summary>
+    public const string Forbidden = "auth.forbidden";
+    /// <summary>The access token has expired or is invalid.</summary>
+    public const string AccessTokenExpired = "auth.access_token_expired";
+    /// <summary>The refresh token has expired or is invalid; the caller must sign in again.</summary>
+    public const string RefreshTokenExpired = "auth.refresh_token_expired";
     /// <summary>A dependency could not be reached or reported unavailability.</summary>
     public const string DependencyUnavailable = "dependency.unavailable";
     /// <summary>A dependency rejected the call because it was rate limited.</summary>

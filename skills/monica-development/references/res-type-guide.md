@@ -226,7 +226,7 @@ public class UserUIService(
 5. **Include using statement** - `using Monica.Core.Results;`
 6. **Use the reserved error contract** - use `SetError(new ResultError(code, traceId, ...))`; `metadata.error` must never contain a legacy exception or validation object
 7. **Check remote data explicitly** - `IsOk` means 200 or 201, including an empty success; it does not prove that data exists. Use nullable payload types when absence is allowed.
-8. **Keep numeric compatibility** - existing 451/452/453/460 statuses and HTTP mappings remain in this release. Stable string reason codes evolve independently.
+8. **Use standard statuses with reason codes** - `ResStatus` is the closed whitelist of supported transport outcomes mapping one-to-one to HTTP statuses; the synthetic 451/452/453/460 values are removed. Express semantics with `ResultErrorCodes` reason codes (`validation.failed`, `auth.access_token_expired`, `operation.confirmation_required`, ...), never with custom numbers.
 
 ## Public Errors and Remote Calls
 

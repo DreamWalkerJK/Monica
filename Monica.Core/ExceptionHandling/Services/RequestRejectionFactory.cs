@@ -19,7 +19,7 @@ internal sealed class RequestRejectionFactory(IJsonSerializerOptionsProvider jso
     private const int MAX_PATH_LENGTH = 256;
     private const int MAX_MESSAGE_LENGTH = 256;
 
-    public RequestRejection FromModelState(ActionContext context, ResStatus status = ResStatus.ValidateError)
+    public RequestRejection FromModelState(ActionContext context, ResStatus status = ResStatus.BadRequest)
     {
         var entries = context.ModelState.Where(pair => pair.Value is { Errors.Count: > 0 }).ToArray();
         if (entries.Any(pair => pair.Value!.Errors.Any(error => error.Exception is UnsupportedContentTypeException)))
@@ -55,7 +55,7 @@ internal sealed class RequestRejectionFactory(IJsonSerializerOptionsProvider jso
                 .Select(member => new ResultFieldError(NormalizePath(member), "invalid",
                     Limit(string.IsNullOrWhiteSpace(error.ErrorMessage) ? "The value did not pass validation." : error.ErrorMessage, MAX_MESSAGE_LENGTH))))
             .Take(MAX_FIELDS).ToArray();
-        return Create(context, ResStatus.ValidateError, ResultErrorCodes.ValidationFailed, fields);
+        return Create(context, ResStatus.BadRequest, ResultErrorCodes.ValidationFailed, fields);
     }
 
     private RequestRejection Create(HttpContext? context, ResStatus status, string code, ResultFieldError[] fields)
