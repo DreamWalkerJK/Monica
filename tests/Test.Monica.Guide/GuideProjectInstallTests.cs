@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Monica.Guide;
 using Xunit;
 
@@ -497,6 +498,80 @@ public sealed class GuideProjectInstallTests
         Assert.Equal("application", command.Profile);
     }
 
+    [Fact]
+    public async Task Status_FlagsSkillTreesLeftBehindByAPartialReleaseUpdate()
+    {
+        using var fixture = new ProjectFixture();
+        var workspace = fixture.CreateWorkspace("monica-application");
+        using (var service = fixture.CreateService())
+        {
+            var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+            var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+            await service.ApplyConfigureAsync(request, preview.Plan.PlanDigest, cancellationToken: CancellationToken);
+        }
+
+        // A newer release bundle is configured for the shared target only; the workspace
+        // projection keeps the previous release's skill trees while the ledger now points
+        // at the upgraded bundle.
+        var upgradedRoot = fixture.CreateUpgradedBundle();
+        using var upgradedService = fixture.CreateBundleService(upgradedRoot);
+        var sharedRequest = new GuideConfigureRequest(
+            null, null, [new GuideTargetSelection(AgentGuideService.NativeEnvironment(), [GuideTarget.Shared])]);
+        var sharedPreview = await upgradedService.PreviewConfigureAsync(sharedRequest, cancellationToken: CancellationToken);
+        await upgradedService.ApplyConfigureAsync(
+            sharedRequest, sharedPreview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        var report = await upgradedService.GetStatusAsync(cancellationToken: CancellationToken);
+
+        var workspaceRelease = Assert.Single(report.Checks, check =>
+            check.Id.EndsWith(".release", StringComparison.Ordinal) && check.Id.Contains("project-", StringComparison.Ordinal));
+        Assert.Equal(GuideCheckStatus.Warning, workspaceRelease.Status);
+        Assert.Contains("monica-application", workspaceRelease.Message, StringComparison.Ordinal);
+        var sharedRelease = Assert.Single(report.Checks, check =>
+            check.Id.EndsWith(".release", StringComparison.Ordinal) && check.Id.Contains(".shared.", StringComparison.Ordinal));
+        Assert.Equal(GuideCheckStatus.Ok, sharedRelease.Status);
+    }
+
+    [Fact]
+    public async Task Status_PassesReleaseChecksWhenEveryProjectionMatchesTheConfiguredBundle()
+    {
+        using var fixture = new ProjectFixture();
+        var workspace = fixture.CreateWorkspace("monica-application");
+        using var service = fixture.CreateService();
+        var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+        var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+        await service.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        var report = await service.GetStatusAsync(cancellationToken: CancellationToken);
+
+        var releaseCheck = Assert.Single(
+            report.Checks, check => check.Id.EndsWith(".release", StringComparison.Ordinal));
+        Assert.Equal(GuideCheckStatus.Ok, releaseCheck.Status);
+    }
+
+    [Fact]
+    public async Task Status_SurfacesWorkspaceManagedInstructionStaleness()
+    {
+        using var fixture = new ProjectFixture();
+        var workspace = fixture.CreateWorkspace("monica-application");
+        using var service = fixture.CreateService();
+        var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+        var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+        await service.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        var agentsFile = Path.Combine(workspace, "AGENTS.md");
+        Assert.True(File.Exists(agentsFile));
+        File.WriteAllText(
+            agentsFile,
+            File.ReadAllText(agentsFile).Replace("Use $monica-application.", "Use nothing.", StringComparison.Ordinal));
+
+        var report = await service.GetStatusAsync(cancellationToken: CancellationToken);
+        var workspaceCheck = Assert.Single(
+            report.Checks, check => check.Id.StartsWith("workspace.", StringComparison.Ordinal));
+        Assert.Equal(GuideCheckStatus.Warning, workspaceCheck.Status);
+        Assert.Contains("stale", workspaceCheck.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class ProjectFixture : IDisposable
     {
         internal const string ApplicationSkill = "monica-application";
@@ -693,6 +768,45 @@ public sealed class GuideProjectInstallTests
             File.WriteAllText(
                 Path.Combine(SkillsRoot, "catalog.json"),
                 JsonSerializer.Serialize(catalog, GuidePlanning.JsonOptions));
+        }
+
+        /// <summary>
+        /// Copies the whole bundle and changes one skill's content and catalog digest, modeling
+        /// a newer release extracted beside the previous one.
+        /// </summary>
+        internal string CreateUpgradedBundle()
+        {
+            var upgradedRoot = Path.Combine(_root, $"upgraded-{Guid.NewGuid():N}");
+            CopyDirectory(BundleRoot, upgradedRoot);
+            var content = Encoding.UTF8.GetBytes($"---\nname: {ApplicationSkill}\ndescription: upgraded\n---\n");
+            File.WriteAllBytes(Path.Combine(upgradedRoot, "skills", ApplicationSkill, "SKILL.md"), content);
+            RewriteCatalogTreeDigest(
+                Path.Combine(upgradedRoot, "skills"), ApplicationSkill, TreeDigest(("SKILL.md", content)));
+            return upgradedRoot;
+        }
+
+        /// <summary>A service whose application directory lives in one specific bundle root.</summary>
+        internal AgentGuideService CreateBundleService(string bundleRoot)
+            => new(
+                Product,
+                EnginePaths,
+                ProductPaths,
+                Runtime,
+                null,
+                Path.Combine(bundleRoot, "app"),
+                static (_, _) => Task.FromResult(false));
+
+        private static void RewriteCatalogTreeDigest(string skillsRoot, string skillName, string treeDigest)
+        {
+            var catalogPath = Path.Combine(skillsRoot, "catalog.json");
+            var catalog = JsonNode.Parse(File.ReadAllText(catalogPath))!;
+            var skills = catalog["skills"]!.AsArray();
+            skills
+                .Single(skill => (string?)skill?["name"] == skillName)!["treeDigest"] = treeDigest;
+            catalog["treeDigest"] = CatalogDigest(skills
+                .Select(skill => (skill!["name"]!.GetValue<string>(), skill!["treeDigest"]!.GetValue<string>()))
+                .ToArray());
+            File.WriteAllText(catalogPath, catalog.ToJsonString(GuidePlanning.JsonOptions));
         }
 
         private static string TreeDigest(params (string Path, byte[] Content)[] files)
