@@ -144,7 +144,8 @@ public sealed class ModuleExceptionHandlingIntegrationTests
             monica.ConfigureTypeDiscovery(options => options
                 .ExcludeDefault()
                 .Add(typeof(ModuleExceptionHandlingIntegrationTests).Assembly));
-            monica.AddExceptionHandling(options => options.IncludeExceptionDetails = includeExceptionDetails);
+            monica.AddExceptionHandling();
+            if (includeExceptionDetails) monica.AddResultEnvelope(options => options.ExposeDiagnosticDetails = true);
         });
 
         var application = builder.Build();

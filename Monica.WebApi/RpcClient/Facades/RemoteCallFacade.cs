@@ -19,6 +19,7 @@ internal sealed class RemoteCallFacade(
     IResultErrorMessageProvider messages,
     IJsonSerializerOptionsProvider serializer,
     IOptions<ModuleRpcClientOption> options,
+    IOptions<ModuleResultEnvelopeOption> envelopeOptions,
     TimeProvider timeProvider,
     ILogger<RemoteCallFacade> logger) : IRemoteCallClient
 {
@@ -47,7 +48,11 @@ internal sealed class RemoteCallFacade(
             stage = "response";
             var result = await decoder.ReadAsync<TResponse>(response, context.Transport, linked.Token);
             linked.Token.ThrowIfCancellationRequested();
-            result.PrepareForPresentation(serializer.SerializerOptions, messages, traceId, context.Service.Name, context.Operation);
+            IdentifyForwardedOrigin(result, context);
+            // Diagnostic hosts keep a downstream's reserved details (for example its metadata.exception stack)
+            // flowing; every other host still strips them at this boundary.
+            result.PrepareForPresentation(serializer.SerializerOptions, messages, traceId, context.Service.Name,
+                context.Operation, exposeReservedDiagnostics: envelopeOptions.Value.ExposeDiagnosticDetails);
             activity.SetStatus(result.IsOk() ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
             return result;
         }
@@ -82,6 +87,17 @@ internal sealed class RemoteCallFacade(
                 exception?.GetType().Name, traceId);
             return TEnvelope.CreateRemoteFailure(failure.Status, messages.GetMessage(error)).SetError(error);
         }
+    }
+
+    private void IdentifyForwardedOrigin<TResponse>(TResponse result, RemoteCallContext context)
+        where TResponse : class, IRemoteResultEnvelope<TResponse>
+    {
+        // A forwarded application failure keeps the origin's own error untouched; only an error that does not
+        // identify its origin gains the immediate dependency so clients can show where the failure came from.
+        if (result.IsOk() || !result.TryGetError(serializer.SerializerOptions, out var forwarded) ||
+            forwarded.Service is not null || forwarded.Operation is not null) return;
+        result.SetError(new ResultError(forwarded.Code, forwarded.TraceId,
+            context.Service.Name, context.Operation, forwarded.Fields));
     }
 
     private static bool HasSerializationFailure(Exception exception)

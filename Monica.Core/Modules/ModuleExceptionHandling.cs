@@ -104,11 +104,6 @@ public class ModuleExceptionHandling : MonicaModule<ModuleExceptionHandlingOptio
                 Monica.Core.Results.Services.ResultHttpProjection.ToMvcResult(context.HttpContext.RequestServices
                     .GetRequiredService<IRequestRejectionFactory>().FromModelState(context).ToResult());
         });
-
-        // Exception details belong to this host's responses only when the host opted in; the envelope module owns
-        // the presentation switch so remote-call boundaries never expose another host's diagnostics.
-        services.PostConfigure<ModuleResultEnvelopeOption>(
-            envelope => envelope.ExposeDiagnosticDetails |= Option.IncludeExceptionDetails);
     }
 }
 
@@ -117,14 +112,6 @@ public class ModuleExceptionHandlingOption : ModuleOptions<ModuleExceptionHandli
     private readonly HashSet<Type> _exceptionMapperTypes = [];
 
     internal IReadOnlyCollection<Type> ExceptionMapperTypes => _exceptionMapperTypes;
-
-    /// <summary>
-    /// Gets or sets whether unhandled-exception responses include technical details (exception type, message,
-    /// stack trace, and request target) under the reserved <c>metadata.exception</c> member. The default is
-    /// <see langword="false"/>. Enable it only on trusted development or test hosts so developers can diagnose
-    /// failures from the response; operator logs always contain the full exception object regardless of this option.
-    /// </summary>
-    public bool IncludeExceptionDetails { get; set; }
 
     /// <summary>
     /// Adds a response mapper that participates in exception-to-envelope conversion.

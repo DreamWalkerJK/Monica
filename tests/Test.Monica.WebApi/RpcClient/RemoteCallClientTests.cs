@@ -93,6 +93,31 @@ public sealed class RemoteCallClientTests
         Assert.DoesNotContain("secret-query", entry);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Invoke_WhenDownstreamCarriesExceptionDetails_ShouldFollowTheHostDiagnosticSwitch(bool expose)
+    {
+        await using var host = await new RpcFactory(exposeDiagnostics: expose)
+            .CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var jsonOptions = host.Services.GetRequiredService<IJsonSerializerOptionsProvider>().SerializerOptions;
+        var downstream = Res.Fail("Safe downstream failure", ResStatus.InternalError)
+            .SetError(new ResultError("domain.failed", "origin-trace"))
+            .SetMetadata("exception", new { stackTrace = "downstream-secret" });
+        using var client = Client((_, _) => Task.FromResult(Response(500, JsonSerializer.Serialize(downstream, jsonOptions))));
+        var result = await Invoke<Res>(host, client);
+        var output = JsonSerializer.Serialize(result);
+
+        Assert.Equal(ResStatus.InternalError, result.Status);
+        if (expose) Assert.Contains("downstream-secret", output);
+        else Assert.DoesNotContain("downstream-secret", output);
+        // A forwarded error that does not identify its origin gains the immediate dependency's identity.
+        var error = Error(host, result);
+        Assert.Equal("Orders", error.Service);
+        Assert.Equal("CreateOrder", error.Operation);
+        Assert.Equal("origin-trace", error.TraceId);
+    }
+
     [Fact]
     public async Task Invoke_WhenReturningTypedErrorAcrossHop_ShouldPreserveOriginAndRemoveDiagnosticMetadata()
     {
@@ -269,12 +294,13 @@ public sealed class RemoteCallClientTests
     }
 
     private sealed class RpcFactory(long maxBytes = 16384, TimeProvider? clock = null, RecordingLogs? logs = null,
-        bool registerClient = false, bool classifier = false)
+        bool registerClient = false, bool classifier = false, bool exposeDiagnostics = false)
         : MonicaTestApplicationFactory<RemoteCallClientTests>
     {
         protected override void ConfigureMonica(IMonicaBuilder builder)
         {
-            builder.AddResultEnvelope().UseResultFieldNames(names => names.Status = "code");
+            builder.AddResultEnvelope(options => options.ExposeDiagnosticDetails = exposeDiagnostics)
+                .UseResultFieldNames(names => names.Status = "code");
             var rpc = builder.AddRpcClient(options => options.MaxResponseBodyBytes = maxBytes)
                 .ConfigDomainInfoProvider(new Domains(registerClient)).ConfigHttpClientRegisterProvider<HttpProvider>();
             if (classifier) rpc.ConfigResponseClassifier<TestProviderClassifier>("test-provider");

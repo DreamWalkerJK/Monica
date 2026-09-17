@@ -17,7 +17,7 @@ internal class ExceptionHandlerService(
     ILogger<ExceptionHandlerService> logger,
     IHttpContextAccessor accessor,
     IEnumerable<IExceptionResponseMapper> mappers,
-    IOptions<ModuleExceptionHandlingOption> options,
+    IOptions<ModuleResultEnvelopeOption> envelopeOptions,
     IJsonSerializerOptionsProvider serializer,
     IResultErrorMessageProvider messages) : IExceptionHandlerService
 {
@@ -29,7 +29,7 @@ internal class ExceptionHandlerService(
         var status = (int)(response.ToHttpStatusCode() ?? System.Net.HttpStatusCode.InternalServerError);
         response.TryGetError(serializer.SerializerOptions, out var error);
         var level = status >= 500 ? LogLevel.Error : LogLevel.Information;
-        // Operator logs always keep the full exception object; the response-detail switch only affects the envelope.
+        // Operator logs always keep the full exception object; the host's diagnostic switch only affects the envelope.
         logger.Log(level, exception,
             "Request failed: {ErrorCode}; HTTP {StatusCode}; exception {ExceptionType}; trace {TraceId}",
             error?.Code, status, exception.GetType().Name, error?.TraceId);
@@ -38,6 +38,7 @@ internal class ExceptionHandlerService(
     public Task<Res> HandleAsync(HttpContext? httpContext, Exception exception, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var exposeDiagnostics = envelopeOptions.Value.ExposeDiagnosticDetails;
         var metadata = new List<KeyValuePair<string, object?>>();
         while (exception is ContextualException contextual)
         {
@@ -58,14 +59,14 @@ internal class ExceptionHandlerService(
                 .WithDetail(display.TechnicalDetail),
             _ => Res.Fail("", ResStatus.InternalError)
         };
-        if (options.Value.IncludeExceptionDetails)
+        if (exposeDiagnostics)
             result.SetMetadata("exception", ExceptionDiagnostics.From(exception, httpContext));
 
         // All mappers pass through the same reserved-metadata policy. Outer context cannot replace an error.
         foreach (var entry in metadata.Where(entry => entry.Key != "error"))
             result.SetMetadata(entry.Key, entry.Value);
         result.PrepareForPresentation(serializer.SerializerOptions, messages, ResultTraceId.Capture(httpContext),
-            exposeReservedDiagnostics: options.Value.IncludeExceptionDetails);
+            exposeReservedDiagnostics: exposeDiagnostics);
         return Task.FromResult(result);
     }
 
