@@ -664,11 +664,7 @@ public sealed partial class EfCoreJobSchedulerStore
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        ValidateIdentity(request.SchedulerScopeKey, nameof(request.SchedulerScopeKey));
-        if (request.MaxCount < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(request), request.MaxCount, "Recovery count must be greater than zero.");
-        }
+        request.Validate();
 
         return WriteAsync(async (dbContext, token) =>
         {
@@ -696,12 +692,36 @@ public sealed partial class EfCoreJobSchedulerStore
                 }
                 else
                 {
-                    execution.State = JobExecutionState.Queued;
-                    execution.AvailableAtUtcTicks = nowTicks;
                     execution.LeaseLossCount++;
+                    // The template snapshot carries the immutable retry and timeout budget the recovery enforces;
+                    // the worker-side timeout timer alone must never decide an over-budget attempt's fate.
+                    var template = Deserialize<JobExecutionTemplate>(execution.TemplateJson);
+                    var outcome = request.ResolveOutcome(
+                        now,
+                        FromTicks(execution.StartedAtUtcTicks),
+                        template.MaxExecutionTimeout,
+                        execution.LeaseLossCount,
+                        execution.RetryAttempt,
+                        template.RetryCount);
+                    execution.State = outcome.NewState;
+                    if (outcome.ConsumesRetryAttempt)
+                    {
+                        execution.RetryAttempt++;
+                    }
+
+                    if (outcome.AvailableAtUtc is { } availableAtUtc)
+                    {
+                        execution.AvailableAtUtcTicks = ToTicks(availableAtUtc);
+                    }
+
+                    if (outcome.NewState == JobExecutionState.Failed)
+                    {
+                        execution.CompletedAtUtcTicks = nowTicks;
+                    }
+
                     AddHistory(execution, now, JobExecutionHistoryKind.StateTransition,
-                        "Expired execution lease recovered", worker,
-                        JobExecutionState.Running, JobExecutionState.Queued);
+                        outcome.HistoryMessage, worker,
+                        JobExecutionState.Running, outcome.NewState, outcome.HistoryLogLevel);
                 }
                 ClearExecutionLease(execution);
                 execution.ConcurrencyToken = NewVersion();

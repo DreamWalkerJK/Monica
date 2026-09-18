@@ -110,6 +110,12 @@ public sealed class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
                 $"{nameof(options.MaxExpiredLeaseRecoveriesPerCycle)} must be greater than zero.");
         }
 
+        if (options.MaxLeaseLossesBeforeFailure < 1)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(options.MaxLeaseLossesBeforeFailure)} must be greater than zero.");
+        }
+
         if (options.MaxExecutionHistoryEntriesPerExecution < 1)
         {
             throw new InvalidOperationException(
@@ -480,6 +486,16 @@ public sealed class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
     /// Gets or sets the maximum expired execution leases recovered per scheduling cycle. The default is 100.
     /// </summary>
     public int MaxExpiredLeaseRecoveriesPerCycle { get; set; } = 100;
+
+    /// <summary>
+    /// Gets or sets the maximum number of expired-lease recoveries one execution may accumulate before the
+    /// scheduling plane records a failed attempt instead of requeueing it again. Recoveries also fail an
+    /// execution immediately when its expired attempt already exceeded the declaration's
+    /// <c>MaxExecutionTimeout</c>, regardless of this budget. Raise the value only for workers whose leases are
+    /// expected to expire benignly (for example frequent rolling restarts); lower it to stop repeated re-execution
+    /// of work that cannot hold a lease. The default is 5.
+    /// </summary>
+    public int MaxLeaseLossesBeforeFailure { get; set; } = 5;
 
     /// <summary>
     /// Gets or sets whether terminal execution history is periodically trimmed according to active job policies. The

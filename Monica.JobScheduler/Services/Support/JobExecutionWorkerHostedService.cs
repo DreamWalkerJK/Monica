@@ -323,7 +323,8 @@ internal sealed class JobExecutionWorkerHostedService(
                                          && result.Outcome == JobAttemptOutcome.Cancelled;
         if (shutdownCancelledExecution)
         {
-            await store.ReleaseLeaseAsync(lease.LeaseKey, CancellationToken.None);
+            var release = await store.ReleaseLeaseAsync(lease.LeaseKey, CancellationToken.None);
+            WarnDiscardedOutcome(release.Status, lease.Execution.InstanceId, "shutdown release");
             return;
         }
 
@@ -335,13 +336,29 @@ internal sealed class JobExecutionWorkerHostedService(
         var message = timedOut
             ? $"Execution timed out after {lease.Execution.Template.MaxExecutionTimeout}"
             : result.Message;
-        await store.CompleteAttemptAsync(new JobAttemptCompletion
+        var completion = await store.CompleteAttemptAsync(new JobAttemptCompletion
         {
             LeaseKey = lease.LeaseKey,
             Outcome = outcome,
             Message = message,
             RetryDelay = _options.ExecutionRetryDelay
         }, CancellationToken.None);
+        WarnDiscardedOutcome(completion.Status, lease.Execution.InstanceId, $"attempt outcome '{outcome}'");
+    }
+
+    private void WarnDiscardedOutcome(JobAttemptCompletionStatus status, string instanceId, string discarded)
+    {
+        // A lost completion means the scheduling plane already recovered the expired lease; this log is the only
+        // local trace of an attempt outcome that will never reach the durable history.
+        if (status != JobAttemptCompletionStatus.Lost)
+        {
+            return;
+        }
+
+        logger.LogWarning(
+            "Execution {InstanceId} {Discarded} was discarded because its lease was already recovered by another host",
+            instanceId,
+            discarded);
     }
 
     private async Task<JobAttemptResult> ObserveExecutionTaskAsync(

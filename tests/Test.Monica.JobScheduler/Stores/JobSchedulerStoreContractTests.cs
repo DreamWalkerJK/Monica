@@ -385,6 +385,123 @@ public sealed class JobSchedulerStoreContractTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task ExpiredLeaseRecovery_ShouldFailExpiredAttemptThatExceededItsTimeout(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.beta"));
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: "timeout-exec");
+        var lease = (await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"])).Single();
+
+        // The declaration's timeout is five minutes; the expired lease is discovered well past it.
+        fixture.Time.Advance(TimeSpan.FromMinutes(6));
+        var recovered = await fixture.Store.RecoverExpiredLeasesAsync(new ExpiredLeaseRecoveryRequest
+        {
+            SchedulerScopeKey = fixture.Scope,
+            MaxCount = 10
+        }, TestContext.Current.CancellationToken);
+        recovered.Should().ContainSingle();
+
+        var execution = (await fixture.Store.GetExecutionAsync(fixture.Scope, "timeout-exec", TestContext.Current.CancellationToken))!;
+        execution.State.Should().Be(JobExecutionState.Failed);
+        execution.RetryAttempt.Should().Be(1);
+        execution.LeaseLossCount.Should().Be(1);
+        execution.CompletedAtUtc.Should().NotBeNull();
+        execution.History.Should().Contain(entry =>
+            entry.NewState == JobExecutionState.Failed
+            && entry.Message.Contains("MaxExecutionTimeout"));
+
+        // The terminal outcome fences the expired lease instead of requeueing it for another attempt.
+        (await fixture.Store.RenewLeaseAsync(lease.LeaseKey, TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken)).Status
+            .Should().Be(JobLeaseRenewalStatus.Lost);
+        (await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"])).Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExpiredLeaseRecovery_ShouldConsumeRetryBudgetWhenExpiredAttemptExceededItsTimeout(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(
+            StoreFixture.OWNER_A,
+            StoreFixture.TriggeredDeclaration("jobs.beta") with { RetryCount = 1 });
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: "timeout-retry-exec");
+        await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"]);
+
+        fixture.Time.Advance(TimeSpan.FromMinutes(6));
+        await fixture.Store.RecoverExpiredLeasesAsync(new ExpiredLeaseRecoveryRequest
+        {
+            SchedulerScopeKey = fixture.Scope,
+            MaxCount = 10,
+            RetryDelay = TimeSpan.FromSeconds(5)
+        }, TestContext.Current.CancellationToken);
+
+        var retried = (await fixture.Store.GetExecutionAsync(fixture.Scope, "timeout-retry-exec", TestContext.Current.CancellationToken))!;
+        retried.State.Should().Be(JobExecutionState.Queued);
+        retried.RetryAttempt.Should().Be(1);
+        retried.AvailableAtUtc.Should().Be(NOW.AddMinutes(6).AddSeconds(5));
+
+        // The retry attempt claims fresh timeout budget, exceeds it, and exhausts the one-retry policy.
+        fixture.Time.Advance(TimeSpan.FromSeconds(5));
+        (await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"])).Single();
+        fixture.Time.Advance(TimeSpan.FromMinutes(6));
+        await fixture.Store.RecoverExpiredLeasesAsync(new ExpiredLeaseRecoveryRequest
+        {
+            SchedulerScopeKey = fixture.Scope,
+            MaxCount = 10
+        }, TestContext.Current.CancellationToken);
+
+        var exhausted = (await fixture.Store.GetExecutionAsync(fixture.Scope, "timeout-retry-exec", TestContext.Current.CancellationToken))!;
+        exhausted.State.Should().Be(JobExecutionState.Failed);
+        exhausted.RetryAttempt.Should().Be(2);
+        exhausted.CompletedAtUtc.Should().NotBeNull();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExpiredLeaseRecovery_ShouldFailExecutionThatExhaustedItsLeaseLossBudget(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        // A one-hour timeout keeps every recovery well inside the attempt's execution budget.
+        await fixture.SyncAsync(
+            StoreFixture.OWNER_A,
+            StoreFixture.TriggeredDeclaration("jobs.beta") with { MaxExecutionTimeout = TimeSpan.FromHours(1) });
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: "loss-budget-exec");
+
+        for (var loss = 1; loss <= 3; loss++)
+        {
+            await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"]);
+            fixture.Time.Advance(TimeSpan.FromSeconds(31));
+            await fixture.Store.RecoverExpiredLeasesAsync(new ExpiredLeaseRecoveryRequest
+            {
+                SchedulerScopeKey = fixture.Scope,
+                MaxCount = 10,
+                MaxLeaseLossesBeforeFailure = 3
+            }, TestContext.Current.CancellationToken);
+
+            var execution = (await fixture.Store.GetExecutionAsync(fixture.Scope, "loss-budget-exec", TestContext.Current.CancellationToken))!;
+            execution.LeaseLossCount.Should().Be(loss);
+            if (loss < 3)
+            {
+                // Benign lease losses inside the budget still requeue without consuming retry policy.
+                execution.State.Should().Be(JobExecutionState.Queued);
+                execution.RetryAttempt.Should().Be(0);
+            }
+            else
+            {
+                execution.State.Should().Be(JobExecutionState.Failed);
+                execution.CompletedAtUtc.Should().NotBeNull();
+                execution.History.Should().Contain(entry =>
+                    entry.NewState == JobExecutionState.Failed
+                    && entry.Message.Contains("lost leases"));
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task RecurringSynchronization_ShouldCreateProspectivelyAndRemoveStaleCursors(bool useEfCore)
     {
         await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);

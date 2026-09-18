@@ -623,14 +623,7 @@ public sealed partial class InMemoryJobSchedulerStore
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        JobSchedulerIdentity.ValidateStandard(request.SchedulerScopeKey, nameof(request.SchedulerScopeKey));
-        if (request.MaxCount < 1)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(request),
-                request.MaxCount,
-                "Recovery count must be greater than zero.");
-        }
+        request.Validate();
 
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
@@ -667,15 +660,39 @@ public sealed partial class InMemoryJobSchedulerStore
                 }
                 else
                 {
-                    execution.State = JobExecutionState.Queued;
-                    execution.AvailableAtUtc = now;
                     execution.LeaseLossCount++;
+                    // The recovery shares the timeout and retry policy resolution with the EF Core store so both
+                    // providers fail over-budget attempts identically.
+                    var outcome = request.ResolveOutcome(
+                        now,
+                        execution.StartedAtUtc,
+                        execution.Template.MaxExecutionTimeout,
+                        execution.LeaseLossCount,
+                        execution.RetryAttempt,
+                        execution.Template.RetryCount);
+                    execution.State = outcome.NewState;
+                    if (outcome.ConsumesRetryAttempt)
+                    {
+                        execution.RetryAttempt++;
+                    }
+
+                    if (outcome.AvailableAtUtc is { } availableAtUtc)
+                    {
+                        execution.AvailableAtUtc = availableAtUtc;
+                    }
+
+                    if (outcome.NewState == JobExecutionState.Failed)
+                    {
+                        execution.CompletedAtUtc = now;
+                    }
+
                     AddHistory(execution, Transition(
                         now,
                         JobExecutionState.Running,
-                        JobExecutionState.Queued,
-                        "Expired execution lease recovered",
-                        workerInstanceId));
+                        outcome.NewState,
+                        outcome.HistoryMessage,
+                        workerInstanceId,
+                        outcome.HistoryLogLevel));
                 }
 
                 ClearExecutionLeaseUnsafe(execution);
