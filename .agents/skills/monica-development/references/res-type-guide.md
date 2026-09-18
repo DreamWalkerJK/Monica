@@ -211,7 +211,7 @@ public class UserUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get user {UserId}", id);
-            return Res.Fail($"Failed to get user: {ex.Message}");
+            return Res.Fail("Unable to load the user.", ResStatus.InternalError);
         }
     }
 }
@@ -221,10 +221,24 @@ public class UserUIService(
 
 1. **Use at intentional result-envelope boundaries** — Facades return `Res`; internal services use standard returns + exceptions
 2. **Never return null** - Always return `Res.Fail()` or `Res.Ok()`
-3. **Catch exceptions** - Return `Res.Fail()` with meaningful error messages
+3. **Handle exceptions deliberately** - Let unexpected defects reach the host handler; an intentionally handled exception gets a safe public message and separate operator diagnostics
 4. **Use implicit conversions** - Makes code cleaner and more readable
 5. **Include using statement** - `using Monica.Core.Results;`
-6. **Attach structured error payloads** - use `AppendMetadata("error", payload)` when extra error detail is needed
+6. **Use the reserved error contract** - use `SetError(new ResultError(code, traceId, ...))`; `metadata.error` must never contain a legacy exception or validation object
+7. **Check remote data explicitly** - `IsOk` means 200 or 201, including an empty success; it does not prove that data exists. Use nullable payload types when absence is allowed.
+8. **Use standard statuses with reason codes** - `ResStatus` is the closed whitelist of supported transport outcomes mapping one-to-one to HTTP statuses; the synthetic 451/452/453/460 values are removed. Express semantics with `ResultErrorCodes` reason codes (`validation.failed`, `auth.access_token_expired`, `operation.confirmation_required`, ...), never with custom numbers.
+
+## Public Errors and Remote Calls
+
+The host projects failures through `ResultError` with a stable `Code`, a nonempty origin `TraceId`, optional logical `Service`/`Operation`, and bounded request field errors. The `metadata.error` key has one shape per deployment unit; migrate all producers together.
+
+Use `GetResponse()` for Minimal APIs and `GetResponse(controller)` for explicit MVC results. The shared projection preserves application data and public metadata, fills missing failure presentation, and removes reserved diagnostic metadata (`request`, `response`, `originResponse`, `exception`, `deserializationError`, `detail`, `chain`, `chain_error`, and `remoteService`, including numbered variants). `WithDetail` is for in-process use. `ModuleResultEnvelopeOption.ExposeDiagnosticDetails` is the single host diagnostic switch: enabled hosts keep reserved diagnostics in responses, forward them across remote calls, produce `metadata.exception` for unhandled exceptions, and attach the SQL call chain; every other host strips them at each boundary.
+
+The call chain correlates remote calls for every outcome because it is the debugging channel when no distributed-tracing infrastructure exists. The remote-call boundary stamps the target service identity (`metadata.remoteService`, for example the Dapr app id) onto every returned envelope, and `IChainTracing.MergeRemoteChain` records it on the call node with the downstream's correlation trace id (`RemoteTraceId`) for successful and failed calls alike; failed calls additionally keep the error's `code`/`service`/`operation`. Configure `ModuleChainTracingOption.ServiceName` (for example the Dapr app id) so the chain root labels the recording host and forwarded responses carrying multiple chains stay self-describing. Responses built from unhandled exceptions carry the same members: the chain-tracing module implements `IExceptionResponseDiagnostics` and recovers the request chain from `HttpContext` items, because AsyncLocal mutations made downstream do not flow back to the exception handler on unwind. The EF command interceptor aggregates repeated commands of the same shape inside one scope onto one node with a repeat count, so batch inserts of tens of thousands of rows cannot balloon the chain or the diagnostic response.
+
+Use `IRemoteCallClient` for custom forwarding and generated clients for declared RPC contracts. The call boundary owns the request and response, bounds decoded response bytes, and times request creation, sending, and body reads together. It preserves valid remote application failures, including 500, only when envelope and HTTP status agree. It propagates caller cancellation and local defects. Provider classification is selected explicitly by transport; message prose never determines classification.
+
+Downstream 429 uses `dependency.rate_limited` with a validated `Retry-After` in the diagnostic event. A timeout or rate limit does not establish whether a command executed; the boundary never retries automatically.
 
 ## API Response Integration
 

@@ -41,15 +41,13 @@ public class AspNetCoreExceptionHandler(IExceptionHandlerService handler) : IExc
             await httpContext.Response.WriteAsync(payload, cancellationToken);
             return true;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception writeException)
         {
             var logger = httpContext.RequestServices.GetRequiredService<ILogger<AspNetCoreExceptionHandler>>();
             logger.LogError(
-                writeException,
-                "Failed to serialize the exception response payload for {Path}. Original exception: {OriginalExceptionType}: {OriginalExceptionMessage}",
-                httpContext.Request.Path,
-                originalException.GetType().FullName,
-                originalException.Message);
+                "Failed to serialize an exception response: {ExceptionType}; original {OriginalExceptionType}; trace {TraceId}",
+                writeException.GetType().Name, originalException.GetType().Name, ResultTraceId.Capture(httpContext));
 
             if (httpContext.Response.HasStarted)
             {
@@ -62,7 +60,7 @@ public class AspNetCoreExceptionHandler(IExceptionHandlerService handler) : IExc
 
             var fallbackResponse = Res.Fail(
                 "An unexpected server error occurred.",
-                ResStatus.InternalError);
+                ResStatus.InternalError).SetError(new ResultError(ResultErrorCodes.UnexpectedError, ResultTraceId.Capture(httpContext)));
 
             var fallback = JsonSerializer.Serialize(fallbackResponse, serializerOptions);
 

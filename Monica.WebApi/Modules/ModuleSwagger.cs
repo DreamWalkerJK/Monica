@@ -14,6 +14,9 @@ namespace Monica.Modules;
 
 public class ModuleSwagger : MonicaModule<ModuleSwaggerOption>, IWebHostRequiredModule
 {
+    /// <inheritdoc />
+    public override void Describe(ModuleDescriptor module) =>
+        module.Require<ModuleResultEnvelope, ModuleResultEnvelopeOption>();
     private SwaggerDocumentCatalog? _documentCatalog;
 
     public override void ConfigureApplicationBuilder(WebModuleContext<ModuleSwaggerOption> context)
@@ -33,6 +36,8 @@ public class ModuleSwagger : MonicaModule<ModuleSwaggerOption>, IWebHostRequired
     {
         context.Services.AddSwaggerGen(swaggerGenOptions =>
         {
+            swaggerGenOptions.SchemaFilter<ResultEnvelopeSchemaFilter>();
+            swaggerGenOptions.OperationFilter<ResultEnvelopeOperationFilter>();
             SwaggerGenOptionConfigurator.Configure(
                 swaggerGenOptions,
                 Option,

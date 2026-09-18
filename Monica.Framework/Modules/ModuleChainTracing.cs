@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
+using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.Execution;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -13,6 +14,7 @@ using Monica.Framework.ChainTracing.Providers.Execution;
 using Monica.Framework.ChainTracing.Providers.EntityFrameworkCore;
 using Monica.Framework.ChainTracing.Providers.Rpc;
 using Monica.Framework.ChainTracing.Services;
+using Monica.Framework.ChainTracing.Services.Support;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -81,13 +83,21 @@ public static class ModuleChainTracingRegistrationExtensions
     }
 
     /// <summary>
-    /// Attaches completed chain-trace metadata to controller result envelopes.
+    /// Completes controller tracing and attaches a trace identifier to result envelopes. Full chain data stays in operator diagnostics.
+    /// Also attaches the same members to exception-built responses, so unhandled failures keep their call chain.
     /// </summary>
     public static ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> AttachControllerTraceMetadata(
         this ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> module)
     {
+        module.Require<ModuleExceptionHandling, ModuleExceptionHandlingOption>();
         module.Require<ModuleControllers, ModuleControllersOption>()
             .ConfigMvcOption(options => options.Filters.Add<ChainTracingResultMetadataActionFilter>());
+        module.ConfigureServices(context =>
+        {
+            context.Services.TryAddSingleton<ChainResultMetadataAttacher>();
+            context.Services.TryAddSingleton<ExceptionResponseChainDiagnostics>();
+            context.Services.TryAddSingleton<IExceptionResponseDiagnostics, ExceptionResponseChainDiagnostics>();
+        });
         return module;
     }
 
@@ -101,7 +111,7 @@ public static class ModuleChainTracingRegistrationExtensions
     }
 
     /// <summary>
-    /// Enables RPC response tracing middleware.
+    /// Enables actor invocation tracing without buffering or rewriting response bodies.
     /// </summary>
     public static ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> UseRpcTracing(this ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> module)
     {
@@ -134,4 +144,11 @@ public class ModuleChainTracingOption : ModuleOptions<ModuleChainTracing>
     /// Maximum node count to avoid unbounded memory growth.
     /// </summary>
     public int MaxNodeCount { get; set; } = 1000;
+
+    /// <summary>
+    /// Service identity (for example the Dapr app id) of this host. When set, the root node of every chain
+    /// carries it, so debug output that aggregates several hosts (a forwarded response) shows which service
+    /// recorded each chain. Leave empty for single-process hosts where the origin is obvious.
+    /// </summary>
+    public string? ServiceName { get; set; }
 }
