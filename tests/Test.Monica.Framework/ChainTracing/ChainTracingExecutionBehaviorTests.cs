@@ -169,19 +169,12 @@ public sealed class ChainTracingExecutionBehaviorTests
             return _containsTrace && traceId == TRACE_ID;
         }
 
-        public void RecordTrace(
-            string operation,
-            string? handler,
-            bool success = true,
-            string? result = null,
-            TimeSpan? duration = null,
-            object? extraInfo = null,
-            EChainTracingType type = EChainTracingType.Unknown)
+        public ChainTraceContext? GetCurrentChain()
         {
-            throw new NotSupportedException();
+            return null;
         }
 
-        public ChainTraceContext? GetCurrentChain()
+        public ChainTraceNode? GetCurrentNode()
         {
             return null;
         }

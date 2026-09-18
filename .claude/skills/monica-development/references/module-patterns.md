@@ -103,7 +103,7 @@ public class {Name}Facade(
         catch (Exception ex)
         {
             logger.LogError(ex, "Operation failed");
-            return Res.Fail($"Operation failed: {ex.Message}");
+            return Res.Fail("The operation could not be completed.", ResStatus.InternalError);
         }
     }
 }

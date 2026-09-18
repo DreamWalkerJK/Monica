@@ -3,7 +3,7 @@ using System.Dynamic;
 using System.Net;
 using System.Text;
 using Monica.Core.Results.Abstractions;
-using Monica.Core.Results.Models.Internal;
+
 using Monica.Tool.Extensions;
 // ReSharper disable once CheckNamespace
 namespace Monica.Core.Results;
@@ -11,92 +11,29 @@ namespace Monica.Core.Results;
 public static class ResultExtensions
 {
     /// <summary>
-    /// Get the HttpStatusCode corresponding to the response code
+    /// Get the HttpStatusCode corresponding to the response status. Every supported status maps one-to-one;
+    /// values outside the <see cref="ResStatus"/> whitelist are local contract defects.
     /// </summary>
-    /// <returns></returns>
     public static HttpStatusCode? ToHttpStatusCode(this IResultEnvelope? response)
     {
         if (response == null) return null;
-        switch (response.Status)
-        {
-            case ResStatus.Ok:
-                return HttpStatusCode.OK;
-
-            case ResStatus.Created:
-                return HttpStatusCode.Created;
-
-            case ResStatus.NotFound:
-                return HttpStatusCode.NotFound;
-
-            case ResStatus.Conflict:
-                return HttpStatusCode.Conflict;
-
-            case ResStatus.Unauthorized:
-            case ResStatus.RefreshTokenExpired:
-            case ResStatus.AccessTokenExpired:
-                return HttpStatusCode.Unauthorized;
-
-
-            case ResStatus.Forbidden:
-                return HttpStatusCode.Forbidden;
-
-
-            case ResStatus.ValidateError:
-            case ResStatus.ErrorWarning:
-            case ResStatus.BadRequest:
-                return HttpStatusCode.BadRequest;
-
-            case ResStatus.PayloadTooLarge:
-                return HttpStatusCode.RequestEntityTooLarge;
-
-            case ResStatus.UnsupportedMediaType:
-                return HttpStatusCode.UnsupportedMediaType;
-
-
-            case ResStatus.InternalError:
-                return HttpStatusCode.InternalServerError;
-
-
-            case ResStatus.Unknown:
-                return null;
-            default:
-                throw new ArgumentOutOfRangeException(response.ToString(), $"No HTTP status code mapping is defined for status {response.Status}.");
-        }
+        if (response.Status == ResStatus.Unknown) return null;
+        return Enum.IsDefined(response.Status)
+            ? (HttpStatusCode)response.Status
+            : throw new ArgumentOutOfRangeException(response.ToString(),
+                $"No HTTP status code mapping is defined for status {response.Status}.");
     }
 
     /// <summary>
-    /// [500] It needs to be checked after the microservice is called. If it is False, it should be an error in the service call and needs to be recorded in the microservice call log. Interface call exceptions are automatically AOPed by Mediator and logged by try catch.
+    ///  [200/201] indicates successful processing; success does not guarantee non-null Data.
     /// </summary>
-    public static bool IsRemoteResultHealthy(this IResultEnvelope res) =>
-        res.Status != ResStatus.InternalError && !IsMalformed(res);
+    public static bool IsOk(this IResultEnvelope res) => res.Status is ResStatus.Ok or ResStatus.Created;
 
     /// <summary>
-    ///  [200] means the request is processed normally
-    /// </summary>
-    public static bool IsOk(this IResultEnvelope res) => res.Status == ResStatus.Ok;
-
-    /// <summary>
-    /// Request results from remote call Automatically validate and append information
-    /// </summary>
-    /// <param name="res"></param>
-    /// <param name="originInfo">HTTP and other original responses</param>
-    /// <returns></returns>
-    public static void AttachOriginIfMalformed(this IResultEnvelope res, string originInfo)
-    {
-        if (IsMalformed(res))
-        {
-            res.AppendMetadata(
-                ResultEnvelopeMetadataKeys.OriginResponse,
-                ResultEnvelopeHttpResponseInfo.FromRawContent(originInfo));
-        }
-    }
-
-    /// <summary>
-    ///  It is not a valid request, which means that the return value may not comply with this specification. You should pay attention to this situation and handle it specially.
+    /// Indicates an uninitialized envelope. Remote responses require the fuller wire-contract validation performed by the RPC boundary.
     /// </summary>
     public static bool IsMalformed(this IResultEnvelope res)
     {
-        //TODO needs to judge Res<T> when OK Data = null There is a specification issue
         return res.Status == ResStatus.Unknown;
     }
     /// <summary>
@@ -125,19 +62,18 @@ public static class ResultExtensions
     }
 
     /// <summary>
-    /// Adds technical detail to <c>metadata.detail</c> while keeping <see cref="IResultEnvelope.Message"/>
-    /// reserved for user-facing text.
+    /// Adds in-process technical detail. HTTP and remote-call presentation remove this reserved member;
+    /// record diagnostics through the host's logger when operators need to retain them.
     /// </summary>
     /// <param name="res">The result envelope to enrich.</param>
-    /// <param name="detail">Technical detail intended for API callers, operations, or developers.</param>
+    /// <param name="detail">Technical detail for local consumers, never a public response contract.</param>
     public static T WithDetail<T>(this T res, object? detail) where T : IResultEnvelope
     {
         return detail is null ? res : res.SetMetadata("detail", detail);
     }
 
     /// <summary>
-    /// Adds formatted technical detail to <c>metadata.detail</c> while keeping
-    /// <see cref="IResultEnvelope.Message"/> reserved for user-facing text.
+    /// Adds formatted in-process detail that is removed at HTTP and remote-call presentation boundaries.
     /// </summary>
     /// <param name="res">The result envelope to enrich.</param>
     /// <param name="format">Composite format string for technical detail.</param>
@@ -151,7 +87,7 @@ public static class ResultExtensions
     }
 
     /// <summary>
-    /// [not 200] indicates a problem with the request
+    /// Indicates an unsuccessful status (anything other than 200 or 201).
     /// </summary>
     public static bool IsFailed<T>(this Res<T> res, [NotNullWhen(true)] out Res? error, [MaybeNullWhen(true)]out T data)
     {
@@ -161,7 +97,7 @@ public static class ResultExtensions
         return true;
     }
     /// <summary>
-    /// [not 200] indicates a problem with the request
+    /// Indicates an unsuccessful status (anything other than 200 or 201).
     /// </summary>
     public static bool IsFailed<T>(this Res<T> res, [NotNullWhen(true)] out Res? error)
     {
@@ -171,7 +107,7 @@ public static class ResultExtensions
         return true;
     }
     /// <summary>
-    /// [not 200] indicates a problem with the request
+    /// Indicates an unsuccessful status (anything other than 200 or 201).
     /// </summary>
     public static bool IsFailed<T>(this Res<T?> res, [NotNullWhen(true)] out Res? error, out T? data) where T : struct
     {
@@ -181,7 +117,7 @@ public static class ResultExtensions
         return true;
     }
     /// <summary>
-    /// [not 200] indicates a problem with the request
+    /// Indicates an unsuccessful status (anything other than 200 or 201).
     /// </summary>
     public static bool IsFailed<T>(this Res<T?> res, [NotNullWhen(true)] out Res? error) where T : struct
     {
@@ -191,7 +127,7 @@ public static class ResultExtensions
         return true;
     }
     /// <summary>
-    /// [not 200] indicates a problem with the request
+    /// Indicates an unsuccessful status (anything other than 200 or 201).
     /// </summary>
     public static bool IsFailed(this Res res, [NotNullWhen(true)] out Res? error)
     {
@@ -202,7 +138,7 @@ public static class ResultExtensions
     }
 
     /// <summary>
-    /// [not 200] indicates a problem with the request
+    /// Indicates an unsuccessful status (anything other than 200 or 201).
     /// </summary>
     public static bool IsFailed<T>(this ResPaged<T> res, [NotNullWhen(true)] out Res? error, out ResPaged<T>.PageData data)
     {
@@ -213,7 +149,7 @@ public static class ResultExtensions
     }
 
     /// <summary>
-    /// [not 200] indicates a problem with the request
+    /// Indicates an unsuccessful status (anything other than 200 or 201).
     /// </summary>
     public static bool IsFailed<T>(this ResPaged<T> res, [NotNullWhen(true)] out Res? error)
     {
@@ -224,7 +160,7 @@ public static class ResultExtensions
     }
 
     /// <summary>
-    /// [200] means the request is processed normally
+    /// [200/201] indicates successful processing; success does not guarantee non-null Data.
     /// </summary>
     public static bool IsOk<T>(this ResPaged<T> res, out ResPaged<T>.PageData data)
     {
@@ -232,7 +168,7 @@ public static class ResultExtensions
         return res.IsOk();
     }
     /// <summary>
-    /// [200] means the request is processed normally
+    /// [200/201] indicates successful processing; success does not guarantee non-null Data.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="res"></param>
@@ -245,7 +181,7 @@ public static class ResultExtensions
     }
 
     /// <summary>
-    /// [200] means the request is processed normally
+    /// [200/201] indicates successful processing; success does not guarantee non-null Data.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="res"></param>

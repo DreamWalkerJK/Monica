@@ -17,5 +17,5 @@ public static class ResultMinimalApiExtensions
     /// <returns>The Minimal API result.</returns>
     public static IResult GetResponse<T>(this T response)
         where T : IResultEnvelope
-        => ResultEnvelopeProvider.ToMinimalApiResult(response);
+        => ResultHttpProjection.ToMinimalApiResult(response);
 }

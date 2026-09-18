@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.Results;
@@ -9,7 +8,7 @@ namespace Monica.Core.ExceptionHandling.Services;
 /// <summary>
 /// Converts ASP.NET Core request-binding failures into the standard Monica response envelope.
 /// </summary>
-internal sealed class BadHttpRequestExceptionMapper : IExceptionResponseMapper
+internal sealed class BadHttpRequestExceptionMapper(IRequestRejectionFactory rejections) : IExceptionResponseMapper
 {
     public bool TryMap(
         HttpContext? httpContext,
@@ -23,20 +22,7 @@ internal sealed class BadHttpRequestExceptionMapper : IExceptionResponseMapper
             return false;
         }
 
-        var detail = badRequestException.InnerException is JsonException jsonException
-            ? jsonException.Message
-            : badRequestException.Message;
-        response = Res.Fail($"The request is invalid: {detail}", MapStatus(badRequestException.StatusCode));
+        response = rejections.FromBadRequest(httpContext, badRequestException).ToResult();
         return true;
-    }
-
-    private static ResStatus MapStatus(int statusCode)
-    {
-        return statusCode switch
-        {
-            StatusCodes.Status413PayloadTooLarge => ResStatus.PayloadTooLarge,
-            StatusCodes.Status415UnsupportedMediaType => ResStatus.UnsupportedMediaType,
-            _ => ResStatus.BadRequest
-        };
     }
 }

@@ -32,32 +32,29 @@ internal class AuthorizationExceptionMapper(AuthorityMessageLocalizer authorityL
                 response = ResultsAuthorization.RefreshTokenExpired(authorityLocalizer);
                 return true;
 
-            case AuthorizationException { Type: AuthorizationException.ExceptionType.AccessTokenExpired } e:
-                response = ResultsAuthorization.AccessTokenExpired(authorityLocalizer, e.Reason);
+            case AuthorizationException { Type: AuthorizationException.ExceptionType.AccessTokenExpired }:
+                response = ResultsAuthorization.AccessTokenExpired(authorityLocalizer);
                 return true;
 
-            case SecurityTokenExpiredException expired:
-                response = ResultsAuthorization.AccessTokenExpired(authorityLocalizer, expired.Message);
+            case SecurityTokenExpiredException:
+                response = ResultsAuthorization.AccessTokenExpired(authorityLocalizer);
                 return true;
 
             case AuthorizationException authorizationException:
             {
-                var problemDetail = new ProblemDetails { Title = authorizationException.Reason };
                 response = Res.Fail(
                         authorizationException.GetTitle(authorityLocalizer),
                         ResStatus.Forbidden)
-                    .AppendMetadata("error", problemDetail);
+                    .SetError(new ResultError(ResultErrorCodes.Forbidden, ResultTraceId.Capture(httpContext)));
                 return true;
             }
 
             case SecurityTokenArgumentException tokenMalformedException:
-                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResStatus.Unauthorized).AppendMetadata("detail",
-                    tokenMalformedException.Message);
+                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResStatus.Unauthorized);
                 return true;
 
             case SecurityTokenException:
-                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResStatus.Unauthorized).AppendMetadata("detail",
-                    exception.Message);
+                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResStatus.Unauthorized);
                 return true;
 
             default:

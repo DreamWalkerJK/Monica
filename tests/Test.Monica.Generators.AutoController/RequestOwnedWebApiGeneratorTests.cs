@@ -33,10 +33,11 @@ public sealed class RequestOwnedWebApiGeneratorTests
 
         run.OutputErrors.Should().BeEmpty();
         var httpClient = run.GeneratedSources["HttpOrderingCommandApi.g.cs"];
-        httpClient.Should().Contain("var requestUri = CreateRequestUri(request,");
-        httpClient.Should().Contain("httpRequest.Content = CreateJsonRequestContent(request);");
+        httpClient.Should().Contain("CreateHttpRequest(request,");
+        httpClient.Should().Contain("includeBody: true");
         httpClient.Should().NotContain("HttpApiRequestExtensions.BuildApiRequestUri");
         httpClient.Should().NotContain("JsonContent.Create");
+        httpClient.Should().Contain("ExecuteAsync<").And.Contain("RemoteCallContext(serviceDescriptor");
     }
 
     [Fact]
