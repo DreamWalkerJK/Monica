@@ -160,7 +160,7 @@ FIPS Aspire installs a global resilience handler with a retry and a longer timeo
 
 Only UTF-8 JSON media types (`application/json` and `+json`) are accepted. gzip, deflate, and Brotli are decoded before applying the byte limit. The JSON document is parsed once and deserialized with the host's canonical options.
 
-The canonical status and message members must each appear once. Status must be a defined nonzero numeric value; message must be a string or null. Payloads must deserialize to the declared type, and any existing reserved error must satisfy the typed contract.
+The canonical status member must appear exactly once and be a defined nonzero numeric value. A successful 200/201 envelope may omit its null message under the host's JSON ignore policy; when present, the message must appear exactly once and be a string or null. Failure envelopes still require a message member. HTTP and envelope statuses must agree even when a success message is omitted. Payloads must deserialize to the declared type, and any existing reserved error must satisfy the typed contract.
 
 A valid envelope takes precedence over provider classification, including a valid application 500. A contradictory envelope never becomes success. Dapr classification is enabled by explicit transport selection and recognizes structured `ERR_DIRECT_INVOKE`; English error text is not evidence.
 
