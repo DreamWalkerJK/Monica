@@ -7,13 +7,19 @@ namespace Monica.Core.Results;
 public static class ResultPresentationExtensions
 {
     private static readonly string[] DIAGNOSTIC_KEYS =
-        ["originResponse", "response", "request", "deserializationError", "exception", "detail", "chain", "chain_error"];
+        ["originResponse", "response", "request", "deserializationError", "exception", "detail", "chain", "chain_error", "remoteService"];
 
     /// <summary>
     /// Removes reserved technical metadata and fills missing failure presentation. Domain data and public
     /// application metadata are retained. An existing error must use <see cref="ResultError"/>; mixed producers
     /// are a local contract defect. Capture the trace once at the owning boundary and use it in diagnostics too.
     /// </summary>
+    /// <param name="result">The result envelope to prepare.</param>
+    /// <param name="json">Serializer options used to project typed error metadata.</param>
+    /// <param name="messages">Provider of user-facing failure messages.</param>
+    /// <param name="traceId">The correlation identifier captured at the owning boundary.</param>
+    /// <param name="service">Optional owning service name stamped onto synthesized errors.</param>
+    /// <param name="operation">Optional owning operation name stamped onto synthesized errors.</param>
     /// <param name="exposeReservedDiagnostics">
     /// Retains reserved diagnostic members in the response. Only trusted development hosts may enable this;
     /// remote-call boundaries always strip diagnostics.

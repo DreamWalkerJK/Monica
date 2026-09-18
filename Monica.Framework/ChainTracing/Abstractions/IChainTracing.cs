@@ -38,19 +38,6 @@ public interface IChainTracing
     bool ContainsTrace(string traceId);
 
     /// <summary>
-    /// Records a one-shot trace entry for simple operations.
-    /// </summary>
-    /// <param name="operation">The operation name.</param>
-    /// <param name="handler">The handler name.</param>
-    /// <param name="success">Whether the operation succeeded.</param>
-    /// <param name="result">A description of the result.</param>
-    /// <param name="duration">The known execution duration.</param>
-    /// <param name="extraInfo">Optional extra metadata.</param>
-    /// <param name="type">The traced operation type.</param>
-    void RecordTrace(string operation, string? handler, bool success = true, string? result = null,
-        TimeSpan? duration = null, object? extraInfo = null, EChainTracingType type = EChainTracingType.Unknown);
-
-    /// <summary>
     /// Gets the current call-chain context.
     /// </summary>
     /// <returns>The current chain, or <see langword="null" /> when no chain exists.</returns>

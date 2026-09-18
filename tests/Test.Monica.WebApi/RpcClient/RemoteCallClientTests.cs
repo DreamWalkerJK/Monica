@@ -118,6 +118,35 @@ public sealed class RemoteCallClientTests
         Assert.Equal("origin-trace", error.TraceId);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Invoke_WhenDecoded_ShouldStampTargetServiceForChainCorrelation(bool expose)
+    {
+        await using var host = await new RpcFactory(exposeDiagnostics: expose)
+            .CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        using var client = Client((_, _) => Task.FromResult(Response(200, """{"code":200,"message":"","data":"ok"}""")));
+        var result = await Invoke<Res>(host, client);
+
+        var output = JsonSerializer.Serialize(result);
+        if (expose) Assert.Contains("\"remoteService\":\"Orders\"", output);
+        else Assert.DoesNotContain("remoteService", output);
+    }
+
+    [Fact]
+    public async Task Invoke_WhenTransportFails_ShouldStampAttemptedTargetService()
+    {
+        await using var host = await new RpcFactory()
+            .CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        using var client = Client((_, _) => Task.FromException<HttpResponseMessage>(new HttpRequestException("unreachable")));
+        var result = await Invoke<Res>(host, client);
+
+        Assert.Equal(ResStatus.ServiceUnavailable, result.Status);
+        // The local envelope bypasses remote presentation, so the stamp stays for in-process chain consumers.
+        Assert.Contains("\"remoteService\":\"Orders\"", JsonSerializer.Serialize(result));
+        Assert.Equal("Orders", Error(host, result).Service);
+    }
+
     [Fact]
     public async Task Invoke_WhenReturningTypedErrorAcrossHop_ShouldPreserveOriginAndRemoveDiagnosticMetadata()
     {

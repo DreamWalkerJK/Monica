@@ -12,6 +12,7 @@ using Monica.Core.JsonSerialization.Services;
 using Monica.Core.Results;
 using Monica.Framework.ChainTracing.Providers.AspNetCore;
 using Monica.Framework.ChainTracing.Services;
+using Monica.Framework.ChainTracing.Services.Support;
 using Monica.Framework.ChainTracing.Models;
 using Monica.Modules;
 using Xunit;
@@ -27,7 +28,8 @@ public sealed class ChainTracingResultMetadataFilterTests
     {
         var tracing = CreateTracingWithDatabaseNode();
         var filter = new ChainTracingResultMetadataActionFilter(tracing,
-            Options.Create(new ModuleResultEnvelopeOption { ExposeDiagnosticDetails = exposeDiagnostics }));
+            new ChainResultMetadataAttacher(Options.Create(
+                new ModuleResultEnvelopeOption { ExposeDiagnosticDetails = exposeDiagnostics })));
         var response = Res.Fail("Safe failure");
         var context = ExecutedContext(response);
 

@@ -4,6 +4,7 @@ using Monica.Core.Extensions;
 using Monica.Core.Results;
 using Monica.Core.Results.Abstractions;
 using Monica.Framework.ChainTracing.Abstractions;
+using Monica.Framework.ChainTracing.Models;
 using Monica.Framework.ChainTracing.Services.Support;
 using Monica.Tool.Extensions;
 
@@ -25,11 +26,14 @@ public class ChainTracingControllerActionFilter(IChainTracing chainTracing, ILog
     {
         var controllerName = context.Controller.GetType().Name;
         var actionName = context.ActionDescriptor.DisplayName ?? context.ActionDescriptor.RouteValues["action"] ?? "Unknown";
-        
-        var actionTraceId = chainTracing.BeginTrace(actionName, $"Controller({controllerName})");
+
+        var actionTraceId = chainTracing.BeginTrace(actionName, $"Controller({controllerName})", type: EChainTracingType.Controller);
 
         // Store the trace id so the completion step can finish the same node.
         context.HttpContext.Items[nameof(ChainTracingControllerActionFilter)] = actionTraceId;
+        // Publish the chain for the exception handler: AsyncLocal mutations made here do not flow back to
+        // it when the pipeline unwinds, while HttpContext items survive the unwind.
+        context.HttpContext.Items[ChainTraceContext.HTTP_ITEM_KEY] = chainTracing.GetCurrentChain();
     }
 
     /// <summary>
@@ -69,7 +73,7 @@ public class ChainTracingControllerActionFilter(IChainTracing chainTracing, ILog
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "处理 Controller Action 调用链时发生异常");
+            logger.LogError(ex, "Failed to process the controller action chain trace.");
         }
     }
 }

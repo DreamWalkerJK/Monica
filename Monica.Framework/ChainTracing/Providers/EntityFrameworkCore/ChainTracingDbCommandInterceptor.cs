@@ -9,7 +9,9 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.ChainTracing.Providers.EntityFrameworkCore;
 
 /// <summary>
-/// Records EF Core command execution inside the current chain-tracing context.
+/// Records EF Core command execution inside the current chain-tracing context. All command kinds
+/// (reader, non-query, scalar) and all terminal paths (executed, failed, canceled) are paired so the
+/// command-to-trace map never leaks entries.
 /// </summary>
 /// <param name="chainTracing">The chain tracing service.</param>
 /// <param name="logger">The logger.</param>
@@ -49,7 +51,7 @@ public class ChainTracingDbCommandInterceptor(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "记录数据库命令开始时发生异常");
+            logger.LogWarning(ex, "Failed to record the start of a database command trace.");
             return string.Empty;
         }
     }
@@ -98,7 +100,7 @@ public class ChainTracingDbCommandInterceptor(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "记录数据库命令结束时发生异常");
+            logger.LogWarning(ex, "Failed to record the end of a database command trace.");
         }
     }
 
@@ -166,6 +168,48 @@ public class ChainTracingDbCommandInterceptor(
         return base.ReaderExecutedAsync(command, eventData, result, cancellationToken);
     }
 
+    public override InterceptionResult<object> ScalarExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<object> result)
+    {
+        StartCommandTrace(command);
+        return base.ScalarExecuting(command, eventData, result);
+    }
+
+    public override object? ScalarExecuted(DbCommand command, CommandExecutedEventData eventData, object? result)
+    {
+        if (_commandTraceMap.TryRemove(command, out var traceId))
+        {
+            FinishCommandTrace(traceId, eventData, result);
+        }
+
+        return base.ScalarExecuted(command, eventData, result);
+    }
+
+    public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<object> result, CancellationToken cancellationToken = default)
+    {
+        StartCommandTrace(command);
+        return base.ScalarExecutingAsync(command, eventData, result, cancellationToken);
+    }
+
+    public override ValueTask<object?> ScalarExecutedAsync(DbCommand command, CommandExecutedEventData eventData, object? result, CancellationToken cancellationToken = default)
+    {
+        if (_commandTraceMap.TryRemove(command, out var traceId))
+        {
+            FinishCommandTrace(traceId, eventData, result);
+        }
+
+        return base.ScalarExecutedAsync(command, eventData, result, cancellationToken);
+    }
+
+    public override void CommandFailed(DbCommand command, CommandErrorEventData eventData)
+    {
+        if (_commandTraceMap.TryRemove(command, out var traceId))
+        {
+            FinishCommandTrace(traceId, eventData);
+        }
+
+        base.CommandFailed(command, eventData);
+    }
+
     public override Task CommandFailedAsync(DbCommand command, CommandErrorEventData eventData, CancellationToken cancellationToken = default)
     {
         if (_commandTraceMap.TryRemove(command, out var traceId))
@@ -174,6 +218,16 @@ public class ChainTracingDbCommandInterceptor(
         }
 
         return base.CommandFailedAsync(command, eventData, cancellationToken);
+    }
+
+    public override void CommandCanceled(DbCommand command, CommandEndEventData eventData)
+    {
+        if (_commandTraceMap.TryRemove(command, out var traceId))
+        {
+            FinishCommandTrace(traceId, eventData, isCanceled: true);
+        }
+
+        base.CommandCanceled(command, eventData);
     }
 
     public override Task CommandCanceledAsync(DbCommand command, CommandEndEventData eventData, CancellationToken cancellationToken = default)

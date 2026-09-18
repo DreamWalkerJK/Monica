@@ -1,5 +1,4 @@
 using Monica.Core.Results;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.JsonSerialization.Abstractions;
@@ -13,7 +12,9 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.ChainTracing.Services;
 
 /// <summary>
-/// Chain tracing implementation backed by <see cref="AsyncLocal{T}" />.
+/// Chain tracing implementation backed by <see cref="AsyncLocal{T}" />. The chain context is shared by
+/// reference within a request, while the ambient current node forks with each async flow, so parallel
+/// scopes that begin under the same parent attach as siblings without racing each other.
 /// </summary>
 /// <remarks>
 /// Creates a new <see cref="AsyncLocalChainTracingService" /> instance.
@@ -24,10 +25,11 @@ namespace Monica.Framework.ChainTracing.Services;
 public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> options, ILogger<AsyncLocalChainTracingService> logger, IJsonSerializerOptionsProvider jsonSerializerOptionsProvider) : IChainTracing
 {
     private readonly AsyncLocal<ChainTraceContext?> _chainContext = new();
+    private readonly AsyncLocal<ChainTraceNode?> _currentNode = new();
     private readonly ModuleChainTracingOption _options = options.Value;
 
     /// <summary>
-    /// Starts a new trace node.
+    /// Starts a new trace node beneath the ambient current node.
     /// </summary>
     /// <param name="operation">The operation name.</param>
     /// <param name="handler">The handler name.</param>
@@ -64,10 +66,21 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
                 StartTime = DateTime.UtcNow
             };
 
-            context.AddNode(node);
+            context.AddNode(node, _currentNode.Value);
+
+            // Label the chain root with this host's identity so multi-hop debug output is self-describing.
+            if (ReferenceEquals(context.Root, node) && !string.IsNullOrEmpty(_options.ServiceName))
+            {
+                node.Service = _options.ServiceName;
+            }
+
+            if (ChainTraceContext.CanHaveChildOperations(type))
+            {
+                _currentNode.Value = node;
+            }
 
             logger.LogDebug("Started chain node {Handler}.{Operation} ({TraceId}); depth {Depth}, nodes {NodeCount}.",
-                handler, operation, node.TraceId, context.ActiveNodes.Count, context.NodeMap.Count);
+                handler, operation, node.TraceId, node.Depth, context.NodeMap.Count);
 
             return node.TraceId;
         }
@@ -79,7 +92,8 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
     }
 
     /// <summary>
-    /// Completes a trace node.
+    /// Completes a trace node and restores the ambient current node. When an ancestor completes while
+    /// descendant scopes are still open in the same flow, those leaked scopes are recorded as isolated.
     /// </summary>
     /// <param name="traceId">The trace identifier.</param>
     /// <param name="result">A description of the result.</param>
@@ -99,6 +113,7 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
             }
 
             context.CompleteNode(traceId, result, success, exception, extraInfo);
+            RestoreCurrentNode(context, traceId);
 
             logger.LogDebug("Completed chain node {TraceId}; success {Success}, result {Result}.",
                 traceId, success, result);
@@ -106,63 +121,6 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to complete chain node {TraceId}.", traceId);
-        }
-    }
-
-    /// <summary>
-    /// Records a one-shot trace entry.
-    /// </summary>
-    /// <param name="operation">The operation name.</param>
-    /// <param name="handler">The handler name.</param>
-    /// <param name="success">Whether the operation succeeded.</param>
-    /// <param name="result">A description of the result.</param>
-    /// <param name="duration">The known execution duration.</param>
-    /// <param name="extraInfo">Optional extra metadata.</param>
-    /// <param name="type">The traced operation type.</param>
-    public void RecordTrace(string operation, string? handler, bool success = true, string? result = null,
-        TimeSpan? duration = null, object? extraInfo = null, EChainTracingType type = EChainTracingType.Unknown)
-    {
-        try
-        {
-            var context = _chainContext.Value ??= new ChainTraceContext();
-
-            if (IsMaxNodeCountReached())
-            {
-                logger.LogWarning("Chain node count reached the {MaxNodeCount} limit; skipping {Handler}.{Operation}.",
-                    _options.MaxNodeCount, handler, operation);
-                return;
-            }
-
-            var node = new ChainTraceNode
-            {
-                Handler = handler,
-                Operation = operation,
-                StartTime = DateTime.UtcNow,
-                IsFailed = !success ? true : null,
-                Result = result,
-                Type = type,
-                StartExtraInfo = extraInfo,
-                EndExtraInfo = extraInfo
-            };
-
-            if (duration.HasValue)
-            {
-                node.EndTime = node.StartTime.Add(duration.Value);
-            }
-            else
-            {
-                node.EndTime = DateTime.UtcNow;
-            }
-
-            context.AddNode(node);
-            context.CompleteNode(node.TraceId, result, success, null, extraInfo);
-
-            logger.LogDebug("Recorded chain node {Handler}.{Operation}; success {Success}, duration {Duration} ms, nodes {NodeCount}.",
-                handler, operation, success, node.Duration, context.NodeMap.Count);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to record chain node {Handler}.{Operation}.", handler, operation);
         }
     }
 
@@ -185,13 +143,12 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
     }
 
     /// <summary>
-    /// Gets the current chain depth.
+    /// Gets the current chain depth measured as the tree depth of the ambient current node.
     /// </summary>
-    /// <returns>The number of active nodes in the chain.</returns>
+    /// <returns>The depth of the current node, or zero when no scope is active.</returns>
     public int GetChainDepth()
     {
-        var context = _chainContext.Value;
-        return context?.ActiveNodes.Count ?? 0;
+        return _currentNode.Value?.Depth ?? 0;
     }
 
     /// <summary>
@@ -223,16 +180,53 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
     }
 
     /// <summary>
-    /// Links remote public error correlation to the current local trace node.
+    /// Links remote response correlation to a local trace node for every outcome. Chain tracing is the
+    /// debugging channel when no distributed-tracing infrastructure exists, so successful calls record the
+    /// target identity and the remote correlation identifier just like failed ones; failures additionally
+    /// keep the typed error origin. Payloads and chain graphs are not copied.
     /// </summary>
     /// <param name="traceId">The local trace node that should receive the remote correlation.</param>
-    /// <param name="remoteRes">The response containing a typed public error.</param>
+    /// <param name="remoteRes">The response returned by the remote-call boundary.</param>
     public void MergeRemoteChain(string traceId, IResultEnvelope remoteRes)
     {
-        // Remote responses carry correlation only. Distributed tracing owns the graph between services.
         if (_chainContext.Value is not { } context || !context.NodeMap.TryGetValue(traceId, out var node)) return;
+
+        node.RemoteTraceId = ResolveRemoteTraceId(remoteRes);
+        node.RemoteService ??= AsString(remoteRes.Metadata?.GetOrDefault(ResultMetadataKeys.RemoteService));
+
         if (remoteRes.TryGetError(jsonSerializerOptionsProvider.SerializerOptions, out var error))
-            node.EndExtraInfo = new { RemoteTraceId = error.TraceId, error.Code, error.Service, error.Operation };
+            node.EndExtraInfo = new { error.Code, error.Service, error.Operation };
+    }
+
+    /// <summary>
+    /// Resolves the remote host's correlation identifier: the trace-id metadata its result filter attached,
+    /// or the typed error's trace identifier when the failure envelope carries no metadata.
+    /// </summary>
+    /// <param name="remoteRes">The remote response.</param>
+    /// <returns>The remote trace identifier, or <see langword="null" /> when the remote host publishes none.</returns>
+    private string? ResolveRemoteTraceId(IResultEnvelope remoteRes)
+    {
+        if (AsString(remoteRes.Metadata?.GetOrDefault(ResultMetadataKeys.TraceId)) is { } metadataTraceId)
+            return metadataTraceId;
+
+        return remoteRes.TryGetError(jsonSerializerOptionsProvider.SerializerOptions, out var error)
+            ? error.TraceId
+            : null;
+    }
+
+    /// <summary>
+    /// Converts a metadata value that may be an in-memory string or a JSON-round-tripped element into text.
+    /// </summary>
+    /// <param name="value">The raw metadata value.</param>
+    /// <returns>The textual value, or <see langword="null" /> when absent or not textual.</returns>
+    private static string? AsString(object? value)
+    {
+        return value switch
+        {
+            string text => text,
+            System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.String } element => element.GetString(),
+            _ => null
+        };
     }
 
     public void Init()
@@ -246,4 +240,52 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
         return context?.NodeMap.ContainsKey(traceId) ?? false;
     }
 
+    /// <summary>
+    /// Restores the ambient current node after a completion. Only nodes that actually occupy this flow's
+    /// ambient scope (or an ancestor of it) move the pointer; database leaves, foreign-flow nodes, and
+    /// synthetic identifiers never disturb the enclosing scope.
+    /// </summary>
+    /// <param name="context">The active chain context.</param>
+    /// <param name="traceId">The identifier of the completed node.</param>
+    private void RestoreCurrentNode(ChainTraceContext context, string traceId)
+    {
+        var current = _currentNode.Value;
+        if (current is null)
+        {
+            return;
+        }
+
+        if (current.TraceId == traceId)
+        {
+            _currentNode.Value = current.Parent;
+            return;
+        }
+
+        if (!context.NodeMap.TryGetValue(traceId, out var node))
+        {
+            return;
+        }
+
+        // Out-of-order closure: an ancestor finished while descendant scopes in this flow are still open.
+        // Record the leaked descendants, then continue from the completed ancestor's parent.
+        var leaked = new List<ChainTraceNode>();
+        var walk = current;
+        while (walk is not null && walk != node)
+        {
+            leaked.Add(walk);
+            walk = walk.Parent;
+        }
+
+        if (walk is null)
+        {
+            return; // The completed node is not on this flow's active path.
+        }
+
+        foreach (var descendant in leaked)
+        {
+            context.MarkIsolated(descendant);
+        }
+
+        _currentNode.Value = node.Parent;
+    }
 }

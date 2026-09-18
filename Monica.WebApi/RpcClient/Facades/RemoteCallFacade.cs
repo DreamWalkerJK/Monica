@@ -49,6 +49,9 @@ internal sealed class RemoteCallFacade(
             var result = await decoder.ReadAsync<TResponse>(response, context.Transport, linked.Token);
             linked.Token.ThrowIfCancellationRequested();
             IdentifyForwardedOrigin(result, context);
+            // Target identity for the call-chain node regardless of outcome; presentation keeps this
+            // reserved member only on hosts that expose diagnostic details.
+            result.SetMetadata(ResultMetadataKeys.RemoteService, context.Service.Name);
             // Diagnostic hosts keep a downstream's reserved details (for example its metadata.exception stack)
             // flowing; every other host still strips them at this boundary.
             result.PrepareForPresentation(serializer.SerializerOptions, messages, traceId, context.Service.Name,
@@ -85,7 +88,11 @@ internal sealed class RemoteCallFacade(
                 failure.Code, context.Service.Name, context.Operation, context.RouteTemplate, failure.Stage, context.Transport,
                 (int?)failure.UpstreamStatus, failure.RetryAfter, timeProvider.GetElapsedTime(started).TotalMilliseconds,
                 exception?.GetType().Name, traceId);
-            return TEnvelope.CreateRemoteFailure(failure.Status, messages.GetMessage(error)).SetError(error);
+            // The target identity stays on transport failures too: "which service was unreachable" is
+            // exactly what the call chain needs to answer.
+            return TEnvelope.CreateRemoteFailure(failure.Status, messages.GetMessage(error))
+                .SetError(error)
+                .SetMetadata(ResultMetadataKeys.RemoteService, context.Service.Name);
         }
     }
 

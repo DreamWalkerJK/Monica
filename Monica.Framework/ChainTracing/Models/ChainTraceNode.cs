@@ -121,6 +121,29 @@ public class ChainTraceNode
     public bool IsRemoteCall { get; set; }
 
     /// <summary>
+    /// Service identity (for example the Dapr app id) of the host that recorded this chain.
+    /// Labeled on the chain root when the host configures <c>ModuleChainTracingOption.ServiceName</c>,
+    /// so multi-hop debug output (a forwarded response carrying several chains) stays self-describing.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Service { get; set; }
+
+    /// <summary>
+    /// Service identity of the remote target this node invoked, regardless of outcome. Chain tracing is
+    /// the debugging channel when no distributed-tracing infrastructure exists, so both successful and
+    /// failed remote calls carry the target identity.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RemoteService { get; set; }
+
+    /// <summary>
+    /// Correlation identifier returned by the remote service for the call this node represents.
+    /// Use it to look up the remote host's own chain or logs; captured for successful and failed calls alike.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RemoteTraceId { get; set; }
+
+    /// <summary>
     /// Captured exception.
     /// </summary>
     [JsonIgnore]
@@ -168,6 +191,7 @@ public class ChainTraceNode
 
     public override string ToString()
     {
-        return $"[{Type}]{Handler}-{Operation}";
+        var target = RemoteService is null ? null : $"->{RemoteService}";
+        return $"[{Type}{target}]{Handler}-{Operation}";
     }
 }

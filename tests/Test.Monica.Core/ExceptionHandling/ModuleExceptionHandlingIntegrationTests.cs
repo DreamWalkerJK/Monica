@@ -6,11 +6,14 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Services;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Results;
+using Monica.Core.Results.Abstractions;
 using Monica.Modules;
 using Xunit;
 
@@ -130,8 +133,25 @@ public sealed class ModuleExceptionHandlingIntegrationTests
             { Message: "secret-token failure" }).Should().BeTrue();
     }
 
+    [Fact]
+    public async Task UnexpectedException_InvokesRegisteredResponseDiagnosticsWithTheResponse()
+    {
+        var diagnostics = new RecordingDiagnostics();
+        await using var application = await StartApplicationAsync(static () => { }, diagnostics: diagnostics);
+
+        using var response = await application.GetTestClient().GetAsync(
+            "/throw", TestContext.Current.CancellationToken);
+        await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        diagnostics.Calls.Should().HaveCount(1);
+        diagnostics.Calls[0].Response.Status.Should().Be(ResStatus.InternalError);
+        diagnostics.Calls[0].HttpContext.Should().NotBeNull();
+    }
+
     private static async Task<WebApplication> StartApplicationAsync(Action onEndpointInvoked,
-        bool includeExceptionDetails = false, CapturingLoggerProvider? loggerProvider = null)
+        bool includeExceptionDetails = false, CapturingLoggerProvider? loggerProvider = null,
+        RecordingDiagnostics? diagnostics = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -139,6 +159,7 @@ public sealed class ModuleExceptionHandlingIntegrationTests
         });
         builder.WebHost.UseTestServer();
         if (loggerProvider is not null) builder.Logging.AddProvider(loggerProvider);
+        if (diagnostics is not null) builder.Services.AddSingleton<IExceptionResponseDiagnostics>(diagnostics);
         builder.AddMonica(monica =>
         {
             monica.ConfigureTypeDiscovery(options => options
@@ -163,6 +184,16 @@ public sealed class ModuleExceptionHandlingIntegrationTests
         application.MapMonica();
         await application.StartAsync(TestContext.Current.CancellationToken);
         return application;
+    }
+
+    private sealed class RecordingDiagnostics : IExceptionResponseDiagnostics
+    {
+        public List<(HttpContext? HttpContext, Res Response)> Calls { get; } = [];
+
+        public void Attach(HttpContext? httpContext, IResultEnvelope response)
+        {
+            Calls.Add((httpContext, (Res)response));
+        }
     }
 
     private sealed class CapturingLoggerProvider : ILoggerProvider

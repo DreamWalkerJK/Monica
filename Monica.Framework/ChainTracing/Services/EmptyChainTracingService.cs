@@ -51,21 +51,6 @@ public class EmptyChainTracingService : IChainTracing
 
 
     /// <summary>
-    /// Records a one-shot trace entry.
-    /// </summary>
-    /// <param name="operation">The operation name.</param>
-    /// <param name="handler">The handler name.</param>
-    /// <param name="success">Whether the operation succeeded.</param>
-    /// <param name="result">A description of the result.</param>
-    /// <param name="duration">The known execution duration.</param>
-    /// <param name="extraInfo">Optional extra metadata.</param>
-    /// <param name="type">The traced operation type.</param>
-    public void RecordTrace(string operation, string? handler, bool success = true, string? result = null,
-        TimeSpan? duration = null, object? extraInfo = null, EChainTracingType type = EChainTracingType.Unknown)
-    {
-    }
-
-    /// <summary>
     /// Gets the current chain.
     /// </summary>
     /// <returns>Always <see langword="null" /> because tracing is disabled.</returns>

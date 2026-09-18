@@ -19,7 +19,8 @@ internal class ExceptionHandlerService(
     IEnumerable<IExceptionResponseMapper> mappers,
     IOptions<ModuleResultEnvelopeOption> envelopeOptions,
     IJsonSerializerOptionsProvider serializer,
-    IResultErrorMessageProvider messages) : IExceptionHandlerService
+    IResultErrorMessageProvider messages,
+    IExceptionResponseDiagnostics? diagnostics = null) : IExceptionHandlerService
 {
     public Task<Res> HandleCurrentHttpContextAsync(Exception exception, CancellationToken cancellationToken) =>
         HandleAsync(accessor.HttpContext, exception, cancellationToken);
@@ -67,6 +68,9 @@ internal class ExceptionHandlerService(
             result.SetMetadata(entry.Key, entry.Value);
         result.PrepareForPresentation(serializer.SerializerOptions, messages, ResultTraceId.Capture(httpContext),
             exposeReservedDiagnostics: exposeDiagnostics);
+        // Exception-path diagnostics (call-chain correlation) run after presentation so the reserved-member
+        // policy has already been applied.
+        diagnostics?.Attach(httpContext, result);
         return Task.FromResult(result);
     }
 
