@@ -3,6 +3,7 @@ using Monica.DataChannel.Abstractions;
 using Monica.DataChannel.Abstractions.Communication;
 using Monica.DataChannel.Pipeline;
 using Monica.DataChannel.Providers.TCP.Utils;
+using Monica.Tool.Extensions;
 
 namespace Monica.DataChannel.Providers.TCP;
 
@@ -29,7 +30,12 @@ public class TcpClientEndpoint(
     public override Task InitAsync(CancellationToken cancellationToken = default)
     {
         _client = new TcpClientExtends(runtime);
-        _client.MsgReceivedEvent += eventArgs => SendData(eventArgs);
+        _client.MsgReceivedEvent += eventArgs =>
+        {
+            var data = CreateData(eventArgs.Data);
+            data.Metadata.Set("ConnectionName", eventArgs.ConnectionName);
+            SendData(data);
+        };
         _client.Init(metadata, logger);
         return Task.CompletedTask;
     }
