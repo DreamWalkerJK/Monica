@@ -247,10 +247,27 @@ internal sealed class JobExecutionWorkerHostedService(
                     break;
                 }
 
-                var renewal = await store.RenewLeaseAsync(
-                    lease.LeaseKey,
-                    _options.ExecutionLeaseDuration,
-                    CancellationToken.None);
+                JobLeaseRenewalResult renewal;
+                try
+                {
+                    renewal = await store.RenewLeaseAsync(
+                        lease.LeaseKey,
+                        _options.ExecutionLeaseDuration,
+                        CancellationToken.None);
+                }
+                catch (Exception exception)
+                {
+                    // A failed renewal call (serialization conflicts, a stalled store write) is not a lease loss:
+                    // the lease usually still holds runway, so retry on the next cycle instead of cancelling
+                    // cooperative job code. A genuinely lost lease surfaces as an explicit Lost result, and the
+                    // scheduling plane recovers it if renewals never succeed again.
+                    logger.LogWarning(
+                        exception,
+                        "Execution {InstanceId} lease renewal failed; retrying on the next worker cycle",
+                        lease.Execution.InstanceId);
+                    continue;
+                }
+
                 if (renewal.Status == JobLeaseRenewalStatus.Lost)
                 {
                     if (!await CancelAndAwaitExecutionAsync(

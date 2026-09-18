@@ -134,6 +134,68 @@ public sealed class JobExecutionWorkerHostedServiceTests
     }
 
     [Fact]
+    public async Task ExecuteLease_WhenLeaseRenewalThrowsTransiently_ShouldRetryAndCompleteTheAttempt()
+    {
+        var probe = new CompletionProbe();
+        var hostBuilder = Host.CreateApplicationBuilder();
+        hostBuilder.Services.AddSingleton(probe);
+        hostBuilder.Services.AddScoped<CompletingRecurringJob>();
+        hostBuilder.AddMonica(monica => monica.AddExecutionPipeline());
+        using var host = hostBuilder.Build();
+
+        var definition = new LocalJobDefinition
+        {
+            JobClrType = typeof(CompletingRecurringJob),
+            Declaration = StoreFixture.RecurringDeclaration(
+                typeof(CompletingRecurringJob).FullName!)
+        };
+        var store = Substitute.For<IJobSchedulerStore>();
+        var renewalCount = 0;
+        store.RenewLeaseAsync(
+                Arg.Any<JobLeaseKey>(),
+                Arg.Any<TimeSpan>(),
+                Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                // The first renewal fails like an exhausted serialization-retry storm; the retry succeeds and
+                // finishes the job inline, proving a transient renewal failure does not cancel cooperative work.
+                if (Interlocked.Increment(ref renewalCount) == 1)
+                {
+                    throw new InvalidOperationException("Simulated transient store failure");
+                }
+
+                probe.Completion.TrySetResult();
+                return Task.FromResult(new JobLeaseRenewalResult { Status = JobLeaseRenewalStatus.Active });
+            });
+        store.CompleteAttemptAsync(
+                Arg.Any<JobAttemptCompletion>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new JobAttemptCompletionResult
+            {
+                Status = JobAttemptCompletionStatus.Applied
+            }));
+        var (worker, options) = CreateWorker(
+            store,
+            [definition],
+            host.Services.GetRequiredService<IServiceScopeFactory>(),
+            configure: schedulerOptions => schedulerOptions.ExecutionLeaseRenewInterval = TimeSpan.FromMilliseconds(5));
+
+        var attempt = worker.ExecuteLeaseAsync(
+            CreateLease(definition.Declaration.JobKey, options.Value.ExecutionLeaseDuration),
+            TestContext.Current.CancellationToken);
+        await probe.Started.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await attempt.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        renewalCount.Should().BeGreaterThanOrEqualTo(2);
+        await store.Received(1).CompleteAttemptAsync(
+            Arg.Is<JobAttemptCompletion>(completion => completion.Outcome == JobAttemptOutcome.Succeeded),
+            Arg.Any<CancellationToken>());
+        await store.DidNotReceive().ReleaseLeaseAsync(
+            Arg.Any<JobLeaseKey>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ExecuteLease_WhenLocalJobIsMissing_ShouldCompleteAttemptAsFailed()
     {
         using var host = Host.CreateApplicationBuilder().Build();

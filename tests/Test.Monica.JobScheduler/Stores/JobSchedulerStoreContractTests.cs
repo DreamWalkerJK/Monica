@@ -414,6 +414,13 @@ public sealed class JobSchedulerStoreContractTests
         (await fixture.Store.RenewLeaseAsync(lease.LeaseKey, TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken)).Status
             .Should().Be(JobLeaseRenewalStatus.Lost);
         (await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"])).Should().BeEmpty();
+
+        // No running work remains, so a further recovery pass reports nothing.
+        (await fixture.Store.RecoverExpiredLeasesAsync(new ExpiredLeaseRecoveryRequest
+        {
+            SchedulerScopeKey = fixture.Scope,
+            MaxCount = 10
+        }, TestContext.Current.CancellationToken)).Should().BeEmpty();
     }
 
     [Theory]
