@@ -61,13 +61,13 @@ public sealed class ChainTracingNestingTests
                 first = tracing.BeginTrace("First", "A");
                 await Task.Yield();
                 tracing.EndTrace(first, "ok");
-            }),
+            }, TestContext.Current.CancellationToken),
             Task.Run(async () =>
             {
                 second = tracing.BeginTrace("Second", "B");
                 await Task.Yield();
                 tracing.EndTrace(second, "ok");
-            }));
+            }, TestContext.Current.CancellationToken));
 
         tracing.EndTrace(parent, "ok");
 

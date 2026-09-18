@@ -44,6 +44,13 @@ public interface IChainTracing
     ChainTraceContext? GetCurrentChain();
 
     /// <summary>
+    /// Gets the ambient current node of this flow. Database leaves never occupy it, so callers that
+    /// aggregate repeated commands can key their aggregation by the enclosing scope.
+    /// </summary>
+    /// <returns>The current node, or <see langword="null" /> when no scope is active.</returns>
+    ChainTraceNode? GetCurrentNode();
+
+    /// <summary>
     /// Links a remote public error to a local trace node using its origin trace identifier.
     /// </summary>
     /// <param name="traceId">The local trace node that should receive the remote correlation details.</param>

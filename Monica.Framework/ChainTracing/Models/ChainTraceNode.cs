@@ -15,6 +15,15 @@ public class ChainTraceNode
     private string[]? _exceptionMessage;
     private string? _duration;
     private EChainTracingType _type;
+    private int _repeatCount;
+
+    /// <summary>
+    /// Number of identical database commands aggregated onto this node beyond the first execution.
+    /// Batch writers and repeated lookups collapse into one node so a tens-of-thousands-row insert
+    /// cannot balloon the chain; the node's time window spans every aggregated execution.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int RepeatCount => _repeatCount;
 
     /// <summary>
     /// Sets the parent node and updates the depth.
@@ -24,6 +33,22 @@ public class ChainTraceNode
     {
         Depth = parent.Depth + 1;
         Parent = parent;
+    }
+
+    /// <summary>
+    /// Records one more identical database command aggregated onto this node, extending its window to
+    /// the aggregated execution's completion so <see cref="Duration" /> reflects the whole batch.
+    /// </summary>
+    /// <param name="failed">Whether the aggregated execution failed.</param>
+    /// <param name="endTime">Completion time of the aggregated execution.</param>
+    public void AddRepeat(bool failed, DateTime endTime)
+    {
+        lock (this)
+        {
+            _repeatCount++;
+            EndTime = endTime;
+            if (failed) IsFailed = true;
+        }
     }
 
     /// <summary>

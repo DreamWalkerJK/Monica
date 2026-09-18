@@ -174,6 +174,11 @@ public sealed class ChainTracingExecutionBehaviorTests
             return null;
         }
 
+        public ChainTraceNode? GetCurrentNode()
+        {
+            return null;
+        }
+
         public void MergeRemoteChain(string traceId, IResultEnvelope remoteRes)
         {
             traceId.Should().Be(TRACE_ID);

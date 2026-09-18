@@ -58,6 +58,13 @@ public class ChainTraceContext
     public ExpandoObject? OtherInfo { get; set; }
 
     /// <summary>
+    /// Whether the chain-limit warning has been issued for this chain. Volume beyond a limit (for
+    /// example a pathological batch writer) warns once instead of once per skipped command.
+    /// </summary>
+    [JsonIgnore]
+    public bool LimitWarningIssued { get; set; }
+
+    /// <summary>
     /// Returns whether nodes of the specified type should become the ambient current node.
     /// High-volume operations without child calls (database commands) skip ambient tracking so they
     /// never disturb the enclosing scope.

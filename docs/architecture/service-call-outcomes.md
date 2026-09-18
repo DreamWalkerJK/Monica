@@ -109,6 +109,8 @@ The call chain is the debugging channel for hosts without distributed-tracing in
 
 Responses built from unhandled exceptions expose the same correlation members through `IExceptionResponseDiagnostics`: the chain-tracing module implements it, recovering the request chain from `HttpContext` items — AsyncLocal mutations made downstream do not flow back to the exception handler when the pipeline unwinds — so an exception response carries `metadata.traceId` and, on diagnostic hosts, the full chain including the failing node with its exception. The actor-invocation tracing node records the observed outcome instead of an unconditional success: a propagated exception, or the HTTP status the actor runtime produced.
 
+The EF command interceptor aggregates repeated commands with the same shape inside one ambient scope onto a single node carrying a repeat count (`RepeatCount`, with the result rendered as `… ×N`), so batch writers inserting tens of thousands of rows produce one node per command shape instead of thousands of nodes; the node's time window spans every aggregated execution. Different handlers keep their own nodes, and the chain limits warn once per chain instead of once per skipped command.
+
 A classified dependency failure emits one structured warning containing reason, logical service and operation, route template, stage, transport, upstream HTTP status, validated `Retry-After`, duration, exception type, and trace. It excludes resolved addresses, query values, bodies, and headers. Dedicated RPC clients disable the standard HTTP loggers so those loggers do not reintroduce raw URLs.
 
 ## 5. Request rejection before execution

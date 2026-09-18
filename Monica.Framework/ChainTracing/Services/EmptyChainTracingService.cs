@@ -60,6 +60,15 @@ public class EmptyChainTracingService : IChainTracing
     }
 
     /// <summary>
+    /// Gets the ambient current node.
+    /// </summary>
+    /// <returns>Always <see langword="null" /> because tracing is disabled.</returns>
+    public ChainTraceNode? GetCurrentNode()
+    {
+        return null;
+    }
+
+    /// <summary>
     /// Merges chain data returned from a remote call.
     /// </summary>
     /// <param name="traceId">The local trace identifier.</param>

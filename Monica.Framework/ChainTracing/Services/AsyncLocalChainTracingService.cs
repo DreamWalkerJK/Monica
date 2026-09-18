@@ -45,14 +45,14 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
 
             if (IsMaxDepthReached())
             {
-                logger.LogWarning("Chain depth reached the {MaxChainDepth} limit; skipping {Handler}.{Operation}.",
+                WarnOnce(context, "Chain depth reached the {Limit} limit; skipping further nodes below {Handler}.{Operation}.",
                     _options.MaxChainDepth, handler, operation);
                 return Guid.NewGuid().ToString("N"); // Return a synthetic TraceId so follow-up calls stay safe.
             }
 
             if (IsMaxNodeCountReached())
             {
-                logger.LogWarning("Chain node count reached the {MaxNodeCount} limit; skipping {Handler}.{Operation}.",
+                WarnOnce(context, "Chain node count reached the {Limit} limit; skipping {Handler}.{Operation}.",
                     _options.MaxNodeCount, handler, operation);
                 return Guid.NewGuid().ToString("N"); // Return a synthetic TraceId so follow-up calls stay safe.
             }
@@ -131,6 +131,15 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
     public ChainTraceContext? GetCurrentChain()
     {
         return _chainContext.Value;
+    }
+
+    /// <summary>
+    /// Gets the ambient current node of this flow. Database leaves never occupy it.
+    /// </summary>
+    /// <returns>The current node, or <see langword="null" /> when no scope is active.</returns>
+    public ChainTraceNode? GetCurrentNode()
+    {
+        return _currentNode.Value;
     }
 
     /// <summary>
@@ -238,6 +247,23 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
     {
         var context = _chainContext.Value;
         return context?.NodeMap.ContainsKey(traceId) ?? false;
+    }
+
+    /// <summary>
+    /// Emits a limit warning once per chain so volume beyond a limit cannot flood the log.
+    /// </summary>
+    /// <param name="context">The active chain context.</param>
+    /// <param name="message">The warning message template.</param>
+    /// <param name="args">The template arguments.</param>
+    private void WarnOnce(ChainTraceContext context, string message, params object?[] args)
+    {
+        if (context.LimitWarningIssued)
+        {
+            return;
+        }
+
+        context.LimitWarningIssued = true;
+        logger.LogWarning(message, args);
     }
 
     /// <summary>
