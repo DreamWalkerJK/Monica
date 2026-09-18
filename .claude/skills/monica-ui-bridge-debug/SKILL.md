@@ -240,6 +240,24 @@ If that returns `172.31.96.1`, switch from `http://localhost:5092` to `http://17
 
 If strict log-marker enforcement is required, add `--strict-marker` to `wait-ready`.
 
+#### Bridge host requirements for static web assets
+
+The helper launches `dotnet run`, but it does not force a Development environment. When the bridge project has no `Properties/launchSettings.json`, the host starts as `Production` from `bin/Debug` output: every `_content/*` and `_framework/*` asset then returns `200 OK` with an **empty body**, the page renders unstyled, and the Blazor circuit never starts (`_blazor` request count stays 0 in `app-run.log`, which repeats `Static Web Assets are not enabled`).
+
+A Monica UI bridge host needs both, independently:
+
+1. `RequiresAspNetWebAssets=true` in the host `.csproj` — without it `_framework/blazor.web.js` returns 404.
+2. `Properties/launchSettings.json` setting `ASPNETCORE_ENVIRONMENT=Development` — without it assets return 200 with 0 bytes.
+
+Never verify static assets by status code alone. After readiness, confirm real content:
+
+```bash
+curl -s "<service-url>/_content/MudBlazor/MudBlazor.min.css" | wc -c
+curl -s "<service-url>/_framework/blazor.web.js" | wc -c
+```
+
+Expected sizes are in the hundreds of kilobytes; `0` means static web assets are disabled. A browser that previously cached empty responses needs a hard refresh. Consumer host applications hitting the same symptom should follow Monica.Docs `docs/zh-CN/getting-started/installation.md` ("接入 UI 模块后页面一直转圈时" / "Debug 启动后 UI 没有样式"), the authoritative write-up.
+
 ### 7. Playwright capture workflow
 
 After readiness succeeds, build the page URL from:
@@ -320,6 +338,8 @@ Otherwise report it as unconfirmed instead of as a verified UI error.
 - [ ] Run `$monica-ui-development` source check before UI edits
 - [ ] Use `bridge_service.py run` instead of ad-hoc launch commands
 - [ ] Use `bridge_service.py wait-ready` before opening Playwright
+- [ ] Bridge host csproj sets `RequiresAspNetWebAssets=true` and `Properties/launchSettings.json` sets `ASPNETCORE_ENVIRONMENT=Development`
+- [ ] Verify static assets by byte size (`curl | wc -c`), not status code — 0-byte `200` responses mean static web assets are disabled
 - [ ] If `localhost` works in shell probes but Playwright cannot connect in WSL, retry with the WSL gateway IP
 - [ ] Save screenshots and snapshots inside the bridge artifact directory
 - [ ] Keep the bridge service running after successful verification
