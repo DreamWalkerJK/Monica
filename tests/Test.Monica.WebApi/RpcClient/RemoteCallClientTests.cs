@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core.JsonSerialization.Abstractions;
@@ -42,6 +43,71 @@ public sealed class RemoteCallClientTests
         Assert.Equal("Application message", result.Message);
         Assert.Null(result.Data);
         Assert.Equal(status is 200 or 201, result.IsOk());
+    }
+
+    [Theory]
+    [InlineData(200, JsonIgnoreCondition.Never)]
+    [InlineData(200, JsonIgnoreCondition.WhenWritingNull)]
+    [InlineData(200, JsonIgnoreCondition.WhenWritingDefault)]
+    [InlineData(201, JsonIgnoreCondition.WhenWritingNull)]
+    [InlineData(201, JsonIgnoreCondition.WhenWritingDefault)]
+    public async Task Invoke_WhenSuccessfulMessageIsNull_ShouldAcceptHostSerializedEnvelope(
+        int status, JsonIgnoreCondition ignoreCondition)
+    {
+        await using var host = await new RpcFactory(ignoreCondition: ignoreCondition)
+            .CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var options = host.Services.GetRequiredService<IJsonSerializerOptionsProvider>().SerializerOptions;
+        var downstream = Res.Create("payload", (ResStatus)status);
+        Assert.Null(downstream.Message);
+        var json = JsonSerializer.Serialize(downstream, options);
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal(ignoreCondition == JsonIgnoreCondition.Never,
+            document.RootElement.TryGetProperty("message", out _));
+        using var client = Client((_, _) => Task.FromResult(Response(status, json)));
+
+        var result = await Invoke<Res<string>>(host, client);
+
+        Assert.Equal((ResStatus)status, result.Status);
+        Assert.Equal("payload", result.Data);
+        Assert.True(result.IsOk());
+        Assert.False(result.TryGetError(options, out _));
+    }
+
+    [Theory]
+    [InlineData(200, """{"code":200,"message":"","message":null,"data":"payload"}""")]
+    [InlineData(200, """{"code":200,"code":200,"data":"payload"}""")]
+    [InlineData(200, """{"code":"200","data":"payload"}""")]
+    [InlineData(200, """{"code":0,"data":"payload"}""")]
+    [InlineData(200, """{"code":999,"data":"payload"}""")]
+    [InlineData(200, """{"code":201,"data":"payload"}""")]
+    [InlineData(201, """{"code":200,"data":"payload"}""")]
+    [InlineData(200, """{"code":500,"data":"payload"}""")]
+    [InlineData(200, """{"code":200,"data":{"wrong":"type"}}""")]
+    [InlineData(200, """{"code":200,"metadata":{"error":{"stackTrace":"secret"}}}""")]
+    public async Task Invoke_WhenSuccessfulMessageIsOptional_ShouldStillRejectInvalidEnvelopes(int http, string json)
+    {
+        await using var host = await new RpcFactory().CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        using var client = Client((_, _) => Task.FromResult(Response(http, json)));
+
+        var result = await Invoke<Res<string>>(host, client);
+
+        Assert.Equal(ResStatus.BadGateway, result.Status);
+        Assert.Equal(ResultErrorCodes.DependencyInvalidResponse, Error(host, result).Code);
+        Assert.DoesNotContain("secret", JsonSerializer.Serialize(result));
+    }
+
+    [Theory]
+    [InlineData(400, "dependency.rejected")]
+    [InlineData(500, "dependency.failed")]
+    public async Task Invoke_WhenFailedResponseOmitsMessage_ShouldNotAcceptItAsApplicationEnvelope(int http, string code)
+    {
+        await using var host = await new RpcFactory().CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        using var client = Client((_, _) => Task.FromResult(Response(http, $$"""{"code":{{http}}}""")));
+
+        var result = await Invoke<Res>(host, client);
+
+        Assert.Equal(ResStatus.BadGateway, result.Status);
+        Assert.Equal(code, Error(host, result).Code);
     }
 
     [Theory]
@@ -323,11 +389,13 @@ public sealed class RemoteCallClientTests
     }
 
     private sealed class RpcFactory(long maxBytes = 16384, TimeProvider? clock = null, RecordingLogs? logs = null,
-        bool registerClient = false, bool classifier = false, bool exposeDiagnostics = false)
+        bool registerClient = false, bool classifier = false, bool exposeDiagnostics = false,
+        JsonIgnoreCondition ignoreCondition = JsonIgnoreCondition.Never)
         : MonicaTestApplicationFactory<RemoteCallClientTests>
     {
         protected override void ConfigureMonica(IMonicaBuilder builder)
         {
+            builder.AddJsonSerialization(options => options.DefaultIgnoreCondition = ignoreCondition);
             builder.AddResultEnvelope(options => options.ExposeDiagnosticDetails = exposeDiagnostics)
                 .UseResultFieldNames(names => names.Status = "code");
             var rpc = builder.AddRpcClient(options => options.MaxResponseBodyBytes = maxBytes)
