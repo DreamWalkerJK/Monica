@@ -507,7 +507,7 @@ public sealed class GuideProjectInstallTests
         {
             var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
             var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
-            await service.ApplyConfigureAsync(request, preview.Plan.PlanDigest, cancellationToken: CancellationToken);
+            await service.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
         }
 
         // A newer release bundle is configured for the shared target only; the workspace
