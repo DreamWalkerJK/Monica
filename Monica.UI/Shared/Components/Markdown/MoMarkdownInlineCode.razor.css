@@ -1,0 +1,52 @@
+.mo-markdown-code {
+    display: inline-block;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    vertical-align: baseline;
+    overflow-wrap: anywhere;
+    user-select: text;
+    cursor: copy;
+}
+
+.mo-markdown-code code {
+    display: block;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
+
+.mo-markdown-code:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+.mo-markdown-code ::deep .mo-markdown-code__icon {
+    width: 13px;
+    height: 13px;
+    font-size: 13px;
+    margin-inline-start: 3px;
+    vertical-align: -2px;
+    opacity: 0;
+}
+
+.mo-markdown-code:hover ::deep .mo-markdown-code__icon,
+.mo-markdown-code:focus-visible ::deep .mo-markdown-code__icon,
+.mo-markdown-code--copied ::deep .mo-markdown-code__icon,
+.mo-markdown-code--failed ::deep .mo-markdown-code__icon {
+    opacity: 1;
+}
+
+.mo-markdown-code--copied ::deep .mo-markdown-code__icon { color: var(--mud-palette-success); }
+.mo-markdown-code--failed ::deep .mo-markdown-code__icon { color: var(--mud-palette-error); }
+
+@media (hover: none) {
+    .mo-markdown-code ::deep .mo-markdown-code__icon { opacity: .82; }
+}

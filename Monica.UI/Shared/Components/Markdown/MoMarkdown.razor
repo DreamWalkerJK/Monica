@@ -13,6 +13,8 @@
                    HasTableOfContents="@HasTableOfContents"
                    TableOfContentsHeader="@TableOfContentsHeader"
                    EnableMermaid="@EnableMermaid"
+                   EnableCodeCopy="@EnableCodeCopy"
+                   LinkTemplate="@LinkTemplate"
                    HeadingsChanged="@HeadingsChanged" />
 </div>
 
@@ -48,6 +50,14 @@
     public bool EnableMermaid { get; set; } = true;
 
     /// <summary>
+    /// Enables click-to-copy for recognizable file paths in prose or inline code. Defaults to true.
+    /// Other inline code, including identifiers and commands, keeps standard Markdown rendering.
+    /// Authored links and fenced code blocks retain their existing interactions.
+    /// </summary>
+    [Parameter]
+    public bool EnableCodeCopy { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets whether Markdig must treat raw HTML as plain Markdown text instead of renderable markup.
     /// </summary>
     [Parameter]
@@ -55,6 +65,13 @@
 
     [Parameter]
     public EventCallback<IReadOnlyList<MoMarkdownHeading>> HeadingsChanged { get; set; }
+
+    /// <summary>
+    /// Optionally renders selected non-image links using their authored destination and formatted label.
+    /// Return null to retain ordinary URL resolution and navigation.
+    /// </summary>
+    [Parameter]
+    public Func<MoMarkdownLink, RenderFragment?>? LinkTemplate { get; set; }
 
     [Parameter]
     public MudMarkdownProps? Props { get; set; }
