@@ -52,9 +52,23 @@ public sealed class SetupSession
     /// The one full dashboard diagnosis of this wizard run. Host and runtime probing shells
     /// out to agent CLIs and takes seconds, so it starts in the background at startup,
     /// serves every later surface from this cache, and is replaced only by an explicit
-    /// refresh or a product switch.
+    /// refresh or a product switch. Replacements raise <see cref="DashboardChanged"/> so
+    /// layout-level surfaces (the drift banner) repaint with the fresh result.
     /// </summary>
-    public SetupDashboardView? DashboardCache { get; set; }
+    public SetupDashboardView? DashboardCache
+    {
+        get => _dashboardCache;
+        set
+        {
+            _dashboardCache = value;
+            DashboardChanged?.Invoke();
+        }
+    }
+
+    private SetupDashboardView? _dashboardCache;
+
+    /// <summary>Raised whenever the dashboard cache is replaced or cleared.</summary>
+    public event Action? DashboardChanged;
 
     public void ToggleLanguage()
     {
@@ -178,6 +192,9 @@ public static class SetupText
         ["stop-cockpit"] = "停止工作台",
         ["summary-ok"] = "一切就绪",
         ["summary-attention"] = "项需要关注",
+        ["drift-banner"] = "技能投影漂移:{0} 项检查需要关注,已装投影与安装记录或配置的发布包不一致;更新技能可重新收敛。",
+        ["drift-banner-single"] = "技能投影漂移:1 项检查需要关注,已装投影与安装记录或配置的发布包不一致;更新技能可重新收敛。",
+        ["drift-banner-cta"] = "查看详情",
         ["version"] = "版本",
         ["location"] = "位置",
         ["status"] = "状态",
@@ -364,6 +381,9 @@ public static class SetupText
         ["stop-cockpit"] = "Stop cockpit",
         ["summary-ok"] = "All good",
         ["summary-attention"] = "items need attention",
+        ["drift-banner"] = "Skill projection drift: {0} checks need attention — installed trees diverge from their recorded installation or the configured release; updating the skills reconverges them.",
+        ["drift-banner-single"] = "Skill projection drift: one check needs attention — an installed tree diverges from its recorded installation or the configured release; updating the skill reconverges it.",
+        ["drift-banner-cta"] = "Review on Overview",
         ["version"] = "Version",
         ["location"] = "Location",
         ["status"] = "Status",

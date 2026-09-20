@@ -401,6 +401,12 @@
         .banner-info { background: var(--accent-soft); border-color: var(--accent-border); color: var(--text-2); }
         .banner-warn { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn-text); }
 
+        /* The layout-level drift banner sits above the page title, so it owns its own
+           rhythm: no top margin, clear air below, and an inline link that reads as one. */
+        .layout-banner { margin: 0 0 22px; }
+        .layout-banner a { color: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+        .layout-banner a:hover { opacity: 0.75; }
+
         /* ---- fields ---- */
         .field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
         .field > label {

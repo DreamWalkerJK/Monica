@@ -62,6 +62,19 @@
         </div>
     </aside>
     <main class="content">
+        @* The startup diagnosis warms in the background; once it lands, any skill-projection
+           or workspace staleness finding is promoted to a layout-level banner so drift stays
+           visible on every page, not only on the Overview check list. *@
+        @if (DriftBanner is { } drift)
+        {
+            <div class="banner banner-warn layout-banner" role="status" title="@drift.Detail">
+                <Icon Name="alert" Size="16"/>
+                <span>
+                    @drift.Text
+                    <a href="">@Session.T("drift-banner-cta")</a>
+                </span>
+            </div>
+        }
         @Body
     </main>
 </div>
@@ -72,6 +85,35 @@
 
     [Inject]
     private IJSRuntime Js { get; set; } = default!;
+
+    /// <summary>Banner copy plus the offending check lines as a hover tooltip.</summary>
+    private sealed record DriftBannerView(string Text, string Detail);
+
+    /// <summary>
+    /// The proactive drift prompt: skill-projection and workspace checks that warn or fail,
+    /// derived from whatever diagnosis the session currently holds. Null while the startup
+    /// diagnosis is still running or when every projection matches the configured release.
+    /// </summary>
+    private DriftBannerView? DriftBanner
+    {
+        get
+        {
+            var drifted = Session.DashboardCache?.Checks.Items
+                .Where(check => check.Status is GuideCheckStatus.Warning or GuideCheckStatus.Error
+                    && (check.Id.StartsWith("skills.", StringComparison.Ordinal)
+                        || check.Id.StartsWith("workspace.", StringComparison.Ordinal)))
+                .OrderBy(static check => check.Id, StringComparer.Ordinal)
+                .ToList();
+            return drifted is { Count: > 0 }
+                ? new DriftBannerView(
+                    // Chinese is count-neutral; English picks the singular variant for one finding.
+                    drifted.Count == 1
+                        ? Session.T("drift-banner-single")
+                        : string.Format(Session.T("drift-banner"), drifted.Count),
+                    string.Join("\n", drifted.Select(static check => $"{check.Id}: {check.Message}")))
+                : null;
+        }
+    }
 
     // The informational version carries the full commit hash; the sidebar shows the
     // short form and the tooltip keeps the complete identity.
@@ -93,13 +135,21 @@
 
     private string ThemeLabel { get; set; } = "Dark";
 
-    protected override void OnInitialized() => Session.LanguageChanged += OnLanguageChanged;
+    protected override void OnInitialized()
+    {
+        Session.LanguageChanged += OnLanguageChanged;
+        // The banner is a pure function of the dashboard cache, so it follows every
+        // replacement: startup warmup landing, manual refresh, or a product switch.
+        Session.DashboardChanged += OnDashboardChanged;
+    }
 
     private void OnLanguageChanged() => InvokeAsync(() =>
     {
         ApplyThemeLabel();
         StateHasChanged();
     });
+
+    private void OnDashboardChanged() => InvokeAsync(StateHasChanged);
 
     private void ApplyThemeLabel() => ThemeLabel = Session.Language == "zh-CN"
         ? (ThemeIcon == "sun" ? "浅色" : "深色")
@@ -119,5 +169,9 @@
         ApplyThemeLabel();
     }
 
-    public void Dispose() => Session.LanguageChanged -= OnLanguageChanged;
+    public void Dispose()
+    {
+        Session.LanguageChanged -= OnLanguageChanged;
+        Session.DashboardChanged -= OnDashboardChanged;
+    }
 }

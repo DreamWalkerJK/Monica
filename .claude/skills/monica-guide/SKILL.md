@@ -59,7 +59,7 @@ Monica skills install **into the project by default**, never globally unless the
 
 5. Global installs are explicit opt-ins only (`configure --environment windows --target shared|claude`), for users who want the skills in every project; never choose them on the user's behalf. The guide skill is the exception already covered above: it rides the global-first preference, and disabling that preference restores the per-workspace copy on the next update.
 
-6. Diagnose with `status` or `doctor` (add `--workspace` for repository-specific checks, including the installed-versus-profile skill count). Update skills by configuring a newer release bundle — or with the wizard's Update page, which verifies the release `SHA256SUMS` before activation. The wizard also offers a Workspaces page listing every registered workspace and a Sources page observing the global source bindings and the issue-reporting mode.
+6. Diagnose with `status` or `doctor` (add `--workspace` for repository-specific checks, including the installed-versus-profile skill count). The wizard runs the same diagnosis at startup in the background and promotes any skill-projection or workspace staleness finding to a warning banner shown on every page until a refresh reconverges. Update skills by configuring a newer release bundle — or with the wizard's Update page, which verifies the release `SHA256SUMS` before activation. The wizard also offers a Workspaces page listing every registered workspace and a Sources page observing the global source bindings and the issue-reporting mode.
 
 7. Route application work to `$monica-application`, framework and extension work to `$monica-framework`, documentation work to `$monica-docs-authoring`, and upstream contribution preparation to `$monica-contribution`.
 
