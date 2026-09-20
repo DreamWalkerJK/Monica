@@ -199,84 +199,120 @@ else
         }
         else if (Detection is not null)
         {
+            var initialized = Detection.Initialized && Detection.Outcome != GuideWorkspaceDetectionOutcome.NotADirectory;
             <div class="banner @(Detection.Outcome == GuideWorkspaceDetectionOutcome.NotADirectory
                                      ? "banner-error"
-                                     : Detection.Initialized ? "banner-ok" : "banner-info")">
-                <Icon Name="@(Detection.Initialized
-                                  ? "check-circle"
-                                  : Detection.Outcome == GuideWorkspaceDetectionOutcome.NotADirectory
-                                      ? "error-circle"
-                                      : "info")" Size="18"/>
+                                     : "banner-info")">
+                <Icon Name="@(Detection.Outcome == GuideWorkspaceDetectionOutcome.NotADirectory
+                                  ? "error-circle"
+                                  : "info")" Size="18"/>
                 <span>
-                    @DetectionText
+                    @(initialized ? InitializedBannerText : DetectionText)
                     @if (Detection.FrameworkVersion is not null)
                     {
                         <span> · @Session.T("version") @Detection.FrameworkVersion</span>
                     }
-                    @if (Detection.Initialized)
-                    {
-                        <span> · @Session.T("ws-already-initialized")</span>
-                    }
                 </span>
             </div>
         }
-        @if (Detection is { Initialized: false, Outcome: not GuideWorkspaceDetectionOutcome.NotADirectory })
+        @if (Detection is { Outcome: not GuideWorkspaceDetectionOutcome.NotADirectory })
         {
-            <div class="field">
-                <label>@Session.T("ws-profile")</label>
-                <div class="option-grid wide">
-                    @foreach (var profile in Profiles)
+            @if (Detection.Initialized && !ConfirmingProfile)
+            {
+                @* The shared config already records the profile, so the add flow becomes a
+                   confirmation: show exactly what an install will place into the workspace
+                   before the plan, and let an ambiguous source scan reselect the profile. *@
+                <div class="field">
+                    <label>@Session.T("ws-closure-title") (@(Closure?.Count.ToString() ?? "…"))</label>
+                    <div class="value chips">
+                        @if (Closure is null)
+                        {
+                            <span class="chip">…</span>
+                        }
+                        else
+                        {
+                            @foreach (var skill in Closure)
+                            {
+                                <span class="chip">@skill</span>
+                            }
+                        }
+                    </div>
+                    @if (DetectionIsAmbiguous)
                     {
-                        var selected = SelectedProfile == profile;
-                        <label class="option-card @(selected ? "selected" : null)">
-                            <input type="radio" name="ws-profile" checked="@selected"
-                                   @onchange="() => SelectProfile(profile)"/>
-                            <span class="option-main">
-                                <span class="option-title">@profile</span>
-                                <span class="option-desc">@Session.T($"ws-profile-desc-{profile}")</span>
-                            </span>
-                        </label>
+                        <span class="hint">@Session.T("ws-ambiguous-note")</span>
                     }
                 </div>
-                @if (Detection.CandidateProfile is { } candidate)
-                {
-                    <span class="hint">@Session.T("ws-profile-hint") @(Session.T("ws-candidate")): @candidate (@Detection.Confidence)</span>
-                }
-            </div>
-            @if (SelectedProfile == "application")
+                <div class="actions" style="margin-top:0">
+                    <button class="btn btn-primary" disabled="@(Busy || Closure is null)" @onclick="() => InstallForPathAsync(CandidatePath!)">
+                        <Icon Name="install" Size="16"/>
+                        @Session.T("ws-install")
+                    </button>
+                    @if (DetectionIsAmbiguous)
+                    {
+                        <button class="btn btn-ghost" disabled="@Busy" @onclick="BeginProfileConfirm">
+                            <Icon Name="update" Size="16"/>
+                            @Session.T("ws-reselect-profile")
+                        </button>
+                    }
+                </div>
+            }
+            else
             {
+                @if (ConfirmingProfile)
+                {
+                    <div class="actions" style="margin-top:0">
+                        <button class="btn btn-ghost" disabled="@Busy" @onclick="() => ConfirmingProfile = false">
+                            @Session.T("cancel")
+                        </button>
+                    </div>
+                }
                 <div class="field">
-                    <label>@Session.T("ws-architecture")</label>
-                    <div class="option-grid">
-                        @foreach (var architecture in Architectures)
+                    <label>@Session.T("ws-profile")</label>
+                    <div class="option-grid wide">
+                        @foreach (var profile in Profiles)
                         {
-                            var selected = SelectedArchitecture == architecture;
+                            var selected = SelectedProfile == profile;
                             <label class="option-card @(selected ? "selected" : null)">
-                                <input type="radio" name="ws-arch" checked="@selected"
-                                       @onchange="() => SelectedArchitecture = architecture"/>
+                                <input type="radio" name="ws-profile" checked="@selected"
+                                       @onchange="() => SelectProfile(profile)"/>
                                 <span class="option-main">
-                                    <span class="option-title">@architecture</span>
+                                    <span class="option-title">@profile</span>
+                                    <span class="option-desc">@Session.T($"ws-profile-desc-{profile}")</span>
                                 </span>
                             </label>
                         }
                     </div>
+                    @if (Detection.CandidateProfile is { } candidate)
+                    {
+                        <span class="hint">@Session.T("ws-profile-hint") @(Session.T("ws-candidate")): @candidate (@Detection.Confidence)</span>
+                    }
+                </div>
+                @if (SelectedProfile == "application")
+                {
+                    <div class="field">
+                        <label>@Session.T("ws-architecture")</label>
+                        <div class="option-grid">
+                            @foreach (var architecture in Architectures)
+                            {
+                                var selected = SelectedArchitecture == architecture;
+                                <label class="option-card @(selected ? "selected" : null)">
+                                    <input type="radio" name="ws-arch" checked="@selected"
+                                           @onchange="() => SelectedArchitecture = architecture"/>
+                                    <span class="option-main">
+                                        <span class="option-title">@architecture</span>
+                                    </span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                }
+                <div class="actions" style="margin-top:0">
+                    <button class="btn btn-primary" disabled="@(Busy || Inspecting || SelectedProfile is null)" @onclick="InitPreviewAsync">
+                        <Icon Name="file" Size="16"/>
+                        @Session.T("ws-init-preview")
+                    </button>
                 </div>
             }
-            <div class="actions" style="margin-top:0">
-                <button class="btn btn-primary" disabled="@(Busy || Inspecting || SelectedProfile is null)" @onclick="InitPreviewAsync">
-                    <Icon Name="file" Size="16"/>
-                    @Session.T("ws-init-preview")
-                </button>
-            </div>
-        }
-        else if (Detection is { Initialized: true })
-        {
-            <div class="actions" style="margin-top:0">
-                <button class="btn btn-primary" disabled="@Busy" @onclick="() => InstallForPathAsync(CandidatePath!)">
-                    <Icon Name="install" Size="16"/>
-                    @Session.T("ws-install")
-                </button>
-            </div>
         }
         @if (ValidationError is not null)
         {
@@ -467,6 +503,49 @@ else
         _ => Session.T("ws-detect-not-directory")
     };
 
+    /// <summary>
+    /// Banner text for an already-initialized candidate: the recorded configuration facts,
+    /// not the source-scan verdict — a config exists, so the scan's ambiguity no longer
+    /// demands a selection the card does not offer.
+    /// </summary>
+    private string InitializedBannerText => string.Format(
+        Session.T("ws-initialized-banner"),
+        Detection?.ConfiguredProfile ?? "—",
+        Detection?.ConfiguredCapabilities is { Count: > 0 } capabilities
+            ? string.Join(", ", capabilities)
+            : "—",
+        Detection?.InitializingProduct is { } productId
+            ? KnownAgentProducts.FindByProductId(productId)?.DisplayName ?? productId
+            : "—");
+
+    /// <summary>Whether the source scan could not decide a profile on its own.</summary>
+    private bool DetectionIsAmbiguous => Detection?.Outcome is GuideWorkspaceDetectionOutcome.AmbiguousApplicationAndExtension
+        or GuideWorkspaceDetectionOutcome.AmbiguousApplicationUnscanned
+        or GuideWorkspaceDetectionOutcome.AmbiguousScanExhausted
+        or GuideWorkspaceDetectionOutcome.AmbiguousNoCharacteristics;
+
+    /// <summary>True while the user reselects the profile of an already-initialized workspace.</summary>
+    private bool ConfirmingProfile { get; set; }
+
+    /// <summary>Skill closure an install would place for the configured profile; null until loaded.</summary>
+    private IReadOnlyList<string>? Closure { get; set; }
+
+    /// <summary>
+    /// Opens the profile reselection flow for an initialized workspace, preseeding the
+    /// selectors from the recorded configuration so a re-init preview starts from reality.
+    /// </summary>
+    private void BeginProfileConfirm()
+    {
+        ConfirmingProfile = true;
+        if (Detection?.ConfiguredProfile is { } configured && Profiles.Contains(configured))
+        {
+            SelectedProfile = configured;
+        }
+
+        SelectedArchitecture = Detection?.ConfiguredCapabilities?
+            .FirstOrDefault(capability => Architectures.Contains(capability));
+    }
+
     private string? SelectedProfile { get; set; }
 
     private string? SelectedArchitecture { get; set; }
@@ -528,6 +607,8 @@ else
         ValidationError = null;
         SelectedProfile = null;
         SelectedArchitecture = null;
+        ConfirmingProfile = false;
+        Closure = null;
         if (string.IsNullOrWhiteSpace(CandidatePath))
         {
             return;
@@ -550,6 +631,19 @@ else
             SelectedProfile = detection.CandidateProfile is { } candidate && Profiles.Contains(candidate)
                 ? candidate
                 : null;
+            if (detection.Initialized && detection.ConfiguredProfile is { } configuredProfile)
+            {
+                // The install confirmation summary needs the closure the configured profile
+                // would place; a missing bundle leaves it null and disables the button.
+                try
+                {
+                    Closure = await Facade.DescribeProfileClosureAsync(configuredProfile);
+                }
+                catch (InvalidOperationException)
+                {
+                    Closure = null;
+                }
+            }
         }
         finally
         {
