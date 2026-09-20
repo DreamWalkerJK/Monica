@@ -572,6 +572,38 @@ public sealed class GuideProjectInstallTests
         Assert.Contains("stale", workspaceCheck.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Status_NamesDriftedSkillTreesAndCarriesTargetDetails()
+    {
+        using var fixture = new ProjectFixture();
+        var workspace = fixture.CreateWorkspace("monica-application");
+        using (var service = fixture.CreateService())
+        {
+            var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+            var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+            await service.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        }
+
+        // Tamper with one installed skill tree on disk: the catalog check must name the
+        // drifted skill in its message and carry the structured target identity that UI
+        // surfaces (the wizard drift banner) group findings by.
+        var skillFile = Path.Combine(workspace, ".agents", "skills", "monica-application", "SKILL.md");
+        Assert.True(File.Exists(skillFile));
+        File.AppendAllText(skillFile, "tampered");
+
+        using (var service = fixture.CreateService())
+        {
+            var report = await service.GetStatusAsync(cancellationToken: CancellationToken);
+            var catalogCheck = Assert.Single(
+                report.Checks, check => check.Id.EndsWith(".catalog", StringComparison.Ordinal));
+            Assert.Equal(GuideCheckStatus.Warning, catalogCheck.Status);
+            Assert.Contains("monica-application", catalogCheck.Message, StringComparison.Ordinal);
+            Assert.NotNull(catalogCheck.Details);
+            Assert.Equal("workspace", catalogCheck.Details!["target.kind"]);
+            Assert.Equal(workspace, catalogCheck.Details!["target.label"]);
+        }
+    }
+
     private sealed class ProjectFixture : IDisposable
     {
         internal const string ApplicationSkill = "monica-application";

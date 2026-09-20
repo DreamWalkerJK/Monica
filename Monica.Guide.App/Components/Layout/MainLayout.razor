@@ -65,14 +65,22 @@
         @* The startup diagnosis warms in the background; once it lands, any skill-projection
            or workspace staleness finding is promoted to a layout-level banner so drift stays
            visible on every page, not only on the Overview check list. *@
-        @if (DriftBanner is { } drift)
+        @if (DriftTargets is { Count: > 0 } targets)
         {
-            <div class="banner banner-warn layout-banner" role="status" title="@drift.Detail">
+            <div class="banner banner-warn layout-banner" role="status">
                 <Icon Name="alert" Size="16"/>
-                <span>
-                    @drift.Text
-                    <a href="">@Session.T("drift-banner-cta")</a>
-                </span>
+                <div class="layout-banner-main">
+                    <span class="layout-banner-text">
+                        @Session.T("drift-banner")
+                        <a href="">@Session.T("drift-banner-cta")</a>
+                    </span>
+                    <span class="drift-chips">
+                        @foreach (var target in targets)
+                        {
+                            <span class="drift-chip" title="@target.Detail">@target.Label · @KindLabel(target.Kind)</span>
+                        }
+                    </span>
+                </div>
             </div>
         }
         @Body
@@ -86,34 +94,49 @@
     [Inject]
     private IJSRuntime Js { get; set; } = default!;
 
-    /// <summary>Banner copy plus the offending check lines as a hover tooltip.</summary>
-    private sealed record DriftBannerView(string Text, string Detail);
+    /// <summary>One drifted target: its display label, global/workspace kind, and check lines as a tooltip.</summary>
+    private sealed record DriftTargetView(string Label, string Kind, string Detail);
 
     /// <summary>
-    /// The proactive drift prompt: skill-projection and workspace checks that warn or fail,
-    /// derived from whatever diagnosis the session currently holds. Null while the startup
-    /// diagnosis is still running or when every projection matches the configured release.
+    /// The proactive drift prompt, grouped per target. Skill-projection and workspace checks
+    /// that warn or fail name their target through the engine's structured details, so the
+    /// banner answers "which targets — global or workspace" at a glance while each chip's
+    /// tooltip carries the exact check messages (which name the drifted skills). Leftover
+    /// foreign directories are excluded: their remediation is manual cleanup, not a skill
+    /// update. Null while the startup diagnosis is still running or when clean.
     /// </summary>
-    private DriftBannerView? DriftBanner
+    private IReadOnlyList<DriftTargetView>? DriftTargets
     {
         get
         {
             var drifted = Session.DashboardCache?.Checks.Items
                 .Where(check => check.Status is GuideCheckStatus.Warning or GuideCheckStatus.Error
                     && (check.Id.StartsWith("skills.", StringComparison.Ordinal)
-                        || check.Id.StartsWith("workspace.", StringComparison.Ordinal)))
-                .OrderBy(static check => check.Id, StringComparer.Ordinal)
-                .ToList();
-            return drifted is { Count: > 0 }
-                ? new DriftBannerView(
-                    // Chinese is count-neutral; English picks the singular variant for one finding.
-                    drifted.Count == 1
-                        ? Session.T("drift-banner-single")
-                        : string.Format(Session.T("drift-banner"), drifted.Count),
-                    string.Join("\n", drifted.Select(static check => $"{check.Id}: {check.Message}")))
-                : null;
+                        || check.Id.StartsWith("workspace.", StringComparison.Ordinal))
+                    && !check.Id.EndsWith(".foreign", StringComparison.Ordinal)
+                    && !check.Id.EndsWith(".stale-alias", StringComparison.Ordinal))
+                .ToArray();
+            if (drifted is not { Length: > 0 })
+            {
+                return null;
+            }
+
+            return drifted
+                .GroupBy(check => (
+                    Label: check.TargetLabel ?? check.Id,
+                    Kind: check.TargetKind ?? (check.Id.StartsWith("workspace.", StringComparison.Ordinal) ? "workspace" : "global")))
+                .OrderBy(static group => group.Key.Kind, StringComparer.Ordinal)
+                .ThenBy(static group => group.Key.Label, StringComparer.Ordinal)
+                .Select(static group => new DriftTargetView(
+                    group.Key.Label,
+                    group.Key.Kind,
+                    string.Join("\n", group.Select(check => $"{check.Id}: {check.Message}").Order(StringComparer.Ordinal))))
+                .ToArray();
         }
     }
+
+    private string KindLabel(string kind)
+        => kind == "workspace" ? Session.T("drift-kind-workspace") : Session.T("drift-kind-global");
 
     // The informational version carries the full commit hash; the sidebar shows the
     // short form and the tooltip keeps the complete identity.
