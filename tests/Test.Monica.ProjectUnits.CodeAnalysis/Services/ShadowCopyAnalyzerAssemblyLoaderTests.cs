@@ -7,14 +7,14 @@ using Xunit;
 
 namespace Test.Monica.ProjectUnits.CodeAnalysis.Services;
 
-public sealed class LockFreeAnalyzerAssemblyLoaderTests
+public sealed class ShadowCopyAnalyzerAssemblyLoaderTests
 {
     [Fact]
-    public void LoadFromPath_WhileTheAssemblyStaysLoaded_ShouldNotLockTheFile()
+    public void LoadFromPath_WhileTheAssemblyStaysLoaded_ShouldNotLockTheSourceFile()
     {
         using var directory = TemporaryDirectory.Create();
         var assemblyPath = directory.CopyFromTestOutput("Monica.ProjectUnits.CodeAnalysis.dll");
-        var loader = new LockFreeAnalyzerAssemblyLoader();
+        var loader = new ShadowCopyAnalyzerAssemblyLoader();
 
         var loaded = loader.LoadFromPath(assemblyPath);
 
@@ -30,7 +30,7 @@ public sealed class LockFreeAnalyzerAssemblyLoaderTests
     {
         using var directory = TemporaryDirectory.Create();
         var assemblyPath = directory.CopyFromTestOutput("Monica.ProjectUnits.CodeAnalysis.dll");
-        var loader = new LockFreeAnalyzerAssemblyLoader();
+        var loader = new ShadowCopyAnalyzerAssemblyLoader();
 
         var first = loader.LoadFromPath(assemblyPath);
 
@@ -38,22 +38,36 @@ public sealed class LockFreeAnalyzerAssemblyLoaderTests
     }
 
     [Fact]
-    public void Dependencies_ShouldResolveFromRegisteredLocationsWithoutLockingAnyFile()
+    public void LoadFromPath_ShouldLoadFromAShadowCopyWithARealFileLocation()
+    {
+        using var directory = TemporaryDirectory.Create();
+        var assemblyPath = directory.CopyFromTestOutput("Monica.ProjectUnits.CodeAnalysis.dll");
+        var loader = new ShadowCopyAnalyzerAssemblyLoader();
+
+        var loaded = loader.LoadFromPath(assemblyPath);
+
+        loaded.Location.Should().NotBeNullOrEmpty();
+        Path.GetDirectoryName(loaded.Location).Should().NotBe(directory.RootDirectory);
+        File.Exists(loaded.Location).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Dependencies_ShouldResolveFromRegisteredLocationsWithoutLockingAnySourceFile()
     {
         using var directory = TemporaryDirectory.Create();
         var (primaryPath, dependencyPath) = CompileReferencingPair(directory.RootDirectory);
-        var loader = new LockFreeAnalyzerAssemblyLoader();
-        loader.AddDependencyLocation(directory.RootDirectory);
+        var loader = new ShadowCopyAnalyzerAssemblyLoader();
+        // The Roslyn calling convention registers analyzer file paths; each registration covers
+        // the containing directory for dependency probing.
+        loader.AddDependencyLocation(primaryPath);
 
         var loaded = loader.LoadFromPath(primaryPath);
-        var holder = loaded.GetType("Monica.LoaderTest.Primary.Holder");
+        var holder = loaded.GetType("Monica.LoaderTest.Primary.Holder", throwOnError: true);
 
         holder.Should().NotBeNull();
         holder!.BaseType.Should().NotBeNull();
         holder.BaseType!.Assembly.GetName().Name.Should().Be("Monica.LoaderTest.Dependency");
-        // Stream-loaded assemblies carry no file location; resolution alone proves the probe,
-        // because the compiled pair exists nowhere outside the registered directory.
-        holder.BaseType.Assembly.Location.Should().BeEmpty();
+        holder.BaseType.Assembly.Location.Should().NotBe(dependencyPath);
         using (var overwrite = new FileStream(primaryPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
         {
             overwrite.Length.Should().BeGreaterThan(0);
@@ -66,11 +80,11 @@ public sealed class LockFreeAnalyzerAssemblyLoaderTests
     }
 
     [Fact]
-    public void CreateWorkspace_ShouldComposeTheLockFreeAnalyzerService()
+    public void CreateWorkspace_ShouldComposeTheShadowCopyAnalyzerService()
     {
-        using var workspace = LockFreeAnalyzerAssemblyLoader.CreateWorkspace();
+        using var workspace = ShadowCopyAnalyzerAssemblyLoader.CreateWorkspace();
 
-        workspace.Services.GetService<IAnalyzerService>().Should().BeOfType<LockFreeAnalyzerService>();
+        workspace.Services.GetService<IAnalyzerService>().Should().BeOfType<ShadowCopyAnalyzerService>();
     }
 
     /// <summary>
@@ -111,7 +125,7 @@ public sealed class LockFreeAnalyzerAssemblyLoaderTests
         {
             var rootDirectory = Path.Combine(
                 Path.GetTempPath(),
-                $"monica-lock-free-loader-tests-{Guid.NewGuid():N}");
+                $"monica-shadow-copy-loader-tests-{Guid.NewGuid():N}");
             Directory.CreateDirectory(rootDirectory);
             return new TemporaryDirectory(rootDirectory);
         }
@@ -119,7 +133,7 @@ public sealed class LockFreeAnalyzerAssemblyLoaderTests
         internal string CopyFromTestOutput(string fileName)
         {
             var source = Path.Combine(
-                Path.GetDirectoryName(typeof(LockFreeAnalyzerAssemblyLoaderTests).Assembly.Location)!,
+                Path.GetDirectoryName(typeof(ShadowCopyAnalyzerAssemblyLoaderTests).Assembly.Location)!,
                 fileName);
             var destination = Path.Combine(RootDirectory, fileName);
             File.Copy(source, destination);

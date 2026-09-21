@@ -14,8 +14,9 @@ namespace Monica.ProjectUnits.CodeAnalysis.Services;
 /// <remarks>
 /// The analyzer serializes calls made through one instance because MSBuild registration and workspace loading use
 /// process-wide resources. Consumers such as Monica Workflow should register one shared instance. Analyzer and
-/// source-generator references discovered in analyzed projects load through <see cref="LockFreeAnalyzerAssemblyLoader"/>,
-/// so a long-lived analysis host never locks the analyzed repository's build outputs.
+/// source-generator references discovered in analyzed projects load through
+/// <see cref="ShadowCopyAnalyzerAssemblyLoader"/>, so a long-lived analysis host never locks the analyzed
+/// repository's build outputs.
 /// </remarks>
 public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
 {
@@ -72,7 +73,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 diagnostics);
         }
 
-        using var workspace = LockFreeAnalyzerAssemblyLoader.CreateWorkspace();
+        using var workspace = ShadowCopyAnalyzerAssemblyLoader.CreateWorkspace();
         var workspaceDiagnostics = new List<WorkspaceDiagnostic>();
         var workspaceDiagnosticsLock = new Lock();
         workspace.RegisterWorkspaceFailedHandler(args =>
@@ -312,7 +313,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
             null,
             $"Retrying {failures.Count} transiently failed project(s) in a fresh workspace.");
         var recovered = 0;
-        using var retryWorkspace = LockFreeAnalyzerAssemblyLoader.CreateWorkspace();
+        using var retryWorkspace = ShadowCopyAnalyzerAssemblyLoader.CreateWorkspace();
         var retryWorkspaceDiagnostics = new List<WorkspaceDiagnostic>();
         var retryWorkspaceDiagnosticsLock = new Lock();
         retryWorkspace.RegisterWorkspaceFailedHandler(args =>
