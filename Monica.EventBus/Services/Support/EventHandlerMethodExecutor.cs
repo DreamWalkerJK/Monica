@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 using Monica.Core.Execution;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
@@ -50,12 +51,19 @@ internal static class EventHandlerExecutionAdapter<TEvent>
         var point = subscription.Scope == EventSubscriptionScope.Local
             ? EventBusExecutionPoints.LocalHandler
             : EventBusExecutionPoints.DistributedHandler;
+        var mapping = handlerType.GetInterfaceMap(contract);
+        var method = mapping.TargetMethods.Single(candidate => candidate.GetParameters().Length == 2);
+        var transactionMode = method.GetCustomAttribute<ExecutionTransactionAttribute>(inherit: true)?.Mode
+            ?? handlerType.GetCustomAttribute<ExecutionTransactionAttribute>(inherit: true)?.Mode
+            ?? (method.IsDefined(typeof(ReadOnlyOperationAttribute), inherit: true)
+                || handlerType.IsDefined(typeof(ReadOnlyOperationAttribute), inherit: true)
+                ? ExecutionTransactionMode.None : ExecutionTransactionMode.Automatic);
         var descriptor = ExecutionDescriptor.ForInterface<TEvent, ExecutionUnit>(
             point,
             handlerType,
             contract,
             isBusinessOperation: true,
-            transactionMode: ExecutionTransactionMode.Automatic);
+            transactionMode: transactionMode);
         var features = new ExecutionFeatureCollection();
         features.Set(new EventHandlerExecutionFeature(
             subscription.Id,

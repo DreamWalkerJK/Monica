@@ -60,7 +60,7 @@ public static class ModuleJobSchedulerEfCoreRegistrationExtensions
         ArgumentNullException.ThrowIfNull(optionsAction);
 
         module.Require<ModuleRepository, ModuleRepositoryOption>()
-            .AddRepositoryDbContext<JobSchedulerDbContext>(optionsAction);
+            .AddRepositoryDbContext<JobSchedulerDbContext>(optionsAction, DbContextProviderType.Default);
         module.ConfigureServices(context =>
         {
             context.Services.TryAddSingleton<EfCoreJobSchedulerStore>();

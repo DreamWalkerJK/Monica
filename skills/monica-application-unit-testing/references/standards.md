@@ -46,10 +46,10 @@ Do not shorten suffixes such as `.API`, `.Domain`, `.Infrastructure`, `.Adaptor`
 - Put test-specific seam registrations in its `ISeamReplacementBuilder` callback.
 - Create normal child scopes with `application.CreateScope(...)`.
 - Resolve units under test from `MonicaTestScope`.
-- Run write scenarios through `scope.InvokeAsync(...)` so the action executes with request-shaped unit-of-work semantics; resolving directly is for read-only flows.
-- Seed one entity graph per `scope.SeedAsync(...)` call (mixed types and shared navigation parents stay in one call; collections passed as elements are flattened); use `scope.SeedRangeAsync<T>(...)` for typed sequences. Seeding applies persistence concepts and clears the change tracker, so never initialize the DbContext by hand or call `ChangeTracker.Clear()` to work around seeding.
+- Run writes through application.ExecuteAsync, which creates a fresh scope and invokes the production execution pipeline. Resolve the handler inside the callback.
+- Seed with application.SeedAsync<TContext,TResult>, save explicitly inside the callback and return keys. Verify persisted state through application.VerifyAsync<TContext> in another scope. Do not clear trackers to repair application tests.
 - Dispose every scope before its owning application.
-- Use multiple scopes in one application only when the behavior deliberately spans scopes under the same host.
+- Use independent arrange/act/assert scopes over the scenario database.
 - Use `application.Services`, `application.Application`, or `application.ModuleSnapshots` for host-level assertions.
 
 The service collection is immutable after build. A scope may select scoped state, but it cannot replace registrations.
@@ -60,11 +60,11 @@ Replace leaves and adapters:
 
 - state stores and caches
 - event transports
-- DbContext provider or database
+- database connection/provider options, retaining production context/session resolution
 - HTTP/RPC clients
 - current user or tenant context
 - local configuration adapters
-- clocks, random sources, or ID generators when nondeterminism matters
+- clocks, random sources, or ID generators when nondeterminism matters; retain the real audit policy
 
 Do not replace application services, domain services, repositories, or mappers unless that type is itself the external boundary under test.
 

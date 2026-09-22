@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Entity.Services;
 using Monica.Repository.Persistence.Abstractions;
+using Monica.Repository.Persistence.Extensions;
 using Monica.Repository.Snowflake.Abstractions;
 using Monica.Testing.Doubles;
 using Monica.Testing.Repository;
@@ -17,7 +18,7 @@ namespace Test.Monica.Repository.Persistence;
 /// </summary>
 public sealed class RepositoryDbContextConceptTests
 {
-    private const string TesterId = "concept-tester";
+    private const string TESTER_ID = "concept-tester";
 
     [Fact]
     public async Task SaveChangesAsync_WhenInsertedOutsideUnitOfWork_ShouldStampCreationAudit()
@@ -30,12 +31,12 @@ public sealed class RepositoryDbContextConceptTests
 
         row.Id.Should().NotBe(0);
         row.CreationTime.Should().NotBe(default);
-        row.CreatorId.Should().Be(TesterId);
+        row.CreatorId.Should().Be(TESTER_ID);
 
         var stored = await fixture.Context.SoftDeleteRows.AsNoTracking()
             .SingleAsync(r => r.Title == "order-1", TestContext.Current.CancellationToken);
         stored.CreationTime.Should().NotBe(default);
-        stored.CreatorId.Should().Be(TesterId);
+        stored.CreatorId.Should().Be(TESTER_ID);
     }
 
     [Fact]
@@ -49,7 +50,7 @@ public sealed class RepositoryDbContextConceptTests
 
         row.IsDeleted.Should().BeTrue();
         row.DeletionTime.Should().NotBeNull();
-        row.DeleterId.Should().Be(TesterId);
+        row.DeleterId.Should().Be(TESTER_ID);
 
         var visibleRows = await fixture.Context.SoftDeleteRows.AsNoTracking()
             .CountAsync(TestContext.Current.CancellationToken);
@@ -75,7 +76,7 @@ public sealed class RepositoryDbContextConceptTests
             .SingleAsync(r => r.Id == row.Id, TestContext.Current.CancellationToken);
         stored.Title.Should().Be("renamed");
         stored.LastModificationTime.Should().NotBeNull();
-        stored.LastModifierId.Should().Be(TesterId);
+        stored.LastModifierId.Should().Be(TESTER_ID);
     }
 
     [Fact]
@@ -119,46 +120,34 @@ public sealed class RepositoryDbContextConceptTests
         await using var fixture = await CreateFixtureAsync();
         var repository = fixture.Repository<SoftDeleteAuditRow>();
 
-        // Insertion keeps the inserted instance tracked, as in production; the later read-modify-write flow
-        // starts from a clean tracker, mirroring a fresh operation scope.
-        var inserted = await repository.InsertAsync(
-            new SoftDeleteAuditRow { Title = "origin" },
-            TestContext.Current.CancellationToken);
-        await repository.SaveChangesAsync(TestContext.Current.CancellationToken);
-        inserted.CreatorId.Should().Be(TesterId);
-        fixture.Context.ChangeTracker.Clear();
+        var inserted = new SoftDeleteAuditRow { Title = "origin" };
+        repository.Add(inserted);
+        await fixture.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        inserted.CreatorId.Should().Be(TESTER_ID);
 
-        var loaded = await repository.FindAsync(r => r.Title == "origin", TestContext.Current.CancellationToken);
-        loaded.Should().NotBeNull();
-        loaded!.Title = "renamed";
-        await repository.UpdateAsync(loaded, TestContext.Current.CancellationToken);
-        await repository.SaveChangesAsync(TestContext.Current.CancellationToken);
-        fixture.Context.ChangeTracker.Clear();
+        var loaded = await repository.Query.AsTracking().SingleAsync(r => r.Title == "origin", TestContext.Current.CancellationToken);
+        loaded.Title = "renamed";
+        await fixture.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var reread = await repository.FindAsync(r => r.Title == "renamed", TestContext.Current.CancellationToken);
-        reread.Should().NotBeNull();
-        reread!.LastModificationTime.Should().NotBeNull();
+        var reread = await repository.Query.SingleAsync(r => r.Title == "renamed", TestContext.Current.CancellationToken);
+        reread.LastModificationTime.Should().NotBeNull();
 
-        await repository.DeleteAsync(reread, TestContext.Current.CancellationToken);
-        await repository.SaveChangesAsync(TestContext.Current.CancellationToken);
+        repository.Remove(loaded);
+        await fixture.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        (await repository.Query.AnyAsync(TestContext.Current.CancellationToken)).Should().BeFalse();
 
-        var visible = await repository.AnyAsync(r => r.Title == "renamed", TestContext.Current.CancellationToken);
-        visible.Should().BeFalse();
-
-        var softDeleted = await repository.IgnoreSoftDeleteFilter()
-            .FirstOrDefaultAsync(r => r.Title == "renamed", TestContext.Current.CancellationToken);
-        softDeleted.Should().NotBeNull();
-        softDeleted!.IsDeleted.Should().BeTrue();
-        softDeleted.DeleterId.Should().Be(TesterId);
+        var softDeleted = await repository.Query.IncludeSoftDeleted().SingleAsync(TestContext.Current.CancellationToken);
+        softDeleted.IsDeleted.Should().BeTrue();
+        softDeleted.DeleterId.Should().Be(TESTER_ID);
     }
 
     private static async Task<DbContextFixture<TestRepositoryDbContext>> CreateFixtureAsync()
     {
-        // The real audit property setter makes audit stamping observable; the fixture default is a no-op double.
+        // Replace the identity input while retaining the production audit implementation.
         var fixture = DbContextFixture<TestRepositoryDbContext>.UseSqliteInMemory(services =>
         {
             services.AddSingleton<ISnowflakeIdGenerator>(new SequentialTestIdGenerator());
-            services.AddSingleton<IAuditPropertySetter>(new AuditPropertySetter(new TestCurrentUser(TesterId, "concept-tester")));
+            services.AddSingleton<IAuditPropertySetter>(new AuditPropertySetter(new TestCurrentUser(TESTER_ID, "concept-tester"), TimeProvider.System));
         });
         return await fixture.EnsureCreatedAsync(TestContext.Current.CancellationToken);
     }

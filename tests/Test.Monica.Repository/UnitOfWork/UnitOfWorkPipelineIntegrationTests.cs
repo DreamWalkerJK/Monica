@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Monica.Core;
 using Monica.Core.Execution;
+using Monica.Core.Mediator;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
@@ -14,6 +15,35 @@ namespace Test.Monica.Repository.UnitOfWork;
 
 public sealed class UnitOfWorkPipelineIntegrationTests
 {
+    [Fact]
+    public async Task Mediator_WhenRequestIsReadOnly_ShouldSkipTransactionAndRetainEnclosingSession()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.AddUnitOfWork();
+            monica.AddMediator();
+        });
+        builder.Services.AddScoped<IRequestHandler<ReadQuery, bool>, ReadQueryHandler>();
+        using var host = builder.Build();
+        await using var scope = host.Services.CreateAsyncScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var manager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
+        Assert.False(await mediator.Send(new ReadQuery(), TestContext.Current.CancellationToken));
+        await manager.RunAsync(async () =>
+            Assert.True(await mediator.Send(new ReadQuery(), TestContext.Current.CancellationToken)),
+            cancellationToken: TestContext.Current.CancellationToken);
+    }
+
+    [ReadOnlyOperation]
+    public sealed record ReadQuery : IRequest<bool>;
+
+    private sealed class ReadQueryHandler(IUnitOfWorkManager manager) : IRequestHandler<ReadQuery, bool>
+    {
+        public Task<bool> Handle(ReadQuery request, CancellationToken cancellationToken)
+            => Task.FromResult(manager.Current is not null);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

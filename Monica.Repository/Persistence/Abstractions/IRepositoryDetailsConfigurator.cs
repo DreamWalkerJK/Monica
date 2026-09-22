@@ -4,7 +4,7 @@ using Monica.Repository.Entity.Abstractions;
 namespace Monica.Repository.Persistence.Abstractions;
 
 /// <summary>
-/// Provides the default eager-loading shape used by <see cref="IRepositoryRead{TEntity}.WithDetails"/>.
+/// Provides the default eager-loading shape used by infrastructure CRUD queries.
 /// </summary>
 /// <typeparam name="TEntity">The entity type whose details are configured.</typeparam>
 /// <remarks>

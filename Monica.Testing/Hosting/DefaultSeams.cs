@@ -34,8 +34,8 @@ public static class DefaultSeams
         services.RemoveAll<ICurrentUser>();
         services.AddSingleton<ICurrentUser, TestCurrentUser>();
 
-        services.RemoveAll<IAuditPropertySetter>();
-        services.AddSingleton<IAuditPropertySetter, TestAuditPropertySetter>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddTransient<IAuditPropertySetter, Monica.Repository.Entity.Services.AuditPropertySetter>();
 
         services.RemoveAll<IEventHandlerInvoker>();
         services.AddSingleton<IEventHandlerInvoker, EventHandlerInvoker>();

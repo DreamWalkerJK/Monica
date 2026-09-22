@@ -1,3 +1,6 @@
+using Monica.Repository.Outbox.Abstractions;
+using Monica.Repository.Outbox.Models;
+using Monica.Repository.Outbox.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -68,7 +71,10 @@ public static class ModuleRepositoryRegistrationExtensions
     /// <param name="module">The Repository module registration being configured.</param>
     /// <typeparam name="TDbContext">The repository DbContext type to register.</typeparam>
     /// <param name="optionsAction">Configures the EF Core provider and options for the DbContext.</param>
-    /// <param name="dbContextProviderType">Selects how scoped repositories obtain the current DbContext.</param>
+    /// <param name="dbContextProviderType">
+    /// Selects transaction participation. UnitOfWork is the default; Default is for independently managed stores.
+    /// Both modes resolve the same directly registered scoped context.
+    /// </param>
     /// <returns>The repository module registration for method chaining.</returns>
     /// <remarks>
     /// Registration also exposes an <see cref="IDbContextFactory{TContext}"/> whose contexts own independent
@@ -76,12 +82,12 @@ public static class ModuleRepositoryRegistrationExtensions
     /// from long-lived services. This host-owned factory replaces any earlier factory registration for the same
     /// context so the ownership guarantee cannot be bypassed accidentally.
     /// </remarks>
-    public static ModuleRegistration<ModuleRepository, ModuleRepositoryOption> AddRepositoryDbContext<TDbContext>(this ModuleRegistration<ModuleRepository, ModuleRepositoryOption> module, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.Default)
+    public static ModuleRegistration<ModuleRepository, ModuleRepositoryOption> AddRepositoryDbContext<TDbContext>(this ModuleRegistration<ModuleRepository, ModuleRepositoryOption> module, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.UnitOfWork)
         where TDbContext : RepositoryDbContext<TDbContext>
     {
         if (dbContextProviderType == DbContextProviderType.UnitOfWork)
         {
-            module.Require<ModuleUnitOfWork, ModuleUnitOfWorkOption>().AddDbContextProvider<TDbContext>();
+            module.Require<ModuleUnitOfWork, ModuleUnitOfWorkOption>();
         }
         else if (dbContextProviderType != DbContextProviderType.Default)
         {
@@ -93,12 +99,10 @@ public static class ModuleRepositoryRegistrationExtensions
 
         module.ConfigureServices(context =>
         {
-            if (dbContextProviderType == DbContextProviderType.Default)
-            {
-                context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(DefaultDbContextProvider<TDbContext>));
-            }
+            context.Services.AddScoped<IDbContextProvider<TDbContext>, DefaultDbContextProvider<TDbContext>>();
             
             context.Services.TryAddTransient<IAuditPropertySetter, AuditPropertySetter>();
+            context.Services.TryAddSingleton(TimeProvider.System);
             context.Services.AddSingleton(new RepositoryDbContextRegistration(
                 typeof(TDbContext),
                 dbContextProviderType));
@@ -126,6 +130,29 @@ public static class ModuleRepositoryRegistrationExtensions
 
             context.Services
                 .AddTransient<IDbContextDatabaseManager<TDbContext>, DbContextDatabaseManager<TDbContext>>();
+        });
+        return module;
+    }
+
+    /// <summary>
+    /// Adds outbox storage to this context's EF model and registers a writer and explicit dispatcher.
+    /// Generate an EF migration before deploying. No hosted worker or event transport is implicitly enabled.
+    /// Writers and dispatchers must register the same versioned payload contracts.
+    /// </summary>
+    public static ModuleRegistration<ModuleRepository, ModuleRepositoryOption> AddOutbox<TDbContext>(
+        this ModuleRegistration<ModuleRepository, ModuleRepositoryOption> module,
+        Action<RepositoryOutboxOptions> configure)
+        where TDbContext : RepositoryDbContext<TDbContext>
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        var options = new RepositoryOutboxOptions();
+        configure(options);
+        if (options.DeliveryLease <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(configure), "Delivery lease must be positive.");
+        module.ConfigureServices(context =>
+        {
+            context.Services.AddSingleton(new OutboxRegistration<TDbContext>(options));
+            context.Services.AddScoped<IOutboxWriter<TDbContext>, OutboxWriter<TDbContext>>();
+            context.Services.AddSingleton<OutboxDispatcher<TDbContext>>();
         });
         return module;
     }
@@ -191,17 +218,18 @@ public class ModuleRepositoryOption : ModuleOptions<ModuleRepository>
 }
 
 /// <summary>
-/// Selects how scoped repository services resolve the DbContext for a request or operation.
+/// Selects transaction participation; both modes use the directly registered scoped DbContext.
 /// </summary>
 public enum DbContextProviderType
 {
     /// <summary>
-    /// Resolves the current DbContext directly from the active dependency injection scope.
+    /// Excludes this context from automatic selection. An independent operation can select it explicitly
+    /// through UnitOfWorkScopeOptions.DbContextTypes, or own a direct save.
     /// </summary>
     Default,
 
     /// <summary>
-    /// Resolves the current DbContext from the active unit of work.
+    /// Uses the current scope's DbContext and enlists it in the operation's transaction.
     /// </summary>
     UnitOfWork
 }

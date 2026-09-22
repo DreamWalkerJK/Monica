@@ -1,107 +1,84 @@
 ---
 name: monica-application-unit-testing
-description: Create, migrate, or review sociable tests for Monica-based business services. Use for Test.{ProductionProjectName} architecture, MonicaTestApplicationFactory host-owned scenarios, handler/domain-service/repository/module tests, request-shaped write execution with MonicaTestScope.InvokeAsync, seeding and write-path persistence semantics, pre-build seam replacement, database isolation, raw ProjectUnit fast paths, parallel test isolation, or migration from mock-heavy legacy fixtures.
+description: Create, migrate, or review sociable tests for Monica-based business services. Use for Test.{ProductionProjectName} architecture, host-owned MonicaTestApplicationFactory scenarios, production-pipeline write execution with MonicaTestApplication.ExecuteAsync, independent arrange/act/assert scopes, typed database seeding, outbox assertions, pre-build seam replacement, database isolation, or migration from mock-heavy fixtures.
 ---
 
 # Monica Application Unit Testing
 
-Test business behavior through a complete Monica host when composition matters. Each scenario owns its host; registrations are finalized before build, and scopes only provide normal scoped lifetimes.
+Test business behavior through a complete Monica host when composition matters. Each scenario owns its host and database; registrations are finalized before build. Arrange, act and assert use independent scopes.
 
 ## Repository Test Infrastructure First
 
-Before writing any factory, search the repository's shared test layer (for example a `Platform.UnitTests` project or a base factory such as `PlatformTestApplicationFactory`). When one covers the project under test, inherit and extend it: its seams already encode repo-wide decisions such as the current user, ID generators, and test databases. Apply this skill's shapes only when no repo-level factory exists.
+Search the repository's shared test layer (for example Platform.UnitTests or PlatformTestApplicationFactory) before writing a factory. Extend existing project infrastructure when it covers the scenario. Do not introduce another framework with different transaction semantics.
 
 ## Workflow
 
-1. Inspect the production startup path, module registrations, discovery assemblies, DbContexts, external adapters, and the repository's shared test layer.
-2. Create one runnable project named `Test.{ProductionProjectName}` for the exact production project stem.
-3. Add a project-level factory derived from `MonicaTestApplicationFactory<TDiscoveryAnchor>`:
-   - Override `ConfigureMonica(IMonicaBuilder)` with the production module graph required by the service.
-   - Override `TypeDiscoveryAssemblies` when production ProjectUnits span more than the anchor assembly.
-   - Override `ConfigureHost(WebApplicationBuilder)` only for test host configuration or environment inputs.
-   - Override `ConfigureServices(IServiceCollection)` for stable test providers and boundary seams used by every scenario; call the base implementation first to retain Monica's standard seams.
-4. In every sociable test, call `CreateAsync(...)` to build a complete host for that scenario.
-5. Supply scenario-specific registrations through the optional `Action<ISeamReplacementBuilder>` callback to `CreateAsync`. The callback runs before host build.
-6. Call `application.CreateScope(...)`, resolve the unit from the concrete `MonicaTestScope`, and pass its cancellation token to async operations.
-7. Assert public behavior and observable side effects, then dispose the scope and application.
-8. Run the target test project.
+1. Inspect production startup, module registration, discovery assemblies, contexts, external adapters and existing test factories.
+2. Use a runnable project named Test. plus the exact production project stem.
+3. Derive a stateless project recipe from MonicaTestApplicationFactory<TDiscoveryAnchor>:
+   - ConfigureMonica composes the relevant production module graph.
+   - TypeDiscoveryAssemblies includes all production assemblies needed by the scenario.
+   - ConfigureHost supplies host/environment inputs.
+   - ConfigureServices applies stable boundary replacements before build; call its base implementation.
+4. Call CreateAsync for each scenario. Its optional ISeamReplacementBuilder callback applies scenario-specific replacements before build.
+5. Arrange with application.SeedAsync<TContext,TResult>, execute with application.ExecuteAsync, and verify with application.VerifyAsync<TContext>.
+6. Assert business outcomes, persisted state and durable notifications separately from delivery.
+7. Dispose the application and run the target test project.
 
-## Write Path and Persistence
+## Write and Read Boundaries
 
-Repository write methods (`InsertAsync`, `UpdateAsync`, `DeleteAsync`) only stage changes. Persistence concepts — soft-delete rewriting, audit stamping, concurrency stamps, entity events — are applied by the DbContext save pipeline on every save path, with or without a unit of work.
+- IRepository<TEntity> exposes Add/Remove; keyed repositories load tracked aggregates with FindAsync/GetAsync. Mutate the loaded instance. No detached Update or repository save is required.
+- application.ExecuteAsync creates a fresh scope and calls the production IExecutionPipeline. Resolve the handler inside its callback. Exceptions, cancellation and failed Monica result envelopes roll back; an early FlushAsync or direct context save stays inside that transaction.
+- AddRepositoryDbContext defaults to UnitOfWork participation and enables the module. Independently managed infrastructure stores explicitly use Default. Multiple business contexts require explicit operation selection.
+- Completed/faulted operation scopes are terminal. Each retry or independent operation gets a fresh scope. A caught nested failure still prevents commit.
+- For mediator-specific behavior, resolve IMediator in a fresh scope and Send the actual request. Query requests marked [ReadOnlyOperation] avoid an automatic write transaction.
+- For direct read-only calls, use application.CreateScope and resolve the service there. Direct resolution alone does not invoke the pipeline.
+- Native EF queries stay in infrastructure; business query interfaces return materialized projections. Do not enumerate an IQueryable after its scope is disposed.
 
-- Write scenarios: wrap the action in `await scope.InvokeAsync(async s => { ... })` (a generic overload returns a result). This mirrors the request pipeline: an ambient unit of work wraps the action, the scope's DbContexts are saved when the action succeeds, and the unit of work commits; nothing persists when the action throws. No manual context initialization and no manual `SaveChangesAsync`.
-- Read-only scenarios: resolve the service from the scope and query directly; no wrapper is needed.
-- A directly resolved service never runs the auto-controller execution pipeline. Any write that must commit as one business operation goes through `scope.InvokeAsync`.
-- `scope.InvokeAsync` requires the UnitOfWork module in the composition (`monica.AddUnitOfWork()` or a `DbContextProviderType.UnitOfWork` registration); it fails fast when the module is missing.
+## Arrange and Verify
 
-## Seeding
+application.SeedAsync<TContext,TResult> takes a typed context callback. Add a heterogeneous graph together, call db.SaveChangesAsync inside the callback, and return keys or DTOs. An unsaved callback fails visibly.
 
-- `await scope.SeedAsync(entity1, entity2, ...)` seeds one entity graph in a single save: mixed types and entities reachable through navigation properties belong together in one call, because the tracker clears after each call and a shared parent seeded again in a later call would be inserted as a duplicate row. A collection element (array or list) is flattened automatically, so `SeedAsync(users)` seeds the items, never the collection as one element.
-- `await scope.SeedRangeAsync(entities)` is the typed path for one entity type from an `IEnumerable<T>`.
-- Seeds save through the repository save pipeline: creation audit applies (subject to the registered `IAuditPropertySetter` seam) and the change tracker is cleared afterwards, so later no-tracking reads followed by `UpdateAsync` never collide with leftover tracked instances. Do not call `ChangeTracker.Clear()` manually after seeding.
+Each seed callback and VerifyAsync callback uses a fresh scope. Data remains in the scenario database across these scopes. Pass foreign keys or load existing parents when arranging later data; do not pass detached seed graphs into the act phase.
 
-## Factory Contract
+Do not initialize contexts manually, clear trackers to make writes pass, or reconstruct transaction behavior in test helpers.
 
-`MonicaTestApplicationFactory<TDiscoveryAnchor>` is a reusable composition recipe, not a shared host.
+## Database and Audit
 
-- `ConfigureHost(WebApplicationBuilder)` configures the future host.
-- `TypeDiscoveryAssemblies` selects the production assemblies scanned for ProjectUnits; it contains the anchor assembly by default.
-- `ConfigureMonica(IMonicaBuilder)` defines the real Monica composition and is required.
-- `ConfigureServices(IServiceCollection)` applies stable test registrations before build.
-- `CreateAsync(Action<ISeamReplacementBuilder>? configureScenario = null, CancellationToken cancellationToken = default)` creates and starts a new full host.
+UseTestDatabase<TContext>() overrides provider options while preserving production context/provider registrations. It requires production AddRepositoryDbContext first. One named SQLite memory database is owned by each scenario/context type, with independent scoped connections. Optional configureOptions supplies necessary EF interceptors/options.
 
-The resulting `MonicaTestApplication` exposes `Services`, `Application`, `ModuleSnapshots`, and `CreateScope(CancellationToken)`. `CreateScope` never changes service registrations. Use another `CreateAsync` call when a test needs a different registration graph.
+UseRealTestDatabase<TContext> for production-provider SQL, isolation and sharding tests. The caller owns schema/data isolation and cleanup. SQLite does not establish those guarantees.
 
-## Scope API
+Default seams retain the real audit policy. Replace ICurrentUser, TimeProvider and ID generators when deterministic inputs are needed; do not replace audit logic with a no-op.
 
-`MonicaTestScope` mirrors the runtime shapes a production host offers:
+## Event Assertions
 
-- `Resolve<T>()` resolves a scoped service.
-- `InvokeAsync(action, options?)` runs a write-scenario action with request-shaped unit-of-work semantics.
-- `SeedAsync(params object[])` seeds one entity graph (mixed types, collections flattened); `SeedRangeAsync<T>(IEnumerable<T>)` seeds a typed sequence.
-- `GetDbContextAsync<TDbContext>()` resolves the scope's repository DbContext for direct assertions (query with `AsNoTracking()`; use `IgnoreQueryFilters()` to see soft-deleted rows).
+- Explicit domain effects use IDomainEventQueue and same-scope IDomainEventHandler handlers before commit.
+- Committed notifications/integration events use the optional outbox. Inspect persisted envelopes first.
+- Call application.DrainOutboxAsync<TContext> explicitly to test delivery. The payload is OutboxDelivery<T> on the registered contract-name topic.
+- Delivery is at least once. Exercise a failure after receipt but before acknowledgment and assert consumer deduplication by MessageId.
+- Do not restore pre-commit transport publishing or sleeps to wait for an uncontrolled dispatcher.
 
-## Boundary Choice
+## Ownership and Naming
 
-Use a full scenario host for application services, domain services, repositories, module registration, options, mapping, interceptors, events, jobs, and behavior spanning scopes.
+- Project, folder, assembly and root namespace: Test.{ProductionProjectName}.
+- Factory: {Service}TestApplicationFactory; field: _factory.
+- Classes: {TypeUnderTest}Tests; methods: Method_WhenCondition_ShouldExpectation.
+- Mirror production folders such as HandlersCommand, HandlersQuery, DomainServices, Repositories, Entities and Modules.
+- Keep Builders, TestDoubles, TestData and Factories test-only.
+- Do not cache an application/provider on a reusable factory.
+- A built service provider is immutable. CreateScope never replaces registrations.
+- Never share a MonicaApplication across root providers.
+- Independent scenarios run in parallel. Serialize only a named real external resource that cannot be isolated.
 
-Use raw `ProjectUnitFixture<TUnit>` only for a narrow collaboration test where every dependency is explicit and Monica composition is irrelevant. It does not validate discovery, conventional registration, dynamic proxies, module options, hosted lifecycle, or host ownership. Do not use or recreate `ApplicationServiceFixture<THandler>`.
+## Smaller Boundaries
 
-Entity invariant tests and deterministic value-object tests may construct objects directly.
+Use raw ProjectUnitFixture<TUnit> only when collaborators are explicit and composition, discovery, proxies, transactions, hosted lifecycle and host ownership are outside the assertion. It does not supply a substitute production UoW. Entity/value-object invariant tests may construct objects directly.
 
-## Required Conventions
+Replace external boundaries, not domain services, repositories or policy logic. Avoid uncontrolled network/database access and hidden machine dependencies. Keep assertions in tests.
 
-- Project, folder, assembly, and root namespace: `Test.{ProductionProjectName}`
-- Project factory: `{Service}TestApplicationFactory`
-- Test class: `{TypeUnderTest}Tests`
-- Test method: `Method_WhenCondition_ShouldExpectation`
-- Host-backed test field: `_factory`
-- Source-aligned folders: `HandlersCommand`, `HandlersQuery`, `DomainServices`, `Repositories`, `Entities`, and `Modules`
-- Test-only support folders: `Factories`, `Builders`, `TestDoubles`, and `TestData`
+## References and Validation
 
-Do not put all service tests in one xUnit collection. Independent scenario hosts run in parallel by default. Use a named collection only when tests intentionally share a real external resource that cannot be isolated, and document that resource.
+Read references/standards.md for layout and ownership, references/templates.md for exact API examples, and references/database-isolation.md for provider choices.
 
-## Hard Rules
-
-- Replace boundaries, not domain logic.
-- Resolve production handlers, domain services, repositories, mappers, and options from the scenario host.
-- Apply registration overrides before host build; never copy descriptors from a built provider or replace services while creating a scope.
-- Never share a `MonicaApplication` between root providers.
-- Keep stateful doubles owned by one scenario host or its scopes.
-- Use unique names or explicit serialization for external databases, ports, files, topics, and queues.
-- Avoid real network, uncontrolled external databases, sleeps, random/manual output, and hidden machine dependencies.
-- Keep assertions in tests rather than setup helpers.
-- Never manually initialize a repository DbContext for unit-of-work participation or call `ChangeTracker.Clear()` to work around seeding; both needs are covered by the scope API.
-
-## References
-
-- Read `references/standards.md` for project, ownership, and migration rules.
-- Read `references/templates.md` for exact factory, scenario, and write-path shapes.
-- Read `references/database-isolation.md` before selecting a database strategy.
-
-## Validation
-
-- Run the target test project with `dotnet test`, following the repository's established path conventions.
-- Use one `dotnet build` or `dotnet test` process at a time.
-- Treat warnings introduced by the touched test project as failures.
+Run the relevant test project with absolute Windows paths under WSL. Keep one dotnet build/test process at a time and resolve all build warnings.

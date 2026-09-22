@@ -1,8 +1,9 @@
-using AwesomeAssertions;
-using Monica.Core.Execution;
+using Microsoft.Extensions.DependencyInjection;
+using Monica.Repository.Persistence.Abstractions;
 using Monica.Repository.UnitOfWork.Abstractions;
-using Monica.Repository.UnitOfWork.Models;
-using Monica.Repository.UnitOfWork.Services.Behaviors;
+using Test.Monica.Repository.Hosting;
+using Test.Monica.Repository.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace Test.Monica.Repository.UnitOfWork;
@@ -10,190 +11,72 @@ namespace Test.Monica.Repository.UnitOfWork;
 public sealed class UnitOfWorkExecutionBehaviorTests
 {
     [Fact]
-    public async Task ExecuteAsync_WhenTerminalSucceeds_ShouldCompleteUnitOfWork()
+    public async Task ExecuteAsync_WhenDomainEffectsQueueEvents_ShouldDrainInTheSameScope()
     {
-        var unitOfWork = new TrackingUnitOfWork();
-        var behavior = new UnitOfWorkExecutionBehavior<string, int>(new TrackingUnitOfWorkManager(unitOfWork));
-
-        var result = await behavior.ExecuteAsync(
-            CreateContext(TestContext.Current.CancellationToken),
-            () => Task.FromResult(42));
-
-        result.Should().Be(42);
-        unitOfWork.CompleteCount.Should().Be(1);
-        unitOfWork.RollbackCount.Should().Be(0);
-        unitOfWork.DisposeCount.Should().Be(1);
+        var seen = new List<TestRepositoryDbContext>();
+        await using var app = await new RepositoryScenarioFactory(configure: services =>
+        {
+            services.AddSingleton(seen);
+            services.AddScoped<IDomainEventHandler<First>, FirstHandler>();
+            services.AddScoped<IDomainEventHandler<Second>, SecondHandler>();
+        }).CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        TestRepositoryDbContext? operationContext = null;
+        await app.ExecuteAsync(scope =>
+        {
+            operationContext = scope.Resolve<TestRepositoryDbContext>();
+            scope.Resolve<IDomainEventQueue>().Enqueue(new First());
+            return Task.CompletedTask;
+        }, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(2, seen.Count);
+        Assert.All(seen, db => Assert.Same(operationContext, db));
+        await app.VerifyAsync<TestRepositoryDbContext>(async (db, ct) =>
+            Assert.Equal(2, await db.HardDeleteRows.CountAsync(ct)), TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenTerminalFails_ShouldRollbackAndRethrow()
+    public async Task ExecuteAsync_WhenDomainEventsCycle_ShouldFailAndRollBack()
     {
-        var unitOfWork = new TrackingUnitOfWork();
-        var behavior = new UnitOfWorkExecutionBehavior<string, int>(new TrackingUnitOfWorkManager(unitOfWork));
-        var expected = new InvalidOperationException("terminal failed");
-
-        var action = () => behavior.ExecuteAsync(CreateContext(), () => Task.FromException<int>(expected));
-
-        (await action.Should().ThrowAsync<InvalidOperationException>()).Which.Should().BeSameAs(expected);
-        unitOfWork.CompleteCount.Should().Be(0);
-        unitOfWork.RollbackCount.Should().Be(1);
-        unitOfWork.DisposeCount.Should().Be(1);
+        await using var app = await new RepositoryScenarioFactory(configure: services =>
+            services.AddScoped<IDomainEventHandler<Loop>, LoopHandler>())
+            .CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => app.ExecuteAsync(scope =>
+        {
+            scope.Resolve<IDomainEventQueue>().Enqueue(new Loop());
+            return Task.CompletedTask;
+        }, cancellationToken: TestContext.Current.CancellationToken));
+        await app.VerifyAsync<TestRepositoryDbContext>(async (db, ct) =>
+            Assert.Equal(0, await db.HardDeleteRows.CountAsync(ct)), TestContext.Current.CancellationToken);
     }
 
-    [Fact]
-    public async Task ExecuteAsync_WhenInvocationIsCanceled_ShouldRollbackWithoutCanceledToken()
+    public sealed record First;
+    public sealed record Second;
+    public sealed record Loop;
+    private sealed class FirstHandler(TestRepositoryDbContext db, IDomainEventQueue queue, List<TestRepositoryDbContext> seen)
+        : IDomainEventHandler<First>
     {
-        using var cancellation = new CancellationTokenSource();
-        await cancellation.CancelAsync();
-        var unitOfWork = new TrackingUnitOfWork();
-        var behavior = new UnitOfWorkExecutionBehavior<string, int>(new TrackingUnitOfWorkManager(unitOfWork));
-        var context = CreateContext(cancellation.Token);
-
-        var action = () => behavior.ExecuteAsync(
-            context,
-            () => Task.FromCanceled<int>(cancellation.Token));
-
-        await action.Should().ThrowAsync<OperationCanceledException>();
-        unitOfWork.RollbackCancellationToken.IsCancellationRequested.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_WhenOperationAndRollbackFail_ShouldPreserveOperationFailureWithRollbackDetails()
-    {
-        var rollbackFailure = new InvalidOperationException("rollback failed");
-        var unitOfWork = new TrackingUnitOfWork
+        public Task HandleAsync(First domainEvent, CancellationToken cancellationToken)
         {
-            RollbackException = rollbackFailure
-        };
-        var behavior = new UnitOfWorkExecutionBehavior<string, int>(new TrackingUnitOfWorkManager(unitOfWork));
-        var operationFailure = new InvalidOperationException("operation failed");
-
-        var action = () => behavior.ExecuteAsync(
-            CreateContext(),
-            () => Task.FromException<int>(operationFailure));
-
-        var assertion = await action.Should().ThrowAsync<InvalidOperationException>();
-        assertion.Which.Should().BeSameAs(operationFailure);
-        assertion.Which.Data.Values.Cast<object?>().Should().Contain(rollbackFailure);
-        unitOfWork.RollbackCount.Should().Be(1);
-    }
-
-    private static ExecutionContext<string> CreateContext(CancellationToken cancellationToken = default)
-    {
-        var descriptor = ExecutionDescriptor.ForMethod<string, int>(
-            new ExecutionPoint("test.unit-of-work"),
-            typeof(UnitOfWorkExecutionBehaviorTests),
-            entryMethod: null,
-            isBusinessOperation: true,
-            transactionMode: ExecutionTransactionMode.Automatic);
-        return new ExecutionContext<string>(descriptor, "input", cancellationToken: cancellationToken);
-    }
-
-    private sealed class TrackingUnitOfWorkManager(TrackingUnitOfWork unitOfWork) : IUnitOfWorkManager
-    {
-        public IUnitOfWork? Current => null;
-
-        public IUnitOfWork BeginScope(UnitOfWorkScopeOptions? options = null)
-        {
-            return unitOfWork;
-        }
-
-        public Task RunAsync(
-            Func<Task> work,
-            UnitOfWorkScopeOptions? options = null,
-            CancellationToken cancellationToken = default)
-        {
-            return RunCoreAsync(
-                async () =>
-                {
-                    await work();
-                    return ExecutionUnit.Value;
-                },
-                cancellationToken);
-        }
-
-        public Task<T> RunAsync<T>(
-            Func<Task<T>> work,
-            UnitOfWorkScopeOptions? options = null,
-            CancellationToken cancellationToken = default)
-        {
-            return RunCoreAsync(work, cancellationToken);
-        }
-
-        private async Task<T> RunCoreAsync<T>(Func<Task<T>> work, CancellationToken cancellationToken)
-        {
-            await using var scope = BeginScope();
-            try
-            {
-                var result = await work();
-                await scope.CompleteAsync(cancellationToken);
-                return result;
-            }
-            catch (Exception operationException)
-            {
-                try
-                {
-                    await scope.RollbackAsync(CancellationToken.None);
-                }
-                catch (Exception rollbackException)
-                {
-                    operationException.Data["Monica.Repository.UnitOfWork.RollbackException"] = rollbackException;
-                }
-
-                throw;
-            }
-        }
-    }
-
-    private sealed class TrackingUnitOfWork : IUnitOfWork
-    {
-        public Guid Id { get; } = Guid.NewGuid();
-
-        public bool IsCompleted => CompleteCount > 0;
-
-        public int CompleteCount { get; private set; }
-
-        public int RollbackCount { get; private set; }
-
-        public int DisposeCount { get; private set; }
-
-        public CancellationToken RollbackCancellationToken { get; private set; }
-
-        public Exception? RollbackException { get; init; }
-
-        public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-        {
+            seen.Add(db);
+            db.Add(new HardDeleteRow { Title = "first" });
+            queue.Enqueue(new Second());
             return Task.CompletedTask;
         }
-
-        public Task CompleteAsync(CancellationToken cancellationToken = default)
+    }
+    private sealed class SecondHandler(TestRepositoryDbContext db, List<TestRepositoryDbContext> seen) : IDomainEventHandler<Second>
+    {
+        public Task HandleAsync(Second domainEvent, CancellationToken cancellationToken)
         {
-            CompleteCount++;
+            seen.Add(db);
+            db.Add(new HardDeleteRow { Title = "second" });
             return Task.CompletedTask;
         }
-
-        public Task RollbackAsync(CancellationToken cancellationToken = default)
+    }
+    private sealed class LoopHandler(IDomainEventQueue queue) : IDomainEventHandler<Loop>
+    {
+        public Task HandleAsync(Loop domainEvent, CancellationToken cancellationToken)
         {
-            RollbackCount++;
-            RollbackCancellationToken = cancellationToken;
-            return RollbackException is null
-                ? Task.CompletedTask
-                : Task.FromException(RollbackException);
-        }
-
-        public void OnCompleted(Func<Task> handler)
-        {
-        }
-
-        public ValueTask DisposeAsync()
-        {
-            DisposeCount++;
-            return ValueTask.CompletedTask;
-        }
-
-        public void Dispose()
-        {
-            DisposeCount++;
+            queue.Enqueue(new Loop());
+            return Task.CompletedTask;
         }
     }
 }

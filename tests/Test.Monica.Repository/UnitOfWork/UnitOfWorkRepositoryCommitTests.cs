@@ -1,145 +1,137 @@
-using AwesomeAssertions;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Monica.Authority.Identity.Abstractions;
-using Monica.Core;
-using Monica.Core.Modularity.Extensions;
-using Monica.Modules;
-using Monica.Repository.Entity.Abstractions;
+using Microsoft.AspNetCore.Mvc;
+using Monica.Core.Execution.Mvc;
+using Monica.Core.Results;
+using Monica.Repository.Outbox.Models;
 using Monica.Repository.Persistence.Abstractions;
-using Monica.Repository.Snowflake.Abstractions;
 using Monica.Repository.UnitOfWork.Abstractions;
-using Monica.Testing.Doubles;
+using Test.Monica.Repository.Hosting;
 using Test.Monica.Repository.Persistence;
 using Xunit;
 
 namespace Test.Monica.Repository.UnitOfWork;
 
-/// <summary>
-/// Verifies the production unit-of-work topology (adaptive DbContext provider, transactional commit)
-/// still initializes contexts and commits writes with full persistence concepts.
-/// </summary>
-public sealed class UnitOfWorkRepositoryCommitTests : IDisposable
+public sealed class UnitOfWorkRepositoryCommitTests
 {
-    private const string TesterId = "uow-tester";
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    private readonly SqliteConnection _connection = new("Data Source=:memory:");
-
-    public UnitOfWorkRepositoryCommitTests()
+    [Theory]
+    [InlineData(ResStatus.Created, true, false)]
+    [InlineData(ResStatus.Ok, true, true)]
+    [InlineData(ResStatus.Conflict, false, false)]
+    [InlineData(ResStatus.BadRequest, false, true)]
+    public async Task MvcOutcome_WhenReturned_ShouldHonorEnvelopeStatus(ResStatus status, bool committed, bool json)
     {
-        _connection.Open();
+        await using var app = await new RepositoryScenarioFactory().CreateAsync(cancellationToken: Token);
+        await app.ExecuteAsync(scope =>
+        {
+            scope.Resolve<IRepository<SoftDeleteAuditRow>>().Add(new() { Title = "mvc" });
+            IActionResult result = json ? new JsonResult(new Res("outcome", status)) : new ObjectResult(new Res("outcome", status));
+            return Task.FromResult(MvcActionExecutionResult.ShortCircuit(result));
+        }, cancellationToken: Token);
+        await app.VerifyAsync<TestRepositoryDbContext>(async (db, ct) =>
+        {
+            Assert.Equal(committed ? 1 : 0, await db.SoftDeleteRows.CountAsync(ct));
+            Assert.Equal(committed ? 1 : 0, await db.Set<OutboxMessage>().CountAsync(ct));
+        }, Token);
     }
 
-    public void Dispose()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExecuteAsync_WhenHandlerFails_ShouldRollBackStagedAndFlushedWrites(bool flush)
     {
-        _connection.Dispose();
+        await using var app = await new RepositoryScenarioFactory().CreateAsync(cancellationToken: Token);
+        var expected = new InvalidOperationException("handler failed");
+        var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => app.ExecuteAsync(async scope =>
+        {
+            scope.Resolve<IRepository<SoftDeleteAuditRow>>().Add(new() { Title = "must roll back" });
+            if (flush) await scope.Resolve<TestRepositoryDbContext>().SaveChangesAsync(Token);
+            throw expected;
+        }, cancellationToken: Token));
+        Assert.Same(expected, thrown);
+        await app.ExecuteAsync(_ => Task.CompletedTask, cancellationToken: Token);
+        await app.VerifyAsync<TestRepositoryDbContext>(async (db, ct) =>
+        {
+            Assert.Equal(0, await db.SoftDeleteRows.CountAsync(ct));
+            Assert.Equal(0, await db.Set<OutboxMessage>().CountAsync(ct));
+        }, Token);
     }
 
     [Fact]
-    public async Task RunAsync_WhenRepositoryWritesInsideUnitOfWork_ShouldCommitWithConcepts()
+    public async Task ExecuteAsync_WhenResultFails_ShouldRollBack()
     {
-        using var composition = await CreateCompositionAsync();
-        var insertedId = 0L;
-
-        await composition.Manager.RunAsync(
-            async () =>
-            {
-                var repository = composition.Scope.ServiceProvider.GetRequiredService<IRepository<SoftDeleteAuditRow>>();
-                var row = await repository.InsertAsync(new SoftDeleteAuditRow { Title = "uow-row" }, composition.CancellationToken);
-                insertedId = row.Id;
-            },
-            cancellationToken: composition.CancellationToken);
-
-        composition.Manager.Current.Should().BeNull();
-        insertedId.Should().NotBe(0);
-
-        var committed = await composition.SetupContext.SoftDeleteRows.AsNoTracking()
-            .SingleAsync(r => r.Id == insertedId, composition.CancellationToken);
-        committed.Title.Should().Be("uow-row");
-        committed.CreationTime.Should().NotBe(default);
-        committed.CreatorId.Should().Be(TesterId);
+        await using var app = await new RepositoryScenarioFactory().CreateAsync(cancellationToken: Token);
+        var result = await app.ExecuteAsync(async scope =>
+        {
+            scope.Resolve<IRepository<SoftDeleteAuditRow>>().Add(new() { Title = "failure result" });
+            await scope.Resolve<IUnitOfWorkManager>().Current!.FlushAsync(Token);
+            return Res.Fail("declined");
+        }, cancellationToken: Token);
+        Assert.Equal(ResStatus.BadRequest, result.Status);
+        await app.VerifyAsync<TestRepositoryDbContext>(async (db, ct) =>
+            Assert.Equal(0, await db.SoftDeleteRows.CountAsync(ct)), Token);
     }
 
     [Fact]
-    public async Task RunAsync_WhenSecondUnitOfWorkSoftDeletesCommittedRow_ShouldRewriteToSoftDelete()
+    public async Task RunAsync_WhenNestedFailureIsCaught_ShouldPreventCommit()
     {
-        using var composition = await CreateCompositionAsync();
-        var insertedId = await InsertInsideUnitOfWorkAsync(composition, "to-delete");
-
-        await composition.Manager.RunAsync(
-            async () =>
-            {
-                var repository = composition.Scope.ServiceProvider.GetRequiredService<IRepository<SoftDeleteAuditRow>>();
-                var loaded = await repository.FindAsync(r => r.Title == "to-delete", composition.CancellationToken);
-                loaded.Should().NotBeNull();
-                await repository.DeleteAsync(loaded!, composition.CancellationToken);
-            },
-            cancellationToken: composition.CancellationToken);
-
-        var stored = await composition.SetupContext.SoftDeleteRows.IgnoreQueryFilters().AsNoTracking()
-            .SingleAsync(r => r.Id == insertedId, composition.CancellationToken);
-        stored.IsDeleted.Should().BeTrue();
-        stored.DeletionTime.Should().NotBeNull();
-
-        var visible = await composition.SetupContext.SoftDeleteRows.AsNoTracking()
-            .AnyAsync(r => r.Id == insertedId, composition.CancellationToken);
-        visible.Should().BeFalse();
-    }
-
-    private async Task<Composition> CreateCompositionAsync()
-    {
-        var builder = Host.CreateApplicationBuilder();
-        builder.Services.AddSingleton<ICurrentUser>(new TestCurrentUser(TesterId, "uow-tester"));
-        builder.Services.AddSingleton<ISnowflakeIdGenerator>(new SequentialTestIdGenerator());
-        builder.AddMonica(monica =>
+        await using var app = await new RepositoryScenarioFactory().CreateAsync(cancellationToken: Token);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => app.ExecuteAsync(async scope =>
         {
-            monica.AddRepository()
-                .AddRepositoryDbContext<TestRepositoryDbContext>(
-                    (_, db) => db.UseSqlite(_connection),
-                    DbContextProviderType.UnitOfWork);
-        });
-
-        var host = builder.Build();
-        var scope = host.Services.CreateScope();
-        var setupContext = scope.ServiceProvider.GetRequiredService<TestRepositoryDbContext>();
-        await setupContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
-        setupContext.ChangeTracker.Clear();
-
-        return new Composition(
-            host,
-            scope,
-            scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>(),
-            setupContext,
-            TestContext.Current.CancellationToken);
-    }
-
-    private static async Task<long> InsertInsideUnitOfWorkAsync(Composition composition, string title)
-    {
-        var insertedId = 0L;
-        await composition.Manager.RunAsync(
-            async () =>
+            var manager = scope.Resolve<IUnitOfWorkManager>();
+            try
             {
-                var repository = composition.Scope.ServiceProvider.GetRequiredService<IRepository<SoftDeleteAuditRow>>();
-                var row = await repository.InsertAsync(new SoftDeleteAuditRow { Title = title }, composition.CancellationToken);
-                insertedId = row.Id;
-            },
-            cancellationToken: composition.CancellationToken);
-        return insertedId;
+                await manager.RunAsync(async () =>
+                {
+                    scope.Resolve<IRepository<SoftDeleteAuditRow>>().Add(new() { Title = "nested" });
+                    await manager.Current!.FlushAsync(Token);
+                    throw new ApplicationException("nested failure");
+                }, cancellationToken: Token);
+            }
+            catch (ApplicationException) { }
+        }, cancellationToken: Token));
+        await app.VerifyAsync<TestRepositoryDbContext>(async (db, ct) =>
+            Assert.Equal(0, await db.SoftDeleteRows.CountAsync(ct)), Token);
     }
 
-    private sealed record Composition(
-        IHost Host,
-        IServiceScope Scope,
-        IUnitOfWorkManager Manager,
-        TestRepositoryDbContext SetupContext,
-        CancellationToken CancellationToken) : IDisposable
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RunAsync_WhenOperationEnds_ShouldRejectScopeReuseAndDirectWrites(bool fail)
     {
-        public void Dispose()
+        await using var app = await new RepositoryScenarioFactory().CreateAsync(cancellationToken: Token);
+        await using var scope = app.CreateScope(Token);
+        var manager = scope.Resolve<IUnitOfWorkManager>();
+        var operation = () => manager.RunAsync(() => fail
+            ? Task.FromException(new ApplicationException("failed"))
+            : Task.CompletedTask, cancellationToken: Token);
+        if (fail) await Assert.ThrowsAsync<ApplicationException>(operation);
+        else await operation();
+        Assert.Null(manager.Current);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => manager.RunAsync(() => Task.CompletedTask, cancellationToken: Token));
+        scope.Resolve<TestRepositoryDbContext>().Add(new SoftDeleteAuditRow { Title = "stale" });
+        await Assert.ThrowsAsync<InvalidOperationException>(() => scope.Resolve<TestRepositoryDbContext>().SaveChangesAsync(Token));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => scope.Resolve<TestRepositoryDbContext>().SoftDeleteRows
+            .ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Title, "stale SQL"), Token));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenBulkSqlFails_ShouldRollBack()
+    {
+        await using var app = await new RepositoryScenarioFactory().CreateAsync(cancellationToken: Token);
+        await app.ExecuteAsync(scope =>
         {
-            Scope.Dispose();
-            Host.Dispose();
-        }
+            scope.Resolve<IRepository<SoftDeleteAuditRow>>().Add(new() { Title = "original" });
+            return Task.CompletedTask;
+        }, cancellationToken: Token);
+        await Assert.ThrowsAsync<ApplicationException>(() => app.ExecuteAsync(async scope =>
+        {
+            await scope.Resolve<TestRepositoryDbContext>().SoftDeleteRows.ExecuteUpdateAsync(
+                setters => setters.SetProperty(row => row.Title, "bulk"), Token);
+            throw new ApplicationException();
+        }, cancellationToken: Token));
+        await app.VerifyAsync<TestRepositoryDbContext>(async (db, ct) =>
+            Assert.Equal("original", (await db.SoftDeleteRows.SingleAsync(ct)).Title), Token);
     }
 }

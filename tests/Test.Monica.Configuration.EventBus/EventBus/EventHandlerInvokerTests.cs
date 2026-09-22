@@ -109,6 +109,41 @@ public sealed class EventHandlerInvokerTests
         capture.Feature.Scope.Should().Be(scope);
     }
 
+    [Theory]
+    [InlineData(false, ExecutionTransactionMode.None)]
+    [InlineData(true, ExecutionTransactionMode.Automatic)]
+    public async Task InvokeAsync_ShouldHonorHandlerPolicyAndMethodPrecedence(bool methodOverride, ExecutionTransactionMode expected)
+    {
+        var capture = new ExecutionCapture();
+        await using var provider = new ServiceCollection()
+            .AddSingleton(capture)
+            .AddScoped<ScopeIdentity>()
+            .AddScoped<IExecutionPipeline, RecordingPipeline>()
+            .BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        var subscription = Substitute.For<IEventSubscription>();
+        subscription.Scope.Returns(EventSubscriptionScope.Local);
+        IEventHandler handler = methodOverride ? new MethodPolicyHandler() : new ClassPolicyHandler();
+
+        await new EventHandlerInvoker().InvokeAsync(handler, new TestEvent("policy"), typeof(TestEvent),
+            subscription, scope.ServiceProvider, TestContext.Current.CancellationToken);
+
+        capture.TransactionMode.Should().Be(expected);
+    }
+
+    [ExecutionTransaction(ExecutionTransactionMode.None)]
+    private sealed class ClassPolicyHandler : ILocalEventHandler<TestEvent>
+    {
+        public Task HandleEventAsync(TestEvent eventData, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    [ExecutionTransaction(ExecutionTransactionMode.None)]
+    private sealed class MethodPolicyHandler : ILocalEventHandler<TestEvent>
+    {
+        [ExecutionTransaction(ExecutionTransactionMode.Automatic)]
+        Task ILocalEventHandler<TestEvent>.HandleEventAsync(TestEvent eventData, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
     private sealed record TestEvent(string Value);
 
     private static IHost BuildExecutionHost(List<string> trace)

@@ -5,7 +5,7 @@ using Platform.Protocol.PublishedLanguages.DomainOrdering.Events;
 namespace Domains.Ordering.Application.HandlersEvent;
 
 /// <summary>
-/// Records the in-process reaction to a committed order approval.
+/// Records the in-process reaction to an approval in the demo's process-local repository.
 /// </summary>
 public sealed class LocalEventHandlerOrderApproved : LocalEventHandler<EventOrderApproved>
 {
@@ -16,7 +16,7 @@ public sealed class LocalEventHandlerOrderApproved : LocalEventHandler<EventOrde
     {
         cancellationToken.ThrowIfCancellationRequested();
         Logger.LogInformation(
-            "Observed committed approval for order {OrderNumber} ({OrderId}) at {ApprovedAtUtc}.",
+            "Observed approval for order {OrderNumber} ({OrderId}) at {ApprovedAtUtc}.",
             eventData.OrderNumber,
             eventData.OrderId,
             eventData.ApprovedAtUtc);

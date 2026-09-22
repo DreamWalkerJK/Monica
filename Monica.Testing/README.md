@@ -36,10 +36,9 @@ var gateway = Substitute.For<IOrdersGateway>();
 await using var application = await factory.CreateAsync(
     scenario => scenario.With<IOrdersGateway>(gateway),
     TestContext.Current.CancellationToken);
-await using var scope = application.CreateScope(TestContext.Current.CancellationToken);
-
-var service = scope.Resolve<RefreshOrdersApplicationService>();
-await service.ExecuteAsync(scope.CancellationToken);
+await application.ExecuteAsync(scope =>
+    scope.Resolve<RefreshOrdersApplicationService>().ExecuteAsync(scope.CancellationToken),
+    cancellationToken: TestContext.Current.CancellationToken);
 ```
 
 Factory hooks have distinct ownership:
@@ -50,7 +49,17 @@ Factory hooks have distinct ownership:
 - `ConfigureServices(IServiceCollection)` registers stable test providers and boundary doubles after module registration but before build.
 - `CreateAsync(Action<ISeamReplacementBuilder>?, CancellationToken)` applies final scenario-specific registration replacements before build.
 
-`MonicaTestApplication` exposes its root `Services`, host-owned `Application`, immutable `ModuleSnapshots`, and `CreateScope(CancellationToken)`. A `MonicaTestScope` resolves scoped services, carries the test cancellation token, and provides database seeding helpers. Scope creation never changes registrations.
+`MonicaTestApplication` exposes its root `Services`, host-owned `Application`, immutable `ModuleSnapshots`, and `CreateScope(CancellationToken)`. A `MonicaTestScope` resolves scoped services, carries the test cancellation token, and carries no transaction or synthetic-save implementation. Scope creation never changes registrations.
+
+## Database Scenarios
+
+Register the real context/module, then use UseTestDatabase<TContext>() to replace provider options. One database lives for the whole scenario, while each scope has its own context and connection.
+
+Arrange with application.SeedAsync<TContext,TResult>: add a graph, explicitly save, and return IDs. ExecuteAsync creates the act scope and invokes the production IExecutionPipeline. VerifyAsync<TContext> reads persisted state in a third scope. No tracker-clearing workaround is needed.
+
+The real audit policy remains active. Replace TimeProvider/current user/ID generation rather than audit logic. For durable events, inspect outbox contents first and then call application.DrainOutboxAsync<TContext>().
+
+See [the repository migration guide](../docs/migrations/repository-redesign.md) for transaction, outbox and breaking API details.
 
 ## Ownership Rules
 
@@ -74,7 +83,7 @@ There is no separate application-service fixture. Application services use `Proj
 - `Hosting/` — host factory, scenario application and scope, seam replacement, database isolation, deterministic logging and HTTP support
 - `ProjectUnits/` — raw ProjectUnit fixture and execution helpers
 - `Repository/` — direct DbContext and repository helpers
-- `Doubles/` — deterministic state, user, audit, and event boundaries
+- `Doubles/` — deterministic state, user, and event boundaries
 - `Results/` — explicit assertions for `Res`, `Res<T>`, and `ResPaged<T>`
 - `Localization/` and `ObjectMapping/` — focused shared test support
 

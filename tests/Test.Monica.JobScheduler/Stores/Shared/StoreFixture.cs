@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Hosting;
+using Monica.Core.Modularity.Extensions;
+using Monica.Testing.Hosting;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -182,68 +185,50 @@ internal abstract class StoreFixture : IAsyncDisposable
 
 file sealed class EfCoreStoreFixture : StoreFixture
 {
-    private readonly ServiceProvider _serviceProvider;
+    private readonly IHost _host;
     private readonly SqliteConnection _connection;
 
     private EfCoreStoreFixture(
         IJobSchedulerStore store,
         ManualTimeProvider time,
-        ServiceProvider serviceProvider,
+        IHost host,
         SqliteConnection connection)
         : base(store, time)
     {
-        _serviceProvider = serviceProvider;
+        _host = host;
         _connection = connection;
     }
 
     internal static async Task<EfCoreStoreFixture> CreateAsync(DateTimeOffset now)
     {
-        var services = new ServiceCollection();
-        services.AddSingleton<ICachedServiceProvider, global::Monica.DependencyInjection.Services.CachedServiceProvider>();
-        services.AddOptions();
-        services.Configure<global::Monica.Modules.ModuleRepositoryOption>(_ => { });
+        var time = new ManualTimeProvider(now);
         var connection = new SqliteConnection(
             $"Data Source=contract-store-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
         await connection.OpenAsync();
-        var provider = services.BuildServiceProvider();
-        var factory = new SqliteFactory(connection.ConnectionString, provider);
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica => monica.AddRepository()
+            .AddRepositoryDbContext<JobSchedulerDbContext>(
+                (_, options) => options.UseSqlite(connection.ConnectionString), DbContextProviderType.Default));
+        builder.Services.AddMonicaTestSeams();
+        builder.Services.AddSingleton<TimeProvider>(time);
+        var host = builder.Build();
+        var factory = host.Services.GetRequiredService<IDbContextFactory<JobSchedulerDbContext>>();
         await using (var context = await factory.CreateDbContextAsync())
         {
             await context.Database.EnsureCreatedAsync();
         }
 
-        var time = new ManualTimeProvider(now);
         return new EfCoreStoreFixture(
             new EfCoreJobSchedulerStore(factory, time),
             time,
-            provider,
+            host,
             connection);
     }
 
     public override async ValueTask DisposeAsync()
     {
-        await _serviceProvider.DisposeAsync();
+        _host.Dispose();
         await _connection.DisposeAsync();
     }
 
-    private sealed class SqliteFactory(
-        string connectionString,
-        IServiceProvider serviceProvider) : IDbContextFactory<JobSchedulerDbContext>
-    {
-        public JobSchedulerDbContext CreateDbContext()
-        {
-            return new JobSchedulerDbContext(
-                new DbContextOptionsBuilder<JobSchedulerDbContext>()
-                    .UseSqlite(connectionString)
-                    .Options,
-                serviceProvider.GetRequiredService<ICachedServiceProvider>());
-        }
-
-        public ValueTask<JobSchedulerDbContext> CreateDbContextAsync(
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return ValueTask.FromResult(CreateDbContext());
-        }
-    }
 }

@@ -94,6 +94,11 @@ public abstract class MonicaTestApplicationFactory<TDiscoveryAnchor>
         var application = builder.Build();
         try
         {
+            await using (var setupScope = application.Services.CreateAsyncScope())
+            {
+                foreach (var initializer in setupScope.ServiceProvider.GetServices<ITestDatabaseInitializer>())
+                    await initializer.InitializeAsync(cancellationToken);
+            }
             application.UseMonica();
             application.MapMonica();
             await application.StartAsync(cancellationToken);

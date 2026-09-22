@@ -1,44 +1,25 @@
 # Database Isolation
 
-Database state belongs to one `MonicaTestApplication` scenario. Configure the provider in the factory before host build, then create normal scopes from that application.
+One MonicaTestApplication owns one scenario database for each registered test context type. Arrange, act and assert deliberately cross scope boundaries.
 
-## PerScopeDatabase
+## Default SQLite Scenario
 
-Use `DatabaseIsolation.PerScopeDatabase` by default. Every `application.CreateScope()` receives a fresh SQLite in-memory connection and schema. Seeds and `scope.InvokeAsync(...)` writes both target the scope's own database.
+Register the production context/module first, then call services.UseTestDatabase<TContext>() in the factory's ConfigureServices. This replaces provider options while retaining the production context, provider, repository and transaction registration.
 
-Best for:
+A host-owned keeper connection preserves a uniquely named in-memory SQLite database. Each operation resolves a fresh context and connection. The factory creates schema before host startup. Disposing the scenario releases the database; another scenario never shares it.
 
-- handler and repository scenarios
-- tests that mutate data in one scope
-- scenarios that must run in any order or in parallel
+Use SeedAsync<TContext,TResult> for explicit setup/save and returned keys, ExecuteAsync for production-pipeline writes, and VerifyAsync<TContext> for fresh-scope assertions. There is no rollback-on-dispose test wrapper around every scope. The real operation boundary must establish rollback.
 
-Trade-off: schema creation occurs for each scope. Data intentionally does not cross scope boundaries.
+Supply required EF options/interceptors using UseTestDatabase's configureOptions callback. Do not replace IDbContextProvider with a semantically different test implementation.
 
-## SharedDatabaseWithTransaction
+## Real Provider
 
-Use `DatabaseIsolation.SharedDatabaseWithTransaction` when schema creation is measurably expensive and the scenario needs one host-owned SQLite database. Each scope starts a transaction and rolls it back on disposal.
+Use UseRealTestDatabase<TContext>((services, options) => ...) when provider-specific SQL, transaction isolation or sharding is part of the assertion. This helper replaces options only; it does not create or clean schema.
 
-Check carefully with:
+Use unique database/schema names, keep credentials outside source control, and dispose resources with the scenario. If isolation is impossible, serialize only tests sharing that named resource. SQLite success does not validate ShardingCore or production-dialect behavior.
 
-- overlapping scopes in one application
-- `ExecuteUpdateAsync` or raw SQL
-- several DbContext instances in one scope
-- behavior that escapes a transaction
+## Multiple Contexts
 
-The database is shared only within one `MonicaTestApplication`; separate scenario hosts still own separate databases. Do not run overlapping transactions against one shared SQLite connection.
+Seed and verify by explicit context type. Select the business operation's participant with UnitOfWorkScopeOptions when multiple contexts are registered for writes. Several contexts can share one local transaction only through the same DbConnection instance and provider. The ordinary SQLite scenario helper gives contexts separate connections and does not imply multi-context atomicity.
 
-## RealDatabase
-
-Use `DatabaseIsolation.RealDatabase` only when a real provider dialect is part of the behavior and SQLite is not representative.
-
-- Apply provider registration before `CreateAsync` builds the host.
-- Use unique database or schema names per scenario when possible.
-- Keep credentials outside source control.
-- Dispose provider resources with the scenario application.
-- If isolation is impossible, serialize only the tests sharing that named database resource.
-
-## Choosing Quickly
-
-- Start with `PerScopeDatabase`.
-- Use `SharedDatabaseWithTransaction` only after measuring schema cost and verifying single-connection transaction behavior.
-- Use `RealDatabase` only to cover provider-specific behavior.
+Independent stores and shards require a separately designed consistency workflow, not sequential commits.

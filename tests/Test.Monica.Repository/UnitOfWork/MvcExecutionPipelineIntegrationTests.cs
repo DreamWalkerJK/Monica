@@ -21,6 +21,20 @@ namespace Test.Monica.Repository.UnitOfWork;
 
 public sealed class MvcExecutionPipelineIntegrationTests
 {
+    [Theory]
+    [InlineData("GET", "forced-write", ExecutionTransactionMode.Automatic)]
+    [InlineData("POST", "orchestrate", ExecutionTransactionMode.None)]
+    public async Task ActionTransactionOverride_ShouldTakePrecedenceOverHttpConvention(string method, string route,
+        ExecutionTransactionMode expected)
+    {
+        await using var application = await StartApplicationAsync();
+        using var client = application.GetTestClient();
+        using var request = new HttpRequestMessage(new HttpMethod(method), $"/execution-pipeline-test/{route}");
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        application.Services.GetRequiredService<MvcPipelineObservation>().LastTransactionMode.Should().Be(expected);
+    }
+
     [Fact]
     public async Task Actions_ShouldUseExactlyOneOwningExecutionBoundary()
     {
@@ -222,6 +236,14 @@ internal sealed class DerivedRuntimeDirectController : DeclaredDirectController;
 [Route("execution-pipeline-test")]
 public sealed class MvcExecutionPipelineTestController(IMediator mediator) : ControllerBase
 {
+    [HttpGet("forced-write")]
+    [ExecutionTransaction(ExecutionTransactionMode.Automatic)]
+    public IActionResult ForcedWrite() => Ok();
+
+    [HttpPost("orchestrate")]
+    [ExecutionTransaction(ExecutionTransactionMode.None)]
+    public IActionResult Orchestrate() => Ok();
+
     [HttpGet("direct")]
     public IActionResult Direct()
     {
@@ -284,6 +306,7 @@ public sealed class MvcPipelineObservationBehavior(MvcPipelineObservation observ
         ExecutionDelegate<MvcActionExecutionResult> next)
     {
         observation.RecordMvcStarted(context.Descriptor.ComponentType);
+        observation.LastTransactionMode = context.Descriptor.TransactionMode;
         try
         {
             var result = await next();
@@ -322,6 +345,7 @@ public sealed class MediatorPipelineObservationBehavior(MvcPipelineObservation o
 
 public sealed class MvcPipelineObservation
 {
+    public ExecutionTransactionMode LastTransactionMode { get; set; }
     private readonly ConcurrentQueue<Type> _mvcComponentTypes = new();
     private int _mvcStarted;
     private int _mvcSucceeded;

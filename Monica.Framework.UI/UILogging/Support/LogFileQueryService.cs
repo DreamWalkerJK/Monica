@@ -54,6 +54,13 @@ public sealed class LogFileQueryService(
         }
     }
 
+    /// <summary>
+    /// Opens a live log for sequential asynchronous reading while allowing its writer to append or rotate it.
+    /// </summary>
+    /// <remarks>
+    /// The caller owns the returned stream and must dispose it. The file can change length while it is open;
+    /// this method does not create an immutable snapshot.
+    /// </remarks>
     public Task<Res<FileStream>> OpenFileAsync(string relativePath, CancellationToken cancellationToken = default)
     {
         try
@@ -64,7 +71,13 @@ public sealed class LogFileQueryService(
                 return Task.FromResult((Res<FileStream>) $"指定日志文件不存在: {relativePath}");
             }
 
-            var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            var stream = new FileStream(fullPath, new FileStreamOptions
+            {
+                Mode = FileMode.Open,
+                Access = FileAccess.Read,
+                Share = FileShare.ReadWrite | FileShare.Delete,
+                Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+            });
             return Task.FromResult((Res<FileStream>)stream);
         }
         catch (Exception ex)
@@ -160,8 +173,14 @@ public sealed class LogFileQueryService(
         var combined = Path.Combine(_logDirectory, relativePath);
         var fullPath = Path.GetFullPath(combined);
         var directoryPath = Path.GetFullPath(_logDirectory);
+        if (!Path.EndsInDirectorySeparator(directoryPath))
+        {
+            directoryPath += Path.DirectorySeparatorChar;
+        }
 
-        if (!fullPath.StartsWith(directoryPath, StringComparison.OrdinalIgnoreCase))
+        // Match the directory boundary so similarly named sibling directories are not included.
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (!fullPath.StartsWith(directoryPath, comparison))
         {
             throw new InvalidOperationException("非法的日志文件访问路径");
         }

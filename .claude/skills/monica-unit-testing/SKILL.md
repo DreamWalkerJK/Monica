@@ -34,6 +34,12 @@ Use `MonicaTestApplicationFactory<TDiscoveryAnchor>` when the test depends on re
 
 Do not copy service descriptors into another root provider, share one `MonicaApplication` across providers, or emulate per-scope registration replacement.
 
+## Persistence Scenarios
+
+Keep production context/provider registration. UseTestDatabase overrides options and keeps one database per scenario/context type, with fresh scoped connections. Arrange with application.SeedAsync<TContext,TResult> and an explicit save; act through application.ExecuteAsync and the real IExecutionPipeline; verify in application.VerifyAsync<TContext>. Do not add synthetic save loops or clear trackers to repair tests.
+
+Default seams retain real audit policy; replace TimeProvider/current-user/ID inputs. Test outbox capture separately from delivery and explicitly call DrainOutboxAsync<TContext>. Include rollback after an early flush, failed results, commit failure, repeated aggregate identity, and fresh-scope retries.
+
 ## Raw ProjectUnit Fast Path
 
 `ProjectUnitFixture<TUnit>` is an explicitly raw fast-path harness. It creates a small Microsoft DI container, activates the target, and initializes Monica's cached-service-provider accessor where applicable.

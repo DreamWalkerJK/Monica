@@ -41,7 +41,7 @@ public sealed class DbContextFixture<TDbContext> : IDisposable, IAsyncDisposable
             scope.ServiceProvider,
             options,
             scope.ServiceProvider.GetRequiredService<ICachedServiceProvider>());
-        Provider = new TestDbContextProvider<TDbContext>(scope.ServiceProvider, Context);
+        Provider = new DefaultDbContextProvider<TDbContext>(Context);
         Services = scope.ServiceProvider;
     }
 
@@ -152,19 +152,19 @@ public sealed class DbContextFixture<TDbContext> : IDisposable, IAsyncDisposable
     /// <summary>
     /// Creates a production EF repository backed by this fixture's DbContext.
     /// </summary>
-    public IRepository<TEntity> Repository<TEntity>()
+    public IEfEntityStore<TEntity> Repository<TEntity>()
         where TEntity : class, IEntity
     {
-        return new EfRepository<TDbContext, TEntity>(Provider);
+        return new EfRepository<TDbContext, TEntity>(Context);
     }
 
     /// <summary>
     /// Creates a production EF repository backed by this fixture's DbContext.
     /// </summary>
-    public IRepository<TEntity, TKey> Repository<TEntity, TKey>()
+    public IEfEntityStore<TEntity, TKey> Repository<TEntity, TKey>()
         where TEntity : class, IEntity<TKey>
     {
-        return new EfRepository<TDbContext, TEntity, TKey>(Provider);
+        return new EfRepository<TDbContext, TEntity, TKey>(Context);
     }
 
     /// <inheritdoc />
@@ -199,7 +199,8 @@ public sealed class DbContextFixture<TDbContext> : IDisposable, IAsyncDisposable
         services.AddSingleton(NullLoggerFactory.Instance);
         services.AddSingleton<IOptions<ModuleRepositoryOption>>(Options.Create(new ModuleRepositoryOption()));
         services.AddSingleton<ICurrentUser, TestCurrentUser>();
-        services.AddSingleton<IAuditPropertySetter, TestAuditPropertySetter>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddTransient<IAuditPropertySetter, Monica.Repository.Entity.Services.AuditPropertySetter>();
         services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
         configureServices?.Invoke(services);
 

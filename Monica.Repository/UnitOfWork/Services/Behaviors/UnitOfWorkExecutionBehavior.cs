@@ -1,10 +1,11 @@
 using Monica.Core.Execution;
 using Monica.Repository.UnitOfWork.Abstractions;
+using Monica.Repository.UnitOfWork.Models;
 
 namespace Monica.Repository.UnitOfWork.Services.Behaviors;
 
 /// <summary>
-/// Executes one business operation inside the ambient Monica unit of work.
+/// Executes one business operation inside the current scope's Monica transaction.
 /// </summary>
 /// <remarks>
 /// Nested execution adapters join the current unit of work. The outermost behavior owns the commit; failure handling
@@ -18,6 +19,7 @@ public sealed class UnitOfWorkExecutionBehavior<TInput, TResult>(IUnitOfWorkMana
         ExecutionContext<TInput> context,
         ExecutionDelegate<TResult> next)
     {
-        return unitOfWorkManager.RunAsync(next.Invoke, cancellationToken: context.CancellationToken);
+        context.Features.TryGet<UnitOfWorkScopeOptions>(out var options);
+        return unitOfWorkManager.RunAsync(next.Invoke, options, context.CancellationToken);
     }
 }

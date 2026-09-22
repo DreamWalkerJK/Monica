@@ -1,32 +1,20 @@
+using Microsoft.EntityFrameworkCore;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Persistence.Abstractions;
 
 namespace Monica.Repository.Persistence.Extensions;
 
-/// <summary>
-/// Provides keyed repository convenience operations that do not need to be part of the core repository contract.
-/// </summary>
+/// <summary>Infrastructure conveniences that retain tracked deletion policies.</summary>
 public static class RepositoryKeyExtensions
 {
-    /// <summary>
-    /// Deletes all entities whose keys are included in <paramref name="ids"/>.
-    /// </summary>
-    public static async Task DeleteManyAsync<TEntity, TKey>(
-        this IRepository<TEntity, TKey> repository,
-        IEnumerable<TKey> ids,
-        CancellationToken cancellationToken = default)
+    /// <summary>Loads and stages matching rows for policy-aware removal; does not execute a physical bulk delete.</summary>
+    public static async Task RemoveByIdsAsync<TEntity, TKey>(
+        this IEfEntityStore<TEntity, TKey> store, IEnumerable<TKey> ids, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TKey>
     {
-        var idArray = ids.ToArray();
-        if (idArray.Length == 0)
-        {
-            return;
-        }
-
-        var entities = await repository
-            .AsTracking()
-            .GetListAsync(entity => idArray.Contains(entity.Id), cancellationToken);
-
-        await repository.DeleteManyAsync(entities, cancellationToken);
+        var keys = ids.ToArray();
+        if (keys.Length == 0) return;
+        var entities = await store.Query.AsTracking().Where(x => keys.Contains(x.Id)).ToListAsync(cancellationToken);
+        foreach (var entity in entities) store.Remove(entity);
     }
 }

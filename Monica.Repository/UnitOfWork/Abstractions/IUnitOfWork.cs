@@ -1,41 +1,17 @@
 namespace Monica.Repository.UnitOfWork.Abstractions;
 
 /// <summary>
-/// Represents an application-level persistence boundary.
+/// The active operation's persistence session. The execution boundary owns commit and rollback;
+/// the dependency-injection scope owns its contexts. Never share a session between concurrent operations.
 /// </summary>
-/// <remarks>
-/// A unit of work coordinates SaveChanges, transactions, and completion callbacks for participating DbContexts.
-/// Dispose the scope asynchronously when possible; an incomplete scope rolls back explicitly during disposal.
-/// </remarks>
-public interface IUnitOfWork : IAsyncDisposable, IDisposable
+public interface IUnitOfWork
 {
-    /// <summary>
-    /// Gets the unique identifier of this unit-of-work scope.
-    /// </summary>
+    /// <summary>Gets the operation identity.</summary>
     Guid Id { get; }
 
-    /// <summary>
-    /// Gets whether the scope has completed successfully.
-    /// </summary>
-    bool IsCompleted { get; }
+    /// <summary>Flushes staged changes without committing. Throws after failure or completion.</summary>
+    Task<int> FlushAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Saves changes for all DbContexts attached to this unit of work without committing the transaction.
-    /// </summary>
-    Task SaveChangesAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Saves changes, publishes buffered events, commits transactions, and runs completion handlers.
-    /// </summary>
-    Task CompleteAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Rolls back all active transactions attached to this unit of work.
-    /// </summary>
-    Task RollbackAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Registers a handler that runs after commit succeeds.
-    /// </summary>
-    void OnCompleted(Func<Task> handler);
+    /// <summary>Prevents commit, including when a nested failure was caught by its caller.</summary>
+    void MarkRollbackOnly();
 }

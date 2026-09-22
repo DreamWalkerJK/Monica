@@ -22,6 +22,7 @@
 - Use the inherited `Logger` in handler methods when logging is needed. Monica resolves it after activation from the
   host that owns the service instance; do not access it from a constructor.
 - Make the request implement `IResultRequest<TResponse>` or `IResultRequest`.
+- Mark query requests with Core [ReadOnlyOperation] so mediator dispatch does not open a write transaction.
 - Keep the handler thin. Push reusable rules into `DomainService` or the entity itself.
 - Catch exceptions only when you are adding boundary-specific context. Do not smother useful failures.
 - Put `[ApiEndpoint]` on the request type. It owns the HTTP method, request-specific route, binding source, and optional generated operation name.
@@ -55,6 +56,7 @@ For an assembly that owns only local HTTP endpoints, use the same configuration 
 
 ```csharp
 using Monica.Core.Results;
+using Monica.Core.Execution;
 using Monica.ProjectUnits.Annotations;
 using Monica.Repository.Persistence.Abstractions;
 using Monica.WebApi.Abstractions;
@@ -62,6 +64,7 @@ using Monica.WebApi.Annotations;
 
 namespace $ApplicationNamespace$.HandlersQuery;
 
+[ReadOnlyOperation]
 [ApiEndpoint(
     ApiHttpMethod.Get,
     "$RequestRoute$",

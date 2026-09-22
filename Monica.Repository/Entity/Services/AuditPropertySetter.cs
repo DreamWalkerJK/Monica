@@ -4,7 +4,8 @@ using Monica.Repository.Entity.Abstractions.Auditing;
 using Monica.Repository.Entity.Utils;
 
 namespace Monica.Repository.Entity.Services;
-public class AuditPropertySetter(ICurrentUser currentUser) : IAuditPropertySetter
+/// <summary>Applies audit identity and UTC timestamps from the current user and injected clock.</summary>
+public class AuditPropertySetter(ICurrentUser currentUser, TimeProvider timeProvider) : IAuditPropertySetter
 {
     protected ICurrentUser CurrentUser { get; } = currentUser;
 
@@ -43,7 +44,7 @@ public class AuditPropertySetter(ICurrentUser currentUser) : IAuditPropertySette
 
         if (objectWithCreationTime.CreationTime == default)
         {
-            ObjectHelper.TrySetProperty(objectWithCreationTime, x => x.CreationTime, () => DateTime.Now);
+            ObjectHelper.TrySetProperty(objectWithCreationTime, x => x.CreationTime, () => timeProvider.GetUtcNow().UtcDateTime);
         }
     }
 
@@ -52,12 +53,9 @@ public class AuditPropertySetter(ICurrentUser currentUser) : IAuditPropertySette
     {
         if (targetObject is IHasModificationTime objectWithModificationTime)
         {
-            ObjectHelper.TrySetProperty(objectWithModificationTime, x => x.LastModificationTime, () => DateTime.Now);
+            ObjectHelper.TrySetProperty(objectWithModificationTime, x => x.LastModificationTime, () => timeProvider.GetUtcNow().UtcDateTime);
         }
-        if (targetObject is IHasModificationTime objectWithModificationTime2)
-        {
-            ObjectHelper.TrySetProperty(objectWithModificationTime2, x => x.LastModificationTime, () => DateTime.Now);
-        }
+
     }
 
 
@@ -65,7 +63,7 @@ public class AuditPropertySetter(ICurrentUser currentUser) : IAuditPropertySette
     {
         if (targetObject is IHasDeletionTime { DeletionTime: null } objectWithDeletionTime)
         {
-            ObjectHelper.TrySetProperty(objectWithDeletionTime, x => x.DeletionTime, () => DateTime.Now);
+            ObjectHelper.TrySetProperty(objectWithDeletionTime, x => x.DeletionTime, () => timeProvider.GetUtcNow().UtcDateTime);
         }
     }
     protected virtual void SetLastModifierId(object targetObject)
@@ -109,7 +107,7 @@ public class AuditPropertySetter(ICurrentUser currentUser) : IAuditPropertySette
         {
             return;
         }
-        //Huge pit: It cannot be changed directly, otherwise it will report: A second operation was started on this context instance before a previous operation completed. This is usually caused by different threads concurrently using the same instance of DbContext. For more information on how to avoid threading issues with DbContext, see https://go.microsoft.com/fwlink/?linkid=2097913."
+        // Audit inputs come from scoped identity; stamping must not issue another query on the saving context.
         if (targetObject is IHasDeleterName deleter)
         {
             ObjectHelper.TrySetProperty(deleter, x => x.Deleter, () => CurrentUser.Username);

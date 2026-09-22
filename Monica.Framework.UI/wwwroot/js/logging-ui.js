@@ -192,7 +192,9 @@ export function preserveScrollPosition(container, absoluteLineNumber) {
     return true;
 }
 
-export function downloadFile(url) {
+// Fetch the attachment before downloading a local Blob so HTTP deployments do not
+// hand an insecure network URL to the browser's download manager.
+export async function downloadFile(url) {
     if (!url) {
         return false;
     }
@@ -202,20 +204,51 @@ export function downloadFile(url) {
         return false;
     }
 
+    const response = await fetch(url, {
+        credentials: "same-origin",
+        mode: "same-origin",
+        redirect: "error"
+    });
+    if (!response.ok) {
+        throw new Error(`Log download failed: HTTP ${response.status} ${response.statusText}`.trim());
+    }
+
+    const blob = await response.blob();
     const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "";
+    anchor.download = getDownloadFileName(response.headers.get("Content-Disposition"));
     anchor.rel = "noopener";
     anchor.style.display = "none";
-
-    host.appendChild(anchor);
+    const objectUrl = URL.createObjectURL(blob);
+    anchor.href = objectUrl;
 
     try {
+        host.appendChild(anchor);
         anchor.click();
         return true;
     } finally {
         if (anchor.isConnected) {
             anchor.remove();
         }
+
+        // Allow the browser to consume the URL before releasing the attachment.
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     }
+}
+
+function getDownloadFileName(contentDisposition) {
+    // ASP.NET Core emits filename* for Unicode names alongside an ASCII fallback.
+    const encodedName = /(?:^|;)\s*filename\*\s*=\s*UTF-8'[^']*'([^;]*)/i.exec(contentDisposition ?? "");
+    if (encodedName) {
+        try {
+            const fileName = decodeURIComponent(encodedName[1].trim());
+            if (fileName) {
+                return fileName;
+            }
+        } catch {
+            // A malformed extended parameter must not hide a usable plain filename.
+        }
+    }
+
+    const plainName = /(?:^|;)\s*filename\s*=\s*(?:"((?:[^"\\]|\\.)*)"|([^;]*))/i.exec(contentDisposition ?? "");
+    return plainName?.[1]?.replace(/\\(.)/g, "$1") || plainName?.[2]?.trim() || "logs.log";
 }

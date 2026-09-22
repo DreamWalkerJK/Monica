@@ -1,6 +1,6 @@
+using System.Transactions;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -15,21 +15,27 @@ using Monica.Modules;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Entity.Extensions;
 using Monica.Repository.Persistence.Abstractions;
+using Monica.Repository.Persistence.Models;
 using Monica.Repository.Persistence.Extensions;
 using Monica.Repository.Persistence.Services.Support;
 using Monica.Repository.UnitOfWork.Abstractions;
-using Monica.Repository.UnitOfWork.Models;
+using Monica.Repository.UnitOfWork.Services;
+using Monica.Repository.Outbox.Models;
+using Monica.Repository.Outbox.Services;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Monica.Tool.Extensions;
 
 namespace Monica.Repository.Persistence.Services;
 
 /// <summary>
 /// Base DbContext for Monica repositories. Persistence concepts — audit stamping, soft-delete rewriting,
-/// concurrency stamps, and entity change events — are intrinsic to <see cref="SaveChangesAsync(bool, CancellationToken)"/>
-/// and apply on every save path, with or without an ambient unit of work.
+/// concurrency stamps, and optional durable notification capture — are intrinsic to
+/// <see cref="SaveChangesAsync(bool, CancellationToken)"/> and apply on every save path, with or without
+/// a scoped operation. External notification delivery runs separately after commit.
 /// </summary>
 public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContext> options, ICachedServiceProvider serviceProvider)
-    : DbContext(options), IUnitOfWorkAwareDbContext
+    : DbContext(options), IRepositoryModelFeatures, IRepositoryContextLifetime
     where TDbContext : DbContext
 {
     private IServiceScope? _factoryScope;
@@ -42,10 +48,20 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
 
     protected ModuleRepositoryOption Options => CachedServiceProvider.GetRequiredService<IOptions<ModuleRepositoryOption>>().Value;
 
+    private bool _saveFailed;
+    private bool _saving;
+    private readonly List<OutboxMessage> _pendingMessages = [];
+    private RepositoryOutboxOptions? OutboxOptions => CachedServiceProvider.GetService<OutboxRegistration<TDbContext>>()?.Options;
+    bool IRepositoryModelFeatures.HasOutbox => OutboxOptions is not null;
+    object IRepositoryModelFeatures.ModelCacheKey => ModelCacheKey;
+
     /// <summary>
-    /// Gets whether <see cref="Initialize"/> has already been applied to this context by a unit of work.
+    /// Identifies this context's model variant. Override for dynamic mappings such as table shards,
+    /// including <c>base.ModelCacheKey</c> and every value that changes the model in the returned key.
+    /// Monica adds outbox configuration and design-time mode to this key automatically.
+    /// The getter runs before model initialization and must not access <see cref="DbContext.Model"/>.
     /// </summary>
-    public bool HasInit { get; protected set; }
+    protected virtual object ModelCacheKey => GetType();
 
     /// <summary>
     /// Transfers ownership of the factory-created dependency injection scope to this context.
@@ -103,6 +119,8 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
     protected readonly DbContextOptions DbContextOptions = options;
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, RepositoryModelCacheKeyFactory>();
+        optionsBuilder.AddInterceptors(RepositoryOperationInterceptor.Instance);
         var enableSensitiveDataLogging = Options.EnableSensitiveDataLogging
             ?? CachedServiceProvider.GetService<IHostEnvironment>()?.IsDevelopment()
             ?? false;
@@ -114,7 +132,7 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
         }
     }
 
-    #region 待优化
+    #region Model conventions
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -197,6 +215,17 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
         builder.ApplyEntitySeparateConfigurations(Options, Logger);
 
         OnModelCreatingExtend(builder);
+        if (OutboxOptions is not null)
+        {
+            var outbox = builder.Entity<OutboxMessage>();
+            outbox.ToTable("MonicaOutbox");
+            outbox.HasKey(x => x.Sequence);
+            outbox.Property(x => x.Sequence).ValueGeneratedOnAdd();
+            outbox.HasIndex(x => x.MessageId).IsUnique();
+            outbox.HasIndex(x => new { x.DeliveredAtUtc, x.Sequence });
+            outbox.Property(x => x.Contract).HasMaxLength(200).IsRequired();
+            outbox.Property(x => x.Payload).IsRequired();
+        }
     }
 
 
@@ -204,281 +233,168 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
 
 
     /// <summary>
-    /// Saves all tracked changes after applying the repository persistence concepts
-    /// (audit stamping, soft-delete rewriting, concurrency stamps, entity events) to changed entries.
+    /// Saves through fixed persistence policies. Outbox snapshots and business rows share a transaction.
+    /// No transport is invoked. A failed save faults this context; retry in a fresh scope.
     /// </summary>
     /// <remarks>
-    /// Concepts are intrinsic to the save pipeline: every save path applies them, whether it runs inside a
-    /// unit of work, in a background worker, or in a test that resolves the context directly. Entity events
-    /// staged during the save defer until the unit of work commits when one is active, and publish right
-    /// after the save commits when none is. Use <see cref="SaveChangesOnDbContextAsync"/> to bypass the
-    /// concepts deliberately.
+    /// SaveChanges(false) is deliberately unsupported: accepting business changes between two internal flushes
+    /// is necessary for generated-key outbox capture. Use a transaction and a fresh context when retrying.
+    /// A caller-owned transaction is never committed here.
     /// </remarks>
-    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    public sealed override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        => SaveCoreAsync(true, acceptAllChangesOnSuccess, cancellationToken);
+
+    /// <summary>Synchronous saves apply identical policies and durable capture using synchronous database I/O.</summary>
+    public sealed override int SaveChanges(bool acceptAllChangesOnSuccess)
+        => SaveCoreAsync(false, acceptAllChangesOnSuccess, CancellationToken.None).GetAwaiter().GetResult();
+
+    internal Guid StageOutboxMessage<TMessage>(TMessage message) where TMessage : class
     {
-        // Outside a unit of work the successful save itself is the commit boundary, so its entity events
-        // publish immediately after it instead of waiting for a unit-of-work completion.
-        var publisher = Publisher;
-        var detachedEvents = publisher?.TryBeginDetachedEventBuffer();
+        ArgumentNullException.ThrowIfNull(message);
+        ValidateSave();
+        var options = OutboxOptions ?? throw new InvalidOperationException("Register AddOutbox for this context first.");
+        var row = OutboxSerializer.Capture(message, options, CachedServiceProvider.GetService<TimeProvider>() ?? TimeProvider.System);
+        _pendingMessages.Add(row);
+        return row.MessageId;
+    }
+
+    private void ValidateSave()
+    {
+        if (_saveFailed) throw new InvalidOperationException("This context's save failed. Dispose it and retry in a fresh scope.");
+        if (_saving) throw new InvalidOperationException("Recursive or concurrent saves are not supported.");
+        if (this is IRepositoryContextAdapter { TransactionOwner: { } owner }
+            && owner.Database.CurrentTransaction is { } transaction
+            && (!ReferenceEquals(Database.GetDbConnection(), owner.Database.GetDbConnection())
+                || Database.ProviderName != owner.Database.ProviderName
+                || Database.CurrentTransaction is not { } physicalTransaction
+                || !ReferenceEquals(physicalTransaction.GetDbTransaction(), transaction.GetDbTransaction())))
+            throw new NotSupportedException("A physical context must share its logical owner's connection and transaction.");
+        CachedServiceProvider.GetService<UnitOfWorkManager>()?.ValidateSave(this);
+    }
+
+    void IRepositoryContextLifetime.ValidateDatabaseAccess()
+    {
+        // Save owns its internal commands and rollback/savepoint cleanup. Outside it, native EF access
+        // must obey the same operation lifetime and participant selection as tracked saves.
+        if (!_saving) ValidateSave();
+    }
+
+    private async Task<int> SaveCoreAsync(bool useAsync, bool acceptAll, CancellationToken token)
+    {
+        if (!acceptAll) throw new NotSupportedException("RepositoryDbContext requires acceptAllChangesOnSuccess=true. Retry failures in a fresh scope.");
+        ValidateSave();
+        _saving = true;
+        var autoDetect = ChangeTracker.AutoDetectChangesEnabled;
+        IDbContextTransaction? ownedTransaction = null;
+        IDbContextTransaction? externalTransaction = null;
+        string? savepoint = null;
+        Exception? failure = null;
         try
         {
-            ApplyConceptsBeforeSave();
-
-            var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
-
-            if (detachedEvents != null)
+            // Sharding coordinators delegate their EF save to physical RepositoryDbContexts. Policies
+            // belong to those actual saves, never to both the aggregate tracker and its physical trackers.
+            IReadOnlyList<PersistenceChange> changes = this is IRepositoryContextAdapter { CoordinatesSave: true }
+                ? [] : PersistencePolicies.Apply(this, AuditPropertySetter, CachedServiceProvider.GetServices<IPersistencePolicy>());
+            ChangeTracker.AutoDetectChangesEnabled = false;
+            var outbox = OutboxOptions;
+            if (outbox is not null)
             {
-                await publisher!.PublishDetachedEventsAsync(detachedEvents);
-            }
-
-            return result;
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            throw WrapConcurrencyException(ex);
-        }
-        finally
-        {
-            detachedEvents?.Dispose();
-            ChangeTracker.AutoDetectChangesEnabled = true;
-        }
-    }
-
-    /// <summary>
-    /// Saves all tracked changes synchronously after applying the same persistence concepts as
-    /// <see cref="SaveChangesAsync(bool, CancellationToken)"/>, except entity events: without an ambient
-    /// unit of work a synchronous save has no async-safe point to publish them from, and such a save on an
-    /// event-enabled entity fails instead of dropping the events silently.
-    /// </summary>
-    public override int SaveChanges(bool acceptAllChangesOnSuccess)
-    {
-        try
-        {
-            ApplyConceptsBeforeSave();
-
-            return base.SaveChanges(acceptAllChangesOnSuccess);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            throw WrapConcurrencyException(ex);
-        }
-        finally
-        {
-            ChangeTracker.AutoDetectChangesEnabled = true;
-        }
-    }
-
-    private Exception WrapConcurrencyException(DbUpdateConcurrencyException ex)
-    {
-        if (ex.Entries.Count > 0)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine(ex.Entries.Count > 1
-                ? "There are some entries which are not saved due to concurrency exception:"
-                : "There is an entry which is not saved due to concurrency exception:");
-            foreach (var entry in ex.Entries)
-            {
-                sb.AppendLine(entry.ToString());
-            }
-
-            Logger.LogWarning(sb.ToString());
-        }
-
-        return new Exception(ex.Message, ex);
-    }
-
-    /// <summary>
-    /// Calls the EF Core save pipeline directly without applying the repository persistence concepts.
-    /// Use this only when raw EF semantics are explicitly wanted.
-    /// </summary>
-    public virtual Task<int> SaveChangesOnDbContextAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
-    {
-        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
-    }
-
-    /// <summary>
-    /// Applies unit-of-work operational settings (currently the command timeout) to this DbContext.
-    /// </summary>
-    /// <remarks>
-    /// Persistence concepts are intrinsic to <see cref="SaveChangesAsync(bool, CancellationToken)"/> and do not
-    /// depend on this call; it only carries unit-of-work scope settings for contexts that participate in one.
-    /// </remarks>
-    public virtual void Initialize(UnitOfWorkScopeOptions options)
-    {
-        if (HasInit) throw new InvalidOperationException("The same repository DbContext was initialized for unit-of-work participation twice; the calling structure is invalid.");
-        HasInit = true;
-
-        if (options.Timeout.HasValue &&
-            Database.IsRelational() &&
-            !Database.GetCommandTimeout().HasValue)
-        {
-            Database.SetCommandTimeout(TimeSpan.FromMilliseconds(options.Timeout.Value));
-        }
-    }
-
-    /// <summary>
-    /// Gets the entity change event publisher resolved from the application service provider, if registered.
-    /// </summary>
-    protected IAsyncLocalEventPublisher? Publisher => CachedServiceProvider.GetService<IAsyncLocalEventPublisher>();
-
-    #region 保存时应用 concepts：审计等自动属性、软删重写、实体事件
-
-    /// <summary>
-    /// Applies the repository persistence concepts to every changed entry right before the save is handed to EF Core.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Runs inside every <see cref="SaveChangesAsync(bool, CancellationToken)"/> and <see cref="SaveChanges(bool)"/>
-    /// call, so write semantics (soft delete, audit stamping, concurrency stamps, entity events) hold on every
-    /// runtime shape: request pipelines with an ambient unit of work, background workers, and direct context usage in tests.
-    /// </para>
-    /// <para>
-    /// Cascaded dependents must already sit in the change tracker with their final state when this pass runs, which is
-    /// why the EF Core default cascade timing (<see cref="CascadeTiming.Immediate"/>) must be kept: with
-    /// <see cref="CascadeTiming.OnSaveChanges"/> dependents would only transition during the EF save and this pass would miss them.
-    /// </para>
-    /// <para>
-    /// Compared to applying concepts from <c>ChangeTracker</c> events, an entry that was tracked as Added and then
-    /// explicitly transitioned to Modified before saving is handled once, by its current state (Modified), instead of twice.
-    /// </para>
-    /// </remarks>
-    protected virtual void ApplyConceptsBeforeSave()
-    {
-        foreach (var entry in ChangeTracker.Entries().ToList())
-        {
-            switch (entry.State)
-            {
-                case EntityState.Added:
-                case EntityState.Modified:
-                case EntityState.Deleted:
-                    PublishEventsForTrackedEntity(entry);
-                    break;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Applies the concepts and buffers the entity change events for one changed entry.
-    /// </summary>
-    /// <param name="entry">The entry whose state is Added, Modified, or Deleted.</param>
-    protected virtual void PublishEventsForTrackedEntity(EntityEntry entry)
-    {
-        switch (entry.State)
-        {
-            case EntityState.Added:
-                ApplyConceptsForAddedEntity(entry);
-                Publisher?.AddEntityCreatedEvent(entry.Entity);
-                break;
-
-            case EntityState.Modified:
-                ApplyConceptsForModifiedEntity(entry);
-
-                //Big Pitfall: In ABP 8.0.2, OnAdd is not considered for new addition judgment, resulting in no triggering of related events.
-                if (entry.Properties.Any(x => x is { IsModified: true, Metadata.ValueGenerated: ValueGenerated.Never or ValueGenerated.OnAdd }))
+                if (!Database.IsRelational()) throw new NotSupportedException("Transactional outbox requires a relational provider.");
+                externalTransaction = Database.CurrentTransaction;
+                if (externalTransaction is null)
                 {
-                    if (entry.Entity is IHasSoftDelete && entry.Entity.As<IHasSoftDelete>().IsDeleted)
-                    {
-                        Publisher?.AddEntityDeletedEvent(entry.Entity);
-
-                    }
-                    else
-                    {
-                        Publisher?.AddEntityUpdatedEvent(entry.Entity);
-                    }
+                    // Some relational adapters support local EF transactions without System.Transactions enlistment.
+                    if (System.Transactions.Transaction.Current is not null
+                        || this.GetService<IDbContextTransactionManager>() is ITransactionEnlistmentManager { EnlistedTransaction: not null })
+                        throw new NotSupportedException("Outbox saves require an explicit EF transaction, not an ambient system transaction.");
+                    ownedTransaction = useAsync ? await Database.BeginTransactionAsync(token) : Database.BeginTransaction();
                 }
+                else
+                {
+                    if (!externalTransaction.SupportsSavepoints)
+                        throw new NotSupportedException("Outbox capture inside an existing transaction requires savepoint support.");
+                    savepoint = "monica_" + Guid.NewGuid().ToString("N");
+                    if (useAsync) await externalTransaction.CreateSavepointAsync(savepoint, token);
+                    else externalTransaction.CreateSavepoint(savepoint);
+                }
+            }
 
-                UpdateConcurrencyStamp(entry);
-                break;
-
-            case EntityState.Deleted:
-                ApplyConceptsForDeletedEntity(entry);
-                Publisher?.AddEntityDeletedEvent(entry.Entity);
-                UpdateConcurrencyStamp(entry);
-                break;
-        }
-    }
-
-    protected virtual void UpdateConcurrencyStamp(EntityEntry entry)
-    {
-        if (entry.Entity is not IHasConcurrencyStamp entity)
-        {
-            return;
-        }
-
-        Entry(entity).Property(x => x.ConcurrencyStamp).OriginalValue = entity.ConcurrencyStamp;
-        entity.ConcurrencyStamp = Guid.NewGuid().ToString("N");
-    }
-
-    protected virtual void SetConcurrencyStampIfNull(EntityEntry entry)
-    {
-        if (entry.Entity is not IHasConcurrencyStamp entity)
-        {
-            return;
-        }
-
-        if (entity.ConcurrencyStamp.IsNotNullOrEmpty())
-        {
-            return;
-        }
-
-        entity.ConcurrencyStamp = Guid.NewGuid().ToString("N");
-    }
-
-    protected virtual void ApplyConceptsForAddedEntity(EntityEntry entry)
-    {
-        SetConcurrencyStampIfNull(entry);
-        SetCreationAuditProperties(entry);
-    }
-
-    protected virtual void ApplyConceptsForModifiedEntity(EntityEntry entry)
-    {
-        if (entry.State == EntityState.Modified && entry.Properties.Any(x => x is { IsModified: true, Metadata.ValueGenerated: ValueGenerated.Never or ValueGenerated.OnAdd }))
-        {
-            IncrementEntityVersionProperty(entry);
-            SetModificationAuditProperties(entry);
-
-            if (entry.Entity is IHasSoftDelete && entry.Entity.As<IHasSoftDelete>().IsDeleted)
+            var affected = useAsync ? await base.SaveChangesAsync(true, token) : base.SaveChanges(true);
+            if (outbox is not null)
             {
-                SetDeletionAuditProperties(entry);
+                var time = CachedServiceProvider.GetService<TimeProvider>() ?? TimeProvider.System;
+                var switches = CachedServiceProvider.GetServices<IEntityEventPublishSwitch>().ToArray();
+                foreach (var change in changes)
+                {
+                    if (outbox.EntityProjections.TryGetValue(change.Entry.Metadata.ClrType, out var projections)
+                        && switches.All(x => x.CanPublish(change.Entry.Entity)))
+                        foreach (var project in projections)
+                            if (project(CachedServiceProvider.UnderlyingProvider, change) is { } payload)
+                                _pendingMessages.Add(OutboxSerializer.Capture(payload, outbox, time));
+                }
+                if (_pendingMessages.Count != 0)
+                {
+                    Set<OutboxMessage>().AddRange(_pendingMessages);
+                    if (useAsync) await base.SaveChangesAsync(true, token);
+                    else base.SaveChanges(true);
+                }
+            }
+            if (ownedTransaction is not null)
+            {
+                if (useAsync) await ownedTransaction.CommitAsync(token);
+                else ownedTransaction.Commit();
+            }
+            if (savepoint is not null)
+            {
+                if (useAsync) await externalTransaction!.ReleaseSavepointAsync(savepoint, token);
+                else externalTransaction!.ReleaseSavepoint(savepoint);
+            }
+            _pendingMessages.Clear();
+            return affected;
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+            _saveFailed = true;
+            CachedServiceProvider.GetService<IUnitOfWorkManager>()?.Current?.MarkRollbackOnly();
+            try
+            {
+                if (ownedTransaction is not null)
+                {
+                    if (useAsync) await ownedTransaction.RollbackAsync(CancellationToken.None);
+                    else ownedTransaction.Rollback();
+                }
+                else if (savepoint is not null)
+                {
+                    if (useAsync) await externalTransaction!.RollbackToSavepointAsync(savepoint, CancellationToken.None);
+                    else externalTransaction!.RollbackToSavepoint(savepoint);
+                }
+            }
+            catch (Exception cleanup) { exception.Data["Monica.Repository.SaveRollbackException"] = cleanup; }
+            throw;
+        }
+        finally
+        {
+            ChangeTracker.AutoDetectChangesEnabled = autoDetect;
+            _saving = false;
+            if (ownedTransaction is not null)
+            {
+                try
+                {
+                    if (useAsync) await ownedTransaction.DisposeAsync();
+                    else ownedTransaction.Dispose();
+                }
+                catch (Exception cleanup)
+                {
+                    if (failure is not null) failure.Data["Monica.Repository.SaveDisposeException"] = cleanup;
+                    Logger.LogError(cleanup, "Transaction cleanup failed after the save outcome was established.");
+                }
             }
         }
     }
 
-    protected virtual void ApplyConceptsForDeletedEntity(EntityEntry entry)
-    {
-        if (entry.Entity is not IHasSoftDelete entity)
-        {
-            return;
-        }
+    #region Entity conventions
 
-        entry.State = EntityState.Unchanged;
-        entity.IsDeleted = true;
-
-        SetDeletionAuditProperties(entry);
-    }
-
-    protected virtual void SetCreationAuditProperties(EntityEntry entry)
-    {
-        AuditPropertySetter?.SetCreationProperties(entry.Entity);
-    }
-
-    protected virtual void SetModificationAuditProperties(EntityEntry entry)
-    {
-        AuditPropertySetter?.SetModificationProperties(entry.Entity);
-    }
-
-    protected virtual void SetDeletionAuditProperties(EntityEntry entry)
-    {
-        AuditPropertySetter?.SetDeletionProperties(entry.Entity);
-    }
-
-    protected virtual void IncrementEntityVersionProperty(EntityEntry entry)
-    {
-        AuditPropertySetter?.IncrementEntityVersionProperty(entry.Entity);
-    }
-    #endregion
-
-    #region 实体额外配置
     private static readonly MethodInfo _configureBasePropertiesMethodInfo
         = typeof(RepositoryDbContext<TDbContext>)
             .GetMethod(
@@ -525,7 +441,7 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
             var filterExpression = CreateFilterExpression<TEntity>(modelBuilder);
             if (filterExpression != null)
             {
-                modelBuilder.Entity<TEntity>().HasMoQueryFilter(filterExpression);
+                modelBuilder.Entity<TEntity>().HasQueryFilter(RepositoryQueryFilters.SoftDelete, filterExpression);
             }
         }
     }
@@ -565,7 +481,7 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
 
         if (typeof(IHasSoftDelete).IsAssignableFrom(typeof(TEntity)))
         {
-            var softDeleteColumnName = modelBuilder.Entity<TEntity>().Metadata.FindProperty(nameof(IHasSoftDelete.IsDeleted))?.GetColumnName() ?? nameof(IHasSoftDelete.IsDeleted);
+            const string softDeletePropertyName = nameof(IHasSoftDelete.IsDeleted);
 
             if (Options.UseDbFunction)
             {
@@ -574,7 +490,7 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
             }
             else
             {
-                expression = e => !EF.Property<bool>(e, softDeleteColumnName);
+                expression = e => !EF.Property<bool>(e, softDeletePropertyName);
             }
         }
 
