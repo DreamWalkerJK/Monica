@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using AwesomeAssertions;
 using Monica.ProjectUnits.CodeAnalysis.Models;
 using Monica.ProjectUnits.CodeAnalysis.Services;
@@ -18,6 +19,7 @@ public sealed class ProjectUnitSourceAnalyzerTests
     public async Task AnalyzeAsync_WhenASelectedProjectIsMissing_ShouldReturnStablePartialCatalog()
     {
         using var fixture = new TemporaryProjectFixture();
+        await fixture.RestoreAsync(TestContext.Current.CancellationToken);
         var progress = new ProgressRecorder();
         var analyzer = new ProjectUnitSourceAnalyzer();
 
@@ -32,6 +34,8 @@ public sealed class ProjectUnitSourceAnalyzerTests
         result.RequestedProjectCount.Should().Be(2);
         result.AnalyzedProjectCount.Should().Be(1);
         result.IsPartial.Should().BeTrue();
+        result.Diagnostics.Should().NotContain(diagnostic =>
+            diagnostic.Code == "ProjectUnit.Analysis.MSBuild.Failure");
         result.Units.Should().ContainSingle();
         result.Units[0].Should().Match<ProjectUnitSourceUnit>(unit =>
             unit.CatalogKey == "Sample.csproj::Sample.ManagedUnit"
@@ -107,6 +111,41 @@ public sealed class ProjectUnitSourceAnalyzerTests
         public string Root { get; }
 
         public string ProjectPath { get; }
+
+        public async Task RestoreAsync(CancellationToken cancellationToken)
+        {
+            // MSBuildWorkspace needs restored framework references to bind attribute arguments.
+            // This package-free fixture restores against an empty local source to stay offline.
+            var startInfo = new ProcessStartInfo("dotnet")
+            {
+                WorkingDirectory = Root,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            foreach (var argument in new[] { "restore", ProjectPath, "--source", Root, "--nologo", "-p:NuGetAudit=false" })
+            {
+                startInfo.ArgumentList.Add(argument);
+            }
+
+            using var process = Process.Start(startInfo)!;
+            var output = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var error = process.StandardError.ReadToEndAsync(cancellationToken);
+            try
+            {
+                await process.WaitForExitAsync(cancellationToken);
+            }
+            finally
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+            }
+
+            Assert.True(process.ExitCode == 0, $"Fixture restore failed: {await output}\n{await error}");
+        }
 
         public void Dispose()
         {
