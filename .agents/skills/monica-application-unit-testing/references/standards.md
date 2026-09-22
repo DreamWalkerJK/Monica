@@ -46,6 +46,8 @@ Do not shorten suffixes such as `.API`, `.Domain`, `.Infrastructure`, `.Adaptor`
 - Put test-specific seam registrations in its `ISeamReplacementBuilder` callback.
 - Create normal child scopes with `application.CreateScope(...)`.
 - Resolve units under test from `MonicaTestScope`.
+- Run write scenarios through `scope.InvokeAsync(...)` so the action executes with request-shaped unit-of-work semantics; resolving directly is for read-only flows.
+- Seed one entity graph per `scope.SeedAsync(...)` call (mixed types and shared navigation parents stay in one call; collections passed as elements are flattened); use `scope.SeedRangeAsync<T>(...)` for typed sequences. Seeding applies persistence concepts and clears the change tracker, so never initialize the DbContext by hand or call `ChangeTracker.Clear()` to work around seeding.
 - Dispose every scope before its owning application.
 - Use multiple scopes in one application only when the behavior deliberately spans scopes under the same host.
 - Use `application.Services`, `application.Application`, or `application.ModuleSnapshots` for host-level assertions.

@@ -76,7 +76,17 @@ public sealed class CommandHandlerUserLoginTests(
 
 The replacement callback changes the service collection before `Build()`. `CreateScope()` only creates a child scope.
 
-## Repository Scenario
+This shape resolves the handler directly, so the auto-controller execution pipeline (including its request-level unit of work) does not run. It is fine for handlers that only read. When the handler writes and the operation must commit as one business transaction, resolve it inside `scope.InvokeAsync` instead:
+
+```csharp
+var result = await scope.InvokeAsync(async s =>
+{
+    var handler = s.Resolve<CommandHandlerCreateUser>();
+    return await handler.Handle(command, s.CancellationToken);
+});
+```
+
+## Repository Read Scenario
 
 ```csharp
 public sealed class RepositoryUserTests(
@@ -109,6 +119,43 @@ public sealed class RepositoryUserTests(
     }
 }
 ```
+
+## Repository Write Scenario
+
+Wrap write actions in `scope.InvokeAsync` so they run with request-shaped unit-of-work semantics: staged repository writes are saved when the action succeeds and committed by the unit of work. Persistence concepts (soft delete, audit stamping) apply without any manual context work.
+
+```csharp
+public sealed class RepositoryPermissionTests(
+    UserServiceTestApplicationFactory factory)
+    : IClassFixture<UserServiceTestApplicationFactory>
+{
+    private readonly UserServiceTestApplicationFactory _factory = factory;
+
+    [Fact]
+    public async Task DeleteAsync_WhenPermissionExists_ShouldSoftDelete()
+    {
+        await using var application = await _factory.CreateAsync(
+            cancellationToken: TestContext.Current.CancellationToken);
+        await using var scope = application.CreateScope(TestContext.Current.CancellationToken);
+        await scope.SeedAsync(new Permission { Id = 201, Name = "user:view" });
+
+        await scope.InvokeAsync(async s =>
+        {
+            var repository = s.Resolve<IRepositoryPermission>();
+            var loaded = await repository.FindAsync(p => p.Name == "user:view", s.CancellationToken);
+            await repository.DeleteAsync(loaded!, s.CancellationToken);
+        });
+
+        var context = await scope.GetDbContextAsync<UserDbContext>();
+        var stored = await context.Permissions.IgnoreQueryFilters().AsNoTracking()
+            .SingleAsync(p => p.Id == 201, TestContext.Current.CancellationToken);
+        stored.IsDeleted.Should().BeTrue();
+        stored.DeletionTime.Should().NotBeNull();
+    }
+}
+```
+
+Use the generic overload (`await scope.InvokeAsync(async s => { ...; return result; })`) when the test asserts on the action's return value.
 
 ## Module Composition Scenario
 

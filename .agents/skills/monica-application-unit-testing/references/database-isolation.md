@@ -4,7 +4,7 @@ Database state belongs to one `MonicaTestApplication` scenario. Configure the pr
 
 ## PerScopeDatabase
 
-Use `DatabaseIsolation.PerScopeDatabase` by default. Every `application.CreateScope()` receives a fresh SQLite in-memory connection and schema.
+Use `DatabaseIsolation.PerScopeDatabase` by default. Every `application.CreateScope()` receives a fresh SQLite in-memory connection and schema. Seeds and `scope.InvokeAsync(...)` writes both target the scope's own database.
 
 Best for:
 
