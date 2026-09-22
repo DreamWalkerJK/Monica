@@ -23,7 +23,13 @@ using Monica.Tool.Extensions;
 
 namespace Monica.Repository.Persistence.Services;
 
-public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContext> options, ICachedServiceProvider serviceProvider) : DbContext(options), IUnitOfWorkAwareDbContext
+/// <summary>
+/// Base DbContext for Monica repositories. Persistence concepts — audit stamping, soft-delete rewriting,
+/// concurrency stamps, and entity change events — are intrinsic to <see cref="SaveChangesAsync(bool, CancellationToken)"/>
+/// and apply on every save path, with or without an ambient unit of work.
+/// </summary>
+public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContext> options, ICachedServiceProvider serviceProvider)
+    : DbContext(options), IUnitOfWorkAwareDbContext
     where TDbContext : DbContext
 {
     private IServiceScope? _factoryScope;
@@ -36,6 +42,9 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
 
     protected ModuleRepositoryOption Options => CachedServiceProvider.GetRequiredService<IOptions<ModuleRepositoryOption>>().Value;
 
+    /// <summary>
+    /// Gets whether <see cref="Initialize"/> has already been applied to this context by a unit of work.
+    /// </summary>
     public bool HasInit { get; protected set; }
 
     /// <summary>
@@ -91,7 +100,6 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
     }
 
 
-
     protected readonly DbContextOptions DbContextOptions = options;
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -107,7 +115,7 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
     }
 
     #region 待优化
-    
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<DateTime>().HavePrecision(0);
@@ -159,18 +167,6 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
                         property.SetValueConverter(converter);
                     }
                 }
-
-                //Tidb does not support ascii_general_ci
-                // if (property.ClrType == typeof(Guid?))
-                // {
-                //     property.SetCollation("utf8mb4_bin");
-                // }
-
-                //postgresql 
-                //if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
-                //{
-                //    property.SetColumnType("timestamp");
-                //}
             }
         }
     }
@@ -196,9 +192,6 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
                 .Invoke(this, [builder, entityType]);
         }
 
-        //Tidb is used with mysql8.0.0 or above.
-        //builder.UseCollation("utf8mb4_bin"); 
-
         builder.ApplyEntitySelfConfigurations(Options, Logger);
 
         builder.ApplyEntitySeparateConfigurations(Options, Logger);
@@ -210,109 +203,109 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
     #endregion
 
 
+    /// <summary>
+    /// Saves all tracked changes after applying the repository persistence concepts
+    /// (audit stamping, soft-delete rewriting, concurrency stamps, entity events) to changed entries.
+    /// </summary>
+    /// <remarks>
+    /// Concepts are intrinsic to the save pipeline: every save path applies them, whether it runs inside a
+    /// unit of work, in a background worker, or in a test that resolves the context directly. Entity events
+    /// staged during the save defer until the unit of work commits when one is active, and publish right
+    /// after the save commits when none is. Use <see cref="SaveChangesOnDbContextAsync"/> to bypass the
+    /// concepts deliberately.
+    /// </remarks>
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        // Outside a unit of work the successful save itself is the commit boundary, so its entity events
+        // publish immediately after it instead of waiting for a unit-of-work completion.
+        var publisher = Publisher;
+        var detachedEvents = publisher?.TryBeginDetachedEventBuffer();
         try
         {
-            //foreach (var entityEntry in AbpEfCoreNavigationHelper.GetChangedEntityEntries())
-            //{
-            //    if (EntityChangeOptions.Value.PublishEntityUpdatedEventWhenNavigationChanges)
-            //    {
-            //        if (entityEntry.Entity is ISoftDelete && entityEntry.Entity.As<ISoftDelete>().IsDeleted)
-            //        {
-            //            EntityChangeEventHelper.PublishEntityDeletedEvent(entityEntry.Entity);
-            //        }
-            //        else
-            //        {
-            //            EntityChangeEventHelper.PublishEntityUpdatedEvent(entityEntry.Entity);
-            //        }
-            //    }
-            //    else if (entityEntry.Properties.Any(x => x.IsModified && (x.Metadata.ValueGenerated == ValueGenerated.Never || x.Metadata.ValueGenerated == ValueGenerated.OnAdd)))
-            //    {
-            //        if (entityEntry.Properties.Where(x => x.IsModified).All(x => x.Metadata.IsForeignKey()))
-            //        {
-            //            // Skip `PublishEntityDeletedEvent/PublishEntityUpdatedEvent` if only foreign keys have changed.
-            //            break;
-            //        }
+            ApplyConceptsBeforeSave();
 
-            //        if (entityEntry.Entity is ISoftDelete && entityEntry.Entity.As<ISoftDelete>().IsDeleted)
-            //        {
-            //            EntityChangeEventHelper.PublishEntityDeletedEvent(entityEntry.Entity);
-            //        }
-            //        else
-            //        {
-            //            EntityChangeEventHelper.PublishEntityUpdatedEvent(entityEntry.Entity);
-            //        }
-            //    }
-            //}
-
-            //var auditLog = AuditingManager?.Current?.Log;
-            //List<EntityChangeInfo>? entityChangeList = null;
-            //if (auditLog != null)
-            //{
-            //    EntityHistoryHelper.InitializeNavigationHelper(AbpEfCoreNavigationHelper);
-            //    entityChangeList = EntityHistoryHelper.CreateChangeList(ChangeTracker.Entries().ToList());
-            //}
-
-            HandlePropertiesBeforeSave();
-
-            //var eventReport = CreateEventReport();
-            var tracker = ChangeTracker;
             var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
-            //var method = typeof(DbContext).GetMethod(nameof(DbContext.SaveChangesAsync), [typeof(bool), typeof(CancellationToken)])!.MethodHandle.GetFunctionPointer();
-            //var baseMethod = (Func<int>) Activator.CreateInstance(typeof(Func<int>), this, method)!;
-            //var result = baseMethod();
 
-
-
-
-            //PublishEntityEvents(eventReport);
-
-            //if (entityChangeList != null)
-            //{
-            //    EntityHistoryHelper.UpdateChangeList(entityChangeList);
-            //    auditLog!.EntityChanges.AddRange(entityChangeList);
-            //    Logger.LogDebug($"Added {entityChangeList.Count} entity changes to the current audit log");
-            //}
+            if (detachedEvents != null)
+            {
+                await publisher!.PublishDetachedEventsAsync(detachedEvents);
+            }
 
             return result;
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            if (ex.Entries.Count > 0)
-            {
-                var sb = new StringBuilder();
-                sb.AppendLine(ex.Entries.Count > 1
-                    ? "There are some entries which are not saved due to concurrency exception:"
-                    : "There is an entry which is not saved due to concurrency exception:");
-                foreach (var entry in ex.Entries)
-                {
-                    sb.AppendLine(entry.ToString());
-                }
-
-                Logger.LogWarning(sb.ToString());
-            }
-
-            throw new Exception(ex.Message, ex);
+            throw WrapConcurrencyException(ex);
         }
         finally
         {
+            detachedEvents?.Dispose();
             ChangeTracker.AutoDetectChangesEnabled = true;
-            //AbpEfCoreNavigationHelper.Clear();
         }
     }
 
     /// <summary>
-    /// This method will call the DbContext <see cref="SaveChangesAsync(bool, CancellationToken)"/> method directly of EF Core, which doesn't apply concepts of abp.
+    /// Saves all tracked changes synchronously after applying the same persistence concepts as
+    /// <see cref="SaveChangesAsync(bool, CancellationToken)"/>, except entity events: without an ambient
+    /// unit of work a synchronous save has no async-safe point to publish them from, and such a save on an
+    /// event-enabled entity fails instead of dropping the events silently.
+    /// </summary>
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        try
+        {
+            ApplyConceptsBeforeSave();
+
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw WrapConcurrencyException(ex);
+        }
+        finally
+        {
+            ChangeTracker.AutoDetectChangesEnabled = true;
+        }
+    }
+
+    private Exception WrapConcurrencyException(DbUpdateConcurrencyException ex)
+    {
+        if (ex.Entries.Count > 0)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine(ex.Entries.Count > 1
+                ? "There are some entries which are not saved due to concurrency exception:"
+                : "There is an entry which is not saved due to concurrency exception:");
+            foreach (var entry in ex.Entries)
+            {
+                sb.AppendLine(entry.ToString());
+            }
+
+            Logger.LogWarning(sb.ToString());
+        }
+
+        return new Exception(ex.Message, ex);
+    }
+
+    /// <summary>
+    /// Calls the EF Core save pipeline directly without applying the repository persistence concepts.
+    /// Use this only when raw EF semantics are explicitly wanted.
     /// </summary>
     public virtual Task<int> SaveChangesOnDbContextAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
+    /// <summary>
+    /// Applies unit-of-work operational settings (currently the command timeout) to this DbContext.
+    /// </summary>
+    /// <remarks>
+    /// Persistence concepts are intrinsic to <see cref="SaveChangesAsync(bool, CancellationToken)"/> and do not
+    /// depend on this call; it only carries unit-of-work scope settings for contexts that participate in one.
+    /// </remarks>
     public virtual void Initialize(UnitOfWorkScopeOptions options)
     {
-        if (HasInit) throw new InvalidOperationException("重复触发相同DbContext初始化设置，代码结构异常，请上报");
+        if (HasInit) throw new InvalidOperationException("The same repository DbContext was initialized for unit-of-work participation twice; the calling structure is invalid.");
         HasInit = true;
 
         if (options.Timeout.HasValue &&
@@ -321,28 +314,53 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
         {
             Database.SetCommandTimeout(TimeSpan.FromMilliseconds(options.Timeout.Value));
         }
-
-        ChangeTracker.CascadeDeleteTiming = CascadeTiming.OnSaveChanges;
-
-        ChangeTracker.Tracked += ChangeTracker_Tracked;
-        ChangeTracker.StateChanged += ChangeTracker_StateChanged;
     }
 
-
-    protected virtual void ChangeTracker_Tracked(object? sender, EntityTrackedEventArgs e)
-    {
-        PublishEventsForTrackedEntity(e.Entry);
-    }
-
-    protected virtual void ChangeTracker_StateChanged(object? sender, EntityStateChangedEventArgs e)
-    {
-        PublishEventsForTrackedEntity(e.Entry);
-    }
-
+    /// <summary>
+    /// Gets the entity change event publisher resolved from the application service provider, if registered.
+    /// </summary>
     protected IAsyncLocalEventPublisher? Publisher => CachedServiceProvider.GetService<IAsyncLocalEventPublisher>();
 
+    #region 保存时应用 concepts：审计等自动属性、软删重写、实体事件
 
-    #region 触发跟踪增删改时，审计等自动属性设置
+    /// <summary>
+    /// Applies the repository persistence concepts to every changed entry right before the save is handed to EF Core.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Runs inside every <see cref="SaveChangesAsync(bool, CancellationToken)"/> and <see cref="SaveChanges(bool)"/>
+    /// call, so write semantics (soft delete, audit stamping, concurrency stamps, entity events) hold on every
+    /// runtime shape: request pipelines with an ambient unit of work, background workers, and direct context usage in tests.
+    /// </para>
+    /// <para>
+    /// Cascaded dependents must already sit in the change tracker with their final state when this pass runs, which is
+    /// why the EF Core default cascade timing (<see cref="CascadeTiming.Immediate"/>) must be kept: with
+    /// <see cref="CascadeTiming.OnSaveChanges"/> dependents would only transition during the EF save and this pass would miss them.
+    /// </para>
+    /// <para>
+    /// Compared to applying concepts from <c>ChangeTracker</c> events, an entry that was tracked as Added and then
+    /// explicitly transitioned to Modified before saving is handled once, by its current state (Modified), instead of twice.
+    /// </para>
+    /// </remarks>
+    protected virtual void ApplyConceptsBeforeSave()
+    {
+        foreach (var entry in ChangeTracker.Entries().ToList())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                case EntityState.Modified:
+                case EntityState.Deleted:
+                    PublishEventsForTrackedEntity(entry);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Applies the concepts and buffers the entity change events for one changed entry.
+    /// </summary>
+    /// <param name="entry">The entry whose state is Added, Modified, or Deleted.</param>
     protected virtual void PublishEventsForTrackedEntity(EntityEntry entry)
     {
         switch (entry.State)
@@ -358,15 +376,6 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
                 //Big Pitfall: In ABP 8.0.2, OnAdd is not considered for new addition judgment, resulting in no triggering of related events.
                 if (entry.Properties.Any(x => x is { IsModified: true, Metadata.ValueGenerated: ValueGenerated.Never or ValueGenerated.OnAdd }))
                 {
-                    //EFCore can get the original value!
-                    //entry.OriginalValues
-
-                    //// Skip `PublishEntityDeletedEvent/PublishEntityUpdatedEvent` if only foreign keys have changed.
-                    //if (entry.Properties.Where(x => x.IsModified).All(x => x.Metadata.IsForeignKey()))
-                    //{
-                    //    break;
-                    //}
-
                     if (entry.Entity is IHasSoftDelete && entry.Entity.As<IHasSoftDelete>().IsDeleted)
                     {
                         Publisher?.AddEntityDeletedEvent(entry.Entity);
@@ -377,11 +386,14 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
                         Publisher?.AddEntityUpdatedEvent(entry.Entity);
                     }
                 }
+
+                UpdateConcurrencyStamp(entry);
                 break;
 
             case EntityState.Deleted:
                 ApplyConceptsForDeletedEntity(entry);
                 Publisher?.AddEntityDeletedEvent(entry.Entity);
+                UpdateConcurrencyStamp(entry);
                 break;
         }
     }
@@ -410,17 +422,6 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
         }
 
         entity.ConcurrencyStamp = Guid.NewGuid().ToString("N");
-    }
-
-    protected virtual void HandlePropertiesBeforeSave()
-    {
-        foreach (var entry in ChangeTracker.Entries())
-        {
-            if (entry.State is EntityState.Modified or EntityState.Deleted)
-            {
-                UpdateConcurrencyStamp(entry);
-            }
-        }
     }
 
     protected virtual void ApplyConceptsForAddedEntity(EntityEntry entry)
@@ -533,31 +534,6 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
         where TEntity : class
     {
         //TODO Automatic conversion between UTC DateTime type and local time
-        //if (mutableEntityType.BaseType == null &&
-        //    !typeof(TEntity).IsDefined(typeof(DisableDateTimeNormalizationAttribute), true) &&
-        //    !typeof(TEntity).IsDefined(typeof(OwnedAttribute), true) &&
-        //    !mutableEntityType.IsOwned())
-        //{
-
-        //    //if (CachedServiceProvider == null || Clock == null)
-        //    //{
-        //    //    return;
-        //    //}
-
-        //    //foreach (var property in mutableEntityType.GetProperties().
-        //    //             Where(property => property.PropertyInfo != null &&
-        //    //                               (property.PropertyInfo.PropertyType == typeof(DateTime) || property.PropertyInfo.PropertyType == typeof(DateTime?)) &&
-        //    //                               property.PropertyInfo.CanWrite &&
-        //    //                               ReflectionHelper.GetSingleAttributeOfMemberOrDeclaringTypeOrDefault<DisableDateTimeNormalizationAttribute>(property.PropertyInfo) == null))
-        //    //{
-        //    //    modelBuilder
-        //    //        .Entity<TEntity>()
-        //    //        .Property(property.Name)
-        //    //        .HasConversion(property.ClrType == typeof(DateTime)
-        //    //            ? new AbpDateTimeValueConverter(Clock)
-        //    //            : new AbpNullableDateTimeValueConverter(Clock));
-        //    //}
-        //}
     }
 
     /// <summary>
@@ -575,7 +551,7 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
 
         return false;
     }
-    
+
     /// <summary>
     /// Creates a filter expression for given entity.
     /// </summary>

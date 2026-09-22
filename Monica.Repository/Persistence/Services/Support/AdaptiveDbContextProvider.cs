@@ -13,6 +13,9 @@ namespace Monica.Repository.Persistence.Services.Support;
 /// <remarks>
 /// Inside a unit of work, DbContexts are attached to the unit-of-work transaction. Outside a unit of work,
 /// the scoped DbContext is returned and callers commit explicitly through repository <c>SaveChangesAsync</c>.
+/// Persistence concepts (soft delete, audit stamping, entity events) are intrinsic to the DbContext save
+/// pipeline and apply on both paths; the unit of work only adds transaction coordination, deferred event
+/// flushing, and commit/rollback semantics.
 /// </remarks>
 public class AdaptiveDbContextProvider<TDbContext>(
     IUnitOfWorkManager unitOfWorkManager,

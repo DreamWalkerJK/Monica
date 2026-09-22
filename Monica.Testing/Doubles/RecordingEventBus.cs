@@ -118,6 +118,20 @@ public sealed class RecordingEventBus : ILocalEventBus, IDistributedEventBus
             _events.Add(new RecordedEvent(eventType, eventData, finalTopicName));
             await base.PublishAsync(eventType, eventData, topicName, cancellationToken);
         }
+
+        // The unit-of-work event buffer flushes through BulkPublishAsync; record that path too,
+        // otherwise bulk-published events are silently invisible to tests using this double.
+        public override async Task BulkPublishAsync(
+            Type eventType,
+            IEnumerable<object> eventDataList,
+            string? topicName = null,
+            CancellationToken cancellationToken = default)
+        {
+            var finalTopicName = topicName ?? EventNameAttribute.GetNameOrDefault(eventType);
+            var events = eventDataList.ToList();
+            _events.AddRange(events.Select(eventData => new RecordedEvent(eventType, eventData, finalTopicName)));
+            await base.BulkPublishAsync(eventType, events, topicName, cancellationToken);
+        }
     }
 }
 

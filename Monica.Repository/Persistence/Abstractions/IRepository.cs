@@ -137,11 +137,12 @@ public interface IRepositoryFeatures
 public interface IRepositorySaveChanges
 {
     /// <summary>
-    /// Flushes staged changes.
+    /// Flushes staged changes by saving this repository's own DbContext, applying the persistence concepts
+    /// (soft delete, audit stamping, entity events).
     /// </summary>
     /// <remarks>
-    /// Inside an active unit of work this delegates to the unit of work and does not commit the transaction.
-    /// Outside a unit of work this saves the repository DbContext directly.
+    /// Inside an active unit of work this does not commit the transaction; the unit of work still owns the
+    /// final commit, deferred event flushing, and rollback. Outside a unit of work the save itself persists.
     /// </remarks>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -50,36 +50,92 @@ public class AsyncEventBuffer
 }
 
 
+/// <summary>
+/// A save-scoped entity event buffer used when no ambient unit of work is active.
+/// </summary>
+/// <remarks>
+/// The repository save pipeline opens the scope before staging events and publishes the collected events
+/// right after the save commits; disposing the scope restores the previous buffer slot of the async flow.
+/// </remarks>
+public sealed class DetachedEventBufferScope(AsyncEventBuffer buffer, Action dispose) : IDisposable
+{
+    private Action? _dispose = dispose;
+
+    /// <summary>
+    /// Gets the buffer that collects entity events for the owning save.
+    /// </summary>
+    public AsyncEventBuffer Buffer { get; } = buffer;
+
+    /// <summary>
+    /// Restores the async-flow buffer slot this scope occupied.
+    /// </summary>
+    public void Dispose()
+    {
+        Interlocked.Exchange(ref _dispose, null)?.Invoke();
+    }
+}
+
 public class AsyncLocalEventStore(IUnitOfWorkManager uow) : IAsyncLocalEventStore
 {
-    // TODO: Verify potential memory leak scenarios.
-    //private static readonly AsyncLocal<AsyncEventBuffer> _asyncBuffer = new();
-    // ABP interceptors may affect AsyncLocal behavior; enable this after separation.
+    // Save-scoped buffers for flows without an ambient unit of work. AsyncLocal keeps concurrent saves
+    // in separate async flows isolated; the save pipeline always closes the slot it opened.
+    private static readonly AsyncLocal<AsyncEventBuffer?> _detachedBuffer = new();
 
-
+    /// <inheritdoc />
     public AsyncEventBuffer? GetBuffer()
     {
         return uow.Current is IUnitOfWorkInternals internals ? internals.GetEventBuffer() : null;
     }
 
-    public AsyncEventBuffer GetOrNewBuffer()
+    /// <inheritdoc />
+    public AsyncEventBuffer? GetActiveBuffer()
     {
-        var unitOfWork = uow.Current ?? throw new InvalidOperationException(
-            "Entity event buffering requires an active unit of work.");
-        if (unitOfWork is not IUnitOfWorkInternals internals)
+        if (uow.Current is IUnitOfWorkInternals internals)
         {
-            throw new InvalidOperationException(
-                $"The active unit of work '{unitOfWork.GetType().FullName}' does not expose an event buffer.");
+            return internals.GetOrCreateEventBuffer();
         }
 
-        return internals.GetOrCreateEventBuffer();
+        return _detachedBuffer.Value;
+    }
+
+    /// <inheritdoc />
+    public DetachedEventBufferScope? TryBeginDetachedBuffer()
+    {
+        // Inside a unit of work the unit's own buffer owns event deferral until commit.
+        if (uow.Current != null)
+        {
+            return null;
+        }
+
+        var previous = _detachedBuffer.Value;
+        var buffer = new AsyncEventBuffer();
+        _detachedBuffer.Value = buffer;
+        return new DetachedEventBufferScope(buffer, () => _detachedBuffer.Value = previous);
     }
 }
 
+/// <summary>
+/// Resolves the event buffer entity events are staged into.
+/// </summary>
 public interface IAsyncLocalEventStore
 {
-    public AsyncEventBuffer? GetBuffer();
-    public AsyncEventBuffer GetOrNewBuffer();
+    /// <summary>
+    /// Gets the ambient unit-of-work event buffer, if one exists.
+    /// </summary>
+    AsyncEventBuffer? GetBuffer();
+
+    /// <summary>
+    /// Gets the buffer events are currently staged into: the ambient unit-of-work buffer (created on demand)
+    /// or the save-scoped buffer of a save running without a unit of work. Returns <see langword="null"/>
+    /// when no boundary provides buffering.
+    /// </summary>
+    AsyncEventBuffer? GetActiveBuffer();
+
+    /// <summary>
+    /// Opens a save-scoped buffer for the current async flow; returns <see langword="null"/> when an
+    /// ambient unit of work already buffers events.
+    /// </summary>
+    DetachedEventBufferScope? TryBeginDetachedBuffer();
 }
 
 /// <summary>
@@ -275,8 +331,11 @@ public class AsyncLocalEventPublisher(
 
         var eventRecord = new TransactionEventRecord(eventType, eventData, originalEntity);
 
-        var buffer = bufferStore.GetOrNewBuffer();
-        //buffer.Records.Add(eventRecord); // Temporarily kept for testing.
+        var buffer = bufferStore.GetActiveBuffer()
+            ?? throw new InvalidOperationException(
+                "Entity event publishing requires an event boundary. Inside a unit of work events defer until commit; " +
+                "outside one, save through SaveChangesAsync, which publishes the events it staged right after the save commits. " +
+                "Synchronous SaveChanges without a unit of work cannot publish entity events.");
         if (eventPublisher == DistributedEventBus)
         {
             AddOrReplaceEvent(buffer.DistributedEvents, buffer.DistributedEventsHash, eventRecord);
@@ -285,6 +344,19 @@ public class AsyncLocalEventPublisher(
         {
             AddOrReplaceEvent(buffer.LocalEvents, buffer.LocalEventsHash, eventRecord);
         }
+    }
+
+    /// <inheritdoc />
+    public DetachedEventBufferScope? TryBeginDetachedEventBuffer()
+    {
+        return bufferStore.TryBeginDetachedBuffer();
+    }
+
+    /// <inheritdoc />
+    public Task PublishDetachedEventsAsync(DetachedEventBufferScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        return scope.Buffer.Flush(LocalEventBus, DistributedEventBus);
     }
     
     /// <summary>

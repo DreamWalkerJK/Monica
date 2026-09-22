@@ -3,12 +3,10 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.DependencyInjection;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Persistence.Abstractions;
 using Monica.Repository.Persistence.Exceptions;
 using Monica.Repository.Persistence.Models;
-using Monica.Repository.UnitOfWork.Abstractions;
 
 namespace Monica.Repository.Persistence.Services;
 
@@ -364,16 +362,9 @@ public class EfRepository<TDbContext, TEntity>(
     /// <inheritdoc />
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        // Saves this repository's own DbContext only; the ambient unit of work, if any, still owns the final
+        // commit at completion. Persistence concepts are applied by the DbContext save pipeline itself.
         var dbContext = await GetTypedDbContextAsync();
-        var current = dbContext.CachedServiceProvider.GetService<IUnitOfWorkManager>()?.Current;
-        if (current is { IsCompleted: false } unitOfWork &&
-            current is IUnitOfWorkInternals internals &&
-            internals.TryGetDbContext<TDbContext>() != null)
-        {
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            return 0;
-        }
-
         return await dbContext.SaveChangesAsync(cancellationToken);
     }
 
