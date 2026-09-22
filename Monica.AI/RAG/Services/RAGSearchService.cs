@@ -145,7 +145,7 @@ internal sealed partial class RAGSearchService(
             return cached;
         }
 
-        var generator = embeddingBindingResolver.GetEmbeddingGenerator(binding);
+        using var generator = embeddingBindingResolver.GetEmbeddingGenerator(binding);
         var generated = await generator.GenerateAsync([query], cancellationToken: ct);
         var vector = generated.FirstOrDefault()?.Vector.ToArray()
                      ?? throw new InvalidOperationException(

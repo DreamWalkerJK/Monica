@@ -1,0 +1,36 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IDialogService DialogService
+@inject IStringLocalizer<AIResource> L
+
+<div class="attachments">
+    @foreach (var attachment in Attachments)
+    {
+        @if (attachment.Kind == ChatAttachmentKind.Image && SessionId is not null)
+        {
+            <ChatAttachmentImage @key="(SessionId, attachment.Id)" Attachment="@attachment" SessionId="@SessionId" Removable="@Removable" Disabled="@Disabled" OnPreview="@(() => PreviewAsync(attachment))" OnRemove="@(() => OnRemove.InvokeAsync(attachment))" />
+        }
+        else
+        {
+        <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Disabled="@Disabled"
+                 Icon="@(attachment.Kind == ChatAttachmentKind.Image ? Icons.Material.Outlined.Image : Icons.Material.Outlined.Description)"
+                 OnClick="@(() => PreviewAsync(attachment))" OnClose="@(Removable ? EventCallback.Factory.Create<MudChip<string>>(this, () => OnRemove.InvokeAsync(attachment)) : default)">
+            @attachment.FileName <span class="attachment-size">@($"{attachment.Size / 1024d:0.#} KB")</span>
+        </MudChip>
+        }
+    }
+</div>
+@code {
+    [Parameter] public IReadOnlyList<ChatAttachmentReference> Attachments { get; set; } = [];
+    [Parameter] public string? SessionId { get; set; }
+    [Parameter] public bool Removable { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<ChatAttachmentReference> OnRemove { get; set; }
+    private async Task PreviewAsync(ChatAttachmentReference attachment)
+    {
+        if (SessionId is null) return;
+        await DialogService.ShowAsync<ChatAttachmentPreviewDialog>(attachment.FileName,
+            new DialogParameters { [nameof(ChatAttachmentPreviewDialog.Attachment)] = attachment, [nameof(ChatAttachmentPreviewDialog.SessionId)] = SessionId },
+            new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Large, CloseButton = true });
+    }
+}

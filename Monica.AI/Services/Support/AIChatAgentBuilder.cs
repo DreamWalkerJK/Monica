@@ -11,7 +11,7 @@ internal sealed class AIChatAgentBuilder(string? instructions)
     private readonly List<AIContextProvider> _contextProviders = [];
     private readonly List<IDisposable> _ownedResources = [];
     private readonly List<AITool> _tools = [];
-    private readonly List<Func<FunctionCallContent, ValueTask<bool>>> _toolAutoApprovalRules = [];
+    private readonly List<Func<ToolAutoApprovalRuleContext, ValueTask<bool>>> _toolAutoApprovalRules = [];
     private readonly List<string> _instructions = string.IsNullOrWhiteSpace(instructions)
         ? []
         : [instructions];
@@ -59,7 +59,7 @@ internal sealed class AIChatAgentBuilder(string? instructions)
     }
 
     /// <summary>Adds a rule that may automatically approve a trusted tool invocation.</summary>
-    public void AddToolAutoApprovalRule(Func<FunctionCallContent, ValueTask<bool>> rule)
+    public void AddToolAutoApprovalRule(Func<ToolAutoApprovalRuleContext, ValueTask<bool>> rule)
     {
         ArgumentNullException.ThrowIfNull(rule);
         _toolAutoApprovalRules.Add(rule);
@@ -72,10 +72,10 @@ internal sealed class AIChatAgentBuilder(string? instructions)
     {
         return new ChatClientAgentOptions
         {
-            // Keep Responses previous_response_id and framework-managed history current after every
-            // model call inside the tool loop, not only after the whole agent run completes.
+            // Monica owns durable history; provider-side conversation handles must not control replay.
+            ChatHistoryProvider = new InMemoryChatHistoryProvider(),
+            // Preserve complete tool-loop messages after each provider call, including interrupted runs.
             RequirePerServiceCallChatHistoryPersistence = true,
-            EnableNonApprovalRequiredFunctionBypassing = true,
             ChatOptions = string.IsNullOrWhiteSpace(Instructions) && _tools.Count == 0
                 ? null
                 : new ChatOptions
@@ -92,6 +92,6 @@ internal sealed class AIChatAgentBuilder(string? instructions)
     /// </summary>
     internal IReadOnlyList<IDisposable> GetOwnedResources() => _ownedResources;
 
-    internal IReadOnlyList<Func<FunctionCallContent, ValueTask<bool>>> GetToolAutoApprovalRules()
+    internal IReadOnlyList<Func<ToolAutoApprovalRuleContext, ValueTask<bool>>> GetToolAutoApprovalRules()
         => _toolAutoApprovalRules;
 }

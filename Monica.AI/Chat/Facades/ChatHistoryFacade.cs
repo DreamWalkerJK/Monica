@@ -32,7 +32,7 @@ public sealed class ChatHistoryFacade
             var partition = await _partitionResolver.ResolveAsync(ct);
             return Res.Ok(await _historyProvider.GetCatalogAsync(partition, ct));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Res.Fail(ex.GetMessageRecursively());
         }
@@ -50,11 +50,13 @@ public sealed class ChatHistoryFacade
             ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
             var partition = await _partitionResolver.ResolveAsync(ct);
             var snapshot = await _historyProvider.LoadSessionAsync(partition, sessionId, ct);
-            return Res.Ok<ChatSession?>(snapshot is null
+            var session = snapshot is null
                 ? null
-                : _chatService.RestoreSession(snapshot, expectedSessionId: sessionId));
+                : _chatService.RestoreSession(snapshot, expectedSessionId: sessionId);
+            session?.BindPartition(partition);
+            return Res.Ok<ChatSession?>(session);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Res.Fail(ex.GetMessageRecursively());
         }
@@ -71,6 +73,7 @@ public sealed class ChatHistoryFacade
             ArgumentNullException.ThrowIfNull(session);
             ArgumentOutOfRangeException.ThrowIfNegative(expectedRevision);
             var partition = await _partitionResolver.ResolveAsync(ct);
+            session.BindPartition(partition);
             var snapshot = await _chatService.CreateSnapshotAsync(session, ct);
             var result = await _historyProvider.SaveSessionAsync(
                 partition,
@@ -84,7 +87,7 @@ public sealed class ChatHistoryFacade
 
             return Res.Ok(result);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Res.Fail(ex.GetMessageRecursively());
         }
@@ -107,7 +110,7 @@ public sealed class ChatHistoryFacade
                 expectedRevision,
                 ct));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Res.Fail(ex.GetMessageRecursively());
         }
@@ -124,7 +127,7 @@ public sealed class ChatHistoryFacade
             var partition = await _partitionResolver.ResolveAsync(ct);
             return Res.Ok(await _historyProvider.ClearAsync(partition, expectedRevision, ct));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Res.Fail(ex.GetMessageRecursively());
         }
@@ -146,7 +149,7 @@ public sealed class ChatHistoryFacade
                 expectedRevision,
                 ct));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Res.Fail(ex.GetMessageRecursively());
         }

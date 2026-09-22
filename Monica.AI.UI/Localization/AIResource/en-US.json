@@ -39,23 +39,17 @@
       "Clear": {
         "Action": "Clear conversation history",
         "Title": "Clear conversation history?",
-        "Message": "This permanently removes every conversation stored in this browser profile.",
+        "Message": "This permanently removes every conversation in your current user and workspace partition.",
         "Confirm": "Clear all"
       },
       "Warnings": {
-        "LoadFailed": "Conversation history could not be restored. You can continue in memory.",
-        "RevisionConflict": "Conversation history changed in another tab. Refresh this page before saving more changes.",
-        "QuotaExceeded": "This conversation could not be saved because browser storage is full.",
-        "StorageUnavailable": "Browser history is temporarily unavailable. Your current conversation remains in memory.",
-        "SessionsPruned": "Older inactive conversations were removed to keep browser history within its storage limit.",
-        "SessionUnavailable": "This conversation is no longer available in browser storage.",
-        "RuntimeFallback": "The saved agent state was incompatible, so the visible transcript was used to continue the conversation.",
-        "ProviderUnavailable": "This conversation's provider or model is unavailable. Select an available provider and model to continue."
+        "RevisionConflict": "Conversation history changed elsewhere. Refresh before saving more changes.",
+        "StorageUnavailable": "Conversation storage is unavailable. Your current conversation remains in memory.",
+        "SessionUnavailable": "This conversation is no longer available."
       }
     },
     "Input": {
       "Placeholder": "Send a message...",
-      "AttachFile": "Attach file",
       "Send": "Send message",
       "Stop": "Stop generating"
     },
@@ -71,8 +65,6 @@
       "NoMatches": "No matching skills or MCP servers"
     },
     "Actions": {
-      "EnableDeepThinking": "Enable deep thinking",
-      "DisableDeepThinking": "Disable deep thinking",
       "Copy": "Copy",
       "Edit": "Edit",
       "Retry": "Retry"
@@ -87,10 +79,6 @@
     "Error": {
       "Title": "Generation failed"
     },
-    "Status": {
-      "Current": "Current",
-      "GenerationStopped": "Generation stopped"
-    },
     "Approval": {
       "Title": "External script approval",
       "Warning": "This skill is requesting permission to run an external file or subprocess script. Review its identity and arguments before continuing.",
@@ -104,74 +92,7 @@
       "RejectedReason": "Rejected by the user."
     },
     "Reasoning": {
-      "Thinking": "Thinking...",
-      "Label": "Reasoning",
-      "Duration": "Thought for {0:F1} seconds"
-    },
-    "Welcome": {
-      "Title": "What would you like to explore?",
-      "Subtitle": "Ask any configured provider about code, writing, or analysis.",
-      "Cards": {
-        "UI": {
-          "Title": "Improve a UI flow",
-          "Subtitle": "Suggest clearer interactions and motion"
-        },
-        "Docs": {
-          "Title": "Draft API documentation",
-          "Subtitle": "Turn an API design into useful guidance"
-        },
-        "Error": {
-          "Title": "Analyze an error",
-          "Subtitle": "Trace logs and identify the likely cause"
-        },
-        "Script": {
-          "Title": "Write an automation script",
-          "Subtitle": "Automate a common development task"
-        }
-      }
-    },
-    "ToolCalls": {
-      "EnableDebug": "Enable tool debug",
-      "DisableDebug": "Disable tool debug",
-      "Summary": "{0} tool call(s)",
-      "RunningSummary": "{0} tool call(s) in progress",
-      "Actions": {
-        "ViewDebug": "View debug details"
-      },
-      "Dialog": {
-        "Title": "{0} debug details",
-        "Subtitle": "Inspect the raw LLM arguments, full tool output, and debug metrics.",
-        "RunningHint": "The tool is still running, so the output may still change.",
-        "EstimatedTokenHint": "Token counts are estimated from UTF-8 byte length."
-      },
-      "LatestRunning": "Latest: {0} is running",
-      "LatestCompleted": "Latest: {0} completed",
-      "LatestFailed": "Latest: {0} failed",
-      "ResultCount": "{0} result(s) returned",
-      "NoInput": "No input",
-      "NoOutput": "No output",
-      "Status": {
-        "Running": "Running",
-        "Completed": "Completed",
-        "Failed": "Failed"
-      },
-      "Fields": {
-        "Input": "Input",
-        "Output": "Output",
-        "Error": "Error",
-        "CallId": "Call ID",
-        "StartedAt": "Started",
-        "CompletedAt": "Completed",
-        "Duration": "Duration",
-        "Characters": "Characters",
-        "Tokens": "Tokens",
-        "EstimatedTokens": "Estimated tokens"
-      },
-      "Subtitle": {
-        "Running": "{0} completed, {1} still running",
-        "Completed": "{0} tool call(s) completed",
-        "Failed": "{0} completed, {1} failed, {2} running"
-      }
+      "Label": "Reasoning"
     },
     "SourcePreview": {
       "Title": "Source Preview",
@@ -182,52 +103,25 @@
       "NotFound": "No markdown document matched source path '{0}'.",
       "LoadFailed": "Failed to load source document: {0}",
       "OpenFailed": "Failed to open the source preview"
-    },
-    "Usage": {
-      "DialogTitle": "Context and Token Usage",
-      "ContextTooltip": "Context window: {0}",
-      "ContextTooltipWithUsage": "Context window: {0}, {1} remaining",
-      "ContextWindow": "Context window",
-      "LatestInput": "Latest input",
-      "Remaining": "Remaining",
-      "Cached": "Cached",
-      "NoUsage": "No provider usage has been reported for the latest assistant message yet.",
-      "Total": "Total",
-      "Summary": "{0} tokens",
-      "SummaryCached": "{0} tokens · {1} cached",
-      "Column": {
-        "Request": "Request",
-        "Input": "Input",
-        "Output": "Output",
-        "Cached": "Cached",
-        "CacheHit": "Cache hit",
-        "Total": "Total"
-      }
     }
   },
   "Provider": {
     "Label": "Provider",
-    "NotFound": "No provider available",
     "NoChatProvider": "No enabled chat-capable provider is available. Configure at least one provider with an LLM model and valid credentials.",
     "Default": "Default",
     "Settings": {
       "Title": "System Prompt Settings",
       "SystemPrompt": "System Prompt",
       "ReadOnlyMessage": "The session has started, system prompt cannot be modified.",
-      "NewSessionMessage": "Changes will only apply to new sessions.",
-      "UpdateFailed": "Failed to update system prompt",
-      "UpdateSuccess": "System prompt updated successfully"
+      "NewSessionMessage": "Changes will only apply to new sessions."
     }
   },
   "Model": {
     "Label": "Model",
-    "NoModelsAvailable": "No models available",
-    "ContextWindow": "{0}K context",
-    "ContextWindowM": "{0}M context"
+    "NoModelsAvailable": "No models available"
   },
   "Error": {
     "RequestCancelled": "Request was cancelled",
-    "NetworkError": "Network error",
     "Generic": "Error"
   },
   "Common": {
@@ -247,7 +141,6 @@
     "Actions": {
       "Close": "Close",
       "Save": "Save",
-      "Update": "Update",
       "Cancel": "Cancel"
     }
   },
@@ -549,111 +442,7 @@
   },
   "ProviderManage": {
     "Title": "AI Provider Management",
-    "Subtitle": "Inspect configured providers, validate connectivity, and compare model capabilities.",
-    "Refresh": "Refresh",
-    "TestAll": "Test All",
-    "NoProviders": "No configured AI providers found",
-    "DisabledProvidersSummary": "{0} provider(s) are disabled because of configuration errors. Open each provider card below for details.",
-    "LoadFailed": "Failed to load providers",
-    "TestFailed": "Provider test failed",
-    "TestSuccess": "Connection successful",
-    "TestSuccessMessage": "Provider test successful",
-    "OnlyLLMSupported": "Only LLM model testing is currently supported",
-    "OnlyEmbeddingSupported": "Only embedding models support dimension detection",
-    "ModelTestFailed": "Model test failed",
-    "ModelTestSuccess": "Model test successful",
-    "DimensionDetectFailed": "Dimension detection failed",
-    "DimensionDetectSuccess": "Detection successful: dimension = {0}",
-    "UpdatePromptFailed": "Failed to update prompt",
-    "GetRemoteModelsFailed": "Failed to get remote model list",
-    "FetchRemoteModelsSuccess": "Fetched {0} remote model(s).",
-    "Card": {
-      "DefaultModel": "Default model",
-      "ModelCount": "Model count",
-      "DefaultSystemPrompt": "Default system prompt",
-      "ModelDetails": "Model details",
-      "Actions": {
-        "Test": "Test",
-        "EditSystemPrompt": "Edit system prompt"
-      },
-      "RemoteModels": {
-        "UnconfiguredTooltip": "{0} available model(s) are not configured",
-        "Unsupported": "This provider does not support listing available models",
-        "FetchFailed": "Failed to list available models: {0}",
-        "Refresh": "Refresh available models",
-        "Fetch": "Get available models",
-        "Unconfigured": "Available but unconfigured models ({0})",
-        "ValidationUnavailable": "This provider cannot list available models, so configured models cannot be validated against its catalog."
-      },
-      "ConfigurationErrorTitle": "This provider is disabled because of configuration errors.",
-      "InvalidModelsHint": "Model configuration is incomplete. Update the provider settings before using it.",
-      "InvalidModelsLabel": "Missing models:",
-      "NoSupportedModels": "No SupportedModels are configured.",
-      "ApiModeLabel": "OpenAI API",
-      "ApiMode": {
-        "Responses": "Responses API",
-        "Chat": "Chat API"
-      },
-      "Status": {
-        "ConfigurationError": "Configuration Error",
-        "InvalidConfiguration": "Invalid Configuration",
-        "Testing": "Testing",
-        "Available": "Available",
-        "Failed": "Failed",
-        "NotTested": "Not Tested",
-        "Invalid": "Invalid"
-      }
-    },
-    "ModelTable": {
-      "Columns": {
-        "Model": "Model",
-        "Type": "Type",
-        "Capabilities": "Capabilities",
-        "Cost": "Cost",
-        "Metadata": "Metadata",
-        "Actions": "Actions"
-      },
-      "RemoteStatus": {
-        "Verified": "Verified in the provider's available-model catalog",
-        "Missing": "This model is not present in the provider's available-model catalog"
-      },
-      "Capabilities": {
-        "Image": "Image",
-        "Reasoning": "Reasoning",
-        "Editing": "Editing",
-        "Streaming": "Streaming"
-      },
-      "Cost": {
-        "Free": "Free",
-        "Input": "Input",
-        "Output": "Output",
-        "Cached": "Cached",
-        "PerMillion": "{0}: {1} / 1M tokens"
-      },
-      "Metadata": {
-        "Context": "Context: {0}",
-        "MaxOutput": "Max output: {0}",
-        "MaxSize": "Max size: {0}",
-        "Dimensions": "Dimensions: {0}",
-        "DimensionProbeHint": "Dimensions are not configured. Use dimension detection to identify them automatically.",
-        "Voices": "Voices: {0}",
-        "VoiceCount": "{0} voice(s)"
-      },
-      "Actions": {
-        "Test": "Test",
-        "Testing": "Testing",
-        "ProbeDimensions": "Detect dimensions",
-        "Probing": "Detecting"
-      },
-      "Types": {
-        "LLM": "LLM",
-        "Image": "Image",
-        "Embedding": "Embedding",
-        "TTS": "Text to speech"
-      },
-      "Unknown": "Unknown",
-      "Empty": "No models configured"
-    }
+    "Refresh": "Refresh"
   },
   "Capabilities": {
     "Title": "AI Capabilities",
@@ -781,5 +570,229 @@
       "NoParameters": "No parameters",
       "Schema": "Raw schema"
     }
+  },
+  "Workbench": {
+    "Chat": "Chat",
+    "Trajectory": "Trajectory",
+    "ModelRequest": "Model request",
+    "Tool": "Tool",
+    "Compaction": "Context compaction",
+    "Status": {
+      "Running": "Running",
+      "Completed": "Completed",
+      "Failed": "Failed",
+      "Cancelled": "Cancelled",
+      "AwaitingApproval": "Awaiting approval",
+      "Interrupted": "Interrupted"
+    },
+    "Metrics": "Recorded execution metrics",
+    "Elapsed": "Total elapsed time",
+    "FirstToken": "Time to first token",
+    "FirstTokenShort": "TTFT",
+    "InputTokens": "Input tokens",
+    "OutputTokens": "Output tokens",
+    "ReasoningTokens": "Reasoning tokens",
+    "SpeedHelp": "Provider output tokens divided by measured generation time, excluding tools and first-token waiting.",
+    "TokensPerSecond": "tok/s",
+    "CacheHelp": "Cached input tokens divided by total input tokens. A dash means the provider did not report a value.",
+    "Cache": "Cache",
+    "Working": "Working through the request",
+    "ProcessSummary": "View process ({0})",
+    "ToolRequested": "Requested tool: {0}",
+    "ArgumentsAndResult": "Arguments and result",
+    "CompactionSummary": "Context compacted: {0:N0} → {1:N0} estimated tokens",
+    "ConversationSettings": "Conversation options",
+    "ProviderSettings": "Providers and models",
+    "EditAndResend": "Edit and resend",
+    "Waiting": "Waiting",
+    "WelcomeEyebrow": "Monica chat workbench",
+    "WelcomeTitle": "What would you like to explore?",
+    "WelcomeDescription": "Bring a question, an image, or a document. Follow the answer, then inspect the thinking, tools, and requests behind it.",
+    "WelcomeAttachments": "Images and documents",
+    "WelcomeTools": "Skills, MCP, and knowledge bases",
+    "WelcomeTrajectory": "Every step, inspectable",
+    "Bytes": "bytes",
+    "DocumentDelivery": "Text documents are extracted before sending. Documents without readable text require confirmed native document support.",
+    "ImageUnsupported": "The selected model does not have confirmed image support. Choose a compatible model or remove the image.",
+    "DocumentUnsupported": "This document has no extractable text and the selected model does not have confirmed native document support.",
+    "NothingToCompact": "There is not enough older context to compact yet.",
+    "Attach": "Attach",
+    "ReasoningDefault": "Default",
+    "Reasoning": "Reasoning",
+    "ComposerHint": "Enter to send · Shift+Enter for a new line",
+    "Context": "Context occupancy",
+    "ContextCapacity": "Context capacity",
+    "LastInput": "Last reported input",
+    "EstimatedNext": "Estimated next input",
+    "ReservedOutput": "Reserved output budget",
+    "ContextEstimateHelp": "Occupancy uses the estimated next input and usable context capacity. Unknown values remain unavailable.",
+    "AttachmentEstimate": "Binary attachment tokens are not included in this text estimate.",
+    "AutoCompact": "Automatically compact context",
+    "CompactNow": "Compact now",
+    "SelectStep": "Select a message, request, or tool to inspect its recorded details.",
+    "Details": "Details",
+    "Started": "Started",
+    "ConfigurationRevision": "Configuration revision",
+    "Generation": "Generation",
+    "CachedTokens": "Cached input tokens",
+    "FinishReason": "Finish reason",
+    "Input": "Input",
+    "RequestOptions": "Request options",
+    "Output": "Output",
+    "Tools": "Tools",
+    "NoTools": "No tools were exposed to this request.",
+    "SearchTrajectory": "Search user messages, prompts, reasoning, and tools…",
+    "ExpandAll": "Expand all",
+    "FoldAll": "Fold all",
+    "FollowTail": "Follow latest",
+    "EmptyTrajectory": "Conversation messages and execution records will appear here.",
+    "Timeline": "Timeline",
+    "PanEarlier": "Pan earlier",
+    "PanLater": "Pan later",
+    "ZoomOut": "Zoom out",
+    "ZoomIn": "Zoom in",
+    "ResetZoom": "Reset",
+    "TimelineHelp": "Drag an interval to focus. Scroll to zoom. Input markers have no duration.",
+    "HistoryConflict": "This conversation changed elsewhere. Reload its saved version before continuing.",
+    "ReloadHistory": "Reload history",
+    "ReloadHistoryConfirm": "Reloading discards your conflicting local edits. Continue?",
+    "CompactionSettings": "Compaction settings",
+    "CompactionThreshold": "Compact at input occupancy",
+    "RetainedTurns": "Keep recent turns verbatim",
+    "CompactionSettingsHelp": "Older context is summarized above this occupancy. The complete original transcript remains available.",
+    "OutputBudget": "Output token budget",
+    "OutputBudgetHelp": "Leave empty to use the provider default. Set a limit to reserve that space for the answer.",
+    "BackToLedger": "Back to trajectory",
+    "Effort": "Effort",
+    "SearchModels": "Search models or providers…",
+    "ResizeReadingWidth": "Resize conversation width",
+    "ResizeReadingWidthHint": "Drag to resize. Arrow keys adjust width; Home or double-click resets.",
+    "PreviewImage": "Preview image {0}",
+    "RemoveAttachment": "Remove {0}",
+    "DefaultContextCapacity": "{0}K default",
+    "TrajectoryRoleSystem": "SYSTEM",
+    "TrajectoryRoleUser": "USER",
+    "TrajectoryRoleAssistant": "ASSISTANT",
+    "TrajectoryRoleTool": "TOOL",
+    "TrajectoryRoleContext": "CONTEXT",
+    "InitialSystemPrompt": "Initial system prompt",
+    "ConfiguredSystemPrompt": "Configured system prompt",
+    "ChangedSystemPrompt": "System prompt changed",
+    "SummaryRequest": "Context summary",
+    "TrajectorySummary": "Conversation execution summary",
+    "TrajectoryDuration": "Duration",
+    "RecordedDurationHelp": "Recorded execution time. Overlapping operations are counted once; idle gaps are excluded.",
+    "TrajectoryTurns": "Turns",
+    "TrajectoryCalls": "Calls",
+    "ModelCallsHelp": "Actual model provider requests, including context summarization.",
+    "TrajectoryTurn": "Turn {0}",
+    "TrajectoryTurnCounts": "{0} calls · {1} tools",
+    "TimelineModel": "Model",
+    "TimelineElapsed": "Elapsed timeline",
+    "TimelineCluster": "{0} recorded events. Zoom in to inspect individual events.",
+    "NoTrajectoryMatches": "No matching records.",
+    "NoRecordedContent": "No content recorded",
+    "RecordedAt": "Recorded at",
+    "ContextCapacitySource": "Capacity source",
+    "ContextConversationSource": "Conversation override",
+    "ContextModelSource": "Model configuration",
+    "ContextDefaultSource": "Default fallback (256K)"
+  },
+  "Settings": {
+    "Title": "Providers and models",
+    "SharedSettings": "Host-wide settings. Conversations remain isolated by your user and workspace.",
+    "AddProvider": "Add provider",
+    "ProviderHelp": "Save a provider once for everyone using this host. Credentials are stored server-side and never returned to the browser.",
+    "ProviderId": "Provider ID",
+    "DisplayName": "Display name",
+    "Protocol": "Protocol",
+    "Timeout": "Timeout (seconds)",
+    "BaseUrl": "Base URL",
+    "BaseUrlHelp": "Leave empty for the official endpoint; custom endpoints must include their API path.",
+    "ApiKey": "API key",
+    "KeyPresent": "A key is configured. Leave empty to keep it; enter a new value to replace it.",
+    "KeyHelp": "The value is write-only. It will not be shown after saving.",
+    "ClearKey": "Remove the saved key",
+    "ApiMode": "OpenAI API surface",
+    "Enabled": "Enabled",
+    "DefaultProvider": "Default provider",
+    "IdRequired": "An identifier is required.",
+    "InvalidUrl": "Enter an absolute HTTP or HTTPS URL.",
+    "ModelHelp": "Use discovered metadata as a starting point. Keep unverified capabilities unknown and override them when confirmed.",
+    "ModelId": "Exact model ID",
+    "ModelKind": "Model purpose",
+    "Embedding": "Embedding",
+    "UnknownNumber": "Leave empty when the limit is unknown.",
+    "MaxOutput": "Maximum supported output tokens",
+    "EmbeddingDimensions": "Embedding dimensions",
+    "ImageInput": "Image input",
+    "NativeDocuments": "Native documents",
+    "FunctionTools": "Function tools",
+    "ReasoningLevels": "Reasoning levels and protocol mapping",
+    "AddLevel": "Add level",
+    "LevelId": "Level ID",
+    "ProviderValue": "Provider effort value",
+    "ThinkingBudget": "Thinking tokens",
+    "RemoveLevel": "Remove level",
+    "DefaultReasoning": "Default reasoning level",
+    "InvalidLevels": "Reasoning level IDs must be present and unique.",
+    "Unknown": "Unknown",
+    "Supported": "Supported",
+    "Unsupported": "Unsupported",
+    "ModelCount": "{0} models",
+    "Disabled": "Disabled",
+    "NoProviders": "Add a provider to start chatting.",
+    "OfficialEndpoint": "Official endpoint",
+    "EditProvider": "Edit provider",
+    "TestConnection": "Test connection",
+    "ProviderActions": "Provider actions",
+    "Disable": "Disable",
+    "Enable": "Enable",
+    "ResetOverride": "Restore code defaults",
+    "DeleteProvider": "Delete provider",
+    "CredentialConfigured": "Credential configured",
+    "CredentialMissing": "No credential configured",
+    "AppliesNextRequest": "Changes apply to the next request",
+    "Models": "Models",
+    "Discover": "Discover models",
+    "AddModel": "Add model",
+    "Capabilities": "Capabilities",
+    "Actions": "Actions",
+    "EditModel": "Edit model",
+    "ModelActions": "Model actions",
+    "SetDefault": "Set as default",
+    "TestModel": "Test model (uses tokens)",
+    "DeleteModel": "Remove model",
+    "NoModels": "Add a model manually or discover models from this provider.",
+    "DiscoveryResults": "Available remote models",
+    "DiscoveryHelp": "Discovery lists models without running inference. Unknown capabilities can be configured manually.",
+    "SearchModels": "Search discovered models…",
+    "SelectProvider": "Select or add a provider to manage its models.",
+    "DeleteProviderConfirm": "Remove this provider's persisted configuration? Existing conversations remain readable.",
+    "TestSucceeded": "Connection succeeded.",
+    "CodeOverride": "Code defaults + saved override",
+    "CodeDefaults": "Code defaults",
+    "Persisted": "Saved configuration",
+    "ProtocolProfile": "Endpoint protocol",
+    "ProtocolProfileHelp": "Auto recognizes api.deepseek.com. Select DeepSeek explicitly for a compatible proxy.",
+    "ProfileAuto": "Auto",
+    "ProfileStandard": "Standard OpenAI",
+    "TextOnly": "Text only",
+    "FetchAvailableModels": "Fetch available models",
+    "DraftModelsHelp": "Fetch with these connection settings, select the models you want, then review their metadata. Nothing is saved until you save this provider.",
+    "CancelDiscovery": "Cancel fetch",
+    "SelectVisibleModels": "Select visible",
+    "SelectModel": "Select {0}",
+    "NoDiscoveredModels": "The endpoint returned no models.",
+    "DiscoveredModelCount": "{0} models available",
+    "ImportSelectedModels": "Import selected ({0})",
+    "DefaultChatModel": "Default chat model",
+    "DraftConnectionChanged": "Connection settings changed during the fetch. Fetch again to use the current settings.",
+    "DuplicateModelId": "A model with this identifier is already configured for this provider.",
+    "DefaultContext": "{0:N0} tokens · default",
+    "ContextDefaultHelp": "Leave empty to use the {0:N0}-token (256K) planning default. This is a fallback, not verified model capacity.",
+    "CapabilitiesUnknown": "Capabilities not reported",
+    "InvalidModelLimits": "Limits must be positive and output must be smaller than the effective context capacity.",
+    "InvalidReasoningConfiguration": "Check reasoning support and budgets. Thinking budgets must be at least 1,024 tokens, below the output limit, and cannot disable reasoning."
   }
 }

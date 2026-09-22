@@ -1,0 +1,6 @@
+.model-form { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.reasoning-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.reasoning-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; align-items: center; }
+.reasoning-row.has-budget { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; }
+@media(max-width: 600px) { .form-grid { grid-template-columns: minmax(0, 1fr); }.reasoning-row, .reasoning-row.has-budget { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }

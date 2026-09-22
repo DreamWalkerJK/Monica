@@ -13,15 +13,13 @@ namespace Monica.AI.Providers.Anthropic;
 /// </summary>
 internal sealed class AnthropicProvider : IAIProvider
 {
-    private const EAIProviderType ProviderKind = EAIProviderType.Anthropic;
+    private const EAIProviderType PROVIDER_KIND = EAIProviderType.Anthropic;
     private readonly AnthropicProviderOptions _options;
     private readonly AnthropicClient _client;
     private readonly IReadOnlyList<AIModelInfo> _models;
     private readonly string? _defaultModel;
     private readonly bool _isValid;
-    private readonly IReadOnlyList<string> _invalidModels;
-    private string? _systemPrompt;
-    private readonly ConcurrentDictionary<string, IChatClient> _chatClients = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, Lazy<IChatClient>> _chatClients = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
 
     public AnthropicProvider(AnthropicProviderOptions options, AIModelCatalog modelCatalog)
@@ -32,22 +30,21 @@ internal sealed class AnthropicProvider : IAIProvider
         _client = new AnthropicClient
         {
             ApiKey = options.ApiKey,
-            BaseUrl = options.BaseUrl ?? ""
+            BaseUrl = options.BaseUrl ?? "https://api.anthropic.com",
+            Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds)
         };
 
         var resolution = AIProviderModelResolver.ResolveModels(modelCatalog, options);
         _models = resolution.Models;
         _defaultModel = resolution.DefaultModel;
         _isValid = resolution.IsValid;
-        _invalidModels = resolution.MissingModels;
-        _systemPrompt = options.SystemPrompt;
     }
 
     /// <inheritdoc />
-    public string ProviderId => _options.ProviderId ?? ProviderKind.ToString();
+    public string ProviderId => _options.ProviderId ?? PROVIDER_KIND.ToString();
 
     /// <inheritdoc />
-    public string ProviderType => ProviderKind.ToString();
+    public string ProviderType => PROVIDER_KIND.ToString();
 
     /// <inheritdoc />
     public string DisplayName => _options.DisplayName ?? AIProviderNaming.BuildDisplayName(ProviderType, ProviderId);
@@ -60,10 +57,9 @@ internal sealed class AnthropicProvider : IAIProvider
         Description = $"{ProviderType} Claude models",
         ProviderType = ProviderType,
         DefaultModel = _defaultModel,
-        SystemPrompt = _systemPrompt,
+        SystemPrompt = _options.SystemPrompt,
         SupportedModels = _models,
         IsValid = _isValid,
-        InvalidModels = _invalidModels,
         IsDefault = _options.IsDefault,
         Icon = "anthropic"
     };
@@ -71,13 +67,20 @@ internal sealed class AnthropicProvider : IAIProvider
     /// <inheritdoc />
     public IChatClient GetChatClient(string? modelName = null)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var resolvedModel = !string.IsNullOrWhiteSpace(modelName) ? modelName : _defaultModel;
         if (string.IsNullOrWhiteSpace(resolvedModel))
         {
             throw new InvalidOperationException("Anthropic model is not configured.");
         }
 
-        return _chatClients.GetOrAdd(resolvedModel, name => _client.AsIChatClient(name));
+        if (!_models.OfType<LLMModelInfo>().Any(model => string.Equals(model.ModelName, resolvedModel, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException($"Chat model '{resolvedModel}' is not configured on provider '{ProviderId}'.");
+        }
+
+        return _chatClients.GetOrAdd(resolvedModel, name => new Lazy<IChatClient>(() => new AnthropicRequestOptionsChatClient(
+            _client.AsIChatClient(name, _options.MaxTokens), name, _options.MaxTokens))).Value;
     }
 
     /// <inheritdoc />
@@ -120,6 +123,7 @@ internal sealed class AnthropicProvider : IAIProvider
     /// <inheritdoc />
     public async Task<IReadOnlyList<AIRemoteModelInfo>> FetchRemoteModelsAsync(CancellationToken ct = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         try
         {
             var remoteModels = new List<AIRemoteModelInfo>();
@@ -132,10 +136,11 @@ internal sealed class AnthropicProvider : IAIProvider
                     remoteModels.Add(new AIRemoteModelInfo
                     {
                         ModelId = model.ID,
+                        Configuration = AnthropicModelMetadata.Read(model),
                         Metadata = new Dictionary<string, string>
                         {
-                            ["DisplayName"] = model.DisplayName ?? "",
-                            ["CreatedAt"] = model.CreatedAt.ToString("O")
+                            ["DisplayName"] = model.RawData.GetValueOrDefault("display_name").ToString(),
+                            ["CreatedAt"] = model.RawData.GetValueOrDefault("created_at").ToString()
                         }
                     });
                 }
@@ -162,13 +167,6 @@ internal sealed class AnthropicProvider : IAIProvider
         }
     }
 
-    /// <inheritdoc />
-    public void UpdateSystemPrompt(string? systemPrompt)
-    {
-        _systemPrompt = systemPrompt;
-        _options.SystemPrompt = systemPrompt;
-    }
-
     public void Dispose()
     {
         if (_disposed)
@@ -178,10 +176,11 @@ internal sealed class AnthropicProvider : IAIProvider
 
         foreach (var chatClient in _chatClients.Values)
         {
-            chatClient.Dispose();
+            if (chatClient.IsValueCreated) chatClient.Value.Dispose();
         }
 
         _chatClients.Clear();
+        _client.Dispose();
         _disposed = true;
         GC.SuppressFinalize(this);
     }

@@ -14,10 +14,6 @@ internal static class AIProviderAvailabilityMessages
             reasons.AddRange(info.ConfigurationErrors.Where(error => !string.IsNullOrWhiteSpace(error)));
         }
 
-        if (info.InvalidModels is { Count: > 0 })
-        {
-            reasons.Add($"Missing configured models: {string.Join(", ", info.InvalidModels)}.");
-        }
         else if (!info.IsValid
                  && info.ConfigurationErrors is not { Count: > 0 }
                  && info.SupportedModels is not { Count: > 0 })

@@ -1,5 +1,4 @@
 using Monica.AI.Models;
-using Monica.AI.UI.UIChat.Support;
 using Monica.Core.Results;
 using MudBlazor;
 
@@ -9,130 +8,85 @@ public sealed partial class ChatPageState
 {
     private async Task EnsureSessionExistsAsync()
     {
-        if (_workspace.Sessions.Count == 0)
-        {
+        if (workspace.CurrentSession is not null) return;
+        if (workspace.Sessions.Count > 0)
+            _ = await workspace.SelectSessionAsync(workspace.Sessions[0].SessionId, _lifetime.Token);
+        else if (CurrentProviderId is not null)
             _ = await TryCreateSessionAsync();
-            return;
-        }
-
-        if (_workspace.CurrentSession is null)
-        {
-            _ = await _workspace.SelectSessionAsync(_workspace.Sessions.First().SessionId);
-        }
     }
 
-    /// <summary>
-    /// Create a new chat session.
-    /// </summary>
+    /// <summary>Creates and selects a durable conversation.</summary>
     public async Task CreateNewSessionAsync()
     {
-        ClearError();
+        if (IsSending || IsUploading || _disposed) return;
+        await DiscardAttachmentsAsync();
         _ = await TryCreateSessionAsync();
-        UpdateCurrentSession();
+        InspectedStep = null;
         NotifyStateChanged();
     }
 
-    /// <summary>
-    /// Select the current chat session.
-    /// </summary>
-    public async Task SelectSessionAsync(string sessionId)
+    /// <summary>Selects a conversation within the current identity partition.</summary>
+    public async Task SelectSessionAsync(string id)
     {
-        ClearError();
-        _ = await _workspace.SelectSessionAsync(sessionId);
-        UpdateCurrentSession();
+        if (IsSending || IsUploading || _disposed) return;
+        await DiscardAttachmentsAsync();
+        _ = await workspace.SelectSessionAsync(id, _lifetime.Token);
+        InspectedStep = null;
+        ErrorMessage = null;
         NotifyStateChanged();
     }
 
-    /// <summary>
-    /// Delete one chat session.
-    /// </summary>
-    public async Task DeleteSessionAsync(string sessionId)
+    /// <summary>Deletes one conversation and its durable content.</summary>
+    public async Task DeleteSessionAsync(string id)
     {
-        var deletingCurrentSession = string.Equals(
-            sessionId,
-            _workspace.CurrentSessionId,
-            StringComparison.Ordinal);
-        if (!await _workspace.RemoveSessionAsync(sessionId))
-        {
-            return;
-        }
-
-        if (deletingCurrentSession)
-        {
-            if (_workspace.Sessions.Count == 0)
-            {
-                _ = await TryCreateSessionAsync();
-            }
-        }
-
-        UpdateCurrentSession();
+        if (IsSending || IsUploading || _disposed) return;
+        if (id == CurrentSessionId) await DiscardAttachmentsAsync();
+        if (!await workspace.RemoveSessionAsync(id, _lifetime.Token)) return;
+        await EnsureSessionExistsAsync();
         NotifyStateChanged();
     }
 
-    /// <summary>
-    /// Confirms and clears every conversation in the current browser partition.
-    /// </summary>
+    /// <summary>Confirms deletion of every conversation in the current identity partition.</summary>
     public async Task ClearSessionsAsync()
     {
-        if (_workspace.IsLoading || _workspace.Sessions.Count == 0)
-        {
-            return;
-        }
-
-        var confirmed = await _dialogService.ShowMessageBoxAsync(
-            _localizer["Chat:History:Clear:Title"],
-            _localizer["Chat:History:Clear:Message"],
-            yesText: _localizer["Chat:History:Clear:Confirm"],
-            noText: _localizer["Common:Actions:Cancel"],
-            options: new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
-        if (confirmed != true || !await _workspace.ClearAsync())
-        {
-            return;
-        }
-
-        _ = await TryCreateSessionAsync();
-        UpdateCurrentSession();
+        if (IsSending || IsUploading || _disposed || workspace.Sessions.Count == 0) return;
+        var confirmed = await dialogService.ShowMessageBoxAsync(
+            localizer["Chat:History:Clear:Title"], localizer["Chat:History:Clear:Message"],
+            yesText: localizer["Chat:History:Clear:Confirm"], noText: localizer["Common:Actions:Cancel"]);
+        if (_disposed || confirmed != true) return;
+        await DiscardAttachmentsAsync();
+        if (await workspace.ClearAsync(_lifetime.Token)) await EnsureSessionExistsAsync();
         NotifyStateChanged();
     }
 
-    private async Task<string?> EnsureCurrentSessionAsync()
+    /// <summary>Explicitly discards conflicting in-memory edits and reloads durable history.</summary>
+    public async Task ReloadHistoryAsync()
     {
-        var sessionId = _workspace.CurrentSessionId;
-        if (string.IsNullOrEmpty(sessionId))
-        {
-            var session = await TryCreateSessionAsync();
-            if (session == null)
-            {
-                return null;
-            }
-
-            sessionId = session.SessionId;
-        }
-
-        return sessionId;
+        if (IsSending || IsUploading || _disposed) return;
+        var confirmed = await dialogService.ShowMessageBoxAsync(localizer["Workbench:ReloadHistory"],
+            localizer["Workbench:ReloadHistoryConfirm"], yesText: localizer["Workbench:ReloadHistory"],
+            noText: localizer["Common:Actions:Cancel"]);
+        if (_disposed || confirmed != true) return;
+        await DiscardAttachmentsAsync();
+        await workspace.ReloadAsync(_lifetime.Token);
+        InspectedStep = null;
+        NotifyStateChanged();
     }
 
     private async Task<ChatSession?> TryCreateSessionAsync()
     {
+        RefreshProviders();
         if (string.IsNullOrWhiteSpace(CurrentProviderId))
         {
-            SetPageError(_localizer["Provider:NoChatProvider"]);
+            SetError(localizer["Provider:NoChatProvider"]);
             return null;
         }
-
-        var createResult = await _chatFacade.CreateSessionAsync(
-            CurrentProviderId,
-            CurrentModelName,
-            runtimeContext: BuildRuntimeContext(SelectedKnowledgeBaseIds));
-
-        if (createResult.IsFailed(out var error, out var state))
-        {
-            SetPageError(error.Message ?? _localizer["Error:Generic"]);
-            return null;
-        }
-
-        await _workspace.AddSessionAsync(state);
-        ClearError();
-        return state;
+        var result = await chatFacade.CreateSessionAsync(CurrentProviderId, CurrentModelName,
+            systemPrompt: _options.DefaultSystemPrompt, runtimeContext: BuildRuntimeContext(SelectedKnowledgeBaseIds), ct: _lifetime.Token);
+        if (result.IsFailed(out var error, out var session)) { SetError(error.Message); return null; }
+        if (_disposed) { await session.DisposeAsync(); return null; }
+        await workspace.AddSessionAsync(session, _lifetime.Token);
+        ErrorMessage = null;
+        return session;
     }
 }

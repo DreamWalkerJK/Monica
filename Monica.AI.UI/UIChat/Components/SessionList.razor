@@ -51,7 +51,7 @@
                      SelectedValueChanged="@HandleSelectSession">
                 @foreach (var session in Sessions)
                 {
-                    <SessionListItem
+                    <SessionListItem @key="session.SessionId"
                         Session="@session"
                         OnDelete="@(() => HandleDeleteSession(session.SessionId))" />
                 }

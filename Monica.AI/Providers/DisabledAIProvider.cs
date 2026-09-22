@@ -17,11 +17,9 @@ internal sealed class DisabledAIProvider : IAIProvider
     private readonly string _description;
     private readonly string _icon;
     private readonly IReadOnlyList<AIModelInfo> _models;
-    private readonly IReadOnlyList<string> _invalidModels;
     private readonly IReadOnlyList<string> _configurationErrors;
     private readonly string? _defaultModel;
     private readonly bool _supportsRemoteModelListing;
-    private string? _systemPrompt;
 
     private DisabledAIProvider(
         AIProviderOptions options,
@@ -37,11 +35,9 @@ internal sealed class DisabledAIProvider : IAIProvider
         _description = description;
         _icon = icon;
         _models = resolution.Models;
-        _invalidModels = resolution.MissingModels;
         _defaultModel = resolution.DefaultModel;
         _configurationErrors = configurationErrors;
         _supportsRemoteModelListing = supportsRemoteModelListing;
-        _systemPrompt = options.SystemPrompt;
     }
 
     public static DisabledAIProvider FromOptions(
@@ -81,10 +77,9 @@ internal sealed class DisabledAIProvider : IAIProvider
         Description = _description,
         ProviderType = ProviderType,
         DefaultModel = _defaultModel,
-        SystemPrompt = _systemPrompt,
+        SystemPrompt = _options.SystemPrompt,
         SupportedModels = _models,
         IsValid = false,
-        InvalidModels = _invalidModels,
         ConfigurationErrors = _configurationErrors,
         Metadata = BuildMetadata(_options),
         IsDefault = _options.IsDefault,
@@ -125,13 +120,6 @@ internal sealed class DisabledAIProvider : IAIProvider
     public Task<IReadOnlyList<AIRemoteModelInfo>> FetchRemoteModelsAsync(CancellationToken ct = default)
     {
         throw CreateDisabledException();
-    }
-
-    /// <inheritdoc />
-    public void UpdateSystemPrompt(string? systemPrompt)
-    {
-        _systemPrompt = systemPrompt;
-        _options.SystemPrompt = systemPrompt;
     }
 
     /// <inheritdoc />

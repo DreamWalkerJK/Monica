@@ -24,7 +24,11 @@ public interface IChatHistoryProvider
         string sessionId,
         CancellationToken ct = default);
 
-    /// <summary>Saves one complete snapshot when the catalog revision matches.</summary>
+    /// <summary>
+    /// Saves one complete snapshot when the catalog revision and the snapshot's previous session revision match.
+    /// New sessions must have snapshot revision zero; stale or deleted sessions must return a conflict instead of
+    /// overwriting newer content or recreating a deleted conversation.
+    /// </summary>
     Task<ChatHistoryWriteResult> SaveSessionAsync(
         ChatHistoryPartition partition,
         ChatSessionSnapshot snapshot,

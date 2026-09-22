@@ -1,444 +1,183 @@
-using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Monica.AI.AgentCapabilities.Models;
+using Monica.AI.Chat.Facades;
 using Monica.AI.Chat.Models;
 using Monica.AI.Facades;
 using Monica.AI.KnowledgeBase.Facades;
 using Monica.AI.Models;
 using Monica.AI.UI.Localization;
+using Monica.AI.UI.UIChat.Components;
 using Monica.AI.UI.UIChat.Models;
 using Monica.AI.UI.UIChat.Support;
 using Monica.Modules;
-using Monica.UI.Shell.Support;
+using Monica.Core.Results;
 using MudBlazor;
 using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.UI.UIChat.State;
 
 /// <summary>
-/// Owns mutable page state and UI orchestration for the AI chat page.
+/// Component-owned orchestration for one workbench visit. The circuit workspace owns restored
+/// sessions; this owner cancels and drains its own requests before it is disposed.
 /// </summary>
-public sealed partial class ChatPageState : IDisposable
+public sealed partial class ChatPageState(
+    ChatFacade chatFacade,
+    ChatSessionWorkspace workspace,
+    AgentCapabilityFacade capabilityFacade,
+    ChatAttachmentFacade attachmentFacade,
+    IOptions<ModuleAIUIOption> options,
+    IOptions<ModuleAIOption> aiOptions,
+    ISnackbar snackbar,
+    IDialogService dialogService,
+    KnowledgeBaseFacade knowledgeBaseFacade,
+    IStringLocalizer<AIResource> localizer) : IAsyncDisposable
 {
-    private readonly ChatFacade _chatFacade;
-    private readonly ChatSessionWorkspace _workspace;
-    private readonly ProviderFacade _providerFacade;
-    private readonly AgentCapabilityFacade _capabilityFacade;
-    private readonly ModuleAIUIOption _options;
-    private readonly ISnackbar _snackbar;
-    private readonly IDialogService _dialogService;
-    private readonly KnowledgeBaseFacade _knowledgeBaseFacade;
-    private readonly IStringLocalizer<AIResource> _localizer;
-    private readonly IBrowserStorage _browserStorage;
-    private bool _isAttached;
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly ModuleAIUIOption _options = options.Value;
+    private readonly List<ChatAttachmentReference> _attachments = [];
+    private CancellationTokenSource? _requestCancellation;
+    private Task? _activeOperation;
+    private Task? _uploadOperation;
+    private Task? _initialization;
+    private Task? _disposeTask;
+    private bool _disposed;
+    private bool _attached;
 
-    /// <summary>
-    /// Initializes the page state and its collaborators.
-    /// </summary>
-    public ChatPageState(
-        ChatFacade chatFacade,
-        ChatSessionWorkspace workspace,
-        ProviderFacade providerFacade,
-        AgentCapabilityFacade capabilityFacade,
-        IOptions<ModuleAIUIOption> options,
-        ISnackbar snackbar,
-        IDialogService dialogService,
-        KnowledgeBaseFacade knowledgeBaseFacade,
-        IStringLocalizer<AIResource> localizer,
-        IBrowserStorage browserStorage)
-    {
-        _chatFacade = chatFacade;
-        _workspace = workspace;
-        _providerFacade = providerFacade;
-        _capabilityFacade = capabilityFacade;
-        _options = options.Value;
-        _snackbar = snackbar;
-        _dialogService = dialogService;
-        _knowledgeBaseFacade = knowledgeBaseFacade;
-        _localizer = localizer;
-        _browserStorage = browserStorage;
-    }
-
-    /// <summary>
-    /// Raised when the page should re-render.
-    /// </summary>
+    /// <summary>Signals presentation changes while this owner is alive.</summary>
     public event Action? StateChanged;
-
-    /// <summary>
-    /// Whether the session list should be shown.
-    /// </summary>
+    /// <summary>Whether history navigation is enabled by the host.</summary>
     public bool ShowSessionList => _options.ShowSessionList;
-
-    /// <summary>
-    /// Whether the provider selector should be shown.
-    /// </summary>
+    /// <summary>Whether provider selection is enabled by the host.</summary>
     public bool ShowProviderSelector => _options.ShowProviderSelector;
-
-    /// <summary>
-    /// All available chat sessions.
-    /// </summary>
-    public IReadOnlyList<ChatSessionSummary> Sessions => _workspace.Sessions;
-
-    /// <summary>
-    /// Current chat session identifier.
-    /// </summary>
-    public string? CurrentSessionId => _workspace.CurrentSessionId;
-
-    /// <summary>
-    /// Whether durable chat history is being restored from the browser.
-    /// </summary>
-    public bool IsHistoryLoading => _workspace.IsLoading;
-
-    /// <summary>
-    /// Current provider display name shown by the page.
-    /// </summary>
-    public string CurrentProviderName { get; private set; } = string.Empty;
-
-    /// <summary>
-    /// Available providers shown by the page.
-    /// </summary>
+    /// <summary>Whether rich Markdown rendering is enabled.</summary>
+    public bool EnableMarkdown => _options.EnableMarkdown;
+    /// <summary>Whether transcript tail following is enabled.</summary>
+    public bool EnableAutoScroll => _options.EnableAutoScroll;
+    /// <summary>Durable conversation catalog for the current identity partition.</summary>
+    public IReadOnlyList<ChatSessionSummary> Sessions => workspace.Sessions;
+    /// <summary>Selected conversation identifier.</summary>
+    public string? CurrentSessionId => workspace.CurrentSessionId;
+    /// <summary>Selected durable conversation, shared by Chat and Trajectory.</summary>
+    public ChatSession? CurrentSession => workspace.CurrentSession;
+    /// <summary>Whether history is still loading.</summary>
+    public bool IsHistoryLoading => workspace.IsLoading || _initialization is { IsCompleted: false };
+    /// <summary>Current selectable providers.</summary>
     public IReadOnlyList<AIProviderInfo> Providers { get; private set; } = [];
-
-    /// <summary>
-    /// Models available for the currently selected provider.
-    /// </summary>
-    public IReadOnlyList<AIModelInfo> CurrentProviderModels { get; private set; } = [];
-
-    /// <summary>
-    /// Default provider identifier used before a session exists.
-    /// </summary>
+    /// <summary>Provider selected before a conversation is created.</summary>
     public string? DefaultProviderId { get; private set; }
-
-    /// <summary>
-    /// Default model name used before a session exists.
-    /// </summary>
+    /// <summary>Model selected before a conversation is created.</summary>
     public string? DefaultModelName { get; private set; }
-
-    /// <summary>
-    /// Current chat session instance.
-    /// </summary>
-    public ChatSession? CurrentSession { get; private set; }
-
-    /// <summary>
-    /// Current provider identifier resolved from the session or defaults.
-    /// </summary>
+    /// <summary>Effective selected provider.</summary>
     public string? CurrentProviderId => CurrentSession?.ProviderId ?? DefaultProviderId;
-
-    /// <summary>
-    /// Current model name resolved from the session or defaults.
-    /// </summary>
+    /// <summary>Effective selected model.</summary>
     public string? CurrentModelName => CurrentSession?.ModelName ?? DefaultModelName;
-
-    /// <summary>
-    /// Current message list shown by the page.
-    /// </summary>
-    public IReadOnlyList<AIChatMessage> CurrentMessages
-        => CurrentSession?.Messages ?? (IReadOnlyList<AIChatMessage>)Array.Empty<AIChatMessage>();
-
-    /// <summary>
-    /// Per-request token usage records for the latest assistant message.
-    /// </summary>
-    public IReadOnlyList<AIChatRequestUsage> LatestRequestUsages
-        => CurrentMessages.LastOrDefault(message =>
-               message.Role == AIChatRole.Assistant
-               && message.Kind == AIChatMessageKind.Message)?.RequestUsages
-           ?? [];
-
-    /// <summary>
-    /// Whether a request is currently in flight.
-    /// </summary>
+    /// <summary>Display name of the selected provider.</summary>
+    public string CurrentProviderName => CurrentProvider?.DisplayName ?? CurrentProviderId ?? string.Empty;
+    /// <summary>Selectable chat models for the selected provider.</summary>
+    public IReadOnlyList<AIModelInfo> CurrentProviderModels => ChatProviderResolver.GetChatModels(CurrentProvider);
+    /// <summary>Selected model capability metadata; null means unavailable.</summary>
+    public LLMModelInfo? CurrentModel => ChatProviderResolver.ResolveLLMModel(CurrentProviderModels, CurrentModelName);
+    /// <summary>Whether a request, upload, or compaction is running.</summary>
     public bool IsSending { get; private set; }
-
-    /// <summary>
-    /// Current error message shown by the page.
-    /// </summary>
+    /// <summary>Whether attachment upload is running.</summary>
+    public bool IsUploading { get; private set; }
+    /// <summary>Whether local edits conflict with a newer durable conversation revision.</summary>
+    public bool HasHistoryConflict => workspace.IsConflicted;
+    /// <summary>Last actionable error for this page visit.</summary>
     public string? ErrorMessage { get; private set; }
-
-    /// <summary>
-    /// Whether retry is currently available.
-    /// </summary>
-    public bool CanRetry { get; private set; }
-
-    /// <summary>
-    /// Last user message sent by the page.
-    /// </summary>
-    public string? LastMessage { get; private set; }
-
-    /// <summary>
-    /// Current streaming response sequence, if any.
-    /// </summary>
-    public ChatStreamingState? StreamingState { get; private set; }
-
-    /// <summary>
-    /// Current cancellation token source for the active request.
-    /// </summary>
-    public CancellationTokenSource? CancellationTokenSource { get; private set; }
-
-    /// <summary>
-    /// Current cancellation token for the active request.
-    /// </summary>
-    public CancellationToken CancellationToken { get; private set; }
-
-    /// <summary>
-    /// Whether reasoning mode is currently enabled.
-    /// </summary>
-    public bool ReasoningEnabled { get; private set; }
-
-    /// <summary>
-    /// Whether the selected provider/model supports reasoning.
-    /// </summary>
-    public bool SupportsReasoning { get; private set; }
-
-    /// <summary>
-    /// Whether tool-call debug display is enabled.
-    /// </summary>
-    public bool ToolDebugEnabled { get; private set; }
-
-    /// <summary>
-    /// Available knowledge bases shown by the chat page.
-    /// </summary>
+    /// <summary>Current attachments that have been persisted but not submitted.</summary>
+    public IReadOnlyList<ChatAttachmentReference> Attachments => _attachments;
+    /// <summary>Available knowledge bases for tool context.</summary>
     public IReadOnlyList<KnowledgeBaseModel> KnowledgeBases { get; private set; } = [];
-
-    /// <summary>
-    /// Selected knowledge-base identifiers for the current page session.
-    /// </summary>
+    /// <summary>Selected knowledge bases for subsequent requests.</summary>
     public List<string> SelectedKnowledgeBaseIds { get; private set; } = [];
-
-    /// <summary>
-    /// Reference-completion candidates for explicit Skill and MCP references.
-    /// </summary>
+    /// <summary>Skill and MCP reference completion candidates.</summary>
     public IReadOnlyList<AgentCapabilityReferenceCandidate> CapabilityCandidates { get; private set; } = [];
+    /// <summary>Step selected for the shared trajectory inspector.</summary>
+    public ChatExecutionStep? InspectedStep { get; private set; }
+    private AIProviderInfo? CurrentProvider => ChatProviderResolver.FindProvider(Providers, CurrentProviderId);
 
-    /// <summary>
-    /// Initialize the page for the current visit.
-    /// </summary>
-    public async Task InitializeAsync()
+    /// <summary>Initializes server-owned data without browser interop.</summary>
+    public Task InitializeAsync() => _initialization ??= InitializeCoreAsync();
+
+    private async Task InitializeCoreAsync()
     {
-        Attach();
-        ResetPageState();
+        workspace.StateChanged += NotifyStateChanged;
+        workspace.WarningRaised += OnWorkspaceWarning;
+        _attached = true;
+        try
+        {
+            RefreshProviders();
+            SelectedKnowledgeBaseIds = [.. _options.DefaultKnowledgeBaseIds];
+            await workspace.InitializeAsync(_lifetime.Token);
+            if (_disposed) return;
+            await LoadKnowledgeBasesAsync();
+            if (_disposed) return;
+            await LoadCapabilityCandidatesAsync();
+            if (_disposed) return;
+            await EnsureSessionExistsAsync();
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception) { SetError(exception.Message); }
+        finally { NotifyStateChanged(); }
+    }
 
-        Providers = ChatProviderResolver.GetChatProviders(_chatFacade.GetProviders());
-        InitializeDefaultProvider();
-        InitializeKnowledgeBaseSelection();
-        await LoadPersistedPreferencesAsync();
-        await _workspace.InitializeAsync();
-        await LoadKnowledgeBasesAsync();
-        await LoadCapabilityCandidatesAsync();
-        await EnsureSessionExistsAsync();
-        UpdateCurrentSession();
+    /// <summary>Refreshes selectable provider metadata after operator settings changes.</summary>
+    public void RefreshProviders()
+    {
+        Providers = ChatProviderResolver.GetChatProviders(chatFacade.GetProviders());
+        var provider = ChatProviderResolver.GetPreferredChatProvider(Providers, chatFacade.GetDefaultProvider()?.ProviderId);
+        DefaultProviderId ??= provider?.ProviderId;
+        DefaultModelName ??= ChatProviderResolver.GetPreferredChatModel(provider, provider?.DefaultModel);
+    }
+
+    /// <summary>Opens the execution record in the Trajectory inspector.</summary>
+    public void Inspect(ChatExecutionStep step) { InspectedStep = step; NotifyStateChanged(); }
+    /// <summary>Dismisses the latest operation error.</summary>
+    public void DismissError() { ErrorMessage = null; NotifyStateChanged(); }
+    private void SetError(string? message)
+    {
+        if (_disposed) return;
+        ErrorMessage = message ?? localizer["Error:Generic"];
         NotifyStateChanged();
     }
-
-    /// <summary>
-    /// Creates the current chat-container parameter object.
-    /// </summary>
-    public ChatContainerParameters BuildChatContainerParameters()
-    {
-        return new ChatContainerParameters
-        {
-            Messages = CurrentMessages,
-            StreamingState = StreamingState,
-            IsSending = IsSending,
-            ShowRetry = CanRetry,
-            ProviderName = CurrentProviderName,
-            ModelName = CurrentModelName,
-            ShowProviderInfo = !ShowProviderSelector,
-            AvailableModels = CurrentProviderModels,
-            LatestRequestUsages = LatestRequestUsages,
-            ErrorMessage = ErrorMessage,
-            EnableMarkdown = _options.EnableMarkdown,
-            EnableAutoScroll = _options.EnableAutoScroll,
-            SupportsReasoning = SupportsReasoning,
-            ReasoningEnabled = ReasoningEnabled,
-            ToolDebugEnabled = ToolDebugEnabled,
-            KnowledgeBases = KnowledgeBases,
-            SelectedKnowledgeBaseIds = SelectedKnowledgeBaseIds,
-            CapabilityCandidates = CapabilityCandidates,
-            OnSendMessage = EventCallback.Factory.Create<ChatSendRequest>(this, SendMessageAsync),
-            OnCancel = EventCallback.Factory.Create(this, CancelAsync),
-            OnRetry = EventCallback.Factory.Create(this, RetryLastMessageAsync),
-            OnErrorDismissed = EventCallback.Factory.Create(this, DismissError),
-            OnEditMessage = EventCallback.Factory.Create<(AIChatMessage, string)>(this, EditMessage),
-            OnRetryMessage = EventCallback.Factory.Create<AIChatMessage>(this, RetryMessage),
-            OnModelChanged = EventCallback.Factory.Create<string>(this, ChangeModelAsync),
-            ReasoningEnabledChanged = EventCallback.Factory.Create<bool>(this, SetReasoningEnabled),
-            SelectedKnowledgeBaseIdsChanged = EventCallback.Factory.Create<List<string>>(this, SetSelectedKnowledgeBases)
-        };
-    }
-
-    /// <summary>
-    /// Resolve the current tool-debug toggle tooltip.
-    /// </summary>
-    public string GetToolDebugTooltip()
-        => ToolDebugEnabled
-            ? _localizer["Chat:ToolCalls:DisableDebug"]
-            : _localizer["Chat:ToolCalls:EnableDebug"];
-
-    private void Attach()
-    {
-        if (_isAttached)
-        {
-            return;
-        }
-
-        _workspace.StateChanged += OnWorkspaceStateChanged;
-        _workspace.WarningRaised += OnWorkspaceWarning;
-        _isAttached = true;
-    }
-
-    private void ResetPageState()
-    {
-        CancellationTokenSource?.Dispose();
-        CancellationTokenSource = null;
-        CancellationToken = CancellationToken.None;
-        StreamingState = null;
-        IsSending = false;
-        LastMessage = null;
-        CurrentSession = null;
-        CurrentProviderName = string.Empty;
-        CurrentProviderModels = [];
-        ClearError();
-    }
-
-    private void InitializeDefaultProvider()
-    {
-        var defaultProvider = ChatProviderResolver.GetPreferredChatProvider(
-            Providers,
-            _chatFacade.GetDefaultProvider()?.ProviderId);
-        if (defaultProvider == null)
-        {
-            DefaultProviderId = null;
-            DefaultModelName = null;
-            CurrentProviderName = string.Empty;
-            CurrentProviderModels = [];
-            SupportsReasoning = false;
-            SetPageError(_localizer["Provider:NoChatProvider"], showSnackbar: false);
-            return;
-        }
-
-        ClearError();
-        DefaultProviderId = defaultProvider.ProviderId;
-        DefaultModelName = ChatProviderResolver.GetPreferredChatModel(defaultProvider, defaultProvider.DefaultModel);
-        CurrentProviderName = defaultProvider.DisplayName;
-        CurrentProviderModels = ChatProviderResolver.GetChatModels(defaultProvider);
-        SupportsReasoning = ChatProviderResolver.GetReasoningSupport(
-            Providers,
-            defaultProvider.ProviderId,
-            DefaultModelName);
-    }
-
-    private void InitializeKnowledgeBaseSelection()
-    {
-        SelectedKnowledgeBaseIds = new List<string>(_options.DefaultKnowledgeBaseIds);
-    }
-
-    private void OnWorkspaceStateChanged()
-    {
-        UpdateCurrentSession();
-        NotifyStateChanged();
-    }
-
+    private void NotifyStateChanged() { if (!_disposed) StateChanged?.Invoke(); }
     private void OnWorkspaceWarning(ChatHistoryWorkspaceWarning warning)
     {
+        if (_disposed) return;
         var message = warning.Kind switch
         {
-            ChatHistoryWorkspaceWarningKind.LoadFailed => _localizer["Chat:History:Warnings:LoadFailed"],
-            ChatHistoryWorkspaceWarningKind.RevisionConflict => _localizer["Chat:History:Warnings:RevisionConflict"],
-            ChatHistoryWorkspaceWarningKind.QuotaExceeded => _localizer["Chat:History:Warnings:QuotaExceeded"],
-            ChatHistoryWorkspaceWarningKind.StorageUnavailable => _localizer["Chat:History:Warnings:StorageUnavailable"],
-            ChatHistoryWorkspaceWarningKind.SessionsPruned => _localizer["Chat:History:Warnings:SessionsPruned"],
-            ChatHistoryWorkspaceWarningKind.SessionUnavailable => _localizer["Chat:History:Warnings:SessionUnavailable"],
-            ChatHistoryWorkspaceWarningKind.RuntimeFallback => _localizer["Chat:History:Warnings:RuntimeFallback"],
-            _ => _localizer["Error:Generic"]
+            ChatHistoryWorkspaceWarningKind.RevisionConflict => localizer["Chat:History:Warnings:RevisionConflict"],
+            ChatHistoryWorkspaceWarningKind.SessionUnavailable => localizer["Chat:History:Warnings:SessionUnavailable"],
+            _ => localizer["Chat:History:Warnings:StorageUnavailable"]
         };
-        _snackbar.Add(message, Severity.Warning);
-    }
-
-    private void UpdateCurrentSession()
-    {
-        var currentSession = _workspace.CurrentSession;
-        CurrentSession = currentSession;
-
-        if (currentSession == null)
-        {
-            return;
-        }
-
-        var provider = ChatProviderResolver.FindProvider(Providers, currentSession.ProviderId);
-        if (provider != null)
-        {
-            CurrentProviderName = provider.DisplayName;
-            CurrentProviderModels = ChatProviderResolver.GetChatModels(provider);
-            SupportsReasoning = ChatProviderResolver.GetReasoningSupport(
-                Providers,
-                currentSession.ProviderId,
-                currentSession.ModelName);
-            return;
-        }
-
-        CurrentProviderName = currentSession.ProviderId;
-        CurrentProviderModels = [];
-        SupportsReasoning = false;
-    }
-
-    private void ClearError()
-    {
-        ErrorMessage = null;
-        CanRetry = false;
-    }
-
-    private void SetError(string message, bool canRetry = false)
-    {
-        ErrorMessage = message;
-        CanRetry = canRetry;
-    }
-
-    private void SetupCancellationToken()
-    {
-        CancellationTokenSource?.Dispose();
-        CancellationTokenSource = new CancellationTokenSource();
-        CancellationToken = CancellationTokenSource.Token;
-
-        if (_options.RequestTimeoutMs > 0)
-        {
-            CancellationTokenSource.CancelAfter(_options.RequestTimeoutMs);
-        }
-    }
-
-    private void SetPageError(string message, bool canRetry = false, bool showSnackbar = true)
-    {
-        IsSending = false;
-        StreamingState = null;
-        SetError(message, canRetry);
-
-        if (showSnackbar)
-        {
-            _snackbar.Add(message, Severity.Error);
-        }
-
-        NotifyStateChanged();
-    }
-
-    private void NotifyStateChanged()
-    {
-        StateChanged?.Invoke();
+        snackbar.Add(message, Severity.Warning);
     }
 
     /// <inheritdoc />
-    public void Dispose()
+    public ValueTask DisposeAsync() => new(_disposeTask ??= DisposeCoreAsync());
+    private async Task DisposeCoreAsync()
     {
-        CancellationTokenSource?.Dispose();
-        CancellationTokenSource = null;
-        CancellationToken = CancellationToken.None;
-        StreamingState = null;
-        IsSending = false;
-
-        if (_isAttached)
+        _disposed = true;
+        if (_attached)
         {
-            _workspace.StateChanged -= OnWorkspaceStateChanged;
-            _workspace.WarningRaised -= OnWorkspaceWarning;
-            _isAttached = false;
+            workspace.StateChanged -= NotifyStateChanged;
+            workspace.WarningRaised -= OnWorkspaceWarning;
+            _attached = false;
         }
+        StateChanged = null;
+        await _lifetime.CancelAsync();
+        if (_requestCancellation is not null) await _requestCancellation.CancelAsync();
+        try
+        {
+            if (_initialization is not null) await _initialization;
+            if (_activeOperation is not null) await _activeOperation;
+            if (_uploadOperation is not null) await _uploadOperation;
+        }
+        catch (OperationCanceledException) { }
+        _requestCancellation?.Dispose();
+        _lifetime.Dispose();
     }
 }

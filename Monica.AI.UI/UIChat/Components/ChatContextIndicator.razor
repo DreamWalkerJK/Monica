@@ -1,0 +1,72 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.UIChat.Support
+@inject IStringLocalizer<AIResource> L
+<div class="context-indicator">
+    <MudMenu AriaLabel="@L["Workbench:Context"]" Dense="true">
+        <ActivatorContent Context="menu">
+            <span class="context-activator" @onclick="@(args => menu.ToggleAsync(args))">
+                <span class="mud-sr-only">@L["Workbench:Context"]</span>
+                <span class="context-visual" aria-hidden="true">
+                <MudProgressCircular Value="@Percent" Size="Size.Small" Color="@OccupancyColor" Class="context-ring" />
+                <span>@(Usage?.OccupancyRatio is { } ratio ? $"{ratio:P0}" : "—")</span>
+                </span>
+            </span>
+        </ActivatorContent>
+        <ChildContent>
+            <div class="context-details">
+                <MudText Typo="Typo.subtitle2">@L["Workbench:Context"]</MudText>
+                <dl>
+                    <dt>@L["Workbench:ContextCapacity"]</dt><dd>@ChatExecutionPresentation.Tokens(Usage?.ContextWindow)</dd>
+                    <dt>@L["Workbench:ContextCapacitySource"]</dt><dd>@CapacitySource</dd>
+                    <dt>@L["Workbench:LastInput"]</dt><dd>@ChatExecutionPresentation.Tokens(Usage?.LastRequestInputTokens)</dd>
+                    <dt>@L["Workbench:EstimatedNext"]</dt><dd>@ChatExecutionPresentation.Tokens(Usage?.EstimatedNextInputTokens)</dd>
+                    <dt>@L["Workbench:ReservedOutput"]</dt><dd>@ChatExecutionPresentation.Tokens(Usage?.ReservedOutputTokens)</dd>
+                </dl>
+                <MudText Typo="Typo.caption">@L["Workbench:ContextEstimateHelp"]</MudText>
+                @if (Usage?.HasUnestimatedAttachments == true) { <MudText Typo="Typo.caption" Color="Color.Warning">@L["Workbench:AttachmentEstimate"]</MudText> }
+                <MudSwitch T="bool" Value="@AutomaticCompaction" ValueChanged="@AutomaticCompactionChanged" Disabled="@Disabled" Label="@L["Workbench:AutoCompact"]" Color="Color.Primary" />
+                <details class="context-advanced">
+                    <summary>@L["Workbench:CompactionSettings"]</summary>
+                    <MudNumericField T="double" @bind-Value="_thresholdPercent" Label="@L["Workbench:CompactionThreshold"]" Min="1" Max="99" Adornment="Adornment.End" AdornmentText="%" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                    <MudNumericField T="int" @bind-Value="_retainedTurns" Label="@L["Workbench:RetainedTurns"]" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                    <MudNumericField T="int?" @bind-Value="_outputBudget" Label="@L["Workbench:OutputBudget"]" HelperText="@L["Workbench:OutputBudgetHelp"]" Min="1" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                    <MudText Typo="Typo.caption">@L["Workbench:CompactionSettingsHelp"]</MudText>
+                    <MudButton Size="Size.Small" OnClick="SavePreferencesAsync" Disabled="@(Disabled || !PreferencesValid)">@L["Common:Actions:Save"]</MudButton>
+                </details>
+                <MudButton FullWidth="true" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Compress" Disabled="@Disabled" OnClick="@OnCompact">@L["Workbench:CompactNow"]</MudButton>
+            </div>
+        </ChildContent>
+    </MudMenu>
+</div>
+@code {
+    [Parameter] public ChatContextUsage? Usage { get; set; }
+    [Parameter] public bool AutomaticCompaction { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<bool> AutomaticCompactionChanged { get; set; }
+    [Parameter] public EventCallback OnCompact { get; set; }
+    [Parameter] public double CompactionThreshold { get; set; } = .8;
+    [Parameter] public int RetainedTurns { get; set; } = 4;
+    [Parameter] public int? OutputBudget { get; set; }
+    [Parameter] public EventCallback<(double Threshold, int RetainedTurns, int? OutputBudget)> CompactionPreferencesChanged { get; set; }
+    private double _thresholdPercent = 80, _lastThreshold = double.NaN;
+    private int _retainedTurns = 4, _lastRetained;
+    private int? _outputBudget, _lastOutputBudget;
+    private bool PreferencesValid => double.IsFinite(_thresholdPercent) && _thresholdPercent is > 0 and < 100 && _retainedTurns > 0 && (_outputBudget is null or > 0)
+        && !(_outputBudget is { } output && Usage?.ContextWindow is { } context && output >= context);
+    protected override void OnParametersSet()
+    {
+        if (_lastThreshold == CompactionThreshold && _lastRetained == RetainedTurns && _lastOutputBudget == OutputBudget) return;
+        _lastThreshold = CompactionThreshold; _lastRetained = RetainedTurns; _lastOutputBudget = OutputBudget;
+        _thresholdPercent = CompactionThreshold * 100; _retainedTurns = RetainedTurns; _outputBudget = OutputBudget;
+    }
+    private Task SavePreferencesAsync() => PreferencesValid ? CompactionPreferencesChanged.InvokeAsync((_thresholdPercent / 100, _retainedTurns, _outputBudget)) : Task.CompletedTask;
+    private double Percent => Math.Clamp((Usage?.OccupancyRatio ?? 0) * 100, 0, 100);
+    private string CapacitySource => (Usage?.ContextWindowSource ?? ChatContextCapacitySource.Default) switch
+    {
+        ChatContextCapacitySource.Conversation => L["Workbench:ContextConversationSource"],
+        ChatContextCapacitySource.Model => L["Workbench:ContextModelSource"],
+        _ => L["Workbench:ContextDefaultSource"]
+    };
+    private Color OccupancyColor => Usage?.OccupancyRatio switch { >= .9 => Color.Error, >= .75 => Color.Warning, null => Color.Default, _ => Color.Primary };
+}

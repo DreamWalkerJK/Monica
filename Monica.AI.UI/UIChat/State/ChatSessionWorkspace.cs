@@ -28,6 +28,9 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
     /// <summary>Whether initial history restoration has completed.</summary>
     public bool IsInitialized { get; private set; }
 
+    /// <summary>Whether a stale edit requires an explicit reload before further history writes.</summary>
+    public bool IsConflicted { get; private set; }
+
     /// <summary>Current catalog revision used for optimistic writes.</summary>
     public long Revision { get; private set; }
 
@@ -122,8 +125,24 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(session);
+        if (IsConflicted) return false;
 
         var saveResult = await historyFacade.SaveSessionAsync(session, Revision, ct);
+        if (saveResult.Data?.IsConflict == true)
+        {
+            var refreshed = await historyFacade.GetCatalogAsync(ct);
+            if (!refreshed.IsFailed(out _, out var catalog))
+            {
+                var stored = catalog.Sessions.FirstOrDefault(item => item.SessionId == session.SessionId);
+                if (stored?.Revision == session.PersistenceRevision || stored is null && session.PersistenceRevision == 0)
+                {
+                    // A different conversation or selection changed. Rebase only this unchanged session once.
+                    Revision = catalog.Revision;
+                    MergeSummaries(catalog.Sessions);
+                    saveResult = await historyFacade.SaveSessionAsync(session, Revision, ct);
+                }
+            }
+        }
         var accepted = TryApplyWriteResult(saveResult, out var persisted);
         if (persisted is not null)
         {
@@ -145,6 +164,7 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        if (IsConflicted) return false;
 
         var result = await historyFacade.DeleteSessionAsync(sessionId, Revision, ct);
         if (!TryApplyWriteResult(result, out _))
@@ -175,6 +195,7 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
     public async Task<bool> ClearAsync(CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        if (IsConflicted) return false;
         var result = await historyFacade.ClearAsync(Revision, ct);
         if (!TryApplyWriteResult(result, out _))
         {
@@ -194,7 +215,30 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
         return true;
     }
 
-    /// <summary>Returns one already loaded session without performing browser I/O.</summary>
+    /// <summary>Discards local session copies and reloads authoritative history after explicit user confirmation.</summary>
+    public async Task ReloadAsync(CancellationToken ct = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_loadedSessions.Values.Any(session => session.IsBusy))
+            throw new InvalidOperationException("Stop generation before reloading conversation history.");
+        var catalogResult = await historyFacade.GetCatalogAsync(ct);
+        if (catalogResult.IsFailed(out var error, out var catalog))
+        {
+            RaiseWarning(ChatHistoryWorkspaceWarningKind.LoadFailed, error.Message);
+            return;
+        }
+
+        foreach (var session in _loadedSessions.Values) await session.DisposeAsync();
+        _loadedSessions.Clear();
+        ReplaceSummaries(catalog.Sessions);
+        Revision = catalog.Revision;
+        CurrentSessionId = catalog.CurrentSessionId ?? _sessions.FirstOrDefault()?.SessionId;
+        IsConflicted = false;
+        if (CurrentSessionId is { } selected && await LoadSessionAsync(selected, ct) is null) CurrentSessionId = null;
+        StateChanged?.Invoke();
+    }
+
+    /// <summary>Returns one already loaded session without performing storage I/O.</summary>
     public ChatSession? GetLoadedSession(string? sessionId)
         => sessionId is not null && _loadedSessions.TryGetValue(sessionId, out var session)
             ? session
@@ -226,6 +270,7 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
 
     private async Task PersistCurrentSelectionAsync(CancellationToken ct)
     {
+        if (IsConflicted) return;
         var result = await historyFacade.SetCurrentSessionAsync(CurrentSessionId, Revision, ct);
         _ = TryApplyWriteResult(result, out var writeResult);
         if (writeResult is not null)
@@ -249,7 +294,9 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
 
         if (writeResult.IsConflict)
         {
+            IsConflicted = true;
             RaiseWarning(ChatHistoryWorkspaceWarningKind.RevisionConflict);
+            StateChanged?.Invoke();
             return false;
         }
 
@@ -259,11 +306,6 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
             if (writeResult.PrunedSessionIds.Count > 0)
             {
                 RaiseWarning(ChatHistoryWorkspaceWarningKind.SessionsPruned);
-            }
-
-            if (writeResult.FailureReason == ChatHistoryWriteFailureReason.PersistenceDisabled)
-            {
-                return true;
             }
 
             RaiseWarning(
@@ -314,6 +356,14 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
     {
         _sessions.Clear();
         _sessions.AddRange(sessions.OrderByDescending(item => item.UpdatedAt));
+    }
+
+    private void MergeSummaries(IReadOnlyList<ChatSessionSummary> persisted)
+    {
+        // Keep an unsaved local session visible. Per-session revision checks prevent stale cached edits from overwriting remote work.
+        var localOnly = _sessions.Where(local => persisted.All(remote => remote.SessionId != local.SessionId)
+            && _loadedSessions.TryGetValue(local.SessionId, out var session) && session.PersistenceRevision == 0).ToArray();
+        ReplaceSummaries(persisted.Concat(localOnly));
     }
 
     private void CompleteInitialization()

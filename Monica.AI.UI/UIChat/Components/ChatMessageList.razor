@@ -1,74 +1,52 @@
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
-@using Monica.AI.UI.UIChat.State
 @using Monica.AI.UI.UIChat.Support
 @implements IAsyncDisposable
 @inject IStringLocalizer<AIResource> L
 
 <div class="message-list" @ref="_messageListRef">
-    @if (Messages.Count == 0 && StreamingState == null)
+    @if (Session?.Turns.Count is not > 0)
     {
         <div class="welcome-panel">
-            <div class="welcome-icon">
-                <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Large" Color="Color.Primary" />
-            </div>
-            <MudText Typo="Typo.h5">@L["Chat:Welcome:Title"]</MudText>
-            <MudText Typo="Typo.body2" Class="welcome-subtitle">
-                @L["Chat:Welcome:Subtitle"]
-            </MudText>
-            <div class="welcome-grid">
-                <MudPaper Class="welcome-card" Elevation="0">
-                    <MudText Typo="Typo.subtitle2">@L["Chat:Welcome:Cards:UI:Title"]</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Chat:Welcome:Cards:UI:Subtitle"]</MudText>
-                </MudPaper>
-                <MudPaper Class="welcome-card" Elevation="0">
-                    <MudText Typo="Typo.subtitle2">@L["Chat:Welcome:Cards:Docs:Title"]</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Chat:Welcome:Cards:Docs:Subtitle"]</MudText>
-                </MudPaper>
-                <MudPaper Class="welcome-card" Elevation="0">
-                    <MudText Typo="Typo.subtitle2">@L["Chat:Welcome:Cards:Error:Title"]</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Chat:Welcome:Cards:Error:Subtitle"]</MudText>
-                </MudPaper>
-                <MudPaper Class="welcome-card" Elevation="0">
-                    <MudText Typo="Typo.subtitle2">@L["Chat:Welcome:Cards:Script:Title"]</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Chat:Welcome:Cards:Script:Subtitle"]</MudText>
-                </MudPaper>
+            <span class="welcome-eyebrow">@L["Workbench:WelcomeEyebrow"]</span>
+            <MudText Typo="Typo.h4">@L["Workbench:WelcomeTitle"]</MudText>
+            <MudText Typo="Typo.body1" Class="welcome-subtitle">@L["Workbench:WelcomeDescription"]</MudText>
+            <div class="welcome-features">
+                <span><MudIcon Icon="@Icons.Material.Outlined.AttachFile" Size="Size.Small" />@L["Workbench:WelcomeAttachments"]</span>
+                <span><MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" />@L["Workbench:WelcomeTools"]</span>
+                <span><MudIcon Icon="@Icons.Material.Outlined.Timeline" Size="Size.Small" />@L["Workbench:WelcomeTrajectory"]</span>
             </div>
         </div>
     }
     else
     {
-        @foreach (var message in Messages)
-        {
-            @if (message.Kind == AIChatMessageKind.Error)
+        <div class="transcript">
+            @foreach (var turn in Session.Turns)
             {
-                <ChatErrorMessageItem Message="@message" OnRetry="@OnRetryMessage" />
+                <section class="conversation-turn" @key="turn.Id">
+                    <ChatMessageItem Message="@turn.UserMessage" SessionId="@Session.SessionId" Disabled="@IsSending" OnEdit="@OnEditMessage" />
+                    @if (turn.AssistantMessage is { } assistant)
+                    {
+                        <ChatMessageItem Message="@assistant" SessionId="@Session.SessionId" EnableMarkdown="@EnableMarkdown"
+                                         Steps="@turn.Steps" Status="@turn.Status" Running="@(turn.Status is ChatExecutionStatus.Running or ChatExecutionStatus.AwaitingApproval)"
+                                         Disabled="@IsSending" OnRetry="@OnRetryMessage" OnInspect="@OnInspect" />
+                    }
+                    @foreach (var error in turn.ErrorMessages)
+                    {
+                        <ChatErrorMessageItem Message="@error" OnRetry="@OnRetryMessage" />
+                    }
+                </section>
             }
-            else
-            {
-                <ChatMessageItem Message="@message" EnableMarkdown="@EnableMarkdown"
-                                 ToolDebugEnabled="@ToolDebugEnabled"
-                                 OnEdit="@OnEditMessage" OnRetry="@OnRetryMessage" />
-            }
-        }
-
-        @if (StreamingState != null)
-        {
-            <StreamingMessageItem
-                State="@StreamingState"
-                EnableMarkdown="@EnableMarkdown"
-                ToolDebugEnabled="@ToolDebugEnabled" />
-        }
+        </div>
     }
 </div>
-
 @code {
     [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
 
-    [Parameter] public IReadOnlyList<AIChatMessage> Messages { get; set; } = [];
-    [Parameter] public ChatStreamingState? StreamingState { get; set; }
+    [Parameter] public ChatSession? Session { get; set; }
+    [Parameter] public bool IsSending { get; set; }
     [Parameter] public bool EnableMarkdown { get; set; } = true;
-    [Parameter] public bool ToolDebugEnabled { get; set; }
+    [Parameter] public EventCallback<ChatExecutionStep> OnInspect { get; set; }
     [Parameter] public bool EnableAutoScroll { get; set; } = true;
     [Parameter] public EventCallback<(AIChatMessage Message, string NewContent)> OnEditMessage { get; set; }
     [Parameter] public EventCallback<AIChatMessage> OnRetryMessage { get; set; }

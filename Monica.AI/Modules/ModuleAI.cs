@@ -6,6 +6,11 @@ using Monica.AI.Abstractions;
 using Monica.AI.Chat.Abstractions;
 using Monica.AI.Chat.Facades;
 using Monica.AI.Chat.Providers;
+using Monica.AI.Storage.Providers;
+using Monica.AI.Configuration.Abstractions;
+using Monica.AI.Configuration.Facades;
+using Monica.AI.Configuration.Providers;
+using Monica.AI.Configuration.Services;
 using Monica.AI.Facades;
 using Monica.AI.Models;
 using Monica.AI.Providers;
@@ -51,11 +56,18 @@ public class ModuleAI : MonicaModule<ModuleAIOption>
     public override void ConfigureServices(ModuleContext<ModuleAIOption> context)
     {
         var services = context.Services;
+        services.AddDataProtection();
+        services.TryAddSingleton<IAIConfigurationStore, FileAIConfigurationStore>();
+        services.TryAddSingleton<AIConfigurationService>();
+        services.AddScoped(sp => new AIConfigurationFacade(
+            sp.GetRequiredService<AIConfigurationService>(),
+            sp.GetRequiredService<IAIProviderFactory>(),
+            sp.GetRequiredService<AIModelCatalog>()));
         // Register model directory
         services.AddSingleton(sp =>
         {
             var catalog = new AIModelCatalog();
-            catalog.AddModels(ModuleAIOption.GetReservedModels());
+            catalog.AddReservedModels(ModuleAIOption.GetReservedModels());
 
             foreach (var model in Option.ModelRegistrations)
             {
@@ -82,11 +94,18 @@ public class ModuleAI : MonicaModule<ModuleAIOption>
 
         // Register chat service
         services.AddSingleton<AIChatService>();
-        services.TryAddScoped<IChatHistoryProvider, NoOpChatHistoryProvider>();
-        services.TryAddScoped<IChatHistoryPartitionResolver, NoOpChatHistoryPartitionResolver>();
+        services.AddHttpContextAccessor();
+        services.TryAddSingleton<AIFileStore>();
+        services.TryAddSingleton<IChatHistoryProvider, FileChatHistoryProvider>();
+        services.TryAddScoped<IChatUserIdentityAccessor, HttpChatUserIdentityAccessor>();
+        services.TryAddScoped<IChatHistoryPartitionResolver, ChatHistoryPartitionResolver>();
+        services.TryAddSingleton<IChatDocumentExtractor, ChatDocumentExtractor>();
+        services.TryAddSingleton<IChatAttachmentStore, FileChatAttachmentStore>();
+        services.AddScoped<ChatAttachmentFacade>();
         services.AddScoped(sp => new ChatFacade(
             sp.GetRequiredService<AIChatService>(),
-            sp.GetRequiredService<IAIProviderFactory>()));
+            sp.GetRequiredService<IAIProviderFactory>(),
+            sp.GetRequiredService<IChatHistoryPartitionResolver>()));
         services.AddScoped(sp => new ChatHistoryFacade(
             sp.GetRequiredService<IChatHistoryProvider>(),
             sp.GetRequiredService<IChatHistoryPartitionResolver>(),
@@ -101,10 +120,48 @@ public class ModuleAI : MonicaModule<ModuleAIOption>
 /// </summary>
 public static class ModuleAIRegistrationExtensions
 {
-    private const string CHAT_HISTORY_PROVIDER_KEY = nameof(CHAT_HISTORY_PROVIDER_KEY);
+    /// <summary>
+    /// Replaces host-wide provider/model settings persistence. The singleton store must support revision-checked
+    /// atomic writes; credentials reaching it have already been protected by the host's data-protection provider.
+    /// Register the host data-protection key ring consistently across instances that share this store.
+    /// </summary>
+    /// <typeparam name="TStore">Thread-safe configuration storage implementation.</typeparam>
+    /// <param name="module">The AI module registration to configure.</param>
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleAI, ModuleAIOption> UseConfigurationStore<TStore>(
+        this ModuleRegistration<ModuleAI, ModuleAIOption> module)
+        where TStore : class, IAIConfigurationStore
+    {
+        module.ConfigureServices(context =>
+        {
+            context.Services.RemoveAll<IAIConfigurationStore>();
+            context.Services.AddSingleton<IAIConfigurationStore, TStore>();
+        });
+        return module;
+    }
 
     /// <summary>
-    /// Replaces the disabled chat-history defaults with a custom persistence provider and partition resolver.
+    /// Replaces conversation attachment storage. The singleton store must isolate attachments by the supplied
+    /// trusted partition and session, enforce upload limits, and publish complete data before returning a reference.
+    /// Custom stores own the cleanup policy for abandoned uploads and deleted conversations.
+    /// </summary>
+    /// <typeparam name="TStore">Thread-safe attachment storage implementation.</typeparam>
+    /// <param name="module">The AI module registration to configure.</param>
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleAI, ModuleAIOption> UseChatAttachmentStore<TStore>(
+        this ModuleRegistration<ModuleAI, ModuleAIOption> module)
+        where TStore : class, IChatAttachmentStore
+    {
+        module.ConfigureServices(context =>
+        {
+            context.Services.RemoveAll<IChatAttachmentStore>();
+            context.Services.AddSingleton<IChatAttachmentStore, TStore>();
+        });
+        return module;
+    }
+
+    /// <summary>
+    /// Replaces file-backed chat history and host identity partitioning with custom implementations.
     /// </summary>
     /// <typeparam name="TProvider">Scoped provider that owns durable snapshot storage.</typeparam>
     /// <typeparam name="TPartitionResolver">
@@ -112,9 +169,8 @@ public static class ModuleAIRegistrationExtensions
     /// </typeparam>
     /// <returns>The current module registration.</returns>
     /// <remarks>
-    /// This method is optional. Without it, chat remains fully functional in memory and history writes
-    /// report <c>NotPersisted</c>. Server implementations should resolve partitions from authenticated
-    /// identity and secure the sensitive Agent Framework state stored in each snapshot.
+    /// This method is optional. The default stores snapshots on disk inside the configured storage root.
+    /// Custom server implementations must derive partitions from trusted user/workspace identity.
     /// </remarks>
     public static ModuleRegistration<ModuleAI, ModuleAIOption> UseChatHistoryProvider<TProvider, TPartitionResolver>(this ModuleRegistration<ModuleAI, ModuleAIOption> module)
         where TProvider : class, IChatHistoryProvider
@@ -132,12 +188,17 @@ public static class ModuleAIRegistrationExtensions
     }
 
     /// <summary>
-    /// Adds an OpenAI provider.
+    /// Registers code-defined defaults for an OpenAI-compatible provider, including Chat Completions or Responses.
     /// </summary>
     /// <param name="module">The AI module registration to configure.</param>
     /// <param name="configure">The configuration delegate.</param>
     /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
     /// <returns>The current builder instance.</returns>
+    /// <remarks>
+    /// No network client is created during registration. Persisted host settings can override this definition;
+    /// resetting an override restores these defaults. Use a stable provider identifier so saved conversations
+    /// continue to resolve it. Running operations retain their captured provider while settings change.
+    /// </remarks>
     public static ModuleRegistration<ModuleAI, ModuleAIOption> AddOpenAIProvider(this ModuleRegistration<ModuleAI, ModuleAIOption> module,
         Action<OpenAIProviderOptions> configure,
         string? providerId = null)
@@ -148,30 +209,24 @@ public static class ModuleAIRegistrationExtensions
 
         module.ConfigureServices(context =>
         {
-            context.Services.AddSingleton<IAIProvider>(serviceProvider => CreateProvider(
-                serviceProvider,
-                options,
-                nameof(EAIProviderType.OpenAI),
-                "OpenAI-compatible chat and embedding provider.",
-                "openai",
-                supportsRemoteModelListing: true,
-                modelCatalog =>
-                {
-                    EnsureApiKeyConfigured(options);
-                    return new OpenAIProvider(options, modelCatalog);
-                }));
+            context.Services.AddSingleton(new AIProviderDefinition(EAIProviderType.OpenAI, options));
         });
 
         return module;
     }
 
     /// <summary>
-    /// Adds an Anthropic provider.
+    /// Registers code-defined defaults for an Anthropic provider.
     /// </summary>
     /// <param name="module">The AI module registration to configure.</param>
     /// <param name="configure">The configuration delegate.</param>
     /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
     /// <returns>The current builder instance.</returns>
+    /// <remarks>
+    /// No network client is created during registration. Persisted host settings can override this definition;
+    /// resetting an override restores these defaults. Use a stable provider identifier so saved conversations
+    /// continue to resolve it. Running operations retain their captured provider while settings change.
+    /// </remarks>
     public static ModuleRegistration<ModuleAI, ModuleAIOption> AddAnthropicProvider(this ModuleRegistration<ModuleAI, ModuleAIOption> module,
         Action<AnthropicProviderOptions> configure,
         string? providerId = null)
@@ -183,18 +238,7 @@ public static class ModuleAIRegistrationExtensions
 
         module.ConfigureServices(context =>
         {
-            context.Services.AddSingleton<IAIProvider>(serviceProvider => CreateProvider(
-                serviceProvider,
-                options,
-                nameof(EAIProviderType.Anthropic),
-                "Anthropic Claude chat provider.",
-                "anthropic",
-                supportsRemoteModelListing: true,
-                modelCatalog =>
-                {
-                    EnsureApiKeyConfigured(options);
-                    return new AnthropicProvider(options, modelCatalog);
-                }));
+            context.Services.AddSingleton(new AIProviderDefinition(EAIProviderType.Anthropic, options));
         });
 
         return module;
@@ -225,7 +269,9 @@ public static class ModuleAIRegistrationExtensions
     }
 
     /// <summary>
-    /// Adds model information to the catalog.
+    /// Adds an explicit model template referenced by code-defined providers' SupportedModels lists, including
+    /// custom endpoints. Use provider-scoped Models definitions when the same identifier has different metadata
+    /// across providers. Remote discovery does not apply unreferenced global templates to custom endpoints.
     /// </summary>
     /// <param name="module">The AI module registration to configure.</param>
     /// <param name="model">The model information to add.</param>
@@ -237,12 +283,16 @@ public static class ModuleAIRegistrationExtensions
     }
 
     /// <summary>
-    /// Adds a custom provider.
+    /// Registers a host-owned singleton provider with its own implementation and configuration.
     /// </summary>
     /// <typeparam name="TProvider">Provider type</typeparam>
     /// <param name="module">The AI module registration to configure.</param>
     /// <param name="providerFactory">Provider factory method</param>
     /// <returns>The current builder instance.</returns>
+    /// <remarks>
+    /// Custom provider identifiers cannot be replaced by runtime provider settings. The host dependency-injection
+    /// container owns disposal; consumers borrow the provider through <see cref="IAIProviderFactory"/> leases.
+    /// </remarks>
     public static ModuleRegistration<ModuleAI, ModuleAIOption> AddProvider<TProvider>(this ModuleRegistration<ModuleAI, ModuleAIOption> module, Func<IServiceProvider, TProvider> providerFactory)
         where TProvider : class, IAIProvider
     {
@@ -254,63 +304,6 @@ public static class ModuleAIRegistrationExtensions
         return module;
     }
 
-    private static IAIProvider CreateProvider<TOptions>(
-        IServiceProvider serviceProvider,
-        TOptions options,
-        string providerType,
-        string description,
-        string icon,
-        bool supportsRemoteModelListing,
-        Func<AIModelCatalog, IAIProvider> providerFactory)
-        where TOptions : AIProviderOptions
-    {
-        var modelCatalog = serviceProvider.GetRequiredService<AIModelCatalog>();
-
-        try
-        {
-            return providerFactory(modelCatalog);
-        }
-        catch (Exception ex)
-        {
-            return DisabledAIProvider.FromOptions(
-                options,
-                modelCatalog,
-                providerType,
-                description,
-                icon,
-                BuildConfigurationErrors(options, ex),
-                supportsRemoteModelListing);
-        }
-    }
-
-    private static void EnsureApiKeyConfigured(AIProviderOptions options)
-    {
-        if (string.IsNullOrWhiteSpace(options.ApiKey))
-        {
-            throw new InvalidOperationException(
-                "API key is empty. Configure a non-empty API key to enable this provider.");
-        }
-    }
-
-    private static IReadOnlyList<string> BuildConfigurationErrors(AIProviderOptions options, Exception ex)
-    {
-        var errors = new List<string>();
-
-        if (string.IsNullOrWhiteSpace(options.ApiKey))
-        {
-            errors.Add("API key is empty. Configure a non-empty API key to enable this provider.");
-        }
-
-        var exceptionMessage = ex.GetMessageRecursively();
-        if (errors.All(existing => !string.Equals(existing, exceptionMessage, StringComparison.Ordinal)))
-        {
-            errors.Add($"Provider initialization failed: {exceptionMessage}");
-        }
-
-        return errors;
-    }
-
-
 }
 
 /// <summary>
@@ -318,6 +311,29 @@ public static class ModuleAIRegistrationExtensions
 /// </summary>
 public class ModuleAIOption : ModuleOptions<ModuleAI>
 {
+    /// <summary>
+    /// Root directory for host settings, capability enablement, conversation snapshots, and attachments. Defaults to
+    /// <c>monica_data/ai</c> relative to the process working directory. Configure an absolute writable
+    /// path when the application runs from different working directories or uses a dedicated data volume.
+    /// </summary>
+    public string StorageRootPath { get; set; } = "monica_data/ai";
+
+    /// <summary>
+    /// Stable host workspace identifier used with authenticated user identity for conversation isolation.
+    /// Defaults to <c>default</c>. Anonymous standalone hosts share this workspace. Configure separate
+    /// identifiers for independently isolated workspaces that use the same storage provider.
+    /// </summary>
+    public string WorkspaceId { get; set; } = "default";
+
+    /// <summary>Maximum unencoded size of one chat attachment. Defaults to 20 MiB.</summary>
+    public long MaxChatAttachmentBytes { get; set; } = 20 * 1024 * 1024;
+
+    /// <summary>
+    /// Maximum extracted document length, in UTF-16 characters. Defaults to 200,000; documents exceeding
+    /// the limit are rejected rather than truncated. Increase only when the configured model can accept the text.
+    /// </summary>
+    public int MaxExtractedDocumentCharacters { get; set; } = 200_000;
+
     internal List<AIModelInfo> ModelRegistrations { get; } = [];
 
     internal static IReadOnlyList<AIModelInfo> GetReservedModels()
@@ -326,7 +342,8 @@ public class ModuleAIOption : ModuleOptions<ModuleAI>
     }
 
     /// <summary>
-    /// Adds model information.
+    /// Adds an explicit model template for code-defined providers that reference its name in SupportedModels.
+    /// This metadata applies to custom endpoints too; prefer provider-scoped Models for differing provider values.
     /// </summary>
     public void AddModel(AIModelInfo model)
     {
@@ -338,20 +355,4 @@ public class ModuleAIOption : ModuleOptions<ModuleAI>
     /// </summary>
     public string? DefaultSystemPrompt { get; set; }
 
-    /// <summary>
-    /// Default maximum number of context messages. A value of 0 means no limit.
-    /// </summary>
-    public int MaxContextMessages { get; set; }
-
-    /// <summary>
-    /// Indicates whether request logging is enabled.
-    /// </summary>
-    public bool EnableRequestLogging { get; set; }
-
-    /// <summary>
-    /// Relative or absolute file path used to persist runtime Skill and MCP enablement state.
-    /// Defaults to <c>monica_data/ai/capabilities_state.json</c>. Configure this when multiple hosts should
-    /// isolate capability-management state or when the default runtime data directory is unsuitable.
-    /// </summary>
-    public string CapabilityStateStoreFilePath { get; set; } = "monica_data/ai/capabilities_state.json";
 }
