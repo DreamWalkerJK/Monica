@@ -9,7 +9,7 @@ Use this skill as the entry point for work on Monica itself: infrastructure modu
 
 ## Routing
 
-- Exact Monica or Monica.Docs source location/provenance: use `$monica-guide source resolve` before guessing a checkout path, cloning, or using a moving branch. Treat the returned binding as lookup-only.
+- Exact Monica framework source needed outside the active checkout: use `$monica-guide source resolve --repository monica --json` as a read-only locator.
 - Module architecture, folder boundaries, Facades, Providers, public/internal placement, page decomposition: use `$monica-architecture`.
 - Module registration, `Res` and `Res<T>`, services, registration extensions, hosted services, runtime module behavior: use `$monica-development`.
 - Independent NuGet packages, publisher-first IDs, third-party module keys, compatibility branding, licensing, scaffolding, and publishing: use `$monica-third-party-module-development`.
@@ -22,6 +22,7 @@ Use this skill as the entry point for work on Monica itself: infrastructure modu
 - OpenTelemetry-compatible meters, counters, histograms, gauges, diagnostic snapshots, or telemetry ownership: use `$monica-opentelemetry`.
 - Monica unit-test layout, shared test infrastructure, xUnit, or bUnit conventions: use `$monica-unit-testing`.
 - Bridge-based UI inspection through a runnable host: use `$monica-ui-bridge-debug`.
+- Read the affected usage contract before changing implementation: `$monica-infra-hosting`, `$monica-infra-persistence`, `$monica-infra-messaging`, `$monica-infra-jobs`, `$monica-infra-configuration`, `$monica-infra-observability`, `$monica-infra-ai`, `$monica-infra-web`, or `$monica-infra-ui`. Update that contract when behavior changes.
 
 ## Working Rule
 

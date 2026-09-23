@@ -59,7 +59,7 @@ Arrange with application.SeedAsync<TContext,TResult>: add a graph, explicitly sa
 
 The real audit policy remains active. Replace TimeProvider/current user/ID generation rather than audit logic. SeedAsync suppresses entity projections in its own scope. For durable events, use the production scoped bus, inspect captured Outbox rows first, and call application.DrainOutboxAsync<TContext>() to trigger one deterministic delivery pass. Replace `IEventTransport` to record provider sends while keeping transaction-aware routing active.
 
-See [the repository migration guide](../docs/migrations/repository-redesign.md) for transaction, outbox and breaking API details.
+See [the repository migration guide](https://monica.dpdns.org/docs/guides/repository-redesign) for transaction, outbox and breaking API details. Current usage guidance is owned by [monica-infra-persistence](../skills/monica-infra-persistence/SKILL.md).
 
 ## Ownership Rules
 

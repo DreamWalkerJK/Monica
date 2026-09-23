@@ -20,78 +20,139 @@
     "distribution"
   ],
   "properties": {
-    "$schema": { "type": "string", "const": "./schemas/agent-skill-catalog.schema.json" },
-    "schemaVersion": { "type": "integer", "const": 2 },
-    "catalogVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "$schema": {
+      "type": "string",
+      "const": "./schemas/agent-skill-catalog.schema.json"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 2
+    },
+    "catalogVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
     "skills": {
       "type": "object",
       "minProperties": 1,
-      "additionalProperties": { "$ref": "#/$defs/skill" }
+      "additionalProperties": {
+        "$ref": "#/$defs/skill"
+      }
     },
     "externalSkills": {
       "type": "object",
-      "additionalProperties": { "$ref": "#/$defs/externalSkill" }
+      "additionalProperties": {
+        "$ref": "#/$defs/externalSkill"
+      }
     },
     "profiles": {
       "type": "object",
-      "required": ["application", "extension-author", "framework-contributor", "docs-contributor"],
-      "additionalProperties": { "$ref": "#/$defs/profile" }
+      "required": [
+        "application",
+        "extension-author",
+        "framework-contributor"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/profile"
+      }
     },
     "profileClosurePolicy": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["traverseSkillDependencies", "recommendations", "conditional"],
+      "required": [
+        "traverseSkillDependencies",
+        "recommendations",
+        "conditional"
+      ],
       "properties": {
         "traverseSkillDependencies": {
           "type": "array",
-          "items": { "type": "string", "const": "required" },
+          "items": {
+            "type": "string",
+            "const": "required"
+          },
           "minItems": 1,
           "maxItems": 1
         },
-        "recommendations": { "type": "string", "const": "profile-explicit" },
-        "conditional": { "type": "string", "const": "selected-capabilities-only" }
+        "recommendations": {
+          "type": "string",
+          "const": "profile-explicit"
+        },
+        "conditional": {
+          "type": "string",
+          "const": "selected-capabilities-only"
+        }
       }
     },
     "sourceRepositories": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["Tairitsua/Monica", "Tairitsua/Monica.Docs"],
+      "required": [
+        "Tairitsua/Monica"
+      ],
       "properties": {
-        "Tairitsua/Monica": { "$ref": "#/$defs/sourceRepository" },
-        "Tairitsua/Monica.Docs": { "$ref": "#/$defs/sourceRepository" }
+        "Tairitsua/Monica": {
+          "$ref": "#/$defs/sourceRepository"
+        }
       }
     },
-    "sourcePolicies": { "$ref": "#/$defs/sourcePolicies" },
+    "sourcePolicies": {
+      "$ref": "#/$defs/sourcePolicies"
+    },
     "aliases": {
       "type": "object",
-      "additionalProperties": { "$ref": "#/$defs/alias" }
+      "additionalProperties": {
+        "$ref": "#/$defs/alias"
+      }
     },
-    "managedInstructions": { "$ref": "#/$defs/managedInstructions" },
+    "managedInstructions": {
+      "$ref": "#/$defs/managedInstructions"
+    },
     "prompts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["bootstrapAsset", "bootstrapSchema"],
+      "required": [
+        "bootstrapAsset",
+        "bootstrapSchema"
+      ],
       "properties": {
-        "bootstrapAsset": { "$ref": "#/$defs/relativePath" },
-        "bootstrapSchema": { "$ref": "#/$defs/relativePath" }
+        "bootstrapAsset": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "bootstrapSchema": {
+          "$ref": "#/$defs/relativePath"
+        }
       }
     },
     "distribution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repository", "installer", "immutableSkillUrlTemplate"],
+      "required": [
+        "repository",
+        "installer",
+        "immutableSkillUrlTemplate"
+      ],
       "properties": {
-        "repository": { "type": "string", "const": "Tairitsua/Monica" },
+        "repository": {
+          "type": "string",
+          "const": "Tairitsua/Monica"
+        },
         "installer": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["assetNameTemplate", "sha256SumsAsset"],
+          "required": [
+            "assetNameTemplate",
+            "sha256SumsAsset"
+          ],
           "properties": {
             "assetNameTemplate": {
               "type": "string",
               "const": "monica-guide-v{version}-{rid}.zip"
             },
-            "sha256SumsAsset": { "type": "string", "const": "SHA256SUMS" }
+            "sha256SumsAsset": {
+              "type": "string",
+              "const": "SHA256SUMS"
+            }
           }
         },
         "immutableSkillUrlTemplate": {
@@ -102,83 +163,189 @@
     }
   },
   "$defs": {
-    "skillName": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "skillName": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
     "relativePath": {
       "type": "string",
       "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
     },
     "skillNameList": {
       "type": "array",
-      "items": { "$ref": "#/$defs/skillName" },
+      "items": {
+        "$ref": "#/$defs/skillName"
+      },
       "uniqueItems": true
     },
     "conditionalDependency": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["capability", "skills"],
+      "required": [
+        "capability",
+        "skills"
+      ],
       "properties": {
-        "capability": { "$ref": "#/$defs/skillName" },
-        "skills": { "$ref": "#/$defs/skillNameList" }
+        "capability": {
+          "$ref": "#/$defs/skillName"
+        },
+        "skills": {
+          "$ref": "#/$defs/skillNameList"
+        }
       }
     },
     "dependencies": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["required", "recommended", "conditional", "external"],
+      "required": [
+        "required",
+        "recommended",
+        "conditional",
+        "external"
+      ],
       "properties": {
-        "required": { "$ref": "#/$defs/skillNameList" },
-        "recommended": { "$ref": "#/$defs/skillNameList" },
+        "required": {
+          "$ref": "#/$defs/skillNameList"
+        },
+        "recommended": {
+          "$ref": "#/$defs/skillNameList"
+        },
         "conditional": {
           "type": "array",
-          "items": { "$ref": "#/$defs/conditionalDependency" }
+          "items": {
+            "$ref": "#/$defs/conditionalDependency"
+          }
         },
-        "external": { "$ref": "#/$defs/skillNameList" }
+        "external": {
+          "$ref": "#/$defs/skillNameList"
+        }
       }
     },
     "skill": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "role", "ownership", "managed", "dependencies"],
+      "required": [
+        "path",
+        "role",
+        "ownership",
+        "managed",
+        "dependencies"
+      ],
       "properties": {
-        "path": { "$ref": "#/$defs/relativePath" },
-        "role": { "type": "string", "enum": ["router", "capability"] },
-        "ownership": { "type": "string", "const": "monica" },
-        "managed": { "type": "boolean", "const": true },
-        "routes": { "$ref": "#/$defs/skillNameList" },
-        "dependencies": { "$ref": "#/$defs/dependencies" }
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "router",
+            "capability"
+          ]
+        },
+        "ownership": {
+          "type": "string",
+          "const": "monica"
+        },
+        "managed": {
+          "type": "boolean",
+          "const": true
+        },
+        "routes": {
+          "$ref": "#/$defs/skillNameList"
+        },
+        "dependencies": {
+          "$ref": "#/$defs/dependencies"
+        },
+        "publication": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "title",
+            "modules",
+            "sourcePaths"
+          ],
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "modules": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/skillName"
+              },
+              "uniqueItems": true
+            },
+            "sourcePaths": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/relativePath"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        }
       }
     },
     "externalSkill": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["ownership", "managed", "purpose"],
+      "required": [
+        "ownership",
+        "managed",
+        "purpose"
+      ],
       "properties": {
-        "ownership": { "type": "string", "const": "external" },
-        "managed": { "type": "boolean", "const": false },
-        "purpose": { "type": "string", "minLength": 1 }
+        "ownership": {
+          "type": "string",
+          "const": "external"
+        },
+        "managed": {
+          "type": "boolean",
+          "const": false
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "profileSkills": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["required", "recommended", "conditional"],
+      "required": [
+        "required",
+        "recommended",
+        "conditional"
+      ],
       "properties": {
-        "required": { "$ref": "#/$defs/skillNameList" },
-        "recommended": { "$ref": "#/$defs/skillNameList" },
+        "required": {
+          "$ref": "#/$defs/skillNameList"
+        },
+        "recommended": {
+          "$ref": "#/$defs/skillNameList"
+        },
         "conditional": {
           "type": "array",
-          "items": { "$ref": "#/$defs/conditionalDependency" }
+          "items": {
+            "$ref": "#/$defs/conditionalDependency"
+          }
         }
       }
     },
     "sourceRepository": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["aliases"],
+      "required": [
+        "aliases"
+      ],
       "properties": {
         "aliases": {
           "type": "array",
-          "items": { "$ref": "#/$defs/skillName" },
+          "items": {
+            "$ref": "#/$defs/skillName"
+          },
           "minItems": 1,
           "uniqueItems": true
         }
@@ -187,63 +354,141 @@
     "sourceRequirement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repository", "requirement", "compatibility"],
+      "required": [
+        "repository",
+        "requirement",
+        "compatibility"
+      ],
       "properties": {
         "repository": {
           "type": "string",
-          "enum": ["Tairitsua/Monica", "Tairitsua/Monica.Docs"]
+          "enum": [
+            "Tairitsua/Monica"
+          ]
         },
-        "requirement": { "type": "string", "enum": ["required", "conditional"] },
+        "requirement": {
+          "type": "string",
+          "enum": [
+            "required",
+            "conditional"
+          ]
+        },
         "compatibility": {
           "type": "string",
-          "enum": ["framework-version", "workspace-commit"]
+          "enum": [
+            "framework-version",
+            "workspace-commit"
+          ]
         },
-        "condition": { "$ref": "#/$defs/skillName" }
+        "condition": {
+          "$ref": "#/$defs/skillName"
+        }
       },
       "allOf": [
         {
           "if": {
-            "properties": { "requirement": { "const": "conditional" } },
-            "required": ["requirement"]
+            "properties": {
+              "requirement": {
+                "const": "conditional"
+              }
+            },
+            "required": [
+              "requirement"
+            ]
           },
-          "then": { "required": ["condition"] },
-          "else": { "not": { "required": ["condition"] } }
+          "then": {
+            "required": [
+              "condition"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "condition"
+              ]
+            }
+          }
         }
       ]
     },
     "repositoryRequirement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repository", "access"],
+      "required": [
+        "repository",
+        "access"
+      ],
       "properties": {
-        "repository": { "type": "string", "minLength": 1 },
-        "access": { "type": "string", "enum": ["read-only", "read-write"] },
-        "purpose": { "type": "string", "minLength": 1 }
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "access": {
+          "type": "string",
+          "enum": [
+            "read-only",
+            "read-write"
+          ]
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "profile": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["description", "skills", "sourceRequirements", "repositories", "inference"],
+      "required": [
+        "description",
+        "skills",
+        "sourceRequirements",
+        "repositories",
+        "inference"
+      ],
       "properties": {
-        "description": { "type": "string", "minLength": 1 },
-        "skills": { "$ref": "#/$defs/profileSkills" },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "skills": {
+          "$ref": "#/$defs/profileSkills"
+        },
         "sourceRequirements": {
           "type": "array",
-          "items": { "$ref": "#/$defs/sourceRequirement" },
+          "items": {
+            "$ref": "#/$defs/sourceRequirement"
+          },
           "uniqueItems": true
         },
         "repositories": {
           "type": "array",
-          "items": { "$ref": "#/$defs/repositoryRequirement" }
+          "items": {
+            "$ref": "#/$defs/repositoryRequirement"
+          }
         },
         "inference": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["repositoryIdentities", "characteristicPaths"],
+          "required": [
+            "repositoryIdentities",
+            "characteristicPaths"
+          ],
           "properties": {
-            "repositoryIdentities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-            "characteristicPaths": { "type": "array", "items": { "$ref": "#/$defs/relativePath" }, "uniqueItems": true }
+            "repositoryIdentities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "characteristicPaths": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/relativePath"
+              },
+              "uniqueItems": true
+            }
           }
         }
       }
@@ -260,71 +505,145 @@
         "offline"
       ],
       "properties": {
-        "bindingScope": { "type": "string", "const": "global-user" },
-        "bindingCardinality": { "type": "string", "const": "one-per-repository" },
+        "bindingScope": {
+          "type": "string",
+          "const": "global-user"
+        },
+        "bindingCardinality": {
+          "type": "string",
+          "const": "one-per-repository"
+        },
         "channels": {
           "type": "array",
-          "items": { "type": "string", "enum": ["stable", "preview", "source"] },
+          "items": {
+            "type": "string",
+            "enum": [
+              "stable",
+              "preview",
+              "source"
+            ]
+          },
           "uniqueItems": true,
           "minItems": 3,
           "maxItems": 3
         },
         "versionResolutionOrder": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "minItems": 1,
           "uniqueItems": true
         },
-        "failClosedOn": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-        "offline": { "type": "string", "minLength": 1 }
+        "failClosedOn": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "offline": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "alias": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["canonical", "diagnostic"],
+      "required": [
+        "canonical",
+        "diagnostic"
+      ],
       "properties": {
-        "canonical": { "$ref": "#/$defs/skillName" },
-        "diagnostic": { "type": "string", "minLength": 1 }
+        "canonical": {
+          "$ref": "#/$defs/skillName"
+        },
+        "diagnostic": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "instructionRule": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "text"],
+      "required": [
+        "id",
+        "text"
+      ],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "text": { "type": "string", "minLength": 1 }
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "instructionTemplate": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["skills", "rules"],
+      "required": [
+        "skills",
+        "rules"
+      ],
       "properties": {
-        "skills": { "$ref": "#/$defs/skillNameList" },
-        "rules": { "type": "array", "items": { "$ref": "#/$defs/instructionRule" }, "minItems": 1 }
+        "skills": {
+          "$ref": "#/$defs/skillNameList"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/instructionRule"
+          },
+          "minItems": 1
+        }
       }
     },
     "managedInstructions": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["version", "markers", "templates"],
+      "required": [
+        "version",
+        "markers",
+        "templates"
+      ],
       "properties": {
-        "version": { "type": "integer", "minimum": 1 },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
         "markers": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["start", "end"],
+          "required": [
+            "start",
+            "end"
+          ],
           "properties": {
-            "start": { "type": "string", "minLength": 1 },
-            "end": { "type": "string", "minLength": 1 }
+            "start": {
+              "type": "string",
+              "minLength": 1
+            },
+            "end": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         "templates": {
           "type": "object",
-          "required": ["application", "extension-author", "framework-contributor", "docs-contributor"],
-          "additionalProperties": { "$ref": "#/$defs/instructionTemplate" }
+          "required": [
+            "application",
+            "extension-author",
+            "framework-contributor"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/instructionTemplate"
+          }
         }
       }
     }

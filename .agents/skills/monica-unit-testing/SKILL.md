@@ -1,6 +1,6 @@
 ---
 name: monica-unit-testing
-description: Create, migrate, or review Monica framework tests and shared testing infrastructure. Use for tests under tests/, the Monica.Testing toolkit, host-owned MonicaTestApplicationFactory scenarios, raw ProjectUnitFixture tests, Roslyn GeneratorDriver source-generator tests, xUnit v3 or bUnit setup, module tests, facade result assertions, test isolation, and testing documentation or skills.
+description: Create, migrate, or review Monica framework tests and shared testing infrastructure: host-owned scenarios, raw ProjectUnit fixtures, Roslyn source-generator tests, result assertions, and isolation.
 ---
 
 # Monica Unit Testing
@@ -14,7 +14,7 @@ Use `Monica.Testing` as the shared toolkit and keep runnable framework tests und
    - Pure logic: construct the value or service directly.
    - Raw ProjectUnit collaboration: use `ProjectUnitFixture<TUnit>` and accept its activation limits.
    - Module wiring, options, conventional registration, proxies, hosted lifecycle, or cross-scope behavior: create a full host with `MonicaTestApplicationFactory<TDiscoveryAnchor>`.
-   - Blazor component or page shell: use bUnit in the runnable UI test project.
+   - Blazor behavior contract: use bUnit in the runnable UI test project only when the user explicitly requests UI testing or UI test additions.
    - Roslyn source-generator semantics: build an in-memory `CSharpCompilation` and run the generator through `GeneratorDriver`.
 3. Put reusable assertions, host helpers, and deterministic boundary doubles in `Monica.Testing`; keep scenario-specific data and doubles in the runnable test project.
 4. Prefer public-surface coverage: module registrations, facades, public models and abstractions, stable providers, and observable side effects.
@@ -104,4 +104,4 @@ Test source generators with raw Roslyn inputs under a dedicated `tests/Test.Moni
 
 - Use Windows paths for `dotnet build` and `dotnet test` under WSL.
 - Run one build or test process at a time.
-- Run the relevant runnable test project or solution after changes.
+- Run the relevant runnable test project and the repository's default non-UI gate when required. UI projects run only on explicit user request.

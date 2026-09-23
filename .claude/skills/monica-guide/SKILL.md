@@ -1,6 +1,6 @@
 ---
 name: monica-guide
-description: Explain, bootstrap, configure, diagnose, update, and safely route the Monica toolbox for any Agent Skills-compatible host. Use when someone is new to Monica or has not chosen a repository/profile yet; when initializing or maintaining a Monica application, extension, framework checkout, or Monica.Docs checkout; when selecting Monica skills or releases; when an agent needs verified Monica or Monica.Docs source; or when preparing a safe upstream contribution.
+description: Explain, bootstrap, configure, diagnose, update, and route the Monica toolbox. Use for Monica applications, extensions, framework checkouts, skill installation and releases, or locating verified Monica framework source.
 ---
 
 # Monica Guide
@@ -33,7 +33,6 @@ Monica skills install **into the project by default**, never globally unless the
 
    ```bash
    $monica-guide source resolve --repository monica --json
-   $monica-guide source resolve --repository docs --json
    ```
 
    Treat a returned path as a verified lookup location, never as write authorization. Report dirty-checkout and commit-movement warnings instead of hiding the path. Bind or rebind with `source bind --repository <repo> --source-path <checkout>` (optionally `--source-ref <tag|commit>` to require an exact ref), always through preview and apply.
@@ -43,7 +42,7 @@ Monica skills install **into the project by default**, never globally unless the
 3. Initialize a repository workspace after the user confirms a concrete profile:
 
    ```bash
-   $monica-guide init --workspace <path> --profile <application|extension-author|framework-contributor|docs-contributor> --capability <microservice|modular-monolith|ui> --json
+   $monica-guide init --workspace <path> --profile <application|extension-author|framework-contributor> --capability <microservice|modular-monolith|ui> --json
    ```
 
    `init` writes `.monica/guide.json` (including the optional `skillTargets` list of workspace-relative install directories, default `.agents/skills`) plus one managed instruction block in the root `AGENTS.md` (and the minimal `@AGENTS.md` import in `CLAUDE.md` when a Claude target is installed), and registers the workspace in the engine registry. The managed block also projects this machine's verified first-party source locators and the issue-reporting policy while the wizard's projection switches are on; a workspace update converges those sections with the same preview and apply. Inspect advisory detection with `status --workspace <path>` first; detection is a suggestion, confirmation is the user's.

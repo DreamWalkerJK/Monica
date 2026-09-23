@@ -19,7 +19,7 @@
   English | <a href="README.zh_CN.md">简体中文</a>
 </p>
 
-Monica is an agent-governed application architecture for observable .NET backends. It gives developers and coding agents the same typed vocabulary for modules, DDD application units, infrastructure, and runtime diagnostics—so generated code remains structurally predictable and the running system remains understandable.
+Monica is modular .NET infrastructure for agent-driven development. Applications can adopt its modules independently, while developers and coding agents share a typed vocabulary for composition, DDD application units, and runtime diagnostics. That makes generated code structurally predictable and running systems inspectable.
 
 > Monica is approaching 1.0 and is still allowed to make breaking architectural improvements before the stable release.
 
@@ -128,7 +128,11 @@ Hosts opt in with `monica.AddModuleSystem()`. Its `ModuleDiagnosticsFacade` expo
 
 Every public module-option property remains visible by clean type name. Ordinary bounded values are shown automatically; `[ModuleOptionDiagnosticsSensitive]` or a host policy reduces sensitive content to a non-secret presence, count, or protected-address representation as appropriate. `RevealSensitive` can reveal only bounded sensitive scalars and is restricted to Development-only debugging. The Module System workbench is also Development-only by default; exposing it elsewhere requires both explicit enablement and a host authorization policy.
 
-The canonical Monica-owned Agent Skills live under [`skills/`](skills/). Release tooling projects each managed Monica skill byte-for-byte into `.agents/skills/` and `.claude/skills/` for repository-local discovery while preserving unrelated external skills; those managed projections are not authoring sources. Start with `monica-guide` for setup and diagnostics, then continue through the profile-selected `monica-application`, `monica-framework`, and granular skills.
+## Knowledge for coding agents
+
+The canonical Monica Agent Skills live under [`skills/`](skills/). Nine consumer skills are the single source of reusable infrastructure usage guidance: [`monica-infra-persistence`](skills/monica-infra-persistence), [`monica-infra-messaging`](skills/monica-infra-messaging), [`monica-infra-jobs`](skills/monica-infra-jobs), [`monica-infra-configuration`](skills/monica-infra-configuration), [`monica-infra-hosting`](skills/monica-infra-hosting), [`monica-infra-observability`](skills/monica-infra-observability), [`monica-infra-ai`](skills/monica-infra-ai), [`monica-infra-web`](skills/monica-infra-web), and [`monica-infra-ui`](skills/monica-infra-ui). Other skills cover application architecture, framework authoring, testing, UI development, and contribution workflows. Start with `monica-guide` for installation and framework source discovery, then use the skill that owns the task.
+
+Release tooling projects managed skills into `.agents/skills/` and `.claude/skills/` for repository-local discovery; these are generated copies, not authoring sources. [Monica.Docs](https://monica.dpdns.org/) publishes the skills from an immutable release knowledge archive (`monica-knowledge.json` and its checksum) alongside stable editorial guides. Local site development can preview the current source checkout.
 
 ## Third-party ecosystem
 

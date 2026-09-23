@@ -635,6 +635,23 @@ public sealed class GuideWorkspaceTests
         Assert.Equal("canonical", candidate.Confidence);
     }
 
+    [Fact]
+    public void DetectCandidate_DocsCheckoutUsesOrdinaryWorkspaceDetection()
+    {
+        using var fixture = new WorkspaceFixture();
+        Directory.CreateDirectory(Path.Combine(fixture.Workspace, "docs", "en-US"));
+        Directory.CreateDirectory(Path.Combine(fixture.Workspace, "docs", "zh-CN"));
+        Directory.CreateDirectory(Path.Combine(fixture.Workspace, "frontend", "monica-docs-web"));
+        var service = fixture.CreateService(new RemoteGitProbe(
+            fixture.Workspace,
+            "https://github.com/Tairitsua/Monica.Docs.git"));
+
+        var candidate = service.DetectCandidate(fixture.Workspace);
+
+        Assert.Equal(GuideWorkspaceDetectionOutcome.AmbiguousNoCharacteristics, candidate.Outcome);
+        Assert.Null(candidate.CandidateProfile);
+    }
+
     private sealed class WorkspaceFixture : IDisposable
     {
         internal const string MarkerStart = "<!-- monica-guide:managed:start -->";

@@ -1,6 +1,6 @@
 ---
 name: monica-application-unit-testing
-description: Create, migrate, or review sociable tests for Monica-based business services. Use for Test.{ProductionProjectName} architecture, host-owned MonicaTestApplicationFactory scenarios, production-pipeline write execution with MonicaTestApplication.ExecuteAsync, independent arrange/act/assert scopes, typed database seeding, outbox assertions, pre-build seam replacement, database isolation, or migration from mock-heavy fixtures.
+description: Create or review Monica application tests through real host composition, business pipelines, scoped database arrange/act/assert, durable event assertions, and isolated provider seams.
 ---
 
 # Monica Application Unit Testing
@@ -26,6 +26,8 @@ Search the repository's shared test layer (for example Platform.UnitTests or Pla
 7. Dispose the application and run the target test project.
 
 ## Write and Read Boundaries
+
+Use `$monica-infra-persistence` for the current repository and UnitOfWork contracts; this section identifies the test boundary those contracts require.
 
 - IRepository<TEntity> exposes Add/Remove; keyed repositories load tracked aggregates with FindAsync/GetAsync. Mutate the loaded instance. No detached Update or repository save is required.
 - application.ExecuteAsync creates a fresh scope and calls the production IExecutionPipeline. Resolve the handler inside its callback. Exceptions, cancellation and failed Monica result envelopes roll back; an early FlushAsync or direct context save stays inside that transaction.

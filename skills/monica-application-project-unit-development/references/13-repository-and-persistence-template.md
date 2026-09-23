@@ -9,8 +9,7 @@ Use $DomainNamespace$ for the domain project namespace and $RepositoryNamespace$
 - Use native EF LINQ inside repository/query implementations. Return materialized projections from query interfaces.
 - IEfEntityStore is infrastructure access for CRUD adapters, not a domain contract.
 - Inject the scoped context directly into EfRepository. Context, repository and handler must share one operation scope.
-- Use IPersistencePolicy for explicit save-time storage stamping; do not override SaveChanges or reintroduce tracking-time initialization.
-- Queries marked [ReadOnlyOperation] avoid automatic transactions. Independent operations and retries get fresh scopes.
+- Use the current `$monica-infra-persistence` contract for save policies, operation scopes, transactions, and read-only requests.
 
 ## Aggregate Repository
 
@@ -69,8 +68,4 @@ builder.AddMonica(monica =>
 });
 ```
 
-Default registration enables operation transaction participation. Independently managed infrastructure contexts use DbContextProviderType.Default. Multiple write contexts require explicit participant selection.
-
-Outbox registration adds schema to the application context; create the application's migration before deployment. Mark an ordinary event `[Outbox]` and give it stable `[EventName]` metadata, then publish through the scoped `IDistributedEventBus` or `ILocalEventBus` inside an operation. Monica's worker sends the same payload after commit. Delivery is at least once: consumers may use `[Inbox("stable.consumer")]` to deduplicate database effects and must enforce application stream/version rules. When several write contexts are registered, `[UnitOfWorkContext(typeof(OrderingDbContext))]` selects the primary store for an automatically transactional handler.
-
-Use IDomainEventQueue and scoped IDomainEventHandler for business effects that must run before commit in the same scope. Auto row notifications, cache invalidation and external integration belong in the outbox. Native bulk SQL and physical purge deliberately bypass save policies and need explicit application semantics.
+The example shows application-owned repository and context placement. For `AddRepositoryDbContext`, multi-context participant selection, save policies, outbox, and commit behavior, read `$monica-infra-persistence`. For domain events versus distributed delivery, read `$monica-infra-messaging`. Keep migrations with the application that owns the data.

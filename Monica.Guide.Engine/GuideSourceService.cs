@@ -41,7 +41,7 @@ public sealed record GuideSourceBindRequest(
     string? SourceRef);
 
 /// <summary>
-/// Global source bindings for first-party repositories (Monica, Monica.Docs). Bindings live
+/// Global source bindings for catalog-declared first-party repositories. Bindings live
 /// in the guide engine data root beside the ownership ledger, are verified against a local
 /// canonical Git checkout, and every mutation goes through the engine's preview-first,
 /// digest-locked plan flow.
@@ -51,8 +51,7 @@ public sealed class GuideSourceService
     /// <summary>Fallback registry when the product bundle catalog declares no source repositories.</summary>
     private static readonly (string Repository, string[] Aliases)[] KNOWN_REPOSITORIES =
     [
-        ("Tairitsua/Monica", ["monica"]),
-        ("Tairitsua/Monica.Docs", ["docs"])
+        ("Tairitsua/Monica", ["monica"])
     ];
 
     private readonly GuidePaths _enginePaths;

@@ -233,11 +233,11 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
 
     def test_source_registry_and_profile_minimums_are_global_and_authority_free(self) -> None:
         self.assertEqual(
-            {"Tairitsua/Monica", "Tairitsua/Monica.Docs"},
+            {"Tairitsua/Monica"},
             set(self.catalog["sourceRepositories"]),
         )
         self.assertEqual(
-            {"monica", "docs"},
+            {"monica"},
             {
                 alias
                 for entry in self.catalog["sourceRepositories"].values()
@@ -258,11 +258,8 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             extension,
         )
 
-        docs = self.catalog["profiles"]["docs-contributor"]["sourceRequirements"]
-        self.assertEqual(
-            {"Tairitsua/Monica", "Tairitsua/Monica.Docs"},
-            {requirement["repository"] for requirement in docs},
-        )
+        self.assertNotIn("docs-contributor", self.catalog["profiles"])
+        self.assertNotIn("docs-contributor", self.catalog["managedInstructions"]["templates"])
         for profile in self.catalog["profiles"].values():
             for requirement in profile["sourceRequirements"]:
                 self.assertNotIn("access", requirement)

@@ -9,13 +9,13 @@ Build independent packages and companion images from one explicit repository con
 
 Resolve every bundled `scripts/`, `references/`, and `assets/` path from this skill's own directory. Do not assume an `.agents` or `.claude` projection path.
 
-## Required companion skills
+## Companion skills by task
 
 - Use `$monica-architecture` for package and module boundaries.
 - Use `$monica-development` for host-bound registrations, providers, Facades, and services.
-- Use `$monica-ui-development`, `$monica-ui-audit`, and `$monica-ui-localization` for UI packages.
+- Use `$monica-ui-development` for UI packages, `$monica-ui-localization` for localization changes, and `$monica-ui-audit` when reviewing a concrete UI risk.
 - Use `$monica-unit-testing` for tests.
-- Use `$monica-docs-authoring` only when changing Monica.Docs.
+- Use `$monica-docs-authoring` for canonical Agent Skill instructions or Monica.Docs guidance.
 - Use `$monica-ui-bridge-debug` and `$playwright-cli` for runnable UI verification.
 
 Independently published packages override Monica's first-party test naming rule: use one `tests/Test.<PackageId>` project per package. The host lifecycle, isolation, assertion, and WSL execution rules from `$monica-unit-testing` still apply.

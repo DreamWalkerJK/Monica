@@ -11,7 +11,7 @@
 - Use `RecurringJob` for scheduled work and name it `Worker*`.
 - Use `TriggeredJob<TArgs>` for on-demand asynchronous work and name it `Job*`.
 - Keep the job focused on scheduling, retry, and orchestration. Put reusable business behavior in a `DomainService`.
-- Add `[JobConfig]` only when defaults are not enough.
+- Add `[JobConfig]` only when defaults are not enough. Use `$monica-infra-jobs` for scheduler registration, durable store, owner/scope identity, and execution semantics.
 - Inject `ILogger<TConcreteJob>` and pass it to the job base constructor.
 - Use `$ApplicationNamespace$` for the application-layer namespace chosen by the architecture skill.
 - Place jobs in `BackgroundWorkers/`.

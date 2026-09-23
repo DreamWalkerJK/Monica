@@ -85,18 +85,18 @@ public sealed class GuideSourceTests
     [Fact]
     public async Task Bind_ResolvesTagRefsThroughTheGitProbe()
     {
-        using var fixture = new SourceFixture(remoteUrl: "git@github.com:Tairitsua/Monica.Docs.git");
+        using var fixture = new SourceFixture(remoteUrl: "git@github.com:Tairitsua/Monica.git");
         fixture.Git.TagCommits["v1.4.0"] = SourceFixture.Commit;
         var service = fixture.CreateService();
-        var request = new GuideSourceBindRequest("docs", fixture.CheckoutPath, "v1.4.0");
+        var request = new GuideSourceBindRequest("monica", fixture.CheckoutPath, "v1.4.0");
 
         var preview = await service.BindAsync(request, cancellationToken: CancellationToken);
         Assert.Equal(GuideStatus.Ready, preview.Status);
 
         var applied = await service.BindAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
         Assert.True(applied.Plan!.Applied);
-        var resolved = service.Resolve("docs");
-        var binding = Assert.Single(resolved.Checks, check => check.Id == "source.binding.Tairitsua/Monica.Docs");
+        var resolved = service.Resolve("monica");
+        var binding = Assert.Single(resolved.Checks, check => check.Id == "source.binding.Tairitsua/Monica");
         Assert.Equal(GuideCheckStatus.Ok, binding.Status);
         Assert.Equal("v1.4.0", binding.Details!["ref"]);
     }
@@ -131,11 +131,46 @@ public sealed class GuideSourceTests
         using var fixture = new SourceFixture();
         var service = fixture.CreateService();
 
-        var resolved = service.Resolve("docs");
+        var resolved = service.Resolve("monica");
 
         Assert.Equal(GuideStatus.Warning, resolved.Status);
         Assert.Contains(resolved.Checks, check =>
-            check.Id == "source.binding.Tairitsua/Monica.Docs" && check.Status == GuideCheckStatus.Warning);
+            check.Id == "source.binding.Tairitsua/Monica" && check.Status == GuideCheckStatus.Warning);
+    }
+
+    [Fact]
+    public void Resolve_DocsAliasIsUnknownWithoutCatalogDeclaration()
+    {
+        using var fixture = new SourceFixture();
+        var resolved = fixture.CreateService().Resolve("docs");
+
+        Assert.Equal(GuideStatus.Error, resolved.Status);
+        Assert.Contains(resolved.Checks, check =>
+            check.Id == "source.repository" && check.Status == GuideCheckStatus.Error);
+    }
+
+    [Fact]
+    public async Task Bind_UsesCatalogDeclaredRepositoryWithoutEngineSpecialCase()
+    {
+        using var fixture = new SourceFixture(remoteUrl: "https://github.com/Example/GuideDocs.git");
+        var catalog = new SkillCatalog(
+            SchemaVersion: 1,
+            SkillCount: 0,
+            TreeDigest: string.Empty,
+            Skills: [],
+            SourceRepositories: new Dictionary<string, GuideSourceRepositoryDefinition>
+            {
+                ["Example/GuideDocs"] = new("Example/GuideDocs", ["docs"])
+            });
+        var service = fixture.CreateService(catalog);
+        var request = new GuideSourceBindRequest("docs", fixture.CheckoutPath, null);
+
+        var preview = await service.BindAsync(request, cancellationToken: CancellationToken);
+        Assert.Equal(GuideStatus.Ready, preview.Status);
+        var applied = await service.BindAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        Assert.True(applied.Plan!.Applied);
+        Assert.Contains(service.Resolve("docs").Checks, check =>
+            check.Id == "source.binding.Example/GuideDocs" && check.Status == GuideCheckStatus.Ok);
     }
 
     [Fact]
@@ -206,7 +241,7 @@ public sealed class GuideSourceTests
         Assert.Equal("Tairitsua/Monica", GuideGitProbe.CanonicalRepository("https://github.com/Tairitsua/Monica.git"));
         Assert.Equal("Tairitsua/Monica", GuideGitProbe.CanonicalRepository("git@github.com:Tairitsua/Monica.git"));
         // The remote's own casing is preserved; every engine comparison is case-insensitive.
-        Assert.Equal("tairitsua/monica.docs", GuideGitProbe.CanonicalRepository("https://github.com/tairitsua/monica.docs"));
+        Assert.Equal("someone/other", GuideGitProbe.CanonicalRepository("https://github.com/someone/other"));
         Assert.Null(GuideGitProbe.CanonicalRepository("https://gitlab.com/Tairitsua/Monica"));
         Assert.Null(GuideGitProbe.CanonicalRepository(null));
     }
@@ -275,8 +310,8 @@ public sealed class GuideSourceTests
         internal string Root => _root;
         internal string LedgerFile => Path.Combine(EnginePaths.StateDirectory, "source-bindings.json");
 
-        internal GuideSourceService CreateService()
-            => new(EnginePaths, catalog: null, Git);
+        internal GuideSourceService CreateService(SkillCatalog? catalog = null)
+            => new(EnginePaths, catalog, Git);
 
         public void Dispose()
         {

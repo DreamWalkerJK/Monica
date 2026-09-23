@@ -1,6 +1,6 @@
 ---
 name: monica-application-project-unit-development
-description: Shared Monica-native DDD ProjectUnit development guidance for application projects. Use when creating, naming, placing, or refactoring ApplicationService, RequestDto, request-owned HTTP or published RPC endpoint contracts, DomainService, Entity, Repository, DomainEvent, DomainEventHandler, LocalEventHandler, Configuration, RecurringJob, or TriggeredJob types, or when deciding which ProjectUnits a new feature requires in either microservice or modular monolith solutions.
+description: Create or refactor Monica application ProjectUnits: requests, handlers, domain services, entities, repositories, events, options, and jobs. Use with the chosen microservice or modular-monolith architecture skill.
 ---
 
 # Monica Application ProjectUnit Development
@@ -11,18 +11,13 @@ Use this skill for unit-level application development in Monica-based DDD projec
 
 ## Workflow
 
-1. Start with the architecture skill to choose the target subdomain, project, and folder layout.
-2. Read [00-project-unit-overview.md](references/00-project-unit-overview.md) and [02-project-unit-composition-map.md](references/02-project-unit-composition-map.md) to identify the units the feature needs.
-3. Resolve the owning team, stable requirement IDs, and concise unit responsibility using [03-project-unit-context-metadata.md](references/03-project-unit-context-metadata.md).
-4. Load only the template references relevant to the units you are creating or changing.
-5. Keep the boundary thin: `ApplicationService` returns `Res`, while internal `DomainService`, repository, and entity logic stay on normal .NET return types and exceptions.
-6. Prefer rich entities and value objects over procedural handlers that directly mutate persistence state.
+Choose the owning subdomain and project with `$monica-application-microservice` or `$monica-application-modular-monolith`. Use [unit overview](references/00-project-unit-overview.md) and [composition map](references/02-project-unit-composition-map.md) when the feature's units are unclear; load only the matching unit example below. Keep rich entity behavior in the domain and orchestration in handlers.
 
 ## Ground Rules
 
 - Use Monica-native base classes and interfaces only. Do not introduce `Our*` wrappers or FIPS-specific conventions.
 - Follow the naming, placement, and boundary rules in [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md). These rules are aligned with the current `Monica.ProjectUnits` discovery behavior.
-- Keep persistence concerns in repositories and persistence classes, not in request handlers.
+- Keep persistence concerns in repositories and persistence classes, not in request handlers. Use `$monica-infra-persistence` for the current operation, transaction, and provider contracts.
 - Keep repository implementations in the owning subdomain or service infrastructure boundary. Do not move a repository or adapter to `Platform` just because it uses an external library; only project-common reusable infrastructure belongs in `Platform`.
 - Keep contracts stable: requests, DTOs, and events are not persistence entities.
 - Add explicit `[ProjectUnitMetadata]` and one or more `[ProjectUnitRequirement]` annotations to every discovered unit. Do not rely on metadata inherited from a base class.
@@ -33,7 +28,7 @@ Use this skill for unit-level application development in Monica-based DDD projec
 - Put `[assembly: WebApiGenerationConfig(...)]` in each assembly that owns attributed requests. Protocol assemblies select the required `RpcClientTargets`; local-only assemblies normally use `None`.
 - Do not add MVC `[Http*]`, `[Route]`, or `[From*]` attributes to generated `ApplicationService` endpoints. The request contract is the single endpoint authority.
 - Use `ApplicationService` only for HTTP-exposed mediator handlers. If a request is intentionally internal and must have no HTTP endpoint, implement `IRequestHandler<TRequest, TResult>` as a normal transient dependency instead of omitting `[ApiEndpoint]` from an `ApplicationService`.
-- Register `monica.AddConfiguration()` inside `builder.AddMonica(...)`. Runtime consumers receive configuration ProjectUnits through `IOptions<T>`, `IOptionsSnapshot<T>`, or `IOptionsMonitor<T>`; composition code that needs bootstrap values reads `builder.Configuration` directly and passes explicit values into module options.
+- For capability setup and runtime behavior, use `$monica-infra-configuration`, `$monica-infra-jobs`, `$monica-infra-messaging`, and `$monica-infra-web` as applicable. This skill owns the application unit's shape and placement.
 
 ## Reference Navigation
 
@@ -48,7 +43,6 @@ Use this skill for unit-level application development in Monica-based DDD projec
 - Event handler templates: [14-event-handler-template.md](references/14-event-handler-template.md)
 - Job templates: [15-job-template.md](references/15-job-template.md)
 - Configuration templates: [16-configuration-template.md](references/16-configuration-template.md)
-- Completion checklist: [17-feature-checklist.md](references/17-feature-checklist.md)
 
 ## Scope Notes
 

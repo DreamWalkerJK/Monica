@@ -498,7 +498,7 @@ public static class GuideCommandRunner
             "       guide workspaces [--json]";
         return definition.OwnsGlobalAgentPolicy
             ? core
-              + "\n       guide source <list|resolve|bind|unbind> [--repository monica|docs] " +
+              + "\n       guide source <list|resolve|bind|unbind> [--repository <repo>] " +
               "[--source-path <path>] [--source-ref <ref>] " +
               "[--apply --plan-digest <sha256>]\n" +
               "       guide issue <status|set> [--mode prepare|ask|never]"

@@ -22,9 +22,6 @@ public enum GuideWorkspaceDetectionOutcome
     /// <summary>The canonical Monica framework repository (remote identity or characteristics).</summary>
     FrameworkRepository,
 
-    /// <summary>The canonical Monica.Docs repository (remote identity or characteristics).</summary>
-    DocsRepository,
-
     /// <summary>Unambiguous Monica extension characteristics.</summary>
     ExtensionCharacteristics,
 
@@ -56,7 +53,6 @@ public sealed partial class GuideWorkspaceService
     private const string PROFILE_APPLICATION = "application";
     private const string PROFILE_EXTENSION = "extension-author";
     private const string PROFILE_FRAMEWORK = "framework-contributor";
-    private const string PROFILE_DOCS = "docs-contributor";
     private const string CAPABILITY_MICROSERVICE = "microservice";
     private const string CAPABILITY_MODULAR_MONOLITH = "modular-monolith";
     private const string CAPABILITY_UI = "ui";
@@ -1129,37 +1125,15 @@ public sealed partial class GuideWorkspaceService
         var identity = git?.CanonicalRemote;
         var isMonicaFramework = File.Exists(Path.Combine(root, "Monica.slnx"))
                                 && Directory.Exists(Path.Combine(root, "Monica.Core"));
-        var isMonicaDocs = Directory.Exists(Path.Combine(root, "docs", "en-US"))
-                           && Directory.Exists(Path.Combine(root, "docs", "zh-CN"))
-                           && Directory.Exists(Path.Combine(root, "frontend", "monica-docs-web"));
 
-        // Repository outcomes are decided by identity and root markers alone; walking a
-        // framework checkout file by file can take minutes and cannot change the result,
-        // so the characteristic scan below only runs for ordinary project workspaces.
+        // Framework identity and root markers settle the outcome without a file walk, which can take
+        // minutes on a framework checkout. Ordinary workspaces use the characteristic scan below.
         if (IsCanonical(identity, "Tairitsua/Monica") || isMonicaFramework)
         {
-            return RepositoryDetection(
+            return FrameworkRepositoryDetection(
                 root,
                 git,
-                GuideWorkspaceDetectionOutcome.FrameworkRepository,
-                PROFILE_FRAMEWORK,
-                IsCanonical(identity, "Tairitsua/Monica") ? "canonical" : "characteristic",
-                "Monica framework repository detected.",
-                // The framework's own UI projects are the one capability the framework
-                // profile's conditional skills depend on; the architecture path patterns
-                // never match a framework checkout's layout.
-                Directory.Exists(Path.Combine(root, "Monica.UI")));
-        }
-        if (IsCanonical(identity, "Tairitsua/Monica.Docs") || isMonicaDocs)
-        {
-            return RepositoryDetection(
-                root,
-                git,
-                GuideWorkspaceDetectionOutcome.DocsRepository,
-                PROFILE_DOCS,
-                IsCanonical(identity, "Tairitsua/Monica.Docs") ? "canonical" : "characteristic",
-                "Monica.Docs repository detected.",
-                includeUiCapability: false);
+                IsCanonical(identity, "Tairitsua/Monica") ? "canonical" : "characteristic");
         }
 
         var inventory = WalkFiles(root).ToArray();
@@ -1267,28 +1241,26 @@ public sealed partial class GuideWorkspaceService
     }
 
     /// <summary>
-    /// Detection for the canonical framework and docs repositories without the characteristic
-    /// scan: the workspace is the repository itself, so only its own version, the framework
-    /// UI capability, and nested agent instruction files remain relevant.
+    /// Detection for the canonical framework repository without the characteristic scan:
+    /// only its version, UI capability, and nested agent instruction files remain relevant.
     /// </summary>
-    private static GuideWorkspaceDetection RepositoryDetection(
+    private static GuideWorkspaceDetection FrameworkRepositoryDetection(
         string root,
         GuideGitIdentity? git,
-        GuideWorkspaceDetectionOutcome outcome,
-        string profile,
-        string confidence,
-        string reason,
-        bool includeUiCapability)
+        string confidence)
     {
-        var capabilities = includeUiCapability ? [CAPABILITY_UI] : Array.Empty<string>();
+        // The framework's own UI project is the only capability its conditional skills need.
+        string[] capabilities = Directory.Exists(Path.Combine(root, "Monica.UI"))
+            ? [CAPABILITY_UI]
+            : Array.Empty<string>();
         var rootVersion = FrameworkRootVersion(git?.Root ?? root);
         return new GuideWorkspaceDetection(
-            outcome,
+            GuideWorkspaceDetectionOutcome.FrameworkRepository,
             git?.CanonicalRemote,
             git?.Root,
-            profile,
+            PROFILE_FRAMEWORK,
             confidence,
-            reason,
+            "Monica framework repository detected.",
             capabilities,
             HasMonicaProjectReference: false,
             rootVersion,
@@ -1754,10 +1726,6 @@ public sealed partial class GuideWorkspaceService
         if (profile == PROFILE_FRAMEWORK)
         {
             AddRepositoryContractIssues(root, detection, issues, "Tairitsua/Monica", PROFILE_FRAMEWORK);
-        }
-        else if (profile == PROFILE_DOCS)
-        {
-            AddRepositoryContractIssues(root, detection, issues, "Tairitsua/Monica.Docs", PROFILE_DOCS);
         }
 
         return issues;

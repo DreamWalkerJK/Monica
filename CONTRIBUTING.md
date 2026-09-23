@@ -39,13 +39,23 @@ python3 scripts/test_agent_skills.py
 
 Edit Monica-owned skills only under `skills/<name>/`. Their matching `.agents/skills/<name>` and `.claude/skills/<name>` directories are generated projections and must not be edited directly. The generator owns only catalog-managed Monica directories: unrelated external skills, files, and caches in either projection root are preserved and ignored by projection checks. Monica-owned skills use portable `SKILL.md` frontmatter containing only `name` and `description`. Skill release versions live in `.monica/agent-skill-catalog.json` and `.monica/agent-skill-index.json`, not in skill frontmatter.
 
+Nine `monica-infra-*` skills own reusable consumer guidance for persistence, messaging, jobs, configuration, hosting, observability, AI, web, and UI. Keep framework-authoring contracts in their distinct skills. For an implementation change, check whether the catalog-owned knowledge changed:
+
+```bash
+python3 scripts/check_knowledge_impact.py --base <git-revision>
+# Or inspect selected files:
+python3 scripts/check_knowledge_impact.py --paths <changed-path> [more paths]
+```
+
+The checker assigns changed source files to their most specific catalog owner and requires a matching canonical `SKILL.md` or `references/` change. If the implementation change has no effect on reusable usage knowledge, pass `--no-impact "reason"` and include `Knowledge-Impact: none — <concrete reason>` on its own line in the pull request body. The Knowledge Impact workflow enforces this on pull requests. [Monica.Docs](https://monica.dpdns.org/) publishes the release skills from immutable `monica-knowledge.json` bytes and checksum, alongside stable bilingual guides; it does not maintain a second module manual.
+
 When running `dotnet` from WSL with a Windows `dotnet` executable, use Windows paths for project or solution arguments.
 
 ## Pull Requests
 
 1. Open an issue or discussion first for broad design changes.
 2. Keep changes focused on one feature, fix, or refactor.
-3. Update public docs when public behavior changes.
+3. Update the owning `skills/monica-infra-*/references/` when public behavior or reusable usage guidance changes. Update its example or behavioral check in the same change, or explain why the change has no knowledge impact. Monica.Docs keeps stable guides and renders the published skills; do not duplicate module manuals.
 4. Keep public XML documentation accurate for developer-facing APIs.
 5. Run the relevant build and test commands before opening the pull request.
 

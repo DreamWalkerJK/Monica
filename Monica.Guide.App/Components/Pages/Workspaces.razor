@@ -371,7 +371,7 @@ else
     [Inject]
     private IJSRuntime Js { get; set; } = default!;
 
-    private static readonly string[] Profiles = ["application", "extension-author", "framework-contributor", "docs-contributor"];
+    private static readonly string[] Profiles = ["application", "extension-author", "framework-contributor"];
     private static readonly string[] Architectures = ["microservice", "modular-monolith"];
     private static readonly GuideIssueReportingMode[] IssueModes =
         [GuideIssueReportingMode.Prepare, GuideIssueReportingMode.Ask, GuideIssueReportingMode.Never];
@@ -493,7 +493,6 @@ else
     private string DetectionText => Detection?.Outcome switch
     {
         GuideWorkspaceDetectionOutcome.FrameworkRepository => Session.T("ws-detect-framework"),
-        GuideWorkspaceDetectionOutcome.DocsRepository => Session.T("ws-detect-docs"),
         GuideWorkspaceDetectionOutcome.ExtensionCharacteristics => Session.T("ws-detect-extension"),
         GuideWorkspaceDetectionOutcome.ApplicationCharacteristics => Session.T("ws-detect-application"),
         GuideWorkspaceDetectionOutcome.AmbiguousApplicationAndExtension => Session.T("ws-detect-ambiguous-both"),
@@ -828,7 +827,6 @@ else
             "application" => "application",
             "extension-author" => "extension",
             "framework-contributor" => "framework",
-            "docs-contributor" => "docs",
             _ => "generic"
         };
 

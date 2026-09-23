@@ -356,6 +356,9 @@ jobs:
           echo "path=${PREVIOUS_INDEX}" >> "${GITHUB_OUTPUT}"
           echo "tag=${PREVIOUS_TAG}" >> "${GITHUB_OUTPUT}"
 
+      - name: Prepare release notes output
+        run: mkdir -p artifacts
+
       - name: Generate release notes
         id: release_notes
         uses: orhun/git-cliff-action@v4
@@ -365,7 +368,7 @@ jobs:
           args: ${{ steps.version.outputs.release_notes_args }}
           github_token: ${{ github.token }}
         env:
-          OUTPUT: RELEASE_NOTES.md
+          OUTPUT: artifacts/RELEASE_NOTES.md
           GITHUB_REPO: ${{ github.repository }}
 
       - name: Restore solution
@@ -410,6 +413,9 @@ jobs:
             --output artifacts/agent-skills \
             "${HISTORY_ARGS[@]}"
 
+      - name: Export immutable capability knowledge
+        run: python3 scripts/export_agent_knowledge.py --release-ref "${{ steps.version.outputs.tag_name }}" --output artifacts/agent-skills/monica-knowledge.json
+
       - name: Download the unified guide bundles
         uses: actions/download-artifact@v7
         with:
@@ -422,7 +428,7 @@ jobs:
         run: |
           SKILLS_ZIP="artifacts/agent-skills/monica-agent-skills-${{ steps.version.outputs.tag_name }}.zip"
           : > artifacts/guide-release/SHA256SUMS
-          for asset in artifacts/guide-release/*.zip "${SKILLS_ZIP}"; do
+          for asset in artifacts/guide-release/*.zip "${SKILLS_ZIP}" artifacts/agent-skills/monica-knowledge.json; do
             echo "$(sha256sum "${asset}" | cut -d' ' -f1)  $(basename "${asset}")" >> artifacts/guide-release/SHA256SUMS
           done
 
@@ -478,13 +484,14 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag_name }}
           target_commitish: ${{ steps.version.outputs.target_commitish }}
           prerelease: ${{ steps.version.outputs.prerelease }}
-          body_path: RELEASE_NOTES.md
+          body_path: artifacts/RELEASE_NOTES.md
           files: |
             artifacts/packages/*.nupkg
             artifacts/packages/*.snupkg
             artifacts/agent-skills/agent-skill-catalog.json
             artifacts/agent-skills/agent-skill-index.json
             artifacts/agent-skills/agent-skill-manifest.json
+            artifacts/agent-skills/monica-knowledge.json
             artifacts/agent-skills/monica-agent-skills-${{ steps.version.outputs.tag_name }}.zip
             artifacts/guide-release/monica-guide-${{ steps.version.outputs.tag_name }}-*.zip
             artifacts/guide-release/SHA256SUMS

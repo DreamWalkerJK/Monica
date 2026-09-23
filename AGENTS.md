@@ -1,6 +1,6 @@
 ## Project Overview
 
-Monica is a modular .NET infrastructure library designed for flexibility and performance. Each module can be used independently without requiring the entire framework.
+Monica is modular .NET infrastructure for agent-driven development. Each module can be used independently; canonical Agent Skills teach both agents and developers how to compose and operate it.
 
 ## Unified Guide Engine
 
@@ -42,6 +42,11 @@ Invoke when:
 - Adding, changing, reviewing, or validating Monica UI localization/i18n, user-facing text, `IStringLocalizer<TResource>` usage, `RegisterLocalizedPage(...)` or `RegisterLocalizedCategory(...)` keys, or `zh-CN`/`en-US` resources
 
 ## Agent Skill Authoring and Synchronization
+
+- Framework usage knowledge belongs to canonical `skills/monica-infra-*/` packages. Monica.Docs renders those skills and keeps only stable onboarding, concepts, ecosystem, and migration guides. Do not reintroduce a parallel framework `docs/` tree or handwritten module manuals.
+- When public behavior, examples, or reusable development guidance changes, update the owning skill reference and relevant behavioral example/check in the same change. Update `SKILL.md` only when routing or execution guidance changes. Replace obsolete guidance; if no knowledge update is needed, state why.
+- Capability ownership and the module slugs each capability replaces live in each catalog entry's `publication` metadata. Export website content with `python scripts/export_agent_knowledge.py --output <artifact>`; public builds consume an immutable release artifact. Guide manages framework skills and source only; it has no Monica.Docs profile, source binding, or instruction injection.
+- Before completing an infrastructure change, run `python scripts/check_knowledge_impact.py --base <base-ref>`. Update each affected owning skill, or pass `--no-impact "<concrete reason>"` and include that rationale in the PR's Knowledge impact section. Prefer replacing obsolete rules and retaining verified, reusable examples over accumulating session notes.
 
 - Edit Monica-owned Agent Skills only under the canonical `skills/<name>/` tree. Do not edit the corresponding `.agents/skills/<name>/` or `.claude/skills/<name>/` projections directly.
 - When implementation feedback changes a skill rule, update the canonical skill first, regenerate both projections with `python3 scripts/sync_agent_skills.py --write`, and commit the canonical and generated changes together.
