@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Monica.Repository.Outbox.Services;
+using Monica.Repository.Inbox.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
@@ -105,6 +107,9 @@ public sealed class UnitOfWorkManager(
         {
             var affected = 0;
             foreach (var context in _contexts) affected += await context.SaveChangesAsync(cancellationToken);
+            // A later participant can stage a projection on the primary after its first save.
+            if (_contexts.Count > 1 && _contexts[0] is IOutboxStoreContext { HasPendingOutboxMessages: true })
+                affected += await _contexts[0].SaveChangesAsync(cancellationToken);
             return affected;
         }
         catch { MarkRollbackOnly(); throw; }
@@ -112,6 +117,34 @@ public sealed class UnitOfWorkManager(
 
     /// <inheritdoc />
     public void MarkRollbackOnly() => _rollbackOnly = true;
+
+    internal IOutboxStoreContext RequireOutboxOwner()
+    {
+        EnsureUsable();
+        if (!_active || _rollbackOnly || _transaction is null || _contexts.Count == 0)
+            throw new InvalidOperationException("Durable publishing requires an active, healthy local transaction.");
+        var primary = _contexts[0];
+        if (primary is not IOutboxStoreContext owner || !owner.HasOutbox)
+            throw new InvalidOperationException("The primary transaction context must enable AddOutbox.");
+        var current = primary.Database.CurrentTransaction;
+        if (current is null || !ReferenceEquals(current.GetDbTransaction(), _transaction.GetDbTransaction()))
+            throw new InvalidOperationException("The outbox owner is not enlisted in the operation's physical transaction.");
+        return owner;
+    }
+
+    internal DbContext RequireInboxOwner()
+    {
+        EnsureUsable();
+        if (!_active || _rollbackOnly || _transaction is null || _contexts.Count == 0)
+            throw new InvalidOperationException("Inbox handling requires an active, healthy local transaction.");
+        var primary = _contexts[0];
+        if (primary is not IInboxStoreContext { HasInbox: true })
+            throw new InvalidOperationException("The primary transaction context must enable AddInbox.");
+        var current = primary.Database.CurrentTransaction;
+        if (current is null || !ReferenceEquals(current.GetDbTransaction(), _transaction.GetDbTransaction()))
+            throw new InvalidOperationException("The inbox owner is not enlisted in the operation's physical transaction.");
+        return primary;
+    }
 
     internal void ValidateSave(DbContext context)
     {

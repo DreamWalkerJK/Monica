@@ -1,6 +1,8 @@
 using Monica.Core.Execution;
 using Monica.Repository.UnitOfWork.Abstractions;
 using Monica.Repository.UnitOfWork.Models;
+using Monica.Repository.UnitOfWork.Annotations;
+using System.Reflection;
 
 namespace Monica.Repository.UnitOfWork.Services.Behaviors;
 
@@ -20,6 +22,12 @@ public sealed class UnitOfWorkExecutionBehavior<TInput, TResult>(IUnitOfWorkMana
         ExecutionDelegate<TResult> next)
     {
         context.Features.TryGet<UnitOfWorkScopeOptions>(out var options);
+        if (options is null)
+        {
+            var selected = context.Descriptor.EntryMethod?.GetCustomAttribute<UnitOfWorkContextAttribute>(inherit: true)
+                ?? context.Descriptor.ComponentType.GetCustomAttribute<UnitOfWorkContextAttribute>(inherit: true);
+            if (selected is not null) options = new UnitOfWorkScopeOptions(selected.DbContextTypes);
+        }
         return unitOfWorkManager.RunAsync(next.Invoke, options, context.CancellationToken);
     }
 }

@@ -6,11 +6,20 @@ using Monica.Core.Modularity.Extensions;
 using Monica.DependencyInjection.Abstractions;
 using Monica.Modules;
 using Monica.Repository.Persistence.Services;
+using Monica.Repository.Outbox.Models;
+using Monica.Repository.Inbox.Annotations;
+using Monica.Repository.Inbox.Models;
+using Monica.Repository.UnitOfWork.Annotations;
+using Monica.EventBus.Abstractions;
+using Monica.EventBus.Abstractions.Handlers;
+using Monica.EventBus.Annotations;
+using Monica.EventBus.Models;
 using Monica.Repository.Snowflake.Abstractions;
 using Monica.Repository.UnitOfWork.Abstractions;
 using Monica.Repository.UnitOfWork.Models;
 using Monica.Testing.Hosting;
 using Test.Monica.Repository.Persistence;
+using Test.Monica.Repository.Hosting;
 using Xunit;
 
 namespace Test.Monica.Repository.UnitOfWork;
@@ -100,15 +109,87 @@ public sealed class SharedTransactionTests
         Assert.Single(await verify.ServiceProvider.GetRequiredService<SecondDbContext>().HardDeleteRows.ToListAsync(TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task RunAsync_WhenPrimaryWasFlushedFirst_ShouldFlushLaterParticipantProjectionOnOwner()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        using var host = CreateHost(connection, connection, withOutbox: true);
+        await using (var setup = host.Services.CreateAsyncScope())
+            await setup.ServiceProvider.GetRequiredService<TestRepositoryDbContext>()
+                .Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+        await using (var operation = host.Services.CreateAsyncScope())
+        {
+            var services = operation.ServiceProvider;
+            var manager = services.GetRequiredService<IUnitOfWorkManager>();
+            await manager.RunAsync(() =>
+            {
+                services.GetRequiredService<TestRepositoryDbContext>().Add(new HardDeleteRow { Title = "primary" });
+                services.GetRequiredService<SecondDbContext>().Add(new HardDeleteRow { Title = "secondary" });
+                return Task.CompletedTask;
+            }, new UnitOfWorkScopeOptions([typeof(TestRepositoryDbContext), typeof(SecondDbContext)]),
+                TestContext.Current.CancellationToken);
+        }
+        await using var verify = host.Services.CreateAsyncScope();
+        var db = verify.ServiceProvider.GetRequiredService<TestRepositoryDbContext>();
+        Assert.Equal(2, await db.HardDeleteRows.CountAsync(TestContext.Current.CancellationToken));
+        var message = Assert.Single(await db.Set<OutboxMessage>().ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("tests.notice.v1", message.EventName);
+    }
+
+    [Fact]
+    public async Task ReceivedHandler_WhenSelectingSharedContexts_ShouldCommitInboxBusinessAndOutgoingRowsTogether()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        using var host = CreateHost(connection, connection, withOutbox: true, withInbox: true);
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await using (var setup = host.Services.CreateAsyncScope())
+            await setup.ServiceProvider.GetRequiredService<TestRepositoryDbContext>()
+                .Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+        await using (var subscriptionScope = host.Services.CreateAsyncScope())
+            await subscriptionScope.ServiceProvider.GetRequiredService<IDistributedEventBus>()
+                .SubscribeAsync<SharedIncomingNotice, SharedInboxHandler>();
+        EventMessage message;
+        await using (var scope = host.Services.CreateAsyncScope())
+            message = scope.ServiceProvider.GetRequiredService<IEventMessageFactory>().Prepare(
+                typeof(SharedIncomingNotice), new SharedIncomingNotice("transactional"), EventSubscriptionScope.Distributed);
+        var receiver = host.Services.GetRequiredService<IEventReceiveDispatcher>();
+        await receiver.DispatchAsync(message, TestContext.Current.CancellationToken);
+        await receiver.DispatchAsync(message, TestContext.Current.CancellationToken);
+        await using var verify = host.Services.CreateAsyncScope();
+        var db = verify.ServiceProvider.GetRequiredService<TestRepositoryDbContext>();
+        Assert.Equal(2, await db.HardDeleteRows.CountAsync(TestContext.Current.CancellationToken));
+        Assert.Single(await db.Set<InboxReceipt>().ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Single(await db.Set<OutboxMessage>().ToListAsync(TestContext.Current.CancellationToken));
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
     private static IHost CreateHost(SqliteConnection first, SqliteConnection second,
-        DbContextProviderType secondParticipation = DbContextProviderType.UnitOfWork)
+        DbContextProviderType secondParticipation = DbContextProviderType.UnitOfWork,
+        bool withOutbox = false,
+        bool withInbox = false)
     {
         var builder = Host.CreateApplicationBuilder();
-        builder.AddMonica(monica => monica.AddRepository()
-            .AddRepositoryDbContext<TestRepositoryDbContext>((_, db) => db.UseSqlite(first))
-            .AddRepositoryDbContext<SecondDbContext>((_, db) => db.UseSqlite(second), secondParticipation));
+        builder.AddMonica(monica =>
+        {
+            if (withInbox) monica.ConfigureTypeDiscovery(options => options.Add(typeof(SharedInboxHandler).Assembly));
+            var repository = monica.AddRepository()
+                .AddRepositoryDbContext<TestRepositoryDbContext>((_, db) => db.UseSqlite(first))
+                .AddRepositoryDbContext<SecondDbContext>((_, db) => db.UseSqlite(second), secondParticipation);
+            if (withOutbox)
+            {
+                monica.AddEventBus().UseNoOpDistributedEventBus();
+                repository.AddOutbox<TestRepositoryDbContext>(options => options.EnableWorker = false);
+                if (!withInbox)
+                    repository.AddEntityEventProjections<SecondDbContext>(options =>
+                        options.RegisterEntity<HardDeleteRow, IntegrationNotice>(row => new IntegrationNotice(row.Title)));
+            }
+            if (withInbox) repository.AddInbox<TestRepositoryDbContext>();
+        });
         builder.Services.AddMonicaTestSeams();
         builder.Services.AddSingleton<ISnowflakeIdGenerator, SequentialTestIdGenerator>();
+        if (withInbox) builder.Services.AddScoped<SharedInboxHandler>();
         return builder.Build();
     }
 
@@ -116,5 +197,23 @@ public sealed class SharedTransactionTests
         : RepositoryDbContext<SecondDbContext>(options, services)
     {
         public DbSet<HardDeleteRow> HardDeleteRows => Set<HardDeleteRow>();
+    }
+}
+
+[EventName("tests.shared-incoming.v1")]
+public sealed record SharedIncomingNotice(string Value);
+
+[Inbox("tests.shared-handler.v1")]
+[UnitOfWorkContext(typeof(TestRepositoryDbContext), typeof(SharedTransactionTests.SecondDbContext))]
+public sealed class SharedInboxHandler(
+    TestRepositoryDbContext primary,
+    SharedTransactionTests.SecondDbContext secondary,
+    IDistributedEventBus bus) : IDistributedEventHandler<SharedIncomingNotice>
+{
+    public async Task HandleEventAsync(SharedIncomingNotice eventData, CancellationToken cancellationToken)
+    {
+        primary.Add(new HardDeleteRow { Title = "primary:" + eventData.Value });
+        secondary.Add(new HardDeleteRow { Title = "secondary:" + eventData.Value });
+        await bus.PublishAsync(new IntegrationNotice(eventData.Value), cancellationToken: cancellationToken);
     }
 }

@@ -22,6 +22,10 @@ using Monica.Repository.UnitOfWork.Abstractions;
 using Monica.Repository.UnitOfWork.Services;
 using Monica.Repository.Outbox.Models;
 using Monica.Repository.Outbox.Services;
+using Monica.EventBus.Abstractions;
+using Monica.EventBus.Models;
+using Monica.Repository.Inbox.Models;
+using Monica.Repository.Inbox.Services;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Monica.Tool.Extensions;
@@ -35,7 +39,7 @@ namespace Monica.Repository.Persistence.Services;
 /// a scoped operation. External notification delivery runs separately after commit.
 /// </summary>
 public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContext> options, ICachedServiceProvider serviceProvider)
-    : DbContext(options), IRepositoryModelFeatures, IRepositoryContextLifetime
+    : DbContext(options), IRepositoryModelFeatures, IRepositoryContextLifetime, IOutboxStoreContext, IInboxStoreContext
     where TDbContext : DbContext
 {
     private IServiceScope? _factoryScope;
@@ -52,7 +56,12 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
     private bool _saving;
     private readonly List<OutboxMessage> _pendingMessages = [];
     private RepositoryOutboxOptions? OutboxOptions => CachedServiceProvider.GetService<OutboxRegistration<TDbContext>>()?.Options;
+    private RepositoryEntityEventOptions? EntityEventOptions => CachedServiceProvider.GetService<RepositoryEntityEventOptionsRegistration<TDbContext>>()?.Options;
     bool IRepositoryModelFeatures.HasOutbox => OutboxOptions is not null;
+    bool IRepositoryModelFeatures.HasInbox => CachedServiceProvider.GetService<InboxRegistration<TDbContext>>() is not null;
+    bool IOutboxStoreContext.HasOutbox => OutboxOptions is not null;
+    bool IOutboxStoreContext.HasPendingOutboxMessages => _pendingMessages.Count != 0;
+    bool IInboxStoreContext.HasInbox => CachedServiceProvider.GetService<InboxRegistration<TDbContext>>() is not null;
     object IRepositoryModelFeatures.ModelCacheKey => ModelCacheKey;
 
     /// <summary>
@@ -222,9 +231,24 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
             outbox.HasKey(x => x.Sequence);
             outbox.Property(x => x.Sequence).ValueGeneratedOnAdd();
             outbox.HasIndex(x => x.MessageId).IsUnique();
-            outbox.HasIndex(x => new { x.DeliveredAtUtc, x.Sequence });
-            outbox.Property(x => x.Contract).HasMaxLength(200).IsRequired();
-            outbox.Property(x => x.Payload).IsRequired();
+            outbox.HasIndex(x => new { x.DeliveredAtUtc, x.NextAttemptAtUtc, x.LeaseUntilUtc, x.Sequence });
+            outbox.Property(x => x.MessageId).HasMaxLength(200).IsRequired();
+            outbox.Property(x => x.Source).HasMaxLength(200).IsRequired();
+            outbox.Property(x => x.EventName).HasMaxLength(200).IsRequired();
+            outbox.Property(x => x.TopicName).HasMaxLength(200).IsRequired();
+            outbox.Property(x => x.ServiceKey).HasMaxLength(200);
+            outbox.Property(x => x.TransportKey).HasMaxLength(500);
+            outbox.Property(x => x.Body).IsRequired();
+            outbox.Property(x => x.LastError).HasMaxLength(1000);
+        }
+        if (CachedServiceProvider.GetService<InboxRegistration<TDbContext>>() is not null)
+        {
+            var inbox = builder.Entity<InboxReceipt>();
+            inbox.ToTable("MonicaInbox");
+            inbox.HasKey(x => new { x.Consumer, x.Source, x.MessageId });
+            inbox.Property(x => x.Consumer).HasMaxLength(200).IsRequired();
+            inbox.Property(x => x.Source).HasMaxLength(200).IsRequired();
+            inbox.Property(x => x.MessageId).HasMaxLength(200).IsRequired();
         }
     }
 
@@ -248,14 +272,11 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
     public sealed override int SaveChanges(bool acceptAllChangesOnSuccess)
         => SaveCoreAsync(false, acceptAllChangesOnSuccess, CancellationToken.None).GetAwaiter().GetResult();
 
-    internal Guid StageOutboxMessage<TMessage>(TMessage message) where TMessage : class
+    void IOutboxStoreContext.StagePreparedMessage(EventMessage message)
     {
-        ArgumentNullException.ThrowIfNull(message);
-        ValidateSave();
-        var options = OutboxOptions ?? throw new InvalidOperationException("Register AddOutbox for this context first.");
-        var row = OutboxSerializer.Capture(message, options, CachedServiceProvider.GetService<TimeProvider>() ?? TimeProvider.System);
-        _pendingMessages.Add(row);
-        return row.MessageId;
+        if (_saveFailed) throw new InvalidOperationException("This context's save failed. Retry in a fresh operation scope.");
+        if (OutboxOptions is null) throw new InvalidOperationException("The selected transaction owner must enable AddOutbox.");
+        _pendingMessages.Add(OutboxMessage.Capture(message, CachedServiceProvider.GetService<TimeProvider>() ?? TimeProvider.System));
     }
 
     private void ValidateSave()
@@ -297,6 +318,18 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
                 ? [] : PersistencePolicies.Apply(this, AuditPropertySetter, CachedServiceProvider.GetServices<IPersistencePolicy>());
             ChangeTracker.AutoDetectChangesEnabled = false;
             var outbox = OutboxOptions;
+            var switches = CachedServiceProvider.GetServices<IEntityEventPublishSwitch>().ToArray();
+            if (EntityEventOptions is { } entityEvents)
+            {
+                var projectedChanges = changes.Where(change =>
+                    entityEvents.Projections.ContainsKey(change.Entry.Metadata.ClrType)
+                    && switches.All(x => x.CanPublish(change.Entry.Entity))).ToArray();
+                if (!useAsync && projectedChanges.Any(change =>
+                        entityEvents.AsyncEntityTypes.Contains(change.Entry.Metadata.ClrType)))
+                    throw new NotSupportedException("An enabled asynchronous entity-event projection requires SaveChangesAsync.");
+                if (projectedChanges.Length != 0)
+                    CachedServiceProvider.GetRequiredService<UnitOfWorkManager>().RequireOutboxOwner();
+            }
             if (outbox is not null)
             {
                 if (!Database.IsRelational()) throw new NotSupportedException("Transactional outbox requires a relational provider.");
@@ -320,24 +353,18 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
             }
 
             var affected = useAsync ? await base.SaveChangesAsync(true, token) : base.SaveChanges(true);
+            if (useAsync) await CaptureEntityEventsAsync(changes, switches, token);
+            else CaptureEntityEvents(changes, switches);
             if (outbox is not null)
             {
-                var time = CachedServiceProvider.GetService<TimeProvider>() ?? TimeProvider.System;
-                var switches = CachedServiceProvider.GetServices<IEntityEventPublishSwitch>().ToArray();
-                foreach (var change in changes)
-                {
-                    if (outbox.EntityProjections.TryGetValue(change.Entry.Metadata.ClrType, out var projections)
-                        && switches.All(x => x.CanPublish(change.Entry.Entity)))
-                        foreach (var project in projections)
-                            if (project(CachedServiceProvider.UnderlyingProvider, change) is { } payload)
-                                _pendingMessages.Add(OutboxSerializer.Capture(payload, outbox, time));
-                }
                 if (_pendingMessages.Count != 0)
-                {
                     Set<OutboxMessage>().AddRange(_pendingMessages);
-                    if (useAsync) await base.SaveChangesAsync(true, token);
-                    else base.SaveChanges(true);
-                }
+            }
+            ChangeTracker.DetectChanges();
+            if (ChangeTracker.Entries().Any(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+            {
+                if (useAsync) await base.SaveChangesAsync(true, token);
+                else base.SaveChanges(true);
             }
             if (ownedTransaction is not null)
             {
@@ -391,6 +418,56 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
                 }
             }
         }
+    }
+
+    private async Task CaptureEntityEventsAsync(IReadOnlyList<PersistenceChange> changes,
+        IReadOnlyList<IEntityEventPublishSwitch> switches, CancellationToken token)
+    {
+        var projections = EntityEventOptions?.Projections;
+        if (projections is null || changes.Count == 0) return;
+        if (!changes.Any(change => projections.ContainsKey(change.Entry.Metadata.ClrType)
+                && switches.All(x => x.CanPublish(change.Entry.Entity)))) return;
+        var owner = CachedServiceProvider.GetRequiredService<UnitOfWorkManager>().RequireOutboxOwner();
+        var factory = CachedServiceProvider.GetRequiredService<IEventMessageFactory>();
+        foreach (var change in changes)
+        {
+            if (!projections.TryGetValue(change.Entry.Metadata.ClrType, out var callbacks)
+                || switches.Any(x => !x.CanPublish(change.Entry.Entity))) continue;
+            foreach (var project in callbacks)
+            {
+                var payload = project.Async is { } asyncProject
+                    ? await asyncProject(CachedServiceProvider.UnderlyingProvider, change, token)
+                    : project.Sync!(CachedServiceProvider.UnderlyingProvider, change);
+                if (payload is not null) StageProjectedEvent(payload, owner, factory);
+            }
+        }
+    }
+
+    private void CaptureEntityEvents(IReadOnlyList<PersistenceChange> changes,
+        IReadOnlyList<IEntityEventPublishSwitch> switches)
+    {
+        var projections = EntityEventOptions?.Projections;
+        if (projections is null || changes.Count == 0) return;
+        if (!changes.Any(change => projections.ContainsKey(change.Entry.Metadata.ClrType)
+                && switches.All(x => x.CanPublish(change.Entry.Entity)))) return;
+        var owner = CachedServiceProvider.GetRequiredService<UnitOfWorkManager>().RequireOutboxOwner();
+        var factory = CachedServiceProvider.GetRequiredService<IEventMessageFactory>();
+        foreach (var change in changes)
+        {
+            if (!projections.TryGetValue(change.Entry.Metadata.ClrType, out var callbacks)
+                || switches.Any(x => !x.CanPublish(change.Entry.Entity))) continue;
+            foreach (var project in callbacks)
+            {
+                var payload = project.Sync!(CachedServiceProvider.UnderlyingProvider, change);
+                if (payload is not null) StageProjectedEvent(payload, owner, factory);
+            }
+        }
+    }
+
+    private static void StageProjectedEvent(object payload, IOutboxStoreContext owner, IEventMessageFactory factory)
+    {
+        var message = factory.Prepare(payload.GetType(), payload, EventSubscriptionScope.Distributed);
+        owner.StagePreparedMessage(message);
     }
 
     #region Entity conventions

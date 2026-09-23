@@ -49,9 +49,13 @@ public static class DefaultSeams
         services.RemoveAll<RecordingEventBus>();
         services.RemoveAll<ILocalEventBus>();
         services.RemoveAll<IDistributedEventBus>();
+        services.RemoveAll<IEventTransport>();
         services.AddSingleton<RecordingEventBus>();
-        services.AddSingleton<ILocalEventBus>(sp => sp.GetRequiredService<RecordingEventBus>());
-        services.AddSingleton<IDistributedEventBus>(sp => sp.GetRequiredService<RecordingEventBus>());
+        services.AddSingleton<IEventTransport>(sp => sp.GetRequiredService<RecordingEventBus>());
+        services.AddScoped<ILocalEventBus>(sp => new ScopedLocalEventBusGateway(
+            sp.GetRequiredService<RecordingEventBus>(), sp.GetRequiredService<IEventMessageFactory>(), sp));
+        services.AddScoped<IDistributedEventBus>(sp => new ScopedDistributedEventBusGateway(
+            sp.GetRequiredService<RecordingEventBus>(), sp.GetRequiredService<IEventMessageFactory>(), sp));
 
         return services;
     }

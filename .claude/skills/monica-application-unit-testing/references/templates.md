@@ -90,13 +90,13 @@ Arrange in a seed scope first. Then a direct read can resolve IOrganUnitQueries 
 
 ## Durable Notification Scenario
 
-Configure AddOutbox in the production composition; keep its projections in tests. A RecordingEventBus replaces the external transport.
+Configure AddOutbox in the production composition; keep its entity projections in tests. Replace `IEventTransport` with a recording transport while retaining the scoped bus gateway.
 
 ```csharp
-await application.ExecuteAsync(scope =>
+await application.ExecuteAsync(async scope =>
 {
-    scope.Resolve<IOutboxWriter<UserDbContext>>().Enqueue(new UserChangedV1(userId));
-    return Task.CompletedTask;
+    await scope.Resolve<IDistributedEventBus>().PublishAsync(
+        new UserChangedV1(userId), cancellationToken: token);
 }, cancellationToken: token);
 
 await application.VerifyAsync<UserDbContext>(async (db, ct) =>
@@ -107,10 +107,10 @@ await application.VerifyAsync<UserDbContext>(async (db, ct) =>
 
 await application.DrainOutboxAsync<UserDbContext>(cancellationToken: token);
 application.Services.GetRequiredService<RecordingEventBus>()
-    .Recorded<OutboxDelivery<UserChangedV1>>().Should().ContainSingle();
+    .Messages.Should().ContainSingle();
 ```
 
-When testing a local subscription, subscribe to the exact envelope type and the registered contract-name topic. Test stable MessageId and consumer deduplication under retry.
+The event type must carry `[Outbox]` and stable `[EventName]` metadata. When testing a local subscription, subscribe to the ordinary event type and exact topic. Test stable MessageId and consumer deduplication under retry.
 
 ## Module Composition
 

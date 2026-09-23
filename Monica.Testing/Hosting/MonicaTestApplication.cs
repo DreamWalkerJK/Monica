@@ -4,6 +4,7 @@ using Monica.Repository.UnitOfWork.Abstractions;
 using Monica.Repository.UnitOfWork.Models;
 using Monica.Repository.Outbox.Services;
 using Monica.Repository.Persistence.Services;
+using Monica.Repository.UnitOfWork.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
@@ -87,6 +88,7 @@ public sealed class MonicaTestApplication : IAsyncDisposable
         where TDbContext : DbContext
     {
         await using var scope = CreateScope(cancellationToken);
+        using var suppressed = scope.Resolve<EntityEventPublicationScope>().Suspend();
         var db = scope.Resolve<TDbContext>();
         var result = await seed(db, cancellationToken);
         if (db.ChangeTracker.HasChanges())

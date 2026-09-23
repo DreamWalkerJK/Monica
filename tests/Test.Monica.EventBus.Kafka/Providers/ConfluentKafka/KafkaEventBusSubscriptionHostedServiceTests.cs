@@ -7,6 +7,42 @@ namespace Test.Monica.EventBus.Kafka.Providers.ConfluentKafka;
 public class KafkaEventBusSubscriptionHostedServiceTests
 {
     [Fact]
+    public async Task CommitAfterHandlingAsync_WaitsForHandlerBeforeAcknowledging()
+    {
+        var handled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var committed = false;
+        var rewound = false;
+
+        var pending = KafkaEventBusSubscriptionHostedService.CommitAfterHandlingAsync(
+            () => handled.Task,
+            () => committed = true,
+            () => rewound = true);
+
+        committed.Should().BeFalse();
+        handled.SetResult();
+        await pending;
+        committed.Should().BeTrue();
+        rewound.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CommitAfterHandlingAsync_WhenHandlerFails_RewindsWithoutAcknowledging()
+    {
+        var committed = false;
+        var rewound = false;
+        var failure = new InvalidOperationException("handler failed");
+
+        Func<Task> operation = () => KafkaEventBusSubscriptionHostedService.CommitAfterHandlingAsync(
+            () => Task.FromException(failure),
+            () => committed = true,
+            () => rewound = true);
+
+        (await Assert.ThrowsAsync<InvalidOperationException>(operation)).Should().BeSameAs(failure);
+        committed.Should().BeFalse();
+        rewound.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task TopicConsumerTryStart_WhenStopWasRequestedFirst_ShouldNotRunConsumer()
     {
         var executionCount = 0;

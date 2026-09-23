@@ -54,9 +54,9 @@ Default seams retain the real audit policy. Replace ICurrentUser, TimeProvider a
 ## Event Assertions
 
 - Explicit domain effects use IDomainEventQueue and same-scope IDomainEventHandler handlers before commit.
-- Committed notifications/integration events use the optional outbox. Inspect persisted envelopes first.
-- Call application.DrainOutboxAsync<TContext> explicitly to test delivery. The payload is OutboxDelivery<T> on the registered contract-name topic.
-- Delivery is at least once. Exercise a failure after receipt but before acknowledgment and assert consumer deduplication by MessageId.
+- Committed notifications/integration events use ordinary `[Outbox]` EventBus payloads. Inspect persisted JSON snapshots before delivery.
+- Call application.DrainOutboxAsync<TContext> explicitly to test delivery. Keep the scoped bus gateway and replace `IEventTransport` with a recording double.
+- Delivery is at least once. Exercise a failure after receipt but before acknowledgment and assert stable message identity and optional `[Inbox]` consumer deduplication.
 - Do not restore pre-commit transport publishing or sleeps to wait for an uncontrolled dispatcher.
 
 ## Ownership and Naming

@@ -54,7 +54,7 @@ public sealed class PersistencePolicyTests
     [Fact]
     public async Task SaveChanges_WhenConcurrencyConflicts_ShouldPreserveExceptionAndFaultContext()
     {
-        await using var app = await new RepositoryScenarioFactory().CreateAsync(cancellationToken: Token);
+        await using var app = await new RepositoryScenarioFactory(outbox: false).CreateAsync(cancellationToken: Token);
         var id = await app.SeedAsync<TestRepositoryDbContext, long>(async (db, ct) =>
         {
             var row = new SoftDeleteAuditRow { Title = "seed" };

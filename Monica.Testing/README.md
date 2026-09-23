@@ -57,7 +57,7 @@ Register the real context/module, then use UseTestDatabase<TContext>() to replac
 
 Arrange with application.SeedAsync<TContext,TResult>: add a graph, explicitly save, and return IDs. ExecuteAsync creates the act scope and invokes the production IExecutionPipeline. VerifyAsync<TContext> reads persisted state in a third scope. No tracker-clearing workaround is needed.
 
-The real audit policy remains active. Replace TimeProvider/current user/ID generation rather than audit logic. For durable events, inspect outbox contents first and then call application.DrainOutboxAsync<TContext>().
+The real audit policy remains active. Replace TimeProvider/current user/ID generation rather than audit logic. SeedAsync suppresses entity projections in its own scope. For durable events, use the production scoped bus, inspect captured Outbox rows first, and call application.DrainOutboxAsync<TContext>() to trigger one deterministic delivery pass. Replace `IEventTransport` to record provider sends while keeping transaction-aware routing active.
 
 See [the repository migration guide](../docs/migrations/repository-redesign.md) for transaction, outbox and breaking API details.
 

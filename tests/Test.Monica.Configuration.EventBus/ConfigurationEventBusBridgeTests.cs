@@ -22,7 +22,7 @@ public sealed class ConfigurationEventBusBridgeTests
             .AddSingleton<IDistributedEventBus>(eventBus)
             .BuildServiceProvider();
         var notifier = new ConfigurationEventBusChangeNotifier(
-            services,
+            services.GetRequiredService<IServiceScopeFactory>(),
             Options.Create(new ModuleConfigurationEventBusOption
             {
                 TopicName = "custom.configuration.reload"
@@ -46,7 +46,7 @@ public sealed class ConfigurationEventBusBridgeTests
             .AddKeyedSingleton<IDistributedEventBus>("configuration-reload", keyedEventBus)
             .BuildServiceProvider();
         var notifier = new ConfigurationEventBusChangeNotifier(
-            services,
+            services.GetRequiredService<IServiceScopeFactory>(),
             Options.Create(new ModuleConfigurationEventBusOption
             {
                 DistributedEventBusServiceKey = "configuration-reload",
@@ -71,7 +71,7 @@ public sealed class ConfigurationEventBusBridgeTests
             .AddSingleton<IDistributedEventBus>(eventBus)
             .BuildServiceProvider();
         var hostedService = new ConfigurationEventBusSubscriptionHostedService(
-            services,
+            services.GetRequiredService<IServiceScopeFactory>(),
             Options.Create(new ModuleConfigurationEventBusOption
             {
                 TopicName = "custom.configuration.reload"
@@ -97,7 +97,7 @@ public sealed class ConfigurationEventBusBridgeTests
             .AddKeyedSingleton<IDistributedEventBus>("configuration-reload", keyedEventBus)
             .BuildServiceProvider();
         var hostedService = new ConfigurationEventBusSubscriptionHostedService(
-            services,
+            services.GetRequiredService<IServiceScopeFactory>(),
             Options.Create(new ModuleConfigurationEventBusOption
             {
                 DistributedEventBusServiceKey = "configuration-reload",
@@ -117,7 +117,7 @@ public sealed class ConfigurationEventBusBridgeTests
     public async Task StartAsync_WhenDistributedEventBusIsMissing_ShouldFailFast()
     {
         var hostedService = new ConfigurationEventBusSubscriptionHostedService(
-            new ServiceCollection().BuildServiceProvider(),
+            new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
             Options.Create(new ModuleConfigurationEventBusOption()),
             new RecordingReloadSignalReceiver());
 

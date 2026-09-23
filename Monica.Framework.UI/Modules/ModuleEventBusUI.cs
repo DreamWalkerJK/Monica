@@ -68,10 +68,10 @@ public class ModuleEventBusUI : MonicaModule<ModuleEventBusUIOption>, IWebHostRe
         services.AddSingleton<EventBusMonitorService>();
 
         // Register a test service for distributed event bus testing
-        services.AddSingleton<EventBusTestService>();
+        services.AddScoped<EventBusTestService>();
 
         // Register the Provider Discovery Service
-        services.AddSingleton<EventBusProviderDiscoveryService>();
+        services.AddScoped<EventBusProviderDiscoveryService>();
     }
 
     public override void ConfigureEndpoints(WebModuleContext<ModuleEventBusUIOption> context)

@@ -1,76 +1,162 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Monica.EventBus.Abstractions;
+using Monica.EventBus.Models;
 using Monica.Repository.Outbox.Models;
 using Monica.Repository.Persistence.Services;
 
 namespace Monica.Repository.Outbox.Services;
 
-/// <summary>
-/// Explicit outbox drain for a worker or test. Each call uses a fresh scope and only committed rows.
-/// Delivery is at least once; expired claims may be redelivered. Processing stops at the first pending
-/// failure or live claim, preserving sequence selection without silently skipping failed notifications.
-/// </summary>
-public sealed class OutboxDispatcher<TDbContext>(IServiceScopeFactory scopes, TimeProvider time)
+internal interface IOutboxStore
+{
+    string StoreName { get; }
+    TimeSpan PollInterval { get; }
+    int BatchSize { get; }
+    Task<int> DrainAsync(int maximumMessages, CancellationToken cancellationToken);
+    Task<int> CleanupAsync(CancellationToken cancellationToken);
+    Task<OutboxStoreStatus> GetStatusAsync(CancellationToken cancellationToken);
+}
+
+internal sealed record OutboxStoreStatus(int PendingCount, DateTime? OldestPendingAtUtc, string? LastError);
+
+/// <summary>Claims committed, due messages in one store and conditionally acknowledges successful delivery.</summary>
+public sealed class OutboxDispatcher<TDbContext>(IServiceScopeFactory scopes, TimeProvider time,
+    OutboxRegistration<TDbContext> registration, ILogger<OutboxDispatcher<TDbContext>> logger) : IOutboxStore
     where TDbContext : RepositoryDbContext<TDbContext>
 {
-    /// <summary>
-    /// Delivers at most the requested number of messages. Returns acknowledged count.
-    /// A transport failure leaves the message pending and propagates; invoke again to retry.
-    /// Applications own scheduling, backoff, monitoring, retention and consumer idempotency.
-    /// </summary>
+    string IOutboxStore.StoreName => typeof(TDbContext).Name;
+    TimeSpan IOutboxStore.PollInterval => registration.Options.PollInterval;
+    int IOutboxStore.BatchSize => registration.Options.BatchSize;
+
+    /// <summary>Runs one bounded pass. A failed message remains due and does not block unrelated messages.</summary>
     public async Task<int> DrainAsync(int maximumMessages = 100, CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(maximumMessages, 1);
         await using var scope = scopes.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
-        var options = scope.ServiceProvider.GetRequiredService<OutboxRegistration<TDbContext>>().Options;
+        var services = scope.ServiceProvider;
+        var db = services.GetRequiredService<TDbContext>();
         var rows = db.Set<OutboxMessage>();
+        var options = registration.Options;
+        var now = time.GetUtcNow().UtcDateTime;
+        var candidates = await rows.AsNoTracking()
+            .Where(x => x.DeliveredAtUtc == null
+                && (x.NextAttemptAtUtc == null || x.NextAttemptAtUtc <= now)
+                && (x.LeaseUntilUtc == null || x.LeaseUntilUtc <= now))
+            .OrderBy(x => x.Sequence).Take(maximumMessages).ToListAsync(cancellationToken);
         var delivered = 0;
-        while (delivered < maximumMessages)
+        foreach (var candidate in candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var row = await rows.AsNoTracking().Where(x => x.DeliveredAtUtc == null)
-                .OrderBy(x => x.Sequence).FirstOrDefaultAsync(cancellationToken);
-            if (row is null) break;
-            var now = time.GetUtcNow().UtcDateTime;
             var lease = Guid.NewGuid();
-            var until = now.Add(options.DeliveryLease);
-            var claimed = await rows.Where(x => x.Sequence == row.Sequence && x.DeliveredAtUtc == null
+            now = time.GetUtcNow().UtcDateTime;
+            var claimed = await rows.Where(x => x.Sequence == candidate.Sequence && x.DeliveredAtUtc == null
+                    && (x.NextAttemptAtUtc == null || x.NextAttemptAtUtc <= now)
                     && (x.LeaseUntilUtc == null || x.LeaseUntilUtc <= now))
                 .ExecuteUpdateAsync(update => update.SetProperty(x => x.LeaseId, lease)
-                    .SetProperty(x => x.LeaseUntilUtc, until).SetProperty(x => x.Attempts, x => x.Attempts + 1), cancellationToken);
-            if (claimed == 0) break;
+                    .SetProperty(x => x.LeaseUntilUtc, now.Add(options.DeliveryLease))
+                    .SetProperty(x => x.Attempts, x => x.Attempts + 1), cancellationToken);
+            if (claimed == 0) continue;
 
             try
             {
-                var (contract, envelope) = OutboxSerializer.Read(row, options);
-                IEventBus bus = contract.Destination == OutboxDestination.Local
-                    ? scope.ServiceProvider.GetRequiredService<ILocalEventBus>()
-                    : scope.ServiceProvider.GetRequiredService<IDistributedEventBus>();
+                var message = candidate.ToEventMessage();
                 using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 deadline.CancelAfter(options.DeliveryLease);
-                await bus.PublishAsync(envelope.GetType(), envelope, topicName: contract.Name, cancellationToken: deadline.Token);
+                Task delivery;
+                if (message.Scope == EventSubscriptionScope.Local)
+                    delivery = services.GetRequiredService<IEventReceiveDispatcher>().DispatchAsync(message, deadline.Token);
+                else if (message.Scope == EventSubscriptionScope.Distributed)
+                {
+                    var transport = message.Metadata.ServiceKey is { } key
+                        ? services.GetRequiredKeyedService<IEventTransport>(key)
+                        : services.GetRequiredService<IEventTransport>();
+                    delivery = transport.SendAsync(message, deadline.Token);
+                }
+                else throw new InvalidOperationException($"Unknown outbox delivery scope '{message.Scope}'.");
+                await delivery.WaitAsync(deadline.Token);
                 var acknowledgedAt = time.GetUtcNow().UtcDateTime;
-                var acknowledged = await rows.Where(x => x.Sequence == row.Sequence && x.LeaseId == lease)
+                delivered += await rows.Where(x => x.Sequence == candidate.Sequence && x.LeaseId == lease
+                        && x.DeliveredAtUtc == null)
                     .ExecuteUpdateAsync(update => update.SetProperty(x => x.DeliveredAtUtc, acknowledgedAt)
-                        .SetProperty(x => x.LeaseId, (Guid?)null).SetProperty(x => x.LeaseUntilUtc, (DateTime?)null), cancellationToken);
-                if (acknowledged == 0) break;
-                delivered++;
+                        .SetProperty(x => x.LeaseId, (Guid?)null)
+                        .SetProperty(x => x.LeaseUntilUtc, (DateTime?)null)
+                        .SetProperty(x => x.LastError, (string?)null), cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException exception)
+            {
+                // A transport may ignore its deadline. Keep the claim until expiry so a still-running
+                // send does not overlap an immediate retry from another worker.
+                logger.LogWarning(exception, "Outbox delivery deadline elapsed for message {MessageId}; lease expiry will permit retry.", candidate.MessageId);
+                var error = exception.ToString();
+                if (error.Length > 1000) error = error[..1000];
+                try
+                {
+                    await rows.Where(x => x.Sequence == candidate.Sequence && x.LeaseId == lease)
+                        .ExecuteUpdateAsync(update => update.SetProperty(x => x.LastError, error), CancellationToken.None);
+                }
+                catch (Exception cleanup)
+                {
+                    logger.LogError(cleanup, "Failed to record outbox timeout for message {MessageId}.", candidate.MessageId);
+                }
             }
             catch (Exception exception)
             {
+                logger.LogError(exception, "Outbox delivery failed for message {MessageId}; it remains due for retry.", candidate.MessageId);
                 try
                 {
-                    // Cleanup is independent of an already canceled delivery. A lost claim is never overwritten.
-                    await rows.Where(x => x.Sequence == row.Sequence && x.LeaseId == lease)
+                    var backoff = Math.Min(options.RetryMaxDelay.TotalMilliseconds,
+                        options.RetryBaseDelay.TotalMilliseconds * Math.Pow(2, Math.Min(candidate.Attempts, 16)));
+                    var jittered = Math.Min(options.RetryMaxDelay.TotalMilliseconds,
+                        backoff * (0.8 + Random.Shared.NextDouble() * 0.4));
+                    var retryAt = time.GetUtcNow().UtcDateTime.AddMilliseconds(jittered);
+                    var error = exception.ToString();
+                    if (error.Length > 1000) error = error[..1000];
+                    await rows.Where(x => x.Sequence == candidate.Sequence && x.LeaseId == lease)
                         .ExecuteUpdateAsync(update => update.SetProperty(x => x.LeaseId, (Guid?)null)
-                            .SetProperty(x => x.LeaseUntilUtc, (DateTime?)null), CancellationToken.None);
+                            .SetProperty(x => x.LeaseUntilUtc, (DateTime?)null)
+                            .SetProperty(x => x.NextAttemptAtUtc, retryAt)
+                            .SetProperty(x => x.LastError, error), CancellationToken.None);
                 }
-                catch (Exception cleanup) { exception.Data["Monica.Outbox.ClaimReleaseException"] = cleanup; }
-                throw;
+                catch (Exception cleanup)
+                {
+                    logger.LogError(cleanup, "Failed to release outbox claim for message {MessageId}; lease expiry will permit retry.", candidate.MessageId);
+                }
             }
         }
         return delivered;
+    }
+
+    /// <summary>Deletes only acknowledged rows beyond the configured replay and diagnostic retention period.</summary>
+    public async Task<int> CleanupAsync(CancellationToken cancellationToken = default)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
+        var cutoff = time.GetUtcNow().UtcDateTime - registration.Options.DeliveredRetention;
+        var keys = await db.Set<OutboxMessage>().AsNoTracking()
+            .Where(x => x.DeliveredAtUtc != null && x.DeliveredAtUtc < cutoff)
+            .OrderBy(x => x.Sequence).Select(x => x.Sequence)
+            .Take(registration.Options.BatchSize).ToListAsync(cancellationToken);
+        if (keys.Count == 0) return 0;
+        return await db.Set<OutboxMessage>().Where(x => keys.Contains(x.Sequence)).ExecuteDeleteAsync(cancellationToken);
+    }
+
+    async Task<OutboxStoreStatus> IOutboxStore.GetStatusAsync(CancellationToken cancellationToken)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var rows = scope.ServiceProvider.GetRequiredService<TDbContext>().Set<OutboxMessage>().AsNoTracking();
+        var pending = rows.Where(x => x.DeliveredAtUtc == null);
+        var summary = await pending.GroupBy(_ => 1)
+            .Select(group => new { Count = group.Count(), Oldest = group.Min(x => x.CreatedAtUtc) })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (summary is null) return new OutboxStoreStatus(0, null, null);
+        var error = await pending.Where(x => x.LastError != null)
+            .OrderByDescending(x => x.Sequence).Select(x => x.LastError)
+            .FirstOrDefaultAsync(cancellationToken);
+        return new OutboxStoreStatus(summary.Count, summary.Oldest, error);
     }
 }

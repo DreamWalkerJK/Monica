@@ -4,15 +4,18 @@ using Monica.EventBus.Abstractions;
 using Monica.EventBus.Annotations;
 using Monica.EventBus.Services;
 using Monica.EventBus.Services.Support;
+using Monica.EventBus.Models;
+using System.Collections.Concurrent;
 
 namespace Monica.Testing.Doubles;
 
 /// <summary>
 /// Event bus double that records published events and can still invoke in-process subscriptions.
 /// </summary>
-public sealed class RecordingEventBus : ILocalEventBus, IDistributedEventBus
+public sealed class RecordingEventBus : ILocalEventBus, IDistributedEventBus, IEventTransport
 {
     private readonly LocalRecordingEventBus _local;
+    private readonly ConcurrentQueue<EventMessage> _messages = new();
 
     /// <summary>
     /// Initializes a recording event bus that dispatches through the host service provider.
@@ -34,6 +37,17 @@ public sealed class RecordingEventBus : ILocalEventBus, IDistributedEventBus
     /// Gets all recorded publish operations.
     /// </summary>
     public IReadOnlyList<RecordedEvent> Events => _local.Events;
+
+    /// <summary>Gets prepared messages accepted by the recording transport.</summary>
+    public IReadOnlyList<EventMessage> Messages => _messages.ToArray();
+
+    /// <inheritdoc />
+    public Task SendAsync(EventMessage message, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        _messages.Enqueue(message);
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc />
     public IEventSubscriptionRegistry Subscriptions => _local.Subscriptions;

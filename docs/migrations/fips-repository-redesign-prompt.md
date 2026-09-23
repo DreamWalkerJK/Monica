@@ -1,17 +1,9 @@
-# FIPS repository redesign: independent review prompt
+# FIPS EventBus Outbox migration: review context
 
-The user subsequently authorized the same agent to implement both repositories. This prompt supersedes the original implementation handoff.
+The user approved implementation of the EventBus Outbox simplification on 2026-09-23 in Monica and FIPS. The earlier repository redesign handoff and independent-review prompt are superseded. No database update or deployment is part of this implementation. The user waived FIPS Workflow lifecycle changes for this work.
 
----
+Review the current implementation in `D:\Code\MoLibrary` and `D:\Code\FIPS2022` against [the Monica migration guide](repository-redesign.md) and FIPS's current repository guide. FIPS publishes ordinary `[Outbox]` EventBus payloads through scoped `IDistributedEventBus` or `ILocalEventBus` and handles ordinary payload types. There is no business `IOutboxWriter`, `OutboxDelivery<T>`, FIPS application Outbox worker, or parallel handler hierarchy. Monica owns durable rows, leases, retries, cleanup, and optional `[Inbox]` receipts.
 
-Review the completed repository redesign in `D:\Code\MoLibrary` and `D:\Code\FIPS2022`, both on `codex/repository-redesign`. Read both repositories' instructions and `docs/migrations/repository-redesign.md` in Monica, plus `docs/repository-redesign.md` in FIPS.
+Check primary transaction ownership, same-connection Sharding participation, generated-key entity projections, the final primary Outbox flush after secondary participants, and transport identity preservation. FIPS owns source revision and authority decisions. Its persisted per-key revisions and retained tombstones must commit with the source business change and event; Outbox storage sequence is not a domain revision. Verify duplicate and out-of-order snapshot/delta/archive handling, independent current/history transfers, SQL flight journal and manual-repair checkpoints, and cache compare-and-swap behavior. Separate local commits do not create distributed atomicity.
 
-Review operation ownership, tracked graph updates, save policies, sharding transaction participation, outbox subscriptions, per-source ordering, and consumer idempotency. Pay particular attention to independent current/history transfers, the SQL flight journal, manual-repair checkpoints and cache compare-and-swap behavior. Do not infer distributed atomicity from separate local commits.
-
-Check the generated `RepositoryPersistenceRedesign` migrations and the schema review. No real database migration or deployment has been performed. Running `database update`, changing production data, or deployment requires separate authorization. Keep credential-bearing configuration and logs private.
-
-Use the production-composed tests and failure-injection cases. Run one dotnet process at a time, with the .NET 10 SDK and bounded MSBuild parallelism. Distinguish SQLite/actual ShardingCore package evidence from production GaussDB runtime validation.
-
-Report concrete defects with paths, triggering scenarios and practical consequences. Existing synchronous business RPCs and the departure/arrival processing queue retain their application-specific delivery semantics; the new repository outbox does not make arbitrary external calls transactional. Propose any further business-process redesign separately rather than silently changing response contracts.
-
-Preserve unrelated pre-existing FIPS edits in the four Workflow skill files, `.monica/guide.json`, and `CLAUDE.md`. Do not restore the old repository wrappers, ambient context switching, or test-only save loops.
+Use production-composed tests and failure injection. Distinguish SQLite and actual ShardingCore package evidence from GaussDB production runtime validation. Review generated migrations and schema changes without running `database update` or touching production data. Keep credential-bearing configuration and logs private. Existing synchronous business RPCs and the departure/arrival processing queue retain their application-specific delivery semantics; durable messaging does not make arbitrary external effects transactional.

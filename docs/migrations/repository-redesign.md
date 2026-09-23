@@ -28,6 +28,8 @@ The scoped `IUnitOfWorkManager.RunAsync` remains available to custom adapters. N
 
 Use `manager.Current!.FlushAsync(token)` only when generated values or early constraint checks are needed. It does not commit. Direct `DbContext.SaveChangesAsync` inside the operation uses that same transaction.
 
+Entity projections registered with an asynchronous callback require `SaveChangesAsync` or normal asynchronous operation completion. A synchronous save with an enabled async projection fails before database I/O. Synchronous callbacks and saves with projection capture suspended continue to support `SaveChanges()`.
+
 Returned `IResultEnvelope` failures roll back; both `Ok` and `Created` are success. Custom result adapters implement `IExecutionOutcome.ShouldRollback`. The MVC adapter recognizes failed ObjectResult/JsonResult envelopes, error status codes, and handled exceptions. Prefer exceptions inside business operations and map errors at the public boundary.
 
 `[ReadOnlyOperation]` on a mediator request/handler or MVC action disables the automatic write transaction. Direct MVC GET, HEAD, and OPTIONS are read-only by default; generated mediated query requests should carry the attribute. Native query enumeration must finish before its DI scope is disposed. The read-only marker is transaction policy, not database authorization.
@@ -82,34 +84,38 @@ The sealed save methods run a fixed sequence: detect/cascade changes, retain own
 Opt into outbox storage per relational context:
 
 ```csharp
+[Outbox]
+[EventName("orders.approved.v1")]
+public sealed record OrderApprovedV1(long OrderId);
+
 builder.AddMonica(monica =>
 {
     monica.AddRepository()
         .AddRepositoryDbContext<OrdersDbContext>((_, db) => db.UseSqlite(connectionString))
-        .AddOutbox<OrdersDbContext>(outbox =>
-        {
-            outbox.Register<OrderApprovedV1>("orders.approved.v1");
-            outbox.RegisterEntity<Order, OrderSnapshotV1>(
-                "orders.changed.v1",
-                order => new OrderSnapshotV1(order.Id, order.Number),
-                OutboxDestination.Local);
-        });
+        .AddOutbox<OrdersDbContext>();
 });
+
+// In an operation that uses OrdersDbContext:
+await bus.PublishAsync(new OrderApprovedV1(order.Id), cancellationToken: cancellationToken);
 ```
 
-Create the application's EF migration for the added `MonicaOutbox` table and its indexes before deployment. The framework does not own a concrete application's migrations and does not update a production database. Generate migrations with the same AddOutbox configuration used at runtime.
+Configure the existing EventBus provider alongside Repository. Create an application EF migration for `MonicaOutbox` before deployment. Repository does not own a concrete application's migrations or update a production database.
 
-Inject `IOutboxWriter<OrdersDbContext>` and enqueue registered DTOs. Explicit messages are serialized immediately; automatic `EntityChange<TProjection>` notifications are projected after EF supplies generated values. Capture is opt-in and concerns changed rows; aggregate-wide domain facts should be explicit events. Never serialize a live EF navigation graph.
+`[Outbox]` is a delivery policy on a normal EventBus payload. The scoped bus prepares immutable JSON at publish time and stages it on the operation's selected primary context. Publish completion means staged acceptance; the message becomes visible after commit. Publishing without an active, healthy local transaction or an Outbox-enabled primary context throws. Plain unmarked messages retain immediate delivery. The transport and handlers receive the ordinary event type, with optional scoped `IEventDeliveryContext` for identity. Durable local events use the same marker and `ILocalEventBus`.
 
-Business and outbox writes share a local transaction. When saving inside a caller-owned transaction, a savepoint protects both internal flushes. Providers without the necessary relational/savepoint support are rejected. Synchronous saves use synchronous database I/O and perform the same durable capture. No save or commit path calls an event transport.
+The transactional sink validates ownership, prepares the complete publish batch, and stages its snapshots as one operation. A preparation or staging failure marks the operation rollback-only even if application code catches the exception.
 
-Configure the selected Monica event-bus transport and schedule `OutboxDispatcher<OrdersDbContext>.DrainAsync(...)` in an application worker. AddOutbox does not enable a transport. The dispatcher uses a fresh scope, reads committed pending rows, claims the oldest row, publishes `OutboxDelivery<TPayload>` through the selected Monica bus on the **registered contract name as topic**, and conditionally acknowledges its claim. Subscribe to that exact envelope type and topic.
+When a handler host registers several write contexts, put `[UnitOfWorkContext(typeof(OrdersDbContext))]` on its automatically transactional handler (or entry method) to select the primary store. Additional context types may follow when they share that physical connection and transaction. An explicit `UnitOfWorkScopeOptions` execution feature overrides the attribute. This lets `[Inbox]` receipts, business writes, and outgoing `[Outbox]` events share the selected transaction.
 
-Delivery is **at least once**. MessageId is stable across retries; consumers must atomically record it with their own effects. A transport may deliver before acknowledgment fails. Leases default to five minutes; timeout cancellation is cooperative and does not imply exactly-once delivery.
+For entity notifications, configure `AddEntityEventProjections<TContext>(options => options.RegisterEntity<TEntity,TEvent>(...))` separately from `AddOutbox`. The callback receives `PersistenceChange` after generated values exist; it must return an ordinary `[Outbox]` event with stable EventBus naming and a detached DTO payload. An async callback may query or stage source-side bookkeeping through `change.Entry.Context`, but must not save, commit, or publish. The saving context and primary Outbox owner flush inside the same physical transaction, including when another participant captures a projection after the owner was first flushed. Seed scopes explicitly suppress projections. The transaction-local `IDomainEventQueue` remains separate from durable transport delivery.
 
-A failed/leased oldest row blocks later pending selection. This is a conservative dispatcher, not a global commit-order guarantee: sequence allocation, concurrent commits and expired claims can reorder observations. For streams requiring ordering, include aggregate ID and monotonic domain version in the payload and enforce those semantics at the consumer. FIPS must choose its own stream/version policy.
+Monica starts one hosted Outbox worker for configured stores. Each store is scanned on its own `PollInterval` in a fresh scope. The worker atomically claims due rows, invokes the selected provider or local receive dispatcher directly, and acknowledges only the matching lease. A failed row gets bounded backoff and does not block unrelated rows. Pending count, oldest age, and last failure appear in the hosted-service state. Pending messages remain until delivered; only acknowledged rows older than `DeliveredRetention` are pruned. `DeliveryLease`, `BatchSize`, `PollInterval`, retry delays, and retention are operational options on `AddOutbox<TContext>`.
 
-Applications own dispatch scheduling, retry backoff, poison-message handling, monitoring and delivered-row retention. No hosted dispatcher is started implicitly. Transport failure does not undo committed business state.
+Delivery is **at least once**. Message ID, source, topic, provider key, and body stay stable through retry; a transport may accept a send before acknowledgment is lost. The Outbox sequence is a storage key, not an application revision or ordering promise.
+
+Consumers that need database deduplication can mark ordinary handlers `[Inbox("orders.projection.v1")]` and configure `AddInbox<OrdersDbContext>()`. Inbox requires stable incoming source and message identity. The receipt's `(consumer, source, message ID)` key is unique and commits with business changes and outgoing Outbox rows in the same operation. A concurrent duplicate that loses the database uniqueness race rolls back and retries in a fresh scope. Retain receipts for the full replay horizon; pruning them permits reprocessing. External effects still need their own idempotency controls.
+
+Transport failure does not undo committed business state. Unsupported transaction ownership or provider capabilities fail clearly; there is no direct-publish fallback for marked events.
 
 ## Test migration
 
@@ -123,6 +129,6 @@ The in-memory reference application remains a non-durable demonstration and publ
 
 ## Validation record
 
-The integrated change was validated on 2026-09-22 with .NET SDK 10.0.302 and EF Core 10.0.12. The complete Release solution build produced zero warnings and zero errors; all 1,906 tests passed across 30 assemblies. Canonical skill validation, projection synchronization checks, and skill tests passed.
+The integrated change was validated on 2026-09-23 with .NET SDK 10.0.302 and EF Core 10.0.12. The complete Monica Release solution build produced zero warnings and zero errors; 1,922 tests passed across 30 projects with no failures or skips. Canonical skill validation, projection synchronization checks, and skill tests passed.
 
-FIPS validates the actual ShardingCore 7.10.2.2 package, including direct outbox saves and operation commit/rollback with SQLite. Its production-provider tests require an explicitly configured disposable database. The consumer report records those limits, migration SQL, and deployment prerequisites.
+FIPS validates the actual ShardingCore 7.10.2.2 package, including direct outbox saves and operation commit/rollback with SQLite. Its final test suite passed 1,663 tests with six external-database tests skipped and no failures. Those production-provider tests require an explicitly configured disposable database. The consumer report records those limits, migration SQL, and deployment prerequisites.

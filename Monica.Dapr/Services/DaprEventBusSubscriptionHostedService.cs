@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text.Json;
 using Dapr.Messaging.PublishSubscribe;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -7,11 +6,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Monica.Core.HostedService.Models;
-using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Dapr.Abstractions;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
+using Monica.EventBus.Annotations;
 using Monica.EventBus.Models;
 using Monica.EventBus.Services.Support;
 
@@ -28,19 +27,18 @@ internal class DaprEventBusSubscriptionHostedService(
     IEventSubscriptionRegistry subscriptionManager,
     ITopicSubscriptionStatusStore topicStatusStore,
     IHostApplicationLifetime applicationLifetime,
-    IDistributedEventBus eventBus,
+    IEventReceiveDispatcher dispatcher,
     IObservableInstanceRegistry observableManager,
     IDaprSidecarHealthCoordinator healthCoordinator,
     IOptions<ModuleDaprEventBusOption> options,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IServiceScopeFactory serviceScopeFactory,
-    IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
     ILogger<DaprTopicSubscription> topicSubscriptionLogger,
     ILogger<DaprEventBusSubscriptionHostedService> logger,
     string? serviceKey = null)
     : EventBusSubscriptionHostedServiceBase(
         subscriptionManager,
-        eventBus,
+        dispatcher,
         topicStatusStore,
         observableManager,
         hostedServiceOptions,
@@ -207,7 +205,7 @@ internal class DaprEventBusSubscriptionHostedService(
             return Task.CompletedTask;
         }
 
-        // Message handler - deserializes and delegates to base class
+        // The common dispatcher is the sole payload decoder.
         async Task<TopicResponseAction> HandleMessageAsync(TopicMessage message, CancellationToken ct)
         {
             if (_options.EnableMessageDataDebugLogging)
@@ -218,55 +216,9 @@ internal class DaprEventBusSubscriptionHostedService(
                     message.Topic, rawJson);
             }
 
-            object? eventData;
-            try
-            {
-                eventData = JsonSerializer.Deserialize(
-                    message.Data.Span,
-                    eventType,
-                    jsonSerializerOptionsProvider.SerializerOptions);
-            }
-            catch (Exception ex) when (ex is JsonException or NotSupportedException)
-            {
-                TopicStatusStore.ReportError(ServiceKey, message.Topic, $"Rejected malformed Dapr message for topic {message.Topic}", ex);
-                RecordState(
-                    $"Rejected malformed Dapr message for topic {message.Topic}",
-                    HostedServiceState.Degraded,
-                    ex);
-                Logger.LogWarning(
-                    ex,
-                    "Dropping malformed Dapr message for topic {Topic}",
-                    message.Topic);
-                return TopicResponseAction.Drop;
-            }
-            catch (Exception ex)
-            {
-                TopicStatusStore.ReportError(ServiceKey, message.Topic, $"Error deserializing Dapr message for topic {message.Topic}", ex);
-                RecordState(
-                    $"Error deserializing Dapr message for topic {message.Topic}",
-                    HostedServiceState.Degraded,
-                    ex);
-                Logger.LogError(
-                    ex,
-                    "Transient error deserializing Dapr message for topic {Topic}; requesting retry",
-                    message.Topic);
-                return TopicResponseAction.Retry;
-            }
-
-            if (eventData is null)
-            {
-                TopicStatusStore.ReportError(ServiceKey, message.Topic, $"Dapr message for topic {message.Topic} deserialized to null");
-                RecordState($"Failed to deserialize message for topic {message.Topic}", HostedServiceState.Degraded);
-                Logger.LogWarning(
-                    "Dropping Dapr message for topic {Topic} because it deserialized to null",
-                    message.Topic);
-                return TopicResponseAction.Drop;
-            }
-
+            var metadata = CreateMetadata(message, eventType, ServiceKey);
             var handlingTask = HandleExternalMessageAsync(
-                message.Topic,
-                eventData,
-                ct);
+                new EventMessage(metadata, EventSubscriptionScope.Distributed, message.Data), ct);
 
             try
             {
@@ -293,6 +245,15 @@ internal class DaprEventBusSubscriptionHostedService(
                     message.Topic);
                 return TopicResponseAction.Retry;
             }
+            catch (EventMessageDeserializationException ex)
+            {
+                TopicStatusStore.ReportError(ServiceKey, message.Topic,
+                    $"Rejected malformed Dapr message for topic {message.Topic}", ex);
+                RecordState($"Rejected malformed Dapr message for topic {message.Topic}",
+                    HostedServiceState.Degraded, ex);
+                Logger.LogWarning(ex, "Dropping malformed Dapr message for topic {Topic}", message.Topic);
+                return TopicResponseAction.Drop;
+            }
             catch (Exception ex)
             {
                 TopicStatusStore.ReportError(ServiceKey, message.Topic, $"Error handling Dapr message for topic {message.Topic}", ex);
@@ -305,6 +266,21 @@ internal class DaprEventBusSubscriptionHostedService(
                 return TopicResponseAction.Retry;
             }
         }
+    }
+
+    internal static EventDeliveryMetadata CreateMetadata(
+        TopicMessage message, Type eventType, string? serviceKey)
+    {
+        string? Extension(string name) => message.Extensions.TryGetValue(name, out var value)
+            ? value.StringValue : null;
+        return new EventDeliveryMetadata(
+            string.IsNullOrWhiteSpace(message.Id) ? null : message.Id,
+            string.IsNullOrWhiteSpace(message.Source) ? null : message.Source,
+            EventNameAttribute.GetNameOrDefault(eventType),
+            message.Topic,
+            serviceKey,
+            Extension("traceparent"),
+            Extension("tracestate"));
     }
 
     private void OnSubscriptionReceiverCreated(string topicName)
