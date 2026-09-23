@@ -1,32 +1,17 @@
-.session-item-wrapper ::deep .session-item {
-    margin: 6px 0;
-    padding: 8px 12px;
-}
-
-.session-content {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    gap: 8px;
-}
-
-.session-info {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-}
-
-.session-item-wrapper ::deep .session-title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-weight: 600;
-}
-
-.session-item-wrapper ::deep .session-time {
-    opacity: 0.7;
-}
-
-.delete-action {
-    flex: 0 0 auto;
-}
+.session-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) 38px; align-items: center; min-height: 38px; margin: 2px 0; padding: 0 4px; border-radius: 8px; }
+.session-row:hover, .session-row:focus-within { background: var(--mud-palette-action-default-hover); }
+.session-row.selected { background: var(--mud-palette-action-default-hover); }
+.session-row ::deep .session-select { justify-content: flex-start; min-width: 0; width: 100%; padding: 8px 4px; border-radius: 6px; text-transform: none; text-align: left; font-size: .8125rem; font-weight: 400; }
+.session-row.selected ::deep .session-select { font-weight: 600; }
+.session-row ::deep .session-select .mud-button-label { display: block; min-width: 0; overflow: hidden; }
+.session-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pin-action, .archive-action { display: flex; align-items: center; justify-content: center; opacity: 0; }
+.session-row ::deep .mud-icon-button { padding: 4px; color: var(--mud-palette-text-secondary); }
+.session-row ::deep .mud-icon-button .mud-icon-root { font-size: 16px; }
+.session-tail { display: grid; place-items: center; min-width: 0; }
+.session-time, .archive-action { grid-area: 1 / 1; }
+.session-time { color: var(--mud-palette-text-disabled); font-size: .6875rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.session-row:hover .pin-action, .session-row:focus-within .pin-action, .session-row.pinned .pin-action,
+.session-row:hover .archive-action, .session-row:focus-within .archive-action { opacity: 1; }
+.session-row:hover .session-time, .session-row:focus-within .session-time { opacity: 0; }
+@media (hover: none), (pointer: coarse) { .pin-action, .archive-action { opacity: 1; } .session-time { display: none; } .session-row { min-height: 44px; } .session-row ::deep .mud-icon-button { padding: 6px; } }

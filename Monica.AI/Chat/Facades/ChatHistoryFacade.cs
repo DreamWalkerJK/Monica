@@ -116,6 +116,75 @@ public sealed class ChatHistoryFacade
         }
     }
 
+    /// <summary>
+    /// Pins or unpins an active conversation in the current user/workspace without changing its transcript recency.
+    /// Archived conversations must be restored before they can be pinned.
+    /// </summary>
+    public async Task<Res<ChatHistoryWriteResult>> SetPinnedAsync(
+        string sessionId,
+        bool isPinned,
+        long expectedRevision,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+            ArgumentOutOfRangeException.ThrowIfNegative(expectedRevision);
+            var partition = await _partitionResolver.ResolveAsync(ct);
+            return Res.Ok(await _historyProvider.SetPinnedAsync(partition, sessionId, isPinned, expectedRevision, ct));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return Res.Fail(ex.GetMessageRecursively());
+        }
+    }
+
+    /// <summary>
+    /// Archives or restores the complete selection atomically in the current user/workspace. Archiving clears pins
+    /// and any matching current selection while preserving transcripts and attachments; restoration leaves them unpinned.
+    /// </summary>
+    public async Task<Res<ChatHistoryWriteResult>> SetArchivedAsync(
+        IReadOnlyList<string> sessionIds,
+        bool isArchived,
+        long expectedRevision,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            ValidateSelection(sessionIds);
+            ArgumentOutOfRangeException.ThrowIfNegative(expectedRevision);
+            var partition = await _partitionResolver.ResolveAsync(ct);
+            return Res.Ok(await _historyProvider.SetArchivedAsync(partition, sessionIds, isArchived, expectedRevision, ct));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return Res.Fail(ex.GetMessageRecursively());
+        }
+    }
+
+    /// <summary>
+    /// Permanently deletes selected archived conversations and their attachments in the current user/workspace.
+    /// Active or unknown IDs reject the complete request. A successful result with a warning means the catalog
+    /// deletion committed but residual physical files still require the provider's automatic cleanup retry.
+    /// </summary>
+    public async Task<Res<ChatHistoryWriteResult>> DeleteArchivedSessionsAsync(
+        IReadOnlyList<string> sessionIds,
+        long expectedRevision,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            ValidateSelection(sessionIds);
+            ArgumentOutOfRangeException.ThrowIfNegative(expectedRevision);
+            var partition = await _partitionResolver.ResolveAsync(ct);
+            return Res.Ok(await _historyProvider.DeleteArchivedSessionsAsync(partition, sessionIds, expectedRevision, ct));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return Res.Fail(ex.GetMessageRecursively());
+        }
+    }
+
     /// <summary>Clears all persisted sessions when the expected catalog revision is current.</summary>
     public async Task<Res<ChatHistoryWriteResult>> ClearAsync(
         long expectedRevision,
@@ -153,5 +222,12 @@ public sealed class ChatHistoryFacade
         {
             return Res.Fail(ex.GetMessageRecursively());
         }
+    }
+
+    private static void ValidateSelection(IReadOnlyList<string> sessionIds)
+    {
+        ArgumentNullException.ThrowIfNull(sessionIds);
+        if (sessionIds.Count == 0) throw new ArgumentException("Choose at least one conversation.", nameof(sessionIds));
+        foreach (var id in sessionIds) ArgumentException.ThrowIfNullOrWhiteSpace(id);
     }
 }

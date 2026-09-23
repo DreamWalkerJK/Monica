@@ -1,10 +1,52 @@
 .chat-container { --mo-chat-reading-gutter: 36px; position: relative; flex: 1; display: flex; flex-direction: column; width: 100%; min-width: 0; min-height: 0; }
-.reading-resize-guides { position: absolute; z-index: 1; top: 8px; bottom: 8px; left: 50%; transform: translateX(-50%); width: min(var(--mo-chat-reading-width, 960px), calc(100% - var(--mo-chat-reading-gutter) * 2)); pointer-events: none; }
-.reading-resize-handle { position: absolute; top: 0; bottom: 0; width: 12px; cursor: ew-resize; touch-action: none; pointer-events: auto; border-radius: 6px; }
-.left-handle { left: -18px; }
-.right-handle { right: -18px; }
-.reading-resize-handle::after { content: ""; position: absolute; top: 15%; bottom: 15%; left: 5px; width: 2px; border-radius: 6px; background: var(--mud-palette-lines-default); opacity: .5; }
-.reading-resize-handle:hover::after, .reading-resize-handle:focus-visible::after { background: var(--mud-palette-primary); opacity: 1; }
-.reading-resize-handle:focus-visible { outline: 1px solid var(--mud-palette-primary); }
+.reading-resize-guides {
+    --reading-column-width: min(var(--mo-chat-reading-width, 960px), calc(100% - var(--mo-chat-reading-gutter) * 2));
+    position: absolute;
+    z-index: 1;
+    inset: 8px 0;
+    pointer-events: none;
+}
+
+/* The hit area expands into free space, leaving 6px by the text and 16px by the scrollbar. */
+.reading-resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: min(40px, calc((100% - var(--reading-column-width)) / 2 - 22px));
+    cursor: col-resize;
+    touch-action: none;
+    pointer-events: auto;
+    color: var(--mud-palette-text-secondary);
+}
+.left-handle { right: calc(50% + var(--reading-column-width) / 2 + 6px); }
+.right-handle { left: calc(50% + var(--reading-column-width) / 2 + 6px); }
+
+/* The short cue follows the pointer without leaving a rule beside the transcript. */
+.reading-resize-handle::after {
+    --indicator-y: var(--mo-chat-reading-pointer-y, 50%);
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 1.5px);
+    width: 3px;
+    border-radius: 6px;
+    background: linear-gradient(to bottom,
+        transparent calc(var(--indicator-y) - 52px),
+        currentColor calc(var(--indicator-y) - 12px),
+        currentColor calc(var(--indicator-y) + 12px),
+        transparent calc(var(--indicator-y) + 52px));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+}
+
+.reading-resize-handle[data-dragging]::after,
+.reading-resize-handle:focus-visible::after { opacity: 1; }
+.reading-resize-handle:focus-visible { outline: none; }
+.reading-resize-handle:focus-visible:not(:hover):not([data-dragging])::after { --indicator-y: 50%; color: var(--mud-palette-primary); }
+
+@media (hover: hover) { .reading-resize-handle:hover::after { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .reading-resize-handle::after { transition: none; } }
 .hidden-guides { display: none; }
 @media(max-width: 600px) { .chat-container { --mo-chat-reading-gutter: 14px; } .reading-resize-guides { display: none; } }

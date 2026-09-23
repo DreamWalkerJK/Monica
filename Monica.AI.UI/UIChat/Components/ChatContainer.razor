@@ -30,7 +30,7 @@
                          EnableAutoScroll="@State.EnableAutoScroll" IsSending="@State.IsSending"
                          OnEditMessage="@State.EditMessageAsync" OnRetryMessage="@State.RetryMessageAsync" OnInspect="@OnInspect" />
     }
-    <ChatInputArea Disabled="@State.HasHistoryConflict" IsSending="@State.IsSending" IsUploading="@State.IsUploading"
+    <ChatInputArea Disabled="@(State.HasHistoryConflict || State.IsHistoryUpdating)" IsSending="@State.IsSending" IsUploading="@State.IsUploading"
                    ModelName="@State.CurrentModelName"
                    Providers="@State.Providers" ProviderId="@State.CurrentProviderId" ShowProviderInfo="@State.ShowProviderSelector"
                    CurrentModel="@State.CurrentModel" ReasoningLevel="@State.CurrentSession?.Settings.ReasoningLevel"

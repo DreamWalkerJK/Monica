@@ -19,7 +19,10 @@ public enum ChatHistoryWorkspaceWarningKind
     SessionsPruned,
 
     /// <summary>A catalog entry no longer had a readable snapshot.</summary>
-    SessionUnavailable
+    SessionUnavailable,
+
+    /// <summary>A committed write returned additional diagnostic information from the storage provider.</summary>
+    PersistenceWarning
 }
 
 /// <summary>Describes a warning that should be presented without adding a transcript error.</summary>

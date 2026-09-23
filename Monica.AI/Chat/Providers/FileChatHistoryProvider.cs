@@ -13,7 +13,11 @@ internal sealed class FileChatHistoryProvider(
 {
     public Task<ChatHistoryCatalog> GetCatalogAsync(ChatHistoryPartition partition, CancellationToken ct = default)
         => files.WithLockAsync(ChatStoragePaths.Manifest(partition), async token =>
-            (await FileChatCatalog.ReadAsync(files, partition, token)).ToCatalog(), ct);
+        {
+            var manifest = await FileChatCatalog.ReadAsync(files, partition, token);
+            CleanupDeletedSessions(partition, manifest);
+            return manifest.ToCatalog();
+        }, ct);
 
     public Task<ChatSessionSnapshot?> LoadSessionAsync(
         ChatHistoryPartition partition, string sessionId, CancellationToken ct = default)
@@ -42,41 +46,66 @@ internal sealed class FileChatHistoryProvider(
             var fileId = Guid.NewGuid().ToString("N");
             // A crash before catalog publication can leave only an unreferenced snapshot, never a torn session.
             await files.WriteAsync(FileChatCatalog.SnapshotPath(partition, snapshot.SessionId, fileId), committed, token);
-            manifest.Sessions[snapshot.SessionId] = new FileChatSnapshotEntry(fileId, committed.ToSummary());
+            var summary = committed.ToSummary();
+            if (manifest.Sessions.TryGetValue(snapshot.SessionId, out var existing))
+            {
+                summary = summary with { IsPinned = existing.Summary.IsPinned, ArchivedAt = existing.Summary.ArchivedAt };
+            }
+            manifest.Sessions[snapshot.SessionId] = new FileChatSnapshotEntry(fileId, summary);
             return () => CleanupUnreferencedSnapshots(partition, snapshot.SessionId, fileId);
         }, ct, manifest => manifest.Sessions.TryGetValue(snapshot.SessionId, out var existing)
-            ? existing.Summary.Revision == snapshot.Revision : snapshot.Revision == 0);
+            ? existing.Summary.Revision == snapshot.Revision && existing.Summary.ArchivedAt is null
+            : snapshot.Revision == 0 && !manifest.PendingDeletionSessionIds.Contains(snapshot.SessionId));
+
+    public Task<ChatHistoryWriteResult> SetPinnedAsync(
+        ChatHistoryPartition partition, string sessionId, bool isPinned, long expectedRevision, CancellationToken ct = default)
+        => MutateAsync(partition, expectedRevision, (manifest, _) =>
+        {
+            manifest.SetPinned(sessionId, isPinned);
+            return Task.FromResult<Action?>(null);
+        }, ct);
+
+    public Task<ChatHistoryWriteResult> SetArchivedAsync(
+        ChatHistoryPartition partition, IReadOnlyList<string> sessionIds, bool isArchived, long expectedRevision,
+        CancellationToken ct = default)
+        => MutateAsync(partition, expectedRevision, (manifest, _) =>
+        {
+            manifest.SetArchived(sessionIds, isArchived);
+            return Task.FromResult<Action?>(null);
+        }, ct);
+
+    public Task<ChatHistoryWriteResult> DeleteArchivedSessionsAsync(
+        ChatHistoryPartition partition, IReadOnlyList<string> sessionIds, long expectedRevision, CancellationToken ct = default)
+        => MutateAsync(partition, expectedRevision, (manifest, _) =>
+        {
+            manifest.DeleteSessions(sessionIds, archivedOnly: true);
+            return Task.FromResult<Action?>(null);
+        }, ct);
 
     public Task<ChatHistoryWriteResult> DeleteSessionAsync(
         ChatHistoryPartition partition, string sessionId, long expectedRevision, CancellationToken ct = default)
         => MutateAsync(partition, expectedRevision, (manifest, _) =>
         {
-            manifest.Sessions.Remove(sessionId);
-            if (manifest.CurrentSessionId == sessionId)
-            {
-                manifest.CurrentSessionId = null;
-            }
-
-            return Task.FromResult<Action?>(() => CleanupDirectory(ChatStoragePaths.Session(partition, sessionId)));
+            manifest.DeleteSessions([sessionId], archivedOnly: false);
+            return Task.FromResult<Action?>(null);
         }, ct);
 
     public Task<ChatHistoryWriteResult> ClearAsync(
         ChatHistoryPartition partition, long expectedRevision, CancellationToken ct = default)
         => MutateAsync(partition, expectedRevision, (manifest, _) =>
         {
-            manifest.Sessions.Clear();
-            manifest.CurrentSessionId = null;
-            return Task.FromResult<Action?>(() => CleanupDirectory(Path.Combine(ChatStoragePaths.Partition(partition), "sessions")));
+            if (manifest.Sessions.Count > 0)
+            {
+                manifest.DeleteSessions(manifest.Sessions.Keys.ToArray(), archivedOnly: false);
+            }
+            return Task.FromResult<Action?>(null);
         }, ct);
 
     public Task<ChatHistoryWriteResult> SetCurrentSessionAsync(
         ChatHistoryPartition partition, string? sessionId, long expectedRevision, CancellationToken ct = default)
         => MutateAsync(partition, expectedRevision, (manifest, _) =>
         {
-            if (sessionId is not null && !manifest.Sessions.ContainsKey(sessionId))
-            {
-                throw new KeyNotFoundException("The selected conversation does not exist in the current partition.");
-            }
+            if (sessionId is not null) manifest.RequireActiveSession(sessionId);
 
             manifest.CurrentSessionId = sessionId;
             return Task.FromResult<Action?>(null);
@@ -93,23 +122,32 @@ internal sealed class FileChatHistoryProvider(
         return files.WithLockAsync(ChatStoragePaths.Manifest(partition), async token =>
         {
             var manifest = await FileChatCatalog.ReadAsync(files, partition, token);
-            if (manifest.Revision != expectedRevision || sessionRevisionMatches?.Invoke(manifest) == false)
+            if (manifest.Revision != expectedRevision) return Conflict(manifest.Revision);
+
+            // Retry cleanup before accepting a reused ID, so queued removal can never delete a newly published session.
+            CleanupDeletedSessions(partition, manifest);
+            if (sessionRevisionMatches?.Invoke(manifest) == false)
             {
-                return new ChatHistoryWriteResult
-                {
-                    Status = ChatHistoryWriteStatus.Conflict,
-                    Revision = manifest.Revision,
-                    FailureReason = ChatHistoryWriteFailureReason.Conflict
-                };
+                return Conflict(manifest.Revision);
             }
 
             var cleanup = await mutate(manifest, token);
             manifest.Revision++;
             await files.WriteAsync(ChatStoragePaths.Manifest(partition), manifest, token);
             cleanup?.Invoke();
-            return new ChatHistoryWriteResult { Status = ChatHistoryWriteStatus.Succeeded, Revision = manifest.Revision };
+            var warning = CleanupDeletedSessions(partition, manifest);
+            return new ChatHistoryWriteResult
+            {
+                Status = ChatHistoryWriteStatus.Succeeded, Revision = manifest.Revision, Warning = warning
+            };
         }, ct);
     }
+
+    private static ChatHistoryWriteResult Conflict(long revision) => new()
+    {
+        Status = ChatHistoryWriteStatus.Conflict, Revision = revision,
+        FailureReason = ChatHistoryWriteFailureReason.Conflict
+    };
 
     private void CleanupUnreferencedSnapshots(ChatHistoryPartition partition, string sessionId, string retainedFileId)
     {
@@ -131,24 +169,27 @@ internal sealed class FileChatHistoryProvider(
         }
     }
 
-    private void CleanupDirectory(string relativePath)
+    private string? CleanupDeletedSessions(ChatHistoryPartition partition, FileChatCatalog manifest)
     {
-        var path = files.GetPath(relativePath);
-        try
+        foreach (var sessionId in manifest.PendingDeletionSessionIds.ToArray())
         {
-            if (Directory.Exists(path))
+            var path = files.GetPath(ChatStoragePaths.Session(partition, sessionId));
+            try
             {
                 Directory.Delete(path, recursive: true);
+                manifest.PendingDeletionSessionIds.Remove(sessionId);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                manifest.PendingDeletionSessionIds.Remove(sessionId);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                logger.LogWarning(ex, "A deleted conversation has residual files requiring cleanup.");
             }
         }
-        catch (IOException ex)
-        {
-            logger.LogWarning(ex, "A deleted conversation has residual files requiring cleanup.");
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            logger.LogWarning(ex, "A deleted conversation has residual files requiring cleanup.");
-        }
-    }
 
+        return manifest.PendingDeletionSessionIds.Count == 0 ? null
+            : "The conversations were removed from history, but some files could not be deleted. Cleanup will retry automatically.";
+    }
 }

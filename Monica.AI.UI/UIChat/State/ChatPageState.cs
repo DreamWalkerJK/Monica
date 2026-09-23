@@ -40,6 +40,7 @@ public sealed partial class ChatPageState(
     private CancellationTokenSource? _requestCancellation;
     private Task? _activeOperation;
     private Task? _uploadOperation;
+    private Task<bool>? _historyOperation;
     private Task? _initialization;
     private Task? _disposeTask;
     private bool _disposed;
@@ -57,6 +58,12 @@ public sealed partial class ChatPageState(
     public bool EnableAutoScroll => _options.EnableAutoScroll;
     /// <summary>Durable conversation catalog for the current identity partition.</summary>
     public IReadOnlyList<ChatSessionSummary> Sessions => workspace.Sessions;
+    /// <summary>Archived conversations available for restoration or permanent removal.</summary>
+    public IReadOnlyList<ChatSessionSummary> ArchivedSessions => workspace.ArchivedSessions;
+    /// <summary>Whether a catalog action is currently being persisted.</summary>
+    public bool IsHistoryUpdating { get; private set; }
+    /// <summary>Whether conversation navigation or organization must wait for the current operation.</summary>
+    public bool IsHistoryBusy => IsHistoryLoading || IsHistoryUpdating || IsSending || IsUploading;
     /// <summary>Selected conversation identifier.</summary>
     public string? CurrentSessionId => workspace.CurrentSessionId;
     /// <summary>Selected durable conversation, shared by Chat and Trajectory.</summary>
@@ -151,6 +158,7 @@ public sealed partial class ChatPageState(
         {
             ChatHistoryWorkspaceWarningKind.RevisionConflict => localizer["Chat:History:Warnings:RevisionConflict"],
             ChatHistoryWorkspaceWarningKind.SessionUnavailable => localizer["Chat:History:Warnings:SessionUnavailable"],
+            ChatHistoryWorkspaceWarningKind.PersistenceWarning => localizer["Chat:History:Warnings:PersistenceWarning", warning.Details ?? string.Empty],
             _ => localizer["Chat:History:Warnings:StorageUnavailable"]
         };
         snackbar.Add(message, Severity.Warning);
@@ -175,6 +183,7 @@ public sealed partial class ChatPageState(
             if (_initialization is not null) await _initialization;
             if (_activeOperation is not null) await _activeOperation;
             if (_uploadOperation is not null) await _uploadOperation;
+            if (_historyOperation is not null) await _historyOperation;
         }
         catch (OperationCanceledException) { }
         _requestCancellation?.Dispose();

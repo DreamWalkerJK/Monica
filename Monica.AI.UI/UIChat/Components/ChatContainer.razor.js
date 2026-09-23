@@ -33,24 +33,39 @@ export function createReadingWidth(root, callback, initialWidth) {
         const saved = preferredWidth;
         pending = pending.then(() => disposed ? undefined : callback.invokeMethodAsync('CommitWidthAsync', saved)).catch(() => {});
     };
+    const trackPointer = (handle, event) => {
+        const y = event.clientY - handle.getBoundingClientRect().top;
+        handle.style.setProperty('--mo-chat-reading-pointer-y', `${y}px`);
+    };
     const cancelDrag = () => {
         if (!drag) return;
         const active = drag;
         drag = null;
+        active.handle.removeAttribute('data-dragging');
         apply(preferredWidth);
         if (active.handle.hasPointerCapture(active.pointerId)) active.handle.releasePointerCapture(active.pointerId);
     };
+    // Pointer resizing leaves focus in the composer, so Escape must also work outside the handles.
+    root.ownerDocument.addEventListener('keydown', event => {
+        if (event.key !== 'Escape' || !drag) return;
+        event.preventDefault();
+        cancelDrag();
+    }, { signal: events.signal });
 
     for (const handle of handles) {
         const direction = handle.dataset.readingResize === 'left' ? -1 : 1;
+        handle.addEventListener('pointerenter', event => trackPointer(handle, event), { signal: events.signal });
         handle.addEventListener('pointerdown', event => {
             if (disposed || event.button !== 0 || root.clientWidth <= 600) return;
             cancelDrag();
+            trackPointer(handle, event);
             drag = { handle, pointerId: event.pointerId, x: event.clientX, width: clamp(preferredWidth), next: clamp(preferredWidth), moved: false };
+            handle.setAttribute('data-dragging', '');
             handle.setPointerCapture(event.pointerId);
             event.preventDefault();
         }, { signal: events.signal });
         handle.addEventListener('pointermove', event => {
+            trackPointer(handle, event);
             if (!drag || drag.pointerId !== event.pointerId || drag.handle !== handle) return;
             const travel = event.clientX - drag.x;
             drag.moved ||= Math.abs(travel) >= 3;
@@ -58,9 +73,10 @@ export function createReadingWidth(root, callback, initialWidth) {
             apply(drag.next);
         }, { signal: events.signal });
         handle.addEventListener('pointerup', event => {
-            if (!drag || drag.pointerId !== event.pointerId) return;
+            if (!drag || drag.pointerId !== event.pointerId || drag.handle !== handle) return;
             const active = drag;
             drag = null;
+            handle.removeAttribute('data-dragging');
             const travel = event.clientX - active.x;
             active.moved ||= Math.abs(travel) >= 3;
             active.next = clamp(active.width + travel * direction * 2);
@@ -71,7 +87,6 @@ export function createReadingWidth(root, callback, initialWidth) {
         handle.addEventListener('lostpointercapture', cancelDrag, { signal: events.signal });
         handle.addEventListener('dblclick', () => commit(960), { signal: events.signal });
         handle.addEventListener('keydown', event => {
-            if (event.key === 'Escape') { cancelDrag(); return; }
             const step = event.shiftKey ? 128 : 32;
             let next;
             if (event.key === 'ArrowLeft') next = clamp(preferredWidth) - step * direction;
@@ -93,10 +108,16 @@ export function createReadingWidth(root, callback, initialWidth) {
     function shutdown() {
         if (!disposed) {
             disposed = true;
-            drag = null;
             events.abort();
             resize.disconnect();
             removal.disconnect();
+            if (drag) {
+                const active = drag;
+                drag = null;
+                active.handle.removeAttribute('data-dragging');
+                if (active.handle.hasPointerCapture(active.pointerId)) active.handle.releasePointerCapture(active.pointerId);
+            }
+            for (const handle of handles) handle.style.removeProperty('--mo-chat-reading-pointer-y');
         }
         return pending;
     }

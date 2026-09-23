@@ -34,7 +34,7 @@ public sealed class SessionListTests : BunitContext
     }
 
     [Fact]
-    public void Render_WhenSessionExists_ShouldExposeNamedDeleteAndClearActions()
+    public void Render_WhenSessionExists_ShouldExposeNonDestructiveOrganizationActions()
     {
         var summary = new ChatSessionSummary
         {
@@ -49,8 +49,9 @@ public sealed class SessionListTests : BunitContext
             .Add(item => item.Sessions, [summary])
             .Add(item => item.CurrentSessionId, summary.SessionId));
 
-        component.Find("button[aria-label='Session:Delete']").Should().NotBeNull();
-        component.Find("button[aria-label='Chat:History:Clear:Action']").Should().NotBeNull();
+        component.Find("button[aria-label='Session:Pin']").Should().NotBeNull();
+        component.Find("button[aria-label='Session:Archive:Action']").Should().NotBeNull();
+        component.Markup.Should().Contain("Session:Archive:Title").And.NotContain("Delete");
     }
 
     [Fact]
@@ -62,11 +63,32 @@ public sealed class SessionListTests : BunitContext
             .Add(component => component.Sessions, [first, selected])
             .Add(component => component.CurrentSessionId, selected.SessionId));
 
-        view.Find(".mud-selected-item .session-title").TextContent.Should().Be(selected.Title);
+        view.Find(".selected .session-title").TextContent.Should().Be(selected.Title);
 
         view.Render(parameters => parameters.Add(component => component.Sessions, [selected, first]));
 
-        view.FindAll(".mud-selected-item").Should().ContainSingle()
+        view.FindAll(".selected").Should().ContainSingle()
             .Which.QuerySelector(".session-title")!.TextContent.Should().Be(selected.Title);
+    }
+
+    [Fact]
+    public void PinAndArchiveActions_ShouldNotSelectConversation()
+    {
+        var selected = new List<string>();
+        var pinned = new List<string>();
+        var archived = new List<string>();
+        var summary = new ChatSessionSummary { SessionId = "pinned", Title = "Pinned", IsPinned = true, Settings = new("provider") };
+        var view = Render<SessionList>(parameters => parameters
+            .Add(item => item.Sessions, [summary])
+            .Add(item => item.OnSelectSession, selected.Add)
+            .Add(item => item.OnPinSession, pinned.Add)
+            .Add(item => item.OnArchiveSession, archived.Add));
+
+        view.Find("button[aria-label='Session:Unpin']").Click();
+        view.Find("button[aria-label='Session:Archive:Action']").Click();
+
+        pinned.Should().Equal("pinned");
+        archived.Should().Equal("pinned");
+        selected.Should().BeEmpty();
     }
 }

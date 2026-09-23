@@ -11,7 +11,7 @@ public sealed partial class ChatPageState
     /// <summary>Atomically selects a provider and model for subsequent requests.</summary>
     public async Task SelectModelAsync((string ProviderId, string ModelName) selection)
     {
-        if (IsSending || IsUploading || HasHistoryConflict || _disposed) return;
+        if (IsHistoryBusy || HasHistoryConflict || _disposed) return;
         RefreshProviders();
         var provider = ChatProviderResolver.FindProvider(Providers, selection.ProviderId);
         if (provider is not { IsValid: true } || !ChatProviderResolver.GetChatModels(provider).Any(model => model.ModelName == selection.ModelName)) return;
@@ -46,7 +46,7 @@ public sealed partial class ChatPageState
     /// <summary>Edits conversation instructions; changes affect the next request.</summary>
     public async Task OpenPromptSettingsAsync()
     {
-        if (CurrentSession is not { } session || IsSending) return;
+        if (CurrentSession is not { } session || IsHistoryBusy || _disposed) return;
         var parameters = new DialogParameters
         {
             [nameof(ProviderSystemPromptDialog.ProviderName)] = CurrentProviderName,
@@ -57,13 +57,13 @@ public sealed partial class ChatPageState
             localizer["Provider:Settings:SystemPrompt"], parameters,
             new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true });
         var result = await dialog.Result;
-        if (_disposed || result is not { Canceled: false }) return;
+        if (_disposed || IsHistoryBusy || CurrentSession != session || result is not { Canceled: false }) return;
         await SaveSettingsAsync(session.Settings with { SystemPrompt = result.Data as string });
     }
 
     private async Task<bool> SaveSettingsAsync(ChatSessionSettings settings)
     {
-        if (CurrentSession is not { } session) return false;
+        if (_disposed || IsHistoryBusy || HasHistoryConflict || CurrentSession is not { } session) return false;
         var result = chatFacade.UpdateSettings(session, settings);
         if (result.IsFailed(out var error)) { SetError(error.Message); return false; }
         var saved = await workspace.SaveSessionAsync(session, _lifetime.Token);

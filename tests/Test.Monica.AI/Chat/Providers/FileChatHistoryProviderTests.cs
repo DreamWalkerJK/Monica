@@ -12,9 +12,10 @@ public sealed class FileChatHistoryProviderTests
     {
         using var fixture = new FileChatStorageFixture();
         var ct = TestContext.Current.CancellationToken;
+        await fixture.History.SaveSessionAsync(fixture.Partition, FileChatStorageFixture.Snapshot(), 0, ct);
         await using var content = new MemoryStream(Encoding.UTF8.GetBytes("Persistent evidence"));
         var reference = await fixture.Attachments.SaveAsync(fixture.Partition, "session-one", "evidence.txt", "text/plain", content, ct);
-        var saved = await fixture.History.SaveSessionAsync(fixture.Partition, FileChatStorageFixture.Snapshot(attachment: reference), 0, ct);
+        var saved = await fixture.History.SaveSessionAsync(fixture.Partition, FileChatStorageFixture.Snapshot(attachment: reference) with { Revision = 1 }, 1, ct);
         var selected = await fixture.History.SetCurrentSessionAsync(fixture.Partition, "session-one", saved.Revision, ct);
 
         var reopened = fixture.ReopenHistory();

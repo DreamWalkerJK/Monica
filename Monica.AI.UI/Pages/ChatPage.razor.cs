@@ -16,6 +16,7 @@ public partial class ChatPage : IAsyncDisposable
     private ChatPageState PageState { get; set; } = null!;
     private bool _sessionDrawerOpen = true;
     private bool _trajectory;
+    private bool _archiveOpen;
     private bool _disposed;
     private Task _renderTask = Task.CompletedTask;
 

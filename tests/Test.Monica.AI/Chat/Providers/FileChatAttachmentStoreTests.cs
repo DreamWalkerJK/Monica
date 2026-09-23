@@ -1,7 +1,10 @@
 using System.IO.Compression;
 using System.Text;
 using AwesomeAssertions;
+using Monica.AI.Chat.Abstractions;
 using Monica.AI.Chat.Models;
+using Monica.AI.Chat.Providers;
+using NSubstitute;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
@@ -16,14 +19,15 @@ public sealed class FileChatAttachmentStoreTests
     {
         using var fixture = new FileChatStorageFixture();
         var ct = TestContext.Current.CancellationToken;
+        await fixture.History.SaveSessionAsync(fixture.Partition, FileChatStorageFixture.Snapshot(), 0, ct);
         await using var stream = new MemoryStream("retained text"u8.ToArray());
         var reference = await fixture.Attachments.SaveAsync(fixture.Partition, "session-one", "document.txt", "image/png", stream, ct);
         reference.MediaType.Should().Be("text/plain");
-        await fixture.History.SaveSessionAsync(fixture.Partition, FileChatStorageFixture.Snapshot(attachment: reference), 0, ct);
+        await fixture.History.SaveSessionAsync(fixture.Partition, FileChatStorageFixture.Snapshot(attachment: reference) with { Revision = 1 }, 1, ct);
 
         Func<Task> remove = () => fixture.Attachments.DeleteAsync(fixture.Partition, "session-one", reference.Id, ct);
         await remove.Should().ThrowAsync<InvalidOperationException>();
-        await fixture.History.DeleteSessionAsync(fixture.Partition, "session-one", 1, ct);
+        await fixture.History.DeleteSessionAsync(fixture.Partition, "session-one", 2, ct);
         Func<Task> read = () => fixture.Attachments.ReadAsync(fixture.Partition, "session-one", reference.Id, ct);
         await read.Should().ThrowAsync<FileNotFoundException>();
     }
@@ -33,6 +37,7 @@ public sealed class FileChatAttachmentStoreTests
     {
         using var fixture = new FileChatStorageFixture();
         var ct = TestContext.Current.CancellationToken;
+        await fixture.History.SaveSessionAsync(fixture.Partition, FileChatStorageFixture.Snapshot(), 0, ct);
         await using var stream = new MemoryStream("private text"u8.ToArray());
         var reference = await fixture.Attachments.SaveAsync(fixture.Partition, "session-one", "document.txt", "text/plain", stream, ct);
 
@@ -50,6 +55,7 @@ public sealed class FileChatAttachmentStoreTests
     {
         using var fixture = new FileChatStorageFixture();
         var ct = TestContext.Current.CancellationToken;
+        await fixture.History.SaveSessionAsync(fixture.Partition, FileChatStorageFixture.Snapshot(), 0, ct);
         await using var stream = new MemoryStream();
         using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
@@ -76,6 +82,7 @@ public sealed class FileChatAttachmentStoreTests
     {
         using var fixture = new FileChatStorageFixture();
         var ct = TestContext.Current.CancellationToken;
+        await fixture.History.SaveSessionAsync(fixture.Partition, FileChatStorageFixture.Snapshot(), 0, ct);
         var document = new PdfDocumentBuilder();
         var page = document.AddPage(PageSize.A4);
         var font = document.AddStandard14Font(Standard14Font.Helvetica);
@@ -115,5 +122,41 @@ public sealed class FileChatAttachmentStoreTests
             TestContext.Current.CancellationToken);
 
         await save.Should().ThrowAsync<Exception>();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SaveAsync_WhenConversationChangesDuringExtraction_ShouldRejectWithoutPublishingAttachment(bool permanentlyDelete)
+    {
+        using var fixture = new FileChatStorageFixture();
+        var ct = TestContext.Current.CancellationToken;
+        await fixture.History.SaveSessionAsync(fixture.Partition, FileChatStorageFixture.Snapshot(), 0, ct);
+        var extractionStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var extractionCompletion = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var extractor = Substitute.For<IChatDocumentExtractor>();
+        extractor.ExtractAsync(Arg.Any<ChatAttachmentData>(), Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            extractionStarted.SetResult();
+            return extractionCompletion.Task;
+        });
+        var store = new FileChatAttachmentStore(fixture.Files, extractor, fixture.Options);
+        await using var content = new MemoryStream("Late upload"u8.ToArray());
+        var uploading = store.SaveAsync(fixture.Partition, "session-one", "evidence.txt", "text/plain", content, ct);
+        await extractionStarted.Task.WaitAsync(ct);
+
+        await fixture.History.SetArchivedAsync(fixture.Partition, ["session-one"], true, 1, ct);
+        if (permanentlyDelete)
+        {
+            await fixture.History.DeleteArchivedSessionsAsync(fixture.Partition, ["session-one"], 2, ct);
+        }
+        extractionCompletion.SetResult("Late upload");
+
+        Func<Task> finishUpload = () => uploading;
+        if (permanentlyDelete) await finishUpload.Should().ThrowAsync<KeyNotFoundException>();
+        else await finishUpload.Should().ThrowAsync<InvalidOperationException>();
+        var sessionDirectory = fixture.Files.GetPath(ChatStoragePaths.Session(fixture.Partition, "session-one"));
+        Directory.Exists(Path.Combine(sessionDirectory, "attachments")).Should().BeFalse();
+        if (permanentlyDelete) Directory.Exists(sessionDirectory).Should().BeFalse();
     }
 }

@@ -76,7 +76,7 @@ public sealed partial class ChatPageState
 
     private Task RunOperationAsync(Func<CancellationToken, Task> operation)
     {
-        if (IsSending || IsUploading || _disposed || HasHistoryConflict) return Task.CompletedTask;
+        if (IsSending || IsUploading || IsHistoryUpdating || _disposed || HasHistoryConflict) return Task.CompletedTask;
         _activeOperation = RunOperationCoreAsync(operation);
         return _activeOperation;
     }
@@ -173,7 +173,7 @@ public sealed partial class ChatPageState
     /// <summary>Persists selected files before accepting them into a request.</summary>
     public Task UploadAttachmentsAsync(InputFileChangeEventArgs args)
     {
-        if (IsSending || IsUploading || _disposed || HasHistoryConflict) return Task.CompletedTask;
+        if (IsSending || IsUploading || IsHistoryUpdating || _disposed || HasHistoryConflict) return Task.CompletedTask;
         _uploadOperation = UploadAttachmentsCoreAsync(args);
         return _uploadOperation;
     }

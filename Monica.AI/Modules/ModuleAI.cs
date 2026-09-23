@@ -143,7 +143,8 @@ public static class ModuleAIRegistrationExtensions
     /// <summary>
     /// Replaces conversation attachment storage. The singleton store must isolate attachments by the supplied
     /// trusted partition and session, enforce upload limits, and publish complete data before returning a reference.
-    /// Custom stores own the cleanup policy for abandoned uploads and deleted conversations.
+    /// Custom stores own the cleanup policy for abandoned uploads and must coordinate attachment retention
+    /// and deletion with the configured chat history provider.
     /// </summary>
     /// <typeparam name="TStore">Thread-safe attachment storage implementation.</typeparam>
     /// <param name="module">The AI module registration to configure.</param>
@@ -171,6 +172,11 @@ public static class ModuleAIRegistrationExtensions
     /// <remarks>
     /// This method is optional. The default stores snapshots on disk inside the configured storage root.
     /// Custom server implementations must derive partitions from trusted user/workspace identity.
+    /// The default history provider and attachment store share a file catalog, partition lock, and session
+    /// directories to coordinate publication and deletion. A custom history provider requires a coordinated
+    /// attachment store registered with <see cref="UseChatAttachmentStore{TStore}"/> because the default store
+    /// checks the file catalog for active sessions. The replacement store must follow the history provider's
+    /// archive and deletion lifecycle.
     /// </remarks>
     public static ModuleRegistration<ModuleAI, ModuleAIOption> UseChatHistoryProvider<TProvider, TPartitionResolver>(this ModuleRegistration<ModuleAI, ModuleAIOption> module)
         where TProvider : class, IChatHistoryProvider

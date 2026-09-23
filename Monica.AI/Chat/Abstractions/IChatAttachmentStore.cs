@@ -10,7 +10,12 @@ namespace Monica.AI.Chat.Abstractions;
 /// </remarks>
 public interface IChatAttachmentStore
 {
-    /// <summary>Validates and durably stores one attachment before returning its reference.</summary>
+    /// <summary>
+    /// Validates and durably stores one attachment before returning its reference. The conversation must already be
+    /// persisted and active when attachment publication occurs, including when its state changes during the upload.
+    /// </summary>
+    /// <exception cref="KeyNotFoundException">The conversation is absent or was permanently deleted.</exception>
+    /// <exception cref="InvalidOperationException">The conversation was archived before the attachment could be published.</exception>
     Task<ChatAttachmentReference> SaveAsync(ChatHistoryPartition partition, string sessionId,
         string fileName, string mediaType, Stream content, CancellationToken ct = default);
 

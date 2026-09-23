@@ -51,6 +51,39 @@ public sealed class ChatHistoryFacadeTests
         await action.Should().ThrowAsync<OperationCanceledException>();
     }
 
+    [Theory]
+    [InlineData("pin")]
+    [InlineData("archive")]
+    [InlineData("delete")]
+    public async Task Organization_WhenRequested_ShouldResolveTrustedPartitionAndExposeProviderOutcome(string operation)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var partition = new ChatHistoryPartition("trusted/workspace/user");
+        var provider = Substitute.For<IChatHistoryProvider>();
+        var resolver = Substitute.For<IChatHistoryPartitionResolver>();
+        resolver.ResolveAsync(ct).Returns(partition);
+        var outcome = new ChatHistoryWriteResult
+        {
+            Status = ChatHistoryWriteStatus.Succeeded, Revision = 8, Warning = "Physical cleanup is pending."
+        };
+        provider.SetPinnedAsync(partition, "session", true, 7, ct).Returns(outcome);
+        provider.SetArchivedAsync(partition, Arg.Any<IReadOnlyList<string>>(), true, 7, ct).Returns(outcome);
+        provider.DeleteArchivedSessionsAsync(partition, Arg.Any<IReadOnlyList<string>>(), 7, ct).Returns(outcome);
+        var facade = new ChatHistoryFacade(provider, resolver, CreateService());
+
+        var result = operation switch
+        {
+            "pin" => await facade.SetPinnedAsync("session", true, 7, ct),
+            "archive" => await facade.SetArchivedAsync(["session"], true, 7, ct),
+            _ => await facade.DeleteArchivedSessionsAsync(["session"], 7, ct)
+        };
+
+        result.Status.Should().Be(ResStatus.Ok);
+        result.Message.Should().BeNull();
+        result.Data.Should().BeSameAs(outcome);
+        await resolver.Received(1).ResolveAsync(ct);
+    }
+
     private static ChatSessionSnapshot CreateSnapshot()
     {
         var now = DateTimeOffset.UtcNow;

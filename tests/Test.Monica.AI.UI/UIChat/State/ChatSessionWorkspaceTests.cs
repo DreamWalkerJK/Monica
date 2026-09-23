@@ -132,6 +132,109 @@ public sealed class ChatSessionWorkspaceTests
         fixture.Workspace.IsConflicted.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task PinThenSave_ShouldRetainOrganizationAcrossCheckpointAndReload()
+    {
+        await using var fixture = await WorkspaceFixture.CreateAsync(includeSecondSession: true);
+        var ct = TestContext.Current.CancellationToken;
+        await fixture.Workspace.InitializeAsync(ct);
+
+        (await fixture.Workspace.SetPinnedAsync("session-1", true, ct)).Should().BeTrue();
+        (await fixture.Workspace.SaveSessionAsync(fixture.Workspace.CurrentSession!, ct)).Should().BeTrue();
+        await fixture.Workspace.ReloadAsync(ct);
+
+        fixture.Workspace.Sessions[0].SessionId.Should().Be("session-1");
+        fixture.Workspace.Sessions[0].IsPinned.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ArchiveCurrent_ShouldKeepTranscriptAndSelectNextActiveConversationAfterReload()
+    {
+        await using var fixture = await WorkspaceFixture.CreateAsync(includeSecondSession: true);
+        var ct = TestContext.Current.CancellationToken;
+        await fixture.Workspace.InitializeAsync(ct);
+        await fixture.Workspace.SetPinnedAsync("session-1", true, ct);
+
+        (await fixture.Workspace.SetArchivedAsync(["session-1"], true, ct)).Should().BeTrue();
+
+        fixture.Workspace.CurrentSessionId.Should().Be("session-2");
+        fixture.Workspace.ArchivedSessions.Should().ContainSingle().Which.IsPinned.Should().BeFalse();
+        fixture.Workspace.GetLoadedSession("session-1").Should().BeNull();
+        (await fixture.Provider.LoadSessionAsync(PARTITION, "session-1", ct))!.Turns.Should().ContainSingle();
+        await fixture.Workspace.ReloadAsync(ct);
+        fixture.Workspace.CurrentSessionId.Should().Be("session-2");
+        fixture.Workspace.Sessions.Should().ContainSingle().Which.SessionId.Should().Be("session-2");
+        (await fixture.Workspace.SelectSessionAsync("session-1", ct)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RestoreAndDeleteArchived_ShouldApplyOnlyTheSelectedConversations()
+    {
+        await using var fixture = await WorkspaceFixture.CreateAsync(includeSecondSession: true);
+        var ct = TestContext.Current.CancellationToken;
+        await fixture.Workspace.InitializeAsync(ct);
+        await fixture.Workspace.SetArchivedAsync(["session-1", "session-2"], true, ct);
+        fixture.Workspace.CurrentSession.Should().BeNull();
+
+        (await fixture.Workspace.SetArchivedAsync(["session-1"], false, ct)).Should().BeTrue();
+        (await fixture.Workspace.DeleteArchivedSessionsAsync(["session-2"], ct)).Should().BeTrue();
+
+        fixture.Workspace.Sessions.Should().ContainSingle().Which.SessionId.Should().Be("session-1");
+        fixture.Workspace.ArchivedSessions.Should().BeEmpty();
+        fixture.Workspace.CurrentSession.Should().BeNull();
+        (await fixture.Provider.LoadSessionAsync(PARTITION, "session-1", ct)).Should().NotBeNull();
+        (await fixture.Provider.LoadSessionAsync(PARTITION, "session-2", ct)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Save_WhenAnotherTabArchivesConversation_ShouldRequireReloadWithoutRestoringIt()
+    {
+        await using var fixture = await WorkspaceFixture.CreateAsync();
+        var ct = TestContext.Current.CancellationToken;
+        await fixture.Workspace.InitializeAsync(ct);
+        var local = fixture.Workspace.CurrentSession!;
+        await fixture.Provider.SetArchivedAsync(PARTITION, ["session-1"], true, fixture.Workspace.Revision, ct);
+
+        (await fixture.Workspace.SaveSessionAsync(local, ct)).Should().BeFalse();
+        fixture.Workspace.IsConflicted.Should().BeTrue();
+        fixture.Workspace.CurrentSession.Should().BeSameAs(local);
+        (await fixture.Provider.GetCatalogAsync(PARTITION, ct)).Sessions.Single().ArchivedAt.Should().NotBeNull();
+        await fixture.Workspace.ReloadAsync(ct);
+        fixture.Workspace.CurrentSession.Should().BeNull();
+        fixture.Workspace.Sessions.Should().BeEmpty();
+        fixture.Workspace.ArchivedSessions.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Save_WhenAnotherTabPinsConversation_ShouldSafelyRebaseAndRetainPin()
+    {
+        await using var fixture = await WorkspaceFixture.CreateAsync();
+        var ct = TestContext.Current.CancellationToken;
+        await fixture.Workspace.InitializeAsync(ct);
+        await fixture.Provider.SetPinnedAsync(PARTITION, "session-1", true, fixture.Workspace.Revision, ct);
+
+        (await fixture.Workspace.SaveSessionAsync(fixture.Workspace.CurrentSession!, ct)).Should().BeTrue();
+
+        fixture.Workspace.IsConflicted.Should().BeFalse();
+        fixture.Workspace.Sessions.Single().IsPinned.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Archive_WhenCatalogChangedElsewhere_ShouldLeaveSelectionAndLocalRowsUntouched()
+    {
+        await using var fixture = await WorkspaceFixture.CreateAsync();
+        var ct = TestContext.Current.CancellationToken;
+        await fixture.Workspace.InitializeAsync(ct);
+        await fixture.Provider.SetPinnedAsync(PARTITION, "session-1", true, fixture.Workspace.Revision, ct);
+
+        (await fixture.Workspace.SetArchivedAsync(["session-1"], true, ct)).Should().BeFalse();
+
+        fixture.Workspace.IsConflicted.Should().BeTrue();
+        fixture.Workspace.CurrentSessionId.Should().Be("session-1");
+        fixture.Workspace.Sessions.Should().ContainSingle();
+        fixture.Workspace.ArchivedSessions.Should().BeEmpty();
+    }
+
     private sealed class WorkspaceFixture : IAsyncDisposable
     {
         private readonly MonicaTestApplication _application;

@@ -1,6 +1,5 @@
 using Monica.AI.Models;
 using Monica.Core.Results;
-using MudBlazor;
 
 namespace Monica.AI.UI.UIChat.State;
 
@@ -9,68 +8,87 @@ public sealed partial class ChatPageState
     private async Task EnsureSessionExistsAsync()
     {
         if (workspace.CurrentSession is not null) return;
-        if (workspace.Sessions.Count > 0)
-            _ = await workspace.SelectSessionAsync(workspace.Sessions[0].SessionId, _lifetime.Token);
+        if (workspace.Sessions.FirstOrDefault() is { } next)
+            _ = await workspace.SelectSessionAsync(next.SessionId, _lifetime.Token);
         else if (CurrentProviderId is not null)
             _ = await TryCreateSessionAsync();
     }
 
     /// <summary>Creates and selects a durable conversation.</summary>
-    public async Task CreateNewSessionAsync()
+    public async Task CreateNewSessionAsync() => _ = await RunHistoryOperationAsync(async () =>
     {
-        if (IsSending || IsUploading || _disposed) return;
         await DiscardAttachmentsAsync();
         _ = await TryCreateSessionAsync();
         InspectedStep = null;
-        NotifyStateChanged();
-    }
+        return true;
+    });
 
     /// <summary>Selects a conversation within the current identity partition.</summary>
-    public async Task SelectSessionAsync(string id)
+    public async Task SelectSessionAsync(string id) => _ = await RunHistoryOperationAsync(async () =>
     {
-        if (IsSending || IsUploading || _disposed) return;
         await DiscardAttachmentsAsync();
         _ = await workspace.SelectSessionAsync(id, _lifetime.Token);
         InspectedStep = null;
         ErrorMessage = null;
-        NotifyStateChanged();
-    }
+        return true;
+    });
 
-    /// <summary>Deletes one conversation and its durable content.</summary>
-    public async Task DeleteSessionAsync(string id)
+    /// <summary>Toggles a conversation pin without altering its transcript.</summary>
+    public async Task TogglePinAsync(string id) => _ = await RunHistoryOperationAsync(async () =>
     {
-        if (IsSending || IsUploading || _disposed) return;
+        var summary = Sessions.FirstOrDefault(item => item.SessionId == id);
+        return summary is not null && await workspace.SetPinnedAsync(id, !summary.IsPinned, _lifetime.Token);
+    });
+
+    /// <summary>Archives a conversation while retaining its transcript and attachments.</summary>
+    public async Task ArchiveSessionAsync(string id) => _ = await RunHistoryOperationAsync(async () =>
+    {
         if (id == CurrentSessionId) await DiscardAttachmentsAsync();
-        if (!await workspace.RemoveSessionAsync(id, _lifetime.Token)) return;
-        await EnsureSessionExistsAsync();
-        NotifyStateChanged();
-    }
+        if (!await workspace.SetArchivedAsync([id], true, _lifetime.Token)) return false;
+        InspectedStep = null;
+        return true;
+    });
 
-    /// <summary>Confirms deletion of every conversation in the current identity partition.</summary>
-    public async Task ClearSessionsAsync()
-    {
-        if (IsSending || IsUploading || _disposed || workspace.Sessions.Count == 0) return;
-        var confirmed = await dialogService.ShowMessageBoxAsync(
-            localizer["Chat:History:Clear:Title"], localizer["Chat:History:Clear:Message"],
-            yesText: localizer["Chat:History:Clear:Confirm"], noText: localizer["Common:Actions:Cancel"]);
-        if (_disposed || confirmed != true) return;
-        await DiscardAttachmentsAsync();
-        if (await workspace.ClearAsync(_lifetime.Token)) await EnsureSessionExistsAsync();
-        NotifyStateChanged();
-    }
+    /// <summary>Restores selected archived conversations without changing the current selection.</summary>
+    public Task<bool> RestoreArchivedSessionsAsync(IReadOnlyList<string> ids)
+        => RunHistoryOperationAsync(() => workspace.SetArchivedAsync(ids, false, _lifetime.Token));
+
+    /// <summary>Permanently removes the selection after the archive manager obtains explicit confirmation.</summary>
+    public Task<bool> DeleteArchivedSessionsAsync(IReadOnlyList<string> ids)
+        => RunHistoryOperationAsync(() => workspace.DeleteArchivedSessionsAsync(ids, _lifetime.Token));
 
     /// <summary>Explicitly discards conflicting in-memory edits and reloads durable history.</summary>
     public async Task ReloadHistoryAsync()
     {
-        if (IsSending || IsUploading || _disposed) return;
+        if (IsHistoryBusy || _disposed) return;
         var confirmed = await dialogService.ShowMessageBoxAsync(localizer["Workbench:ReloadHistory"],
             localizer["Workbench:ReloadHistoryConfirm"], yesText: localizer["Workbench:ReloadHistory"],
             noText: localizer["Common:Actions:Cancel"]);
-        if (_disposed || confirmed != true) return;
-        await DiscardAttachmentsAsync();
-        await workspace.ReloadAsync(_lifetime.Token);
-        InspectedStep = null;
+        if (_disposed || IsHistoryBusy || confirmed != true) return;
+        _ = await RunHistoryOperationAsync(async () =>
+        {
+            await DiscardAttachmentsAsync();
+            await workspace.ReloadAsync(_lifetime.Token);
+            InspectedStep = null;
+            return true;
+        }, allowConflict: true);
+    }
+
+    private Task<bool> RunHistoryOperationAsync(Func<Task<bool>> action, bool allowConflict = false)
+    {
+        if (_disposed || IsHistoryBusy || HasHistoryConflict && !allowConflict) return Task.FromResult(false);
+        _historyOperation = RunHistoryOperationCoreAsync(action);
+        return _historyOperation;
+    }
+
+    private async Task<bool> RunHistoryOperationCoreAsync(Func<Task<bool>> action)
+    {
+        IsHistoryUpdating = true;
         NotifyStateChanged();
+        try { return await action(); }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { return false; }
+        catch (Exception exception) { SetError(exception.Message); return false; }
+        finally { IsHistoryUpdating = false; NotifyStateChanged(); }
     }
 
     private async Task<ChatSession?> TryCreateSessionAsync()

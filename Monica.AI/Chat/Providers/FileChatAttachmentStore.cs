@@ -70,6 +70,9 @@ internal sealed class FileChatAttachmentStore(
         var payload = new ChatAttachmentData(reference, bytes, text);
         await files.WithLockAsync(ChatStoragePaths.Manifest(partition), async token =>
         {
+            // Recheck at publication: another tab may archive or delete the conversation while a file is uploading.
+            var catalog = await FileChatCatalog.ReadAsync(files, partition, token);
+            catalog.RequireActiveSession(sessionId);
             await files.WriteAsync(AttachmentPath(partition, sessionId, reference.Id), payload, token);
             return true;
         }, ct);

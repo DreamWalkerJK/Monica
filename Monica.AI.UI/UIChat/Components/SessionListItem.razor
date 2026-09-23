@@ -2,48 +2,53 @@
 @using Monica.AI.UI.Localization
 @inject IStringLocalizer<AIResource> L
 
-<div class="session-item-wrapper">
-    <MudListItem T="string"
-                 Value="@Session.SessionId"
-                 Class="session-item">
-        <ChildContent>
-            <div class="session-content">
-                <div class="session-info">
-                    <MudText Typo="Typo.body2" Class="session-title">@Session.Title</MudText>
-                    <MudText Typo="Typo.caption" Class="session-time">
-                        @GetTimeDisplay()
-                    </MudText>
-                </div>
-                <span class="delete-action" @onclick:stopPropagation="true">
-                    <MudTooltip Text="@L["Session:Delete"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                       Size="Size.Small"
-                                       Color="Color.Error"
-                                       aria-label="@L["Session:Delete"]"
-                                       OnClick="@HandleDelete" />
-                    </MudTooltip>
-                </span>
-            </div>
-        </ChildContent>
-    </MudListItem>
+<div class="session-row @(Selected ? "selected" : null) @(Session.IsPinned ? "pinned" : null)" data-session-id="@Session.SessionId">
+    <span class="pin-action">
+        <MudIconButton @ref="_pinButton" Icon="@(Session.IsPinned ? Icons.Material.Filled.PushPin : Icons.Material.Outlined.PushPin)"
+                       Size="Size.Small" Disabled="@Disabled" aria-label="@(Session.IsPinned ? L["Session:Unpin"] : L["Session:Pin"])"
+                       title="@(Session.IsPinned ? L["Session:Unpin"] : L["Session:Pin"])" OnClick="@OnPin" />
+    </span>
+    <MudButton @ref="_selectButton" Variant="Variant.Text" Color="Color.Default" Class="session-select" Disabled="@Disabled"
+               aria-current="@(Selected ? "true" : "false")" title="@Session.Title" OnClick="@OnSelect">
+        <span class="session-title">@Session.Title</span>
+    </MudButton>
+    <span class="session-tail">
+        <time class="session-time" datetime="@Session.UpdatedAt.ToString("O")" title="@Session.UpdatedAt.ToLocalTime().ToString("g")">@GetTimeDisplay()</time>
+        <span class="archive-action">
+            <MudIconButton Icon="@Icons.Material.Outlined.Archive" Size="Size.Small" Disabled="@Disabled"
+                           aria-label="@L["Session:Archive:Action"]" title="@L["Session:Archive:Action"]" OnClick="@OnArchive" />
+        </span>
+    </span>
 </div>
 
 @code {
-    [Parameter] public required ChatSessionSummary Session { get; set; }
-    [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter, EditorRequired] public required ChatSessionSummary Session { get; set; }
+    [Parameter] public bool Selected { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback OnSelect { get; set; }
+    [Parameter] public EventCallback OnPin { get; set; }
+    [Parameter] public EventCallback OnArchive { get; set; }
+    [Parameter] public int FocusRequest { get; set; }
+    [Parameter] public bool FocusPin { get; set; }
+    private int _focusedRequest;
+    private MudIconButton? _pinButton;
+    private MudButton? _selectButton;
 
-    private async Task HandleDelete(MouseEventArgs e)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await OnDelete.InvokeAsync();
+        if (FocusRequest == 0 || FocusRequest == _focusedRequest || Disabled) return;
+        _focusedRequest = FocusRequest;
+        if (FocusPin && _pinButton is { } pin) await pin.FocusAsync();
+        else if (_selectButton is { } select) await select.FocusAsync();
     }
 
     private string GetTimeDisplay()
     {
-        var diff = DateTimeOffset.UtcNow - Session.UpdatedAt;
-        return diff.TotalMinutes < 1 ? L["Session:JustNow"] :
-               diff.TotalMinutes < 60 ? L["Session:MinutesAgo", (int)diff.TotalMinutes] :
-               diff.TotalHours < 24 ? L["Session:HoursAgo", (int)diff.TotalHours] :
-               diff.TotalDays < 7 ? L["Session:DaysAgo", (int)diff.TotalDays] :
-               Session.UpdatedAt.ToLocalTime().ToString("MM-dd");
+        var age = DateTimeOffset.UtcNow - Session.UpdatedAt;
+        return age.TotalMinutes < 1 ? L["Session:JustNow"] :
+            age.TotalMinutes < 60 ? L["Session:MinutesAgo", (int)age.TotalMinutes] :
+            age.TotalHours < 24 ? L["Session:HoursAgo", (int)age.TotalHours] :
+            age.TotalDays < 7 ? L["Session:DaysAgo", (int)age.TotalDays] :
+            Session.UpdatedAt.ToLocalTime().ToString("MM-dd");
     }
 }

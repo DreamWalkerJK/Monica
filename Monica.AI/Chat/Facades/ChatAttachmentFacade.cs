@@ -13,6 +13,7 @@ public sealed class ChatAttachmentFacade(
     /// <summary>
     /// Stores a supported image or document before it is attached to a message. The caller owns the
     /// stream and should dispose it after this method completes. Size and document limits are host-configured.
+    /// The conversation must be persisted and active; an upload completing after archival or deletion is rejected.
     /// </summary>
     public async Task<Res<ChatAttachmentReference>> UploadAsync(string sessionId, string fileName,
         string mediaType, Stream content, CancellationToken ct = default)

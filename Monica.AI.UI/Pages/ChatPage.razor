@@ -12,8 +12,9 @@
                        Width="264px" Elevation="0" Class="ai-session-drawer">
                 <SessionList Sessions="@PageState.Sessions" CurrentSessionId="@PageState.CurrentSessionId"
                              IsLoading="@PageState.IsHistoryLoading" OnNewSession="@PageState.CreateNewSessionAsync"
-                             OnSelectSession="@PageState.SelectSessionAsync" OnDeleteSession="@PageState.DeleteSessionAsync"
-                             OnClearSessions="@PageState.ClearSessionsAsync" />
+                             Disabled="@(PageState.IsHistoryBusy || PageState.HasHistoryConflict)" ArchivedCount="@PageState.ArchivedSessions.Count"
+                             OnSelectSession="@PageState.SelectSessionAsync" OnPinSession="@PageState.TogglePinAsync"
+                             OnArchiveSession="@PageState.ArchiveSessionAsync" OnOpenArchive="@(() => _archiveOpen = true)" />
             </MudDrawer>
         }
         <MudMainContent Class="ai-main">
@@ -48,3 +49,6 @@
         </MudMainContent>
     </MudLayout>
 </div>
+<ChatArchiveDialog @bind-Open="_archiveOpen" Sessions="@PageState.ArchivedSessions"
+                   Disabled="@PageState.IsHistoryBusy" HasConflict="@PageState.HasHistoryConflict"
+                   RestoreSessions="@PageState.RestoreArchivedSessionsAsync" DeleteSessions="@PageState.DeleteArchivedSessionsAsync" />
