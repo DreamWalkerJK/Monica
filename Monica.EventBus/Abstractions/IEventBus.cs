@@ -5,6 +5,10 @@ namespace Monica.EventBus.Abstractions;
 /// <summary>
 /// Core EventBus interface - unified for both local and distributed scenarios.
 /// Provides publishing and subscription management capabilities.
+/// Application publishing gateways are scoped. A successful publish of an event marked
+/// <see cref="Monica.EventBus.Annotations.OutboxAttribute"/> means its prepared payload was staged in the
+/// current writable operation; transport delivery happens after that operation commits.
+/// Ordinary events retain their provider's immediate publishing behavior.
 /// </summary>
 public interface IEventBus
 {

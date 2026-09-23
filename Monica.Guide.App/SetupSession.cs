@@ -52,9 +52,23 @@ public sealed class SetupSession
     /// The one full dashboard diagnosis of this wizard run. Host and runtime probing shells
     /// out to agent CLIs and takes seconds, so it starts in the background at startup,
     /// serves every later surface from this cache, and is replaced only by an explicit
-    /// refresh or a product switch.
+    /// refresh or a product switch. Replacements raise <see cref="DashboardChanged"/> so
+    /// layout-level surfaces (the drift banner) repaint with the fresh result.
     /// </summary>
-    public SetupDashboardView? DashboardCache { get; set; }
+    public SetupDashboardView? DashboardCache
+    {
+        get => _dashboardCache;
+        set
+        {
+            _dashboardCache = value;
+            DashboardChanged?.Invoke();
+        }
+    }
+
+    private SetupDashboardView? _dashboardCache;
+
+    /// <summary>Raised whenever the dashboard cache is replaced or cleared.</summary>
+    public event Action? DashboardChanged;
 
     public void ToggleLanguage()
     {
@@ -178,6 +192,10 @@ public static class SetupText
         ["stop-cockpit"] = "停止工作台",
         ["summary-ok"] = "一切就绪",
         ["summary-attention"] = "项需要关注",
+        ["drift-banner"] = "技能投影漂移:以下目标的已装技能与安装记录或配置的发布包不一致;更新技能可重新收敛。",
+        ["drift-kind-global"] = "全局",
+        ["drift-kind-workspace"] = "工作区",
+        ["drift-banner-cta"] = "查看详情",
         ["version"] = "版本",
         ["location"] = "位置",
         ["status"] = "状态",
@@ -227,6 +245,10 @@ public static class SetupText
         ["ws-preview-profile"] = "示例 Profile:{0}",
         ["ws-preview-unavailable"] = "本机还没有已安装的发布包目录,暂无法生成示例;安装后此处会显示将要写入的托管块。",
         ["ws-already-initialized"] = "已初始化",
+        ["ws-initialized-banner"] = "已初始化:项目类型 {0} · 能力 {1} · 由 {2} 初始化",
+        ["ws-closure-title"] = "将安装的技能",
+        ["ws-ambiguous-note"] = "源码扫描结论存在歧义;若上面记录的项目类型不符合预期,可重新选择。",
+        ["ws-reselect-profile"] = "重新选择项目类型",
         ["ws-profile-required"] = "请选择项目类型。",
         ["ws-architecture-required"] = "application 类型需要选择一种架构。",
         ["ws-inspecting"] = "正在检测项目类型、能力与框架版本…",
@@ -364,6 +386,10 @@ public static class SetupText
         ["stop-cockpit"] = "Stop cockpit",
         ["summary-ok"] = "All good",
         ["summary-attention"] = "items need attention",
+        ["drift-banner"] = "Skill projection drift — the installed skills of the targets below diverge from their recorded installation or the configured release; updating the skills reconverges them.",
+        ["drift-kind-global"] = "global",
+        ["drift-kind-workspace"] = "workspace",
+        ["drift-banner-cta"] = "Review on Overview",
         ["version"] = "Version",
         ["location"] = "Location",
         ["status"] = "Status",
@@ -413,6 +439,10 @@ public static class SetupText
         ["ws-preview-profile"] = "example profile: {0}",
         ["ws-preview-unavailable"] = "No installed release catalog defines managed instructions yet; the example appears here after installation.",
         ["ws-already-initialized"] = "already initialized",
+        ["ws-initialized-banner"] = "Already initialized: profile {0} · capabilities {1} · initialized by {2}",
+        ["ws-closure-title"] = "Skills to install",
+        ["ws-ambiguous-note"] = "The source scan was ambiguous; reselect the profile if the recorded one does not match.",
+        ["ws-reselect-profile"] = "Change profile",
         ["ws-profile-required"] = "Select a profile.",
         ["ws-architecture-required"] = "The application profile requires one architecture.",
         ["ws-inspecting"] = "Detecting the profile, capabilities, and framework version…",

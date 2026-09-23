@@ -20,6 +20,10 @@ public static class ServiceCollectionRepositoryExtensions
             RegisterService(services, repositoryInterface, repositoryImplementationType, replaceExisting);
         }
 
+        var storeInterface = typeof(IEfEntityStore<>).MakeGenericType(entityType);
+        if (storeInterface.IsAssignableFrom(repositoryImplementationType))
+            RegisterService(services, storeInterface, repositoryImplementationType, replaceExisting);
+
         var primaryKeyType = EntityHelper.FindPrimaryKeyType(entityType);
         if (primaryKeyType != null)
         {
@@ -28,6 +32,13 @@ public static class ServiceCollectionRepositoryExtensions
             {
                 RegisterService(services, repositoryInterfaceWithPk, repositoryImplementationType, replaceExisting);
             }
+        }
+
+        if (primaryKeyType != null)
+        {
+            var keyedStoreInterface = typeof(IEfEntityStore<,>).MakeGenericType(entityType, primaryKeyType);
+            if (keyedStoreInterface.IsAssignableFrom(repositoryImplementationType))
+                RegisterService(services, keyedStoreInterface, repositoryImplementationType, replaceExisting);
         }
 
         return services;
@@ -40,15 +51,6 @@ public static class ServiceCollectionRepositoryExtensions
         bool replaceExisting)
     {
         var descriptor = ServiceDescriptor.Transient(serviceType, implementationType);
-
-        //if (isReadOnlyRepository)
-        //{
-        //    services.OnActivated(descriptor, context =>
-        //    {
-        //        var repository = context.Instance.As<IRepository>();
-        //        ObjectHelper.TrySetProperty(repository.As<IRepository>(), x => x.IsChangeTrackingEnabled, _ => false);
-        //    });
-        //}
 
         if (replaceExisting)
         {

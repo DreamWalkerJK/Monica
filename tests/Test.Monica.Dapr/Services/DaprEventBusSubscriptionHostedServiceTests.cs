@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Dapr;
 using Dapr.Messaging.PublishSubscribe;
+using ProtobufValue = Google.Protobuf.WellKnownTypes.Value;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,40 @@ namespace Test.Monica.Dapr.Services;
 public sealed class DaprEventBusSubscriptionHostedServiceTests
 {
     [Fact]
+    public void CreateMetadata_PreservesNativeIdentitySourceAndTrace()
+    {
+        var message = new TopicMessage(
+            "native-id", "urn:monica:producer", "test.event", "1.0", "application/json", "orders", "pubsub")
+        {
+            Extensions = new Dictionary<string, ProtobufValue>
+            {
+                ["traceparent"] = new() { StringValue = "00-1234-5678-01" },
+                ["tracestate"] = new() { StringValue = "vendor=state" }
+            }
+        };
+
+        var metadata = DaprEventBusSubscriptionHostedService.CreateMetadata(message, typeof(TestEvent), "key");
+
+        Assert.Equal("native-id", metadata.MessageId);
+        Assert.Equal("urn:monica:producer", metadata.Source);
+        Assert.Equal("orders", metadata.TopicName);
+        Assert.Equal("key", metadata.ServiceKey);
+        Assert.Equal("00-1234-5678-01", metadata.TraceParent);
+        Assert.Equal("vendor=state", metadata.TraceState);
+    }
+
+    [Fact]
+    public void CreateMetadata_LeavesMissingNativeIdentityAbsent()
+    {
+        var message = new TopicMessage("", "", "", "1.0", "application/json", "orders", "pubsub");
+
+        var metadata = DaprEventBusSubscriptionHostedService.CreateMetadata(message, typeof(TestEvent), null);
+
+        Assert.Null(metadata.MessageId);
+        Assert.Null(metadata.Source);
+    }
+
+    [Fact]
     [RequiresPreviewFeatures]
     public async Task AddKeyedDaprEventBus_WithTwoKeys_ShouldPublishBothRegisteredInstances()
     {
@@ -53,6 +88,16 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         builder.Services.AddSingleton(Substitute.For<IJsonSerializerOptionsProvider>());
 
         using var host = builder.Build();
+        using (var firstScope = host.Services.CreateScope())
+        using (var secondScope = host.Services.CreateScope())
+        {
+            var firstGateway = firstScope.ServiceProvider.GetRequiredKeyedService<IDistributedEventBus>("orders");
+            var secondGateway = secondScope.ServiceProvider.GetRequiredKeyedService<IDistributedEventBus>("orders");
+            Assert.NotSame(firstGateway, secondGateway);
+            Assert.Same(
+                firstScope.ServiceProvider.GetRequiredKeyedService<IEventTransport>("orders"),
+                secondScope.ServiceProvider.GetRequiredKeyedService<IEventTransport>("orders"));
+        }
         var registryLifecycle = host.Services.GetServices<IHostedService>()
             .OfType<IHostedLifecycleService>()
             .Single(service => service.GetType().Name == "HostedServiceRegistryLifecycle");
@@ -528,10 +573,10 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         var serviceProvider = new ServiceCollection()
             .AddScoped<IExecutionPipeline, PassThroughExecutionPipeline>()
             .BuildServiceProvider();
-        var eventBus = new TestDistributedEventBus(
-            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-            new EventHandlerInvoker(),
-            registry);
+        var jsonOptions = new JsonSerializerOptionsProvider(
+            new JsonSerializerOptions(JsonSerializerDefaults.Web), DateTimeWireFormat.Iso8601WallClock);
+        var dispatcher = new EventReceiveDispatcher(registry, new EventHandlerInvoker(),
+            jsonOptions, NullLogger<EventReceiveDispatcher>.Instance);
         var client = new CapturingDaprPublishSubscribeClient(initialSubscriptionFailures);
         var logger = new TestLogger<DaprEventBusSubscriptionHostedService>();
         var healthCoordinator = Substitute.For<IDaprSidecarHealthCoordinator>();
@@ -550,7 +595,7 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
             registry,
             topicStatusStore,
             Substitute.For<IHostApplicationLifetime>(),
-            eventBus,
+            dispatcher,
             new ObservableInstanceRegistry(Options.Create(new ModuleObservableInstanceOption())),
             healthCoordinator,
             Options.Create(eventBusOptions),
@@ -559,9 +604,6 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
                 DefaultHeartbeatInterval = TimeSpan.Zero
             }),
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-            new JsonSerializerOptionsProvider(
-                new JsonSerializerOptions(JsonSerializerDefaults.Web),
-                DateTimeWireFormat.Iso8601WallClock),
             NullLogger<DaprTopicSubscription>.Instance,
             logger);
         var subscription = await registry.SubscribeAsync(new EventSubscriptionDescriptor
@@ -592,10 +634,10 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         IServiceProvider dependencyProvider,
         string serviceKey)
     {
-        var eventBus = new TestDistributedEventBus(
-            dependencyProvider.GetRequiredService<IServiceScopeFactory>(),
-            new EventHandlerInvoker(),
-            subscriptionRegistry);
+        var jsonOptions = new JsonSerializerOptionsProvider(
+            new JsonSerializerOptions(JsonSerializerDefaults.Web), DateTimeWireFormat.Iso8601WallClock);
+        var dispatcher = new EventReceiveDispatcher(subscriptionRegistry, new EventHandlerInvoker(),
+            jsonOptions, NullLogger<EventReceiveDispatcher>.Instance);
         var healthCoordinator = Substitute.For<IDaprSidecarHealthCoordinator>();
         healthCoordinator.IsHealthy.Returns(true);
 
@@ -604,15 +646,12 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
             subscriptionRegistry,
             new TopicSubscriptionStatusStore(),
             Substitute.For<IHostApplicationLifetime>(),
-            eventBus,
+            dispatcher,
             new ObservableInstanceRegistry(Options.Create(new ModuleObservableInstanceOption())),
             healthCoordinator,
             Options.Create(new ModuleDaprEventBusOption()),
             Options.Create(new ModuleHostedServiceOption { DefaultHeartbeatInterval = TimeSpan.Zero }),
             dependencyProvider.GetRequiredService<IServiceScopeFactory>(),
-            new JsonSerializerOptionsProvider(
-                new JsonSerializerOptions(JsonSerializerDefaults.Web),
-                DateTimeWireFormat.Iso8601WallClock),
             NullLogger<DaprTopicSubscription>.Instance,
             NullLogger<DaprEventBusSubscriptionHostedService>.Instance,
             serviceKey);

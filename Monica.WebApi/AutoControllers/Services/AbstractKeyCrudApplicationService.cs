@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Monica.AutoModel.Abstractions;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.Results;
+using Monica.Core.Execution;
 using Monica.Repository;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Entity.Abstractions.Auditing;
@@ -35,7 +36,7 @@ namespace Monica.WebApi.AutoControllers.Services;
 /// <typeparam name="TUpdateInput">The input type for Update operations</typeparam>
 /// <param name="repository">The repository used for persistence operations.</param>
 public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
-    IRepository<TEntity, TKey> repository) : ApplicationService
+    IEfEntityStore<TEntity, TKey> repository) : ApplicationService
     where TEntity : class, IEntity<TKey>
 {
     /// <summary>
@@ -51,7 +52,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <summary>
     /// Gets the repository for entity operations.
     /// </summary>
-    protected virtual IRepository<TEntity, TKey> Repository { get; } = repository;
+    protected virtual IEfEntityStore<TEntity, TKey> Repository { get; } = repository;
 
     #region Query
     protected virtual bool DisableProjectToType => false;
@@ -60,6 +61,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// </summary>
     /// <param name="id">The ID of the entity to retrieve</param>
     /// <returns>The mapped entity DTO</returns>
+    [ReadOnlyOperation]
     public virtual async Task<TGetOutputDto> GetAsync(TKey id)
     {
         var entity = await GetEntityByIdAsync(id);
@@ -174,6 +176,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// </summary>
     /// <param name="input">The input parameters for the list operation</param>
     /// <returns>A paged response containing the mapped entity DTOs</returns>
+    [ReadOnlyOperation]
     public virtual async Task<ResPaged<dynamic>> GetListAsync(TGetListInput input)
     {
         var result = await InnerGetListAsync(input);
@@ -197,12 +200,12 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <param name="cancellationToken">Cancellation token for the async operation</param>
     /// <returns>An async enumerable of mapped entity DTOs</returns>
     [HttpPost]
+    [ReadOnlyOperation]
     public virtual async IAsyncEnumerable<TGetListOutputDto> ListStreamAsync(
         TGetListInput input, 
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        // Important: IAsyncEnumerable loses AsyncLocal values; by the time execution reaches this method, the ambient state is already gone.
-        await using var uow = UnitOfWorkManager.BeginScope();
+        // Enumeration must finish within the request/operation DI scope that owns Repository.Context.
         var query = await CreateFilteredQueryAsync(input);
         
         await foreach (var dto in InnerGetListStreamAsync<TGetListOutputDto>(input, query, cancellationToken))
@@ -277,7 +280,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <exception cref="EntityNotFoundException">Thrown when an entity with the specified ID is not found</exception>
     protected virtual async Task<TEntity> GetEntityByIdAsync(TKey id)
     {
-        var query = ApplyInclude(Repository)
+        var query = ApplyInclude(Repository.Query)
             .OrderBy(e => e.Id);
 
         var entity = await query.FirstOrDefaultAsync(e => e.Id!.Equals(id));
@@ -301,7 +304,9 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     {
         var entity = MapToEntity(input);
 
-        await Repository.InsertAsync(entity);
+        Repository.Add(entity);
+        var session = UnitOfWorkManager.Current ?? throw new InvalidOperationException("CRUD writes require an execution-pipeline transaction.");
+        await session.FlushAsync();
 
         return await MapToGetOutputDtoAsync(entity);
     }
@@ -328,7 +333,8 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <returns>A task representing the asynchronous delete operation</returns>
     protected virtual async Task DeleteByIdAsync(TKey id)
     {
-        await Repository.DeleteAsync(id);
+        var entity = await Repository.FindAsync(id);
+        if (entity is not null) Repository.Remove(entity);
     }
 
     #endregion
@@ -441,7 +447,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <returns><see langword="true"/> when sorting should be skipped; otherwise, <see langword="false"/>.</returns>
     protected virtual bool ShouldSkipSortingForProjectedShardingQuery(TGetListInput input)
     {
-        return input is IHasRequestSelect select && select.HasUsingSelected() && Repository.IsShardingTable();
+        return input is IHasRequestSelect select && select.HasUsingSelected() && Repository.IsShardingTable;
     }
 
     /// <summary>
@@ -563,7 +569,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <exception cref="EntityNotFoundException">Thrown when an entity with the specified ID is not found.</exception>
     protected virtual async Task<TEntity> GetTrackedEntityByIdAsync(TKey id)
     {
-        var query = ApplyInclude(Repository.AsTracking())
+        var query = ApplyInclude(Repository.Query.AsTracking())
             .OrderBy(e => e.Id);
 
         var entity = await query.FirstOrDefaultAsync(e => e.Id!.Equals(id));
@@ -603,13 +609,14 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <param name="input">The input used for the list query.</param>
     /// <param name="repository">The repository to query, such as a history repository.</param>
     /// <returns>The filtered query.</returns>
-    protected virtual async Task<IQueryable<TEntity>> CreateFilteredQueryAsync(TGetListInput input, IRepository<TEntity, TKey>? repository = null)
+    protected virtual async Task<IQueryable<TEntity>> CreateFilteredQueryAsync(TGetListInput input, IEfEntityStore<TEntity, TKey>? repository = null)
     {
         repository ??= Repository;
-        var query = (IRepositoryRead<TEntity>)repository;
+        var query = repository.Query;
         if (WithDetail())
         {
-            query = query.WithDetails();
+            if (repository is IRepositoryDetailsConfigurator<TEntity> details)
+                query = details.ApplyDetails(query);
         }
 
         query = ApplyListInclude(query, input);
@@ -621,10 +628,10 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
                 var result = AutoModel.GetNormalizedResult(filterRequest.Filter);
                 if (result.Context.Tokens.Any(p => p.FieldInfo?.ReflectionName == nameof(IHasSoftDelete.IsDeleted)))
                 {
-                    query = query.IgnoreSoftDeleteFilter(); // Important: this was observed to stop working with sharded tables.
+                    query = query.IncludeSoftDeleted(); // Important: this was observed to stop working with sharded tables.
                 }
 
-                var queryable = await ApplyCustomFilterQueryAsync(input, await query.GetQueryableAsync());
+                var queryable = await ApplyCustomFilterQueryAsync(input, query);
                 queryable = AutoModel.ApplyFilter(queryable, result);
 
                 if (!string.IsNullOrEmpty(filterRequest.Fuzzy))
@@ -637,13 +644,13 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
 
             if (!string.IsNullOrEmpty(filterRequest.Fuzzy))
             {
-                var queryable = await ApplyCustomFilterQueryAsync(input, await query.GetQueryableAsync());
+                var queryable = await ApplyCustomFilterQueryAsync(input, query);
                 queryable = AutoModel.ApplyFuzzy(queryable, filterRequest.Fuzzy, filterRequest.FuzzyColumns);
                 return await ApplyClientSideFilterAsync(input, queryable);
             }
         }
 
-        return await ApplyClientSideFilterAsync(input, await ApplyCustomFilterQueryAsync(input, await query.GetQueryableAsync()));
+        return await ApplyClientSideFilterAsync(input, await ApplyCustomFilterQueryAsync(input, query));
     }
 
     private async Task<IQueryable<TEntity>> ApplyClientSideFilterAsync(TGetListInput input, IQueryable<TEntity> queryable)
@@ -682,7 +689,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <param name="query">The repository query to extend with Include clauses.</param>
     /// <param name="input">The input used for the list query.</param>
     /// <returns>The query after Include clauses have been applied.</returns>
-    protected virtual IRepositoryRead<TEntity> ApplyListInclude(IRepositoryRead<TEntity> query, TGetListInput input)
+    protected virtual IQueryable<TEntity> ApplyListInclude(IQueryable<TEntity> query, TGetListInput input)
     {
         return query;
     }
@@ -691,7 +698,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// </summary>
     /// <param name="query">The repository query to extend with Include clauses.</param>
     /// <returns>The query after Include clauses have been applied.</returns>
-    protected virtual IRepositoryRead<TEntity> ApplyInclude(IRepositoryRead<TEntity> query)
+    protected virtual IQueryable<TEntity> ApplyInclude(IQueryable<TEntity> query)
     {
         return query;
     }

@@ -92,7 +92,7 @@ public static class ModuleConfigurationEfCoreRegistrationExtensions
     public static ModuleRegistration<ModuleConfigurationEfCore, ModuleConfigurationEfCoreOption> UseDbContext(this ModuleRegistration<ModuleConfigurationEfCore, ModuleConfigurationEfCoreOption> module, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
     {
         module.Require<ModuleRepository, ModuleRepositoryOption>()
-            .AddRepositoryDbContext<ConfigurationDbContext>(optionsAction);
+            .AddRepositoryDbContext<ConfigurationDbContext>(optionsAction, DbContextProviderType.Default);
         module.SatisfyFeature(nameof(UseDbContext));
         return module;
     }

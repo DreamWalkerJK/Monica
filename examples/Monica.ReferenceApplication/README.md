@@ -11,7 +11,7 @@ The sample is intentionally more realistic than a hello-world endpoint:
 - request-owned API contracts exposed by command and query `ApplicationService` units
 - a schema-first `[Configuration]` ProjectUnit consumed through `IOptions<OrderingOptions>`
 - a unit-of-work boundary around controller requests
-- an `EventOrderApproved` local event published only after unit-of-work completion
+- an `EventOrderApproved` local event published after the demo's dictionary update
 - an auto-discovered `LocalEventHandlerOrderApproved` reaction
 - an auto-discovered recurring backlog report backed by the in-memory job scheduler
 - Swagger, ProjectUnit inspection, Prometheus metrics, and a health response
@@ -130,7 +130,7 @@ builder.AddMonica(monica =>
 });
 ```
 
-The no-op distributed provider makes the external integration boundary explicit without introducing a broker. `EventOrderApproved` is dispatched through the real in-process local bus. The approval handler registers publication with `IUnitOfWork.OnCompleted`, so the local reaction observes only a successfully completed request boundary.
+The no-op distributed provider makes the external integration boundary explicit without introducing a broker. `EventOrderApproved` is dispatched through the real in-process local bus. The sample publishes after its process-local dictionary update. Durable applications use the transactional outbox; the sample does not provide durable publication or rollback.
 
 JobScheduler UI is deliberately not composed: adding its Blazor shell to an API-only host would blur the host boundary. The host synchronizes its local owner snapshot and schedules and executes the recurring job; its activity remains observable through scheduler execution history and logs.
 
@@ -166,4 +166,4 @@ This reference stays entirely on Monica's Stable path:
 | Integrations | None | Add a database, broker, cache, or service provider only when the deployment has chosen it |
 | Labs | None | Evaluate runtime AI, RAG, MCP, DataChannel, DevOps, Office, and profiling packages explicitly |
 
-`RepositoryOrder` is the intentional persistence seam. A production application can replace it with an Integration-tier provider without moving order rules out of the domain entity or changing the public requests. Because this sample repository is process-local rather than transactional, UnitOfWork demonstrates request coordination and post-completion behavior; it does not pretend to roll back in-memory mutations.
+`RepositoryOrder` is the intentional persistence seam. A production application can replace it with an Integration-tier provider without moving order rules out of the domain entity or changing the public requests. Because this sample repository is process-local rather than transactional, UnitOfWork demonstrates scoped request coordination only; it cannot roll back in-memory mutations. See the repository migration guide for a relational context and outbox integration.

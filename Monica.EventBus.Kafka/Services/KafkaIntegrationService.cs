@@ -18,7 +18,7 @@ public sealed class KafkaIntegrationService(
     public async Task<KafkaIntegrationSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
         var clusters = await clusterService.GetEffectiveClustersAsync(cancellationToken);
-        var activeProvider = serviceProvider.GetService<IDistributedEventBus>();
+        var activeProvider = serviceProvider.GetService<IEventTransport>();
         var primaryCluster = ResolvePrimaryCluster(clusters);
         var mode = ResolveMode(activeProvider, primaryCluster);
 
@@ -54,7 +54,7 @@ public sealed class KafkaIntegrationService(
         return clusters.FirstOrDefault(cluster => cluster.IsDaprBacked) ?? clusters.FirstOrDefault();
     }
 
-    private KafkaIntegrationMode ResolveMode(IDistributedEventBus? activeProvider, KafkaClusterConfig? primaryCluster)
+    private KafkaIntegrationMode ResolveMode(IEventTransport? activeProvider, KafkaClusterConfig? primaryCluster)
     {
         if (activeProvider is KafkaEventBusProvider || options.Value.DirectEventBusCluster is not null)
         {
@@ -71,7 +71,7 @@ public sealed class KafkaIntegrationService(
         return primaryCluster is null ? KafkaIntegrationMode.NotConfigured : KafkaIntegrationMode.Unknown;
     }
 
-    private static string ResolveProviderName(IDistributedEventBus? activeProvider)
+    private static string ResolveProviderName(IEventTransport? activeProvider)
     {
         if (activeProvider is null)
         {
@@ -132,7 +132,7 @@ public sealed class KafkaIntegrationService(
         return messages;
     }
 
-    private static bool IsDaprProvider(IDistributedEventBus? activeProvider)
+    private static bool IsDaprProvider(IEventTransport? activeProvider)
     {
         return activeProvider?.GetType().FullName?.Contains("Dapr", StringComparison.OrdinalIgnoreCase) == true;
     }

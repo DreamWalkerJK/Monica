@@ -34,7 +34,8 @@ internal static class KafkaClientConfigFactory
         {
             GroupId = BuildConsumerGroupId(option, serviceKey),
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = true
+            EnableAutoCommit = false,
+            EnableAutoOffsetStore = false
         };
         ApplyCommon(config, cluster, option);
         return config;

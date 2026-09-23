@@ -12,8 +12,8 @@ $monica-guide <command> [options]
 | --- | --- |
 | `overview` | Installed products, versions, detected agent hosts, and next actions. Never requires a workspace. |
 | `workspaces` | Every registered workspace with live health: profile, directory presence, installed-versus-profile skill counts, and instruction currency. |
-| `status` | Installed skill projections per environment and target, recorded release identity, and host detection. Add `--workspace <path>` for repository detection and managed-instruction health. |
-| `doctor` | Everything `status` checks plus the live loopback runtime probes for products that serve one. Workspace and source-binding checks are appended like every other check. |
+| `status` | Installed skill projections per environment and target, recorded release identity, and host detection. Every recorded tree digest is compared against the configured release catalog, so partially updated or locally modified projections surface as release-drift warnings. Add `--workspace <path>` for repository detection and managed-instruction health. |
+| `doctor` | Everything `status` checks (including the release-drift comparison) plus the live loopback runtime probes for products that serve one. Workspace and source-binding checks are appended like every other check. |
 | `source list` | One summary check per declared first-party repository (Monica, Monica.Docs). |
 | `source resolve --repository monica\|docs` | Observe the stored binding: canonical identity, stored and observed commits, exact ref, provenance, absolute path, dirty/path health, and warnings. |
 | `issue status` | The machine-global issue-reporting mode (`prepare`, `ask`, `never`) with its meaning; read it before preparing any issue artifact. |

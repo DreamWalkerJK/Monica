@@ -344,7 +344,7 @@ public static class ModuleEventBusKafkaRegistrationExtensions
         ArgumentNullException.ThrowIfNull(optionsAction);
 
         module.Require<ModuleRepository, ModuleRepositoryOption>()
-            .AddRepositoryDbContext<KafkaConsoleDbContext>(optionsAction);
+            .AddRepositoryDbContext<KafkaConsoleDbContext>(optionsAction, DbContextProviderType.Default);
 
         module.ConfigureServices(context =>
         {

@@ -71,6 +71,10 @@ Use `ConfigureHost(WebApplicationBuilder)` for test environment or configuration
 - Never copy descriptors from a built provider, build a second root around an existing `MonicaApplication`, or mutate registrations while creating a scope.
 - Do not start multiple independent `dotnet build` or `dotnet test` processes in WSL. Test-runner parallelism inside one process remains allowed.
 
+## Repository Scenarios
+
+Use production context/session registration. UseTestDatabase supplies a scenario-owned database, not a fresh database per scope. SeedAsync<TContext,TResult> arranges and saves explicitly, ExecuteAsync runs the production pipeline in a fresh act scope, and VerifyAsync<TContext> asserts through a third context. Retain real audit policy and replace its clock/user inputs. Capture and drain outbox notifications separately.
+
 ## Directory and Naming Rules
 
 - Shared core toolkit: `Monica.Testing/Monica.Testing.csproj`

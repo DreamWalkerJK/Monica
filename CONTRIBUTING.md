@@ -12,15 +12,21 @@ Prerequisites:
 - Git
 - A C# IDE such as JetBrains Rider or Visual Studio
 
-Restore, build, and test:
+Restore, build, and run the default test gate:
 
 ```bash
 dotnet restore Monica.slnx
 dotnet build Monica.slnx -c Release -m
-dotnet test Monica.slnx -c Release --no-build -m:1
+powershell -File scripts/run-tests.ps1 -NoBuild   # pwsh -File ... on Linux/macOS
 ```
 
-The build uses MSBuild parallelism, while solution-wide tests run one project at a time. Test assemblies retain xUnit collection parallelism, while collections that deliberately park worker threads opt into exclusive execution.
+`run-tests.ps1` enumerates test projects dynamically and runs them one at a time. Its default gate
+covers every test project **except UI (bUnit) projects**: UI tests are not part of standard
+verification and run only on explicit request — use `-UiOnly` for just the UI projects, or
+`-IncludeUi` for the full suite. CI mirrors this split: `unit-tests.yml` runs the default gate on
+every push, `ui-tests.yml` is a manual workflow, and the release gate still runs the full suite.
+Test assemblies retain xUnit collection parallelism, while collections that deliberately park
+worker threads opt into exclusive execution.
 
 When changing canonical Agent Skills, also run:
 

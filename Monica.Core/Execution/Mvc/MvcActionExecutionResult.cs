@@ -1,12 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Monica.Core.Results;
+using Monica.Core.Results.Abstractions;
 
 namespace Monica.Core.Execution.Mvc;
 
 /// <summary>
 /// Represents either an executed MVC action or an execution-pipeline short circuit.
 /// </summary>
-public sealed class MvcActionExecutionResult
+public sealed class MvcActionExecutionResult : IExecutionOutcome
 {
     private MvcActionExecutionResult(
         IActionResult? result,
@@ -26,6 +29,12 @@ public sealed class MvcActionExecutionResult
     /// short-circuited before action execution.
     /// </summary>
     public ActionExecutedContext? ExecutedContext { get; }
+
+    /// <summary>Reports returned failures, including handled action exceptions, to the transaction boundary.</summary>
+    public bool ShouldRollback => ExecutedContext?.Exception is not null
+        || Result is ObjectResult { Value: IResultEnvelope envelope } && !envelope.IsOk()
+        || Result is JsonResult { Value: IResultEnvelope jsonEnvelope } && !jsonEnvelope.IsOk()
+        || Result is IStatusCodeActionResult { StatusCode: >= 400 };
 
     /// <summary>
     /// Creates a result for a controller action that MVC executed.

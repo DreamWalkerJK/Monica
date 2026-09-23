@@ -8,6 +8,7 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 using Monica.EventBus.Abstractions;
+using Monica.EventBus.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -86,10 +87,16 @@ public static class ModuleDaprEventBusRegistrationExtensions
         {
             var options = Options.Create(module.GetProfile(key));
             // Register keyed DaprEventBus with the specified serviceKey
-            context.Services.AddKeyedSingleton<IDistributedEventBus>(key, (sp, _) =>
+            context.Services.AddKeyedSingleton<DaprEventBusProvider>(key, (sp, _) =>
             {
                 return ActivatorUtilities.CreateInstance<DaprEventBusProvider>(sp, options, key);
             });
+            context.Services.AddKeyedSingleton<IEventTransport>(key, (sp, _) =>
+                sp.GetRequiredKeyedService<DaprEventBusProvider>(key));
+            context.Services.AddKeyedScoped<IDistributedEventBus>(key, (sp, _) =>
+                new ScopedDistributedEventBusGateway(
+                    sp.GetRequiredKeyedService<DaprEventBusProvider>(key),
+                    sp.GetRequiredService<IEventMessageFactory>(), sp, key));
 
             // Register HostedService for this keyed EventBus
             context.Services.AddSingleton<IHostedService>(sp =>
@@ -107,11 +114,6 @@ public static class ModuleDaprEventBusRegistrationExtensions
 public class ModuleDaprEventBusOption : ModuleOptions<ModuleDaprEventBus>
 {
     public string PubSubName { get; set; } = "pubsub";
-
-    /// <summary>
-    /// Bulk chunk size for BulkPublishEventAsync. Defaults to 1000.
-    /// </summary>
-    public int? BulkChunkSize { get; set; } = 1000;
 
     /// <summary>
     /// Gets or sets the message-handling deadline passed to the Dapr streaming subscription. Defaults to 30 seconds.

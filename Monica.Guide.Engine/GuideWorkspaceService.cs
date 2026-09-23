@@ -185,7 +185,9 @@ public sealed partial class GuideWorkspaceService
         string? FrameworkVersion,
         string? FrameworkVersionTier,
         bool Initialized,
-        string? ConfiguredProfile);
+        string? ConfiguredProfile,
+        IReadOnlyList<string>? ConfiguredCapabilities = null,
+        string? InitializingProduct = null);
 
     /// <summary>Detects one workspace candidate without mutating anything.</summary>
     public GuideWorkspaceCandidate DetectCandidate(string workspace)
@@ -211,7 +213,32 @@ public sealed partial class GuideWorkspaceService
             detection.FrameworkVersion,
             detection.FrameworkVersionTier,
             config is not null,
-            config?.Profile);
+            config?.Profile,
+            config?.Capabilities,
+            config?.ProductId);
+    }
+
+    /// <summary>
+    /// Names of the skill trees a workspace configure installs for one profile, honoring the
+    /// global-first guide-skill exclusion, so interactive surfaces can preview the closure
+    /// before any plan exists.
+    /// </summary>
+    public IReadOnlyList<string> ProfileClosureSkills(string profile)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profile);
+        if (_catalog is null)
+        {
+            throw new InvalidOperationException("No installed release catalog is available.");
+        }
+
+        var closure = AgentGuideService.SelectProfileClosure(
+            _catalog,
+            profile,
+            [],
+            AgentGuideService.WorkspaceGuideSkillExclusion(_definition, _productPaths));
+        return closure is null
+            ? []
+            : closure.Select(static skill => skill.Name).Order(StringComparer.Ordinal).ToArray();
     }
 
     /// <summary>Read-only workspace health for status and doctor surfaces.</summary>

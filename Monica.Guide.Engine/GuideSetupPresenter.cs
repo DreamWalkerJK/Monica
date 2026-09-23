@@ -19,7 +19,9 @@ public sealed record SetupCheckView(
     string Id,
     GuideCheckStatus Status,
     string Message,
-    string? Remediation);
+    string? Remediation,
+    string? TargetKind = null,
+    string? TargetLabel = null);
 
 /// <summary>Culture-neutral projection of guide checks with failures and blockers first.</summary>
 public sealed record SetupChecksView(
@@ -96,7 +98,13 @@ public static class GuideSetupPresenter
         => new(
             status,
             (checks ?? [])
-            .Select(static check => new SetupCheckView(check.Id, check.Status, check.Message, check.Remediation))
+            .Select(static check => new SetupCheckView(
+                check.Id,
+                check.Status,
+                check.Message,
+                check.Remediation,
+                check.Details is not null && check.Details.TryGetValue("target.kind", out var kind) ? kind : null,
+                check.Details is not null && check.Details.TryGetValue("target.label", out var label) ? label : null))
             .ToArray());
 
     /// <summary>Validates one bundle candidate directory and projects its release identity.</summary>

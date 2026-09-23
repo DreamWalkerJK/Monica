@@ -1,11 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
-using Monica.Repository.Persistence.Abstractions;
 using Monica.Repository.Persistence.Services;
 
 namespace Monica.Testing.Hosting;
 
 /// <summary>
-/// Represents one dependency-injection scope owned by a <see cref="MonicaTestApplication"/>.
+/// Ordinary DI scope owned by a scenario host. Use application-level ExecuteAsync for write operations
+/// and independent SeedAsync/VerifyAsync scopes; this type contains no transaction or save implementation.
 /// </summary>
 public sealed class MonicaTestScope : IAsyncDisposable
 {
@@ -19,86 +19,33 @@ public sealed class MonicaTestScope : IAsyncDisposable
         ServiceProvider = scope.ServiceProvider;
     }
 
-    /// <summary>
-    /// Gets the scoped service provider.
-    /// </summary>
+    /// <summary>The scope's provider; services must not escape its lifetime.</summary>
     public IServiceProvider ServiceProvider { get; }
-
-    /// <summary>
-    /// Gets the cancellation token test operations in this scope should observe.
-    /// </summary>
+    /// <summary>The scenario operation's cancellation token.</summary>
     public CancellationToken CancellationToken { get; }
 
-    /// <summary>
-    /// Resolves a required service from this scope.
-    /// </summary>
-    public T Resolve<T>()
-        where T : notnull
+    /// <summary>Resolves a production or explicitly replaced service from this scope.</summary>
+    public T Resolve<T>() where T : notnull
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         return ServiceProvider.GetRequiredService<T>();
     }
 
-    /// <summary>
-    /// Resolves a required service from this scope.
-    /// </summary>
+    /// <summary>Resolves a runtime-selected service from this scope.</summary>
     public object Resolve(Type type)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         return ServiceProvider.GetRequiredService(type);
     }
 
-    /// <summary>
-    /// Adds entities to the single repository DbContext registered in this scope and saves them.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the scenario has no registered repository DbContext or has more than one candidate.
-    /// </exception>
-    public async Task SeedAsync(params object[] entities)
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        if (entities.Length == 0)
-        {
-            return;
-        }
-
-        var registry = ServiceProvider.GetService<TestDbContextTypeRegistry>();
-        if (registry is null || registry.Types.Count == 0)
-        {
-            throw new InvalidOperationException("No RepositoryDbContext service is registered in this test scope.");
-        }
-
-        var dbContextType = registry.Types.Count == 1
-            ? registry.Types.Single()
-            : throw new InvalidOperationException(
-                "Multiple RepositoryDbContext services are registered. Resolve the intended DbContext and seed it explicitly.");
-
-        var dbContext = (Microsoft.EntityFrameworkCore.DbContext)Resolve(dbContextType);
-        dbContext.AddRange(entities);
-        await dbContext.SaveChangesAsync(CancellationToken);
-    }
-
-    /// <summary>
-    /// Resolves the repository DbContext registered for this scope.
-    /// </summary>
-    public async Task<TDbContext> GetDbContextAsync<TDbContext>()
-        where TDbContext : RepositoryDbContext<TDbContext>
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        var provider = ServiceProvider.GetService<IDbContextProvider<TDbContext>>();
-        return provider is null
-            ? Resolve<TDbContext>()
-            : await provider.GetDbContextAsync();
-    }
+    /// <summary>Returns the directly registered scoped context, identical to repository injection.</summary>
+    public Task<TDbContext> GetDbContextAsync<TDbContext>() where TDbContext : RepositoryDbContext<TDbContext>
+        => Task.FromResult(Resolve<TDbContext>());
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_disposed)
-        {
-            return;
-        }
-
+        if (_disposed) return;
         _disposed = true;
         await _scope.DisposeAsync();
     }

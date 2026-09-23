@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Monica.Core.Results;
+using Monica.Core.Execution;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Persistence.Abstractions;
 using Monica.Repository.Persistence.Exceptions;
+using Monica.Repository.Persistence.Extensions;
 using Monica.WebApi.Annotations;
 using Monica.WebApi.AutoControllers.Abstractions;
 using Monica.WebApi.AutoControllers.Models;
@@ -23,7 +25,7 @@ public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TGetList
         CrudDisableDto, TRepository>(repository)
     where TEntity : class, IEntity<TKey>
     where TEntityDto : IEntityDto<TKey>
-    where TRepository : IRepository<TEntity, TKey>
+    where TRepository : IEfEntityStore<TEntity, TKey>
 {
 }
 
@@ -41,7 +43,7 @@ public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TCreateI
         CrudDisableDto, TRepository>(repository)
     where TEntity : class, IEntity<TKey>
     where TEntityDto : IEntityDto<TKey>
-    where TRepository : IRepository<TEntity, TKey>
+    where TRepository : IEfEntityStore<TEntity, TKey>
 {
 }
 
@@ -59,7 +61,7 @@ public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TGetList
         repository)
     where TEntity : class, IEntity<TKey>
     where TEntityDto : IEntityDto<TKey>
-    where TRepository : IRepository<TEntity, TKey>
+    where TRepository : IEfEntityStore<TEntity, TKey>
 {
 }
 
@@ -89,7 +91,7 @@ public abstract class CrudApplicationService<TEntity, TGetOutputDto, TGetListOut
     where TEntity : class, IEntity<TKey>
     where TGetOutputDto : IEntityDto<TKey>
     where TGetListOutputDto : IEntityDto<TKey>
-    where TRepository : IRepository<TEntity, TKey>
+    where TRepository : IEfEntityStore<TEntity, TKey>
 {
     /// <summary>
     /// Creates an entity.
@@ -127,8 +129,7 @@ public abstract class CrudApplicationService<TEntity, TGetOutputDto, TGetListOut
     {
         if (input is IHasRequestIds<TKey> keys)
         {
-            // TODO: Soft delete should be supported here.
-            await repository.ExecuteDeleteAsync(p => keys.Ids.Contains(p.Id));
+            await repository.RemoveByIdsAsync(keys.Ids);
             return ResEntityDeleteSuccess(string.Join(",", keys.Ids));
         }
 
@@ -159,6 +160,7 @@ public abstract class CrudApplicationService<TEntity, TGetOutputDto, TGetListOut
     /// <param name="id">The entity ID.</param>
     /// <returns>The standardized response that wraps the requested entity.</returns>
     [OverrideService(-999)]
+    [ReadOnlyOperation]
     public new virtual async Task<Res<TGetOutputDto>> GetAsync(TKey id)
     {
         try
@@ -174,6 +176,7 @@ public abstract class CrudApplicationService<TEntity, TGetOutputDto, TGetListOut
     // TODO: Remove this feature or move it elsewhere.
     // TODO: When overriding a method with a different signature, add the POST attribute explicitly because it is not inherited.
     [HttpPost]
+    [ReadOnlyOperation]
     public virtual async Task<ResPaged<dynamic>> ListAsync(TGetListInput input)
     {
         return await GetListAsync(input);

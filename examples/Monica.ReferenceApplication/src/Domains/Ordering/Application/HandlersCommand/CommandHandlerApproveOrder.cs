@@ -2,7 +2,6 @@ using Domains.Ordering.Interfaces;
 using Domains.Ordering.Utilities;
 using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
-using Monica.Repository.UnitOfWork.Abstractions;
 using Monica.WebApi.Abstractions;
 using Platform.Protocol.PublishedLanguages.DomainOrdering.Events;
 using Platform.Protocol.PublishedLanguages.DomainOrdering.Models;
@@ -15,7 +14,6 @@ namespace Domains.Ordering.Application.HandlersCommand;
 /// </summary>
 public sealed class CommandHandlerApproveOrder(
     IRepositoryOrder repository,
-    IUnitOfWorkManager unitOfWorkManager,
     ILocalEventBus localEventBus)
     : ApplicationService<CommandApproveOrder, OrderDto>
 {
@@ -48,16 +46,9 @@ public sealed class CommandHandlerApproveOrder(
                 ApprovedAtUtc = approvedAtUtc
             };
 
-            if (unitOfWorkManager.Current is { } unitOfWork)
-            {
-                unitOfWork.OnCompleted(() => localEventBus.PublishAsync(approvalEvent));
-            }
-            else
-            {
-                await localEventBus.PublishAsync(
-                    approvalEvent,
-                    cancellationToken: cancellationToken);
-            }
+            // This sample uses a process-local dictionary. Durable applications enqueue an outbox message
+            // in the same relational context as the order instead of publishing directly.
+            await localEventBus.PublishAsync(approvalEvent, cancellationToken: cancellationToken);
 
             return Res.Ok(UtilsOrderMapping.ToDto(order));
         }

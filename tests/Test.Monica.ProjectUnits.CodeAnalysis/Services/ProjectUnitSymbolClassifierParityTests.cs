@@ -301,8 +301,8 @@ public sealed class ProjectUnitSymbolClassifierParityTests
             ICachedServiceProvider services)
             : RepositoryDbContext<SampleDbContext>(options, services) { }
         public interface IRepositorySampleEntity : IRepository<SampleEntity> { }
-        public sealed class RepositorySampleEntity(IDbContextProvider<SampleDbContext> provider)
-            : EfRepository<SampleDbContext, SampleEntity>(provider), IRepositorySampleEntity { }
+        public sealed class RepositorySampleEntity(SampleDbContext context)
+            : EfRepository<SampleDbContext, SampleEntity>(context), IRepositorySampleEntity { }
         public sealed class SampleDomainService : DomainService { }
         [ExcludeFromBusinessTypeDiscovery]
         public sealed class SampleExcludedDomainService : DomainService { }

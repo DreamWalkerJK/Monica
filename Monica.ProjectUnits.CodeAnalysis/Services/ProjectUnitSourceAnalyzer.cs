@@ -13,7 +13,10 @@ namespace Monica.ProjectUnits.CodeAnalysis.Services;
 /// </summary>
 /// <remarks>
 /// The analyzer serializes calls made through one instance because MSBuild registration and workspace loading use
-/// process-wide resources. Consumers such as Monica Workflow should register one shared instance.
+/// process-wide resources. Consumers such as Monica Workflow should register one shared instance. Analyzer and
+/// source-generator references discovered in analyzed projects load through
+/// <see cref="ShadowCopyAnalyzerAssemblyLoader"/>, so a long-lived analysis host never locks the analyzed
+/// repository's build outputs.
 /// </remarks>
 public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
 {
@@ -70,7 +73,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 diagnostics);
         }
 
-        using var workspace = MSBuildWorkspace.Create();
+        using var workspace = ShadowCopyAnalyzerAssemblyLoader.CreateWorkspace();
         var workspaceDiagnostics = new List<WorkspaceDiagnostic>();
         var workspaceDiagnosticsLock = new Lock();
         workspace.RegisterWorkspaceFailedHandler(args =>
@@ -82,6 +85,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
         });
 
         var loadedProjects = new List<Project>();
+        var transientFailures = new List<(string AbsolutePath, string RelativePath)>();
         for (var index = 0; index < projects.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -121,8 +125,9 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 diagnostics.Add(new ProjectUnitSourceDiagnostic(
                     "ProjectUnit.Analysis.Project.LoadFailed",
                     ProjectUnitSourceDiagnosticSeverity.Error,
-                    $"MSBuild could not load the project: {exception.Message}",
+                    $"MSBuild could not load the project: {exception.GetType().Name}: {exception.Message}",
                     relativePath));
+                transientFailures.Add((projectPath, relativePath));
             }
         }
 
@@ -174,8 +179,9 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 diagnostics.Add(new ProjectUnitSourceDiagnostic(
                     "ProjectUnit.Analysis.Project.CompilationFailed",
                     ProjectUnitSourceDiagnosticSeverity.Error,
-                    $"Roslyn could not create the project compilation: {exception.Message}",
+                    $"Roslyn could not create the project compilation: {exception.GetType().Name}: {exception.Message}",
                     relativeProjectPath));
+                transientFailures.Add((projectPath, relativeProjectPath));
                 continue;
             }
 
@@ -186,42 +192,17 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                     ProjectUnitSourceDiagnosticSeverity.Error,
                     "Roslyn did not produce a project compilation.",
                     relativeProjectPath));
+                transientFailures.Add((projectPath, relativeProjectPath));
                 continue;
             }
 
             analyzedProjects++;
-            var symbols = await GetDeclaredTypesAsync(project, cancellationToken);
-            foreach (var symbol in symbols)
-            {
-                if (_classifier.Classify(symbol) is not { } candidate)
-                {
-                    continue;
-                }
-
-                var location = CreateLocation(root, candidate.Symbol);
-                if (location is null)
-                {
-                    continue;
-                }
-
-                var attachedDiagnostics = candidate.Diagnostics
-                    .Select(diagnostic => diagnostic with
-                    {
-                        ProjectPath = relativeProjectPath,
-                        SourcePath = location.RelativePath,
-                        Line = location.Line
-                    })
-                    .ToList();
-                diagnostics.AddRange(attachedDiagnostics);
-                candidates.Add(new AnalyzedProjectUnitCandidate(
-                    relativeProjectPath,
-                    project.Name,
-                    compilation.AssemblyName ?? project.Name,
-                    candidate,
-                    location,
-                    attachedDiagnostics));
-            }
+            await CollectProjectUnitsAsync(
+                root, project, compilation, relativeProjectPath, candidates, diagnostics, cancellationToken);
         }
+
+        analyzedProjects += await RetryTransientFailuresAsync(
+            root, transientFailures, candidates, diagnostics, progress, cancellationToken);
 
         Report(
             progress,
@@ -260,6 +241,153 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 .ThenBy(static diagnostic => diagnostic.Line)
                 .ThenBy(static diagnostic => diagnostic.Code, StringComparer.Ordinal)
                 .ToArray());
+    }
+
+    private async Task CollectProjectUnitsAsync(
+        string root,
+        Project project,
+        Compilation compilation,
+        string relativeProjectPath,
+        List<AnalyzedProjectUnitCandidate> candidates,
+        List<ProjectUnitSourceDiagnostic> diagnostics,
+        CancellationToken cancellationToken)
+    {
+        var symbols = await GetDeclaredTypesAsync(project, cancellationToken);
+        foreach (var symbol in symbols)
+        {
+            if (_classifier.Classify(symbol) is not { } candidate)
+            {
+                continue;
+            }
+
+            var location = CreateLocation(root, candidate.Symbol);
+            if (location is null)
+            {
+                continue;
+            }
+
+            var attachedDiagnostics = candidate.Diagnostics
+                .Select(diagnostic => diagnostic with
+                {
+                    ProjectPath = relativeProjectPath,
+                    SourcePath = location.RelativePath,
+                    Line = location.Line
+                })
+                .ToList();
+            diagnostics.AddRange(attachedDiagnostics);
+            candidates.Add(new AnalyzedProjectUnitCandidate(
+                relativeProjectPath,
+                project.Name,
+                compilation.AssemblyName ?? project.Name,
+                candidate,
+                location,
+                attachedDiagnostics));
+        }
+    }
+
+    /// <summary>
+    /// Project-load and compilation failures observed in large batch runs can be transient
+    /// MSBuild/Roslyn workspace states. Each failed project gets exactly one retry in a fresh
+    /// workspace — the manual recovery that has been observed to work — before the failure is
+    /// accepted as real. Recovered projects drop their failure diagnostic and keep an information
+    /// note; persistent failures keep the original error and gain the retry evidence.
+    /// </summary>
+    private async Task<int> RetryTransientFailuresAsync(
+        string root,
+        IReadOnlyList<(string AbsolutePath, string RelativePath)> failures,
+        List<AnalyzedProjectUnitCandidate> candidates,
+        List<ProjectUnitSourceDiagnostic> diagnostics,
+        IProgress<ProjectUnitSourceAnalysisProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        if (failures.Count == 0)
+        {
+            return 0;
+        }
+
+        Report(
+            progress,
+            ProjectUnitSourceAnalysisStage.AnalyzingProjects,
+            0,
+            failures.Count,
+            null,
+            $"Retrying {failures.Count} transiently failed project(s) in a fresh workspace.");
+        var recovered = 0;
+        using var retryWorkspace = ShadowCopyAnalyzerAssemblyLoader.CreateWorkspace();
+        var retryWorkspaceDiagnostics = new List<WorkspaceDiagnostic>();
+        var retryWorkspaceDiagnosticsLock = new Lock();
+        retryWorkspace.RegisterWorkspaceFailedHandler(args =>
+        {
+            lock (retryWorkspaceDiagnosticsLock)
+            {
+                retryWorkspaceDiagnostics.Add(args.Diagnostic);
+            }
+        });
+
+        foreach (var (absolutePath, relativePath) in failures)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                var project = await retryWorkspace.OpenProjectAsync(
+                    absolutePath,
+                    cancellationToken: cancellationToken);
+                if (project.Language != LanguageNames.CSharp)
+                {
+                    continue;
+                }
+
+                var compilation = await project.GetCompilationAsync(cancellationToken);
+                if (compilation is null)
+                {
+                    continue;
+                }
+
+                diagnostics.RemoveAll(diagnostic =>
+                    diagnostic.ProjectPath is not null
+                    && string.Equals(diagnostic.ProjectPath, relativePath, StringComparison.OrdinalIgnoreCase)
+                    && diagnostic.Code
+                        is "ProjectUnit.Analysis.Project.LoadFailed"
+                        or "ProjectUnit.Analysis.Project.CompilationFailed"
+                        or "ProjectUnit.Analysis.Project.CompilationMissing");
+                diagnostics.Add(new ProjectUnitSourceDiagnostic(
+                    "ProjectUnit.Analysis.Project.RecoveredOnRetry",
+                    ProjectUnitSourceDiagnosticSeverity.Information,
+                    "The project succeeded on a fresh-workspace retry after a transient load or compilation failure.",
+                    relativePath));
+                await CollectProjectUnitsAsync(
+                    root,
+                    project,
+                    compilation,
+                    relativePath,
+                    candidates,
+                    diagnostics,
+                    cancellationToken);
+                recovered++;
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                diagnostics.Add(new ProjectUnitSourceDiagnostic(
+                    "ProjectUnit.Analysis.Project.RetryFailed",
+                    ProjectUnitSourceDiagnosticSeverity.Warning,
+                    $"A fresh-workspace retry also failed: {exception.GetType().Name}: {exception.Message}",
+                    relativePath));
+            }
+        }
+
+        lock (retryWorkspaceDiagnosticsLock)
+        {
+            diagnostics.AddRange(retryWorkspaceDiagnostics.Select(diagnostic => new ProjectUnitSourceDiagnostic(
+                diagnostic.Kind == WorkspaceDiagnosticKind.Failure
+                    ? "ProjectUnit.Analysis.MSBuild.Failure"
+                    : "ProjectUnit.Analysis.MSBuild.Warning",
+                diagnostic.Kind == WorkspaceDiagnosticKind.Failure
+                    ? ProjectUnitSourceDiagnosticSeverity.Warning
+                    : ProjectUnitSourceDiagnosticSeverity.Information,
+                diagnostic.Message)));
+        }
+
+        return recovered;
     }
 
     private static List<string> NormalizeProjectPaths(

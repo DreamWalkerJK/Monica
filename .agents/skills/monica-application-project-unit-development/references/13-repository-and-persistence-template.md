@@ -1,73 +1,58 @@
 # Repository and DbContext Template
 
-Use `$DomainNamespace$` for the domain project namespace and `$RepositoryNamespace$` for the repository namespace chosen by the architecture skill, such as `OrderingService.Domain` or `Domains.Ordering`.
-
-## Use When
-
-- The feature needs persistence access.
-- A domain concept needs a repository abstraction.
-- A module or service needs a `DbContext` or persistence model update.
+Use $DomainNamespace$ for the domain project namespace and $RepositoryNamespace$ for its infrastructure side. Keep interfaces in domain Interfaces and implementations/mapping in domain Repository; no new shared project or Persistence folder is required.
 
 ## Rules
 
-- Keep the repository interface on the domain side of the boundary.
-- Keep the repository implementation on the owning domain-side infrastructure boundary: `{Subdomain}Service.Domain/Repository/` for microservices and `Domains/{Subdomain}/Repository/` for modular monolith domains.
-- Keep libraries that only this repository or adapter needs in the owning subdomain/service project. Do not move the implementation to shared `Platform` only because it uses a third-party package.
-- Use `EfRepository<TDbContext, TEntity, TKey>` for standard EF-backed repositories.
-- Put query specialization in repositories, not in handlers.
-- Keep `DbContext` focused on persistence structure and mapping.
-- Do not create a separate `Persistence/` folder by default. Keep repository implementations, `DbContext`, and EF mapping together under `Repository/`.
+- Use narrow business aggregate contracts. The small IRepository<TEntity,TKey> staging/loading interface is optional; do not mirror every LINQ operation.
+- Load tracked aggregates for mutation. The operation owns commit; no generic Update or per-repository save.
+- Use native EF LINQ inside repository/query implementations. Return materialized projections from query interfaces.
+- IEfEntityStore is infrastructure access for CRUD adapters, not a domain contract.
+- Inject the scoped context directly into EfRepository. Context, repository and handler must share one operation scope.
+- Use IPersistencePolicy for explicit save-time storage stamping; do not override SaveChanges or reintroduce tracking-time initialization.
+- Queries marked [ReadOnlyOperation] avoid automatic transactions. Independent operations and retries get fresh scopes.
 
-## Repository Interface
+## Aggregate Repository
 
 ```csharp
-using Monica.Repository.Persistence.Abstractions;
-
-namespace $DomainNamespace$.Interfaces;
-
 public interface IRepositoryOrder : IRepository<Order, long>
 {
-    Task<Order?> FindByNumberAsync(string number, CancellationToken cancellationToken = default);
+    Task<Order?> FindForApprovalAsync(string number, CancellationToken cancellationToken);
 }
-```
 
-## Repository Implementation
-
-```csharp
-using Monica.Repository.Persistence.Abstractions;
-using Monica.Repository.Persistence.Services;
-using Monica.ProjectUnits.Annotations;
-
-namespace $RepositoryNamespace$.Repository;
-
-[ProjectUnitMetadata(
-    "Order Repository",
-    Owner = "$Owner$",
-    Description = "Persists orders and resolves business-relevant order queries.",
-    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
-[ProjectUnitRequirement("$RequirementId$")]
-public sealed class RepositoryOrder(
-    IDbContextProvider<OrderingDbContext> dbContextProvider)
-    : EfRepository<OrderingDbContext, Order, long>(dbContextProvider), IRepositoryOrder
+public sealed class RepositoryOrder(OrderingDbContext context)
+    : EfRepository<OrderingDbContext, Order, long>(context), IRepositoryOrder
 {
-    public async Task<Order?> FindByNumberAsync(
-        string number,
-        CancellationToken cancellationToken = default)
-    {
-        return await FindAsync(x => x.Number == number, cancellationToken: cancellationToken);
-    }
+    public Task<Order?> FindForApprovalAsync(string number, CancellationToken cancellationToken)
+        => DbContext.Orders.AsTracking().Include(order => order.Lines)
+            .SingleOrDefaultAsync(order => order.Number == number, cancellationToken);
 }
 ```
 
-## DbContext
+The handler loads the aggregate and calls order.Approve(); it does not attach a detached copy or call Update. Add the normal ProjectUnitMetadata and requirement annotations used by the surrounding project.
+
+## Read Projection
 
 ```csharp
-using Microsoft.EntityFrameworkCore;
-using Monica.DependencyInjection.Abstractions;
-using Monica.Repository.Persistence.Services;
+public interface IOrderQueries
+{
+    Task<OrderSummary?> FindSummaryAsync(long id, CancellationToken cancellationToken);
+}
 
-namespace $RepositoryNamespace$.Repository;
+public sealed class OrderQueries(OrderingDbContext context) : IOrderQueries
+{
+    public Task<OrderSummary?> FindSummaryAsync(long id, CancellationToken cancellationToken)
+        => context.Orders.AsNoTracking().Where(order => order.Id == id)
+            .Select(order => new OrderSummary(order.Id, order.Number))
+            .SingleOrDefaultAsync(cancellationToken);
+}
+```
 
+Register query implementations explicitly or through the project's established scoped dependency convention.
+
+## DbContext and Composition
+
+```csharp
 public sealed class OrderingDbContext(
     DbContextOptions<OrderingDbContext> options,
     ICachedServiceProvider serviceProvider)
@@ -75,10 +60,17 @@ public sealed class OrderingDbContext(
 {
     public DbSet<Order> Orders => Set<Order>();
 }
+
+builder.AddMonica(monica =>
+{
+    monica.AddRepository()
+        .AddRepositoryDbContext<OrderingDbContext>((_, options) => options.UseSqlite(connectionString))
+        .AddOutbox<OrderingDbContext>();
+});
 ```
 
-## Notes
+Default registration enables operation transaction participation. Independently managed infrastructure contexts use DbContextProviderType.Default. Multiple write contexts require explicit participant selection.
 
-- Keep repository interfaces narrow. Add methods for business-relevant queries, not for every LINQ variation.
-- If one aggregate needs eager-loading defaults, centralize them in the repository.
-- Keep EF mapping files beside the `DbContext` inside `Repository/`, using explicit type names instead of another folder layer.
+Outbox registration adds schema to the application context; create the application's migration before deployment. Mark an ordinary event `[Outbox]` and give it stable `[EventName]` metadata, then publish through the scoped `IDistributedEventBus` or `ILocalEventBus` inside an operation. Monica's worker sends the same payload after commit. Delivery is at least once: consumers may use `[Inbox("stable.consumer")]` to deduplicate database effects and must enforce application stream/version rules. When several write contexts are registered, `[UnitOfWorkContext(typeof(OrderingDbContext))]` selects the primary store for an automatically transactional handler.
+
+Use IDomainEventQueue and scoped IDomainEventHandler for business effects that must run before commit in the same scope. Auto row notifications, cache invalidation and external integration belong in the outbox. Native bulk SQL and physical purge deliberately bypass save policies and need explicit application semantics.

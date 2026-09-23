@@ -46,7 +46,13 @@ public class ModuleEventBus : MonicaModule<ModuleEventBusOption>
         services.AddSingleton<IEventSubscriptionRegistry, EventSubscriptionRegistry>();
         services.AddSingleton<ITopicSubscriptionStatusStore, TopicSubscriptionStatusStore>();
         services.AddSingleton<IEventHandlerInvoker, EventHandlerInvoker>();
-        services.AddSingleton<ILocalEventBus, LocalEventBus>();
+        services.AddSingleton<LocalEventBus>();
+        services.AddScoped<ILocalEventBus>(sp => new ScopedLocalEventBusGateway(
+            sp.GetRequiredService<LocalEventBus>(), sp.GetRequiredService<IEventMessageFactory>(), sp));
+        services.AddScoped<EventDeliveryContext>();
+        services.AddScoped<IEventDeliveryContext>(sp => sp.GetRequiredService<EventDeliveryContext>());
+        services.AddSingleton<IEventMessageFactory, EventMessageFactory>();
+        services.AddSingleton<IEventReceiveDispatcher, EventReceiveDispatcher>();
         services.AddSingleton(_autoDiscovery);
         services.AddHostedService<EventBusAutoDiscoveryLifecycle>();
     }
@@ -54,6 +60,7 @@ public class ModuleEventBus : MonicaModule<ModuleEventBusOption>
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
     }
 
     /// <inheritdoc />
@@ -97,7 +104,12 @@ public static class ModuleEventBusRegistrationExtensions
             .ConfigureServices(context =>
             {
                 context.Services.AddSingleton<TProvider>();
-                context.Services.AddSingleton<IDistributedEventBus>(sp => sp.GetRequiredService<TProvider>());
+                context.Services.AddSingleton<IEventTransport>(sp =>
+                    sp.GetRequiredService<TProvider>() as IEventTransport
+                    ?? throw new InvalidOperationException(
+                        $"Distributed provider '{typeof(TProvider)}' must implement IEventTransport."));
+                context.Services.AddScoped<IDistributedEventBus>(sp => new ScopedDistributedEventBusGateway(
+                    sp.GetRequiredService<TProvider>(), sp.GetRequiredService<IEventMessageFactory>(), sp));
             })
             .SatisfyFeature(ModuleEventBus.DISTRIBUTED_PROVIDER_FEATURE);
     }
@@ -111,7 +123,12 @@ public static class ModuleEventBusRegistrationExtensions
         module.RequireFeature(ModuleEventBus.DISTRIBUTED_PROVIDER_FEATURE);
         return module
             .ConfigureServices(context =>
-                context.Services.AddSingleton<IDistributedEventBus, NoOpDistributedEventBus>())
+            {
+                context.Services.AddSingleton<NoOpDistributedEventBus>();
+                context.Services.AddScoped<IDistributedEventBus>(sp => new ScopedDistributedEventBusGateway(
+                    sp.GetRequiredService<NoOpDistributedEventBus>(),
+                    sp.GetRequiredService<IEventMessageFactory>(), sp));
+            })
             .SatisfyFeature(ModuleEventBus.DISTRIBUTED_PROVIDER_FEATURE);
     }
 
@@ -136,13 +153,13 @@ public static class ModuleEventBusRegistrationExtensions
             if (useDistributed)
             {
                 // For distributed, delegate to the registered keyed IDistributedEventBus
-                context.Services.TryAddKeyedSingleton<IEventBus>(key, (sp, _) =>
+                context.Services.TryAddKeyedScoped<IEventBus>(key, (sp, _) =>
                     sp.GetRequiredService<IDistributedEventBus>());
             }
             else
             {
                 // For local, delegate to the registered keyed ILocalEventBus
-                context.Services.TryAddKeyedSingleton<IEventBus>(key, (sp, _) =>
+                context.Services.TryAddKeyedScoped<IEventBus>(key, (sp, _) =>
                     sp.GetRequiredService<ILocalEventBus>());
             }
         });
@@ -162,8 +179,11 @@ public static class ModuleEventBusRegistrationExtensions
         module.ConfigureServices(context =>
         {
             // Register keyed LocalEventBus with the specified serviceKey
-            context.Services.AddKeyedSingleton<ILocalEventBus>(key, (sp, _) =>
+            context.Services.AddKeyedSingleton<LocalEventBus>(key, (sp, _) =>
                 ActivatorUtilities.CreateInstance<LocalEventBus>(sp, key));
+            context.Services.AddKeyedScoped<ILocalEventBus>(key, (sp, _) =>
+                new ScopedLocalEventBusGateway(sp.GetRequiredKeyedService<LocalEventBus>(key),
+                    sp.GetRequiredService<IEventMessageFactory>(), sp, key));
         });
 
         module.RecordKeyedServiceKey(key);

@@ -139,6 +139,15 @@ their own `AGENTS.md` files and local documentation conventions.
 - If any warning appears while working on the current task, you **MUST** resolve it before finishing the task.
 - Do not leave warnings for later cleanup, and do not silence them with suppression or `NoWarn` unless the user explicitly requires that approach.
 
+## Test Verification Policy
+
+- The standard verification gate is: `dotnet build 'Monica.slnx' -m -c Release` (zero warnings) followed by `powershell -File scripts/run-tests.ps1 -NoBuild` (`pwsh` on Linux/macOS). The script enumerates test projects dynamically; its default run covers everything except UI projects and finishes in about 80 seconds.
+- **UI test projects (`Test.Monica.*.UI`, bUnit) are not part of standard verification.** Run them only when the user explicitly asks for UI testing: `scripts/run-tests.ps1 -UiOnly` (UI only) or `-IncludeUi` (full suite). Never run UI tests on your own initiative.
+- **Do not write new UI (component-rendering) tests unless the user explicitly asks.** Verify UI behavior changes during development with browser smoke testing (screenshot → fix → re-verify through the `vision` agent flow). UI test additions are limited to genuine behavior contracts — authorization boundaries, dispose/async-interleaving safety, no-mutation-on-failure guarantees, security properties like credentials staying out of markup — never layout, markup structure, CSS classes, localized-key presence, or visual composition.
+- Existing UI tests were converged on 2026-09-23 under that rule: presentation-only tests were deleted; behavior-contract tests (authorization, late-result suppression, race safety, theme-color contract) stay.
+- Do not run the whole solution with `dotnet test Monica.slnx`: it re-triggers slow serial execution across all 30 projects, including UI projects, and has stalled on UI test hosts. Test the specific projects you touched plus the default gate.
+- CI mirrors this policy: `unit-tests.yml` runs the default gate on push; `ui-tests.yml` is manual dispatch only; the release workflow keeps the full suite.
+
 ## WSL Environment - dotnet Build Path Issue
 
 **Environment**: This project runs in WSL (Windows Subsystem for Linux) where dotnet CLI is a Windows binary accessed through WSL interoperability.

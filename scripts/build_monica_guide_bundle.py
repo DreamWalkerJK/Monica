@@ -374,7 +374,13 @@ def command_build(args: argparse.Namespace) -> None:
         ignore=shutil.ignore_patterns("*.pdb", "*.xml"),
     )
     for skill_name in sorted(catalog["skills"]):
-        shutil.copytree(REPOSITORY_ROOT / "skills" / skill_name, bundle / "skills" / skill_name)
+        shutil.copytree(
+            REPOSITORY_ROOT / "skills" / skill_name,
+            bundle / "skills" / skill_name,
+            # Local Python cache must never reach the bundle: validate_agent_skills
+            # rejects it at the gate, and silent inclusion would skew tree digests.
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
 
     projected, catalog_payload = project_catalog(catalog, bundle / "skills")
     files = release_files(bundle)

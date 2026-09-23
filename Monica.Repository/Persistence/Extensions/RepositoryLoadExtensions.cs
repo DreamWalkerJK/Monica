@@ -14,14 +14,14 @@ public static class RepositoryLoadExtensions
     /// Explicitly loads a collection navigation for an entity using the repository DbContext.
     /// </summary>
     public static async Task LoadCollectionAsync<TEntity, TProperty>(
-        this IRepository<TEntity> repository,
+        this IEfEntityStore<TEntity> repository,
         TEntity entity,
         Expression<Func<TEntity, IEnumerable<TProperty>>> selector,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
         where TProperty : class
     {
-        await (await repository.GetDbContextAsync())
+        await repository.Context
             .Entry(entity)
             .Collection(selector)
             .LoadAsync(cancellationToken);
@@ -31,14 +31,14 @@ public static class RepositoryLoadExtensions
     /// Explicitly loads a reference navigation for an entity using the repository DbContext.
     /// </summary>
     public static async Task LoadReferenceAsync<TEntity, TProperty>(
-        this IRepository<TEntity> repository,
+        this IEfEntityStore<TEntity> repository,
         TEntity entity,
         Expression<Func<TEntity, TProperty?>> selector,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
         where TProperty : class
     {
-        await (await repository.GetDbContextAsync())
+        await repository.Context
             .Entry(entity)
             .Reference(selector)
             .LoadAsync(cancellationToken);
