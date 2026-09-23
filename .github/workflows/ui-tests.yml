@@ -1,0 +1,49 @@
+name: UI Tests
+
+# UI (bUnit) test projects are excluded from the default unit-test gate and run only on
+# explicit request. Trigger this workflow manually when UI test coverage is wanted.
+
+on:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  ui-tests:
+    name: Run UI tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5.2.0
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            Directory.Build.props
+            Monica.slnx
+            tests/Directory.Build.props
+            tests/Directory.Packages.props
+            **/*.csproj
+
+      - name: Restore solution
+        run: dotnet restore Monica.slnx
+
+      - name: Build solution
+        run: dotnet build Monica.slnx --no-restore --configuration Release -m
+
+      - name: Run UI tests
+        shell: pwsh
+        run: scripts/run-tests.ps1 -NoBuild -UiOnly '--logger' 'trx;LogFilePrefix=ui-tests' '--results-directory' 'tests/TestResults'
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-test-results
+          path: tests/TestResults
+          if-no-files-found: warn
