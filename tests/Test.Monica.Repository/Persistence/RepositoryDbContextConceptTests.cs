@@ -1,6 +1,8 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Monica.Modules;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Entity.Services;
 using Monica.Repository.Persistence.Abstractions;
@@ -147,7 +149,9 @@ public sealed class RepositoryDbContextConceptTests
         var fixture = DbContextFixture<TestRepositoryDbContext>.UseSqliteInMemory(services =>
         {
             services.AddSingleton<ISnowflakeIdGenerator>(new SequentialTestIdGenerator());
-            services.AddSingleton<IAuditPropertySetter>(new AuditPropertySetter(new TestCurrentUser(TESTER_ID, "concept-tester"), TimeProvider.System));
+            services.AddSingleton<IAuditPropertySetter>(new AuditPropertySetter(
+                new TestCurrentUser(TESTER_ID, "concept-tester"), TimeProvider.System,
+                Options.Create(new ModuleClockOption())));
         });
         return await fixture.EnsureCreatedAsync(TestContext.Current.CancellationToken);
     }

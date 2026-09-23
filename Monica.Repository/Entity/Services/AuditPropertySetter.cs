@@ -1,13 +1,36 @@
+using Microsoft.Extensions.Options;
 using Monica.Authority.Identity.Abstractions;
+using Monica.Core.Clock;
+using Monica.Modules;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Entity.Abstractions.Auditing;
 using Monica.Repository.Entity.Utils;
 
 namespace Monica.Repository.Entity.Services;
-/// <summary>Applies audit identity and UTC timestamps from the current user and injected clock.</summary>
-public class AuditPropertySetter(ICurrentUser currentUser, TimeProvider timeProvider) : IAuditPropertySetter
+/// <summary>
+/// Applies audit identity and timestamps from the current user and injected clock. Timestamps are UTC
+/// unless the Clock module configures a deployment timezone through <see cref="ModuleClockOption" />.
+/// </summary>
+public class AuditPropertySetter(
+    ICurrentUser currentUser,
+    TimeProvider timeProvider,
+    IOptions<ModuleClockOption> clockOptions) : IAuditPropertySetter
 {
     protected ICurrentUser CurrentUser { get; } = currentUser;
+
+    /// <summary>
+    /// The audit stamp time: UTC converted to the configured deployment timezone, never the host's
+    /// operating-system timezone, so every host stamps identically.
+    /// </summary>
+    protected virtual DateTime AuditNow
+    {
+        get
+        {
+            var utc = timeProvider.GetUtcNow().UtcDateTime;
+            var zone = clockOptions.Value.LocalTimeZone?.GetTimeZoneInfo();
+            return zone is null ? utc : TimeZoneInfo.ConvertTimeFromUtc(utc, zone);
+        }
+    }
 
     public virtual void SetCreationProperties(object targetObject)
     {
@@ -44,7 +67,7 @@ public class AuditPropertySetter(ICurrentUser currentUser, TimeProvider timeProv
 
         if (objectWithCreationTime.CreationTime == default)
         {
-            ObjectHelper.TrySetProperty(objectWithCreationTime, x => x.CreationTime, () => timeProvider.GetUtcNow().UtcDateTime);
+            ObjectHelper.TrySetProperty(objectWithCreationTime, x => x.CreationTime, () => AuditNow);
         }
     }
 
@@ -53,7 +76,7 @@ public class AuditPropertySetter(ICurrentUser currentUser, TimeProvider timeProv
     {
         if (targetObject is IHasModificationTime objectWithModificationTime)
         {
-            ObjectHelper.TrySetProperty(objectWithModificationTime, x => x.LastModificationTime, () => timeProvider.GetUtcNow().UtcDateTime);
+            ObjectHelper.TrySetProperty(objectWithModificationTime, x => x.LastModificationTime, () => AuditNow);
         }
 
     }
@@ -63,7 +86,7 @@ public class AuditPropertySetter(ICurrentUser currentUser, TimeProvider timeProv
     {
         if (targetObject is IHasDeletionTime { DeletionTime: null } objectWithDeletionTime)
         {
-            ObjectHelper.TrySetProperty(objectWithDeletionTime, x => x.DeletionTime, () => timeProvider.GetUtcNow().UtcDateTime);
+            ObjectHelper.TrySetProperty(objectWithDeletionTime, x => x.DeletionTime, () => AuditNow);
         }
     }
     protected virtual void SetLastModifierId(object targetObject)

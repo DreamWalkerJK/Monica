@@ -67,7 +67,7 @@ Generated CRUD create flushes within its transaction before mapping generated id
 
 The sealed save methods run a fixed sequence: detect/cascade changes, retain owned data for soft deletion, rewrite deletes, stamp audit/version/concurrency, run explicit storage policy extensions, persist business rows, then capture finalized outbox projections and persist them.
 
-- The real audit policy uses `ICurrentUser` and `TimeProvider`. New timestamps are **UTC**, a behavior change from local wall-clock time. Existing stored dates are not rewritten.
+- The real audit policy uses `ICurrentUser` and `TimeProvider`. New timestamps default to **UTC**, a behavior change from the previous host wall clock; existing stored dates are not rewritten. Hosts that store local wall-clock audit timestamps configure the deployment timezone once through the Clock module (`monica.AddClock(options => options.LocalTimeZone = CommonTimeZone.China)`). The value is converted from UTC on every stamp and never reads the host's operating-system timezone; every host writing the same database must configure the same zone, and outbox/inbox bookkeeping stays UTC regardless.
 - Repeated successful flushes advance versions and accept the new concurrency token. Original tokens survive until persistence succeeds. If an API accepts a client version/ETag, validate it explicitly against the loaded aggregate; EF's token only detects concurrent database changes after that load.
 - `DbUpdateConcurrencyException` retains its concrete type and entries.
 - The caller's AutoDetectChangesEnabled setting is restored. When disabled, the caller must explicitly mark its own changes; policy changes are still persisted.

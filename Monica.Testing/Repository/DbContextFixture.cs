@@ -198,6 +198,9 @@ public sealed class DbContextFixture<TDbContext> : IDisposable, IAsyncDisposable
         services.AddLogging();
         services.AddSingleton(NullLoggerFactory.Instance);
         services.AddSingleton<IOptions<ModuleRepositoryOption>>(Options.Create(new ModuleRepositoryOption()));
+        // Registrations from configureServices run after these defaults, so a test can override the
+        // clock options (for example with a deployment timezone) by adding its own singleton later.
+        services.AddSingleton<IOptions<ModuleClockOption>>(Options.Create(new ModuleClockOption()));
         services.AddSingleton<ICurrentUser, TestCurrentUser>();
         services.AddSingleton(TimeProvider.System);
         services.AddTransient<IAuditPropertySetter, Monica.Repository.Entity.Services.AuditPropertySetter>();
