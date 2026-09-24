@@ -73,6 +73,13 @@ Default seams retain the real audit policy. Replace ICurrentUser, TimeProvider a
 - Never share a MonicaApplication across root providers.
 - Independent scenarios run in parallel. Serialize only a named real external resource that cannot be isolated.
 
+## Requirement and Unit Traits
+
+- Declare the governing requirement once per test class with `[Trait("REQ", "<requirement-id>")]`; add a method-level REQ trait only when one test exercises an additional requirement.
+- Add `[Trait("Unit", "<runtimeKey>")]` — the namespace-qualified type name of the unit under test — when the `{TypeUnderTest}Tests` name is absent or its stem names more than one unit. A class carrying Unit traits is linked only through them; a class without them falls back to the naming convention.
+- `REQ` and `Unit` are the reserved trait keys for requirement and unit linkage: `dotnet test --filter "REQ=<requirement-id>"` runs exactly the covering slice, trait values flow into JUnit XML for CI cross-checks, and Test Explorer groups tests by requirement.
+- Trait arguments must be constant, non-empty strings; other trait keys stay free for repository-local tooling.
+
 ## Smaller Boundaries
 
 Use raw ProjectUnitFixture<TUnit> only when collaborators are explicit and composition, discovery, proxies, transactions, hosted lifecycle and host ownership are outside the assertion. It does not supply a substitute production UoW. Entity/value-object invariant tests may construct objects directly.

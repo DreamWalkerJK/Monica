@@ -60,7 +60,16 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
 
         var diagnostics = new List<ProjectUnitSourceDiagnostic>();
         var projects = NormalizeProjectPaths(root, request.ProjectPaths, diagnostics);
-        if (projects.Count == 0)
+        var testProjects = NormalizeProjectPaths(root, request.TestProjectPaths ?? [], diagnostics);
+        var testProjectPaths = new HashSet<string>(testProjects, StringComparer.OrdinalIgnoreCase);
+        // A path listed both ways is a caller error; the test classification wins so its types are
+        // never misread as production units.
+        projects = projects.Where(path => !testProjectPaths.Contains(path)).ToList();
+        var allProjects = projects
+            .Concat(testProjects)
+            .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (allProjects.Count == 0)
         {
             Report(progress, ProjectUnitSourceAnalysisStage.Completed, 0, 0, null, "No projects were selected.");
             return new ProjectUnitSourceCatalog(
@@ -69,6 +78,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 0,
                 diagnostics.Any(static diagnostic => diagnostic.Severity == ProjectUnitSourceDiagnosticSeverity.Error),
                 DateTimeOffset.UtcNow,
+                [],
                 [],
                 diagnostics);
         }
@@ -86,10 +96,10 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
 
         var loadedProjects = new List<Project>();
         var transientFailures = new List<(string AbsolutePath, string RelativePath)>();
-        for (var index = 0; index < projects.Count; index++)
+        for (var index = 0; index < allProjects.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var projectPath = projects[index];
+            var projectPath = allProjects[index];
             var relativePath = ToRelativePath(root, projectPath);
             Report(
                 progress,
@@ -145,6 +155,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
 
         var analyzedProjects = 0;
         var candidates = new List<AnalyzedProjectUnitCandidate>();
+        var testClasses = new List<ProjectUnitSourceTestClass>();
         for (var index = 0; index < loadedProjects.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -197,12 +208,20 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
             }
 
             analyzedProjects++;
-            await CollectProjectUnitsAsync(
-                root, project, compilation, relativeProjectPath, candidates, diagnostics, cancellationToken);
+            if (testProjectPaths.Contains(projectPath))
+            {
+                await CollectTestClassesAsync(
+                    root, project, relativeProjectPath, testClasses, diagnostics, cancellationToken);
+            }
+            else
+            {
+                await CollectProjectUnitsAsync(
+                    root, project, compilation, relativeProjectPath, candidates, diagnostics, cancellationToken);
+            }
         }
 
         analyzedProjects += await RetryTransientFailuresAsync(
-            root, transientFailures, candidates, diagnostics, progress, cancellationToken);
+            root, transientFailures, testProjectPaths, candidates, testClasses, diagnostics, progress, cancellationToken);
 
         Report(
             progress,
@@ -212,7 +231,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
             null,
             "Resolving ProjectUnit dependencies.");
         var units = ResolveUnits(candidates, diagnostics);
-        var isPartial = analyzedProjects != projects.Count
+        var isPartial = analyzedProjects != allProjects.Count
                         || diagnostics.Any(static diagnostic =>
                             diagnostic.Code is "ProjectUnit.Analysis.Project.Missing"
                                 or "ProjectUnit.Analysis.Project.LoadFailed"
@@ -222,18 +241,22 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
         Report(
             progress,
             ProjectUnitSourceAnalysisStage.Completed,
-            projects.Count,
-            projects.Count,
+            allProjects.Count,
+            allProjects.Count,
             null,
             isPartial ? "ProjectUnit analysis completed with partial results." : "ProjectUnit analysis completed.");
 
         return new ProjectUnitSourceCatalog(
             ProjectUnitSourceAnalysisContract.Version,
-            projects.Count,
+            allProjects.Count,
             analyzedProjects,
             isPartial,
             DateTimeOffset.UtcNow,
             units,
+            testClasses
+                .OrderBy(static testClass => testClass.ProjectPath, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static testClass => testClass.RuntimeKey, StringComparer.Ordinal)
+                .ToArray(),
             diagnostics
                 .OrderByDescending(static diagnostic => diagnostic.Severity)
                 .ThenBy(static diagnostic => diagnostic.ProjectPath, StringComparer.OrdinalIgnoreCase)
@@ -285,6 +308,41 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
         }
     }
 
+    private async Task CollectTestClassesAsync(
+        string root,
+        Project project,
+        string relativeProjectPath,
+        List<ProjectUnitSourceTestClass> testClasses,
+        List<ProjectUnitSourceDiagnostic> diagnostics,
+        CancellationToken cancellationToken)
+    {
+        var symbols = await GetDeclaredTypesAsync(project, cancellationToken);
+        foreach (var candidate in ProjectUnitTestClassScanner.Scan(symbols))
+        {
+            var location = CreateLocation(root, candidate.Symbol);
+            if (location is null)
+            {
+                continue;
+            }
+
+            diagnostics.AddRange(candidate.Diagnostics.Select(diagnostic => diagnostic with
+            {
+                ProjectPath = relativeProjectPath,
+                SourcePath = location.RelativePath,
+                Line = location.Line
+            }));
+            testClasses.Add(new ProjectUnitSourceTestClass(
+                candidate.Symbol.GetRuntimeName(),
+                relativeProjectPath,
+                project.Name,
+                candidate.Symbol.ContainingNamespace?.ToDisplayString() ?? string.Empty,
+                candidate.Symbol.Name,
+                location,
+                candidate.TestMethodCount,
+                candidate.Traits));
+        }
+    }
+
     /// <summary>
     /// Project-load and compilation failures observed in large batch runs can be transient
     /// MSBuild/Roslyn workspace states. Each failed project gets exactly one retry in a fresh
@@ -295,7 +353,9 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
     private async Task<int> RetryTransientFailuresAsync(
         string root,
         IReadOnlyList<(string AbsolutePath, string RelativePath)> failures,
+        IReadOnlySet<string> testProjectPaths,
         List<AnalyzedProjectUnitCandidate> candidates,
+        List<ProjectUnitSourceTestClass> testClasses,
         List<ProjectUnitSourceDiagnostic> diagnostics,
         IProgress<ProjectUnitSourceAnalysisProgress>? progress,
         CancellationToken cancellationToken)
@@ -355,14 +415,28 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                     ProjectUnitSourceDiagnosticSeverity.Information,
                     "The project succeeded on a fresh-workspace retry after a transient load or compilation failure.",
                     relativePath));
-                await CollectProjectUnitsAsync(
-                    root,
-                    project,
-                    compilation,
-                    relativePath,
-                    candidates,
-                    diagnostics,
-                    cancellationToken);
+                if (testProjectPaths.Contains(absolutePath))
+                {
+                    await CollectTestClassesAsync(
+                        root,
+                        project,
+                        relativePath,
+                        testClasses,
+                        diagnostics,
+                        cancellationToken);
+                }
+                else
+                {
+                    await CollectProjectUnitsAsync(
+                        root,
+                        project,
+                        compilation,
+                        relativePath,
+                        candidates,
+                        diagnostics,
+                        cancellationToken);
+                }
+
                 recovered++;
             }
             catch (Exception exception) when (exception is not OperationCanceledException)

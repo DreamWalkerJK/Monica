@@ -1,6 +1,7 @@
 using Monica.EventBus.Abstractions;
 using Monica.EventBus;
 using Monica.Repository.Inbox.Annotations;
+using Monica.Repository.Inbox.Models;
 using Monica.Repository.Inbox.Services;
 using Monica.Core.Execution;
 using Monica.Repository.Outbox.Models;
@@ -210,14 +211,17 @@ public static class ModuleRepositoryRegistrationExtensions
     /// Generate an EF migration for the MonicaInbox table before deployment.
     /// </summary>
     public static ModuleRegistration<ModuleRepository, ModuleRepositoryOption> AddInbox<TDbContext>(
-        this ModuleRegistration<ModuleRepository, ModuleRepositoryOption> module)
+        this ModuleRegistration<ModuleRepository, ModuleRepositoryOption> module,
+        Action<RepositoryInboxOptions>? configure = null)
         where TDbContext : RepositoryDbContext<TDbContext>
     {
+        var options = new RepositoryInboxOptions();
+        configure?.Invoke(options);
         module.Require<ModuleUnitOfWork, ModuleUnitOfWorkOption>();
         module.Require<ModuleEventBus, ModuleEventBusOption>();
         module.ConfigureServices(context =>
         {
-            context.Services.AddSingleton(new InboxRegistration<TDbContext>());
+            context.Services.AddSingleton(new InboxRegistration<TDbContext>(options));
             context.Services.TryAddSingleton(TimeProvider.System);
         });
         return module;

@@ -30,7 +30,7 @@ public sealed class ProjectUnitSourceAnalyzerTests
             progress,
             TestContext.Current.CancellationToken);
 
-        result.ContractVersion.Should().Be("monica-project-units-source/v3");
+        result.ContractVersion.Should().Be(ProjectUnitSourceAnalysisContract.Version);
         result.RequestedProjectCount.Should().Be(2);
         result.AnalyzedProjectCount.Should().Be(1);
         result.IsPartial.Should().BeTrue();
@@ -47,6 +47,7 @@ public sealed class ProjectUnitSourceAnalyzerTests
             && unit.ExecutionPoints.Count == 0
             && unit.Source.RelativePath == "ManagedUnit.cs"
             && unit.Source.Line > 0);
+        result.TestClasses.Should().BeEmpty();
         result.Diagnostics.Should().Contain(diagnostic =>
             diagnostic.Code == "ProjectUnit.Analysis.Project.Missing"
             && diagnostic.Severity == ProjectUnitSourceDiagnosticSeverity.Error);
@@ -54,6 +55,45 @@ public sealed class ProjectUnitSourceAnalyzerTests
         progress.Items.Should().Contain(item => item.Stage == ProjectUnitSourceAnalysisStage.AnalyzingProjects);
         progress.Items.Last().Should().Match<ProjectUnitSourceAnalysisProgress>(item =>
             item.Stage == ProjectUnitSourceAnalysisStage.Completed && item.Percentage == 100m);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_WithTestProjects_ShouldCollectTestClassesWithoutUnitsFromThem()
+    {
+        using var fixture = new TemporaryProjectFixture();
+        await fixture.RestoreAsync(TestContext.Current.CancellationToken);
+        var analyzer = new ProjectUnitSourceAnalyzer();
+
+        var result = await analyzer.AnalyzeAsync(
+            new ProjectUnitSourceAnalysisRequest(
+                fixture.Root,
+                [fixture.ProjectPath],
+                [fixture.TestProjectPath]),
+            null,
+            TestContext.Current.CancellationToken);
+
+        result.ContractVersion.Should().Be(ProjectUnitSourceAnalysisContract.Version);
+        result.RequestedProjectCount.Should().Be(2);
+        result.AnalyzedProjectCount.Should().Be(2);
+        result.IsPartial.Should().BeFalse();
+        result.Units.Should().ContainSingle()
+            .Which.RuntimeKey.Should().Be("Sample.ManagedUnit");
+        result.TestClasses.Should().ContainSingle().Which.Should().Match<ProjectUnitSourceTestClass>(testClass =>
+            testClass.RuntimeKey == "Sample.ManagedUnitTests"
+            && testClass.ProjectPath == "Sample.Tests.csproj"
+            && testClass.ProjectName == "Sample.Tests"
+            && testClass.Namespace == "Sample"
+            && testClass.Name == "ManagedUnitTests"
+            && testClass.TestMethodCount == 2
+            && testClass.Source.RelativePath == "ManagedUnitTests.cs"
+            && testClass.Traits.Count == 2);
+        result.TestClasses[0].Traits.Should().BeEquivalentTo(
+        [
+            new ProjectUnitSourceTestTrait("REQ", "REQ-SAMPLE-1"),
+            new ProjectUnitSourceTestTrait("Unit", "Sample.ManagedUnit")
+        ]);
+        result.Diagnostics.Should().NotContain(diagnostic =>
+            diagnostic.Severity == ProjectUnitSourceDiagnosticSeverity.Error);
     }
 
     private sealed class ProgressRecorder : IProgress<ProjectUnitSourceAnalysisProgress>
@@ -106,16 +146,59 @@ public sealed class ProjectUnitSourceAnalyzerTests
                     public sealed class ManagedUnit : DomainService { }
                 }
                 """);
+            TestProjectPath = Path.Combine(Root, "Sample.Tests.csproj");
+            File.WriteAllText(TestProjectPath, """
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup>
+                    <TargetFramework>net10.0</TargetFramework>
+                    <Nullable>enable</Nullable>
+                    <IsTestProject>true</IsTestProject>
+                  </PropertyGroup>
+                  <ItemGroup>
+                    <ProjectReference Include="Sample.csproj" />
+                  </ItemGroup>
+                </Project>
+                """);
+            File.WriteAllText(Path.Combine(Root, "ManagedUnitTests.cs"), """
+                namespace Xunit
+                {
+                    [System.AttributeUsage(
+                        System.AttributeTargets.Class | System.AttributeTargets.Method,
+                        AllowMultiple = true)]
+                    public sealed class TraitAttribute(string key, string value) : System.Attribute { }
+
+                    public sealed class FactAttribute : System.Attribute { }
+                }
+
+                namespace Sample
+                {
+                    using Xunit;
+
+                    [Trait("REQ", "REQ-SAMPLE-1")]
+                    [Trait("Unit", "Sample.ManagedUnit")]
+                    public sealed class ManagedUnitTests
+                    {
+                        [Fact]
+                        public void Creates_the_unit() { }
+
+                        [Fact]
+                        public void Coordinates_the_workflow() { }
+                    }
+                }
+                """);
         }
 
         public string Root { get; }
 
         public string ProjectPath { get; }
 
+        public string TestProjectPath { get; }
+
         public async Task RestoreAsync(CancellationToken cancellationToken)
         {
             // MSBuildWorkspace needs restored framework references to bind attribute arguments.
             // This package-free fixture restores against an empty local source to stay offline.
+            // Restoring the test project restores its production reference transitively.
             var startInfo = new ProcessStartInfo("dotnet")
             {
                 WorkingDirectory = Root,
@@ -124,7 +207,7 @@ public sealed class ProjectUnitSourceAnalyzerTests
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-            foreach (var argument in new[] { "restore", ProjectPath, "--source", Root, "--nologo", "-p:NuGetAudit=false" })
+            foreach (var argument in new[] { "restore", TestProjectPath, "--source", Root, "--nologo", "-p:NuGetAudit=false" })
             {
                 startInfo.ArgumentList.Add(argument);
             }

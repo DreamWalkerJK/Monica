@@ -227,7 +227,10 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
         if (OutboxOptions is not null)
         {
             var outbox = builder.Entity<OutboxMessage>();
-            outbox.ToTable("MonicaOutbox");
+            outbox.ToTable("MonicaOutbox", table =>
+            {
+                if (OutboxOptions.ExcludeFromMigrations) table.ExcludeFromMigrations();
+            });
             outbox.HasKey(x => x.Sequence);
             outbox.Property(x => x.Sequence).ValueGeneratedOnAdd();
             outbox.HasIndex(x => x.MessageId).IsUnique();
@@ -241,10 +244,14 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
             outbox.Property(x => x.Body).IsRequired();
             outbox.Property(x => x.LastError).HasMaxLength(1000);
         }
-        if (CachedServiceProvider.GetService<InboxRegistration<TDbContext>>() is not null)
+        var inboxRegistration = CachedServiceProvider.GetService<InboxRegistration<TDbContext>>();
+        if (inboxRegistration is not null)
         {
             var inbox = builder.Entity<InboxReceipt>();
-            inbox.ToTable("MonicaInbox");
+            inbox.ToTable("MonicaInbox", table =>
+            {
+                if (inboxRegistration.Options.ExcludeFromMigrations) table.ExcludeFromMigrations();
+            });
             inbox.HasKey(x => new { x.Consumer, x.Source, x.MessageId });
             inbox.Property(x => x.Consumer).HasMaxLength(200).IsRequired();
             inbox.Property(x => x.Source).HasMaxLength(200).IsRequired();

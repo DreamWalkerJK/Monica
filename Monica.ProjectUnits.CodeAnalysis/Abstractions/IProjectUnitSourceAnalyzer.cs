@@ -11,7 +11,10 @@ public interface IProjectUnitSourceAnalyzer
     /// <summary>
     /// Analyzes the requested projects and reports deterministic project-loading and semantic-analysis progress.
     /// </summary>
-    /// <param name="request">Workspace root and normalized project files to analyze.</param>
+    /// <param name="request">
+    /// Workspace root with normalized project files to analyze. Test project files are analyzed for test classes
+    /// only and contribute no units.
+    /// </param>
     /// <param name="progress">Optional progress observer. Callbacks may occur on background threads.</param>
     /// <param name="cancellationToken">Cancellation token for project loading and semantic analysis.</param>
     /// <returns>A serializable source catalog. Project failures are represented as diagnostics and partial results.</returns>

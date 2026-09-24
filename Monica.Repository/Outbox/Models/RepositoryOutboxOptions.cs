@@ -23,4 +23,11 @@ public sealed class RepositoryOutboxOptions
 
     /// <summary>Delivered rows older than this are pruned; defaults to seven days. Pending rows are retained.</summary>
     public TimeSpan DeliveredRetention { get; set; } = TimeSpan.FromDays(7);
+
+    /// <summary>
+    /// Maps the Outbox table for runtime use without owning it in migrations. Set this on contexts that share
+    /// a physical database with another context whose migrations create the shared table; leave the default
+    /// (owner) on exactly one context per database.
+    /// </summary>
+    public bool ExcludeFromMigrations { get; set; }
 }
