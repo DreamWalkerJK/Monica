@@ -1,0 +1,106 @@
+@using Monica.AI.UI.UIChat.Support
+@implements IAsyncDisposable
+
+<div class="trajectory-workspace" @ref="_root">
+    <div class="trajectory-toolbar">
+        <MudTextField T="string" Value="@_query" ValueChanged="Search" Placeholder="@L["Workbench:SearchTrajectory"]" Immediate="true" DebounceInterval="180" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true" />
+        <MudButton Size="Size.Small" OnClick="ToggleAll">@(_folded.Count > 0 ? L["Workbench:ExpandAll"] : L["Workbench:FoldAll"])</MudButton>
+        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.VerticalAlignBottom" OnClick="FollowTailAsync">@L["Workbench:FollowTail"]</MudButton>
+    </div>
+    <div class="trajectory-summary" aria-label="@L["Workbench:TrajectorySummary"]">
+        <span title="@L["Workbench:RecordedDurationHelp"]"><MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" /><span>@L["Workbench:TrajectoryDuration"]</span><strong>@ChatExecutionPresentation.Duration(_projection.RecordedDuration)</strong></span>
+        <span><MudIcon Icon="@Icons.Material.Outlined.Forum" Size="Size.Small" /><span>@L["Workbench:TrajectoryTurns"]</span><strong>@_projection.TurnCount</strong></span>
+        <span title="@L["Workbench:ModelCallsHelp"]"><MudIcon Icon="@Icons.Material.Outlined.AutoAwesome" Size="Size.Small" /><span>@L["Workbench:TrajectoryCalls"]</span><strong>@_projection.ModelCalls</strong></span>
+        <span><MudIcon Icon="@Icons.Material.Outlined.Build" Size="Size.Small" /><span>@L["Workbench:Tools"]</span><strong>@_projection.ToolCalls</strong></span>
+    </div>
+    <div class="trajectory-body @(Selected is not null ? "has-selection" : null)">
+        <div class="trajectory-evidence">
+            <div class="timeline-toolbar">
+                <span class="timeline-heading">@L["Workbench:TimelineElapsed"]</span>
+                <span class="timeline-help">@L["Workbench:TimelineHelp"]</span>
+                <div class="timeline-actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Pan(-.4)))" aria-label="@L["Workbench:PanEarlier"]" />
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Pan(.4)))" aria-label="@L["Workbench:PanLater"]" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Zoom(2)))" aria-label="@L["Workbench:ZoomOut"]" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Zoom(.5)))" aria-label="@L["Workbench:ZoomIn"]" />
+                    <MudButton Size="Size.Small" OnClick="@(() => ChangeViewport(_viewport.Reset))">@L["Workbench:ResetZoom"]</MudButton>
+                </div>
+            </div>
+            <div class="trajectory-timeline">
+                <div class="timeline-lanes"><span></span><span>@L["Workbench:Input"]</span><span>@L["Workbench:TimelineModel"]</span><span>@L["Workbench:Tools"]</span></div>
+                <div class="timeline-plot" @ref="_timelineRoot">
+                    <div class="timeline-ticks" aria-hidden="true">@for (var index = 0; index <= 4; index++) { <span>@($"{_viewport.Start + _viewport.Width * index / 4:0.#} s")</span> }</div>
+                    <svg viewBox="0 0 1000 84" preserveAspectRatio="none" height="84" width="100%" role="group" aria-label="@L["Workbench:Timeline"]"
+                         @onpointerdown="BeginInterval" @onpointerup="EndIntervalAsync" @onpointercancel="@(() => _dragStart = null)" @onwheel="ZoomWheel" @onwheel:preventDefault="true">
+                        @for (var lane = 0; lane < 3; lane++) { <line x1="0" x2="1000" y1="@(lane * 28 + 14)" y2="@(lane * 28 + 14)" class="timeline-axis" /> }
+                        @foreach (var mark in _marks)
+                        {
+                            var y = mark.Lane * 28 + 6;
+                            <g tabindex="0" role="button" aria-label="@TimelineLabel(mark)" class="timeline-mark role-@mark.First.RoleClass @(mark.Records.Any(record => record.Id == _selectedId) ? "selected" : null) @(mark.Records.Count > 1 ? "cluster" : null)"
+                               @onclick="@(() => SelectMarkAsync(mark))" @onkeydown="@(args => SelectMarkWithKeyboardAsync(args, mark))">
+                                @if (mark.IsEvent)
+                                {
+                                    <line x1="@X(mark.Start)" x2="@X(mark.Start)" y1="@y" y2="@(y + 16)" class="timeline-event" />
+                                    <line x1="@X(mark.Start)" x2="@X(mark.Start)" y1="@y" y2="@(y + 16)" class="timeline-hit" />
+                                }
+                                else if (mark.Records.Count == 1 && mark.First.Step?.Request?.TimeToFirstToken is { } wait)
+                                {
+                                    <rect x="@X(mark.Start)" y="@y" width="@SpanWidth(mark.Start, Math.Min(mark.End, mark.Start + wait.TotalSeconds))" height="16" rx="3" class="timeline-wait" />
+                                    @if (mark.End > mark.Start + wait.TotalSeconds) { <rect x="@X(mark.Start + wait.TotalSeconds)" y="@y" width="@SpanWidth(mark.Start + wait.TotalSeconds, mark.End)" height="16" rx="3" class="timeline-bar" /> }
+                                }
+                                else { <rect x="@X(mark.Start)" y="@y" width="@SpanWidth(mark.Start, mark.End)" height="16" rx="3" class="timeline-bar" /> }
+                                <title>@TimelineLabel(mark)</title>
+                            </g>
+                        }
+                    </svg>
+                </div>
+            </div>
+            <div class="trajectory-ledger" @ref="_ledgerRoot" aria-label="@L["Workbench:Trajectory"]">
+                @if (_rows.Count == 0)
+                {
+                    <div class="trajectory-empty">@L[string.IsNullOrWhiteSpace(_query) ? "Workbench:EmptyTrajectory" : "Workbench:NoTrajectoryMatches"]</div>
+                }
+                <Virtualize Items="@_rows" Context="row" ItemSize="42" OverscanCount="8">
+                    @if (row.Group is { } group)
+                    {
+                        <button type="button" class="ledger-group" @onclick="@(() => ToggleTurn(group.Id))" aria-expanded="@(!_folded.Contains(group.Id) || !string.IsNullOrWhiteSpace(_query))">
+                            <MudIcon Icon="@(_folded.Contains(group.Id) && string.IsNullOrWhiteSpace(_query) ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" Size="Size.Small" />
+                            <strong>@(group.TurnNumber is { } number ? L["Workbench:TrajectoryTurn", number] : L["Workbench:Compaction"])</strong>
+                            <span>@L["Workbench:TrajectoryTurnCounts", group.ModelCalls, group.ToolCalls]</span>
+                        </button>
+                    }
+                    else if (row.Record is { } record)
+                    {
+                        <button type="button" @key="record.Id" data-record-id="@record.Id" data-role="@record.RoleClass"
+                                class="ledger-row role-@record.RoleClass @(record.Id == _selectedId ? "selected" : null) @(record.IsFailure ? "failed" : null)" @onclick="@(() => SelectRecordAsync(record))">
+                            <span class="record-role" title="@L[record.RoleKey]">@L[record.RoleKey]</span>
+                            <span class="record-content">
+                                @if (record.ToolName is { } toolName)
+                                {
+                                    <strong class="record-tool-name">@toolName</strong><span class="record-arguments">@ChatTrajectoryProjection.Condense(record.Arguments, 160)</span>
+                                    @if (!string.IsNullOrWhiteSpace(record.Result)) { <span class="record-arrow" aria-hidden="true">→</span><span class="record-result">@ChatTrajectoryProjection.Condense(record.Result, 160)</span> }
+                                }
+                                else
+                                {
+                                    @if (record.HeadingKey is { } heading) { <strong class="record-heading">@L[heading]</strong> }
+                                    <span class="record-preview">@(string.IsNullOrWhiteSpace(record.Preview) ? L["Workbench:NoRecordedContent"] : record.Preview)</span>
+                                }
+                            </span>
+                            <span class="record-meta">
+                                @if (record.Step is { Status: not ChatExecutionStatus.Completed } step) { <span class="record-status">@ChatExecutionPresentation.Status(step.Status, L)</span> }
+                                @if (record.Step?.Duration is { } duration) { <time>@ChatExecutionPresentation.Duration(duration)</time> }
+                            </span>
+                        </button>
+                    }
+                </Virtualize>
+            </div>
+        </div>
+        @if (Selected is { } selected)
+        {
+            <aside class="trajectory-inspector">
+                <div class="inspector-navigation"><MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="ClearSelection">@L["Workbench:BackToLedger"]</MudButton></div>
+                <ChatExecutionInspector Step="@selected.Step" Message="@selected.Message" MessageHeading="@(selected.HeadingKey is { } heading ? L[heading].Value : L[selected.RoleKey].Value)" RecordedAt="@selected.StartedAt" SessionId="@Session.SessionId" />
+            </aside>
+        }
+    </div>
+</div>

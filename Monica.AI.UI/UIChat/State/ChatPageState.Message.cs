@@ -1,4 +1,5 @@
-using System.Net.Http;
+using System.Diagnostics;
+using Microsoft.AspNetCore.Components.Forms;
 using Monica.AI.Chat.Models;
 using Monica.AI.Models;
 using Monica.AI.UI.UIChat.Components;
@@ -11,286 +12,205 @@ namespace Monica.AI.UI.UIChat.State;
 
 public sealed partial class ChatPageState
 {
-    private async Task SendMessageAsync(ChatSendRequest request)
-    {
-        var message = request.Message;
-        if (string.IsNullOrWhiteSpace(message) || IsSending)
+    /// <summary>Submits text and staged durable attachments in their selected order.</summary>
+    public Task SendMessageAsync(ChatSendRequest request)
+        => RunOperationAsync(async ct =>
         {
-            return;
-        }
-
-        ClearError();
-        LastMessage = message;
-
-        var sessionId = await EnsureCurrentSessionAsync();
-        if (string.IsNullOrWhiteSpace(sessionId))
-        {
-            return;
-        }
-
-        var resolvedSessionId = sessionId!;
-        var session = _workspace.GetLoadedSession(resolvedSessionId);
-        if (session is null)
-        {
-            SetPageError(_localizer["Error:Generic"]);
-            return;
-        }
-
-        if (!CanContinueSession(session))
-        {
-            _snackbar.Add(_localizer["Chat:History:Warnings:ProviderUnavailable"], Severity.Warning);
-            return;
-        }
-
-        _ = _chatFacade.UpdateSettings(
-            session,
-            session.Settings with { ReasoningEnabled = ReasoningEnabled });
-        _ = _chatFacade.UpdateRuntimeContext(
-            session,
-            BuildRuntimeContext(SelectedKnowledgeBaseIds));
-        if (session.Messages.Count == 0)
-        {
-            _ = _chatFacade.Rename(session, ChatProviderResolver.GenerateSessionTitle(message));
-        }
-
-        await StartStreamingMessageAsync(resolvedSessionId, message);
-    }
-
-    private async Task StartStreamingMessageAsync(string sessionId, string message)
-    {
-        IsSending = true;
-        SetupCancellationToken();
-        NotifyStateChanged();
-        ChatSession? session = null;
-
-        try
-        {
-            session = _workspace.GetLoadedSession(sessionId);
-            if (session == null)
+            if (string.IsNullOrWhiteSpace(request.Message) && _attachments.Count == 0) return;
+            var session = CurrentSession ?? await TryCreateSessionAsync();
+            if (session is null) return;
+            if (_attachments.Any(item => item.Kind == ChatAttachmentKind.Image) && CurrentModel?.SupportsImage != true)
             {
-                SetPageError(_localizer["Error:Generic"]);
+                SetError(localizer["Workbench:ImageUnsupported"]);
                 return;
             }
+            if (_attachments.Any(item => item.Kind == ChatAttachmentKind.Document && !item.HasExtractedText) && CurrentModel?.SupportsDocuments != true)
+            {
+                SetError(localizer["Workbench:DocumentUnsupported"]);
+                return;
+            }
+            _ = chatFacade.UpdateRuntimeContext(session, BuildRuntimeContext(SelectedKnowledgeBaseIds));
+            if (session.Messages.Count == 0)
+                _ = chatFacade.Rename(session, ChatProviderResolver.GenerateSessionTitle(
+                    string.IsNullOrWhiteSpace(request.Message) ? _attachments[0].FileName : request.Message));
+            var parts = new List<ChatContentPart>();
+            if (!string.IsNullOrWhiteSpace(request.Message)) parts.Add(ChatContentPart.FromText(request.Message.Trim()));
+            parts.AddRange(_attachments.Select(ChatContentPart.FromAttachment));
+            request.Accepted = true;
+            _attachments.Clear();
+            await ConsumeStreamAsync(session, chatFacade.SendMessageStreamingAsync(session, new ChatUserInput { Parts = parts }, ct), ct);
+        });
 
-            StreamingState = new ChatStreamingState();
-            UpdateCurrentSession();
-            NotifyStateChanged();
-            await ConsumeStreamAsync(
-                session,
-                _chatFacade.SendMessageStreamingAsync(session, message, CancellationToken));
-        }
+    /// <summary>Edits a user turn and regenerates from that point.</summary>
+    public Task EditMessageAsync((AIChatMessage Message, string NewContent) edit)
+        => RunOperationAsync(async ct =>
+        {
+            if (CurrentSession is { } session)
+                await ConsumeStreamAsync(session, chatFacade.EditMessageAsync(session, edit.Message.Id, edit.NewContent, ct), ct);
+        });
+
+    /// <summary>Regenerates the selected assistant turn using current settings.</summary>
+    public Task RetryMessageAsync(AIChatMessage message)
+        => RunOperationAsync(async ct =>
+        {
+            if (CurrentSession is { } session)
+                await ConsumeStreamAsync(session, chatFacade.RetryMessageAsync(session, message.Id, ct), ct);
+        });
+
+    /// <summary>Compacts context while preserving the transcript and execution records.</summary>
+    public Task CompactAsync() => RunOperationAsync(async ct =>
+    {
+        if (CurrentSession is not { } session) return;
+        var result = await chatFacade.CompactAsync(session, ct);
+        if (result.IsFailed(out var error, out var compacted)) SetError(error.Message);
+        else if (!_disposed) snackbar.Add(compacted.Applied
+            ? localizer["Workbench:CompactionSummary", compacted.BeforeTokens, compacted.AfterTokens]
+            : compacted.Reason ?? localizer["Workbench:NothingToCompact"], Severity.Info);
+    });
+
+    /// <summary>Requests cancellation; the recorded interrupted work remains inspectable.</summary>
+    public async Task CancelAsync()
+    {
+        if (_requestCancellation is not null) await _requestCancellation.CancelAsync();
+    }
+
+    private Task RunOperationAsync(Func<CancellationToken, Task> operation)
+    {
+        if (IsSending || IsUploading || IsHistoryUpdating || _disposed || HasHistoryConflict) return Task.CompletedTask;
+        _activeOperation = RunOperationCoreAsync(operation);
+        return _activeOperation;
+    }
+
+    private async Task RunOperationCoreAsync(Func<CancellationToken, Task> operation)
+    {
+        IsSending = true;
+        ErrorMessage = null;
+        _requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        if (_options.RequestTimeoutMs > 0) _requestCancellation.CancelAfter(_options.RequestTimeoutMs);
+        NotifyStateChanged();
+        try { await operation(_requestCancellation.Token); }
         catch (OperationCanceledException)
         {
-            await CompleteStreamAsync(session);
+            if (CurrentSession is { } session) _ = await chatFacade.CancelAsync(session, CancellationToken.None);
         }
-        catch (HttpRequestException ex)
+        catch (Exception exception) { SetError(exception.Message); }
+        finally
         {
-            await RecordStreamErrorAsync(session, $"{_localizer["Error:NetworkError"]}: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            await RecordStreamErrorAsync(session, $"{_localizer["Error:Generic"]}: {ex.Message}");
-        }
-    }
-
-    private async Task RecordStreamErrorAsync(ChatSession? session, string error)
-    {
-        if (session is null)
-        {
-            SetPageError(error);
-            return;
-        }
-
-        _ = _chatFacade.RecordError(session, error);
-        await CompleteStreamAsync(session);
-    }
-
-    private async Task CompleteStreamAsync(ChatSession? session)
-    {
-        IsSending = false;
-        StreamingState = null;
-        CancellationTokenSource?.Dispose();
-        CancellationTokenSource = null;
-        CancellationToken = CancellationToken.None;
-        UpdateCurrentSession();
-        if (session is not null)
-        {
-            await _workspace.SaveSessionAsync(session);
-            if (session.RestorationState == ChatSessionRestorationState.TranscriptFallback)
+            // Cancellation stops generation, but saving its terminal state must still complete.
+            try
             {
-                _snackbar.Add(_localizer["Chat:History:Warnings:RuntimeFallback"], Severity.Warning);
+                if (CurrentSession is { } session) await workspace.SaveSessionAsync(session);
             }
-        }
-
-        NotifyStateChanged();
-    }
-
-    private async Task CancelAsync()
-    {
-        if (CancellationTokenSource != null && !CancellationTokenSource.IsCancellationRequested)
-        {
-            await CancellationTokenSource.CancelAsync();
-            _snackbar.Add(_localizer["Chat:Status:GenerationStopped"], Severity.Info);
-        }
-
-        NotifyStateChanged();
-    }
-
-    private async Task RetryLastMessageAsync()
-    {
-        if (string.IsNullOrEmpty(LastMessage))
-        {
-            return;
-        }
-
-        ClearError();
-        await SendMessageAsync(new ChatSendRequest(LastMessage));
-    }
-
-    private async Task EditMessage((AIChatMessage Message, string NewContent) args)
-    {
-        if (string.IsNullOrWhiteSpace(args.NewContent) || IsSending)
-        {
-            return;
-        }
-
-        ClearError();
-        LastMessage = args.NewContent;
-        IsSending = true;
-        SetupCancellationToken();
-
-        var session = _workspace.CurrentSession;
-        if (session == null)
-        {
-            SetPageError(_localizer["Error:Generic"]);
-            return;
-        }
-
-        _ = _chatFacade.UpdateSettings(
-            session,
-            session.Settings with { ReasoningEnabled = ReasoningEnabled });
-
-        StreamingState = new ChatStreamingState();
-        UpdateCurrentSession();
-        NotifyStateChanged();
-        await ConsumeStreamAsync(
-            session,
-            _chatFacade.EditMessageAsync(session, args.Message.Id, args.NewContent, CancellationToken));
-    }
-
-    private async Task RetryMessage(AIChatMessage message)
-    {
-        if (IsSending)
-        {
-            return;
-        }
-
-        ClearError();
-        IsSending = true;
-        SetupCancellationToken();
-
-        var session = _workspace.CurrentSession;
-        if (session == null)
-        {
-            SetPageError(_localizer["Error:Generic"]);
-            return;
-        }
-
-        _ = _chatFacade.UpdateSettings(
-            session,
-            session.Settings with { ReasoningEnabled = ReasoningEnabled });
-
-        StreamingState = new ChatStreamingState();
-        UpdateCurrentSession();
-        NotifyStateChanged();
-        await ConsumeStreamAsync(
-            session,
-            _chatFacade.RetryMessageAsync(session, message.Id, CancellationToken));
-    }
-
-    private void DismissError()
-    {
-        ClearError();
-        NotifyStateChanged();
-    }
-
-    private async Task ConsumeStreamAsync(
-        ChatSession session,
-        IAsyncEnumerable<Res<ChatStreamEvent>> stream)
-    {
-        ChatApprovalRequestEvent? pendingApproval = null;
-        try
-        {
-            await foreach (var result in stream)
+            catch (Exception exception) { SetError(exception.Message); }
+            finally
             {
-                if (result.IsFailed(out var error, out var streamEvent))
-                {
-                    await RecordStreamErrorAsync(session, error.Message ?? _localizer["Error:Generic"]);
-                    return;
-                }
-
-                StreamingState ??= new ChatStreamingState();
-                StreamingState.Apply(streamEvent);
-                pendingApproval = streamEvent as ChatApprovalRequestEvent ?? pendingApproval;
-                UpdateCurrentSession();
+                IsSending = false;
+                _requestCancellation.Dispose();
+                _requestCancellation = null;
                 NotifyStateChanged();
             }
         }
+    }
+
+    private async Task ConsumeStreamAsync(ChatSession session, IAsyncEnumerable<Res<ChatStreamEvent>> stream, CancellationToken ct)
+    {
+        ChatApprovalRequestEvent? approval = null;
+        var paintClock = Stopwatch.StartNew();
+        var checkpointClock = Stopwatch.StartNew();
+        var checkpointed = false;
+        var stepStatuses = new Dictionary<string, ChatExecutionStatus>(StringComparer.Ordinal);
+        await foreach (var result in stream.WithCancellation(ct))
+        {
+            if (result.IsFailed(out var error, out var update)) { SetError(error.Message); return; }
+            approval = update as ChatApprovalRequestEvent ?? approval;
+            var boundary = update is ChatApprovalRequestEvent;
+            if (update is ChatStepChangedEvent changed)
+            {
+                boundary |= !stepStatuses.TryGetValue(changed.Step.Id, out var previous) || previous != changed.Step.Status;
+                stepStatuses[changed.Step.Id] = changed.Step.Status;
+            }
+            // Await each checkpoint in the single stream consumer. Repeated partial events are coalesced,
+            // while request/tool starts and terminal states become durable before presentation continues.
+            if (!checkpointed || boundary || checkpointClock.ElapsedMilliseconds >= 1500)
+            {
+                await workspace.SaveSessionAsync(session, ct);
+                checkpointed = true;
+                checkpointClock.Restart();
+                if (workspace.IsConflicted) await CancelAsync();
+                ct.ThrowIfCancellationRequested();
+            }
+            // Stream facts are already owned by the session. Batch only presentation invalidation.
+            if (paintClock.ElapsedMilliseconds >= 40 || update is ChatCompletedEvent or ChatApprovalRequestEvent)
+            {
+                NotifyStateChanged();
+                paintClock.Restart();
+            }
+        }
+        ct.ThrowIfCancellationRequested();
+        if (approval is null || _disposed) return;
+        var dialog = await dialogService.ShowAsync<ExternalScriptApprovalDialog>(localizer["Chat:Approval:Title"],
+            new DialogParameters { [nameof(ExternalScriptApprovalDialog.Request)] = approval },
+            new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = false });
+        DialogResult? resultDialog;
+        try { resultDialog = await dialog.Result.WaitAsync(ct); }
         catch (OperationCanceledException)
         {
-            // The chat facade normally converts cancellation to a completion event. This guard also
-            // covers cancellation before the first provider update is available.
+            dialog.Close(DialogResult.Cancel());
+            throw;
         }
-        catch (Exception ex)
+        ct.ThrowIfCancellationRequested();
+        if (_disposed) return;
+        if (resultDialog is not { Canceled: false })
         {
-            await RecordStreamErrorAsync(session, $"{_localizer["Error:Generic"]}: {ex.Message}");
+            _ = await chatFacade.CancelAsync(session, CancellationToken.None);
             return;
         }
-
-        if (pendingApproval is not null)
-        {
-            await ContinueAfterApprovalAsync(session, pendingApproval);
-            return;
-        }
-
-        await CompleteStreamAsync(session);
+        var approved = resultDialog.Data is true;
+        await ConsumeStreamAsync(session, chatFacade.ContinueApprovalAsync(session, approval.ApprovalId, approved,
+            approved ? localizer["Chat:Approval:ApprovedReason"] : localizer["Chat:Approval:RejectedReason"], ct), ct);
     }
 
-    private async Task ContinueAfterApprovalAsync(
-        ChatSession session,
-        ChatApprovalRequestEvent approval)
+    /// <summary>Persists selected files before accepting them into a request.</summary>
+    public Task UploadAttachmentsAsync(InputFileChangeEventArgs args)
     {
-        var parameters = new DialogParameters
-        {
-            [nameof(ExternalScriptApprovalDialog.Request)] = approval
-        };
-        var dialog = await _dialogService.ShowAsync<ExternalScriptApprovalDialog>(
-            _localizer["Chat:Approval:Title"],
-            parameters,
-            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = false });
-        var result = await dialog.Result;
-        var approved = result is { Canceled: false, Data: true };
-        StreamingState?.ResumeAfterApproval();
-        IsSending = true;
+        if (IsSending || IsUploading || IsHistoryUpdating || _disposed || HasHistoryConflict) return Task.CompletedTask;
+        _uploadOperation = UploadAttachmentsCoreAsync(args);
+        return _uploadOperation;
+    }
+
+    private async Task UploadAttachmentsCoreAsync(InputFileChangeEventArgs args)
+    {
+        IsUploading = true;
         NotifyStateChanged();
-
-        var reason = approved
-            ? _localizer["Chat:Approval:ApprovedReason"].Value
-            : _localizer["Chat:Approval:RejectedReason"].Value;
-        await ConsumeStreamAsync(
-            session,
-            _chatFacade.ContinueApprovalAsync(
-                session,
-                approval.ApprovalId,
-                approved,
-                reason,
-                CancellationToken));
+        try
+        {
+            var session = CurrentSession ?? await TryCreateSessionAsync();
+            if (session is null) return;
+            foreach (var file in args.GetMultipleFiles(10))
+            {
+                await using var data = file.OpenReadStream(aiOptions.Value.MaxChatAttachmentBytes, _lifetime.Token);
+                var result = await attachmentFacade.UploadAsync(session.SessionId, file.Name, file.ContentType, data, _lifetime.Token);
+                if (result.IsFailed(out var error, out var attachment)) { SetError(error.Message); continue; }
+                if (_disposed) return;
+                _attachments.Add(attachment);
+            }
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception) { SetError(exception.Message); }
+        finally { IsUploading = false; NotifyStateChanged(); }
     }
 
-    private bool CanContinueSession(ChatSession session)
+    /// <summary>Removes an attachment that has not yet been submitted.</summary>
+    public async Task RemoveAttachmentAsync(ChatAttachmentReference attachment)
     {
-        var provider = ChatProviderResolver.FindProvider(Providers, session.ProviderId);
-        return provider is not null
-               && ChatProviderResolver.IsChatModelValid(provider, session.ModelName);
+        if (CurrentSessionId is { } id)
+            await attachmentFacade.DeleteAsync(id, attachment.Id, _lifetime.Token);
+        if (_disposed) return;
+        _attachments.Remove(attachment);
+        NotifyStateChanged();
+    }
+    private async Task DiscardAttachmentsAsync()
+    {
+        foreach (var attachment in _attachments.ToArray()) await RemoveAttachmentAsync(attachment);
     }
 }

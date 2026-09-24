@@ -1,0 +1,111 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.Chat.Facades
+@using Monica.AI.UI.Localization
+@using Monica.Core.Results
+@implements IAsyncDisposable
+@inject ChatAttachmentFacade AttachmentFacade
+@inject IJSRuntime JSRuntime
+@inject IStringLocalizer<AIResource> L
+
+<div class="image-attachment" @ref="_root">
+    <MudButton Class="image-preview-button" OnClick="OnPreview" aria-label="@L["Workbench:PreviewImage", Attachment.FileName]" title="@Attachment.FileName">
+        <span class="image-preview">
+            @if (_source is not null) { <img src="@_source" alt="@Attachment.FileName" loading="lazy" decoding="async" /> }
+            else if (_loading) { <MudProgressCircular Indeterminate="true" Size="Size.Small" /> }
+            else { <MudIcon Icon="@Icons.Material.Outlined.BrokenImage" /> }
+        </span>
+        <span class="image-name">@Attachment.FileName</span>
+    </MudButton>
+    @if (Removable)
+    {
+        <span class="image-remove"><MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Disabled="@Disabled" OnClick="OnRemove" aria-label="@L["Workbench:RemoveAttachment", Attachment.FileName]" /></span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required ChatAttachmentReference Attachment { get; set; }
+    [Parameter, EditorRequired] public required string SessionId { get; set; }
+    [Parameter] public bool Removable { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback OnPreview { get; set; }
+    [Parameter] public EventCallback OnRemove { get; set; }
+    private readonly CancellationTokenSource _lifetime = new();
+    private ElementReference _root;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _controller;
+    private DotNetObjectReference<ChatAttachmentImage>? _callback;
+    private Task? _initialization;
+    private Task? _load;
+    private Task? _disposal;
+    private bool _disposed;
+    private bool _loading = true;
+    private string? _source;
+
+    protected override Task OnAfterRenderAsync(bool firstRender) =>
+        firstRender && !_disposed ? _initialization = InitializeAsync() : Task.CompletedTask;
+
+    private async Task InitializeAsync()
+    {
+        try
+        {
+            _module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Monica.AI.UI/UIChat/Components/ChatAttachmentImage.razor.js");
+            if (_disposed) return;
+            _callback = DotNetObjectReference.Create(this);
+            _controller = await _module.InvokeAsync<IJSObjectReference>("observeThumbnail", _root, _callback);
+        }
+        catch (JSDisconnectedException) { }
+    }
+
+    /// <summary>Reads the authorized image once when its thumbnail approaches the visible scroll region.</summary>
+    [JSInvokable]
+    public Task LoadPreviewAsync() => _disposed ? Task.CompletedTask : _load ??= LoadCoreAsync();
+
+    private async Task LoadCoreAsync()
+    {
+        try
+        {
+            // The parent keys this component by session and attachment, so streaming rerenders retain this read.
+            var result = await AttachmentFacade.ReadAsync(SessionId, Attachment.Id, _lifetime.Token);
+            if (_disposed) return;
+            if (!result.IsFailed(out _, out var data) && data.Reference.Kind == ChatAttachmentKind.Image)
+                _source = $"data:{data.Reference.MediaType};base64,{Convert.ToBase64String(data.Data)}";
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally
+        {
+            if (!_disposed) { _loading = false; await InvokeAsync(StateHasChanged); }
+        }
+    }
+
+    public ValueTask DisposeAsync() => new(_disposal ??= DisposeCoreAsync());
+
+    private async Task DisposeCoreAsync()
+    {
+        _disposed = true;
+        _source = null;
+        await _lifetime.CancelAsync();
+        try
+        {
+            if (_initialization is not null) await _initialization;
+            if (_controller is not null) await _controller.InvokeVoidAsync("shutdown");
+            if (_load is not null) await _load;
+        }
+        catch (JSDisconnectedException) { }
+        finally
+        {
+            _callback?.Dispose();
+            await DisposeReferenceAsync(_controller);
+            await DisposeReferenceAsync(_module);
+            _controller = null;
+            _module = null;
+            _lifetime.Dispose();
+        }
+    }
+
+    private static async ValueTask DisposeReferenceAsync(IJSObjectReference? reference)
+    {
+        if (reference is null) return;
+        try { await reference.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+    }
+}

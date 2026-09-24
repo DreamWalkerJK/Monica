@@ -25,37 +25,50 @@
   "Session": {
     "NewChat": "新对话",
     "ToggleHistory": "打开对话历史",
-    "RecentSessions": "最近会话",
-    "NoConversations": "暂无对话",
-    "Delete": "删除会话",
+    "RecentSessions": "会话",
+    "NoConversations": "从这里开始对话",
     "JustNow": "刚刚",
-    "MinutesAgo": "{0}分钟前",
-    "HoursAgo": "{0}小时前",
-    "DaysAgo": "{0}天前"
+    "MinutesAgo": "{0}分",
+    "HoursAgo": "{0}时",
+    "DaysAgo": "{0}天",
+    "EmptyHint": "新建对话，也可以置顶常用会话。",
+    "Pinned": "已置顶",
+    "Pin": "置顶会话",
+    "Unpin": "取消置顶",
+    "Archive": {
+      "Title": "已归档会话",
+      "Action": "归档会话",
+      "Description": "让侧边栏保持清爽。归档会话会保留消息和附件，直到你将其删除。",
+      "Search": "搜索已归档会话",
+      "Empty": "暂无已归档会话",
+      "EmptyHint": "归档后的会话会显示在这里。",
+      "SelectVisible": "选择当前结果",
+      "Selected": "已选择 {0} 项",
+      "NoMatches": "没有匹配的会话",
+      "SelectConversation": "选择 {0}",
+      "RestoreConversation": "恢复 {0}",
+      "ArchivedOn": "归档于 {0}",
+      "Restore": "恢复会话",
+      "RestoreSelected": "恢复所选",
+      "DeleteSelected": "删除所选",
+      "DeleteTitle": "永久删除 {0} 个会话？",
+      "DeleteWarning": "会话的消息、执行记录和附件将永久删除，且无法撤销。",
+      "DeleteConfirm": "永久删除",
+      "Conflict": "其他标签页已更改会话记录。请关闭此窗口并重新加载记录后再操作。"
+    }
   },
   "Chat": {
     "History": {
       "Loading": "正在加载会话历史...",
-      "Clear": {
-        "Action": "清空会话历史",
-        "Title": "确定清空会话历史？",
-        "Message": "此操作将永久删除当前浏览器配置中保存的全部会话。",
-        "Confirm": "全部清空"
-      },
       "Warnings": {
-        "LoadFailed": "无法恢复会话历史，你仍可继续使用内存中的会话。",
-        "RevisionConflict": "另一个标签页已更新会话历史，请刷新页面后再保存更改。",
-        "QuotaExceeded": "浏览器存储空间已满，当前会话无法保存。",
-        "StorageUnavailable": "浏览器历史记录暂时不可用，当前会话仍保留在内存中。",
-        "SessionsPruned": "为满足浏览器存储限制，已移除较早的非当前会话。",
-        "SessionUnavailable": "浏览器存储中已无法读取此会话。",
-        "RuntimeFallback": "保存的 Agent 状态不兼容，已使用可见聊天记录继续会话。",
-        "ProviderUnavailable": "此会话使用的供应商或模型不可用，请选择可用项后继续。"
+        "RevisionConflict": "会话历史已在其他位置发生变化，请刷新后再保存。",
+        "StorageUnavailable": "会话存储暂不可用，当前会话仍保留在内存中。",
+        "SessionUnavailable": "此会话已不可用。",
+        "PersistenceWarning": "存储提供方提示：{0}"
       }
     },
     "Input": {
       "Placeholder": "发送消息...",
-      "AttachFile": "附加文件",
       "Send": "发送消息",
       "Stop": "停止生成"
     },
@@ -71,8 +84,6 @@
       "NoMatches": "未找到匹配的 Skill 或 MCP"
     },
     "Actions": {
-      "EnableDeepThinking": "启用深度思考",
-      "DisableDeepThinking": "禁用深度思考",
       "Copy": "复制",
       "Edit": "编辑",
       "Retry": "重试"
@@ -87,10 +98,6 @@
     "Error": {
       "Title": "生成失败"
     },
-    "Status": {
-      "Current": "当前",
-      "GenerationStopped": "生成已停止"
-    },
     "Approval": {
       "Title": "外部脚本审批",
       "Warning": "此 Skill 正在请求运行外部文件或子进程脚本。继续前请检查脚本身份和参数。",
@@ -104,74 +111,7 @@
       "RejectedReason": "用户已拒绝。"
     },
     "Reasoning": {
-      "Thinking": "思考中...",
-      "Label": "推理过程",
-      "Duration": "思考了 {0:F1} 秒"
-    },
-    "Welcome": {
-      "Title": "今天想聊点什么？",
-      "Subtitle": "支持多个 Provider，可直接提问代码、写作或分析任务。",
-      "Cards": {
-        "UI": {
-          "Title": "优化前端交互",
-          "Subtitle": "给出按钮与动效建议"
-        },
-        "Docs": {
-          "Title": "生成接口文档",
-          "Subtitle": "根据 API 设计输出说明"
-        },
-        "Error": {
-          "Title": "分析一段错误",
-          "Subtitle": "定位日志与异常原因"
-        },
-        "Script": {
-          "Title": "写一段脚本",
-          "Subtitle": "自动化常见开发任务"
-        }
-      }
-    },
-    "ToolCalls": {
-      "EnableDebug": "启用 Tool 调试",
-      "DisableDebug": "关闭 Tool 调试",
-      "Summary": "{0} 次 Tool 调用",
-      "RunningSummary": "正在执行 {0} 个 Tool",
-      "Actions": {
-        "ViewDebug": "查看调试详情"
-      },
-      "Dialog": {
-        "Title": "{0} 调试详情",
-        "Subtitle": "查看 LLM 传入参数、Tool 完整输出与调试统计。",
-        "RunningHint": "Tool 仍在执行，输出可能尚未完整。",
-        "EstimatedTokenHint": "Token 为估算值，按 UTF-8 字节数近似计算。"
-      },
-      "LatestRunning": "最新：{0} 执行中",
-      "LatestCompleted": "最新：{0} 已完成",
-      "LatestFailed": "最新：{0} 执行失败",
-      "ResultCount": "返回了 {0} 条结果",
-      "NoInput": "无输入",
-      "NoOutput": "无输出",
-      "Status": {
-        "Running": "运行中",
-        "Completed": "已完成",
-        "Failed": "失败"
-      },
-      "Fields": {
-        "Input": "输入",
-        "Output": "输出",
-        "Error": "错误",
-        "CallId": "调用 ID",
-        "StartedAt": "开始时间",
-        "CompletedAt": "完成时间",
-        "Duration": "耗时",
-        "Characters": "字符数",
-        "Tokens": "Token",
-        "EstimatedTokens": "估算 Token"
-      },
-      "Subtitle": {
-        "Running": "已完成 {0} 个，仍在执行 {1} 个",
-        "Completed": "共完成 {0} 个 Tool 调用",
-        "Failed": "已完成 {0} 个，失败 {1} 个，执行中 {2} 个"
-      }
+      "Label": "推理过程"
     },
     "SourcePreview": {
       "Title": "来源原文",
@@ -182,52 +122,25 @@
       "NotFound": "未找到来源路径为 '{0}' 的 Markdown 文档。",
       "LoadFailed": "加载来源文档失败：{0}",
       "OpenFailed": "打开来源原文失败"
-    },
-    "Usage": {
-      "DialogTitle": "上下文与 Token 用量",
-      "ContextTooltip": "上下文窗口：{0}",
-      "ContextTooltipWithUsage": "上下文窗口：{0}，剩余 {1}",
-      "ContextWindow": "上下文窗口",
-      "LatestInput": "最近输入",
-      "Remaining": "剩余",
-      "Cached": "缓存",
-      "NoUsage": "最近一条助手消息尚未上报 Provider 用量。",
-      "Total": "合计",
-      "Summary": "{0} 个 Token",
-      "SummaryCached": "{0} 个 Token · {1} 个缓存",
-      "Column": {
-        "Request": "请求",
-        "Input": "输入",
-        "Output": "输出",
-        "Cached": "缓存",
-        "CacheHit": "缓存命中",
-        "Total": "总计"
-      }
     }
   },
   "Provider": {
     "Label": "Provider",
-    "NotFound": "未找到可用 Provider",
     "NoChatProvider": "当前没有可用的聊天 Provider。请至少配置一个包含 LLM 模型且凭据有效的 Provider。",
     "Default": "默认",
     "Settings": {
       "Title": "系统提示词设置",
       "SystemPrompt": "系统提示词",
       "ReadOnlyMessage": "当前会话已开始，系统提示词无法修改。",
-      "NewSessionMessage": "修改后仅对新的会话生效。",
-      "UpdateFailed": "更新提示词失败",
-      "UpdateSuccess": "系统提示词已更新"
+      "NewSessionMessage": "修改后仅对新的会话生效。"
     }
   },
   "Model": {
     "Label": "模型",
-    "NoModelsAvailable": "暂无可用模型",
-    "ContextWindow": "{0}K 上下文",
-    "ContextWindowM": "{0}M 上下文"
+    "NoModelsAvailable": "暂无可用模型"
   },
   "Error": {
     "RequestCancelled": "请求已取消",
-    "NetworkError": "网络错误",
     "Generic": "错误"
   },
   "Common": {
@@ -247,7 +160,6 @@
     "Actions": {
       "Close": "关闭",
       "Save": "保存",
-      "Update": "更新",
       "Cancel": "取消"
     }
   },
@@ -549,111 +461,7 @@
   },
   "ProviderManage": {
     "Title": "AI Provider 管理",
-    "Subtitle": "检查已配置 Provider、验证连接，并比较模型能力。",
-    "Refresh": "刷新",
-    "TestAll": "测试全部",
-    "NoProviders": "未发现已配置的 AI Provider",
-    "DisabledProvidersSummary": "有 {0} 个 Provider 因配置错误被禁用。请打开下方卡片查看详细原因。",
-    "LoadFailed": "加载 Provider 失败",
-    "TestFailed": "Provider 测试失败",
-    "TestSuccess": "连接成功",
-    "TestSuccessMessage": "Provider 测试成功",
-    "OnlyLLMSupported": "当前仅支持测试 LLM 模型",
-    "OnlyEmbeddingSupported": "仅嵌入模型支持维度探测",
-    "ModelTestFailed": "模型测试失败",
-    "ModelTestSuccess": "模型测试成功",
-    "DimensionDetectFailed": "维度探测失败",
-    "DimensionDetectSuccess": "探测成功: 维度 = {0}",
-    "UpdatePromptFailed": "更新提示词失败",
-    "GetRemoteModelsFailed": "获取远程模型列表失败",
-    "FetchRemoteModelsSuccess": "已获取 {0} 个远程模型。",
-    "Card": {
-      "DefaultModel": "默认模型",
-      "ModelCount": "模型数量",
-      "DefaultSystemPrompt": "默认系统提示词",
-      "ModelDetails": "模型详情",
-      "Actions": {
-        "Test": "测试",
-        "EditSystemPrompt": "编辑系统提示词"
-      },
-      "RemoteModels": {
-        "UnconfiguredTooltip": "有 {0} 个可用模型尚未配置",
-        "Unsupported": "此 Provider 不支持获取可用模型列表",
-        "FetchFailed": "获取可用模型列表失败：{0}",
-        "Refresh": "刷新可用模型",
-        "Fetch": "获取可用模型",
-        "Unconfigured": "可用但未配置的模型（{0}）",
-        "ValidationUnavailable": "此 Provider 无法列出可用模型，因此无法根据其目录验证已配置模型。"
-      },
-      "ConfigurationErrorTitle": "该 Provider 因配置错误已被禁用。",
-      "InvalidModelsHint": "模型配置不完整，请在使用前补全 Provider 配置。",
-      "InvalidModelsLabel": "缺失模型:",
-      "NoSupportedModels": "未配置 SupportedModels。",
-      "ApiModeLabel": "OpenAI API",
-      "ApiMode": {
-        "Responses": "Responses API",
-        "Chat": "Chat API"
-      },
-      "Status": {
-        "ConfigurationError": "配置错误",
-        "InvalidConfiguration": "配置无效",
-        "Testing": "测试中",
-        "Available": "可用",
-        "Failed": "失败",
-        "NotTested": "未测试",
-        "Invalid": "无效"
-      }
-    },
-    "ModelTable": {
-      "Columns": {
-        "Model": "模型",
-        "Type": "类型",
-        "Capabilities": "能力",
-        "Cost": "费用",
-        "Metadata": "附加信息",
-        "Actions": "操作"
-      },
-      "RemoteStatus": {
-        "Verified": "已在 Provider 可用模型目录中验证",
-        "Missing": "此模型不在 Provider 的可用模型目录中"
-      },
-      "Capabilities": {
-        "Image": "图像",
-        "Reasoning": "推理",
-        "Editing": "编辑",
-        "Streaming": "流式"
-      },
-      "Cost": {
-        "Free": "免费",
-        "Input": "输入",
-        "Output": "输出",
-        "Cached": "缓存",
-        "PerMillion": "{0}：{1} / 百万 tokens"
-      },
-      "Metadata": {
-        "Context": "上下文：{0}",
-        "MaxOutput": "最大输出：{0}",
-        "MaxSize": "最大尺寸：{0}",
-        "Dimensions": "维度：{0}",
-        "DimensionProbeHint": "尚未配置维度，可使用维度探测自动识别。",
-        "Voices": "音色：{0}",
-        "VoiceCount": "{0} 种"
-      },
-      "Actions": {
-        "Test": "测试",
-        "Testing": "测试中",
-        "ProbeDimensions": "探测维度",
-        "Probing": "探测中"
-      },
-      "Types": {
-        "LLM": "LLM",
-        "Image": "图像",
-        "Embedding": "嵌入",
-        "TTS": "文本转语音"
-      },
-      "Unknown": "未知",
-      "Empty": "未配置模型"
-    }
+    "Refresh": "刷新"
   },
   "Capabilities": {
     "Title": "AI 能力管理",
@@ -781,5 +589,229 @@
       "NoParameters": "无参数",
       "Schema": "原始 Schema"
     }
+  },
+  "Workbench": {
+    "Chat": "聊天",
+    "Trajectory": "运行轨迹",
+    "ModelRequest": "模型请求",
+    "Tool": "工具",
+    "Compaction": "上下文压缩",
+    "Status": {
+      "Running": "运行中",
+      "Completed": "已完成",
+      "Failed": "失败",
+      "Cancelled": "已取消",
+      "AwaitingApproval": "等待批准",
+      "Interrupted": "已中断"
+    },
+    "Metrics": "运行指标",
+    "Elapsed": "总耗时",
+    "FirstToken": "首 token 用时",
+    "FirstTokenShort": "首 token",
+    "InputTokens": "输入 tokens",
+    "OutputTokens": "输出 tokens",
+    "ReasoningTokens": "推理 tokens",
+    "SpeedHelp": "提供方输出 token 数除以实际生成时间，不包含工具执行和首 token 等待。",
+    "TokensPerSecond": "tok/s",
+    "CacheHelp": "缓存输入 token 数占输入 token 总数的比例。破折号表示提供方未报告。",
+    "Cache": "缓存",
+    "Working": "正在处理请求",
+    "ProcessSummary": "查看过程 · {0} 步",
+    "ToolRequested": "请求工具：{0}",
+    "ArgumentsAndResult": "参数和结果",
+    "CompactionSummary": "上下文已压缩：约 {0:N0} → {1:N0} tokens",
+    "ConversationSettings": "会话选项",
+    "ProviderSettings": "提供方与模型",
+    "EditAndResend": "编辑并重发",
+    "Waiting": "等待中",
+    "WelcomeEyebrow": "Monica 聊天工作台",
+    "WelcomeTitle": "你想一起探索什么？",
+    "WelcomeDescription": "带上问题、图片或文档开始对话。专注阅读回答，也可以展开思考、工具与请求的完整过程。",
+    "WelcomeAttachments": "图片和文档",
+    "WelcomeTools": "技能、MCP 与知识库",
+    "WelcomeTrajectory": "每一步都可查看",
+    "Bytes": "字节",
+    "DocumentDelivery": "文本文档将在发送前提取文字。无法提取文字的文档需要模型明确支持原生文档输入。",
+    "ImageUnsupported": "当前模型尚未确认支持图片。请选择兼容的模型或移除图片。",
+    "DocumentUnsupported": "此文档无法提取文字，且当前模型尚未确认支持原生文档输入。",
+    "NothingToCompact": "当前没有足够的历史上下文可供压缩。",
+    "Attach": "添加附件",
+    "ReasoningDefault": "默认",
+    "Reasoning": "推理",
+    "ComposerHint": "Enter 发送 · Shift+Enter 换行",
+    "Context": "上下文占用",
+    "ContextCapacity": "上下文容量",
+    "LastInput": "最近报告的输入",
+    "EstimatedNext": "预计下次输入",
+    "ReservedOutput": "预留输出预算",
+    "ContextEstimateHelp": "占用率使用预计下次输入和可用上下文容量。未知值保持未提供状态。",
+    "AttachmentEstimate": "此文本估算不包含二进制附件的 tokens。",
+    "AutoCompact": "自动压缩上下文",
+    "CompactNow": "立即压缩",
+    "SelectStep": "选择消息、请求或工具，查看已记录的详情。",
+    "Details": "详情",
+    "Started": "开始时间",
+    "ConfigurationRevision": "配置版本",
+    "Generation": "生成",
+    "CachedTokens": "缓存输入 tokens",
+    "FinishReason": "结束原因",
+    "Input": "输入",
+    "RequestOptions": "请求选项",
+    "Output": "输出",
+    "Tools": "工具",
+    "NoTools": "本次请求未提供工具。",
+    "SearchTrajectory": "搜索用户消息、提示词、思考和工具…",
+    "ExpandAll": "全部展开",
+    "FoldAll": "全部折叠",
+    "FollowTail": "跟随最新",
+    "EmptyTrajectory": "对话消息和执行记录将显示在这里。",
+    "Timeline": "时间线",
+    "PanEarlier": "向前平移",
+    "PanLater": "向后平移",
+    "ZoomOut": "缩小",
+    "ZoomIn": "放大",
+    "ResetZoom": "重置",
+    "TimelineHelp": "拖选区间以聚焦，滚动以缩放。输入标记不表示耗时。",
+    "HistoryConflict": "此会话已在其他位置更新，请重新加载已保存版本后继续。",
+    "ReloadHistory": "重新加载历史",
+    "ReloadHistoryConfirm": "重新加载将丢弃本地冲突的修改，是否继续？",
+    "CompactionSettings": "压缩设置",
+    "CompactionThreshold": "触发压缩的输入占用",
+    "RetainedTurns": "原样保留的最近轮次",
+    "CompactionSettingsHelp": "达到此占用比例时总结较早的上下文，完整原始对话始终保留。",
+    "OutputBudget": "输出 Token 预算",
+    "OutputBudgetHelp": "留空时使用服务商默认值。设置上限后会为回答预留相应空间。",
+    "BackToLedger": "返回轨迹",
+    "Effort": "推理强度",
+    "SearchModels": "搜索模型或提供商…",
+    "ResizeReadingWidth": "调整会话宽度",
+    "ResizeReadingWidthHint": "拖动调整宽度。方向键微调，Home 键或双击重置。",
+    "PreviewImage": "预览图片 {0}",
+    "RemoveAttachment": "移除 {0}",
+    "DefaultContextCapacity": "{0}K 默认",
+    "TrajectoryRoleSystem": "系统",
+    "TrajectoryRoleUser": "用户",
+    "TrajectoryRoleAssistant": "助手",
+    "TrajectoryRoleTool": "工具",
+    "TrajectoryRoleContext": "上下文",
+    "InitialSystemPrompt": "初始系统提示词",
+    "ConfiguredSystemPrompt": "已配置的系统提示词",
+    "ChangedSystemPrompt": "系统提示词已变更",
+    "SummaryRequest": "上下文摘要",
+    "TrajectorySummary": "对话执行概览",
+    "TrajectoryDuration": "耗时",
+    "RecordedDurationHelp": "已记录的执行耗时，重叠操作只计算一次，不包含空闲间隔。",
+    "TrajectoryTurns": "轮次",
+    "TrajectoryCalls": "调用",
+    "ModelCallsHelp": "实际发送给模型服务商的请求次数，包含上下文摘要请求。",
+    "TrajectoryTurn": "第 {0} 轮",
+    "TrajectoryTurnCounts": "{0} 次调用 · {1} 次工具执行",
+    "TimelineModel": "模型",
+    "TimelineElapsed": "时间轴",
+    "TimelineCluster": "{0} 条已记录事件，放大后可查看各条事件。",
+    "NoTrajectoryMatches": "没有匹配的记录。",
+    "NoRecordedContent": "未记录内容",
+    "RecordedAt": "记录时间",
+    "ContextCapacitySource": "容量来源",
+    "ContextConversationSource": "会话覆盖值",
+    "ContextModelSource": "模型配置",
+    "ContextDefaultSource": "默认回退值（256K）"
+  },
+  "Settings": {
+    "Title": "提供方与模型",
+    "SharedSettings": "配置由宿主共享，会话按用户与工作区隔离。",
+    "AddProvider": "添加提供方",
+    "ProviderHelp": "为宿主中的所有用户配置提供方。密钥保存在服务器端，不会返回浏览器。",
+    "ProviderId": "提供方标识",
+    "DisplayName": "显示名称",
+    "Protocol": "协议",
+    "Timeout": "超时（秒）",
+    "BaseUrl": "服务地址",
+    "BaseUrlHelp": "留空使用官方服务；自定义地址应包含 API 路径。",
+    "ApiKey": "API 密钥",
+    "KeyPresent": "已配置密钥。留空保留原值，输入新值进行替换。",
+    "KeyHelp": "此值仅可写入，保存后不会再显示。",
+    "ClearKey": "移除已保存的密钥",
+    "ApiMode": "OpenAI API 类型",
+    "Enabled": "已启用",
+    "DefaultProvider": "默认提供方",
+    "IdRequired": "请填写标识。",
+    "InvalidUrl": "请输入完整的 HTTP 或 HTTPS 地址。",
+    "ModelHelp": "以发现的元数据为起点，未验证的能力保持未知，确认后再手动设置。",
+    "ModelId": "模型精确标识",
+    "ModelKind": "模型用途",
+    "Embedding": "向量嵌入",
+    "UnknownNumber": "限制未知时留空。",
+    "MaxOutput": "最大支持输出 Token 数",
+    "EmbeddingDimensions": "向量维度",
+    "ImageInput": "图片输入",
+    "NativeDocuments": "原生文档",
+    "FunctionTools": "函数工具",
+    "ReasoningLevels": "推理等级与协议映射",
+    "AddLevel": "添加等级",
+    "LevelId": "等级标识",
+    "ProviderValue": "提供方 effort 值",
+    "ThinkingBudget": "思考 tokens",
+    "RemoveLevel": "移除等级",
+    "DefaultReasoning": "默认推理等级",
+    "InvalidLevels": "推理等级标识不能为空或重复。",
+    "Unknown": "未知",
+    "Supported": "支持",
+    "Unsupported": "不支持",
+    "ModelCount": "{0} 个模型",
+    "Disabled": "已禁用",
+    "NoProviders": "添加提供方后开始聊天。",
+    "OfficialEndpoint": "官方服务地址",
+    "EditProvider": "编辑提供方",
+    "TestConnection": "测试连接",
+    "ProviderActions": "提供方操作",
+    "Disable": "禁用",
+    "Enable": "启用",
+    "ResetOverride": "恢复代码默认值",
+    "DeleteProvider": "删除提供方",
+    "CredentialConfigured": "已配置密钥",
+    "CredentialMissing": "未配置密钥",
+    "AppliesNextRequest": "修改从下一次请求生效",
+    "Models": "模型",
+    "Discover": "发现模型",
+    "AddModel": "添加模型",
+    "Capabilities": "能力",
+    "Actions": "操作",
+    "EditModel": "编辑模型",
+    "ModelActions": "模型操作",
+    "SetDefault": "设为默认",
+    "TestModel": "测试模型（消耗 tokens）",
+    "DeleteModel": "移除模型",
+    "NoModels": "手动添加模型或从提供方发现模型。",
+    "DiscoveryResults": "远程可用模型",
+    "DiscoveryHelp": "模型发现不会运行推理。未知的能力可以手动配置。",
+    "SearchModels": "搜索发现的模型…",
+    "SelectProvider": "选择或添加提供方以管理模型。",
+    "DeleteProviderConfirm": "移除此提供方的持久化配置？现有会话仍可阅读。",
+    "TestSucceeded": "连接成功。",
+    "CodeOverride": "代码默认值 + 已保存覆盖",
+    "CodeDefaults": "代码默认值",
+    "Persisted": "已保存配置",
+    "ProtocolProfile": "端点协议",
+    "ProtocolProfileHelp": "自动识别 api.deepseek.com。兼容的代理端点请明确选择 DeepSeek。",
+    "ProfileAuto": "自动",
+    "ProfileStandard": "标准 OpenAI",
+    "TextOnly": "仅文本",
+    "FetchAvailableModels": "获取可用模型",
+    "DraftModelsHelp": "使用当前连接设置获取模型，选择并检查模型信息。保存提供商之前，这些更改都不会落盘。",
+    "CancelDiscovery": "取消获取",
+    "SelectVisibleModels": "选择当前筛选结果",
+    "SelectModel": "选择 {0}",
+    "NoDiscoveredModels": "端点未返回可用模型。",
+    "DiscoveredModelCount": "共 {0} 个可用模型",
+    "ImportSelectedModels": "导入所选模型（{0}）",
+    "DefaultChatModel": "默认聊天模型",
+    "DraftConnectionChanged": "获取期间连接设置已更改，请使用当前设置重新获取。",
+    "DuplicateModelId": "此提供商中已存在相同标识的模型。",
+    "DefaultContext": "{0:N0} tokens · 默认值",
+    "ContextDefaultHelp": "留空时使用 {0:N0} tokens（256K）的规划默认值。这是回退值，并非已验证的模型容量。",
+    "CapabilitiesUnknown": "能力信息未提供",
+    "InvalidModelLimits": "容量必须为正数，输出上限必须小于有效上下文容量。",
+    "InvalidReasoningConfiguration": "请检查推理能力和预算。思考预算必须不少于 1,024 tokens、小于输出上限，且不能关闭推理。"
   }
 }

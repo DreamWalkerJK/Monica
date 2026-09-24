@@ -22,7 +22,7 @@ public sealed partial class KnowledgeBaseManagePageState
             return string.Empty;
         }
 
-        var provider = _providerFactory.GetProvider(providerId);
+        var provider = _providerFactory.GetProviderInfo(providerId);
         return provider?.DisplayName ?? providerId.Trim();
     }
 

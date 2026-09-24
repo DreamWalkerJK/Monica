@@ -65,37 +65,33 @@ public sealed class ChatSessionSnapshotValidatorTests
             .WithMessage("*AssistantMessage.Id*unique*");
     }
 
-    [Theory]
-    [InlineData(-1)]
-    [InlineData(4)]
-    public void Validate_WhenCheckpointIsOutsideHistoryBounds_ShouldRejectSnapshot(int checkpoint)
+    [Fact]
+    public void Validate_WhenStepReferencesUnknownTurn_ShouldRejectSnapshot()
     {
         var snapshot = CreateValidSnapshot();
 
         var act = () => ChatSessionSnapshotValidator.Validate(snapshot with
         {
-            Turns = [snapshot.Turns[0] with { HistoryCheckpoint = checkpoint }]
+            ExecutionSteps = [new ChatExecutionStep { Id = "step", Sequence = 1, TurnId = "missing", StartedAt = snapshot.CreatedAt }]
         });
 
         act.Should().Throw<InvalidDataException>()
-            .WithMessage("*HistoryCheckpoint*between zero and 3*");
+            .WithMessage("*unknown turn*");
     }
 
     [Fact]
-    public void Validate_WhenCheckpointsRegress_ShouldRejectSnapshot()
+    public void Validate_WhenExecutionSequenceRegresses_ShouldRejectSnapshot()
     {
         var snapshot = CreateValidSnapshot();
-        var first = snapshot.Turns[0] with { HistoryCheckpoint = 2, ErrorMessages = [] };
-        var second = new ChatTurnSnapshot
+        var act = () => ChatSessionSnapshotValidator.Validate(snapshot with
         {
-            HistoryCheckpoint = 1,
-            UserMessage = CreateMessage("user-2", AIChatRole.User, AIChatMessageKind.Message, "next", 40)
-        };
-
-        var act = () => ChatSessionSnapshotValidator.Validate(snapshot with { Turns = [first, second] });
+            ExecutionSteps = [
+                new ChatExecutionStep { Id = "first", Sequence = 2, StartedAt = snapshot.CreatedAt },
+                new ChatExecutionStep { Id = "second", Sequence = 1, StartedAt = snapshot.CreatedAt }]
+        });
 
         act.Should().Throw<InvalidDataException>()
-            .WithMessage("*HistoryCheckpoint*monotonic*");
+            .WithMessage("*sequence*ordered*");
     }
 
     [Fact]
@@ -118,102 +114,68 @@ public sealed class ChatSessionSnapshotValidatorTests
     }
 
     [Fact]
-    public void Validate_WhenProviderUsageIsObservedAfterSessionUpdate_ShouldAcceptSnapshot()
+    public void Validate_WhenProviderDoesNotReportCacheOrReasoningTokens_ShouldAcceptSnapshot()
     {
         var snapshot = CreateValidSnapshot();
-        var turn = snapshot.Turns[0];
-        var assistant = turn.AssistantMessage! with
-        {
-            RequestUsages =
-            [
-                new ChatRequestUsageSnapshot(
-                    1,
-                    new DateTimeOffset(2026, 7, 13, 2, 9, 21, TimeSpan.Zero),
-                    "response-1",
-                    "message-1",
-                    new ChatTokenUsageSnapshot(10, 5, 2, 0, 15))
-            ]
-        };
-
         var act = () => ChatSessionSnapshotValidator.Validate(snapshot with
         {
-            UpdatedAt = new DateTimeOffset(2026, 7, 13, 2, 7, 54, 979, TimeSpan.Zero),
-            Turns = [turn with { AssistantMessage = assistant }]
+            ExecutionSteps = [CreateRequest(snapshot, new TokenUsage { InputTokens = 10, OutputTokens = 5 })]
         });
 
         act.Should().NotThrow();
     }
 
     [Fact]
-    public void Validate_WhenProviderUsageTimestampIsDefault_ShouldRejectSnapshot()
+    public void Validate_WhenRequestTimestampIsDefault_ShouldRejectSnapshot()
     {
         var snapshot = CreateValidSnapshot();
-        var turn = snapshot.Turns[0];
-        var assistant = turn.AssistantMessage! with
-        {
-            RequestUsages =
-            [
-                new ChatRequestUsageSnapshot(
-                    1,
-                    default,
-                    null,
-                    null,
-                    new ChatTokenUsageSnapshot(1, 1, 0, 0, 2))
-            ]
-        };
-
         var act = () => ChatSessionSnapshotValidator.Validate(snapshot with
         {
-            Turns = [turn with { AssistantMessage = assistant }]
+            ExecutionSteps = [CreateRequest(snapshot) with { StartedAt = default }]
         });
 
         act.Should().Throw<InvalidDataException>()
-            .WithMessage("*RequestUsages[0].CreatedAt*supported timestamp range*");
+            .WithMessage("*ExecutionSteps[0].StartedAt*supported timestamp range*");
+    }
+
+    [Fact]
+    public void Validate_WhenRequestUsageIsNegative_ShouldRejectSnapshot()
+    {
+        var snapshot = CreateValidSnapshot();
+        var act = () => ChatSessionSnapshotValidator.Validate(snapshot with
+        {
+            ExecutionSteps = [CreateRequest(snapshot, new TokenUsage { InputTokens = -1 })]
+        });
+
+        act.Should().Throw<InvalidDataException>()
+            .WithMessage("*ExecutionSteps[0].Request.Usage*cannot be negative*");
     }
 
     [Fact]
     public void Validate_WhenToolTimestampIsUnreasonablyFuture_ShouldRejectSnapshot()
     {
         var snapshot = CreateValidSnapshot();
-        var turn = snapshot.Turns[0];
-        var assistant = turn.AssistantMessage! with
-        {
-            ToolCalls =
-            [
-                CreateToolCall(DateTimeOffset.UtcNow.AddDays(2))
-            ]
-        };
-
         var act = () => ChatSessionSnapshotValidator.Validate(snapshot with
         {
-            Turns = [turn with { AssistantMessage = assistant }]
+            ExecutionSteps = [CreateToolCall(DateTimeOffset.UtcNow.AddDays(2))]
         });
 
         act.Should().Throw<InvalidDataException>()
-            .WithMessage("*ToolCalls[0].StartedAt*supported timestamp range*");
+            .WithMessage("*ExecutionSteps[0].StartedAt*supported timestamp range*");
     }
 
     [Fact]
     public void Validate_WhenToolCompletionPrecedesStart_ShouldRejectSnapshot()
     {
         var snapshot = CreateValidSnapshot();
-        var turn = snapshot.Turns[0];
         var startedAt = new DateTimeOffset(2026, 7, 13, 2, 9, 21, TimeSpan.Zero);
-        var assistant = turn.AssistantMessage! with
-        {
-            ToolCalls =
-            [
-                CreateToolCall(startedAt) with { CompletedAt = startedAt.AddSeconds(-1) }
-            ]
-        };
-
         var act = () => ChatSessionSnapshotValidator.Validate(snapshot with
         {
-            Turns = [turn with { AssistantMessage = assistant }]
+            ExecutionSteps = [CreateToolCall(startedAt) with { CompletedAt = startedAt.AddSeconds(-1) }]
         });
 
         act.Should().Throw<InvalidDataException>()
-            .WithMessage("*ToolCalls[0].CompletedAt*cannot precede the tool start time*");
+            .WithMessage("*ExecutionSteps[0].CompletedAt*cannot precede the operation start time*");
     }
 
     private static ChatSessionSnapshot CreateValidSnapshot() => new()
@@ -222,14 +184,12 @@ public sealed class ChatSessionSnapshotValidatorTests
         Title = "Persisted chat",
         CreatedAt = new DateTimeOffset(2026, 7, 13, 1, 0, 0, TimeSpan.Zero),
         UpdatedAt = new DateTimeOffset(2026, 7, 13, 1, 1, 0, TimeSpan.Zero),
-        Settings = new ChatSessionSettings("provider", "model", "prompt", false),
-        AgentHistoryMessageCount = 3,
+        Settings = new ChatSessionSettings("provider", "model", "prompt"),
         Revision = 2,
         Turns =
         [
             new ChatTurnSnapshot
             {
-                HistoryCheckpoint = 0,
                 UserMessage = CreateMessage(
                     "user-1",
                     AIChatRole.User,
@@ -265,16 +225,25 @@ public sealed class ChatSessionSnapshotValidatorTests
             Id = id,
             Role = role,
             Kind = kind,
-            Content = content,
+            Parts = [ChatContentPart.FromText(content)],
             CreatedAt = new DateTimeOffset(2026, 7, 13, 1, 0, seconds, TimeSpan.Zero)
         };
 
-    private static ChatToolCallSnapshot CreateToolCall(DateTimeOffset startedAt) => new()
+    private static ChatExecutionStep CreateToolCall(DateTimeOffset startedAt) => new()
     {
-        ToolName = "lookup",
-        CallId = "call-1",
-        Status = ToolCallStatus.Completed,
+        Id = "tool-step",
+        Sequence = 1,
+        Kind = ChatExecutionStepKind.Tool,
+        Tool = new ChatToolExecution { CallId = "call-1", Name = "lookup" },
+        Status = ChatExecutionStatus.Completed,
         StartedAt = startedAt,
         CompletedAt = startedAt.AddSeconds(1)
+    };
+
+    private static ChatExecutionStep CreateRequest(ChatSessionSnapshot snapshot, TokenUsage? usage = null) => new()
+    {
+        Id = "request-step", Sequence = 1, Kind = ChatExecutionStepKind.ModelRequest,
+        StartedAt = snapshot.CreatedAt,
+        Request = new ChatModelRequest { ProviderId = "provider", Settings = snapshot.Settings, Usage = usage }
     };
 }

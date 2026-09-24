@@ -7,10 +7,10 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
 @inject IStringLocalizer<AIResource> L
-@inject IDialogService DialogService
 
 <div class="input-area">
-    <MudPaper Elevation="2" Class="input-container">
+    <MudPaper Elevation="0" Class="input-container">
+        <ChatAttachments Attachments="@Attachments" SessionId="@SessionId" Removable="true" Disabled="@(IsSending || IsUploading)" OnRemove="@OnRemoveAttachment" />
         <div class="input-top" @ref="_inputTopRef">
             <div class="composer-editor"
                  contenteditable="@EditorContentEditable"
@@ -59,89 +59,65 @@
         </div>
         <div class="input-bottom">
             <div class="input-actions-left">
-                <MudTooltip Text="@L["Chat:Input:AttachFile"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.AttachFile"
-                                   Class="input-action-button"
-                                   OnClick="@HandleAttach" />
-                </MudTooltip>
-                @if (SupportsReasoning)
-                {
-                    <MudTooltip Text="@(ReasoningEnabled ? L["Chat:Actions:DisableDeepThinking"] : L["Chat:Actions:EnableDeepThinking"])">
-                        <MudIconButton Icon="@Icons.Material.Filled.Psychology"
-                                       Class="@($"input-action-button {(ReasoningEnabled ? "active" : "")}")"
-                                       OnClick="@HandleDeepThinking" />
-                    </MudTooltip>
-                }
+                <InputFile id="@_uploadId" class="file-input" OnChange="@OnUpload" multiple accept="image/png,image/jpeg,image/webp,image/gif,.pdf,.docx,.txt,.md,.csv,.json,.xml,.html" disabled="@(IsSending || IsUploading)" />
+                <MudButton HtmlTag="label" for="@_uploadId" StartIcon="@Icons.Material.Outlined.AttachFile" Size="Size.Small" Disabled="@(IsSending || IsUploading)" aria-label="@L["Workbench:Attach"]"><span class="attachment-label">@L["Workbench:Attach"]</span></MudButton>
                 @if (KnowledgeBases is { Count: > 0 })
                 {
-                    <KnowledgeBaseSelector
-                        KnowledgeBases="@KnowledgeBases"
-                        SelectedIds="@SelectedKnowledgeBaseIds"
-                        SelectedIdsChanged="@SelectedKnowledgeBaseIdsChanged" />
+                    <KnowledgeBaseSelector KnowledgeBases="@KnowledgeBases" SelectedIds="@SelectedKnowledgeBaseIds" SelectedIdsChanged="@SelectedKnowledgeBaseIdsChanged" />
                 }
             </div>
             <div class="input-actions-right">
-                <MudTooltip Text="@BuildContextTooltip()">
-                    <button type="button"
-                            class="input-context-button"
-                            @onclick="@ShowTokenUsageDialogAsync"
-                            aria-label="@BuildContextTooltip()">
-                        <MudProgressCircular Value="@RemainingPercent"
-                                             Size="Size.Small"
-                                             Color="@RemainingColor"
-                                             StrokeWidth="9"
-                                             Class="input-context-ring" />
-                    </button>
-                </MudTooltip>
-                <ModelSelector
-                    AvailableModels="@AvailableModels"
-                    SelectedModelName="@ModelName"
-                    OnModelChanged="@HandleModelChanged" />
+                <ChatModelSelector Providers="@Providers" ProviderId="@ProviderId" ModelName="@ModelName" CurrentModel="@CurrentModel" ReasoningLevel="@ReasoningLevel" AllowProviderSelection="@ShowProviderInfo" Disabled="@(IsSending || IsUploading || Disabled)" OnModelChanged="@OnModelChanged" ReasoningLevelChanged="@ReasoningLevelChanged" />
+                <ChatContextIndicator Usage="@ContextUsage" AutomaticCompaction="@AutomaticCompaction" AutomaticCompactionChanged="@AutomaticCompactionChanged" Disabled="@(IsSending || IsUploading || Disabled)" OnCompact="@OnCompact" CompactionThreshold="@CompactionThreshold" RetainedTurns="@RetainedTurns" OutputBudget="@OutputBudget" CompactionPreferencesChanged="@CompactionPreferencesChanged" />
                 @if (IsSending)
                 {
-                    <MudTooltip Text="@L["Chat:Input:Stop"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Stop"
-                                       Color="Color.Error"
-                                       OnClick="@HandleCancel"
-                                       Class="cancel-button" />
-                    </MudTooltip>
+                    <MudIconButton Icon="@Icons.Material.Filled.Stop" Color="Color.Error" OnClick="HandleCancel" aria-label="@L["Chat:Input:Stop"]" />
                 }
                 else
                 {
-                    <MudTooltip Text="@L["Chat:Input:Send"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Send"
-                                       Color="Color.Primary"
-                                       Disabled="@string.IsNullOrWhiteSpace(InputText)"
-                                       OnClick="@HandleSend"
-                                       Class="send-button" />
-                    </MudTooltip>
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Primary" Disabled="@((string.IsNullOrWhiteSpace(InputText) && Attachments.Count == 0) || IsUploading || AttachmentIncompatible || Disabled || ModelName is null)" OnClick="HandleSend" aria-label="@L["Chat:Input:Send"]" />
                 }
             </div>
         </div>
+        @if (IsUploading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
+        @if (ImageIncompatible) { <MudAlert Dense="true" Severity="Severity.Warning">@L["Workbench:ImageUnsupported"]</MudAlert> }
+        @if (DocumentIncompatible) { <MudAlert Dense="true" Severity="Severity.Warning">@L["Workbench:DocumentUnsupported"]</MudAlert> }
     </MudPaper>
-    @if (ShowProviderInfo && !string.IsNullOrEmpty(ProviderName))
-    {
-        <MudText Typo="Typo.caption" Class="provider-info">
-            @L["Chat:Status:Current"]: @ProviderName
-        </MudText>
-    }
+    <div class="composer-options"><span class="composer-hint">@L["Workbench:ComposerHint"]</span></div>
 </div>
 
 @code {
     [Parameter] public string? Placeholder { get; set; }
     [Parameter] public bool IsSending { get; set; }
-    [Parameter] public string? ProviderName { get; set; }
+    [Parameter] public bool Disabled { get; set; }
     [Parameter] public string? ModelName { get; set; }
     [Parameter] public bool ShowProviderInfo { get; set; } = true;
-    [Parameter] public bool SupportsReasoning { get; set; }
-    [Parameter] public bool ReasoningEnabled { get; set; }
-    [Parameter] public IReadOnlyList<AIModelInfo>? AvailableModels { get; set; }
-    [Parameter] public IReadOnlyList<AIChatRequestUsage> LatestRequestUsages { get; set; } = [];
+    [Parameter] public LLMModelInfo? CurrentModel { get; set; }
+    [Parameter] public string? ReasoningLevel { get; set; }
+    [Parameter] public EventCallback<string?> ReasoningLevelChanged { get; set; }
+    [Parameter] public IReadOnlyList<AIProviderInfo> Providers { get; set; } = [];
+    [Parameter] public string? ProviderId { get; set; }
+    [Parameter] public ChatContextUsage? ContextUsage { get; set; }
+    [Parameter] public bool AutomaticCompaction { get; set; }
+    [Parameter] public EventCallback<bool> AutomaticCompactionChanged { get; set; }
+    [Parameter] public EventCallback OnCompact { get; set; }
+    [Parameter] public double CompactionThreshold { get; set; } = .8;
+    [Parameter] public int RetainedTurns { get; set; } = 4;
+    [Parameter] public int? OutputBudget { get; set; }
+    [Parameter] public EventCallback<(double Threshold, int RetainedTurns, int? OutputBudget)> CompactionPreferencesChanged { get; set; }
+    [Parameter] public bool IsUploading { get; set; }
+    [Parameter] public string? SessionId { get; set; }
+    [Parameter] public IReadOnlyList<ChatAttachmentReference> Attachments { get; set; } = [];
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnUpload { get; set; }
+    [Parameter] public EventCallback<ChatAttachmentReference> OnRemoveAttachment { get; set; }
+    private readonly string _uploadId = $"attachment-{Guid.NewGuid():N}";
+    private bool AttachmentIncompatible => ImageIncompatible || DocumentIncompatible;
+    private bool DocumentIncompatible => Attachments.Any(item => item.Kind == ChatAttachmentKind.Document && !item.HasExtractedText) && CurrentModel?.SupportsDocuments != true;
+    private bool ImageIncompatible => Attachments.Any(item => item.Kind == ChatAttachmentKind.Image) && CurrentModel?.SupportsImage != true;
     [Parameter] public IReadOnlyList<AgentCapabilityReferenceCandidate> CapabilityCandidates { get; set; } = [];
-    [Parameter] public EventCallback<bool> ReasoningEnabledChanged { get; set; }
     [Parameter] public EventCallback<ChatSendRequest> OnSend { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
-    [Parameter] public EventCallback<string> OnModelChanged { get; set; }
+    [Parameter] public EventCallback<(string ProviderId, string ModelName)> OnModelChanged { get; set; }
     [Parameter] public IReadOnlyList<KnowledgeBase>? KnowledgeBases { get; set; }
     [Parameter] public List<string> SelectedKnowledgeBaseIds { get; set; } = [];
     [Parameter] public EventCallback<List<string>> SelectedKnowledgeBaseIdsChanged { get; set; }
@@ -150,7 +126,6 @@
     private ElementReference _inputTopRef;
     private ChatComposerInteropSession? _interopSession;
     private bool _disposed;
-    private bool _wasSending;
     private string _placeholderText = string.Empty;
     private bool _referencePickerOpen;
     private string _referenceQuery = string.Empty;
@@ -165,31 +140,6 @@
         ["skills"] = Icons.Material.Filled.AutoAwesome,
         ["mcp"] = Icons.Material.Filled.AccountTree
     };
-    private int ContextWindow => ChatProviderResolver.GetContextWindow(AvailableModels, ModelName);
-    private TokenUsage? LatestUsage => LatestRequestUsages.LastOrDefault()?.Usage;
-    private int LatestInputTokens => LatestUsage?.InputTokens ?? 0;
-    private double RemainingContextRatio => ContextWindow > 0
-        ? Math.Clamp((double)Math.Max(ContextWindow - LatestInputTokens, 0) / ContextWindow, 0, 1)
-        : 1;
-    private double RemainingPercent => RemainingContextRatio * 100;
-    private Color RemainingColor
-    {
-        get
-        {
-            if (RemainingContextRatio < 0.1)
-            {
-                return Color.Error;
-            }
-
-            if (RemainingContextRatio < 0.25)
-            {
-                return Color.Warning;
-            }
-
-            return Color.Primary;
-        }
-    }
-
     private IReadOnlyList<AgentCapabilityReferenceCandidate> FilteredCapabilityCandidates =>
         CapabilityCandidates
             .Where(IsCandidateAvailable)
@@ -200,18 +150,6 @@
     protected override void OnInitialized()
     {
         _placeholderText = Placeholder ?? L["Chat:Input:Placeholder"];
-    }
-
-    protected override void OnParametersSet()
-    {
-        if (_wasSending && !IsSending)
-        {
-            InputText = string.Empty;
-            _caretIndex = 0;
-            CloseReferencePicker();
-        }
-
-        _wasSending = IsSending;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -245,58 +183,27 @@
 
     private async Task HandleSend()
     {
-        if (string.IsNullOrWhiteSpace(InputText) || IsSending) return;
+        if ((string.IsNullOrWhiteSpace(InputText) && Attachments.Count == 0) || IsSending || IsUploading || AttachmentIncompatible || Disabled || ModelName is null) return;
+        var request = new ChatSendRequest(InputText.Trim());
+        var send = OnSend.InvokeAsync(request);
+        var cleared = request.Accepted;
+        if (cleared) await ClearDraftAsync();
+        await send;
+        if (!cleared && request.Accepted) await ClearDraftAsync();
+    }
 
-        var message = InputText.Trim();
-
+    private async Task ClearDraftAsync()
+    {
         InputText = string.Empty;
         _caretIndex = 0;
-        await SyncEditorAsync(focus: false);
         CloseReferencePicker();
-
-        // Ensure component renders with empty value before parent re-renders
-        StateHasChanged();
-
-        await OnSend.InvokeAsync(new ChatSendRequest(message));
+        await SyncEditorAsync(focus: false);
+        if (!_disposed) StateHasChanged();
     }
 
     private async Task HandleCancel()
     {
         await OnCancel.InvokeAsync();
-    }
-
-    private async Task ShowTokenUsageDialogAsync()
-    {
-        var parameters = new DialogParameters
-        {
-            [nameof(ChatTokenUsageDialog.ModelName)] = ModelName,
-            [nameof(ChatTokenUsageDialog.ContextWindow)] = ContextWindow,
-            [nameof(ChatTokenUsageDialog.RequestUsages)] = LatestRequestUsages
-        };
-
-        await DialogService.ShowAsync<ChatTokenUsageDialog>(
-            L["Chat:Usage:DialogTitle"],
-            parameters,
-            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
-    }
-
-    private string BuildContextTooltip()
-    {
-        return LatestInputTokens > 0
-            ? L["Chat:Usage:ContextTooltipWithUsage", FormatTokenCount(ContextWindow), FormatPercent(RemainingContextRatio)]
-            : L["Chat:Usage:ContextTooltip", FormatTokenCount(ContextWindow)];
-    }
-
-    private static string FormatTokenCount(int tokens)
-    {
-        return tokens >= 1_000_000
-            ? $"{tokens / 1_000_000d:0.#}M"
-            : $"{tokens / 1_000d:0.#}K";
-    }
-
-    private static string FormatPercent(double ratio)
-    {
-        return $"{ratio:P0}";
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
@@ -514,22 +421,6 @@
         return kind == AgentCapabilityKind.Skill
             ? Icons.Material.Filled.AutoAwesome
             : Icons.Material.Filled.AccountTree;
-    }
-
-    private Task HandleAttach()
-    {
-        // TODO: Implement attachment upload.
-        return Task.CompletedTask;
-    }
-
-    private async Task HandleDeepThinking()
-    {
-        await ReasoningEnabledChanged.InvokeAsync(!ReasoningEnabled);
-    }
-
-    private async Task HandleModelChanged(string modelName)
-    {
-        await OnModelChanged.InvokeAsync(modelName);
     }
 
     public async Task FocusAsync()

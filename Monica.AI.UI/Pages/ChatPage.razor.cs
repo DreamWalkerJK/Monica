@@ -1,46 +1,48 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
+using Monica.AI.Chat.Models;
 using Monica.AI.UI.Localization;
 using Monica.AI.UI.UIChat.State;
 
 namespace Monica.AI.UI.Pages;
 
-public partial class ChatPage : IDisposable
+/// <summary>The conversation workbench, owning one cancellable page-state lifetime.</summary>
+public partial class ChatPage : IAsyncDisposable
 {
+    /// <summary>Registered workbench route.</summary>
     public const string PAGE_URL = "/ai-chat";
-
-    [Inject]
-    public required ChatPageState PageState { get; set; }
-
-    [Inject]
-    public required IStringLocalizer<AIResource> L { get; set; }
-
+    [Inject] public required ChatPageStateFactory StateFactory { get; set; }
+    [Inject] public required IStringLocalizer<AIResource> L { get; set; }
+    private ChatPageState PageState { get; set; } = null!;
     private bool _sessionDrawerOpen = true;
+    private bool _trajectory;
+    private bool _archiveOpen;
+    private bool _disposed;
+    private Task _renderTask = Task.CompletedTask;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
+        PageState = StateFactory.Create();
         PageState.StateChanged += OnStateChanged;
         await PageState.InitializeAsync();
     }
-
     private void OnStateChanged()
     {
-        _ = InvokeAsync(StateHasChanged);
+        if (!_disposed) _renderTask = InvokeAsync(() => { if (!_disposed) StateHasChanged(); });
     }
-
-    private void ToggleSessionDrawer()
+    private void ToggleSessionDrawer() => _sessionDrawerOpen = !_sessionDrawerOpen;
+    private void InspectStep(ChatExecutionStep step)
     {
-        _sessionDrawerOpen = !_sessionDrawerOpen;
+        PageState.Inspect(step);
+        _trajectory = true;
     }
-
-    public void Dispose()
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
     {
+        if (_disposed) return;
+        _disposed = true;
         PageState.StateChanged -= OnStateChanged;
-        PageState.Dispose();
+        await PageState.DisposeAsync();
+        await _renderTask;
     }
 }

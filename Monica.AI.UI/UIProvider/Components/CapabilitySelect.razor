@@ -1,0 +1,15 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+<MudSelect T="string" Value="@Selection" ValueChanged="Change" Label="@Label" Variant="Variant.Outlined">
+    <MudSelectItem T="string" Value="@("unknown")">@L["Settings:Unknown"]</MudSelectItem>
+    <MudSelectItem T="string" Value="@("yes")">@L["Settings:Supported"]</MudSelectItem>
+    <MudSelectItem T="string" Value="@("no")">@L["Settings:Unsupported"]</MudSelectItem>
+</MudSelect>
+@code {
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public bool? Value { get; set; }
+    [Parameter] public EventCallback<bool?> ValueChanged { get; set; }
+    private string Selection => Value switch { true => "yes", false => "no", _ => "unknown" };
+    private Task Change(string value) => ValueChanged.InvokeAsync(value switch { "yes" => true, "no" => false, _ => (bool?)null });
+}

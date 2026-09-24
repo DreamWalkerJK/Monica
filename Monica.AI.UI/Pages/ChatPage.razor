@@ -1,78 +1,54 @@
 @attribute [Route(PAGE_URL)]
 @rendermode InteractiveServer
-@implements IDisposable
+@implements IAsyncDisposable
 
 <PageTitle>@L["Pages:AIChat:Title"]</PageTitle>
-
-<HeadContent>
-    <link href="_content/Monica.AI.UI/css/ai-chat-page.css" rel="stylesheet" />
-</HeadContent>
-
+<HeadContent><link href="_content/Monica.AI.UI/css/ai-chat-page.css" rel="stylesheet" /></HeadContent>
 <div class="ai-chat-shell">
     <MudLayout Class="ai-chat-layout">
         @if (PageState.ShowSessionList)
         {
-            <MudDrawer @bind-Open="_sessionDrawerOpen"
-                       Variant="DrawerVariant.Responsive"
-                       Breakpoint="Breakpoint.Sm"
-                       Width="300px"
-                       Elevation="0"
-                       Class="ai-session-drawer">
-                <SessionList
-                    Sessions="@PageState.Sessions"
-                    CurrentSessionId="@PageState.CurrentSessionId"
-                    IsLoading="@PageState.IsHistoryLoading"
-                    OnNewSession="@PageState.CreateNewSessionAsync"
-                    OnSelectSession="@PageState.SelectSessionAsync"
-                    OnDeleteSession="@PageState.DeleteSessionAsync"
-                    OnClearSessions="@PageState.ClearSessionsAsync" />
+            <MudDrawer @bind-Open="_sessionDrawerOpen" Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Md"
+                       Width="264px" Elevation="0" Class="ai-session-drawer">
+                <SessionList Sessions="@PageState.Sessions" CurrentSessionId="@PageState.CurrentSessionId"
+                             IsLoading="@PageState.IsHistoryLoading" OnNewSession="@PageState.CreateNewSessionAsync"
+                             Disabled="@(PageState.IsHistoryBusy || PageState.HasHistoryConflict)" ArchivedCount="@PageState.ArchivedSessions.Count"
+                             OnSelectSession="@PageState.SelectSessionAsync" OnPinSession="@PageState.TogglePinAsync"
+                             OnArchiveSession="@PageState.ArchiveSessionAsync" OnOpenArchive="@(() => _archiveOpen = true)" />
             </MudDrawer>
         }
-
         <MudMainContent Class="ai-main">
-        <header class="ai-topbar">
-            <div class="topbar-left">
-                @if (PageState.ShowSessionList)
-                {
-                    <MudTooltip Text="@L["Session:ToggleHistory"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.History"
-                                       Class="session-drawer-button"
-                                       aria-label="@L["Session:ToggleHistory"]"
-                                       OnClick="ToggleSessionDrawer" />
-                    </MudTooltip>
-                }
-                @if (PageState.ShowProviderSelector)
-                {
-                    <ProviderSelector
-                        Providers="@PageState.Providers"
-                        SelectedProviderId="@PageState.CurrentProviderId"
-                        SelectedModelName="@PageState.CurrentModelName"
-                        SelectedProviderIdChanged="@PageState.ChangeProviderAsync" />
-                }
-            </div>
-            <div class="topbar-right">
-                <MudTooltip Text="@PageState.GetToolDebugTooltip()">
-                    <MudIconButton Icon="@Icons.Material.Filled.BugReport"
-                                   Class="@($"tool-debug-button {(PageState.ToolDebugEnabled ? "active" : "")}")"
-                                   OnClick="PageState.ToggleToolDebugAsync" />
-                </MudTooltip>
-                <MudIconButton Icon="@Icons.Material.Filled.Settings"
-                               Class="settings-button"
-                               OnClick="PageState.OpenPromptSettingsAsync" />
-            </div>
-        </header>
-
-        @if (PageState.IsHistoryLoading)
-        {
-            <div class="history-loading" role="status" aria-busy="true">
-                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-                <MudText Typo="Typo.body1">@L["Chat:History:Loading"]</MudText>
-            </div>
-        }
-        else
-        {
-            <ChatContainer Parameters="@PageState.BuildChatContainerParameters()" />
-        }
+            <header class="ai-topbar">
+                <div class="topbar-left">
+                    @if (PageState.ShowSessionList)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Outlined.Menu" Size="Size.Small" OnClick="ToggleSessionDrawer" aria-label="@L["Session:ToggleHistory"]" />
+                    }
+                    <span class="conversation-title">@(PageState.CurrentSession?.Title ?? L["Pages:AIChat:Title"])</span>
+                </div>
+                <div class="topbar-right">
+                    <div class="conversation-views" role="group">
+                        <MudButton Size="Size.Small" Variant="@(!_trajectory ? Variant.Filled : Variant.Text)" Color="@(!_trajectory ? Color.Primary : Color.Default)" aria-pressed="@(!_trajectory ? "true" : "false")" OnClick="@(() => _trajectory = false)">@L["Workbench:Chat"]</MudButton>
+                        <MudButton Size="Size.Small" Variant="@(_trajectory ? Variant.Filled : Variant.Text)" Color="@(_trajectory ? Color.Primary : Color.Default)" aria-pressed="@(_trajectory ? "true" : "false")" OnClick="@(() => _trajectory = true)">@L["Workbench:Trajectory"]</MudButton>
+                    </div>
+                    <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" AriaLabel="@L["Workbench:ConversationSettings"]" Dense="true">
+                        <MudMenuItem OnClick="@PageState.OpenPromptSettingsAsync" Disabled="@PageState.IsSending">@L["Provider:Settings:SystemPrompt"]</MudMenuItem>
+                        <MudMenuItem Href="/ai-providers">@L["Workbench:ProviderSettings"]</MudMenuItem>
+                        <MudMenuItem Href="/ai-capabilities">@L["Pages:AICapabilities:Title"]</MudMenuItem>
+                    </MudMenu>
+                </div>
+            </header>
+            @if (PageState.IsHistoryLoading)
+            {
+                <div class="history-loading" role="status"><MudProgressCircular Indeterminate="true" Color="Color.Primary" /><span>@L["Chat:History:Loading"]</span></div>
+            }
+            else
+            {
+                <ChatContainer State="@PageState" ShowTrajectory="@_trajectory" OnInspect="InspectStep" />
+            }
         </MudMainContent>
     </MudLayout>
 </div>
+<ChatArchiveDialog @bind-Open="_archiveOpen" Sessions="@PageState.ArchivedSessions"
+                   Disabled="@PageState.IsHistoryBusy" HasConflict="@PageState.HasHistoryConflict"
+                   RestoreSessions="@PageState.RestoreArchivedSessionsAsync" DeleteSessions="@PageState.DeleteArchivedSessionsAsync" />

@@ -20,6 +20,7 @@ internal sealed class AgentStreamingCoordinator(
         AgentResponseUpdateChannel updateChannel,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        using var producerCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var producer = ProduceAsync(
             agent,
             session,
@@ -27,7 +28,7 @@ internal sealed class AgentStreamingCoordinator(
             runtimeContext,
             runOptions,
             updateChannel,
-            cancellationToken);
+            producerCancellation.Token);
 
         try
         {
@@ -38,6 +39,9 @@ internal sealed class AgentStreamingCoordinator(
         }
         finally
         {
+            // A consumer may stop enumeration without cancelling its token. Stop the producer before
+            // awaiting it so disposal cannot deadlock behind a still-streaming provider or tool.
+            await producerCancellation.CancelAsync();
             // ProduceAsync converts failures into channel completion, but its lifetime remains
             // owned and observed here when a consumer stops enumeration early.
             await producer;

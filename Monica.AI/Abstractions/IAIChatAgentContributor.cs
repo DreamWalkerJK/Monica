@@ -60,9 +60,9 @@ public sealed class AIChatAgentContributionContext
     public void AppendInstructions(string instructions) => _builder.AppendInstructions(instructions);
 
     /// <summary>
-    /// Adds a narrowly scoped rule that auto-approves a trusted tool call. Rules must return
-    /// <see langword="false"/> for calls they do not own so later rules and user approval still apply.
+    /// Adds a narrowly scoped rule that auto-approves trusted calls using the tool and agent run context.
+    /// Rules must return <see langword="false"/> for calls they do not own so later rules and user approval still apply.
     /// </summary>
-    public void AddToolAutoApprovalRule(Func<FunctionCallContent, ValueTask<bool>> rule)
+    public void AddToolAutoApprovalRule(Func<ToolAutoApprovalRuleContext, ValueTask<bool>> rule)
         => _builder.AddToolAutoApprovalRule(rule);
 }

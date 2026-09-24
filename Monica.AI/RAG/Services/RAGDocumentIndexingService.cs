@@ -65,7 +65,7 @@ internal sealed class RAGDocumentIndexingService(
             }
 
             var binding = await embeddingBindings.ResolveAsync(knowledgeBase, ct);
-            var generator = embeddingBindings.GetEmbeddingGenerator(binding);
+            using var generator = embeddingBindings.GetEmbeddingGenerator(binding);
             var collection = await vectorCollections.GetOrCreateCollectionAsync(knowledgeBase, binding, ct);
             var vectors = new List<float[]>(chunks.Count);
             await ReportProgressAsync(progressCallback, new IndexingProgress(0, chunks.Count, documentName), ct);
