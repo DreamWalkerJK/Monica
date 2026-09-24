@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -35,15 +36,6 @@ public static class ModuleResultEnvelopeBuilderExtensions
             return registration.Configure(option => configure(option.FieldNames));
         }
 
-        /// <summary>
-        /// Limits how much remote request or response content is kept for diagnostics.
-        /// </summary>
-        public ModuleRegistration<ModuleResultEnvelope, ModuleResultEnvelopeOption> SetMaxRemoteDiagnosticBodyBytes(
-            int maxBodyBytes)
-        {
-            ArgumentOutOfRangeException.ThrowIfNegative(maxBodyBytes);
-            return registration.Configure(option => option.MaxRemoteDiagnosticBodyBytes = maxBodyBytes);
-        }
     }
 }
 
@@ -65,7 +57,7 @@ public class ModuleResultEnvelope : MonicaModule<ModuleResultEnvelopeOption>
     public override void ConfigureServices(ModuleContext<ModuleResultEnvelopeOption> context)
     {
         var services = context.Services;
-        services.AddSingleton<IResultEnvelopeReader, ResultEnvelopeProvider>();
+        services.TryAddSingleton<IResultErrorMessageProvider, DefaultResultErrorMessageProvider>();
     }
 }
 
@@ -77,7 +69,14 @@ public class ModuleResultEnvelopeOption : ModuleOptions<ModuleResultEnvelope>
     public ResultEnvelopeFieldNames FieldNames { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the maximum number of request or response bytes captured for remote diagnostics.
+    /// Gets or sets the single diagnostic switch for this host. The default is <see langword="false"/>.
+    /// When enabled, unhandled exceptions carry bounded <c>metadata.exception</c> details, reserved diagnostic
+    /// members (<c>exception</c>, <c>detail</c>, <c>chain</c>, <c>chain_error</c>) are retained in HTTP responses,
+    /// the remote-call boundary forwards a downstream's reserved details instead of stripping them, and the
+    /// chain-tracing filter attaches the call chain (including recorded SQL commands) to result envelopes.
+    /// Operator logs always contain full exception objects regardless of this switch; enable it only on hosts
+    /// whose consumers may see SQL text, parameter values, and stack traces.
     /// </summary>
-    public int MaxRemoteDiagnosticBodyBytes { get; set; } = 32 * 1024;
+    public bool ExposeDiagnosticDetails { get; set; }
+
 }

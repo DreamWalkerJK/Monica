@@ -101,14 +101,25 @@ internal static class DiagnosticDescriptors
         "Request-owned API generation failed",
         "Request-owned API generation failed: {0}");
 
-    private static DiagnosticDescriptor Create(string id, string title, string message)
+    public static readonly DiagnosticDescriptor DeleteQueryBindingUnfit = Create(
+        "AC1019",
+        "DELETE endpoint binds a collection or complex request from the query string",
+        "DELETE endpoint '{0}' resolves to query binding but declares collection or complex property '{1}'. " +
+        "Prefer a POST bulk-delete route, or declare Binding = ApiRequestBinding.Body on [ApiEndpoint].",
+        DiagnosticSeverity.Warning);
+
+    private static DiagnosticDescriptor Create(
+        string id,
+        string title,
+        string message,
+        DiagnosticSeverity severity = DiagnosticSeverity.Error)
     {
         return new DiagnosticDescriptor(
             id,
             title,
             message,
             CATEGORY,
-            DiagnosticSeverity.Error,
+            severity,
             isEnabledByDefault: true);
     }
 }

@@ -109,82 +109,85 @@ public sealed class DefaultTheme : ThemeDefinitionBase
         GrayDarker = "#303a4d"
     };
 
+    // Dark mode restores the deep Zinc + Indigo scheme of Monica's former default theme
+    // (demo.monica.dpdns.org): a near-black Zinc 950 canvas with Zinc 900 surfaces,
+    // Indigo primary, and Tailwind-scale signal colors.
     private static PaletteDark CreateDarkPalette() => new()
     {
-        Primary = "#9a7cff",
-        PrimaryLighten = "#b19bff",
-        PrimaryDarken = "#7b5fec",
-        PrimaryContrastText = "#17122b",
+        Primary = "#6366f1", // Indigo 500
+        PrimaryLighten = "#818cf8", // Indigo 400
+        PrimaryDarken = "#4f46e5", // Indigo 600
+        PrimaryContrastText = "#ffffff",
 
-        Secondary = "#8fa9c2",
-        SecondaryLighten = "#aec3d6",
-        SecondaryDarken = "#6d8aa4",
-        SecondaryContrastText = "#101720",
+        Secondary = "#a1a1aa", // Zinc 400
+        SecondaryLighten = "#d4d4d8", // Zinc 300
+        SecondaryDarken = "#71717a", // Zinc 500
+        SecondaryContrastText = "#18181b", // Zinc 900
 
-        Tertiary = "#332b5c",
-        TertiaryContrastText = "#e3ddff",
+        Tertiary = "#27272a", // Zinc 800
+        TertiaryContrastText = "#f4f4f5", // Zinc 50
 
-        Info = "#39bdf6",
-        InfoLighten = "#6bcdf9",
-        InfoDarken = "#169bd4",
-        InfoContrastText = "#071820",
+        Info = "#3b82f6", // Blue 500
+        InfoLighten = "#60a5fa", // Blue 400
+        InfoDarken = "#2563eb", // Blue 600
+        InfoContrastText = "#ffffff",
 
-        Success = "#34d5a2",
-        SuccessLighten = "#64e2ba",
-        SuccessDarken = "#17b786",
-        SuccessContrastText = "#071b14",
+        Success = "#10b981", // Emerald 500
+        SuccessLighten = "#34d399", // Emerald 400
+        SuccessDarken = "#059669", // Emerald 600
+        SuccessContrastText = "#ffffff",
 
-        Warning = "#f1b84b",
-        WarningLighten = "#f7cc75",
-        WarningDarken = "#d4972e",
-        WarningContrastText = "#231706",
+        Warning = "#f59e0b", // Amber 500
+        WarningLighten = "#fbbf24", // Amber 400
+        WarningDarken = "#d97706", // Amber 600
+        WarningContrastText = "#18181b", // Zinc 900
 
-        Error = "#ff7189",
-        ErrorLighten = "#ff98a9",
-        ErrorDarken = "#df506c",
-        ErrorContrastText = "#26090f",
+        Error = "#ef4444", // Red 500
+        ErrorLighten = "#f87171", // Red 400
+        ErrorDarken = "#dc2626", // Red 600
+        ErrorContrastText = "#ffffff",
 
-        Dark = "#172235",
-        DarkLighten = "#29384f",
-        DarkDarken = "#0d1421",
-        DarkContrastText = "#edf2fb",
+        Dark = "#f4f4f5", // Zinc 50
+        DarkLighten = "#ffffff",
+        DarkDarken = "#d4d4d8", // Zinc 300
+        DarkContrastText = "#09090b", // Zinc 950
 
-        Background = "#101827",
-        BackgroundGray = "#223149",
-        Surface = "#1a2638",
+        Background = "#09090b", // Zinc 950
+        BackgroundGray = "#18181b", // Zinc 900
+        Surface = "#18181b", // Zinc 900
 
-        DrawerBackground = "#151f30",
-        DrawerText = "#dce4f0",
-        DrawerIcon = "#9eabc0",
+        DrawerBackground = "#18181b",
+        DrawerText = "#e4e4e7", // Zinc 200
+        DrawerIcon = "#a1a1aa", // Zinc 400
 
-        AppbarBackground = "rgba(16, 24, 39, 0.94)",
-        AppbarText = "#edf2fb",
+        AppbarBackground = "rgba(9, 9, 11, 0.94)",
+        AppbarText = "#f4f4f5", // Zinc 50
 
-        TextPrimary = "#edf2fb",
-        TextSecondary = "#a9b6ca",
-        TextDisabled = "#77859b",
+        TextPrimary = "#f4f4f5", // Zinc 50
+        TextSecondary = "#a1a1aa", // Zinc 400
+        TextDisabled = "#52525b", // Zinc 600
 
-        ActionDefault = "#9eabc0",
-        ActionDisabled = "#59667a",
-        ActionDisabledBackground = "#29384f",
+        ActionDefault = "#a1a1aa",
+        ActionDisabled = "#3f3f46", // Zinc 700
+        ActionDisabledBackground = "#27272a", // Zinc 800
 
-        Divider = "#34435c",
-        DividerLight = "#2a3850",
-        LinesDefault = "#34435c",
-        LinesInputs = "#485b78",
+        Divider = "#27272a", // Zinc 800
+        DividerLight = "#18181b", // Zinc 900
+        LinesDefault = "#27272a", // Zinc 800
+        LinesInputs = "#3f3f46", // Zinc 700
 
-        TableStriped = "#151f30",
-        TableHover = "#292454",
+        TableStriped = "#09090b", // Zinc 950
+        TableHover = "#27272a", // Zinc 800
 
-        OverlayDark = "rgba(0, 0, 0, 0.78)",
-        OverlayLight = "rgba(26, 38, 56, 0.76)",
-        HoverOpacity = 0.075,
+        OverlayDark = "rgba(0, 0, 0, 0.8)",
+        OverlayLight = "rgba(24, 24, 27, 0.5)",
+        HoverOpacity = 0.08,
 
-        GrayDefault = "#77859b",
-        GrayLight = "#9eabc0",
-        GrayLighter = "#d0d9e6",
-        GrayDark = "#526078",
-        GrayDarker = "#3a4961"
+        GrayDefault = "#71717a", // Zinc 500
+        GrayLight = "#a1a1aa", // Zinc 400
+        GrayLighter = "#d4d4d8", // Zinc 300
+        GrayDark = "#52525b", // Zinc 600
+        GrayDarker = "#3f3f46" // Zinc 700
     };
 
     private static string[] CreateElevationScale() =>

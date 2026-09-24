@@ -10,7 +10,6 @@ using Monica.Core.Modularity.Services;
 using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Models;
-using Monica.EventBus.Providers.NoOp;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UIEventBus.Models;
 using Monica.Framework.UI.UIEventBus.State;
@@ -65,7 +64,7 @@ public class EventBusProviderDiscoveryService(
 
             // 2. Get the default Distributed EventBus (exclude NoOpDistributedEventBus)
             var defaultDistributedEventBus = serviceProvider.GetService<IDistributedEventBus>();
-            if (defaultDistributedEventBus != null && defaultDistributedEventBus is not NoOpDistributedEventBus)
+            if (defaultDistributedEventBus != null && serviceProvider.GetService<IEventTransport>() != null)
             {
                 providers.Add(CreateDistributedProviderInfo(null, defaultDistributedEventBus));
             }
@@ -87,7 +86,7 @@ public class EventBusProviderDiscoveryService(
 
                     // Try to get Keyed Distributed EventBus
                     var keyedDistributedEventBus = serviceProvider.GetKeyedService<IDistributedEventBus>(key);
-                    if (keyedDistributedEventBus != null && keyedDistributedEventBus is not NoOpDistributedEventBus)
+                    if (keyedDistributedEventBus != null && serviceProvider.GetKeyedService<IEventTransport>(key) != null)
                     {
                         providers.Add(CreateDistributedProviderInfo(key, keyedDistributedEventBus));
                     }
@@ -111,7 +110,7 @@ public class EventBusProviderDiscoveryService(
                     try
                     {
                         var keyedDaprEventBus = serviceProvider.GetKeyedService<IDistributedEventBus>(key);
-                        if (keyedDaprEventBus != null && keyedDaprEventBus is not NoOpDistributedEventBus)
+                        if (keyedDaprEventBus != null && serviceProvider.GetKeyedService<IEventTransport>(key) != null)
                         {
                             // Check if the Provider already exists
                             if (providers.Any(p => p.ServiceKey == key && p.IsDistributed))
@@ -177,7 +176,9 @@ public class EventBusProviderDiscoveryService(
                 ? serviceProvider.GetService<IDistributedEventBus>()
                 : serviceProvider.GetKeyedService<IDistributedEventBus>(serviceKey);
 
-            if (provider == null || provider is NoOpDistributedEventBus)
+            if (provider == null || (serviceKey == null
+                    ? serviceProvider.GetService<IEventTransport>()
+                    : serviceProvider.GetKeyedService<IEventTransport>(serviceKey)) is null)
             {
                 return Res.Fail(localizer[
                     "Services:Providers:DistributedNotFound",
@@ -216,7 +217,7 @@ public class EventBusProviderDiscoveryService(
 
     private EventBusProviderInfo CreateDistributedProviderInfo(string? serviceKey, IDistributedEventBus provider)
     {
-        var (providerType, capabilities, providerSnapshot) = GetDistributedProviderMetadata(provider);
+        var (providerType, capabilities, providerSnapshot) = GetDistributedProviderMetadata(provider, serviceKey);
 
         return new EventBusProviderInfo
         {
@@ -242,9 +243,12 @@ public class EventBusProviderDiscoveryService(
         EventBusProviderKind ProviderType,
         EventBusProviderCapabilities Capabilities,
         ModuleRuntimeSnapshot? ProviderSnapshot) GetDistributedProviderMetadata(
-        IDistributedEventBus provider)
+        IDistributedEventBus provider, string? serviceKey)
     {
-        var providerTypeName = provider.GetType().FullName ?? "";
+        var transport = serviceKey is null
+            ? serviceProvider.GetService<IEventTransport>()
+            : serviceProvider.GetKeyedService<IEventTransport>(serviceKey);
+        var providerTypeName = transport?.GetType().FullName ?? provider.GetType().FullName ?? "";
 
         foreach (var snapshot in ProviderSnapshots)
         {

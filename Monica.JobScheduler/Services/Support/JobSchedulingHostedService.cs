@@ -83,7 +83,9 @@ internal sealed class JobSchedulingHostedService(
         await store.RecoverExpiredLeasesAsync(new ExpiredLeaseRecoveryRequest
         {
             SchedulerScopeKey = scopeKey,
-            MaxCount = _options.MaxExpiredLeaseRecoveriesPerCycle
+            MaxCount = _options.MaxExpiredLeaseRecoveriesPerCycle,
+            RetryDelay = _options.ExecutionRetryDelay,
+            MaxLeaseLossesBeforeFailure = _options.MaxLeaseLossesBeforeFailure
         }, cancellationToken);
         await MaterializeDueOccurrencesAsync(scopeKey, ownerKey, cancellationToken);
         await CleanupHistoryAsync(scopeKey, cancellationToken);

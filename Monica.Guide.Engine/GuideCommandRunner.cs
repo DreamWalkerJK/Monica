@@ -243,7 +243,7 @@ public static class GuideCommandRunner
             "list" => Task.FromResult(service.List()),
             "resolve" => Task.FromResult(service.Resolve(command.Repository!)),
             "bind" => service.BindAsync(
-                new GuideSourceBindRequest(command.Repository!, command.SourcePath, command.SourceRef, command.ResolverPath),
+                new GuideSourceBindRequest(command.Repository!, command.SourcePath, command.SourceRef),
                 command.Apply ? command.PlanDigest : null,
                 null,
                 cancellationToken),
@@ -498,8 +498,8 @@ public static class GuideCommandRunner
             "       guide workspaces [--json]";
         return definition.OwnsGlobalAgentPolicy
             ? core
-              + "\n       guide source <list|resolve|bind|unbind> [--repository monica|docs] " +
-              "[--source-path <path>] [--source-ref <ref>] [--source-resolver <path>] " +
+              + "\n       guide source <list|resolve|bind|unbind> [--repository <repo>] " +
+              "[--source-path <path>] [--source-ref <ref>] " +
               "[--apply --plan-digest <sha256>]\n" +
               "       guide issue <status|set> [--mode prepare|ask|never]"
             : core;

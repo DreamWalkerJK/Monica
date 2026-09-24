@@ -98,7 +98,7 @@ public sealed partial class EfCoreJobSchedulerStore(
                 var result = await operation(dbContext, cancellationToken);
                 await TrimExecutionHistoryAsync(dbContext, cancellationToken);
                 SetMutationVersions(dbContext);
-                await dbContext.SaveChangesOnDbContextAsync(true, cancellationToken);
+                await dbContext.SaveChangesAsync(cancellationToken);
                 if (transaction is not null)
                 {
                     await transaction.CommitAsync(cancellationToken);

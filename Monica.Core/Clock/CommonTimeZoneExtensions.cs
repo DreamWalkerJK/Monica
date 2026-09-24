@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace Monica.Core.Clock;
 
 /// <summary>
@@ -5,6 +7,10 @@ namespace Monica.Core.Clock;
 /// </summary>
 public static class CommonTimeZoneExtensions
 {
+    // TimeZoneInfo instances are immutable and thread-safe, so resolved zones are memoized once
+    // per process; stamps convert from UTC on every call and must not pay repeated lookups.
+    private static readonly ConcurrentDictionary<CommonTimeZone, TimeZoneInfo> ResolvedZones = new();
+
     /// <summary>
     /// Gets the TimeZoneInfo ID for the specified common timezone.
     /// </summary>
@@ -36,6 +42,7 @@ public static class CommonTimeZoneExtensions
 
     /// <summary>
     /// Gets the <see cref="TimeZoneInfo" /> object for the specified common timezone.
+    /// Resolved zones are cached per process.
     /// </summary>
     /// <param name="timezone">The common timezone enum value.</param>
     /// <returns>The <see cref="TimeZoneInfo" /> object for the specified timezone.</returns>
@@ -43,6 +50,7 @@ public static class CommonTimeZoneExtensions
     /// <exception cref="ArgumentOutOfRangeException">Thrown when an unknown timezone value is provided.</exception>
     public static TimeZoneInfo GetTimeZoneInfo(this CommonTimeZone timezone)
     {
-        return TimeZoneInfo.FindSystemTimeZoneById(timezone.GetTimeZoneId());
+        return ResolvedZones.GetOrAdd(
+            timezone, static value => TimeZoneInfo.FindSystemTimeZoneById(value.GetTimeZoneId()));
     }
 }

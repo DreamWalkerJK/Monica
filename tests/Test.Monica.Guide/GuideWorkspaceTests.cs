@@ -592,6 +592,37 @@ public sealed class GuideWorkspaceTests
     }
 
     [Fact]
+    public void DetectCandidate_SurfacesRecordedConfigurationFacts()
+    {
+        using var fixture = new WorkspaceFixture();
+        var service = fixture.CreateService();
+        fixture.WriteProject("""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <ItemGroup>
+                <PackageReference Include="Monica.Core" Version="1.2.3" />
+              </ItemGroup>
+            </Project>
+            """);
+
+        // A shared config another product wrote (here: the workflow product initializing the
+        // same repository) still marks the workspace initialized and must surface its
+        // recorded facts so the wizard can show what an install would follow.
+        Directory.CreateDirectory(Path.Combine(fixture.Workspace, ".monica"));
+        File.WriteAllText(
+            Path.Combine(fixture.Workspace, ".monica", "guide.json"),
+            """
+            {"schemaVersion":1,"productId":"Tairitsua.Monica.Workflow","profile":"application","capabilities":["microservice"],"managedClaudeImport":true}
+            """);
+
+        var candidate = service.DetectCandidate(fixture.Workspace);
+
+        Assert.True(candidate.Initialized);
+        Assert.Equal("application", candidate.ConfiguredProfile);
+        Assert.Equal(["microservice"], candidate.ConfiguredCapabilities);
+        Assert.Equal("Tairitsua.Monica.Workflow", candidate.InitializingProduct);
+    }
+
+    [Fact]
     public void DetectCandidate_TrustsCanonicalRemoteIdentityWithoutStatusScan()
     {
         using var fixture = new WorkspaceFixture();
@@ -602,6 +633,23 @@ public sealed class GuideWorkspaceTests
         Assert.Equal(GuideWorkspaceDetectionOutcome.FrameworkRepository, candidate.Outcome);
         Assert.Equal("framework-contributor", candidate.CandidateProfile);
         Assert.Equal("canonical", candidate.Confidence);
+    }
+
+    [Fact]
+    public void DetectCandidate_DocsCheckoutUsesOrdinaryWorkspaceDetection()
+    {
+        using var fixture = new WorkspaceFixture();
+        Directory.CreateDirectory(Path.Combine(fixture.Workspace, "docs", "en-US"));
+        Directory.CreateDirectory(Path.Combine(fixture.Workspace, "docs", "zh-CN"));
+        Directory.CreateDirectory(Path.Combine(fixture.Workspace, "frontend", "monica-docs-web"));
+        var service = fixture.CreateService(new RemoteGitProbe(
+            fixture.Workspace,
+            "https://github.com/Tairitsua/Monica.Docs.git"));
+
+        var candidate = service.DetectCandidate(fixture.Workspace);
+
+        Assert.Equal(GuideWorkspaceDetectionOutcome.AmbiguousNoCharacteristics, candidate.Outcome);
+        Assert.Null(candidate.CandidateProfile);
     }
 
     private sealed class WorkspaceFixture : IDisposable

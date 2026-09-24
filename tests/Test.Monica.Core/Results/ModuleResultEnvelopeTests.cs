@@ -17,7 +17,7 @@ namespace Test.Monica.Core.Results;
 public sealed class ModuleResultEnvelopeTests
 {
     [Fact]
-    public async Task UseResultFieldNames_ShouldApplyToEveryHostSerializerAndRemoteResponses()
+    public void UseResultFieldNames_ShouldApplyToEveryHostSerializer()
     {
         var builder = Host.CreateApplicationBuilder();
         builder.AddMonica(monica =>
@@ -54,25 +54,5 @@ public sealed class ModuleResultEnvelopeTests
             deserialized.Data.Should().Be("hello");
         }
 
-        using var response = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            RequestMessage = new HttpRequestMessage(
-                HttpMethod.Post,
-                "http://message/api/v1/Message/test"),
-            Content = new StringContent(
-                """{"message":"","code":200,"data":"hello"}""",
-                Encoding.UTF8,
-                "application/json")
-        };
-        var reader = host.Services.GetRequiredService<IResultEnvelopeReader>();
-
-        var remoteResult = await reader.ReadRemoteResponse<Res<string>>(
-            response,
-            TestContext.Current.CancellationToken);
-
-        remoteResult.Status.Should().Be(ResStatus.Ok);
-        remoteResult.Data.Should().Be("hello");
-        remoteResult.Message.Should().BeEmpty();
-        remoteResult.Metadata.Should().BeNull();
     }
 }

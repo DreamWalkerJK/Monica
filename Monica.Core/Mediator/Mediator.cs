@@ -9,7 +9,9 @@ namespace Monica.Core.Mediator;
 /// <summary>
 /// Default request dispatcher for Monica request handlers.
 /// </summary>
-public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
+public sealed class Mediator(
+    IServiceProvider serviceProvider,
+    IEnumerable<IReadOnlyRequestConvention> readOnlyConventions) : IMediator
 {
     private static readonly ConcurrentDictionary<(Type RequestType, Type ResponseType), Func<Mediator, object, CancellationToken, Task<object?>>> _dispatcherCache = new();
 
@@ -62,12 +64,21 @@ public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
     {
         var handler = serviceProvider.GetRequiredService<IRequestHandler<TRequest, TResponse>>();
         var handlerType = handler.GetType();
+        var entryMethod = handlerType.GetInterfaceMap(typeof(IRequestHandler<TRequest, TResponse>)).TargetMethods.Single();
+        var readOnly = typeof(TRequest).IsDefined(typeof(ReadOnlyOperationAttribute), inherit: true)
+            || handlerType.IsDefined(typeof(ReadOnlyOperationAttribute), inherit: true)
+            || entryMethod.IsDefined(typeof(ReadOnlyOperationAttribute), inherit: true)
+            || readOnlyConventions.Any(convention => convention.IsReadOnly(typeof(TRequest)));
+        var transactionMode = (entryMethod.GetCustomAttribute<ExecutionTransactionAttribute>(inherit: true)
+            ?? handlerType.GetCustomAttribute<ExecutionTransactionAttribute>(inherit: true)
+            ?? typeof(TRequest).GetCustomAttribute<ExecutionTransactionAttribute>(inherit: true))?.Mode
+            ?? (readOnly ? ExecutionTransactionMode.None : ExecutionTransactionMode.Automatic);
         var descriptor = ExecutionDescriptor.ForInterface<TRequest, TResponse>(
             MediatorExecutionPoints.Request,
             handlerType,
             typeof(IRequestHandler<TRequest, TResponse>),
             isBusinessOperation: true,
-            transactionMode: ExecutionTransactionMode.Automatic);
+            transactionMode: transactionMode);
 
         return await serviceProvider
             .GetRequiredService<IExecutionPipeline>()

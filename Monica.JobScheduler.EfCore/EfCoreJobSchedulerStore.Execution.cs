@@ -401,11 +401,31 @@ public sealed partial class EfCoreJobSchedulerStore
     {
         ArgumentNullException.ThrowIfNull(request);
         request.Validate();
-        return WriteAsync(async (dbContext, token) =>
+        return ClaimCoreAsync(request, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<JobExecutionLease>> ClaimCoreAsync(
+        JobClaimRequest request,
+        CancellationToken cancellationToken)
+    {
+        // Workers poll the queue aggressively (default 250 ms), so a fully idle poll must not open a serializable
+        // write transaction. The liberal read ignores availability time and concurrency gates; the claim
+        // transaction below re-evaluates both.
+        var jobKeys = request.JobKeys.ToArray();
+        var hasCandidates = await ReadAsync((dbContext, token) => dbContext.Executions.AsNoTracking()
+            .AnyAsync(item => item.SchedulerScopeKey == request.SchedulerScopeKey
+                              && item.OwnerKey == request.OwnerKey
+                              && item.State == JobExecutionState.Queued
+                              && jobKeys.Contains(item.JobKey), token), cancellationToken);
+        if (!hasCandidates)
+        {
+            return [];
+        }
+
+        return await WriteAsync(async (dbContext, token) =>
         {
             var now = await GetUtcNowAsync(dbContext, token);
             var nowTicks = ToTicks(now);
-            var jobKeys = request.JobKeys.ToArray();
             var eligibleExecutions = dbContext.Executions
                 .Where(item => item.SchedulerScopeKey == request.SchedulerScopeKey
                                && item.State == JobExecutionState.Queued
@@ -664,13 +684,27 @@ public sealed partial class EfCoreJobSchedulerStore
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        ValidateIdentity(request.SchedulerScopeKey, nameof(request.SchedulerScopeKey));
-        if (request.MaxCount < 1)
+        request.Validate();
+        return RecoverExpiredLeasesCoreAsync(request, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<JobExecutionInstance>> RecoverExpiredLeasesCoreAsync(
+        ExpiredLeaseRecoveryRequest request,
+        CancellationToken cancellationToken)
+    {
+        // Every host runs this recovery each scheduling cycle (default one second), so a healthy scope must not
+        // open a serializable write transaction. The process-clock snapshot is a liberal pre-filter; the
+        // transaction below re-evaluates expiry against the authoritative store clock.
+        var hasExpired = await ReadAsync((dbContext, token) => dbContext.Executions.AsNoTracking()
+            .AnyAsync(item => item.SchedulerScopeKey == request.SchedulerScopeKey
+                              && item.State == JobExecutionState.Running
+                              && item.LeaseExpiresAtUtcTicks <= ToTicks(UtcNow), token), cancellationToken);
+        if (!hasExpired)
         {
-            throw new ArgumentOutOfRangeException(nameof(request), request.MaxCount, "Recovery count must be greater than zero.");
+            return [];
         }
 
-        return WriteAsync(async (dbContext, token) =>
+        return await WriteAsync(async (dbContext, token) =>
         {
             var now = await GetUtcNowAsync(dbContext, token);
             var nowTicks = ToTicks(now);
@@ -696,12 +730,36 @@ public sealed partial class EfCoreJobSchedulerStore
                 }
                 else
                 {
-                    execution.State = JobExecutionState.Queued;
-                    execution.AvailableAtUtcTicks = nowTicks;
                     execution.LeaseLossCount++;
+                    // The template snapshot carries the immutable retry and timeout budget the recovery enforces;
+                    // the worker-side timeout timer alone must never decide an over-budget attempt's fate.
+                    var template = Deserialize<JobExecutionTemplate>(execution.TemplateJson);
+                    var outcome = request.ResolveOutcome(
+                        now,
+                        FromTicks(execution.StartedAtUtcTicks),
+                        template.MaxExecutionTimeout,
+                        execution.LeaseLossCount,
+                        execution.RetryAttempt,
+                        template.RetryCount);
+                    execution.State = outcome.NewState;
+                    if (outcome.ConsumesRetryAttempt)
+                    {
+                        execution.RetryAttempt++;
+                    }
+
+                    if (outcome.AvailableAtUtc is { } availableAtUtc)
+                    {
+                        execution.AvailableAtUtcTicks = ToTicks(availableAtUtc);
+                    }
+
+                    if (outcome.NewState == JobExecutionState.Failed)
+                    {
+                        execution.CompletedAtUtcTicks = nowTicks;
+                    }
+
                     AddHistory(execution, now, JobExecutionHistoryKind.StateTransition,
-                        "Expired execution lease recovered", worker,
-                        JobExecutionState.Running, JobExecutionState.Queued);
+                        outcome.HistoryMessage, worker,
+                        JobExecutionState.Running, outcome.NewState, outcome.HistoryLogLevel);
                 }
                 ClearExecutionLease(execution);
                 execution.ConcurrencyToken = NewVersion();

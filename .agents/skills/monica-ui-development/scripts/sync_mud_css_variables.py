@@ -63,7 +63,7 @@ def main() -> int:
 
     resolution = resolve_mudblazor_source()
     if not resolution.is_available:
-        print("[ERROR] MudBlazor source is not available through inspect-dependency-source.")
+        print("[ERROR] MudBlazor source is not available through MUDBLAZOR_SOURCE_PATH.")
         print_failure_details(resolution)
         print("Run scripts/check_mudblazor_source.py for detailed diagnostics.")
         return 1

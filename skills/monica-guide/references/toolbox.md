@@ -7,7 +7,6 @@ Guide is useful before the user has chosen a repository, profile, source checkou
 | Learn what Monica Guide can do | Run `overview`. Explain capabilities and ask what matters next. |
 | Inspect global health | Run `status` or `doctor` without `--workspace`. |
 | Locate Monica implementation source | Run `source resolve --repository monica --json`. |
-| Locate Monica.Docs source | Run `source resolve --repository docs --json`. |
 | Add or replace a source lookup | Preview `source bind`; apply only the approved digest. |
 | Start work in a repository | Run `status --workspace <path>` (or `workspaces`), explain the advisory detection, and ask the user to confirm a profile before previewing `init`; then `configure --workspace` installs its skills. |
 | Install or update skills for a project | Preview `configure --workspace <path>` (the workspace's confirmed profile picks the closure), then apply the approved digest. Updating means configuring a newer release bundle — never mixing files across releases. |
@@ -16,9 +15,9 @@ Guide is useful before the user has chosen a repository, profile, source checkou
 
 ## Source lookup behavior
 
-Global bindings answer "where can this agent inspect the exact first-party source?" They do not change project dependencies and do not authorize edits. Application users may bind Monica, Monica.Docs, both, or neither.
+The global Monica binding answers "where can this agent inspect the exact framework source?" It does not change project dependencies or authorize edits. Locate a Monica.Docs checkout through the active task or ordinary filesystem discovery.
 
-Return a healthy path even when the checkout is dirty or its observed commit moved; the binding check carries the stored and observed commits, ref, provenance, and health warnings. Refuse only when identity or an exact commit cannot be established or the path is gone. If no binding exists and an exact ref is known, `source bind --source-ref` can resolve through the pinned `inspect-dependency-source` cache — never clone, fetch, or select a default branch automatically.
+Return a healthy path even when the checkout is dirty or its observed commit moved; the binding check carries the stored and observed commits, ref, provenance, and health warnings. Refuse only when identity or an exact commit cannot be established or the path is gone. Bindings come only from a local canonical checkout supplied with `--source-path` — never clone, fetch, or select a default branch automatically.
 
 ## Repository setup behavior
 

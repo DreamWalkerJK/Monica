@@ -15,6 +15,15 @@ public class ChainTraceNode
     private string[]? _exceptionMessage;
     private string? _duration;
     private EChainTracingType _type;
+    private int _repeatCount;
+
+    /// <summary>
+    /// Number of identical database commands aggregated onto this node beyond the first execution.
+    /// Batch writers and repeated lookups collapse into one node so a tens-of-thousands-row insert
+    /// cannot balloon the chain; the node's time window spans every aggregated execution.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int RepeatCount => _repeatCount;
 
     /// <summary>
     /// Sets the parent node and updates the depth.
@@ -24,6 +33,22 @@ public class ChainTraceNode
     {
         Depth = parent.Depth + 1;
         Parent = parent;
+    }
+
+    /// <summary>
+    /// Records one more identical database command aggregated onto this node, extending its window to
+    /// the aggregated execution's completion so <see cref="Duration" /> reflects the whole batch.
+    /// </summary>
+    /// <param name="failed">Whether the aggregated execution failed.</param>
+    /// <param name="endTime">Completion time of the aggregated execution.</param>
+    public void AddRepeat(bool failed, DateTime endTime)
+    {
+        lock (this)
+        {
+            _repeatCount++;
+            EndTime = endTime;
+            if (failed) IsFailed = true;
+        }
     }
 
     /// <summary>
@@ -121,6 +146,29 @@ public class ChainTraceNode
     public bool IsRemoteCall { get; set; }
 
     /// <summary>
+    /// Service identity (for example the Dapr app id) of the host that recorded this chain.
+    /// Labeled on the chain root when the host configures <c>ModuleChainTracingOption.ServiceName</c>,
+    /// so multi-hop debug output (a forwarded response carrying several chains) stays self-describing.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Service { get; set; }
+
+    /// <summary>
+    /// Service identity of the remote target this node invoked, regardless of outcome. Chain tracing is
+    /// the debugging channel when no distributed-tracing infrastructure exists, so both successful and
+    /// failed remote calls carry the target identity.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RemoteService { get; set; }
+
+    /// <summary>
+    /// Correlation identifier returned by the remote service for the call this node represents.
+    /// Use it to look up the remote host's own chain or logs; captured for successful and failed calls alike.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RemoteTraceId { get; set; }
+
+    /// <summary>
     /// Captured exception.
     /// </summary>
     [JsonIgnore]
@@ -168,6 +216,7 @@ public class ChainTraceNode
 
     public override string ToString()
     {
-        return $"[{Type}]{Handler}-{Operation}";
+        var target = RemoteService is null ? null : $"->{RemoteService}";
+        return $"[{Type}{target}]{Handler}-{Operation}";
     }
 }

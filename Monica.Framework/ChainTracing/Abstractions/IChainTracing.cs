@@ -38,29 +38,23 @@ public interface IChainTracing
     bool ContainsTrace(string traceId);
 
     /// <summary>
-    /// Records a one-shot trace entry for simple operations.
-    /// </summary>
-    /// <param name="operation">The operation name.</param>
-    /// <param name="handler">The handler name.</param>
-    /// <param name="success">Whether the operation succeeded.</param>
-    /// <param name="result">A description of the result.</param>
-    /// <param name="duration">The known execution duration.</param>
-    /// <param name="extraInfo">Optional extra metadata.</param>
-    /// <param name="type">The traced operation type.</param>
-    void RecordTrace(string operation, string? handler, bool success = true, string? result = null,
-        TimeSpan? duration = null, object? extraInfo = null, EChainTracingType type = EChainTracingType.Unknown);
-
-    /// <summary>
     /// Gets the current call-chain context.
     /// </summary>
     /// <returns>The current chain, or <see langword="null" /> when no chain exists.</returns>
     ChainTraceContext? GetCurrentChain();
 
     /// <summary>
-    /// Merges chain data returned from a remote call.
+    /// Gets the ambient current node of this flow. Database leaves never occupy it, so callers that
+    /// aggregate repeated commands can key their aggregation by the enclosing scope.
     /// </summary>
-    /// <param name="traceId">The local trace identifier that should receive the remote chain.</param>
-    /// <param name="remoteRes">The remote response carrying chain metadata.</param>
+    /// <returns>The current node, or <see langword="null" /> when no scope is active.</returns>
+    ChainTraceNode? GetCurrentNode();
+
+    /// <summary>
+    /// Links a remote public error to a local trace node using its origin trace identifier.
+    /// </summary>
+    /// <param name="traceId">The local trace node that should receive the remote correlation details.</param>
+    /// <param name="remoteRes">The remote response carrying a typed error. Payloads and chain graphs are not copied.</param>
     void MergeRemoteChain(string traceId, IResultEnvelope remoteRes);
 
     /// <summary>

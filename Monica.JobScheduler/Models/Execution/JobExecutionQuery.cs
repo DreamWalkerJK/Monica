@@ -131,19 +131,3 @@ public sealed record JobHistoryRetentionPolicy
     /// </summary>
     public int? MaxDays { get; init; }
 }
-
-/// <summary>
-/// Defines one bounded expired-lease recovery pass.
-/// </summary>
-public sealed record ExpiredLeaseRecoveryRequest
-{
-    /// <summary>
-    /// Gets the scheduler scope to repair.
-    /// </summary>
-    public required string SchedulerScopeKey { get; init; }
-
-    /// <summary>
-    /// Gets the maximum number of expired leases repaired in one operation.
-    /// </summary>
-    public int MaxCount { get; init; } = 100;
-}

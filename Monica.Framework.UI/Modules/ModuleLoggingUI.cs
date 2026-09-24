@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.UILogging.Models;
 using Monica.Framework.UI.Pages;
@@ -41,6 +43,7 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleLogging, ModuleLoggingOption>();
+        module.Require<ModuleResultEnvelope, ModuleResultEnvelopeOption>();
         module.Require<ModuleLocalization, ModuleLocalizationOption>(
             static option => option.AddResource<LoggingResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
@@ -79,49 +82,66 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
                 .WithTags(tagName)
                 .WithSummary("列出日志文件")
                 .WithDescription("获取所有可用的日志文件列表");
-
-            endpoints.MapGet("/logging-ui/files/{*filePath}",
-                async ([FromRoute] string filePath,
-                      [FromServices] LoggingService loggingService) =>
-                {
-                    filePath = Uri.UnescapeDataString(filePath);
-                    var result = await loggingService.OpenFileAsync(filePath);
-                    if (result.IsFailed(out var error, out var stream))
-                    {
-                        return error.GetResponse();
-                    }
-
-                    stream.Seek(0, SeekOrigin.Begin);
-                    var downloadName = Path.GetFileName(filePath);
-                    return Results.File(stream, "text/plain", downloadName);
-                })
-                .WithName("下载日志文件")
-                .WithTags(tagName)
-                .WithSummary("下载日志文件")
-                .WithDescription("下载指定的日志文件");
-
-            endpoints.MapGet("/logging-ui/current/export",
-                async ([FromServices] LoggingService loggingService) =>
-                {
-                    var result = await loggingService.ExportBufferAsync();
-                    if (result.IsFailed(out var error, out var export))
-                    {
-                        return error.GetResponse();
-                    }
-
-                    return Results.File(export.Content, export.ContentType, export.FileName);
-                })
-                .WithName("导出当前日志")
-                .WithTags(tagName)
-                .WithSummary("导出当前日志")
-                .WithDescription("导出当前缓冲区中的日志");
         });
+
+        // Downloads are required by the page even when optional Minimal APIs are disabled.
+        // Keep Monica ownership metadata so the host's endpoint port policy still applies.
+        var downloads = context.RequireWebApplication()
+            .MapGroup("/logging-ui")
+            .WithMonicaEndpoint(MonicaEndpointKind.Ui)
+            .ExcludeFromDescription();
+
+        downloads.MapGet("/files/{*filePath}",
+            async ([FromRoute] string filePath,
+                  [FromServices] LoggingService loggingService,
+                  HttpContext httpContext) =>
+            {
+                var result = await loggingService.OpenFileAsync(filePath);
+                if (result.IsFailed(out var error, out var stream))
+                {
+                    return error.GetResponse();
+                }
+
+                httpContext.Response.RegisterForDisposeAsync(stream);
+                var downloadLength = stream.Length;
+                var downloadName = Path.GetFileName(filePath);
+                // Read only the initial extent. A live log can grow or shrink during transmission,
+                // so do not advertise a fixed Content-Length that may disagree with the response body.
+                return Results.Stream(
+                    output => StreamCopyOperation.CopyToAsync(
+                        stream, output, downloadLength, httpContext.RequestAborted),
+                    "text/plain",
+                    downloadName);
+            })
+            .WithName("下载日志文件")
+            .WithSummary("下载日志文件")
+            .WithDescription("下载指定的日志文件");
+
+        downloads.MapGet("/current/export",
+            async ([FromServices] LoggingService loggingService) =>
+            {
+                var result = await loggingService.ExportBufferAsync();
+                if (result.IsFailed(out var error, out var export))
+                {
+                    return error.GetResponse();
+                }
+
+                return Results.File(export.Content, export.ContentType, export.FileName);
+            })
+            .WithName("导出当前日志")
+            .WithSummary("导出当前日志")
+            .WithDescription("导出当前缓冲区中的日志");
     }
 }
 
 /// <summary>
-/// Logging UI module options
+/// Configures the logging page and its optional file-list Minimal API.
 /// </summary>
+/// <remarks>
+/// The inherited Minimal API switch controls the file-list API only. File downloads and buffer exports
+/// are required UI endpoints and remain available whenever this module is registered, subject to the
+/// host's Monica endpoint port policy.
+/// </remarks>
 public class ModuleLoggingUIOption : MinimalApiModuleOptions<ModuleLoggingUI>
 {
     /// <summary>

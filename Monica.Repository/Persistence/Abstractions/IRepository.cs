@@ -1,147 +1,25 @@
-using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 using Monica.DependencyInjection.Abstractions;
 using Monica.Repository.Entity.Abstractions;
 
 namespace Monica.Repository.Persistence.Abstractions;
 
 /// <summary>
-/// Defines the repository contract for managing entities of type <typeparamref name="TEntity"/>.
+/// Minimal aggregate staging contract. Domain-specific repositories add purposeful tracked loading methods.
+/// The operation boundary owns persistence; this interface intentionally exposes no query language or save method.
 /// </summary>
-/// <typeparam name="TEntity">The entity type managed by the repository.</typeparam>
-/// <remarks>
-/// Repository write methods stage changes on the underlying DbContext. Call <see cref="IRepositorySaveChanges.SaveChangesAsync"/>
-/// to flush changes explicitly, or rely on an active unit of work to flush and commit at completion.
-/// </remarks>
-public interface IRepository<TEntity> : IRepositoryRead<TEntity>, IRepositoryFeatures, IRepositorySaveChanges, ITransientDependency
-    where TEntity : class, IEntity
+public interface IRepository<TEntity> : ITransientDependency where TEntity : class, IEntity
 {
-    /// <summary>
-    /// Stages a new entity for insertion.
-    /// </summary>
-    Task<TEntity> InsertAsync(TEntity entity, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Stages multiple new entities for insertion.
-    /// </summary>
-    Task InsertManyAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Attaches an existing entity as unchanged.
-    /// </summary>
-    Task AttachAsync(TEntity entity, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Marks a detached entity root as modified.
-    /// </summary>
-    Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Marks multiple detached entity roots as modified.
-    /// </summary>
-    Task UpdateManyAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Stages an entity for deletion.
-    /// </summary>
-    Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Stages multiple entities for deletion.
-    /// </summary>
-    Task DeleteManyAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Loads entities matching the predicate and stages them for deletion.
-    /// </summary>
-    Task DeleteAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Executes a set-based update immediately against the database.
-    /// </summary>
-    /// <remarks>
-    /// EF Core executes this operation immediately and does not update tracked entity instances.
-    /// When a unit of work transaction is active, the operation participates in that transaction.
-    /// </remarks>
-    Task<int> ExecuteUpdateAsync(
-        Expression<Func<TEntity, bool>> predicate,
-        Action<UpdateSettersBuilder<TEntity>> setters,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Executes a set-based delete immediately against the database.
-    /// </summary>
-    /// <remarks>
-    /// EF Core executes this operation immediately. Use <see cref="DeleteAsync(Expression{Func{TEntity, bool}}, CancellationToken)"/>
-    /// when soft-delete, auditing, and entity change events must run through tracked entities.
-    /// </remarks>
-    Task<int> ExecuteDeleteAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets the DbContext associated with this repository.
-    /// </summary>
-    Task<DbContext> GetDbContextAsync();
-
-    /// <summary>
-    /// Gets the DbSet associated with this repository.
-    /// </summary>
-    Task<DbSet<TEntity>> GetDbSetAsync();
-
+    /// <summary>Stages a new aggregate and its new owned graph.</summary>
+    void Add(TEntity entity);
+    /// <summary>Stages removal using the aggregate's configured deletion policy.</summary>
+    void Remove(TEntity entity);
 }
 
-/// <summary>
-/// Defines keyed repository operations for entities with a single primary key.
-/// </summary>
-/// <typeparam name="TEntity">The entity type managed by the repository.</typeparam>
-/// <typeparam name="TKey">The entity key type.</typeparam>
-public interface IRepository<TEntity, in TKey> : IRepository<TEntity>
-    where TEntity : class, IEntity<TKey>
+/// <summary>Loads a single-key aggregate into the current operation's identity map.</summary>
+public interface IRepository<TEntity, in TKey> : IRepository<TEntity> where TEntity : class, IEntity<TKey>
 {
-    /// <summary>
-    /// Finds an entity by primary key.
-    /// </summary>
+    /// <summary>Returns a tracked aggregate or null when absent/filtered. Repeated loads preserve object identity.</summary>
     Task<TEntity?> FindAsync(TKey id, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets an entity by primary key.
-    /// </summary>
-    /// <exception cref="Persistence.Exceptions.EntityNotFoundException">Thrown when the entity does not exist.</exception>
+    /// <summary>Returns a tracked aggregate; throws EntityNotFoundException when absent/filtered.</summary>
     Task<TEntity> GetAsync(TKey id, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Returns whether an entity with the primary key exists.
-    /// </summary>
-    Task<bool> ExistsAsync(TKey id, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Deletes an entity by primary key if it exists.
-    /// </summary>
-    Task DeleteAsync(TKey id, CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Repository feature flags used by framework components.
-/// </summary>
-public interface IRepositoryFeatures
-{
-    /// <summary>
-    /// Returns whether the repository stores data in sharded tables where query ordering may need special handling.
-    /// </summary>
-    bool IsShardingTable() => false;
-}
-
-/// <summary>
-/// Defines the non-generic save contract shared by repository abstractions.
-/// </summary>
-public interface IRepositorySaveChanges
-{
-    /// <summary>
-    /// Flushes staged changes.
-    /// </summary>
-    /// <remarks>
-    /// Inside an active unit of work this delegates to the unit of work and does not commit the transaction.
-    /// Outside a unit of work this saves the repository DbContext directly.
-    /// </remarks>
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

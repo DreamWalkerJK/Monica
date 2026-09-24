@@ -12,15 +12,16 @@ namespace Monica.Configuration.EventBus.Services;
 /// Publishes Monica configuration reload notifications to the distributed EventBus.
 /// </summary>
 public sealed class ConfigurationEventBusChangeNotifier(
-    IServiceProvider serviceProvider,
+    IServiceScopeFactory serviceScopeFactory,
     IOptions<ModuleConfigurationEventBusOption> options)
     : IConfigurationChangeNotifier
 {
     /// <inheritdoc />
-    public Task NotifyAsync(ConfigurationReloadSignal signal, CancellationToken cancellationToken)
+    public async Task NotifyAsync(ConfigurationReloadSignal signal, CancellationToken cancellationToken)
     {
+        using var scope = serviceScopeFactory.CreateScope();
         var currentOptions = options.Value;
-        return ResolveDistributedEventBus(serviceProvider, currentOptions)
+        await ResolveDistributedEventBus(scope.ServiceProvider, currentOptions)
             .PublishAsync(signal, currentOptions.TopicName, cancellationToken);
     }
 

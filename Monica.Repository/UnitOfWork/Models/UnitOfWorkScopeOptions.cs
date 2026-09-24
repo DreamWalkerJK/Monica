@@ -2,24 +2,15 @@ using System.Data;
 
 namespace Monica.Repository.UnitOfWork.Models;
 
-/// <summary>
-/// Describes how a unit-of-work scope should be opened.
-/// </summary>
-/// <param name="IsTransactional">
-/// Whether the scope should start database transactions for participating DbContexts. The default is transactional because
-/// most write workflows expect commit and rollback to be coordinated by the unit of work.
+/// <summary>Settings for one local transaction. Read-only work should bypass the write behavior.</summary>
+/// <param name="DbContextTypes">
+/// Explicit participant types. Null selects the single UnitOfWork-registered context (or no context).
+/// Multiple contexts require this explicit selection, the same DbConnection instance and relational provider.
+/// Independent databases and shards cannot participate in one local transaction.
 /// </param>
-/// <param name="IsolationLevel">
-/// Optional database isolation level. Leave <see langword="null"/> to use the provider default.
-/// </param>
-/// <param name="RequiresNew">
-/// Whether a new outer unit of work should be created even when one is already active.
-/// </param>
-/// <param name="Timeout">
-/// Optional command timeout in milliseconds applied to participating relational DbContexts that have no explicit timeout.
-/// </param>
+/// <param name="IsolationLevel">Null uses the database provider's default isolation.</param>
+/// <param name="CommandTimeout">Optional command timeout applied to every participant.</param>
 public sealed record UnitOfWorkScopeOptions(
-    bool IsTransactional = true,
+    IReadOnlyList<Type>? DbContextTypes = null,
     IsolationLevel? IsolationLevel = null,
-    bool RequiresNew = false,
-    int? Timeout = null);
+    TimeSpan? CommandTimeout = null);

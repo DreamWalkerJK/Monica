@@ -5,7 +5,7 @@ description: Monica OpenTelemetry and metrics development guidance. Use when add
 
 # Monica OpenTelemetry
 
-Use this skill to design Monica module telemetry that is compatible with OpenTelemetry without making infrastructure modules depend on OpenTelemetry exporters.
+Use this skill to author Monica module instruments. For an application registering exporters or consuming existing diagnostics, use `$monica-infra-observability`.
 
 ## Core Rule
 

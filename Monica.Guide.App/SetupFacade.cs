@@ -128,7 +128,10 @@ public sealed record SetupWorkspaceDetectionView(
     IReadOnlyList<string> Capabilities,
     string? FrameworkVersion,
     bool Initialized,
-    string Error);
+    string Error,
+    string? ConfiguredProfile = null,
+    IReadOnlyList<string>? ConfiguredCapabilities = null,
+    string? InitializingProduct = null);
 
 /// <summary>Localized phase labels map onto these stable phase keys.</summary>
 public sealed record SetupProgressView(string Phase, long Completed, long Total);
@@ -679,9 +682,24 @@ public sealed class SetupFacade(SetupSession session)
                 candidate.Capabilities,
                 candidate.FrameworkVersion,
                 candidate.Initialized,
-                string.Empty);
+                string.Empty,
+                candidate.ConfiguredProfile,
+                candidate.ConfiguredCapabilities,
+                candidate.InitializingProduct);
         }, cancellationToken);
     }
+
+    /// <summary>
+    /// Names of the skill trees a workspace configure would install for one profile under
+    /// the current release catalog and the global-first guide-skill preference; surfaces the
+    /// add-workspace confirmation summary before any plan exists.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> DescribeProfileClosureAsync(
+        string profile,
+        CancellationToken cancellationToken = default)
+        => await Task.Run(() =>
+            new GuideWorkspaceService(Product, GuidePaths.ForCurrentUser(), LoadWorkspaceCatalog())
+                .ProfileClosureSkills(profile), cancellationToken);
 
     /// <summary>
     /// Describes the switchable managed rules of one initialized workspace with their current

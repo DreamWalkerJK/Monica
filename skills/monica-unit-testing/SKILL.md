@@ -1,6 +1,6 @@
 ---
 name: monica-unit-testing
-description: Create, migrate, or review Monica framework tests and shared testing infrastructure. Use for tests under tests/, the Monica.Testing toolkit, host-owned MonicaTestApplicationFactory scenarios, raw ProjectUnitFixture tests, Roslyn GeneratorDriver source-generator tests, xUnit v3 or bUnit setup, module tests, facade result assertions, test isolation, and testing documentation or skills.
+description: Create, migrate, or review Monica framework tests and shared testing infrastructure, including host-owned scenarios, raw ProjectUnit fixtures, Roslyn source-generator tests, result assertions, and isolation.
 ---
 
 # Monica Unit Testing
@@ -14,11 +14,11 @@ Use `Monica.Testing` as the shared toolkit and keep runnable framework tests und
    - Pure logic: construct the value or service directly.
    - Raw ProjectUnit collaboration: use `ProjectUnitFixture<TUnit>` and accept its activation limits.
    - Module wiring, options, conventional registration, proxies, hosted lifecycle, or cross-scope behavior: create a full host with `MonicaTestApplicationFactory<TDiscoveryAnchor>`.
-   - Blazor component or page shell: use bUnit in the runnable UI test project.
+   - Blazor behavior contract: use bUnit in the runnable UI test project only when the user explicitly requests UI testing or UI test additions.
    - Roslyn source-generator semantics: build an in-memory `CSharpCompilation` and run the generator through `GeneratorDriver`.
 3. Put reusable assertions, host helpers, and deterministic boundary doubles in `Monica.Testing`; keep scenario-specific data and doubles in the runnable test project.
 4. Prefer public-surface coverage: module registrations, facades, public models and abstractions, stable providers, and observable side effects.
-5. Run one `dotnet test` process at a time with Windows paths under WSL.
+5. Use the repository test runner or the relevant test project. Keep processes that share build outputs sequential.
 
 ## Host-Owned Scenarios
 
@@ -33,6 +33,14 @@ Use `MonicaTestApplicationFactory<TDiscoveryAnchor>` when the test depends on re
 - Dispose the `MonicaTestApplication` after the scenario, even when several scopes are used within that scenario.
 
 Do not copy service descriptors into another root provider, share one `MonicaApplication` across providers, or emulate per-scope registration replacement.
+
+## Persistence Scenarios
+
+Keep production context/provider registration. UseTestDatabase overrides options and keeps one database per scenario/context type, with fresh scoped connections. Arrange with application.SeedAsync<TContext,TResult> and an explicit save; act through application.ExecuteAsync and the real IExecutionPipeline; verify in application.VerifyAsync<TContext>. Do not add synthetic save loops or clear trackers to repair tests.
+
+Default seams retain real audit policy; replace TimeProvider/current-user/ID inputs. SeedAsync suppresses entity projections. Test `[Outbox]` publishing through the real scoped EventBus gateway, inspect committed row snapshots separately from delivery, and explicitly call DrainOutboxAsync<TContext>. Replace `IEventTransport`, not `IDistributedEventBus`, for provider recording. Include rollback after an early flush, failed results, generated-key capture, immutable payloads, retry identity, Inbox consumer uniqueness, and fresh-scope retries.
+
+When a handler host has multiple write contexts, annotate the ordinary handler with `[UnitOfWorkContext(typeof(PrimaryDbContext), typeof(ParticipantDbContext))]` and test the real receive pipeline. The selected primary context owns Inbox and Outbox rows; verify its final flush after later participants stage projections. Explicit `UnitOfWorkScopeOptions` execution features take precedence over the attribute.
 
 ## Raw ProjectUnit Fast Path
 
@@ -94,6 +102,6 @@ Test source generators with raw Roslyn inputs under a dedicated `tests/Test.Moni
 
 ## Validation
 
-- Use Windows paths for `dotnet build` and `dotnet test` under WSL.
-- Run one build or test process at a time.
-- Run the relevant runnable test project or solution after changes.
+- Match path syntax to the SDK process actually running.
+- Keep build/test processes sharing outputs sequential.
+- Run the relevant runnable test project and the repository's default non-UI gate when required. UI projects run only on explicit user request.

@@ -2,10 +2,12 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Http;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.Results;
+using System.ComponentModel.DataAnnotations;
+using Monica.WebApi.Validation.Annotations;
 
 namespace Monica.WebApi.Validation;
 
-internal class ValidationExceptionMapper : IExceptionResponseMapper
+internal class ValidationExceptionMapper(IRequestRejectionFactory rejections) : IExceptionResponseMapper
 {
     public bool TryMap(
         HttpContext? httpContext,
@@ -16,12 +18,15 @@ internal class ValidationExceptionMapper : IExceptionResponseMapper
         switch (exception)
         {
             case RequestValidationException validationException:
-                response = Res.Fail("Request parameter validation failed.", ResStatus.ValidateError)
-                    .AppendMetadata("error", validationException.ValidationErrors);
+                response = rejections.FromValidationErrors(httpContext, Flatten(validationException.ValidationErrors)).ToResult();
                 return true;
             default:
                 response = null;
                 return false;
         }
     }
+
+    private static IEnumerable<ValidationResult> Flatten(IEnumerable<ValidationResult> results) =>
+        results.SelectMany(result => result is NestedValidationResult nested
+            ? Flatten(nested.NestedResults) : [result]);
 }

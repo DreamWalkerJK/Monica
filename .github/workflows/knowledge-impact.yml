@@ -1,0 +1,47 @@
+name: Knowledge Impact
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  knowledge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check capability knowledge with the implementation
+        env:
+          PYTHONDONTWRITEBYTECODE: 1
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
+          pull_request = event["pull_request"]
+          # base.sha is the base branch's commit at PR creation and goes stale on
+          # synchronize; the merge base of HEAD and the current base branch tip
+          # is the stable reviewable diff.
+          merge_base = subprocess.check_output(
+              ["git", "merge-base", "HEAD", f"origin/{pull_request['base']['ref']}"],
+              text=True,
+          ).strip()
+          args = ["python3", "scripts/check_knowledge_impact.py", "--base", merge_base]
+          # Read the reviewable rationale as data; never interpolate PR text into shell code.
+          match = re.search(r"(?m)^Knowledge-Impact: none\s+[—-]\s+(.+)$", pull_request.get("body") or "")
+          if match:
+              reason = match[1].strip()
+              if len(reason) < 12 or "<" in reason or ">" in reason:
+                  raise SystemExit("Replace the knowledge-impact placeholder with a concrete explanation.")
+              args.extend(["--no-impact", reason])
+          raise SystemExit(subprocess.call(args))
+          PY

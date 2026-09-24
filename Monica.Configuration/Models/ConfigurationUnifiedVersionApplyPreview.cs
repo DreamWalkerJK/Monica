@@ -351,8 +351,14 @@ public sealed record ConfigurationUnifiedVersionValidationIssue
     public IReadOnlyList<ConfigurationValidationRule> ValidationRules { get; init; } = [];
 
     /// <summary>
-    /// Gets whether the path and developer detail were withheld because historical or current sensitivity metadata
-    /// cannot prove that they are safe to disclose.
+    /// Gets whether the incompatible value sits under a schema node marked sensitive, which is why its
+    /// path and developer detail are withheld.
+    /// </summary>
+    public bool IsSensitive { get; init; }
+
+    /// <summary>
+    /// Gets whether the path and developer detail were withheld because the affected path is sensitive,
+    /// or because the current schema can no longer resolve it so its sensitivity is unknown.
     /// </summary>
     public bool DetailsHidden { get; init; }
 }

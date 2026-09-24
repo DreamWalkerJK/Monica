@@ -67,6 +67,7 @@ Use the same leaf folder semantics across solution styles. Keep folders flat and
 - Keep libraries that are only used by one repository or adapter in the owning subdomain/service project. Do not move that implementation into `Platform` unless the implementation itself is project-common reusable infrastructure.
 - Keep request, response, and event contracts separate from persistence entities.
 - Keep endpoint metadata on the request contract. `[ApiEndpoint]` is the single source for HTTP method, route, binding, and operation name; generated `ApplicationService` handlers do not carry MVC endpoint or binding attributes.
+- Use `DateTime` for timezone-free wall-clock contract values and `DateTimeOffset` for instants or explicit offsets. Do not compensate for transport with ad hoc UTC/local conversions in handlers.
 - Publish a request to RPC clients only through the explicit `*.PublishedLanguages.Domain{DomainName}.Requests` namespace boundary. Local HTTP requests stay outside that namespace even when they reuse published DTOs.
 - Keep adapter code thin. Generated endpoint registration, RPC transports, or background-host wiring should not replace ProjectUnits.
 

@@ -41,8 +41,6 @@ public sealed class Domain$FeatureName$(IRepositoryOrder repository) : DomainSer
         var order = await repository.GetAsync(orderId, cancellationToken: cancellationToken);
 
         order.Approve();
-
-        await repository.UpdateAsync(order, autoSave: true, cancellationToken: cancellationToken);
         return order;
     }
 }

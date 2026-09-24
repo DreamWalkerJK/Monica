@@ -7,6 +7,7 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Extensions;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Providers.NoOp;
+using Monica.EventBus.Services;
 using Monica.Modules;
 using Xunit;
 
@@ -42,8 +43,10 @@ public sealed class ModuleEventBusUICompositionTests
         dependencies.Should().Contain(typeof(ModuleJsonSerialization));
         dependencies.Should().Contain(typeof(ModuleLocalization));
         dependencies.Should().Contain(typeof(ModuleShellUI));
-        app.Services.GetRequiredService<IDistributedEventBus>().Should()
-            .BeOfType<NoOpDistributedEventBus>();
+        using var scope = app.Services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IDistributedEventBus>().Should()
+            .BeOfType<ScopedDistributedEventBusGateway>();
+        app.Services.GetRequiredService<NoOpDistributedEventBus>().Should().NotBeNull();
         app.Services.GetRequiredService<IJsonSerializerOptionsProvider>().Should().NotBeNull();
     }
 

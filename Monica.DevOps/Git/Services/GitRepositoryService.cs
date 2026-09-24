@@ -1,6 +1,7 @@
 using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using Monica.DevOps.Git.Events;
 using Monica.DevOps.Git.Abstractions;
 using Monica.DevOps.Git.Models;
@@ -15,7 +16,7 @@ namespace Monica.DevOps.Git.Services;
 public sealed class GitRepositoryService(
     IOptions<ModuleGitOption> options,
     GitCredentialManager credentialManager,
-    ILocalEventBus localEventBus,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger<GitRepositoryService> logger) : IGitRepositoryService
 {
     private readonly ModuleGitOption _option = options.Value;
@@ -546,7 +547,8 @@ public sealed class GitRepositoryService(
     {
         try
         {
-            await localEventBus.PublishAsync(new GitRepositoryUpdatedEvent(
+            using var eventScope = serviceScopeFactory.CreateScope();
+            await eventScope.ServiceProvider.GetRequiredService<ILocalEventBus>().PublishAsync(new GitRepositoryUpdatedEvent(
                 registration.Id,
                 trigger,
                 previousCommit,
@@ -570,7 +572,8 @@ public sealed class GitRepositoryService(
     {
         try
         {
-            await localEventBus.PublishAsync(
+            using var eventScope = serviceScopeFactory.CreateScope();
+            await eventScope.ServiceProvider.GetRequiredService<ILocalEventBus>().PublishAsync(
                 new GitRepositoryDeletedEvent(repositoryId, resolvedLocalPath, pathExisted, DateTimeOffset.UtcNow),
                 cancellationToken: cancellationToken);
         }

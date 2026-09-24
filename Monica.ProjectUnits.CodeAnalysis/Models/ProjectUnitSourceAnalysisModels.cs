@@ -7,9 +7,10 @@ namespace Monica.ProjectUnits.CodeAnalysis.Models;
 public static class ProjectUnitSourceAnalysisContract
 {
     /// <summary>
-    /// Current source catalog contract version. Version 3 aligns discovery-control attributes with the runtime catalog.
+    /// Current source catalog contract version. Version 4 adds test-project scanning: test classes and
+    /// their trait annotations are collected alongside production units.
     /// </summary>
-    public const string Version = "monica-project-units-source/v3";
+    public const string Version = "monica-project-units-source/v4";
 
     /// <summary>Architectural roles the current source classifier can produce.</summary>
     public static IReadOnlySet<ProjectUnitSourceType> DiscoverableUnitTypes { get; } = new[]
@@ -137,9 +138,14 @@ public enum ProjectUnitSourceAnalysisStage
 }
 
 /// <summary>Workspace and project input for one source analysis.</summary>
+/// <remarks>
+/// Project paths are analyzed for ProjectUnits; test project paths are analyzed only for test classes —
+/// they contribute no units of their own.
+/// </remarks>
 public sealed record ProjectUnitSourceAnalysisRequest(
     string WorkspaceRoot,
-    IReadOnlyList<string> ProjectPaths);
+    IReadOnlyList<string> ProjectPaths,
+    IReadOnlyList<string>? TestProjectPaths = null);
 
 /// <summary>Progress reported while loading and analyzing projects.</summary>
 public sealed record ProjectUnitSourceAnalysisProgress(
@@ -187,6 +193,23 @@ public sealed record ProjectUnitSourceUnit(
     IReadOnlyList<string> DependedBy,
     IReadOnlyList<ProjectUnitSourceDiagnostic> Diagnostics);
 
+/// <summary>One key/value pair declared through a trait attribute on a test class or one of its test methods.</summary>
+public sealed record ProjectUnitSourceTestTrait(string Key, string Value);
+
+/// <summary>
+/// A concrete test class declared in a test project: it owns at least one Fact/Theory test method and
+/// carries the merged traits of the class and those methods.
+/// </summary>
+public sealed record ProjectUnitSourceTestClass(
+    string RuntimeKey,
+    string ProjectPath,
+    string ProjectName,
+    string Namespace,
+    string Name,
+    ProjectUnitSourceLocation Source,
+    int TestMethodCount,
+    IReadOnlyList<ProjectUnitSourceTestTrait> Traits);
+
 /// <summary>Serializable result of a multi-project semantic ProjectUnit analysis.</summary>
 public sealed record ProjectUnitSourceCatalog(
     string ContractVersion,
@@ -195,4 +218,5 @@ public sealed record ProjectUnitSourceCatalog(
     bool IsPartial,
     DateTimeOffset CompletedAtUtc,
     IReadOnlyList<ProjectUnitSourceUnit> Units,
+    IReadOnlyList<ProjectUnitSourceTestClass> TestClasses,
     IReadOnlyList<ProjectUnitSourceDiagnostic> Diagnostics);

@@ -1,48 +1,12 @@
 ---
 name: monica-application-microservice
-description: DDD microservice architecture guidance for Monica application projects. Use when creating or extending a subdomain service, planning the strict solution-project dependency chain across Platform layers, placing project-common versus service-only library references, shaping Platform.Protocol/PublishedLanguages, splitting API, Domain, and migration projects, or deciding cross-service collaboration boundaries. Pair with monica-application-project-unit-development for unit-level implementation.
+description: Design a Monica DDD microservice solution with subdomain service ownership, Platform dependency direction, published contracts, API/Domain/migration projects, and cross-service collaboration.
 ---
 
 # Monica Application Microservice
 
-## Overview
+Split services by business capability and data ownership. The intended solution chain is `{Subdomain}Service.API → {Subdomain}Service.Domain → Platform.Infrastructure → Platform.Protocol → Platform.BuildingBlocks`. Put project-common libraries in `Platform.BuildingBlocks`, solution wiring in `Platform.Infrastructure`, shared business language in `Platform.Protocol`, and service-only dependencies in the owning Domain project. A service's API, Domain, and migrations move together; AppHost or gateway projects remain composition adapters. See [solution layout](references/00-solution-layout.md) and [new subdomain](references/01-create-subdomain-and-service.md) when changing topology.
 
-Use this skill to shape Monica application projects as DDD-aligned microservices. It defines where each subdomain lives, how shared contracts are exposed, and how services collaborate without collapsing boundaries.
+Published cross-service requests belong under `Platform.Protocol.PublishedLanguages.Domain{Subdomain}.Requests`. A published request with `[ApiEndpoint]` participates in generated HTTP/RPC clients; an unattributed type is shared language only. An attributed request beside a service handler is local HTTP and does not enter the RPC contract. The request owns route, verb, binding, and operation metadata; handlers own behavior. Configure `WebApiGenerationConfig` in each request-owning assembly: Protocol selects its RPC targets and the service API provides its local `DomainName`. Read [protocol and contracts](references/02-protocol-platform-and-service-contracts.md) before changing this boundary and use `$monica-infra-web` for consumer setup.
 
-## Workflow
-
-1. Read [00-solution-layout.md](references/00-solution-layout.md) to choose the target solution structure.
-2. Use [01-create-subdomain-and-service.md](references/01-create-subdomain-and-service.md) when adding a new subdomain or service trio.
-3. Use [02-protocol-platform-and-service-contracts.md](references/02-protocol-platform-and-service-contracts.md) before adding cross-service requests, DTOs, or events.
-4. Use [03-service-boundaries-and-collaboration.md](references/03-service-boundaries-and-collaboration.md) to keep service ownership and dependency direction clean.
-5. Hand unit implementation to `monica-application-project-unit-development`, then finish with [04-delivery-checklist.md](references/04-delivery-checklist.md).
-
-## Core Rules
-
-- Split by business capability and data ownership, not by transport or technical layer alone.
-- Keep the shared platform split explicit: `Platform.BuildingBlocks` for project-agnostic infrastructure extensions, `Platform.Infrastructure` for solution-owned infrastructure wiring, and `Platform.Protocol` for shared business language.
-- Use the strict solution-project reference chain `{Subdomain}Service.API -> {Subdomain}Service.Domain -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`.
-- Put project-common library references in `Platform.BuildingBlocks`. Keep service-only package references in the owning `{Subdomain}Service.Domain` project.
-- Keep `Shared/Platform.Protocol/PublishedLanguages` stable and explicit. Do not leak persistence entities across service boundaries.
-- Keep each subdomain service independently evolvable: `API`, `Domain`, and migrations move together.
-- Keep pure helper code in the service `Domain` project under `Utilities/`, using `Utils*` names.
-- Declare every `ApplicationService` HTTP contract on its `Command*` or `Query*` request with `[ApiEndpoint]`; handlers contain behavior, not MVC routing metadata.
-- Put cross-service RPC endpoints under the strict `Platform.Protocol.PublishedLanguages.Domain{Subdomain}.Requests` namespace. A published request with `[ApiEndpoint]` generates `I{Subdomain}CommandApi` or `I{Subdomain}QueryApi`; a published type without the attribute remains shared language only.
-- Keep service-private HTTP requests beside their handlers. A local request with `[ApiEndpoint]` generates a controller only and must not leak into the RPC contract.
-- Configure each request-owning assembly once with `WebApiGenerationConfig`: `Platform.Protocol` owns its published RPC targets and route prefix, while `{Subdomain}Service.API` supplies `DomainName` for local endpoints. Do not use metadata snapshots or handler-owned route attributes.
-- Treat the service `API` project and AppHost or gateway entry points as adapters or composition only. Keep AppHost or gateway projects down to the project file and `Program.cs`; business ProjectUnits belong in the service's `API` and `Domain` projects.
-- Register `monica.AddConfiguration()` inside the service host's single `builder.AddMonica(...)` callback. Read bootstrap values from `builder.Configuration` during composition; consume Configuration ProjectUnits through typed options injection at runtime.
-- Keep `.slnx` solution folders aligned with the physical layout under `src/AppHost`, `src/Shared`, `src/Services`, and `src/Migrations`.
-
-## Reference Navigation
-
-- Solution structure: [00-solution-layout.md](references/00-solution-layout.md)
-- New subdomain/service workflow: [01-create-subdomain-and-service.md](references/01-create-subdomain-and-service.md)
-- Protocol platform and service contracts: [02-protocol-platform-and-service-contracts.md](references/02-protocol-platform-and-service-contracts.md)
-- Service boundaries and collaboration: [03-service-boundaries-and-collaboration.md](references/03-service-boundaries-and-collaboration.md)
-- Completion checklist: [04-delivery-checklist.md](references/04-delivery-checklist.md)
-
-## Scope Notes
-
-- This skill defines solution layout and service-level boundaries.
-- Use `monica-application-project-unit-development` whenever the next step is to implement requests, handlers, entities, repositories, events, configurations, or jobs.
+Keep persistence entities and repositories inside the owning service. Cross-service collaborators consume deliberate Protocol contracts rather than another service's implementation. Read [service boundaries](references/03-service-boundaries-and-collaboration.md) for coordination choices. Use `$monica-application-project-unit-development` for handlers and domain units, and `$monica-infra-persistence`, `$monica-infra-messaging`, or `$monica-infra-configuration` for those infrastructure capabilities.

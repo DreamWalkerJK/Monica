@@ -74,8 +74,8 @@ app.MapGet("/", () => Results.Ok(new
     runtime = new
     {
         configuration = "Ordering options are projected from the local Monica configuration store.",
-        consistency = "AutoController requests run inside a Monica unit of work.",
-        approvalEvent = "EventOrderApproved is published to the local bus after unit-of-work completion.",
+        consistency = "Requests use operation scopes; the process-local demo repository has no transactional rollback.",
+        approvalEvent = "The demo publishes locally after updating its dictionary; durable applications use the transactional outbox.",
         scheduler = "WorkerOrderBacklogReport runs every minute with in-memory scheduler state."
     }
 }));

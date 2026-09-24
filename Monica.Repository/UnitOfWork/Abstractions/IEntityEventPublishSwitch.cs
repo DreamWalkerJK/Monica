@@ -18,7 +18,8 @@ public interface IEntityEventPublishSwitch
     bool IsEnabled { get; }
 
     /// <summary>
-    /// Suspends automatic synchronization for the current asynchronous flow.
+    /// Suspends automatic capture in the owning dependency-injection operation scope.
+    /// Independent operations resolve a separate scoped switch; suppression never changes context ownership.
     /// </summary>
     /// <returns>An <see cref="IDisposable"/> that resumes synchronization when disposed.</returns>
     IDisposable Suspend();

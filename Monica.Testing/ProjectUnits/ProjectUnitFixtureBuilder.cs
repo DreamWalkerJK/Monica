@@ -35,8 +35,6 @@ public sealed class ProjectUnitFixtureBuilder<TUnit>
         _services.AddMonicaTestSeams();
         _services.AddScoped<IMediator, Mediator>();
         _services.AddSingleton<ICurrentUser, TestCurrentUser>();
-        _services.AddSingleton<IAsyncLocalEventPublisher, NullAsyncLocalEventPublisher>();
-        _services.AddSingleton<IUnitOfWorkManager, UnitOfWorkManager>();
 
         var mapsterConfig = new TypeAdapterConfig();
         _services.AddSingleton(mapsterConfig);

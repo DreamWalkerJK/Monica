@@ -20,7 +20,7 @@ namespace Monica.EventBus.Services.Support;
 /// </summary>
 public abstract class EventBusSubscriptionHostedServiceBase(
     IEventSubscriptionRegistry subscriptionManager,
-    IEventBus eventBus,
+    IEventReceiveDispatcher dispatcher,
     ITopicSubscriptionStatusStore topicStatusStore,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
@@ -30,7 +30,7 @@ public abstract class EventBusSubscriptionHostedServiceBase(
     : MoBackgroundService(observableManager, hostedServiceOptions, serviceScopeFactory, logger), IObserver<EventSubscriptionChange>
 {
     protected readonly IEventSubscriptionRegistry SubscriptionManager = subscriptionManager;
-    protected readonly IEventBus EventBus = eventBus;
+    protected readonly IEventReceiveDispatcher Dispatcher = dispatcher;
 
     /// <summary>
     /// Store receiving runtime health reports for the topics this service manages.
@@ -401,16 +401,15 @@ public abstract class EventBusSubscriptionHostedServiceBase(
 
     /// <summary>
     /// Handles an external message received from the messaging system.
-    /// Triggers all registered handlers for the topic with the provided event data.
+    /// Triggers all registered handlers for the prepared received message.
     /// </summary>
-    /// <param name="topicName">The topic the message was received on</param>
-    /// <param name="eventData">The deserialized event data object</param>
+    /// <param name="message">The received message with its provider metadata.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     protected async Task HandleExternalMessageAsync(
-        string topicName,
-        object eventData,
+        EventMessage message,
         CancellationToken cancellationToken)
     {
+        var topicName = message.Metadata.TopicName;
         // Get topic information
         if (!_topicSubscriptions.TryGetValue(topicName, out var topicInfo))
         {
@@ -422,28 +421,7 @@ public abstract class EventBusSubscriptionHostedServiceBase(
 
         try
         {
-            if (eventData != null)
-            {
-                if (EventBus is not EventBusBase eventBusBase)
-                {
-                    throw new InvalidOperationException(
-                        $"Event bus '{EventBus.GetType().FullName}' must derive from {nameof(EventBusBase)} to dispatch external messages.");
-                }
-
-                await eventBusBase.TriggerHandlersAsync(
-                    topicInfo.EventType,
-                    eventData,
-                    topicName,
-                    cancellationToken);
-            }
-            else
-            {
-                RecordState($"Received null event data for topic {topicName}", HostedServiceState.Degraded);
-
-                Logger.LogWarning(
-                    "Event data for topic {Topic} was null",
-                    topicName);
-            }
+            await Dispatcher.DispatchAsync(message, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

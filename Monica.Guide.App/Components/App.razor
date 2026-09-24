@@ -401,6 +401,20 @@
         .banner-info { background: var(--accent-soft); border-color: var(--accent-border); color: var(--text-2); }
         .banner-warn { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn-text); }
 
+        /* The layout-level drift banner sits above the page title, so it owns its own
+           rhythm: no top margin, clear air below, and an inline link that reads as one. */
+        .layout-banner { margin: 0 0 22px; }
+        .layout-banner a { color: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+        .layout-banner a:hover { opacity: 0.75; }
+        .layout-banner-main { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+        .drift-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .drift-chip {
+            font-family: var(--font-mono); font-size: 10.5px; font-weight: 500;
+            padding: 2px 8px; border: 1px solid var(--warn-border); border-radius: 3px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px;
+            cursor: help;
+        }
+
         /* ---- fields ---- */
         .field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
         .field > label {
@@ -504,7 +518,6 @@
         .profile-badge.profile-extension { background: rgba(222, 212, 255, 0.4); color: var(--violet-dark); border-color: rgba(75, 44, 174, 0.4); }
         html[data-theme="dark"] .profile-badge.profile-extension { background: rgba(160, 139, 255, 0.14); color: #a08bff; border-color: rgba(160, 139, 255, 0.42); }
         .profile-badge.profile-framework { background: var(--ok-soft); color: var(--ok-text); border-color: var(--ok-border); }
-        .profile-badge.profile-docs { background: var(--danger-soft); color: var(--danger-text); border-color: var(--danger-border); }
         .health-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
         .health-dot.ok {
             background: var(--ok-fill);

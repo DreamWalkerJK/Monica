@@ -54,6 +54,9 @@ function createConfig(theme) {
     return {
         startOnLoad: false,
         securityLevel: 'strict',
+        // Nodes use the global setting; edges and clusters use the flowchart setting.
+        htmlLabels: false,
+        flowchart: { htmlLabels: false },
         theme: 'base',
         fontFamily: getFontFamily(theme),
         themeVariables: {
@@ -123,6 +126,25 @@ function createDiagramId() {
     return `mo-markdown-mermaid-${fallback}`;
 }
 
+function fitRenderedDiagram(element) {
+    const svg = element.querySelector('svg');
+    if (!svg) {
+        return;
+    }
+
+    // Measure after insertion: browser engines can report stale bounds while Mermaid builds its SVG.
+    const { x, y, width, height } = svg.getBBox();
+    if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) {
+        return;
+    }
+
+    const padding = 8;
+    svg.setAttribute('viewBox', `${x - padding} ${y - padding} ${width + padding * 2} ${height + padding * 2}`);
+    svg.setAttribute('width', '100%');
+    svg.removeAttribute('height');
+    svg.style.maxWidth = `${width + padding * 2}px`;
+}
+
 export async function renderMermaid(element, definition, theme) {
     if (!element) {
         return;
@@ -141,6 +163,7 @@ export async function renderMermaid(element, definition, theme) {
     const result = await mermaid.render(diagramId, normalizedDefinition);
 
     element.innerHTML = result.svg;
+    fitRenderedDiagram(element);
     if (typeof result.bindFunctions === 'function') {
         result.bindFunctions(element);
     }

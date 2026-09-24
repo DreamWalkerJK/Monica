@@ -1,7 +1,16 @@
+using Monica.EventBus.Abstractions;
+using Monica.EventBus;
+using Monica.Repository.Inbox.Annotations;
+using Monica.Repository.Inbox.Models;
+using Monica.Repository.Inbox.Services;
+using Monica.Core.Execution;
+using Monica.Repository.Outbox.Models;
+using Monica.Repository.Outbox.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -18,6 +27,8 @@ using Monica.Repository.Persistence.Metrics;
 using Monica.Repository.Persistence.Models;
 using Monica.Repository.Persistence.Services;
 using Monica.Repository.Persistence.Services.Support;
+using Monica.Repository.UnitOfWork.Abstractions;
+using Monica.Repository.UnitOfWork.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -46,6 +57,9 @@ public class ModuleRepository : MonicaModule<ModuleRepositoryOption>
         services.TryAddSingleton<IRepositoryDbContextRegistry, RepositoryDbContextRegistry>();
         services.TryAddScoped<IRepositoryDbContextDiagnosticsService, RepositoryDbContextDiagnosticsService>();
         services.TryAddScoped<RepositoryDiagnosticsFacade>();
+        services.TryAddScoped<EntityEventPublicationScope>();
+        services.AddScoped<IEntityEventPublishSwitch>(
+            serviceProvider => serviceProvider.GetRequiredService<EntityEventPublicationScope>());
 
         if (Option.EnableEfCoreConnectionMetrics)
         {
@@ -57,6 +71,13 @@ public class ModuleRepository : MonicaModule<ModuleRepositoryOption>
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleObjectMapping, ModuleObjectMappingOption>();
+        module.Require<ModuleClock, ModuleClockOption>();
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>(pipeline =>
+            pipeline.AddBehavior(typeof(InboxExecutionBehavior<,>), ExecutionBehaviorOrder.UnitOfWork + 100,
+                static descriptor => (descriptor.Point == EventBusExecutionPoints.LocalHandler
+                    || descriptor.Point == EventBusExecutionPoints.DistributedHandler)
+                    && (Attribute.IsDefined(descriptor.ComponentType, typeof(InboxAttribute), inherit: true)
+                        || descriptor.EntryMethod?.IsDefined(typeof(InboxAttribute), inherit: true) == true)));
     }
 }
 
@@ -68,7 +89,10 @@ public static class ModuleRepositoryRegistrationExtensions
     /// <param name="module">The Repository module registration being configured.</param>
     /// <typeparam name="TDbContext">The repository DbContext type to register.</typeparam>
     /// <param name="optionsAction">Configures the EF Core provider and options for the DbContext.</param>
-    /// <param name="dbContextProviderType">Selects how scoped repositories obtain the current DbContext.</param>
+    /// <param name="dbContextProviderType">
+    /// Selects transaction participation. UnitOfWork is the default; Default is for independently managed stores.
+    /// Both modes resolve the same directly registered scoped context.
+    /// </param>
     /// <returns>The repository module registration for method chaining.</returns>
     /// <remarks>
     /// Registration also exposes an <see cref="IDbContextFactory{TContext}"/> whose contexts own independent
@@ -76,12 +100,12 @@ public static class ModuleRepositoryRegistrationExtensions
     /// from long-lived services. This host-owned factory replaces any earlier factory registration for the same
     /// context so the ownership guarantee cannot be bypassed accidentally.
     /// </remarks>
-    public static ModuleRegistration<ModuleRepository, ModuleRepositoryOption> AddRepositoryDbContext<TDbContext>(this ModuleRegistration<ModuleRepository, ModuleRepositoryOption> module, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.Default)
+    public static ModuleRegistration<ModuleRepository, ModuleRepositoryOption> AddRepositoryDbContext<TDbContext>(this ModuleRegistration<ModuleRepository, ModuleRepositoryOption> module, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.UnitOfWork)
         where TDbContext : RepositoryDbContext<TDbContext>
     {
         if (dbContextProviderType == DbContextProviderType.UnitOfWork)
         {
-            module.Require<ModuleUnitOfWork, ModuleUnitOfWorkOption>().AddDbContextProvider<TDbContext>();
+            module.Require<ModuleUnitOfWork, ModuleUnitOfWorkOption>();
         }
         else if (dbContextProviderType != DbContextProviderType.Default)
         {
@@ -93,12 +117,10 @@ public static class ModuleRepositoryRegistrationExtensions
 
         module.ConfigureServices(context =>
         {
-            if (dbContextProviderType == DbContextProviderType.Default)
-            {
-                context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(DefaultDbContextProvider<TDbContext>));
-            }
+            context.Services.AddScoped<IDbContextProvider<TDbContext>, DefaultDbContextProvider<TDbContext>>();
             
             context.Services.TryAddTransient<IAuditPropertySetter, AuditPropertySetter>();
+            context.Services.TryAddSingleton(TimeProvider.System);
             context.Services.AddSingleton(new RepositoryDbContextRegistration(
                 typeof(TDbContext),
                 dbContextProviderType));
@@ -126,6 +148,81 @@ public static class ModuleRepositoryRegistrationExtensions
 
             context.Services
                 .AddTransient<IDbContextDatabaseManager<TDbContext>, DbContextDatabaseManager<TDbContext>>();
+        });
+        return module;
+    }
+
+    /// <summary>
+    /// Adds transactional event storage to the selected write context and starts Monica's delivery worker.
+    /// Generate an EF migration before deployment. Event names, payload serialization and transport routing
+    /// come from the configured EventBus; the primary context in an operation must enable this capability.
+    /// </summary>
+    public static ModuleRegistration<ModuleRepository, ModuleRepositoryOption> AddOutbox<TDbContext>(
+        this ModuleRegistration<ModuleRepository, ModuleRepositoryOption> module,
+        Action<RepositoryOutboxOptions>? configure = null)
+        where TDbContext : RepositoryDbContext<TDbContext>
+    {
+        var options = new RepositoryOutboxOptions();
+        configure?.Invoke(options);
+        if (options.DeliveryLease <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(configure), "Delivery lease must be positive.");
+        if (options.PollInterval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(configure), "Poll interval must be positive.");
+        if (options.BatchSize <= 0) throw new ArgumentOutOfRangeException(nameof(configure), "Batch size must be positive.");
+        if (options.RetryBaseDelay <= TimeSpan.Zero || options.RetryMaxDelay < options.RetryBaseDelay)
+            throw new ArgumentOutOfRangeException(nameof(configure), "Retry delays must be positive and ordered.");
+        if (options.DeliveredRetention <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(configure), "Delivered retention must be positive.");
+        module.Require<ModuleUnitOfWork, ModuleUnitOfWorkOption>();
+        module.Require<ModuleEventBus, ModuleEventBusOption>();
+        module.Require<ModuleHostedService, ModuleHostedServiceOption>();
+        module.ConfigureServices(context =>
+        {
+            context.Services.AddSingleton(new OutboxRegistration<TDbContext>(options));
+            context.Services.TryAddScoped<ITransactionalEventSink, TransactionalEventSink>();
+            context.Services.AddSingleton<OutboxDispatcher<TDbContext>>();
+            if (options.EnableWorker)
+            {
+                context.Services.AddSingleton<IOutboxStore>(sp => sp.GetRequiredService<OutboxDispatcher<TDbContext>>());
+                context.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, OutboxWorker>());
+            }
+        });
+        return module;
+    }
+
+    /// <summary>
+    /// Registers side-effect-free entity-to-event projections for the context. Projections run after generated
+    /// values exist and stage ordinary Outbox-marked events on the operation's primary transaction context.
+    /// Configure <see cref="AddOutbox{TDbContext}"/> on that primary context as well.
+    /// </summary>
+    public static ModuleRegistration<ModuleRepository, ModuleRepositoryOption> AddEntityEventProjections<TDbContext>(
+        this ModuleRegistration<ModuleRepository, ModuleRepositoryOption> module,
+        Action<RepositoryEntityEventOptions> configure)
+        where TDbContext : RepositoryDbContext<TDbContext>
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        var options = new RepositoryEntityEventOptions();
+        configure(options);
+        module.ConfigureServices(context => context.Services.AddSingleton(new RepositoryEntityEventOptionsRegistration<TDbContext>(options)));
+        return module;
+    }
+
+    /// <summary>
+    /// Adds durable Inbox receipts for EventBus handlers marked with <see cref="InboxAttribute"/>.
+    /// Their receipt, business changes and outgoing events commit in the selected primary context's transaction.
+    /// Generate an EF migration for the MonicaInbox table before deployment.
+    /// </summary>
+    public static ModuleRegistration<ModuleRepository, ModuleRepositoryOption> AddInbox<TDbContext>(
+        this ModuleRegistration<ModuleRepository, ModuleRepositoryOption> module,
+        Action<RepositoryInboxOptions>? configure = null)
+        where TDbContext : RepositoryDbContext<TDbContext>
+    {
+        var options = new RepositoryInboxOptions();
+        configure?.Invoke(options);
+        module.Require<ModuleUnitOfWork, ModuleUnitOfWorkOption>();
+        module.Require<ModuleEventBus, ModuleEventBusOption>();
+        module.ConfigureServices(context =>
+        {
+            context.Services.AddSingleton(new InboxRegistration<TDbContext>(options));
+            context.Services.TryAddSingleton(TimeProvider.System);
         });
         return module;
     }
@@ -191,17 +288,18 @@ public class ModuleRepositoryOption : ModuleOptions<ModuleRepository>
 }
 
 /// <summary>
-/// Selects how scoped repository services resolve the DbContext for a request or operation.
+/// Selects transaction participation; both modes use the directly registered scoped DbContext.
 /// </summary>
 public enum DbContextProviderType
 {
     /// <summary>
-    /// Resolves the current DbContext directly from the active dependency injection scope.
+    /// Excludes this context from automatic selection. An independent operation can select it explicitly
+    /// through UnitOfWorkScopeOptions.DbContextTypes, or own a direct save.
     /// </summary>
     Default,
 
     /// <summary>
-    /// Resolves the current DbContext from the active unit of work.
+    /// Uses the current scope's DbContext and enlists it in the operation's transaction.
     /// </summary>
     UnitOfWork
 }

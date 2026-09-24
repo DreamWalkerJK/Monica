@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.EventBus.Modules;
 using Monica.Configuration.Models;
@@ -11,12 +12,11 @@ namespace Monica.Configuration.EventBus.Services;
 /// Subscribes to distributed configuration reload signals and forwards them to the local receiver.
 /// </summary>
 public sealed class ConfigurationEventBusSubscriptionHostedService(
-    IServiceProvider serviceProvider,
+    IServiceScopeFactory serviceScopeFactory,
     IOptions<ModuleConfigurationEventBusOption> options,
     IConfigurationReloadSignalReceiver receiver)
     : IHostedService
 {
-    private IDistributedEventBus? _eventBus;
     private IEventSubscription? _subscription;
 
     /// <inheritdoc />
@@ -24,8 +24,9 @@ public sealed class ConfigurationEventBusSubscriptionHostedService(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        _eventBus = ConfigurationEventBusChangeNotifier.ResolveDistributedEventBus(serviceProvider, options.Value);
-        _subscription = await _eventBus.SubscribeAsync<ConfigurationReloadSignal>(
+        using var scope = serviceScopeFactory.CreateScope();
+        var eventBus = ConfigurationEventBusChangeNotifier.ResolveDistributedEventBus(scope.ServiceProvider, options.Value);
+        _subscription = await eventBus.SubscribeAsync<ConfigurationReloadSignal>(
             receiver.ReceiveAsync,
             options.Value.TopicName);
     }
@@ -38,16 +39,7 @@ public sealed class ConfigurationEventBusSubscriptionHostedService(
             return;
         }
 
-        if (_eventBus is not null)
-        {
-            await _eventBus.Subscriptions.UnsubscribeAsync(_subscription.Id);
-        }
-        else
-        {
-            await _subscription.DisposeAsync();
-        }
-
+        await _subscription.DisposeAsync();
         _subscription = null;
-        _eventBus = null;
     }
 }

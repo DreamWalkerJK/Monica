@@ -46,8 +46,10 @@ Do not shorten suffixes such as `.API`, `.Domain`, `.Infrastructure`, `.Adaptor`
 - Put test-specific seam registrations in its `ISeamReplacementBuilder` callback.
 - Create normal child scopes with `application.CreateScope(...)`.
 - Resolve units under test from `MonicaTestScope`.
+- Run writes through application.ExecuteAsync, which creates a fresh scope and invokes the production execution pipeline. Resolve the handler inside the callback.
+- Seed with application.SeedAsync<TContext,TResult>, save explicitly inside the callback and return keys. Verify persisted state through application.VerifyAsync<TContext> in another scope. Do not clear trackers to repair application tests.
 - Dispose every scope before its owning application.
-- Use multiple scopes in one application only when the behavior deliberately spans scopes under the same host.
+- Use independent arrange/act/assert scopes over the scenario database.
 - Use `application.Services`, `application.Application`, or `application.ModuleSnapshots` for host-level assertions.
 
 The service collection is immutable after build. A scope may select scoped state, but it cannot replace registrations.
@@ -58,11 +60,11 @@ Replace leaves and adapters:
 
 - state stores and caches
 - event transports
-- DbContext provider or database
+- database connection/provider options, retaining production context/session resolution
 - HTTP/RPC clients
 - current user or tenant context
 - local configuration adapters
-- clocks, random sources, or ID generators when nondeterminism matters
+- clocks, random sources, or ID generators when nondeterminism matters; retain the real audit policy
 
 Do not replace application services, domain services, repositories, or mappers unless that type is itself the external boundary under test.
 
@@ -80,6 +82,31 @@ Do not maintain a parallel `ApplicationServiceFixture<THandler>` abstraction.
 - Delete compatibility fixtures that manually reconstruct production DI.
 - Delete tests with no assertions, manual output only, uncontrolled random loops, untracked files, or live external calls.
 - Convert retained tests to xUnit v3, NSubstitute, and AwesomeAssertions.
+
+## Trait Rules
+
+Two trait keys are reserved for linking test classes into the ProjectUnit chain: `[ProjectUnitRequirement]` ties units to requirement IDs, and test classes declare the same IDs plus the unit under test.
+
+- `REQ` — the governing requirement ID of the spec under test. Class-level declares the default for every test in the class; a method-level `[Trait("REQ", "...")]` adds a requirement only one test exercises.
+- `Unit` — the namespace-qualified type name (the unit's runtime key) of the unit under test. Required when the class name does not follow `{TypeUnderTest}Tests`, or when the stem names more than one unit.
+
+```csharp
+[Trait("REQ", "FIPS-REQ-FLIGHT-20260920-531942")]
+[Trait("Unit", "Fips.Flight.FlightPlan.FlightPlanAppService")]
+public sealed class FlightPlanAppServiceTests
+{
+    [Fact]
+    public void Dispatch_WhenRunwayChanges_ShouldReplan() { }
+
+    [Fact]
+    [Trait("REQ", "FIPS-REQ-FLIGHT-20260922-000042")]
+    public void Dispatch_WhenFuelIsMarginal_ShouldRequestTanker() { }
+}
+```
+
+A class without Unit traits is resolved through the `{TypeUnderTest}Tests` naming convention when the stem names exactly one unit; a class with Unit traits resolves only through them. Trait arguments must be constant, non-empty strings. Keep other trait keys for repository-local tooling.
+
+`dotnet test --filter "REQ=<requirement-id>"` runs exactly the covering slice, trait values flow into JUnit XML for CI cross-checks, and Test Explorer groups tests by requirement.
 
 ## Parallelism
 

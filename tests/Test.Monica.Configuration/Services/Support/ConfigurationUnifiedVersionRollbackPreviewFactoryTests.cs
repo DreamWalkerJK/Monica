@@ -132,6 +132,48 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
     }
 
     [Fact]
+    public async Task CreateAsync_WhenDriftedSchemaAndValueIsIncompatible_ShouldKeepSkipReasonVisible()
+    {
+        // Regression for the 2026-09-17 report: schema drift used to blank the incompatibility reason
+        // for every definition whose captured SchemaHash evolved, so skipped definitions surfaced only
+        // as an opaque "hard incompatible" without path or cause. Drift alone must not hide the reason;
+        // only genuinely sensitive (or no-longer-resolvable) paths stay hidden.
+        var definition = CreateDefinition("Definition.DriftedIncompatible", "DriftedIncompatible");
+        var document = CreateEffectiveDocument(definition, workerId: 2, version: 81);
+        var fixture = CreateFixture(
+            [definition],
+            [document],
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                [definition.DefinitionKey] = 2
+            });
+        var snapshotDefinition = new ConfigurationUnifiedVersionDefinitionSnapshot
+        {
+            DefinitionKey = definition.DefinitionKey,
+            DisplayName = definition.DisplayName,
+            FromProject = definition.FromProject,
+            SchemaVersion = definition.SchemaVersion,
+            SchemaHash = "sha256:older-metadata",
+            Json = "{\"LegacyOnly\":true}"
+        };
+        var snapshot = new ConfigurationUnifiedVersionSnapshot
+        {
+            Summary = new ConfigurationUnifiedVersionSummary { Version = 18 },
+            Definitions = [snapshotDefinition]
+        };
+
+        var preview = await fixture.Factory.CreateAsync(snapshot, TestContext.Current.CancellationToken);
+
+        var target = preview.Targets.Should().ContainSingle().Which;
+        target.Status.Should().Be(ConfigurationUnifiedVersionApplyTargetStatus.IncompatibleValue);
+        var issue = target.ValidationIssues.Should().ContainSingle().Which;
+        issue.DetailsHidden.Should().BeFalse();
+        issue.IsSensitive.Should().BeFalse();
+        issue.LogicalPath.Should().NotBeEmpty();
+        issue.Message.Should().NotContain("hidden");
+    }
+
+    [Fact]
     public async Task CreateAsync_WhenStoredListKeepsExplicitNullsButRuntimeOmitsThem_ShouldNotReportDrift()
     {
         // Reproduces the production incident: a stored document keeps "Tag": null inside list items

@@ -233,11 +233,11 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
 
     def test_source_registry_and_profile_minimums_are_global_and_authority_free(self) -> None:
         self.assertEqual(
-            {"Tairitsua/Monica", "Tairitsua/Monica.Docs"},
+            {"Tairitsua/Monica"},
             set(self.catalog["sourceRepositories"]),
         )
         self.assertEqual(
-            {"monica", "docs"},
+            {"monica"},
             {
                 alias
                 for entry in self.catalog["sourceRepositories"].values()
@@ -258,11 +258,8 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             extension,
         )
 
-        docs = self.catalog["profiles"]["docs-contributor"]["sourceRequirements"]
-        self.assertEqual(
-            {"Tairitsua/Monica", "Tairitsua/Monica.Docs"},
-            {requirement["repository"] for requirement in docs},
-        )
+        self.assertNotIn("docs-contributor", self.catalog["profiles"])
+        self.assertNotIn("docs-contributor", self.catalog["managedInstructions"]["templates"])
         for profile in self.catalog["profiles"].values():
             for requirement in profile["sourceRequirements"]:
                 self.assertNotIn("access", requirement)
@@ -278,25 +275,6 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             joined = "\n".join(rules)
             self.assertIn("$monica-guide source resolve", joined, profile_name)
             self.assertIn("not write permission", joined, profile_name)
-
-    def test_source_resolver_distribution_is_exact_and_capability_scoped(self) -> None:
-        distribution = self.catalog["externalSkills"]["inspect-dependency-source"][
-            "distribution"
-        ]
-        self.assertEqual(
-            "bffe59e69be1d3e217783d41a0b84100ac5c3997",
-            distribution["commit"],
-        )
-        self.assertEqual(
-            "https://github.com/Tairitsua/inspect-dependency-source-skill/tree/"
-            + distribution["commit"],
-            distribution["immutableSkillUrl"],
-        )
-        self.assertRegex(distribution["digest"], r"^sha256:[0-9a-f]{64}$")
-        self.assertEqual(
-            ["cached-source-resolution"],
-            distribution["requiredFor"],
-        )
 
     def test_router_skill_references_exactly_match_catalog_routes(self) -> None:
         for skill_name, entry in self.catalog["skills"].items():

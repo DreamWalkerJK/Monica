@@ -115,9 +115,14 @@ public sealed class HttpApiControllerSourceGenerator : IIncrementalGenerator
                     });
             }
 
-            return new AnalysisSnapshot<ControllerCandidate>(new ControllerCandidate(
+            var deleteQueryWarning = EndpointModelFactory.TryCreateDeleteQueryBindingWarning(
                 endpointAnalysis.Value,
-                ApplicationServiceSymbolHelper.GetTags(handler!).ToImmutableArray()));
+                request);
+            return new AnalysisSnapshot<ControllerCandidate>(
+                new ControllerCandidate(
+                    endpointAnalysis.Value,
+                    ApplicationServiceSymbolHelper.GetTags(handler!).ToImmutableArray()),
+                deleteQueryWarning is null ? null : new[] { deleteQueryWarning });
         }
         catch (OperationCanceledException)
         {

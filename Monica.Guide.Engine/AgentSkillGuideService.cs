@@ -183,6 +183,34 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                 checks.Add(Check("release.identity", GuideCheckStatus.Error, exception.Message, "Restore or re-extract one complete release."));
             }
 
+            // The configured bundle's catalog is the authority for release drift: recorded
+            // installations may still be internally consistent yet predate the configured
+            // release when only some targets were reconfigured after an update. Catalog
+            // tree digests hash raw file bytes while the ledger hashes per-file sha256, so
+            // the expectation is recomputed in the ledger's scheme before comparing.
+            SkillCatalog? bundleCatalog = null;
+            IReadOnlyDictionary<string, string>? expectedReleaseDigests = null;
+            try
+            {
+                ReportPhase(progress, "status.catalog", "Loading the configured release catalog…");
+                bundleCatalog = GuideReleaseMetadata.LoadSkillCatalog(Path.Combine(state.BundleRoot, "skills"));
+                var skillsRoot = Path.Combine(state.BundleRoot, "skills");
+                var filesBySkill = LoadCatalogFiles(skillsRoot, bundleCatalog);
+                expectedReleaseDigests = bundleCatalog.Skills.ToDictionary(
+                    static skill => skill.Name,
+                    skill => ComputeVerificationDigest(
+                        filesBySkill[skill.Name].Select(file => (file.RelativePath, GuidePlanning.Sha256(file.Content)))),
+                    StringComparer.Ordinal);
+            }
+            catch (Exception exception) when (exception is IOException or JsonException or InvalidDataException)
+            {
+                checks.Add(Check(
+                    "skills.catalog",
+                    GuideCheckStatus.Warning,
+                    $"The configured release catalog is unreadable: {exception.Message}",
+                    "Restore or re-extract one complete release, then configure it."));
+            }
+
             var filteredInstallations = FilterInstallations(state.Installations, request?.Environments);
             if (request?.Environments is { Count: > 0 })
             {
@@ -198,10 +226,29 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             // Independent installation inspections run concurrently; their checks are
             // appended in the recorded order so report output stays deterministic.
             var installationChecks = await Task.WhenAll(filteredInstallations.Select(installation =>
-                InspectInstallationAsync(installation, progress, cancellationToken)));
+                InspectInstallationAsync(installation, expectedReleaseDigests, progress, cancellationToken)));
             foreach (var installationCheckList in installationChecks)
             {
                 checks.AddRange(installationCheckList);
+            }
+
+            // Workspace instruction currency is judged against the same configured release
+            // catalog, so one status report covers skill trees and managed instruction blocks.
+            if (bundleCatalog?.ManagedInstructions is not null)
+            {
+                ReportPhase(progress, "status.workspaces", "Inspecting configured workspaces…");
+                foreach (var view in new GuideWorkspaceService(_definition, _enginePaths, bundleCatalog).ListWorkspaces())
+                {
+                    var current = view.DirectoryExists && view.Issues.Count == 0;
+                    checks.Add(Check(
+                        $"workspace.{TargetCheckName(GuideTarget.Project, view.Workspace)}",
+                        current ? GuideCheckStatus.Ok : GuideCheckStatus.Warning,
+                        current
+                            ? $"{view.Workspace}: {view.Profile}, instruction block current, {view.InstalledSkillCount}/{view.ProfileSkillCount} profile skills."
+                            : $"{view.Workspace}: {string.Join(" ", view.Issues)}",
+                        current ? null : "Update the workspace projection: guide configure --workspace <path>.",
+                        TargetDetails(GuideTarget.Project, TargetCheckName(GuideTarget.Project, view.Workspace), view.Workspace)));
+                }
             }
         }
 
@@ -969,7 +1016,9 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             {
                 foreach (var installation in plannedState.Installations)
                 {
-                    var installationChecks = await InspectInstallationAsync(installation, progress, cancellationToken);
+                    // Post-apply verification checks the written trees against the planned
+                    // state only; release comparison belongs to the status flow.
+                    var installationChecks = await InspectInstallationAsync(installation, null, progress, cancellationToken);
                     var catalogCheck = installationChecks.FirstOrDefault(check =>
                         check.Id == $"skills.{installation.Environment.Selector}.{TargetCheckName(installation.Target, installation.TargetRoot)}.catalog");
                     if (catalogCheck is { Status: not GuideCheckStatus.Ok })
@@ -1039,9 +1088,14 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         }
     }
 
-    /// <summary>Verifies one recorded installation by recomputing each skill's tree digest.</summary>
+    /// <summary>
+    /// Verifies one recorded installation by recomputing each skill's tree digest, and when
+    /// the configured release's expected digests are available, compares the recorded digests
+    /// against them so a projection left behind by a partial release update is visible.
+    /// </summary>
     private async Task<List<GuideCheck>> InspectInstallationAsync(
         GuideSkillInstallation installation,
+        IReadOnlyDictionary<string, string>? expectedReleaseDigests,
         IProgress<GuidePhase>? progress,
         CancellationToken cancellationToken)
     {
@@ -1052,7 +1106,9 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             $"Verifying the skill projection for {targetLabel} in {installation.Environment.Selector} ({installation.Trees.Count} skills)…");
         var checks = new List<GuideCheck>();
         var drift = false;
+        var driftedTrees = new List<string>();
         var environment = installation.Environment;
+        var targetDetails = TargetDetails(installation.Target, targetName, installation.WorkspaceRoot);
 
         var skillDirectories = installation.Trees
             .Select(tree => JoinEnvironmentPath(environment, installation.TargetRoot, tree.Name))
@@ -1074,7 +1130,8 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                     $"skills.{environment.Selector}.{targetName}.target-redirection",
                     GuideCheckStatus.Warning,
                     "The recorded skill target root now contains a symbolic link, junction, or other reparse point.",
-                    "Do not configure or unconfigure through redirected target paths; restore ordinary directories and inspect the destination."));
+                    "Do not configure or unconfigure through redirected target paths; restore ordinary directories and inspect the destination.",
+                    targetDetails));
             }
             if (targetObservation.Kind != GuideFileSystemEntryKind.Directory)
             {
@@ -1083,7 +1140,8 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                     $"skills.{environment.Selector}.{targetName}.target-kind",
                     GuideCheckStatus.Warning,
                     "The recorded skill target root is missing or is not an ordinary directory.",
-                    "Restore an ordinary directory, then reinstall from one immutable release."));
+                    "Restore an ordinary directory, then reinstall from one immutable release.",
+                    targetDetails));
             }
         }
         else
@@ -1093,7 +1151,8 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                 $"skills.{environment.Selector}.{targetName}.target-kind",
                 GuideCheckStatus.Warning,
                 "The recorded skill target root is missing or is not an ordinary directory.",
-                "Restore an ordinary directory, then reinstall from one immutable release."));
+                "Restore an ordinary directory, then reinstall from one immutable release.",
+                targetDetails));
         }
 
         foreach (var skillTree in installation.Trees)
@@ -1102,6 +1161,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             if (tree.Paths.TryGetValue(skillDirectory, out var skillObservation) && skillObservation.Redirected)
             {
                 drift = true;
+                driftedTrees.Add(skillTree.Name);
                 continue;
             }
             var files = tree.RootEntries.TryGetValue(skillDirectory, out var entries)
@@ -1129,15 +1189,36 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             if (actualDigest != skillTree.TreeDigest)
             {
                 drift = true;
+                driftedTrees.Add(skillTree.Name);
             }
         }
         checks.Add(Check(
             $"skills.{environment.Selector}.{targetName}.catalog",
             drift ? GuideCheckStatus.Warning : GuideCheckStatus.Ok,
             drift
-                ? $"An installed skill tree drifted or disappeared for {targetLabel}."
+                ? driftedTrees.Count > 0
+                    ? $"Installed skill trees drifted or disappeared for {targetLabel}: {FormatSkillNames(driftedTrees)}."
+                    : $"The recorded skill projection for {targetLabel} drifted at the target root."
                 : $"All installed skill trees match their recorded digests ({targetLabel}).",
-            drift ? "Review local changes, then reinstall from one immutable release." : null));
+            drift ? "Review local changes, then reinstall from one immutable release." : null,
+            targetDetails));
+        if (expectedReleaseDigests is not null)
+        {
+            var outdated = installation.Trees
+                .Where(tree => !expectedReleaseDigests.TryGetValue(tree.Name, out var expected)
+                               || !string.Equals(expected, tree.TreeDigest, StringComparison.Ordinal))
+                .Select(static tree => tree.Name)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+            checks.Add(Check(
+                $"skills.{environment.Selector}.{targetName}.release",
+                outdated.Length == 0 ? GuideCheckStatus.Ok : GuideCheckStatus.Warning,
+                outdated.Length == 0
+                    ? $"Every installed skill tree matches the configured release ({targetLabel})."
+                    : $"Installed skill trees differ from the configured release ({targetLabel}): {FormatSkillNames(outdated)}.",
+                outdated.Length == 0 ? null : "Update this projection from the configured release with guide configure.",
+                targetDetails));
+        }
         // Project directories are workspace territory: repositories may legitimately carry
         // projections the guide does not own (for example a synced checkout), so the foreign
         // scan applies to the guide-owned global roots only.
@@ -2293,8 +2374,36 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             : statuses.Contains(GuideCheckStatus.Warning) ? GuideStatus.Warning : GuideStatus.Ready;
     }
 
-    private static GuideCheck Check(string id, GuideCheckStatus status, string message, string? remediation = null)
-        => new(id, status, message, remediation);
+    private static GuideCheck Check(
+        string id,
+        GuideCheckStatus status,
+        string message,
+        string? remediation = null,
+        IReadOnlyDictionary<string, string>? details = null)
+        => new(id, status, message, remediation, details);
+
+    /// <summary>
+    /// Structured target identity for per-target checks: "global" or "workspace" plus the
+    /// display label (shared/claude, or the workspace root path), so UI surfaces can group
+    /// findings by target without parsing check ids or messages.
+    /// </summary>
+    private static IReadOnlyDictionary<string, string> TargetDetails(
+        GuideTarget target,
+        string targetName,
+        string? workspaceRoot)
+        => new Dictionary<string, string>
+        {
+            ["target.kind"] = target == GuideTarget.Project ? "workspace" : "global",
+            ["target.label"] = target == GuideTarget.Project ? workspaceRoot ?? targetName : targetName,
+        };
+
+    /// <summary>Bounded skill list for check messages: at most five names plus an overflow note.</summary>
+    private static string FormatSkillNames(IReadOnlyCollection<string> names)
+    {
+        var listed = names.Order(StringComparer.Ordinal).Take(5).ToArray();
+        var overflow = names.Count - listed.Length;
+        return overflow > 0 ? $"{string.Join(", ", listed)} (+{overflow} more)" : string.Join(", ", listed);
+    }
 
     private static Uri NormalizeLoopback(Uri uri)
     {

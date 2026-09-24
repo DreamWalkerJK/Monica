@@ -13,7 +13,7 @@
 | Value objects, parsers, validators, deterministic support code | Direct construction |
 | One ProjectUnit with every collaborator supplied explicitly | Raw `ProjectUnitFixture<TUnit>` |
 | Module graph, options, DI registration, proxies, hosted lifecycle, or cross-scope behavior | `MonicaTestApplicationFactory<TDiscoveryAnchor>` scenario |
-| Blazor component or page shell | bUnit in the UI test project |
+| Blazor behavior contract, when UI testing is explicitly requested | bUnit in the UI test project |
 | Incremental source-generator input, diagnostic, or generated source | In-memory Roslyn `GeneratorDriver` |
 
 `ProjectUnitFixture<TUnit>` does not validate Monica composition. Do not add a separate `ApplicationServiceFixture`; application services use either the raw ProjectUnit fast path or a real scenario host according to the behavior being tested.
@@ -63,7 +63,11 @@
 - bUnit only in UI test projects
 - Microsoft.CodeAnalysis.CSharp only in generator test projects
 
-## WSL Execution
+## Execution
 
-- Use Windows paths for `dotnet build` and `dotnet test`.
-- Run a single build or test process at a time; use MSBuild's internal parallelism instead of concurrent CLI processes.
+- Use the repository runner or the relevant test project, with paths understood by the selected SDK.
+- Keep processes that share build outputs sequential; use MSBuild's internal parallelism inside a build.
+
+## UI Verification
+
+Run or add UI rendering tests only on explicit user request. Use browser smoke checks for ordinary UI development. When requested, cover authorization, disposal and late-result safety, no mutation on failure, or security properties such as credentials staying out of markup. Do not add assertions for layout, CSS classes, localized-key presence, or visual composition.

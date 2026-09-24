@@ -1,12 +1,12 @@
-using System.Text.Json;
+using System.Text;
 using Confluent.Kafka;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Models;
-using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.EventBus.Abstractions;
+using Monica.EventBus.Annotations;
 using Monica.EventBus.Kafka.Abstractions;
 using Monica.EventBus.Kafka.Services.Support;
 using Monica.EventBus.Models;
@@ -20,19 +20,18 @@ namespace Monica.EventBus.Kafka.Providers.ConfluentKafka;
 /// </summary>
 internal sealed class KafkaEventBusSubscriptionHostedService(
     IEventSubscriptionRegistry subscriptionManager,
-    IDistributedEventBus eventBus,
+    IEventReceiveDispatcher dispatcher,
     ITopicSubscriptionStatusStore topicStatusStore,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IServiceScopeFactory serviceScopeFactory,
     IKafkaClusterConfigProvider clusterConfigProvider,
-    IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
     IOptions<ModuleEventBusKafkaOption> options,
     ILogger<KafkaEventBusSubscriptionHostedService> logger,
     string? serviceKey = null)
     : EventBusSubscriptionHostedServiceBase(
         subscriptionManager,
-        eventBus,
+        dispatcher,
         topicStatusStore,
         observableManager,
         hostedServiceOptions,
@@ -92,7 +91,7 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
         {
             await ConsumeTopicAsync(topicConsumer);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (topicConsumer.CancellationToken.IsCancellationRequested)
         {
             // Expected during unsubscribe and shutdown.
         }
@@ -125,28 +124,39 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
             try
             {
                 var result = consumer.Consume(cancellationToken);
-                if (result?.Message?.Value is null)
+                if (result?.Message is null)
                 {
                     continue;
                 }
-
-                var eventData = JsonSerializer.Deserialize(
-                    result.Message.Value,
-                    topicConsumer.EventType,
-                    jsonSerializerOptionsProvider.SerializerOptions);
-                if (eventData is null)
+                if (result.Message.Value is null)
                 {
-                    TopicStatusStore.ReportError(
-                        ServiceKey, topicConsumer.TopicName,
-                        $"Kafka message on topic {topicConsumer.TopicName} deserialized to null");
-                    RecordState($"Kafka message on topic {topicConsumer.TopicName} deserialized to null", HostedServiceState.Degraded);
-                    continue;
+                    RewindOrThrow(() => consumer.Seek(result.TopicPartitionOffset),
+                        new EventMessageDeserializationException(
+                            $"Kafka message on topic '{topicConsumer.TopicName}' has a null body."));
+                    throw new EventMessageDeserializationException(
+                        $"Kafka message on topic '{topicConsumer.TopicName}' has a null body.");
                 }
 
-                await HandleExternalMessageAsync(
+                string? Header(string name)
+                {
+                    var value = result.Message.Headers?.LastOrDefault(header => header.Key == name);
+                    return value is null ? null : Encoding.UTF8.GetString(value.GetValueBytes());
+                }
+                var metadata = new EventDeliveryMetadata(
+                    Header("monica-message-id"),
+                    Header("monica-source"),
+                    Header("monica-event-name") ?? EventNameAttribute.GetNameOrDefault(topicConsumer.EventType),
                     topicConsumer.TopicName,
-                    eventData,
-                    cancellationToken);
+                    ServiceKey,
+                    Header("traceparent"),
+                    Header("tracestate"));
+                await CommitAfterHandlingAsync(
+                    () => HandleExternalMessageAsync(
+                        new EventMessage(metadata, EventSubscriptionScope.Distributed,
+                            Encoding.UTF8.GetBytes(result.Message.Value)),
+                        cancellationToken),
+                    () => consumer.Commit(result),
+                    () => consumer.Seek(result.TopicPartitionOffset));
 
                 TopicStatusStore.ReportMessageProcessed(ServiceKey, topicConsumer.TopicName);
 
@@ -158,9 +168,14 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
                         $"Kafka consumer is delivering messages for topic {topicConsumer.TopicName}");
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 break;
+            }
+            catch (KafkaRewindFailedException)
+            {
+                // After a failed seek, this consumer cannot safely commit any later offset.
+                throw;
             }
             catch (Exception ex)
             {
@@ -181,24 +196,44 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
             }
         }
 
-        try
-        {
-            consumer.Commit();
-        }
-        catch (KafkaException ex)
-        {
-            TopicStatusStore.ReportError(
-                ServiceKey, topicConsumer.TopicName,
-                $"Kafka consumer final offset commit failed for topic {topicConsumer.TopicName}",
-                ex);
-            RecordState(
-                $"Kafka consumer final offset commit failed for topic {topicConsumer.TopicName}",
-                HostedServiceState.Degraded,
-                ex);
-        }
-
         // Consumer.Close enters a librdkafka LeaveGroup path that can dereference a missing
         // coordinator. Consumer.Dispose uses NO_CONSUMER_CLOSE instead.
+    }
+
+    internal static async Task CommitAfterHandlingAsync(
+        Func<Task> handle, Action commit, Action rewind)
+    {
+        try
+        {
+            await handle();
+            commit();
+        }
+        catch (Exception failure)
+        {
+            // Broker offsets advance only after the complete handler operation commits.
+            // Rewind so a failed delivery retains the same identity on this consumer.
+            RewindOrThrow(rewind, failure);
+            throw;
+        }
+    }
+
+    private static void RewindOrThrow(Action rewind, Exception? originalFailure)
+    {
+        try
+        {
+            rewind();
+        }
+        catch (Exception seekFailure)
+        {
+            throw new KafkaRewindFailedException(
+                "Kafka failed to rewind an unacknowledged message; the consumer must stop.",
+                originalFailure is null ? seekFailure : new AggregateException(originalFailure, seekFailure));
+        }
+    }
+
+    private sealed class KafkaRewindFailedException(string message, Exception innerException)
+        : Exception(message, innerException)
+    {
     }
 
     /// <summary>

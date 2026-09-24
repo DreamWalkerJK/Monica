@@ -12,10 +12,10 @@ $monica-guide <command> [options]
 | --- | --- |
 | `overview` | Installed products, versions, detected agent hosts, and next actions. Never requires a workspace. |
 | `workspaces` | Every registered workspace with live health: profile, directory presence, installed-versus-profile skill counts, and instruction currency. |
-| `status` | Installed skill projections per environment and target, recorded release identity, and host detection. Add `--workspace <path>` for repository detection and managed-instruction health. |
-| `doctor` | Everything `status` checks plus the live loopback runtime probes for products that serve one. Workspace and source-binding checks are appended like every other check. |
-| `source list` | One summary check per declared first-party repository (Monica, Monica.Docs). |
-| `source resolve --repository monica\|docs` | Observe the stored binding: canonical identity, stored and observed commits, exact ref, provenance, absolute path, dirty/path health, and warnings. |
+| `status` | Installed skill projections per environment and target, recorded release identity, and host detection. Every recorded tree digest is compared against the configured release catalog, so partially updated or locally modified projections surface as release-drift warnings. Add `--workspace <path>` for repository detection and managed-instruction health. |
+| `doctor` | Everything `status` checks (including the release-drift comparison) plus the live loopback runtime probes for products that serve one. Workspace and source-binding checks are appended like every other check. |
+| `source list` | Summary check for the Monica framework repository. |
+| `source resolve --repository monica` | Observe the stored binding: canonical identity, stored and observed commits, exact ref, provenance, absolute path, dirty/path health, and warnings. |
 | `issue status` | The machine-global issue-reporting mode (`prepare`, `ask`, `never`) with its meaning; read it before preparing any issue artifact. |
 
 ## Mutating commands
@@ -27,7 +27,7 @@ $monica-guide <command> [options]
 | `unconfigure` | Remove recorded skill projections: `--workspace <path>` for one workspace's installations, `--target`/`--environment` for global ones, or everything when unscoped. A full unconfigure removes the product's ledger entry, locator, and desktop integration. |
 | `init --workspace <path>` | Write `.monica/guide.json` (profile, capabilities, optional `skillTargets`) and the managed `AGENTS.md` instruction block, and register the workspace in the engine registry. Requires an explicit `--profile`; the application profile additionally requires exactly one of `--capability microservice` or `--capability modular-monolith`. |
 | `forget --workspace <path>` | Remove exactly the guide-owned workspace artifacts: the managed block, the Guide-owned `@AGENTS.md` import, `.monica/guide.json`, the project skill installations recorded for that workspace, and its registry entry. |
-| `source bind --repository <repo>` | Add or replace one global binding from `--source-path <checkout> [--source-ref <tag\|commit>]`, or from `--source-ref <exact-ref>` resolved through the pinned `inspect-dependency-source` skill (discoverable via `--source-resolver <path>`). |
+| `source bind --repository <repo>` | Add or replace one global binding from `--source-path <checkout> [--source-ref <tag\|commit>]`, verified against the local canonical Git checkout. |
 | `source unbind --repository <repo>` | Remove that repository's global binding. |
 | `issue set --mode <prepare\|ask\|never>` | Set the machine-global issue-reporting mode. An immediate preference save like the wizard's toggle: it is not governed state, takes no plan digest, and never authorizes a remote action. |
 
@@ -37,7 +37,7 @@ Every mutating command is a preview until both `--apply` and `--plan-digest <sha
 
 - **Unified guide ledger** — `<engine root>/state/guide.json` holds one entry per installed product: executable, bundle root, release manifest digest, and every skill installation with per-skill tree digests. Installation identity is the environment plus the normalized target root, so project directories and global catalogs coexist and refresh together. The engine root is `%LOCALAPPDATA%\Monica` on Windows, `~/.local/share/Monica` on Linux, `~/Library/Application Support/Monica` on macOS; `MONICA_GUIDE_DATA_ROOT` overrides it.
 - **Workspace registry** — `<engine root>/state/workspaces.json` registers every initialized workspace (path, product, profile, capabilities) so listing surfaces can find them all; the portable truth stays in each workspace's `.monica/guide.json`.
-- **Source bindings** — `<engine root>/state/source-bindings.json` maps exactly `Tairitsua/Monica` and `Tairitsua/Monica.Docs` to one binding each (repository, ref, commit, source path, resolution kind, provenance). It stores no access, dirtiness, or permission state; observations happen at lookup time.
+- **Source binding** — `<engine root>/state/source-bindings.json` records the `Tairitsua/Monica` checkout (repository, ref, commit, source path, resolution kind, provenance). It stores no access, dirtiness, or permission state; observations happen at lookup time.
 - **Issue-reporting preference** — `<engine root>/state/issue-preferences.json` stores the machine-global mode (`prepare`, `ask`, `never`) shared by every product guide. The mode bounds issue preparation only; a persisted value never authorizes creating an issue, branch, or push.
 - **Workspace projection preference** — `<engine root>/state/workspace-projection.json` stores the machine-global switches that project bound source locators and the issue-reporting policy into every managed `AGENTS.md` block. Changes converge with the next workspace initialization or update.
 - **Workspace configuration** — `.monica/guide.json` in the repository is shareable and portable: schema version, product id, confirmed profile, capabilities, instruction block version, the Claude-import ownership flag, and the optional `skillTargets` list of workspace-relative skill directories. It never contains absolute paths or timestamps.

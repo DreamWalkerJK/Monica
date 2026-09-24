@@ -203,6 +203,14 @@ public sealed class ModuleMcpOption : ModuleOptions<ModuleMcp>
     public string? McpHttpAuthorizationPolicy { get; set; }
 
     /// <summary>
+    /// Exposes unhandled tool failure reasons to MCP clients: every exception escaping a tool is answered as a
+    /// JSON-RPC internal error carrying the exception type and its message chain instead of the SDK's generic
+    /// invocation error. Monica MCP surfaces are local-trust agent tooling, so this defaults to <c>true</c>;
+    /// disable it when a server is exposed beyond a local trust boundary and clients must not see failure text.
+    /// </summary>
+    public bool ExposeToolErrorDetail { get; set; } = true;
+
+    /// <summary>
     /// Relative or absolute file path used to persist runtime-managed external MCP client profiles.
     /// Defaults to <c>monica_data/ai/external_mcp_clients.json</c>.
     /// </summary>

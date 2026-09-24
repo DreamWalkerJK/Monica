@@ -9,16 +9,16 @@ Build independent packages and companion images from one explicit repository con
 
 Resolve every bundled `scripts/`, `references/`, and `assets/` path from this skill's own directory. Do not assume an `.agents` or `.claude` projection path.
 
-## Required companion skills
+## Companion skills by task
 
 - Use `$monica-architecture` for package and module boundaries.
 - Use `$monica-development` for host-bound registrations, providers, Facades, and services.
-- Use `$monica-ui-development`, `$monica-ui-audit`, and `$monica-ui-localization` for UI packages.
+- Use `$monica-ui-development` for UI packages, `$monica-ui-localization` for localization changes, and `$monica-ui-audit` when reviewing a concrete UI risk.
 - Use `$monica-unit-testing` for tests.
-- Use `$monica-docs-authoring` only when changing Monica.Docs.
+- Use `$monica-docs-authoring` for canonical Agent Skill instructions or Monica.Docs guidance.
 - Use `$monica-ui-bridge-debug` and `$playwright-cli` for runnable UI verification.
 
-Independently published packages override Monica's first-party test naming rule: use one `tests/Test.<PackageId>` project per package. The host lifecycle, isolation, assertion, and WSL execution rules from `$monica-unit-testing` still apply.
+Independently published packages override Monica's first-party test naming rule: use one `tests/Test.<PackageId>` project per package. The host lifecycle, isolation, assertion, and test execution rules from `$monica-unit-testing` still apply.
 
 ## Workflow
 
@@ -47,7 +47,7 @@ Independently published packages override Monica's first-party test naming rule:
    python scripts/validate_oci.py --root <repository-directory>                   # OCI only
    ```
 
-9. Restore the exact declared Monica NuGet version, then build, test, and pack one .NET process at a time under WSL using Windows paths. Do not replace Monica package references with local source-project switches. The repository validator rejects any `Monica.*` `PackageReference` whose resolved version differs from `monicaVersion`.
+9. Restore the exact declared Monica NuGet version, then build, test, and pack sequentially using paths understood by the selected SDK. Do not replace Monica package references with local source-project switches. The repository validator rejects any `Monica.*` `PackageReference` whose resolved version differs from `monicaVersion`.
 10. Inspect the exact release artifact set and consume every package entry point from a clean local feed:
 
    ```bash

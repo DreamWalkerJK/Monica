@@ -20,7 +20,7 @@
   <strong>AI agent 能遵循的架构，人类能检查的系统。</strong>
 </p>
 
-Monica 是面向可观测 .NET 后端的 agent-governed application architecture。它让开发者和编码 agent 共用同一套模块、DDD ProjectUnit、基础设施和运行时诊断语言，使生成的代码仍然结构可预期，运行中的系统仍然可理解。
+Monica 是面向 Agent 驱动开发的模块化 .NET 基础设施库。应用可按需采用各个模块；开发者与编码 Agent 共用模块组合、DDD ProjectUnit 和运行时诊断的类型化语言，使生成的代码结构可预期，运行中的系统可检查。
 
 > **候选版本**：Monica 1.0.0-rc.12 是用于验证和反馈的预发布版本。在 1.0.0 稳定版之前仍可能出现破坏性变更。
 
@@ -28,7 +28,7 @@ Monica 是面向可观测 .NET 后端的 agent-governed application architecture
 
 - 文档站点：<https://monica.dpdns.org/>
 - Monica.Docs 示例仓库：<https://github.com/Tairitsua/Monica.Docs>
-- JobScheduler 指南：<https://monica.dpdns.org/markdown-docs?group=monica&document=modules%2Fjob-scheduler%2Findex.md&culture=zh-CN>
+- JobScheduler 使用知识：<https://monica.dpdns.org/zh-CN/skills/monica-infra-jobs>
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 
 ## 为什么是 Monica
@@ -132,6 +132,10 @@ Monica.UI 之上还提供多个运维型 Blazor UI：JobScheduler、Configuratio
 ## 随仓库交付的 Agent Skills
 
 Monica 自有 Skill 的唯一源码位于 `skills/`；`.claude/skills/` 与 `.agents/skills/` 中对应的受管 Monica 子目录是面向仓库内发现的生成投影，不应直接编辑。
+
+九个 `monica-infra-*` Skill 是基础设施使用知识的唯一维护位置：[`persistence`](skills/monica-infra-persistence)、[`messaging`](skills/monica-infra-messaging)、[`jobs`](skills/monica-infra-jobs)、[`configuration`](skills/monica-infra-configuration)、[`hosting`](skills/monica-infra-hosting)、[`observability`](skills/monica-infra-observability)、[`ai`](skills/monica-infra-ai)、[`web`](skills/monica-infra-web) 和 [`ui`](skills/monica-infra-ui)。应用架构、框架开发、测试和 UI 实现分别由其他 Skill 负责。
+
+[Monica.Docs](https://monica.dpdns.org/) 从不可变发布资产 `monica-knowledge.json` 及其校验值发布这些 Skill，并维护稳定的中英文编辑文档；本地网站开发可预览当前源码。
 
 - 初始化、配置与诊断入口：`monica-guide`；上游问题分类与草稿准备：`monica-contribution`
 - 框架入口：`monica-framework`、`monica-development`、`monica-architecture`、`monica-ui-development`、`monica-ui-design`、`monica-ui-audit`、`monica-docs-authoring`、`monica-requirement-design`、`monica-unit-testing`、`monica-ui-bridge-debug`

@@ -50,6 +50,8 @@ public sealed record EventHandlerRegistration
     /// </summary>
     public static IEnumerable<EventHandlerRegistration> CreateFromHandlerType(Type handlerType)
     {
+        // Open handler templates cannot be activated. Their closed forms may be subscribed explicitly.
+        if (handlerType.ContainsGenericParameters) return [];
         var results = new List<EventHandlerRegistration>();
         var distributedEvents = new HashSet<Type>();
         var localEvents = new HashSet<Type>();

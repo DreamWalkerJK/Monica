@@ -5,7 +5,8 @@ using Platform.Protocol.PublishedLanguages.DomainOrdering.Models;
 namespace Platform.Protocol.PublishedLanguages.DomainOrdering.Requests;
 
 /// <summary>
-/// Requests all orders in reverse creation order.
+/// Requests all orders in reverse creation order. The GET binding classifies this request as read-only,
+/// so mediated dispatch opens no automatic write transaction.
 /// </summary>
 [ApiEndpoint(
     ApiHttpMethod.Get,

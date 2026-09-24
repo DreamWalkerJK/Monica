@@ -161,7 +161,7 @@ internal static class RpcClientCodeGenerator
         builder.Append("public class ").Append(implementationName).AppendLine("(");
         builder.AppendLine("    global::System.Net.Http.HttpClient httpClient,");
         builder.AppendLine("    global::Monica.DependencyInjection.Abstractions.ICachedServiceProvider serviceProvider,");
-        builder.AppendLine("    global::Monica.Core.Results.Abstractions.IResultEnvelopeReader resultEnvelopeReader)");
+        builder.AppendLine("    global::Monica.WebApi.RpcClient.Models.RpcServiceDescriptor serviceDescriptor)");
         builder.Append("    : ").Append(baseType).Append("(serviceProvider, httpClient), ")
             .Append(contractNamespaceRoot).Append(".Contracts.").AppendLine(interfaceName);
         builder.AppendLine("{");
@@ -218,20 +218,19 @@ internal static class RpcClientCodeGenerator
             .Append(endpoint.RequestTypeName).AppendLine(" request,");
         builder.AppendLine("        global::System.Threading.CancellationToken cancellationToken = default)");
         builder.AppendLine("    {");
-        builder.Append("        var requestUri = CreateRequestUri(request, \"")
+        builder.Append("        return await ExecuteAsync<").Append(endpoint.ResultTypeName).AppendLine(">(");
+        builder.AppendLine("            token =>");
+        builder.AppendLine("            {");
+        builder.AppendLine("                token.ThrowIfCancellationRequested();");
+        builder.Append("                return global::System.Threading.Tasks.ValueTask.FromResult(CreateHttpRequest(request, ")
+            .Append(GetHttpMethodExpression(endpoint.HttpMethod)).Append(", \"")
             .Append(EscapeString(endpoint.CompleteRoute)).Append("\", includeQueryString: ")
-            .Append(includeQueryString).AppendLine(");");
-        builder.Append("        using var httpRequest = new global::System.Net.Http.HttpRequestMessage(")
-            .Append(GetHttpMethodExpression(endpoint.HttpMethod)).AppendLine(", requestUri);");
-        if (endpoint.Binding == "Body")
-        {
-            builder.AppendLine("        httpRequest.Content = CreateJsonRequestContent(request);");
-        }
-
-        builder.Append("        return await global::Monica.Core.Results.ResultRemoteExtensions.GetResponse<")
-            .Append(endpoint.ResultTypeName).AppendLine(">(");
-        builder.AppendLine("            HttpClient.SendAsync(httpRequest, global::System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken),");
-        builder.AppendLine("            resultEnvelopeReader,");
+            .Append(includeQueryString).Append(", includeBody: ")
+            .Append(endpoint.Binding == "Body" ? "true" : "false").AppendLine("));");
+        builder.AppendLine("            },");
+        builder.Append("            new global::Monica.WebApi.RpcClient.Models.RemoteCallContext(serviceDescriptor, \"")
+            .Append(EscapeString(endpoint.OperationName)).Append("\", \"")
+            .Append(EscapeString(endpoint.CompleteRoute)).AppendLine("\"),");
         builder.AppendLine("            cancellationToken);");
         builder.AppendLine("    }");
         builder.AppendLine();

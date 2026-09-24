@@ -377,11 +377,10 @@ def validate_bootstrap_prompts(
         )
         required_fragments = [
             "$monica-guide",
-            "Monica.Docs",
         ]
         validation.check(
             all(fragment in prompt for fragment in required_fragments),
-            f"{label}: toolbox invocation or dual-source discovery guidance is incomplete",
+            f"{label}: toolbox invocation guidance is incomplete",
         )
         validation.check(
             set(BOOTSTRAP_TOKEN_PATTERN.findall(prompt))
@@ -460,8 +459,22 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
         f"generated Python cache artifacts are not allowed in canonical skills: {generated_artifacts}",
     )
 
+    module_owners: dict[str, str] = {}
     for skill_name, entry in skills.items():
         validation.check(entry.get("path") == f"skills/{skill_name}", f"{skill_name}: invalid canonical path")
+        publication = entry.get("publication")
+        if skill_name.startswith("monica-infra-"):
+            validation.check(bool(publication), f"{skill_name}: infrastructure skills must declare publication ownership")
+        if publication:
+            for module in publication.get("modules", []):
+                validation.check(module not in module_owners, f"{skill_name}: module {module!r} already belongs to {module_owners.get(module)}")
+                module_owners[module] = skill_name
+            for source_path in publication.get("sourcePaths", []):
+                source = (REPOSITORY_ROOT / source_path).resolve()
+                validation.check(
+                    source.is_relative_to(REPOSITORY_ROOT.resolve()) and source.exists(),
+                    f"{skill_name}: publication source path must exist inside the repository: {source_path}",
+                )
         skill_path = REPOSITORY_ROOT / entry.get("path", "")
         skill_file = skill_path / "SKILL.md"
         if not skill_file.is_file():
@@ -547,14 +560,12 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
 
     expected_source_aliases = {
         "Tairitsua/Monica": ["monica"],
-        "Tairitsua/Monica.Docs": ["docs"],
     }
     source_aliases: dict[str, str] = {}
     for repository, source_entry in source_repositories.items():
         validation.check(
-            source_entry.get("resolverQuery") == repository
-            and source_entry.get("aliases") == expected_source_aliases.get(repository),
-            f"source repository {repository}: canonical resolver identity or alias contract is invalid",
+            source_entry.get("aliases") == expected_source_aliases.get(repository),
+            f"source repository {repository}: canonical alias contract is invalid",
         )
         for alias in source_entry.get("aliases", []):
             validation.check(
@@ -608,46 +619,6 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
                 f"profile {profile_name}: duplicate source requirement for {repository!r}",
             )
             required_repositories.add(repository)
-
-    for external_name, external_entry in external.items():
-        distribution = external_entry.get("distribution")
-        if not distribution:
-            continue
-        commit = distribution.get("commit", "")
-        expected_url = (
-            f"https://github.com/{distribution.get('repository', '')}/tree/{commit}"
-        )
-        validation.check(
-            distribution.get("immutableSkillUrl") == expected_url,
-            f"external skill {external_name}: immutable URL must resolve by exact commit",
-        )
-        validation.check(
-            distribution.get("digestAlgorithm") == "sha256-file-manifest-v1"
-            and bool(SHA256_PATTERN.fullmatch(distribution.get("digest", ""))),
-            f"external skill {external_name}: immutable distribution digest is invalid",
-        )
-
-    immutable_binding = catalog.get("sourcePolicies", {}).get("immutableBinding", {})
-    source_resolver = external.get(immutable_binding.get("resolverSkill"), {})
-    validation.check(
-        source_resolver.get("distribution", {}).get("requiredFor")
-        == ["cached-source-resolution"],
-        "immutable source resolver must declare the cached-source-resolution capability",
-    )
-    validation.check(
-        immutable_binding.get("command")
-        == "resolve <repository> --ref <immutable-ref> --json"
-        and immutable_binding.get("storedFields")
-        == [
-            "repository",
-            "ref",
-            "commit",
-            "provenance",
-            "resolutionKind",
-            "sourcePath",
-        ],
-        "source policy must persist only the global lookup binding contract",
-    )
 
     for template_name, template in catalog.get("managedInstructions", {}).get("templates", {}).items():
         validation.check(template_name in catalog.get("profiles", {}), f"unknown instruction template {template_name}")

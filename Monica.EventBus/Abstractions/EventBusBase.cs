@@ -110,59 +110,12 @@ public abstract class EventBusBase : IEventBus
 
     #region Trigger Handlers
 
-    public virtual async Task TriggerHandlersAsync(Type eventType, object eventData, string topicName, CancellationToken cancellationToken = default)
+    public virtual Task TriggerHandlersAsync(Type eventType, object eventData, string topicName, CancellationToken cancellationToken = default)
     {
-        var isLocal = this is ILocalEventBus;
-        // Query active subscriptions for this event type and topic
-        var subscriptions = SubscriptionManager.GetAll()
-            .Where(s => s.EventType == eventType &&
-                        s.TopicName == topicName &&
-                        s.State == EventSubscriptionState.Active &&
-                        s.ServiceKey == ServiceKey && s.Scope == (isLocal ? EventSubscriptionScope.Local : EventSubscriptionScope.Distributed))
-            .ToList();
-
-        if (subscriptions.Count == 0)
-        {
-            Logger.LogDebug(
-                "No active subscriptions found for event {EventType} on topic {Topic}",
-                eventType.Name, topicName);
-            return;
-        }
-
-        Logger.LogDebug(
-            "Triggering {Count} handlers for event {EventType} on topic {Topic}",
-            subscriptions.Count, eventType.Name, topicName);
-
-        // Invoke each handler
-        foreach (var subscription in subscriptions)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            try
-            {
-                await using var handlerScope = await subscription.HandlerFactory
-                    .CreateExecutionScopeAsync()
-                    .ConfigureAwait(false);
-                await EventHandlerInvoker.InvokeAsync(
-                    handlerScope.EventHandler,
-                    eventData,
-                    eventType,
-                    subscription,
-                    handlerScope.ServiceProvider,
-                    cancellationToken);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex,
-                    "Error invoking handler {HandlerType} for event {EventType}",
-                    subscription.HandlerType?.Name ?? "Unknown", eventType.Name);
-                throw;
-            }
-        }
+        return EventHandlerDispatcher.DispatchAsync(
+            SubscriptionManager, EventHandlerInvoker, Logger, eventType, eventData,
+            this is ILocalEventBus ? EventSubscriptionScope.Local : EventSubscriptionScope.Distributed,
+            ServiceKey, topicName, metadata: null, requireSubscription: false, cancellationToken);
     }
 
     #endregion

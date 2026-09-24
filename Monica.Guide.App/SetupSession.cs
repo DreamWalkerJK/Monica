@@ -52,9 +52,23 @@ public sealed class SetupSession
     /// The one full dashboard diagnosis of this wizard run. Host and runtime probing shells
     /// out to agent CLIs and takes seconds, so it starts in the background at startup,
     /// serves every later surface from this cache, and is replaced only by an explicit
-    /// refresh or a product switch.
+    /// refresh or a product switch. Replacements raise <see cref="DashboardChanged"/> so
+    /// layout-level surfaces (the drift banner) repaint with the fresh result.
     /// </summary>
-    public SetupDashboardView? DashboardCache { get; set; }
+    public SetupDashboardView? DashboardCache
+    {
+        get => _dashboardCache;
+        set
+        {
+            _dashboardCache = value;
+            DashboardChanged?.Invoke();
+        }
+    }
+
+    private SetupDashboardView? _dashboardCache;
+
+    /// <summary>Raised whenever the dashboard cache is replaced or cleared.</summary>
+    public event Action? DashboardChanged;
 
     public void ToggleLanguage()
     {
@@ -178,6 +192,10 @@ public static class SetupText
         ["stop-cockpit"] = "停止工作台",
         ["summary-ok"] = "一切就绪",
         ["summary-attention"] = "项需要关注",
+        ["drift-banner"] = "技能投影漂移:以下目标的已装技能与安装记录或配置的发布包不一致;更新技能可重新收敛。",
+        ["drift-kind-global"] = "全局",
+        ["drift-kind-workspace"] = "工作区",
+        ["drift-banner-cta"] = "查看详情",
         ["version"] = "版本",
         ["location"] = "位置",
         ["status"] = "状态",
@@ -207,7 +225,6 @@ public static class SetupText
         ["ws-profile-desc-application"] = "在不动框架源码的前提下,基于 Monica 构建自己的应用;安装应用与 ProjectUnit 开发技能。",
         ["ws-profile-desc-extension-author"] = "开发独立发布、通过 NuGet 引用 Monica 的扩展包;安装框架、架构与扩展开发技能。",
         ["ws-profile-desc-framework-contributor"] = "在官方框架检出中开发和测试 Monica 源码;安装框架、架构、需求设计与测试技能。",
-        ["ws-profile-desc-docs-contributor"] = "在 Monica.Docs 检出中编写中英双语文档;安装文档写作与应用技能。",
         ["ws-profile-hint"] = "检测到的候选:",
         ["ws-candidate"] = "候选",
         ["ws-architecture"] = "应用架构",
@@ -227,12 +244,15 @@ public static class SetupText
         ["ws-preview-profile"] = "示例 Profile:{0}",
         ["ws-preview-unavailable"] = "本机还没有已安装的发布包目录,暂无法生成示例;安装后此处会显示将要写入的托管块。",
         ["ws-already-initialized"] = "已初始化",
+        ["ws-initialized-banner"] = "已初始化:项目类型 {0} · 能力 {1} · 由 {2} 初始化",
+        ["ws-closure-title"] = "将安装的技能",
+        ["ws-ambiguous-note"] = "源码扫描结论存在歧义;若上面记录的项目类型不符合预期,可重新选择。",
+        ["ws-reselect-profile"] = "重新选择项目类型",
         ["ws-profile-required"] = "请选择项目类型。",
         ["ws-architecture-required"] = "application 类型需要选择一种架构。",
         ["ws-inspecting"] = "正在检测项目类型、能力与框架版本…",
         ["ws-detect-not-directory"] = "该路径不是存在的目录,请检查后重试。",
         ["ws-detect-framework"] = "检测到 Monica 框架仓库。",
-        ["ws-detect-docs"] = "检测到 Monica.Docs 仓库。",
         ["ws-detect-extension"] = "检测到 Monica 扩展特征。",
         ["ws-detect-application"] = "检测到 Monica 包或项目引用。",
         ["ws-detect-ambiguous-both"] = "同时检测到应用与扩展特征;请显式选择项目类型。",
@@ -250,7 +270,7 @@ public static class SetupText
         ["browse-workspace-title"] = "选择项目根目录",
         ["browse-source-title"] = "选择源码检出目录",
         ["sources"] = "源码与上报",
-        ["sources-sub"] = "在机器全局记录经过验证的第一方源码检出(Monica、Monica.Docs),用于 issue 上报、API 查询、问题排查与源码参考;绑定只是只读定位器,绝不授予写权限,且被本机所有产品共享。",
+        ["sources-sub"] = "在机器全局记录由当前产品声明并经过验证的第一方源码检出,用于 issue 上报、API 查询、问题排查与源码参考;绑定只是只读定位器,绝不授予写权限,且被本机所有产品共享。",
         ["src-issue-title"] = "Issue 上报",
         ["src-issue-mode-prepare"] = "准备草稿",
         ["src-issue-desc-prepare"] = "允许智能体准备本地 issue 草稿;创建 issue、分支或推送等远程操作仍需当次确认。",
@@ -364,6 +384,10 @@ public static class SetupText
         ["stop-cockpit"] = "Stop cockpit",
         ["summary-ok"] = "All good",
         ["summary-attention"] = "items need attention",
+        ["drift-banner"] = "Skill projection drift — the installed skills of the targets below diverge from their recorded installation or the configured release; updating the skills reconverges them.",
+        ["drift-kind-global"] = "global",
+        ["drift-kind-workspace"] = "workspace",
+        ["drift-banner-cta"] = "Review on Overview",
         ["version"] = "Version",
         ["location"] = "Location",
         ["status"] = "Status",
@@ -393,7 +417,6 @@ public static class SetupText
         ["ws-profile-desc-application"] = "Build your own application on Monica without touching framework source; installs the application and ProjectUnit skills.",
         ["ws-profile-desc-extension-author"] = "Develop independently released extension packages that consume Monica through NuGet; installs the framework, architecture, and extension skills.",
         ["ws-profile-desc-framework-contributor"] = "Develop and test Monica framework source in the canonical checkout; installs the framework, architecture, requirement-design, and testing skills.",
-        ["ws-profile-desc-docs-contributor"] = "Author bilingual documentation in a Monica.Docs checkout; installs the docs-authoring and application skills.",
         ["ws-profile-hint"] = "Detected candidate:",
         ["ws-candidate"] = "candidate",
         ["ws-architecture"] = "Application architecture",
@@ -413,12 +436,15 @@ public static class SetupText
         ["ws-preview-profile"] = "example profile: {0}",
         ["ws-preview-unavailable"] = "No installed release catalog defines managed instructions yet; the example appears here after installation.",
         ["ws-already-initialized"] = "already initialized",
+        ["ws-initialized-banner"] = "Already initialized: profile {0} · capabilities {1} · initialized by {2}",
+        ["ws-closure-title"] = "Skills to install",
+        ["ws-ambiguous-note"] = "The source scan was ambiguous; reselect the profile if the recorded one does not match.",
+        ["ws-reselect-profile"] = "Change profile",
         ["ws-profile-required"] = "Select a profile.",
         ["ws-architecture-required"] = "The application profile requires one architecture.",
         ["ws-inspecting"] = "Detecting the profile, capabilities, and framework version…",
         ["ws-detect-not-directory"] = "The path is not an existing directory; check it and try again.",
         ["ws-detect-framework"] = "Monica framework repository detected.",
-        ["ws-detect-docs"] = "Monica.Docs repository detected.",
         ["ws-detect-extension"] = "Monica extension characteristics detected.",
         ["ws-detect-application"] = "Monica package or project references detected.",
         ["ws-detect-ambiguous-both"] = "Both application and extension characteristics were detected; select a profile explicitly.",
@@ -436,7 +462,7 @@ public static class SetupText
         ["browse-workspace-title"] = "Choose the project root",
         ["browse-source-title"] = "Choose the source checkout",
         ["sources"] = "Sources",
-        ["sources-sub"] = "Machine-global records of verified first-party source checkouts (Monica, Monica.Docs) used for issue reporting, API lookup, troubleshooting, and source reference; a binding is a lookup-only locator that never grants write access and is shared by every product on this machine.",
+        ["sources-sub"] = "Machine-global records of catalog-declared, verified first-party source checkouts used for issue reporting, API lookup, troubleshooting, and source reference; a binding is a lookup-only locator that never grants write access and is shared by every product on this machine.",
         ["src-issue-title"] = "Issue reporting",
         ["src-issue-mode-prepare"] = "Prepare drafts",
         ["src-issue-desc-prepare"] = "Agents may draft local issue artifacts; creating issues, branches, or pushes still requires per-action approval.",

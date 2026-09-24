@@ -18,6 +18,7 @@ internal static class MvcOptionsExtensions
 
     private static void AddActionFilters(MvcOptions options)
     {
-        options.Filters.AddService(typeof(ResultEnvelopeMvcFilter));
+        options.Filters.AddService(typeof(InvalidModelStateMvcFilter), order: -1900);
+        options.Filters.AddService(typeof(ResultEnvelopeMvcFilter), order: -2100);
     }
 }

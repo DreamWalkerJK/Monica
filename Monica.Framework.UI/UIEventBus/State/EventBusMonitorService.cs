@@ -18,8 +18,6 @@ namespace Monica.Framework.UI.UIEventBus.State;
 public sealed class EventBusMonitorService(
     IEventSubscriptionRegistry subscriptionManager,
     ITopicSubscriptionStatusStore topicStatusStore,
-    ILocalEventBus localEventBus,
-    IDistributedEventBus distributedEventBus,
     IStringLocalizer<EventBusResource> localizer,
     ILogger<EventBusMonitorService> logger) : IAsyncDisposable
 {
@@ -52,8 +50,8 @@ public sealed class EventBusMonitorService(
 
             try
             {
-                // Subscribe to local EventBus changes
-                var localSub = localEventBus.Subscriptions.Subscribe(
+                // All local and distributed buses share one subscription registry.
+                var subscription = _subscriptionManager.Subscribe(
                     new SubscriptionChangeObserver(change => {
                         if (EventBusTestMetadataKeys.IsTestListenerSubscription(change.Subscription))
                         {
@@ -62,25 +60,10 @@ public sealed class EventBusMonitorService(
 
                         _changesChannel.Writer.TryWrite(
                             new EventBusMonitorChange.SubscriptionChanged(MapToChangeViewModel(change)));
-                        logger.LogDebug("Local subscription change: {ChangeType} - {EventType}",
+                        logger.LogDebug("EventBus subscription change: {ChangeType} - {EventType}",
                             change.ChangeType, change.Subscription.EventType.Name);
                     }));
-                _observableSubscriptions.Add(localSub);
-
-                // Subscribe to changes in distributed EventBus
-                var distSub = distributedEventBus.Subscriptions.Subscribe(
-                    new SubscriptionChangeObserver(change => {
-                        if (EventBusTestMetadataKeys.IsTestListenerSubscription(change.Subscription))
-                        {
-                            return;
-                        }
-
-                        _changesChannel.Writer.TryWrite(
-                            new EventBusMonitorChange.SubscriptionChanged(MapToChangeViewModel(change)));
-                        logger.LogDebug("Distributed subscription change: {ChangeType} - {EventType}",
-                            change.ChangeType, change.Subscription.EventType.Name);
-                    }));
-                _observableSubscriptions.Add(distSub);
+                _observableSubscriptions.Add(subscription);
 
                 // Topic runtime-status changes also refresh the monitor views
                 _topicStatusStore.StatusChanged += OnTopicStatusChanged;
@@ -322,18 +305,13 @@ public sealed class EventBusMonitorService(
                 return Res.Fail(localizer["Services:Monitor:CannotActivateDisposed"]);
             }
 
-            // Select the corresponding manager based on the scope
-            var manager = subscription.Scope == EventSubscriptionScope.Local
-                ? localEventBus.Subscriptions
-                : distributedEventBus.Subscriptions;
-
             if (subscription.State == EventSubscriptionState.Inactive)
             {
-                await manager.ReactivateAsync(subscriptionId);
+                await _subscriptionManager.ReactivateAsync(subscriptionId);
             }
             else
             {
-                await manager.ActivateAsync(subscriptionId);
+                await _subscriptionManager.ActivateAsync(subscriptionId);
             }
 
             logger.LogInformation("Activated subscription: {EventSubscriptionId}", subscriptionId);
@@ -365,12 +343,7 @@ public sealed class EventBusMonitorService(
                 return Res.Fail(localizer["Services:Monitor:OnlyActiveCanDeactivate", subscription.State]);
             }
 
-            // Select the corresponding manager based on the scope
-            var manager = subscription.Scope == EventSubscriptionScope.Local
-                ? localEventBus.Subscriptions
-                : distributedEventBus.Subscriptions;
-
-            await manager.DeactivateAsync(subscriptionId);
+            await _subscriptionManager.DeactivateAsync(subscriptionId);
 
             logger.LogInformation("Deactivated subscription: {EventSubscriptionId}", subscriptionId);
             return Res.Ok(localizer["Services:Monitor:Deactivated"]);
@@ -401,12 +374,7 @@ public sealed class EventBusMonitorService(
                 return Res.Fail(localizer["Services:Monitor:AlreadyRemoved"]);
             }
 
-            // Select the corresponding manager based on the scope
-            var manager = subscription.Scope == EventSubscriptionScope.Local
-                ? localEventBus.Subscriptions
-                : distributedEventBus.Subscriptions;
-
-            await manager.UnsubscribeAsync(subscriptionId);
+            await _subscriptionManager.UnsubscribeAsync(subscriptionId);
 
             logger.LogInformation("Removed subscription: {EventSubscriptionId}", subscriptionId);
             return Res.Ok(localizer["Services:Monitor:Removed"]);

@@ -144,8 +144,10 @@ public interface IJobExecutionStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Requeues expired running work of every owner in the scope, or cancels it when a cancellation request was
-    /// already persisted.
+    /// Repairs expired running work of every owner in the scope: work with a persisted cancellation request is
+    /// cancelled, an attempt that already exceeded its execution timeout or whose execution exhausted its
+    /// lease-loss budget receives a failed attempt (consuming retry policy), and the remaining work is requeued
+    /// for another claim.
     /// </summary>
     Task<IReadOnlyList<JobExecutionInstance>> RecoverExpiredLeasesAsync(
         ExpiredLeaseRecoveryRequest request,

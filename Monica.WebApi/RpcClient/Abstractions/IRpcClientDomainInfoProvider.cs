@@ -10,5 +10,6 @@ public interface IRpcClientDomainInfoProvider
 {
     object GetDependencyDomains();
 
-    string GetDomainRelatedAppId(Enum domain);
+    /// <summary>Resolves logical identity, display name, and the private destination for one dependent domain.</summary>
+    Monica.WebApi.RpcClient.Models.RpcServiceDescriptor GetDomain(Enum domain);
 }
