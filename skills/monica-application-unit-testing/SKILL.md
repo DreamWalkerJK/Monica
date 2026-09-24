@@ -33,7 +33,7 @@ Use `$monica-infra-persistence` for the current repository and UnitOfWork contra
 - application.ExecuteAsync creates a fresh scope and calls the production IExecutionPipeline. Resolve the handler inside its callback. Exceptions, cancellation and failed Monica result envelopes roll back; an early FlushAsync or direct context save stays inside that transaction.
 - AddRepositoryDbContext defaults to UnitOfWork participation and enables the module. Independently managed infrastructure stores explicitly use Default. Multiple business contexts require explicit operation selection.
 - Completed/faulted operation scopes are terminal. Each retry or independent operation gets a fresh scope. A caught nested failure still prevents commit.
-- For mediator-specific behavior, resolve IMediator in a fresh scope and Send the actual request. Query requests marked [ReadOnlyOperation] avoid an automatic write transaction.
+- For mediator-specific behavior, resolve IMediator in a fresh scope and Send the actual request. GET-bound query requests are read-only by convention and avoid an automatic write transaction.
 - For direct read-only calls, use application.CreateScope and resolve the service there. Direct resolution alone does not invoke the pipeline.
 - Native EF queries stay in infrastructure; business query interfaces return materialized projections. Do not enumerate an IQueryable after its scope is disposed.
 

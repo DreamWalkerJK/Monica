@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Mediator;
 using Monica.Core.TypeDiscovery.Models;
 using Monica.WebApi.AutoControllers.Abstractions;
 using Monica.WebApi.AutoControllers.Abstractions.Internal;
@@ -66,6 +67,9 @@ public class ModuleAutoControllers : MonicaModule<ModuleAutoControllersOption>, 
         services.AddSingleton<IOptions<CrudControllerOption>>(
             Microsoft.Extensions.Options.Options.Create(Option.Crud));
         services.TryAddSingleton<IConventionalHttpMethodResolver, ConventionalHttpMethodResolver>();
+        // Mediated GET endpoints reach the write-transaction decision through the mediator, not MVC;
+        // the convention classifies them from the request's own endpoint binding.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IReadOnlyRequestConvention, ApiEndpointReadOnlyConvention>());
         services.AddTransient<IServiceConvention, CrudControllerServiceConvention>();
         services.AddTransient<IApiDescriptionProvider, CrudApiDescriptionProvider>();
         services.AddTransient<IApiDescriptionProvider, RequestEndpointApiDescriptionProvider>();
