@@ -32,7 +32,7 @@ public sealed partial class RAGManagePageState
             return model.ProviderDisplayName;
         }
 
-        var provider = _providerFactory.GetProvider(providerId);
+        var provider = _providerFactory.GetProviderInfo(providerId);
         return provider?.DisplayName ?? providerId.Trim();
     }
 

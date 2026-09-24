@@ -14,10 +14,10 @@ public sealed record ChatHistoryCatalog
     /// <summary>Optimistic concurrency revision for the whole partition catalog.</summary>
     public long Revision { get; init; }
 
-    /// <summary>Persisted session summaries ordered by the provider.</summary>
+    /// <summary>All persisted session summaries, including archived conversations, ordered by the provider.</summary>
     public required IReadOnlyList<ChatSessionSummary> Sessions { get; init; }
 
-    /// <summary>Identifier of the last selected session, when one is persisted.</summary>
+    /// <summary>Identifier of the last selected active session, when one is persisted. Archived sessions cannot be selected.</summary>
     public string? CurrentSessionId { get; init; }
 
     /// <summary>Creates an empty catalog.</summary>
@@ -44,6 +44,15 @@ public sealed record ChatSessionSummary
 
     /// <summary>Last transcript or settings update time.</summary>
     public DateTimeOffset UpdatedAt { get; init; }
+
+    /// <summary>Whether the active conversation is pinned. This catalog-owned preference does not change transcript recency.</summary>
+    public bool IsPinned { get; init; }
+
+    /// <summary>
+    /// Time the conversation was archived, or <see langword="null"/> while active. Archiving clears its pin and
+    /// current selection but retains the original transcript and attachments; restoring leaves it unpinned.
+    /// </summary>
+    public DateTimeOffset? ArchivedAt { get; init; }
 
     /// <summary>Read-only settings needed to continue the conversation.</summary>
     public required ChatSessionSettings Settings { get; init; }

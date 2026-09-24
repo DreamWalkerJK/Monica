@@ -1,0 +1,134 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@implements IDisposable
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog Visible="@Open" VisibleChanged="@OpenChanged" Options="@DialogOptions">
+    <TitleContent>
+        <div class="archive-title"><MudIcon Icon="@Icons.Material.Outlined.Inventory2" /><span>@L["Session:Archive:Title"]</span></div>
+    </TitleContent>
+    <DialogContent>
+        <div class="archive-manager" aria-busy="@_working.ToString().ToLowerInvariant()">
+            <p class="archive-description">@L["Session:Archive:Description"]</p>
+            @if (HasConflict)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true">@L["Session:Archive:Conflict"]</MudAlert>
+            }
+            @if (_confirmationIds is { } confirmation)
+            {
+                <ChatArchiveDeleteConfirmation Count="@confirmation.Length" Working="@_working" Disabled="@ActionsDisabled"
+                                               OnCancel="@CancelDeleteAsync" OnConfirm="@DeleteConfirmedAsync" />
+            }
+            else
+            {
+                <div class="archive-search">
+                    <MudTextField T="string" Value="@_search" ValueChanged="@SearchChanged" Immediate="true"
+                                  Placeholder="@L["Session:Archive:Search"]" aria-label="@L["Session:Archive:Search"]"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Disabled="@_working" />
+                </div>
+                @if (Sessions.Count == 0)
+                {
+                    <div class="archive-empty"><MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Large" /><strong>@L["Session:Archive:Empty"]</strong><span>@L["Session:Archive:EmptyHint"]</span></div>
+                }
+                else
+                {
+                    <div class="archive-selection-bar">
+                        <MudCheckBox T="bool" Value="@AllVisibleSelected" ValueChanged="@SelectVisible" Disabled="@(ActionsDisabled || VisibleSessions.Count == 0)"
+                                     Dense="true" Label="@L["Session:Archive:SelectVisible"]" />
+                        <span>@L["Session:Archive:Selected", _selected.Count]</span>
+                    </div>
+                    <div class="archive-items">
+                        @if (VisibleSessions.Count == 0)
+                        {
+                            <div class="archive-no-matches">@L["Session:Archive:NoMatches"]</div>
+                        }
+                        @foreach (var session in VisibleSessions)
+                        {
+                            <div class="archive-row" @key="session.SessionId">
+                                <MudCheckBox T="bool" Value="@_selected.Contains(session.SessionId)" ValueChanged="@(value => SelectSession(session.SessionId, value))"
+                                             Dense="true" Disabled="@ActionsDisabled" aria-label="@L["Session:Archive:SelectConversation", session.Title]" />
+                                <div class="archive-row-content">
+                                    <span class="archive-row-title" title="@session.Title">@session.Title</span>
+                                    <span class="archive-row-date">@L["Session:Archive:ArchivedOn", session.ArchivedAt?.ToLocalTime().ToString("g") ?? string.Empty]</span>
+                                </div>
+                                <span class="restore-action">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Unarchive" Size="Size.Small" Disabled="@ActionsDisabled"
+                                                   aria-label="@L["Session:Archive:RestoreConversation", session.Title]" title="@L["Session:Archive:Restore"]"
+                                                   OnClick="@(() => RestoreAsync([session.SessionId]))" />
+                                </span>
+                            </div>
+                        }
+                    </div>
+                    <div class="archive-bulk-actions">
+                        <MudButton Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Outlined.DeleteForever"
+                                   Disabled="@(ActionsDisabled || _selected.Count == 0)" OnClick="@BeginDelete">@L["Session:Archive:DeleteSelected"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Unarchive"
+                                   Disabled="@(ActionsDisabled || _selected.Count == 0)" OnClick="@(() => RestoreAsync(_selected.ToArray()))">@L["Session:Archive:RestoreSelected"]</MudButton>
+                    </div>
+                }
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <ChatArchiveCloseButton Disabled="@_working" FocusRequest="@_focusCloseRequest" OnClick="@CloseAsync" />
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public IReadOnlyList<ChatSessionSummary> Sessions { get; set; } = [];
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool HasConflict { get; set; }
+    [Parameter, EditorRequired] public required Func<IReadOnlyList<string>, Task<bool>> RestoreSessions { get; set; }
+    [Parameter, EditorRequired] public required Func<IReadOnlyList<string>, Task<bool>> DeleteSessions { get; set; }
+    private readonly HashSet<string> _selected = new(StringComparer.Ordinal);
+    private string _search = string.Empty;
+    private string[]? _confirmationIds;
+    private bool _working;
+    private bool _disposed;
+    private int _focusCloseRequest;
+    private bool ActionsDisabled => Disabled || HasConflict || _working;
+    private DialogOptions DialogOptions => new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = !_working, CloseOnEscapeKey = !_working, BackdropClick = !_working };
+    private IReadOnlyList<ChatSessionSummary> VisibleSessions => Sessions.Where(item => item.Title.Contains(_search.Trim(), StringComparison.CurrentCultureIgnoreCase)).ToArray();
+    private bool AllVisibleSelected => VisibleSessions.Count > 0 && VisibleSessions.All(item => _selected.Contains(item.SessionId));
+
+    protected override void OnParametersSet()
+    {
+        _selected.IntersectWith(Sessions.Select(item => item.SessionId));
+        if (!Open) { _selected.Clear(); _search = string.Empty; _confirmationIds = null; _focusCloseRequest = 0; }
+    }
+    private void SearchChanged(string? value) => _search = value ?? string.Empty;
+    private void SelectSession(string id, bool selected) { if (selected) _selected.Add(id); else _selected.Remove(id); }
+    private void SelectVisible(bool selected)
+    {
+        foreach (var session in VisibleSessions) SelectSession(session.SessionId, selected);
+    }
+    private void BeginDelete() => _confirmationIds = _selected.ToArray();
+    private Task CancelDeleteAsync()
+    {
+        _confirmationIds = null;
+        _focusCloseRequest++;
+        return Task.CompletedTask;
+    }
+    private Task CloseAsync() => OpenChanged.InvokeAsync(false);
+    private Task RestoreAsync(IReadOnlyList<string> ids) => ApplyAsync(ids, RestoreSessions);
+    private Task DeleteConfirmedAsync() => _confirmationIds is { Length: > 0 } ids ? ApplyAsync(ids, DeleteSessions) : Task.CompletedTask;
+    private async Task ApplyAsync(IReadOnlyList<string> ids, Func<IReadOnlyList<string>, Task<bool>> operation)
+    {
+        if (ActionsDisabled || ids.Count == 0) return;
+        _working = true;
+        try
+        {
+            if (await operation(ids) && !_disposed)
+            {
+                _selected.ExceptWith(ids);
+                _confirmationIds = null;
+                _focusCloseRequest++;
+            }
+        }
+        finally { _working = false; }
+    }
+    public void Dispose() => _disposed = true;
+}

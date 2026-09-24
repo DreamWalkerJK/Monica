@@ -1,0 +1,116 @@
+@using System.Text.Json
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.UIChat.Support
+@inject IStringLocalizer<AIResource> L
+
+<div class="execution-inspector">
+    @if (Message is { } selectedMessage)
+    {
+        <header class="inspector-heading"><span>@MessageHeading</span><span class="inspector-role">@RoleLabel(selectedMessage.Role)</span></header>
+        @if (RecordedAt is { } time)
+        {
+            <dl class="facts"><dt>@L["Workbench:RecordedAt"]</dt><dd>@time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff")</dd></dl>
+        }
+        @foreach (var part in selectedMessage.Parts)
+        {
+            @if (part.Attachment is { } attachment) { <ChatAttachments Attachments="@([attachment])" SessionId="@SessionId" /> }
+            else { <pre class="message-content">@(part.Text ?? part.Data?.ToString())</pre> }
+        }
+        @if (selectedMessage.Parts.Count == 0 || selectedMessage.Parts.All(part => part.Attachment is null && string.IsNullOrWhiteSpace(part.Text) && part.Data is null))
+        {
+            <MudText Typo="Typo.body2">@L["Workbench:NoRecordedContent"]</MudText>
+        }
+    }
+    else if (Step is not { } step)
+    {
+        <div class="inspector-empty"><MudIcon Icon="@Icons.Material.Outlined.TouchApp" /><span>@L["Workbench:SelectStep"]</span></div>
+    }
+    else
+    {
+        <header class="inspector-heading"><span>@ChatExecutionPresentation.Title(step, L)</span><MudChip T="string" Size="Size.Small" Color="@ChatExecutionPresentation.StatusColor(step.Status)" Variant="Variant.Text">@ChatExecutionPresentation.Status(step.Status, L)</MudChip></header>
+        <MudTabs Elevation="0" Rounded="false" Class="inspector-tabs">
+            <MudTabPanel Text="@L["Workbench:Details"]">
+                <dl class="facts"><dt>@L["Workbench:Started"]</dt><dd>@step.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff")</dd><dt>@L["Workbench:Elapsed"]</dt><dd>@ChatExecutionPresentation.Duration(step.Duration)</dd></dl>
+                @if (step.Request is { } request)
+                {
+                    <dl class="facts">
+                        <dt>@L["Provider:Label"]</dt><dd>@request.ProviderId</dd>
+                        <dt>@L["Model:Label"]</dt><dd>@request.ModelName</dd>
+                        <dt>@L["Workbench:Reasoning"]</dt><dd>@(request.Settings.ReasoningLevel ?? L["Workbench:ReasoningDefault"])</dd>
+                        <dt>@L["Workbench:ConfigurationRevision"]</dt><dd>@request.ConfigurationRevision</dd>
+                        <dt>@L["Workbench:FirstToken"]</dt><dd>@ChatExecutionPresentation.Duration(request.TimeToFirstToken)</dd>
+                        <dt>@L["Workbench:Generation"]</dt><dd>@ChatExecutionPresentation.Duration(request.GenerationDuration)</dd>
+                        <dt>@L["Workbench:InputTokens"]</dt><dd>@ChatExecutionPresentation.Tokens(request.Usage?.InputTokens)</dd>
+                        <dt>@L["Workbench:OutputTokens"]</dt><dd>@ChatExecutionPresentation.Tokens(request.Usage?.OutputTokens)</dd>
+                        <dt>@L["Workbench:ReasoningTokens"]</dt><dd>@ChatExecutionPresentation.Tokens(request.Usage?.ReasoningTokens)</dd>
+                        <dt>@L["Workbench:CachedTokens"]</dt><dd>@ChatExecutionPresentation.Tokens(request.Usage?.CachedInputTokens)</dd>
+                        <dt>@L["Workbench:FinishReason"]</dt><dd>@(request.FinishReason ?? "—")</dd>
+                    </dl>
+                    <MudText Typo="Typo.caption">@L["Workbench:SpeedHelp"]</MudText>
+                }
+                @if (step.Error is { } error) { <MudAlert Severity="Severity.Error" Dense="true">@error</MudAlert> }
+                @if (step.Compaction is { } compacted)
+                {
+                    <MudText Typo="Typo.body2">@L["Workbench:CompactionSummary", compacted.BeforeTokens, compacted.AfterTokens]</MudText>
+                    <p>@compacted.Reason</p><pre>@compacted.Summary</pre>
+                }
+            </MudTabPanel>
+            <MudTabPanel Text="@L["Workbench:Input"]">
+                @if (step.Request is { } input)
+                {
+                    @if (input.Instructions is { Length: > 0 } instructions) { <h4>@L["Provider:Settings:SystemPrompt"]</h4><pre>@instructions</pre> }
+                    <h4>@L["Workbench:RequestOptions"]</h4><pre>@Serialize(input.Settings)</pre>
+                    @foreach (var message in input.Messages)
+                    {
+                        <h4>@RoleLabel(message.Role)</h4>
+                        @foreach (var part in message.Parts)
+                        {
+                            @if (part.Attachment is { } attachment) { <ChatAttachments Attachments="@([attachment])" SessionId="@SessionId" /> }
+                            else { <pre>@(part.Text ?? part.Data?.ToString())</pre> }
+                        }
+                    }
+                }
+                @if (step.Tool is { } toolInput) { <pre>@toolInput.Arguments</pre> }
+            </MudTabPanel>
+            <MudTabPanel Text="@L["Workbench:Output"]">
+                @if (step.Request is { } output)
+                {
+                    @foreach (var part in output.Output)
+                    {
+                        <h4>@part.Kind @(part.ToolName ?? string.Empty)</h4><pre>@(part.Text ?? part.Data?.ToString())</pre>
+                    }
+                }
+                @if (step.Tool is { } toolOutput) { <pre>@toolOutput.Result</pre> }
+                @if (step.Compaction is { } compactOutput) { <pre>@compactOutput.Summary</pre> }
+            </MudTabPanel>
+            @if (step.Request is { } definitions)
+            {
+                <MudTabPanel Text="@L["Workbench:Tools"]">
+                    @foreach (var tool in definitions.Tools)
+                    {
+                        <details><summary>@tool.Name</summary><p>@tool.Description</p><pre>@Serialize(tool.Parameters)</pre></details>
+                    }
+                    @if (definitions.Tools.Count == 0) { <MudText Typo="Typo.body2">@L["Workbench:NoTools"]</MudText> }
+                </MudTabPanel>
+            }
+        </MudTabs>
+    }
+</div>
+@code {
+    [Parameter] public ChatExecutionStep? Step { get; set; }
+    [Parameter] public string? SessionId { get; set; }
+    /// <summary>Original user/system message selected independently of an execution step.</summary>
+    [Parameter] public ChatMessageSnapshot? Message { get; set; }
+    /// <summary>Localized description of the selected message's provenance.</summary>
+    [Parameter] public string? MessageHeading { get; set; }
+    /// <summary>Actual message or observation timestamp; null for preferences that have not been sent.</summary>
+    [Parameter] public DateTimeOffset? RecordedAt { get; set; }
+    private static readonly JsonSerializerOptions JSON_OPTIONS = new() { WriteIndented = true };
+    private static string Serialize(object? value) => JsonSerializer.Serialize(value, JSON_OPTIONS);
+    private string RoleLabel(AIChatRole role) => role switch
+    {
+        AIChatRole.System => L["Workbench:TrajectoryRoleSystem"], AIChatRole.User => L["Workbench:TrajectoryRoleUser"],
+        AIChatRole.Tool => L["Workbench:TrajectoryRoleTool"], _ => L["Workbench:TrajectoryRoleAssistant"]
+    };
+}

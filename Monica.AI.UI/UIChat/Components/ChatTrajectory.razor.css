@@ -1,0 +1,86 @@
+.trajectory-workspace { display: flex; flex-direction: column; flex: 1; width: 100%; min-width: 0; min-height: 0; overflow: hidden; }
+.trajectory-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--mud-palette-lines-default); }
+.trajectory-toolbar ::deep .mud-input-control { flex: 1; min-width: 100px; }
+.trajectory-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; padding: 10px 14px; border-bottom: 1px solid var(--mud-palette-lines-default); font-size: .75rem; }
+.trajectory-summary > span { display: inline-flex; align-items: center; gap: 6px; color: var(--mud-palette-text-secondary); }
+.trajectory-summary strong { color: var(--mud-palette-text-primary); font-variant-numeric: tabular-nums; font-weight: 600; }
+.trajectory-summary ::deep .mud-icon-root { font-size: 16px; }
+.trajectory-body { display: flex; flex: 1; min-height: 0; min-width: 0; }
+.trajectory-evidence { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; }
+.trajectory-body.has-selection { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); }
+.timeline-toolbar { display: flex; align-items: center; gap: 10px; padding: 2px 12px; min-height: 34px; }
+.timeline-heading { font-size: .7rem; color: var(--mud-palette-text-secondary); white-space: nowrap; }
+.timeline-help { flex: 1; min-width: 0; font-size: .66rem; color: var(--mud-palette-text-secondary); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+.timeline-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; flex-shrink: 0; }
+.trajectory-timeline { display: grid; grid-template-columns: 64px minmax(0, 1fr); padding: 0 14px 7px 6px; flex-shrink: 0; background: var(--mud-palette-background-gray); border-block: 1px solid var(--mud-palette-lines-default); }
+.timeline-lanes { display: grid; grid-template-rows: 22px repeat(3, 28px); text-align: right; padding-right: 10px; align-items: center; color: var(--mud-palette-text-secondary); font-size: .72rem; }
+.timeline-plot { min-width: 0; }
+.timeline-ticks { display: flex; align-items: center; justify-content: space-between; height: 22px; color: var(--mud-palette-text-secondary); font-size: .62rem; font-variant-numeric: tabular-nums; }
+.timeline-plot svg { display: block; user-select: none; touch-action: pan-y; overflow: visible; }
+.timeline-axis { stroke: var(--mud-palette-lines-default); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.timeline-mark { cursor: pointer; }
+.timeline-bar, .timeline-event { fill: var(--mud-palette-secondary); stroke: var(--mud-palette-secondary); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.timeline-wait { fill: var(--mud-palette-secondary); opacity: .4; }
+.timeline-event { stroke-width: 4px; }
+.timeline-hit { stroke: transparent; stroke-width: 14px; vector-effect: non-scaling-stroke; }
+.role-system .timeline-event { stroke: var(--mud-palette-text-secondary); }
+.role-user .timeline-event { stroke: var(--mud-palette-info); }
+.role-context .timeline-event { stroke: var(--mud-palette-success); }
+.role-tool .timeline-bar { fill: var(--mud-palette-warning); stroke: var(--mud-palette-warning); }
+.timeline-mark:hover .timeline-bar, .timeline-mark:hover .timeline-event { opacity: .75; }
+.timeline-mark:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }
+.timeline-mark.selected .timeline-bar, .timeline-mark.selected .timeline-event { stroke: var(--mud-palette-text-primary); stroke-width: 2px; }
+.timeline-mark.cluster .timeline-bar { fill-opacity: .5; stroke-dasharray: 3 2; }
+.trajectory-ledger { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; min-width: 0; }
+.ledger-row, .ledger-group { box-sizing: border-box; display: flex; align-items: center; width: 100%; height: 42px; gap: 12px; padding: 0 14px; text-align: left; border: 0; border-bottom: 1px solid var(--mud-palette-lines-default); background: var(--mud-palette-surface); color: var(--mud-palette-text-primary); font: inherit; font-size: .79rem; cursor: pointer; overflow: hidden; }
+.ledger-group { height: 42px; gap: 6px; background: var(--mud-palette-background-gray); }
+.ledger-group strong { font-size: .74rem; font-weight: 600; white-space: nowrap; }
+.ledger-group > span { margin-left: auto; color: var(--mud-palette-text-secondary); font-size: .67rem; white-space: nowrap; }
+.ledger-row:hover, .ledger-group:hover { background: var(--mud-palette-action-default-hover); }
+.ledger-row:active, .ledger-group:active { background: var(--mud-palette-action-default-hover); }
+.ledger-row:focus-visible, .ledger-group:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: -2px; }
+.ledger-row.selected { background: var(--mud-palette-primary-hover); }
+.record-role { width: 86px; flex-shrink: 0; justify-content: center; padding: 3px 5px; border-radius: 6px; text-align: center; font-size: .64rem; line-height: 1.4; font-weight: 650; letter-spacing: .02em; color: var(--mud-palette-text-secondary); background: var(--mud-palette-background-gray); }
+.role-user .record-role { color: var(--mud-palette-info); background: color-mix(in srgb, var(--mud-palette-info) 12%, transparent); }
+.role-assistant .record-role { color: var(--mud-palette-secondary); background: color-mix(in srgb, var(--mud-palette-secondary) 12%, transparent); }
+.role-tool .record-role { color: var(--mud-palette-warning); background: color-mix(in srgb, var(--mud-palette-warning) 12%, transparent); }
+.role-context .record-role { color: var(--mud-palette-success); background: color-mix(in srgb, var(--mud-palette-success) 12%, transparent); }
+.record-content { display: flex; align-items: baseline; gap: 9px; flex: 1; min-width: 0; overflow: hidden; }
+.record-preview, .record-arguments, .record-result { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.record-preview { flex: 1; }
+.record-heading, .record-tool-name { font-weight: 600; flex-shrink: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.record-arguments, .record-result { flex: 1; font-family: "IBM Plex Mono", Consolas, monospace; font-size: .71rem; color: var(--mud-palette-text-secondary); }
+.record-arrow { flex-shrink: 0; color: var(--mud-palette-text-secondary); }
+.record-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; color: var(--mud-palette-text-secondary); font-size: .65rem; font-variant-numeric: tabular-nums; }
+.failed .record-status, .failed .record-preview { color: var(--mud-palette-error); }
+.trajectory-inspector { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-left: 1px solid var(--mud-palette-lines-default); }
+.trajectory-inspector ::deep .execution-inspector { flex: 1; height: auto; min-height: 0; }
+.inspector-navigation { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--mud-palette-lines-default); padding: 3px 8px; }
+.trajectory-empty { display: flex; align-items: center; justify-content: center; min-height: 100%; padding: 20px; text-align: center; color: var(--mud-palette-text-secondary); font-size: .8rem; }
+@media (max-width: 1100px) { .timeline-help { display: none; } }
+@media (max-width: 929px) {
+    .trajectory-body.has-selection { display: flex; }
+    .trajectory-body.has-selection .trajectory-evidence { display: none; }
+    .trajectory-inspector { flex: 1; border-left: 0; }
+    .trajectory-toolbar { flex-wrap: wrap; padding: 6px 10px; gap: 4px; }
+    .trajectory-toolbar ::deep .mud-input-control { flex-basis: 100%; }
+    .trajectory-summary { gap: 8px 14px; padding: 8px 10px; font-size: .7rem; }
+    .timeline-toolbar { padding-inline: 8px; }
+    .record-role { width: 70px; font-size: .58rem; }
+    .ledger-row { gap: 8px; padding-inline: 8px; }
+    .record-meta { font-size: .6rem; }
+    .record-status { display: none; }
+    .record-heading { max-width: 60%; }
+}
+@media (max-width: 480px) {
+    .trajectory-summary { gap: 7px 12px; font-size: .66rem; }
+    .trajectory-summary > span { gap: 4px; }
+    .trajectory-summary ::deep .mud-icon-root { display: none; }
+    .timeline-heading { font-size: .65rem; }
+    .trajectory-timeline { grid-template-columns: 48px minmax(0, 1fr); padding-right: 10px; }
+    .timeline-lanes { font-size: .65rem; padding-right: 7px; }
+    .record-content { gap: 6px; }
+    .record-arguments, .record-result { font-size: .66rem; }
+    .record-tool-name { max-width: 35%; font-size: .74rem; }
+    .record-meta { display: none; }
+}

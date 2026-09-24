@@ -1,0 +1,43 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.Chat.Facades
+@using Monica.AI.UI.Localization
+@using Monica.Core.Results
+@implements IDisposable
+@inject ChatAttachmentFacade AttachmentFacade
+@inject IStringLocalizer<AIResource> L
+<MudDialog>
+    <DialogContent>
+        <div class="attachment-preview">
+            @if (_loading) { <MudProgressLinear Indeterminate="true" /> }
+            else if (_error is not null) { <MudAlert Severity="Severity.Error">@_error</MudAlert> }
+            else if (_imageSource is not null) { <img src="@_imageSource" alt="@Attachment.FileName" /> }
+            else if (_text is not null) { <pre>@_text</pre> }
+            <MudText Typo="Typo.caption">@Attachment.MediaType · @($"{Attachment.Size:N0}") @L["Workbench:Bytes"]</MudText>
+            @if (Attachment.Kind == ChatAttachmentKind.Document) { <MudAlert Severity="Severity.Info" Dense="true">@L["Workbench:DocumentDelivery"]</MudAlert> }
+        </div>
+    </DialogContent>
+</MudDialog>
+@code {
+    [Parameter, EditorRequired] public required ChatAttachmentReference Attachment { get; set; }
+    [Parameter, EditorRequired] public required string SessionId { get; set; }
+    private readonly CancellationTokenSource _lifetime = new();
+    private bool _loading = true;
+    private bool _disposed;
+    private string? _error;
+    private string? _imageSource;
+    private string? _text;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await AttachmentFacade.ReadAsync(SessionId, Attachment.Id, _lifetime.Token);
+            if (_disposed) return;
+            if (result.IsFailed(out var error, out var data)) _error = error.Message;
+            else if (Attachment.Kind == ChatAttachmentKind.Image) _imageSource = $"data:{Attachment.MediaType};base64,{Convert.ToBase64String(data.Data)}";
+            else _text = data.ExtractedText;
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { if (!_disposed) _loading = false; }
+    }
+    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
+}

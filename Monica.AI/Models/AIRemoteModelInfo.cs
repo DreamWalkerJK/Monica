@@ -1,3 +1,5 @@
+using Monica.AI.Configuration.Models;
+
 namespace Monica.AI.Models;
 
 /// <summary>
@@ -9,6 +11,9 @@ public class AIRemoteModelInfo
     /// The model identifier as returned by the provider API.
     /// </summary>
     public required string ModelId { get; init; }
+
+    /// <summary>Capabilities explicitly reported by the endpoint, or null when it only lists identifiers.</summary>
+    public AIModelConfiguration? Configuration { get; init; }
 
     /// <summary>
     /// Optional metadata from the provider (e.g., display name, owner, created date).

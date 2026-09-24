@@ -1,30 +1,17 @@
-.ai-provider-page {
-    min-height: 100%;
-}
-
-.page-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-}
-
-.page-heading {
-    min-width: 0;
-}
-
-.page-heading ::deep .mud-typography {
-    overflow-wrap: anywhere;
-}
-
-.provider-grid {
-    margin-top: 8px;
-}
-
-.loading-area {
-    display: flex;
-    justify-content: center;
-    padding: 24px;
-}
+.provider-settings-page { width: 100%; min-width: 0; height: 100%; display: flex; flex-direction: column; padding: 24px; gap: 20px; }
+.settings-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.settings-description { margin-top: 6px; color: var(--mud-palette-text-secondary); }
+.header-actions, .provider-actions, .model-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.settings-workspace { display: grid; grid-template-columns: 248px minmax(0, 1fr); flex: 1; min-height: 0; border: 1px solid var(--mud-palette-lines-default); border-radius: 12px; background: var(--mud-palette-surface); }
+.provider-list { border-right: 1px solid var(--mud-palette-lines-default); padding: 8px; overflow-y: auto; }
+.provider-row { display: flex; flex-direction: column; gap: 5px; width: 100%; border: 0; border-radius: 8px; padding: 14px; text-align: left; cursor: pointer; color: var(--mud-palette-text-primary); background: transparent; font: inherit; }
+.provider-row:hover { background: var(--mud-palette-action-default-hover); }.provider-row:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: -2px; }.provider-row.selected { background: var(--mud-palette-primary-hover); }
+.provider-row-title { font-size: .875rem; font-weight: 600; overflow-wrap: anywhere; }.provider-row-meta, .provider-row-source { color: var(--mud-palette-text-secondary); font-size: .73rem; }.disabled-label { font-size: .7rem; color: var(--mud-palette-warning); }
+.provider-detail { min-width: 0; overflow-y: auto; padding: 24px; }.provider-detail-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }.endpoint { display: block; margin-top: 6px; color: var(--mud-palette-text-secondary); font-size: .78rem; overflow-wrap: anywhere; }
+.provider-facts { display: flex; flex-wrap: wrap; gap: 8px 18px; padding-block: 14px 24px; font-size: .73rem; color: var(--mud-palette-text-secondary); }
+.models-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }.model-table-scroll { overflow-x: auto; }
+.model-identity { display: flex; flex-direction: column; gap: 3px; }.model-identity strong { font-weight: 500; }.model-identity span { font-size: .7rem; color: var(--mud-palette-text-secondary); }.model-identity .default-model { color: var(--mud-palette-primary); }.capability-summary { font-size: .75rem; }
+.discovery-results { margin-top: 24px; display: flex; flex-direction: column; gap: 6px; }.discovery-list { height: 280px; overflow-y: auto; }.discovery-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 42px; border-bottom: 1px solid var(--mud-palette-lines-default); font-size: .8rem; }.discovery-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings-empty { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 160px; color: var(--mud-palette-text-secondary); font-size: .85rem; padding: 20px; text-align: center; }
+@media(max-width: 929px) { .provider-settings-page { padding: 16px; }.settings-workspace { grid-template-columns: 190px minmax(0, 1fr); }.provider-detail { padding: 16px; } }
+@media(max-width: 600px) { .provider-settings-page { padding: 12px; height: auto; min-height: 100%; }.settings-workspace { grid-template-columns: minmax(0, 1fr); }.provider-list { display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--mud-palette-lines-default); }.provider-row { min-width: 160px; width: 160px; flex-shrink: 0; }.provider-detail { padding: 14px; }.header-actions { width: 100%; } }

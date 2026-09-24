@@ -1,352 +1,197 @@
 @attribute [Route(PAGE_URL)]
-@using Monica.Core.Results;
-@using Microsoft.Extensions.Localization
-@using Monica.AI.Facades
-@using Monica.AI.UI.Localization
 @rendermode InteractiveServer
-@inject ProviderFacade ProviderUIService
+@using Microsoft.Extensions.Localization
+@using Monica.AI.Configuration.Facades
+@using Monica.AI.Configuration.Models
+@using Monica.AI.Chat.Models
+@using Monica.AI.UI.Localization
+@using Monica.Core.Results
+@implements IDisposable
+@inject AIConfigurationFacade Configuration
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<AIResource> L
 
 <PageTitle>@L["ProviderManage:Title"]</PageTitle>
-
-<MudContainer MaxWidth="MaxWidth.False" Class="ai-provider-page pa-4">
-    <div class="page-header">
-        <div class="page-heading">
-            <MudText Typo="Typo.h4">@L["ProviderManage:Title"]</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ProviderManage:Subtitle"]</MudText>
-        </div>
-        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadProvidersAsync">
-                @L["ProviderManage:Refresh"]
-            </MudButton>
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.PlayCircle"
-                       OnClick="TestAllAsync"
-                       Disabled="@(!HasTestableProviders || _isTestingAll)">
-                @L["ProviderManage:TestAll"]
-            </MudButton>
-        </MudStack>
-    </div>
-
-    @if (DisabledProviderCount > 0)
-    {
-        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4">
-            @L["ProviderManage:DisabledProvidersSummary", DisabledProviderCount]
-        </MudAlert>
-    }
-
-    @if (_isLoading)
-    {
-        <div class="loading-area">
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
-        </div>
-    }
-    else if (!_providers.Any())
-    {
-        <MudAlert Severity="Severity.Info">@L["ProviderManage:NoProviders"]</MudAlert>
-    }
-    else
-    {
-        <MudGrid Class="provider-grid">
-            @foreach (var provider in _providers)
+<div class="provider-settings-page">
+    <header class="settings-header">
+        <div><MudText Typo="Typo.h5">@L["Settings:Title"]</MudText><MudText Typo="Typo.body2" Class="settings-description">@L["Settings:SharedSettings"]</MudText></div>
+        <div class="header-actions"><MudButton StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync" Disabled="@_busy">@L["ProviderManage:Refresh"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => EditProviderAsync(null))" Disabled="@_busy">@L["Settings:AddProvider"]</MudButton></div>
+    </header>
+    @if (_error is not null) { <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert> }
+    @if (_busy) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
+    <div class="settings-workspace">
+        <nav class="provider-list" aria-label="@L["Provider:Label"]">
+            @foreach (var provider in _snapshot.Providers)
             {
-                var testState = GetTestState(provider.ProviderId);
-                <MudItem xs="12" md="12" lg="6" xl="6" @key="provider.ProviderId">
-                    <ProviderManageCard Provider="@provider"
-                                        Models="@GetModels(provider)"
-                                        IsTesting="@testState.IsRunning"
-                                        TestSuccess="@testState.Success"
-                                        TestMessage="@testState.Message"
-                                        TestedAt="@testState.TestedAt"
-                                        OnTest="TestProviderAsync"
-                                        OnTestModel="TestModelAsync"
-                                        OnProbeEmbedding="ProbeEmbeddingAsync"
-                                        ModelTestingProvider="IsModelTesting"
-                                        OnEditPrompt="OpenProviderPromptAsync"
-                                        RemoteModels="@GetRemoteModels(provider.ProviderId)"
-                                        IsFetchingRemoteModels="@IsFetchingRemoteModels(provider.ProviderId)"
-                                        RemoteModelsFetchError="@GetRemoteModelsFetchError(provider.ProviderId)"
-                                        OnFetchRemoteModels="FetchRemoteModelsAsync" />
-                </MudItem>
+                <button type="button" class="provider-row @(provider.Configuration.ProviderId == _selectedId ? "selected" : null)" @onclick="@(() => Select(provider.Configuration.ProviderId))">
+                    <span class="provider-row-title">@(provider.Configuration.DisplayName ?? provider.Configuration.ProviderId)</span>
+                    <span class="provider-row-meta">@provider.Configuration.ProviderType · @L["Settings:ModelCount", provider.Configuration.Models.Count]</span>
+                    <span class="provider-row-source">@Source(provider)</span>
+                    @if (!provider.Configuration.Enabled) { <span class="disabled-label">@L["Settings:Disabled"]</span> }
+                </button>
             }
-        </MudGrid>
-    }
-</MudContainer>
+            @if (_snapshot.Providers.Count == 0) { <div class="settings-empty">@L["Settings:NoProviders"]</div> }
+        </nav>
+        <main class="provider-detail">
+            @if (Selected is { } selected)
+            {
+                var provider = selected.Configuration;
+                <div class="provider-detail-heading">
+                    <div><MudText Typo="Typo.h6">@(provider.DisplayName ?? provider.ProviderId)</MudText><span class="endpoint">@(provider.BaseUrl ?? L["Settings:OfficialEndpoint"])</span></div>
+                    <div class="provider-actions">
+                        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => EditProviderAsync(selected))" Disabled="@_busy">@L["Settings:EditProvider"]</MudButton>
+                        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.NetworkCheck" OnClick="@(() => TestProviderAsync(provider.ProviderId))" Disabled="@_busy">@L["Settings:TestConnection"]</MudButton>
+                        <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Dense="true" AriaLabel="@L["Settings:ProviderActions"]" Disabled="@_busy">
+                            <MudMenuItem OnClick="@(() => SaveAsync(provider with { Enabled = !provider.Enabled }))">@(provider.Enabled ? L["Settings:Disable"] : L["Settings:Enable"])</MudMenuItem>
+                            @if (selected.IsCodeDefined && selected.HasOverride) { <MudMenuItem OnClick="@(() => ResetAsync(provider.ProviderId))">@L["Settings:ResetOverride"]</MudMenuItem> }
+                            @if (!selected.IsCodeDefined) { <MudMenuItem OnClick="@(() => RemoveAsync(provider.ProviderId))">@L["Settings:DeleteProvider"]</MudMenuItem> }
+                        </MudMenu>
+                    </div>
+                </div>
+                <div class="provider-facts"><span>@Source(selected)</span><span>@(selected.HasApiKey ? L["Settings:CredentialConfigured"] : L["Settings:CredentialMissing"])</span><span>@L["Settings:AppliesNextRequest"]</span></div>
+                <div class="models-heading"><MudText Typo="Typo.subtitle1">@L["Settings:Models"]</MudText><div class="provider-actions"><MudButton Size="Size.Small" OnClick="DiscoverAsync" Disabled="@(_busy || !provider.Enabled)" StartIcon="@Icons.Material.Outlined.Search">@L["Settings:Discover"]</MudButton><MudButton Size="Size.Small" OnClick="@(() => EditModelAsync(null))" Disabled="@_busy" StartIcon="@Icons.Material.Filled.Add">@L["Settings:AddModel"]</MudButton></div></div>
+                <div class="model-table-scroll">
+                    <MudTable T="AIModelConfiguration" Items="@provider.Models" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.None">
+                        <HeaderContent><MudTh>@L["Model:Label"]</MudTh><MudTh>@L["Workbench:ContextCapacity"]</MudTh><MudTh>@L["Settings:Capabilities"]</MudTh><MudTh>@L["Settings:Actions"]</MudTh></HeaderContent>
+                        <RowTemplate Context="model">
+                            <MudTd><div class="model-identity"><strong>@(model.DisplayName ?? model.ModelName)</strong><span>@model.ModelName</span>@if(provider.DefaultModel == model.ModelName){<span class="default-model">@L["Provider:Default"]</span>}</div></MudTd>
+                            <MudTd>@(model.ContextWindow is { } capacity ? $"{capacity:N0}" : model.Kind == AIModelKind.Chat ? L["Settings:DefaultContext", ChatContextCapacity.DefaultTokens] : L["Settings:Unknown"])</MudTd>
+                            <MudTd><span class="capability-summary">@Capabilities(model)</span></MudTd>
+                            <MudTd><div class="model-actions"><MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" OnClick="@(() => EditModelAsync(model))" aria-label="@L["Settings:EditModel"]" Disabled="@_busy" /><MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Dense="true" AriaLabel="@L["Settings:ModelActions"]" Disabled="@_busy"><MudMenuItem OnClick="@(() => SaveAsync(provider with { DefaultModel = model.ModelName }))" Disabled="@(model.Kind != AIModelKind.Chat)">@L["Settings:SetDefault"]</MudMenuItem><MudMenuItem OnClick="@(() => TestModelAsync(provider.ProviderId, model.ModelName))" Disabled="@(model.Kind != AIModelKind.Chat)">@L["Settings:TestModel"]</MudMenuItem><MudMenuItem OnClick="@(() => DeleteModelAsync(model))">@L["Settings:DeleteModel"]</MudMenuItem></MudMenu></div></MudTd>
+                        </RowTemplate>
+                        <NoRecordsContent><MudText Typo="Typo.body2">@L["Settings:NoModels"]</MudText></NoRecordsContent>
+                    </MudTable>
+                </div>
+                @if (_discovered.Count > 0)
+                {
+                    <section class="discovery-results"><MudText Typo="Typo.subtitle2">@L["Settings:DiscoveryResults"]</MudText><MudText Typo="Typo.caption">@L["Settings:DiscoveryHelp"]</MudText>
+                        <MudTextField T="string" @bind-Value="_discoveryQuery" Immediate="true" Placeholder="@L["Settings:SearchModels"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Margin="Margin.Dense" />
+                        <div class="discovery-list">
+                            <Virtualize Items="@FilteredDiscovery" Context="model" ItemSize="42">
+                                <div class="discovery-row"><span>@model.ModelName</span><MudButton Size="Size.Small" Disabled="@(_busy || provider.Models.Any(item => item.ModelName == model.ModelName))" OnClick="@(() => ImportModelAsync(model))">@L["Settings:AddModel"]</MudButton></div>
+                            </Virtualize>
+                        </div>
+                    </section>
+                }
+            }
+            else
+            {
+                <div class="settings-empty"><MudIcon Icon="@Icons.Material.Outlined.Tune" /><p>@L["Settings:SelectProvider"]</p></div>
+            }
+        </main>
+    </div>
+</div>
 
 @code {
     public const string PAGE_URL = "/ai-providers";
-
-    private IReadOnlyList<AIProviderInfo> _providers = [];
-    private bool _isLoading;
-    private bool _isTestingAll;
-    private readonly Dictionary<string, ProviderTestState> _testStates = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _modelTesting = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, RemoteModelState> _remoteModelStates = new(StringComparer.OrdinalIgnoreCase);
-    private bool HasTestableProviders => _providers.Any(provider => provider.IsValid);
-    private int DisabledProviderCount => _providers.Count(provider => provider.Status == AIProviderStatus.ConfigurationError);
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private readonly CancellationTokenSource _lifetime = new();
+    private AIConfigurationSnapshot _snapshot = new();
+    private string? _selectedId, _error;
+    private bool _busy, _disposed;
+    private IReadOnlyList<AIModelConfiguration> _discovered = [];
+    private string _discoveryQuery = string.Empty;
+    private AIProviderSettings? Selected => _snapshot.Providers.FirstOrDefault(item => item.Configuration.ProviderId == _selectedId);
+    private ICollection<AIModelConfiguration> FilteredDiscovery => _discovered.Where(item => item.ModelName.Contains(_discoveryQuery, StringComparison.OrdinalIgnoreCase)).ToArray();
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private void Select(string id) { _selectedId = id; _discovered = []; _discoveryQuery = string.Empty; }
+    private async Task LoadAsync() => await ExecuteAsync(async () => Apply(await Configuration.GetAsync(_lifetime.Token)));
+    private void Apply(Res<AIConfigurationSnapshot> result)
     {
-        if (firstRender)
-        {
-            await LoadProvidersAsync();
-        }
+        if (_disposed) return;
+        if (result.IsFailed(out var error, out var snapshot)) { _error = error.Message; return; }
+        _snapshot = snapshot;
+        if (_snapshot.Providers.All(item => item.Configuration.ProviderId != _selectedId)) _selectedId = _snapshot.Providers.FirstOrDefault()?.Configuration.ProviderId;
     }
-
-    private async Task LoadProvidersAsync()
+    private async Task ExecuteAsync(Func<Task> action)
     {
-        _isLoading = true;
-        StateHasChanged();
-
-        await Task.Yield();
-        try
-        {
-            _providers = ProviderUIService.GetProviders();
-        }
-        catch (Exception ex)
-        {
-            _providers = [];
-            Snackbar.Add($"{L["ProviderManage:LoadFailed"]}: {ex.Message}", Severity.Error);
-        }
-
-        foreach (var provider in _providers)
-        {
-            _ = GetTestState(provider.ProviderId);
-        }
-
-        _isLoading = false;
-        StateHasChanged();
+        if (_busy || _disposed) return;
+        _busy = true; _error = null;
+        try { await action(); }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception) { if (!_disposed) _error = exception.Message; }
+        finally { if (!_disposed) _busy = false; }
     }
-
-    private IReadOnlyList<AIModelInfo> GetModels(AIProviderInfo provider)
+    private async Task EditProviderAsync(AIProviderSettings? provider)
     {
-        return provider.SupportedModels ?? [];
+        _error = null;
+        await DialogService.ShowAsync<ProviderConfigurationDialog>(provider is null ? L["Settings:AddProvider"] : L["Settings:EditProvider"],
+            new DialogParameters
+            {
+                [nameof(ProviderConfigurationDialog.Provider)] = provider,
+                [nameof(ProviderConfigurationDialog.OnSave)] = (Func<ProviderConfigurationEdit, CancellationToken, Task<string?>>)SaveDialogAsync,
+                [nameof(ProviderConfigurationDialog.OnDiscover)] = (Func<ProviderConfigurationEdit, CancellationToken, Task<Res<IReadOnlyList<AIModelConfiguration>>>>)((draft, ct) =>
+                    Configuration.DiscoverDraftModelsAsync(draft.Configuration, draft.ApiKey, provider?.HasApiKey == true && !draft.ClearApiKey, ct))
+            }, new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseButton = true });
     }
-
-    private ProviderTestState GetTestState(string providerId)
+    private async Task<string?> SaveDialogAsync(ProviderConfigurationEdit edit, CancellationToken cancellationToken = default)
     {
-        if (!_testStates.TryGetValue(providerId, out var state))
-        {
-            state = new ProviderTestState();
-            _testStates[providerId] = state;
-        }
-
-        return state;
+        if (_disposed) return L["Error:Generic"];
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, cancellationToken);
+        var result = await Configuration.UpsertProviderAsync(edit.Configuration, edit.ApiKey, edit.ClearApiKey, _snapshot.Revision, cancellation.Token);
+        if (_disposed) return L["Error:Generic"];
+        if (result.IsFailed(out var error)) return error.Message ?? L["Error:Generic"];
+        Apply(result);
+        _selectedId = edit.Configuration.ProviderId;
+        await InvokeAsync(StateHasChanged);
+        return null;
     }
-
-    private bool IsModelTesting(string providerId, string modelName)
+    private Task SaveAsync(AIProviderConfiguration provider) => ExecuteAsync(async () => Apply(await Configuration.UpsertProviderAsync(provider, null, false, _snapshot.Revision, _lifetime.Token)));
+    private Task ResetAsync(string id) => ExecuteAsync(async () => Apply(await Configuration.ResetProviderAsync(id, _snapshot.Revision, _lifetime.Token)));
+    private async Task RemoveAsync(string id)
     {
-        return _modelTesting.Contains(GetModelKey(providerId, modelName));
+        var yes = await DialogService.ShowMessageBoxAsync(L["Settings:DeleteProvider"], L["Settings:DeleteProviderConfirm"], yesText: L["Common:Delete"], noText: L["Common:Actions:Cancel"]);
+        if (!_disposed && yes == true) await ExecuteAsync(async () => Apply(await Configuration.RemoveProviderAsync(id, _snapshot.Revision, _lifetime.Token)));
     }
-
-    private async Task TestProviderAsync(string providerId)
+    private async Task EditModelAsync(AIModelConfiguration? model)
     {
-        var state = GetTestState(providerId);
-        if (state.IsRunning)
-        {
-            return;
-        }
-
-        state.IsRunning = true;
-        state.Message = null;
-        state.Success = null;
-        StateHasChanged();
-
-        var result = await ProviderUIService.TestProviderAsync(providerId);
-        if (result.IsFailed(out var error))
-        {
-            state.Success = false;
-            state.Message = error.Message;
-            Snackbar.Add($"{L["ProviderManage:TestFailed"]}: {error.Message}", Severity.Error);
-        }
-        else
-        {
-            state.Success = true;
-            state.Message = L["ProviderManage:TestSuccess"];
-            Snackbar.Add(L["ProviderManage:TestSuccessMessage"], Severity.Success);
-        }
-
-        state.TestedAt = DateTimeOffset.UtcNow;
-        state.IsRunning = false;
-        StateHasChanged();
+        var provider = Selected?.Configuration;
+        if (provider is null) return;
+        _error = null;
+        await DialogService.ShowAsync<ModelConfigurationDialog>(model is null ? L["Settings:AddModel"] : L["Settings:EditModel"],
+            new DialogParameters
+            {
+                [nameof(ModelConfigurationDialog.Model)] = model,
+                [nameof(ModelConfigurationDialog.ProviderType)] = provider.ProviderType,
+                [nameof(ModelConfigurationDialog.OnSave)] = (Func<AIModelConfiguration, Task<string?>>)(saved => SaveDialogAsync(new ProviderConfigurationEdit(provider with
+                {
+                    Models = provider.Models.Where(item => item.ModelName != model?.ModelName && item.ModelName != saved.ModelName).Append(saved).ToArray(),
+                    DefaultModel = provider.DefaultModel == model?.ModelName ? saved.ModelName : provider.DefaultModel
+                }, null, false)))
+            }, new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseButton = true });
     }
-
-    private async Task TestAllAsync()
+    private Task DeleteModelAsync(AIModelConfiguration model)
     {
-        if (_isTestingAll)
-        {
-            return;
-        }
-
-        _isTestingAll = true;
-        StateHasChanged();
-
-        foreach (var provider in _providers.Where(provider => provider.IsValid))
-        {
-            await TestProviderAsync(provider.ProviderId);
-        }
-
-        _isTestingAll = false;
-        StateHasChanged();
+        var provider = Selected!.Configuration;
+        return SaveAsync(provider with { Models = provider.Models.Where(item => item.ModelName != model.ModelName).ToArray(), DefaultModel = provider.DefaultModel == model.ModelName ? null : provider.DefaultModel });
     }
-
-    private async Task TestModelAsync((string ProviderId, AIModelInfo Model) request)
+    private Task ImportModelAsync(AIModelConfiguration model) => SaveAsync(Selected!.Configuration with { Models = Selected.Configuration.Models.Append(model).ToArray() });
+    private Task DiscoverAsync() => ExecuteAsync(async () =>
     {
-        if (request.Model is not LLMModelInfo)
-        {
-            Snackbar.Add(L["ProviderManage:OnlyLLMSupported"], Severity.Info);
-            return;
-        }
-
-        var key = GetModelKey(request.ProviderId, request.Model.ModelName);
-        if (!_modelTesting.Add(key))
-        {
-            return;
-        }
-
-        StateHasChanged();
-
-        var result = await ProviderUIService.TestModelAsync(request.ProviderId, request.Model.ModelName);
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add($"{L["ProviderManage:ModelTestFailed"]}: {error.Message}", Severity.Error);
-        }
-        else
-        {
-            Snackbar.Add(L["ProviderManage:ModelTestSuccess"], Severity.Success);
-        }
-
-        _modelTesting.Remove(key);
-        StateHasChanged();
-    }
-
-    private async Task ProbeEmbeddingAsync((string ProviderId, AIModelInfo Model) request)
+        var result = await Configuration.DiscoverModelsAsync(_selectedId!, _lifetime.Token);
+        if (_disposed) return;
+        if (result.IsFailed(out var error, out var models)) _error = error.Message; else _discovered = models;
+    });
+    private Task TestProviderAsync(string id) => ExecuteAsync(async () => ShowTest(await Configuration.TestProviderAsync(id, _lifetime.Token)));
+    private Task TestModelAsync(string providerId, string model) => ExecuteAsync(async () => ShowTest(await Configuration.TestModelAsync(providerId, model, _lifetime.Token)));
+    private void ShowTest(Res result)
     {
-        if (request.Model is not EmbeddingModelInfo)
-        {
-            Snackbar.Add(L["ProviderManage:OnlyEmbeddingSupported"], Severity.Info);
-            return;
-        }
-
-        var key = GetModelKey(request.ProviderId, request.Model.ModelName);
-        if (!_modelTesting.Add(key)) return;
-
-        StateHasChanged();
-
-        var result = await ProviderUIService.ProbeEmbeddingDimensionsAsync(
-            request.ProviderId, request.Model.ModelName);
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add($"{L["ProviderManage:DimensionDetectFailed"]}: {error.Message}", Severity.Error);
-        }
-        else
-        {
-            Snackbar.Add(L["ProviderManage:DimensionDetectSuccess", result.Data], Severity.Success);
-        }
-
-        _modelTesting.Remove(key);
-        StateHasChanged();
+        if (_disposed) return;
+        if (result.IsFailed(out var error)) _error = error.Message;
+        else Snackbar.Add(L["Settings:TestSucceeded"], Severity.Success);
     }
-
-    private async Task OpenProviderPromptAsync(AIProviderInfo provider)
+    private string Source(AIProviderSettings provider) => provider.IsCodeDefined ? provider.HasOverride ? L["Settings:CodeOverride"] : L["Settings:CodeDefaults"] : L["Settings:Persisted"];
+    private string Capabilities(AIModelConfiguration model)
     {
-        var parameters = new DialogParameters
-        {
-            [nameof(ProviderSystemPromptDialog.ProviderName)] = provider.DisplayName,
-            [nameof(ProviderSystemPromptDialog.SystemPrompt)] = provider.SystemPrompt,
-            [nameof(ProviderSystemPromptDialog.IsReadOnly)] = false
-        };
-
-        var dialog = await DialogService.ShowAsync<ProviderSystemPromptDialog>(
-            L["Provider:Settings:SystemPrompt"],
-            parameters,
-            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
-
-        var result = await dialog.Result;
-        if (result is not { Canceled: false })
-        {
-            return;
-        }
-
-        var prompt = result.Data as string;
-        var updateResult = ProviderUIService.UpdateProviderSystemPrompt(provider.ProviderId, prompt);
-        if (updateResult.IsFailed(out var error))
-        {
-            Snackbar.Add($"{L["ProviderManage:UpdatePromptFailed"]}: {error.Message}", Severity.Error);
-            return;
-        }
-
-        Snackbar.Add(L["Provider:Settings:UpdateSuccess"], Severity.Success);
-        await LoadProvidersAsync();
+        if (model.Kind == AIModelKind.Embedding) return L["Settings:Embedding"];
+        var names = new List<string>();
+        if (model.SupportsImage == true) names.Add(L["Settings:ImageInput"]);
+        if (model.SupportsDocuments == true) names.Add(L["Settings:NativeDocuments"]);
+        if (model.SupportsTools == true) names.Add(L["Settings:FunctionTools"]);
+        if (model.SupportsReasoning == true) names.Add(L["Workbench:Reasoning"]);
+        return names.Count > 0 ? string.Join(" · ", names)
+            : L[model.SupportsImage == false && model.SupportsDocuments == false && model.SupportsTools == false && model.SupportsReasoning == false
+                ? "Settings:TextOnly" : "Settings:Unknown"];
     }
-
-    private static string GetModelKey(string providerId, string modelName)
-    {
-        return $"{providerId}:{modelName}";
-    }
-
-    private sealed class ProviderTestState
-    {
-        public bool IsRunning { get; set; }
-        public bool? Success { get; set; }
-        public string? Message { get; set; }
-        public DateTimeOffset? TestedAt { get; set; }
-    }
-
-    private IReadOnlyList<AIRemoteModelInfo>? GetRemoteModels(string providerId)
-    {
-        return _remoteModelStates.TryGetValue(providerId, out var state) ? state.Models : null;
-    }
-
-    private bool IsFetchingRemoteModels(string providerId)
-    {
-        return _remoteModelStates.TryGetValue(providerId, out var state) && state.IsFetching;
-    }
-
-    private string? GetRemoteModelsFetchError(string providerId)
-    {
-        return _remoteModelStates.TryGetValue(providerId, out var state) ? state.Error : null;
-    }
-
-    private async Task FetchRemoteModelsAsync(string providerId)
-    {
-        if (!_remoteModelStates.TryGetValue(providerId, out var state))
-        {
-            state = new RemoteModelState();
-            _remoteModelStates[providerId] = state;
-        }
-
-        if (state.IsFetching) return;
-
-        state.IsFetching = true;
-        state.Error = null;
-        StateHasChanged();
-
-        var result = await ProviderUIService.FetchRemoteModelsAsync(providerId);
-        if (result.IsFailed(out var error))
-        {
-            state.Error = error.Message;
-            state.Models = null;
-            Snackbar.Add($"{L["ProviderManage:GetRemoteModelsFailed"]}: {error.Message}", Severity.Warning);
-        }
-        else
-        {
-            state.Models = result.Data;
-            state.Error = null;
-            Snackbar.Add(L["ProviderManage:FetchRemoteModelsSuccess", result.Data?.Count ?? 0], Severity.Success);
-        }
-
-        state.IsFetching = false;
-        StateHasChanged();
-    }
-
-    private sealed class RemoteModelState
-    {
-        public bool IsFetching { get; set; }
-        public IReadOnlyList<AIRemoteModelInfo>? Models { get; set; }
-        public string? Error { get; set; }
-    }
+    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
 }

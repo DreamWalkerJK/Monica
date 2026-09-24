@@ -32,11 +32,6 @@ internal static class ChatSessionSnapshotValidator
             throw Invalid(nameof(snapshot.Revision), "cannot be negative.");
         }
 
-        if (snapshot.AgentHistoryMessageCount < 0)
-        {
-            throw Invalid(nameof(snapshot.AgentHistoryMessageCount), "cannot be negative.");
-        }
-
         if (string.IsNullOrWhiteSpace(snapshot.Title))
         {
             throw Invalid(nameof(snapshot.Title), "cannot be empty.");
@@ -55,12 +50,38 @@ internal static class ChatSessionSnapshotValidator
         }
 
         ValidateTurns(snapshot);
+        snapshot.Settings.Validate();
+        var stepIds = new HashSet<string>(StringComparer.Ordinal);
+        var turnIds = snapshot.Turns.Select(turn => turn.Id).ToHashSet(StringComparer.Ordinal);
+        long previousSequence = 0;
+        for (var index = 0; index < snapshot.ExecutionSteps.Count; index++)
+        {
+            var step = snapshot.ExecutionSteps[index];
+            var path = $"{nameof(snapshot.ExecutionSteps)}[{index}]";
+            ValidateIdentifier(step.Id, $"{path}.{nameof(step.Id)}");
+            if (!stepIds.Add(step.Id) || step.Sequence <= previousSequence)
+                throw Invalid(nameof(snapshot.ExecutionSteps), "step identities and sequence must be unique and ordered.");
+            if (step.TurnId is { } turnId && !turnIds.Contains(turnId))
+                throw Invalid(nameof(snapshot.ExecutionSteps), "a step refers to an unknown turn.");
+            if (!Enum.IsDefined(step.Kind) || !Enum.IsDefined(step.Status))
+                throw Invalid(path, "the operation kind or lifecycle status is not supported.");
+            ValidateTimestamp(step.StartedAt, $"{path}.{nameof(step.StartedAt)}");
+            if (step.CompletedAt is { } completedAt)
+            {
+                ValidateTimestamp(completedAt, $"{path}.{nameof(step.CompletedAt)}");
+                if (completedAt < step.StartedAt)
+                    throw Invalid($"{path}.{nameof(step.CompletedAt)}", "cannot precede the operation start time.");
+            }
+            if (step.Request is { } request)
+                ValidateRequest(request, $"{path}.{nameof(step.Request)}");
+            previousSequence = step.Sequence;
+        }
     }
 
     private static void ValidateTurns(ChatSessionSnapshot snapshot)
     {
         var messageIds = new HashSet<string>(StringComparer.Ordinal);
-        var previousCheckpoint = -1;
+        var turnIds = new HashSet<string>(StringComparer.Ordinal);
         var previousMessageTimestamp = snapshot.CreatedAt;
 
         for (var turnIndex = 0; turnIndex < snapshot.Turns.Count; turnIndex++)
@@ -69,22 +90,7 @@ internal static class ChatSessionSnapshotValidator
                        ?? throw Invalid($"Turns[{turnIndex}]", "cannot be null.");
             var turnPath = $"Turns[{turnIndex}]";
 
-            if (turn.HistoryCheckpoint < 0
-                || turn.HistoryCheckpoint > snapshot.AgentHistoryMessageCount)
-            {
-                throw Invalid(
-                    $"{turnPath}.{nameof(turn.HistoryCheckpoint)}",
-                    $"must be between zero and {snapshot.AgentHistoryMessageCount}.");
-            }
-
-            if (turn.HistoryCheckpoint < previousCheckpoint)
-            {
-                throw Invalid(
-                    $"{turnPath}.{nameof(turn.HistoryCheckpoint)}",
-                    "must be monotonic across turns.");
-            }
-
-            previousCheckpoint = turn.HistoryCheckpoint;
+            if (!turnIds.Add(turn.Id)) throw Invalid(turnPath, "turn identities must be unique.");
             previousMessageTimestamp = ValidateMessage(
                 turn.UserMessage,
                 AIChatRole.User,
@@ -147,11 +153,6 @@ internal static class ChatSessionSnapshotValidator
                 $"must use role '{expectedRole}' and kind '{expectedKind}'.");
         }
 
-        if (message.Content is null)
-        {
-            throw Invalid($"{path}.{nameof(message.Content)}", "cannot be null.");
-        }
-
         ValidateTimestamp(message.CreatedAt, $"{path}.{nameof(message.CreatedAt)}");
         if (message.CreatedAt < session.CreatedAt
             || message.CreatedAt > session.UpdatedAt)
@@ -168,48 +169,18 @@ internal static class ChatSessionSnapshotValidator
                 "must be chronological within the transcript.");
         }
 
-        ValidateNestedTimestamps(message, path);
-
         return message.CreatedAt;
     }
 
-    private static void ValidateNestedTimestamps(
-        ChatMessageSnapshot message,
-        string path)
+    private static void ValidateRequest(ChatModelRequest request, string path)
     {
-        for (var usageIndex = 0; usageIndex < message.RequestUsages.Count; usageIndex++)
-        {
-            var usage = message.RequestUsages[usageIndex];
-            ValidateTimestamp(
-                usage.CreatedAt,
-                $"{path}.{nameof(message.RequestUsages)}[{usageIndex}].{nameof(usage.CreatedAt)}");
-        }
-
-        for (var toolIndex = 0; toolIndex < message.ToolCalls.Count; toolIndex++)
-        {
-            var toolCall = message.ToolCalls[toolIndex];
-            var toolPath = $"{path}.{nameof(message.ToolCalls)}[{toolIndex}]";
-            if (!Enum.IsDefined(toolCall.Status))
-            {
-                throw Invalid($"{toolPath}.{nameof(toolCall.Status)}", "is not supported.");
-            }
-
-            ValidateTimestamp(
-                toolCall.StartedAt,
-                $"{toolPath}.{nameof(toolCall.StartedAt)}");
-            if (toolCall.CompletedAt is { } completedAt)
-            {
-                ValidateTimestamp(
-                    completedAt,
-                    $"{toolPath}.{nameof(toolCall.CompletedAt)}");
-                if (completedAt < toolCall.StartedAt)
-                {
-                    throw Invalid(
-                        $"{toolPath}.{nameof(toolCall.CompletedAt)}",
-                        "cannot precede the tool start time.");
-                }
-            }
-        }
+        ValidateIdentifier(request.ProviderId, $"{path}.{nameof(request.ProviderId)}");
+        if (request.TimeToFirstToken < TimeSpan.Zero || request.GenerationDuration < TimeSpan.Zero)
+            throw Invalid(path, "measured durations cannot be negative.");
+        if (request.Usage is { } usage
+            && (usage.InputTokens < 0 || usage.OutputTokens < 0 || usage.ReasoningTokens < 0
+                || usage.CachedInputTokens < 0 || usage.TotalTokens < 0))
+            throw Invalid($"{path}.{nameof(request.Usage)}", "token counts cannot be negative.");
     }
 
     private static void ValidateIdentifier(string? value, string path)

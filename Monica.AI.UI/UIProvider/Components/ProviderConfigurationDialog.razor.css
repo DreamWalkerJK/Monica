@@ -1,0 +1,15 @@
+.provider-form { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.switches { display: flex; flex-wrap: wrap; gap: 16px; }
+.draft-models { display: flex; flex-direction: column; gap: 12px; min-width: 0; border-top: 1px solid var(--mud-palette-divider); padding-top: 16px; }
+.models-heading, .model-buttons, .discovery-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.models-heading { justify-content: space-between; }
+.discovery-toolbar ::deep .mud-input-control { flex: 1 1 180px; }
+.draft-discovery-list { max-height: 280px; overflow-y: auto; border: 1px solid var(--mud-palette-divider); border-radius: 6px; }
+.discovered-model, .configured-model { display: flex; align-items: center; min-width: 0; gap: 8px; padding: 4px 8px; }
+.discovered-model { min-height: 56px; }
+.configured-model + .configured-model { border-top: 1px solid var(--mud-palette-divider); }
+.discovered-identity { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.discovered-identity strong { font-size: var(--mud-typography-body2-size); font-weight: 500; }
+.discovered-identity span { color: var(--mud-palette-text-secondary); font-size: var(--mud-typography-caption-size); }
+@media(max-width: 600px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }

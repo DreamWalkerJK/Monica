@@ -9,6 +9,14 @@ internal static class AIProviderModelResolver
         AIModelCatalog catalog,
         AIProviderOptions options)
     {
+        if (options.Models is { } configuredModels)
+        {
+            var models = configuredModels.Select(CloneMutableMetadata).ToArray();
+            return new ProviderModelResolution(models,
+                options.DefaultModel ?? models.OfType<LLMModelInfo>().FirstOrDefault()?.ModelName,
+                options.Enabled && models.Length > 0);
+        }
+
         var supportedModels = options.SupportedModels
             ?.Where(modelName => !string.IsNullOrWhiteSpace(modelName))
             .Select(modelName => modelName!.Trim())
@@ -19,39 +27,34 @@ internal static class AIProviderModelResolver
         {
             return new ProviderModelResolution(
                 [],
-                [],
                 null,
                 false);
         }
 
-        var result = new List<AIModelInfo>();
-        var missingModels = new List<string>();
+        var allowBuiltInTemplates = AIProviderMetadataPolicy.AllowsBuiltInTemplates(options);
+        var result = supportedModels.Select(modelName => CloneMutableMetadata(
+            catalog.GetModel(modelName, allowBuiltInTemplates) ?? new LLMModelInfo { ModelName = modelName })).ToArray();
 
-        foreach (var modelName in supportedModels)
-        {
-            var model = catalog.GetModel(modelName);
-            if (model == null)
-            {
-                missingModels.Add(modelName);
-                continue;
-            }
-
-            result.Add(model);
-        }
-
-        var defaultModel = supportedModels.FirstOrDefault();
-        var isValid = missingModels.Count == 0 && result.Count > 0;
+        var defaultModel = options.DefaultModel ?? result.OfType<LLMModelInfo>().FirstOrDefault()?.ModelName;
+        var isValid = options.Enabled && result.Length > 0;
 
         return new ProviderModelResolution(
             result,
-            missingModels,
             defaultModel,
             isValid);
     }
+
+    private static AIModelInfo CloneMutableMetadata(AIModelInfo model) => model is EmbeddingModelInfo embedding
+        ? new EmbeddingModelInfo
+        {
+            ModelName = embedding.ModelName, DisplayName = embedding.DisplayName, Description = embedding.Description,
+            Dimensions = embedding.Dimensions, MaxInputTokens = embedding.MaxInputTokens,
+            CostPerMillionTokens = embedding.CostPerMillionTokens
+        }
+        : model;
 }
 
 internal sealed record ProviderModelResolution(
     IReadOnlyList<AIModelInfo> Models,
-    IReadOnlyList<string> MissingModels,
     string? DefaultModel,
     bool IsValid);

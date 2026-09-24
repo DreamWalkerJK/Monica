@@ -1,6 +1,5 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using Monica.AI.Models;
 
 namespace Monica.AI.Services.Support;
 
@@ -49,27 +48,6 @@ internal static class ToolCallContentSerializer
 
         return SerializeUnknownResult(result);
     }
-
-    public static string? GetExceptionMessage(object? result, Exception? exception)
-    {
-        if (exception is not null)
-        {
-            return exception.ToString();
-        }
-
-        return result is ToolInvocationErrorResult errorResult
-            ? $"{errorResult.ErrorType}: {errorResult.Message}"
-            : TryExtractSerializedToolError(result, out var serializedError)
-                ? serializedError
-            : null;
-    }
-
-    public static ToolCallStatus GetFinalStatus(string? exceptionMessage, object? result = null)
-        => string.IsNullOrWhiteSpace(exceptionMessage)
-           && result is not ToolInvocationErrorResult
-           && !TryExtractSerializedToolError(result, out _)
-            ? ToolCallStatus.Completed
-            : ToolCallStatus.Failed;
 
     private static string SerializeObject(object value)
     {
@@ -140,60 +118,4 @@ internal static class ToolCallContentSerializer
         }
     }
 
-    private static bool TryExtractSerializedToolError(object? result, out string errorMessage)
-    {
-        errorMessage = string.Empty;
-        if (result is not string text || string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(text);
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object
-                || !TryGetProperty(root, "status", out var status)
-                || !string.Equals(status.GetString(), "tool_error", StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            var errorType = TryGetProperty(root, "errorType", out var errorTypeProperty)
-                ? errorTypeProperty.GetString()
-                : null;
-            var message = TryGetProperty(root, "message", out var messageProperty)
-                ? messageProperty.GetString()
-                : null;
-
-            errorMessage = string.IsNullOrWhiteSpace(errorType)
-                ? message ?? "Tool invocation failed."
-                : $"{errorType}: {message}";
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool TryGetProperty(JsonElement element, string propertyName, out JsonElement property)
-    {
-        if (element.TryGetProperty(propertyName, out property))
-        {
-            return true;
-        }
-
-        foreach (var jsonProperty in element.EnumerateObject())
-        {
-            if (string.Equals(jsonProperty.Name, propertyName, StringComparison.OrdinalIgnoreCase))
-            {
-                property = jsonProperty.Value;
-                return true;
-            }
-        }
-
-        property = default;
-        return false;
-    }
 }

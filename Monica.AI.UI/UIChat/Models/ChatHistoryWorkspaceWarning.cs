@@ -9,10 +9,10 @@ public enum ChatHistoryWorkspaceWarningKind
     /// <summary>A stale browser tab attempted to overwrite a newer catalog revision.</summary>
     RevisionConflict,
 
-    /// <summary>The browser did not have enough storage quota for the active conversation.</summary>
+    /// <summary>The storage provider did not have enough capacity for the active conversation.</summary>
     QuotaExceeded,
 
-    /// <summary>Browser persistence was unavailable while the in-memory conversation remained usable.</summary>
+    /// <summary>Persistence was unavailable while the in-memory conversation remained usable.</summary>
     StorageUnavailable,
 
     /// <summary>Older inactive conversations were pruned to satisfy retention or quota constraints.</summary>
@@ -21,8 +21,8 @@ public enum ChatHistoryWorkspaceWarningKind
     /// <summary>A catalog entry no longer had a readable snapshot.</summary>
     SessionUnavailable,
 
-    /// <summary>Agent Framework state was incompatible and the visible transcript was used as fallback history.</summary>
-    RuntimeFallback
+    /// <summary>A committed write returned additional diagnostic information from the storage provider.</summary>
+    PersistenceWarning
 }
 
 /// <summary>Describes a warning that should be presented without adding a transcript error.</summary>

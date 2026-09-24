@@ -20,13 +20,17 @@ internal sealed class SkillChatAgentContributor(
         cancellationToken.ThrowIfCancellationRequested();
 
         context.AddContextProvider(providerFactory.CreateProvider(context.CapabilityState));
-        context.AddToolAutoApprovalRule(functionCall => ValueTask.FromResult(
-            string.Equals(
-                functionCall.Name,
-                AgentSkillsProvider.RunSkillScriptToolName,
-                StringComparison.Ordinal)
-            && TryGetSkillName(functionCall, out var skillName)
-            && skillCatalog.IsTrustedCodeSkill(skillName)));
+        context.AddToolAutoApprovalRule(approvalContext =>
+        {
+            var functionCall = approvalContext.FunctionCallContent;
+            return ValueTask.FromResult(
+                string.Equals(
+                    functionCall.Name,
+                    AgentSkillsProvider.RunSkillScriptToolName,
+                    StringComparison.Ordinal)
+                && TryGetSkillName(functionCall, out var skillName)
+                && skillCatalog.IsTrustedCodeSkill(skillName));
+        });
         return ValueTask.CompletedTask;
     }
 

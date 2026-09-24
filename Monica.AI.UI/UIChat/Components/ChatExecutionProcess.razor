@@ -1,0 +1,81 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.UIChat.Support
+@using Monica.UI.Shared.Components.Markdown
+@inject IStringLocalizer<AIResource> L
+
+<div class="execution-process">
+    @if (Steps.Count > 0)
+    {
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="Toggle"
+                   StartIcon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">
+            @(Running ? L["Workbench:Working"] : L["Workbench:ProcessSummary", Steps.Count])
+        </MudButton>
+        @if (_expanded)
+        {
+            <div class="process-steps">
+                @foreach (var step in Steps)
+                {
+                    <div class="process-step" @key="step.Id">
+                        <div class="step-heading">
+                            <MudIcon Icon="@ChatExecutionPresentation.Icon(step.Kind)" Size="Size.Small" Color="@ChatExecutionPresentation.StatusColor(step.Status)" />
+                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => OnInspect.InvokeAsync(step))">@ChatExecutionPresentation.Title(step, L)</MudButton>
+                            <span>@ChatExecutionPresentation.Status(step.Status, L)</span>
+                            <time>@ChatExecutionPresentation.Duration(step.Duration)</time>
+                        </div>
+                        @if (step.Request is { } request)
+                        {
+                            @foreach (var part in request.Output)
+                            {
+                                @if (part.Kind == ChatContentKind.Reasoning)
+                                {
+                                    <details class="reasoning" open="@Running"><summary>@L["Chat:Reasoning:Label"]</summary><div>@part.Text</div></details>
+                                }
+                                else if (part.Kind == ChatContentKind.Text && step.Id != FinalAnswerStepId)
+                                {
+                                    <div class="step-text"><MoMarkdown Value="@(part.Text ?? string.Empty)" /></div>
+                                }
+                                else if (part.Kind == ChatContentKind.ToolCall)
+                                {
+                                    <span class="tool-request">@L["Workbench:ToolRequested", part.ToolName ?? string.Empty]</span>
+                                }
+                            }
+                        }
+                        @if (step.Tool is { } tool)
+                        {
+                            <details class="tool-details"><summary>@L["Workbench:ArgumentsAndResult"]</summary><pre>@tool.Arguments</pre><pre>@tool.Result</pre></details>
+                        }
+                        @if (step.Compaction is { } compaction)
+                        {
+                            <span>@L["Workbench:CompactionSummary", compaction.BeforeTokens, compaction.AfterTokens]</span>
+                        }
+                        @if (step.Error is { Length: > 0 } error)
+                        {
+                            <MudAlert Severity="Severity.Error" Dense="true">@error</MudAlert>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<ChatExecutionStep> Steps { get; set; } = [];
+    [Parameter] public bool Running { get; set; }
+    [Parameter] public string? FinalAnswerStepId { get; set; }
+    [Parameter] public EventCallback<ChatExecutionStep> OnInspect { get; set; }
+    private bool _expanded;
+    private bool _wasRunning;
+    private bool _initialized;
+    protected override void OnParametersSet()
+    {
+        if (!_initialized || Running != _wasRunning)
+        {
+            _expanded = Running || Steps.Any(step => step.Status is ChatExecutionStatus.Failed or ChatExecutionStatus.Interrupted);
+            _initialized = true;
+            _wasRunning = Running;
+        }
+    }
+    private void Toggle() => _expanded = !_expanded;
+}

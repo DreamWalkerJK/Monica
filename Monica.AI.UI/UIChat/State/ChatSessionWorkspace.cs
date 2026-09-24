@@ -10,7 +10,7 @@ namespace Monica.AI.UI.UIChat.State;
 /// Owns the durable chat catalog, lazily loaded sessions, current selection, and runtime disposal
 /// for one Blazor circuit.
 /// </summary>
-public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsyncDisposable
+public sealed partial class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsyncDisposable
 {
     private readonly List<ChatSessionSummary> _sessions = [];
     private readonly Dictionary<string, ChatSession> _loadedSessions = new(StringComparer.Ordinal);
@@ -28,11 +28,18 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
     /// <summary>Whether initial history restoration has completed.</summary>
     public bool IsInitialized { get; private set; }
 
+    /// <summary>Whether a stale edit requires an explicit reload before further history writes.</summary>
+    public bool IsConflicted { get; private set; }
+
     /// <summary>Current catalog revision used for optimistic writes.</summary>
     public long Revision { get; private set; }
 
-    /// <summary>Persisted session summaries ordered by most recent update.</summary>
-    public IReadOnlyList<ChatSessionSummary> Sessions => _sessions;
+    /// <summary>Active conversations, with pinned conversations first and recent activity next.</summary>
+    public IReadOnlyList<ChatSessionSummary> Sessions => _sessions.Where(item => item.ArchivedAt is null).ToArray();
+
+    /// <summary>Archived conversations, most recently archived first.</summary>
+    public IReadOnlyList<ChatSessionSummary> ArchivedSessions => _sessions.Where(item => item.ArchivedAt is not null)
+        .OrderByDescending(item => item.ArchivedAt).ToArray();
 
     /// <summary>Current session identifier.</summary>
     public string? CurrentSessionId { get; private set; }
@@ -65,9 +72,9 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
         Revision = catalog.Revision;
         ReplaceSummaries(catalog.Sessions);
         var selectedId = catalog.CurrentSessionId is not null
-                         && _sessions.Any(item => item.SessionId == catalog.CurrentSessionId)
+                         && Sessions.Any(item => item.SessionId == catalog.CurrentSessionId)
             ? catalog.CurrentSessionId
-            : _sessions.FirstOrDefault()?.SessionId;
+            : Sessions.FirstOrDefault()?.SessionId;
         if (selectedId is not null)
         {
             await LoadSessionAsync(selectedId, ct);
@@ -100,7 +107,7 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
-        if (_sessions.All(item => item.SessionId != sessionId))
+        if (Sessions.All(item => item.SessionId != sessionId))
         {
             return null;
         }
@@ -122,8 +129,25 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(session);
+        if (IsConflicted) return false;
 
         var saveResult = await historyFacade.SaveSessionAsync(session, Revision, ct);
+        if (saveResult.Data?.IsConflict == true)
+        {
+            var refreshed = await historyFacade.GetCatalogAsync(ct);
+            if (!refreshed.IsFailed(out _, out var catalog))
+            {
+                var stored = catalog.Sessions.FirstOrDefault(item => item.SessionId == session.SessionId);
+                if (stored is { ArchivedAt: null } && stored.Revision == session.PersistenceRevision
+                    || stored is null && session.PersistenceRevision == 0)
+                {
+                    // A different conversation or selection changed. Rebase only this unchanged session once.
+                    Revision = catalog.Revision;
+                    MergeSummaries(catalog.Sessions);
+                    saveResult = await historyFacade.SaveSessionAsync(session, Revision, ct);
+                }
+            }
+        }
         var accepted = TryApplyWriteResult(saveResult, out var persisted);
         if (persisted is not null)
         {
@@ -145,6 +169,7 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        if (IsConflicted) return false;
 
         var result = await historyFacade.DeleteSessionAsync(sessionId, Revision, ct);
         if (!TryApplyWriteResult(result, out _))
@@ -160,7 +185,7 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
 
         if (CurrentSessionId == sessionId)
         {
-            CurrentSessionId = _sessions.FirstOrDefault()?.SessionId;
+            CurrentSessionId = Sessions.FirstOrDefault()?.SessionId;
             if (CurrentSessionId is not null)
             {
                 await LoadSessionAsync(CurrentSessionId, ct);
@@ -175,6 +200,7 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
     public async Task<bool> ClearAsync(CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        if (IsConflicted) return false;
         var result = await historyFacade.ClearAsync(Revision, ct);
         if (!TryApplyWriteResult(result, out _))
         {
@@ -194,7 +220,31 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
         return true;
     }
 
-    /// <summary>Returns one already loaded session without performing browser I/O.</summary>
+    /// <summary>Discards local session copies and reloads authoritative history after explicit user confirmation.</summary>
+    public async Task ReloadAsync(CancellationToken ct = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_loadedSessions.Values.Any(session => session.IsBusy))
+            throw new InvalidOperationException("Stop generation before reloading conversation history.");
+        var catalogResult = await historyFacade.GetCatalogAsync(ct);
+        if (catalogResult.IsFailed(out var error, out var catalog))
+        {
+            RaiseWarning(ChatHistoryWorkspaceWarningKind.LoadFailed, error.Message);
+            return;
+        }
+
+        foreach (var session in _loadedSessions.Values) await session.DisposeAsync();
+        _loadedSessions.Clear();
+        ReplaceSummaries(catalog.Sessions);
+        Revision = catalog.Revision;
+        CurrentSessionId = Sessions.Any(item => item.SessionId == catalog.CurrentSessionId)
+            ? catalog.CurrentSessionId : Sessions.FirstOrDefault()?.SessionId;
+        IsConflicted = false;
+        if (CurrentSessionId is { } selected && await LoadSessionAsync(selected, ct) is null) CurrentSessionId = null;
+        StateChanged?.Invoke();
+    }
+
+    /// <summary>Returns one already loaded session without performing storage I/O.</summary>
     public ChatSession? GetLoadedSession(string? sessionId)
         => sessionId is not null && _loadedSessions.TryGetValue(sessionId, out var session)
             ? session
@@ -226,6 +276,7 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
 
     private async Task PersistCurrentSelectionAsync(CancellationToken ct)
     {
+        if (IsConflicted) return;
         var result = await historyFacade.SetCurrentSessionAsync(CurrentSessionId, Revision, ct);
         _ = TryApplyWriteResult(result, out var writeResult);
         if (writeResult is not null)
@@ -249,7 +300,9 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
 
         if (writeResult.IsConflict)
         {
+            IsConflicted = true;
             RaiseWarning(ChatHistoryWorkspaceWarningKind.RevisionConflict);
+            StateChanged?.Invoke();
             return false;
         }
 
@@ -261,11 +314,6 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
                 RaiseWarning(ChatHistoryWorkspaceWarningKind.SessionsPruned);
             }
 
-            if (writeResult.FailureReason == ChatHistoryWriteFailureReason.PersistenceDisabled)
-            {
-                return true;
-            }
-
             RaiseWarning(
                 writeResult.FailureReason == ChatHistoryWriteFailureReason.QuotaExceeded
                     ? ChatHistoryWorkspaceWarningKind.QuotaExceeded
@@ -275,6 +323,8 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
         }
 
         Revision = writeResult.Revision;
+        if (!string.IsNullOrWhiteSpace(writeResult.Warning))
+            RaiseWarning(ChatHistoryWorkspaceWarningKind.PersistenceWarning, writeResult.Warning);
         if (writeResult.PrunedSessionIds.Count > 0)
         {
             RaiseWarning(ChatHistoryWorkspaceWarningKind.SessionsPruned);
@@ -297,6 +347,7 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
 
     private void UpsertSummary(ChatSession session)
     {
+        var previous = _sessions.FirstOrDefault(item => item.SessionId == session.SessionId);
         _sessions.RemoveAll(item => item.SessionId == session.SessionId);
         _sessions.Add(new ChatSessionSummary
         {
@@ -305,15 +356,34 @@ public sealed class ChatSessionWorkspace(ChatHistoryFacade historyFacade) : IAsy
             CreatedAt = session.CreatedAt,
             UpdatedAt = session.UpdatedAt,
             Settings = session.Settings,
-            Revision = session.PersistenceRevision
+            Revision = session.PersistenceRevision,
+            IsPinned = previous?.IsPinned ?? false,
+            ArchivedAt = previous?.ArchivedAt
         });
-        _sessions.Sort(static (left, right) => right.UpdatedAt.CompareTo(left.UpdatedAt));
+        SortSummaries();
     }
 
     private void ReplaceSummaries(IEnumerable<ChatSessionSummary> sessions)
     {
         _sessions.Clear();
-        _sessions.AddRange(sessions.OrderByDescending(item => item.UpdatedAt));
+        _sessions.AddRange(sessions);
+        SortSummaries();
+    }
+
+    private void SortSummaries() => _sessions.Sort(static (left, right) =>
+    {
+        var pinOrder = right.IsPinned.CompareTo(left.IsPinned);
+        if (pinOrder != 0) return pinOrder;
+        var activityOrder = right.UpdatedAt.CompareTo(left.UpdatedAt);
+        return activityOrder != 0 ? activityOrder : StringComparer.Ordinal.Compare(left.SessionId, right.SessionId);
+    });
+
+    private void MergeSummaries(IReadOnlyList<ChatSessionSummary> persisted)
+    {
+        // Keep an unsaved local session visible. Per-session revision checks prevent stale cached edits from overwriting remote work.
+        var localOnly = _sessions.Where(local => persisted.All(remote => remote.SessionId != local.SessionId)
+            && _loadedSessions.TryGetValue(local.SessionId, out var session) && session.PersistenceRevision == 0).ToArray();
+        ReplaceSummaries(persisted.Concat(localOnly));
     }
 
     private void CompleteInitialization()

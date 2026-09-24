@@ -1,11 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Monica.AI.Chat.Abstractions;
 using Monica.AI.UI.Localization;
 using Monica.AI.UI.Pages;
-using Monica.AI.UI.UIChat.Models;
-using Monica.AI.UI.UIChat.Providers.Browser;
 using Monica.AI.UI.UIChat.State;
 using Monica.AI.UI.UIChat.Support;
 using Monica.Core;
@@ -35,31 +32,6 @@ public static class ModuleAIUIBuilderExtensions
         }
     }
 
-    extension(ModuleRegistration<ModuleAIUI, ModuleAIUIOption> registration)
-    {
-        /// <summary>
-        /// Enables durable chat history in the current browser profile.
-        /// </summary>
-        /// <param name="configure">Optional browser retention configuration.</param>
-        /// <returns>The same host-bound registration.</returns>
-        public ModuleRegistration<ModuleAIUI, ModuleAIUIOption> UseBrowserChatHistory(
-            Action<BrowserChatHistoryOptions>? configure = null)
-        {
-            var options = new BrowserChatHistoryOptions();
-            configure?.Invoke(options);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.MaxSessions);
-
-            return registration.ConfigureServices(context =>
-            {
-                context.Services.RemoveAll<IChatHistoryProvider>();
-                context.Services.RemoveAll<IChatHistoryPartitionResolver>();
-                context.Services.AddScoped<IBrowserChatHistoryLock, BrowserChatHistoryWebLock>();
-                context.Services.AddScoped<IChatHistoryProvider, BrowserChatHistoryProvider>();
-                context.Services.AddScoped<IChatHistoryPartitionResolver, BrowserChatHistoryPartitionResolver>();
-                context.Services.AddSingleton<IOptions<BrowserChatHistoryOptions>>(Options.Create(options));
-            });
-        }
-    }
 
 }
 
@@ -112,7 +84,8 @@ public class ModuleAIUI : MonicaModule<ModuleAIUIOption>, IUIModule
     public override void ConfigureServices(ModuleContext<ModuleAIUIOption> context)
     {
         // Register UI services
-        context.Services.AddScoped<ChatPageState>();
+        context.Services.AddScoped<ChatPageStateFactory>();
+        context.Services.Replace(ServiceDescriptor.Scoped<IChatUserIdentityAccessor, BlazorChatUserIdentityAccessor>());
         context.Services.AddScoped<ChatSessionWorkspace>();
     }
 }
@@ -143,19 +116,10 @@ public class ModuleAIUIOption : ModuleOptions<ModuleAIUI>
     public string? DefaultSystemPrompt { get; set; }
 
     /// <summary>
-    /// Maximum width for message bubbles
+    /// Optional total operation timeout in milliseconds. The default is zero (no UI deadline),
+    /// allowing long reasoning and multi-tool runs. Provider request timeouts still apply independently.
     /// </summary>
-    public string MessageMaxWidth { get; set; } = "80%";
-
-    /// <summary>
-    /// Request timeout in milliseconds (0 = no timeout)
-    /// </summary>
-    public int RequestTimeoutMs { get; set; } = 60000;
-
-    /// <summary>
-    /// Show connection status indicator
-    /// </summary>
-    public bool ShowConnectionStatus { get; set; }
+    public int RequestTimeoutMs { get; set; }
 
     /// <summary>
     /// Enable auto-scroll to bottom on new messages
