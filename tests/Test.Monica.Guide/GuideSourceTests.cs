@@ -219,6 +219,54 @@ public sealed class GuideSourceTests
     }
 
     [Fact]
+    public async Task HealthChecks_WarnWhenTheBoundCheckoutRunsAheadOfTheReleasePin()
+    {
+        using var fixture = new SourceFixture();
+        var head = new string('a', 40);
+        fixture.Git.HeadCommits[fixture.CheckoutPath] = head;
+        fixture.Git.AheadCounts[(SourceFixture.Commit, head)] = 12;
+        var service = fixture.CreateService();
+        var request = new GuideSourceBindRequest("Tairitsua/Monica", fixture.CheckoutPath, null);
+        var preview = await service.BindAsync(request, cancellationToken: CancellationToken);
+        await service.BindAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        var release = new ReleaseManifest
+        {
+            ProductId = "Tairitsua.Monica",
+            ProductVersion = "1.0.0-rc.13-local.4",
+            SourceCommit = SourceFixture.Commit
+        };
+
+        var checks = service.HealthChecks(release);
+
+        var lag = Assert.Single(checks, check => check.Id == "source.binding.Tairitsua/Monica.release-lag");
+        Assert.Equal(GuideCheckStatus.Warning, lag.Status);
+        Assert.Contains("12 commits ahead", lag.Message);
+        Assert.Contains("1.0.0-rc.13-local.4", lag.Message);
+    }
+
+    [Fact]
+    public async Task HealthChecks_StaySilentWhenTheReleasePinMatchesTheCheckout()
+    {
+        using var fixture = new SourceFixture();
+        var service = fixture.CreateService();
+        var request = new GuideSourceBindRequest("Tairitsua/Monica", fixture.CheckoutPath, null);
+        var preview = await service.BindAsync(request, cancellationToken: CancellationToken);
+        await service.BindAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        var release = new ReleaseManifest
+        {
+            ProductId = "Tairitsua.Monica",
+            ProductVersion = "1.0.0-rc.13-local.4",
+            SourceCommit = SourceFixture.Commit
+        };
+
+        var checks = service.HealthChecks(release);
+
+        Assert.Contains(checks, check =>
+            check.Id == "source.binding.Tairitsua/Monica" && check.Status == GuideCheckStatus.Ok);
+        Assert.DoesNotContain(checks, check => check.Id.EndsWith("release-lag", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Observe_MovedOrDirtyCheckoutsProduceWarnings()
     {
         using var fixture = new SourceFixture();
@@ -326,6 +374,8 @@ public sealed class GuideSourceTests
     {
         internal Dictionary<string, string> Remotes { get; } = new(StringComparer.OrdinalIgnoreCase);
         internal Dictionary<string, string> TagCommits { get; } = new(StringComparer.OrdinalIgnoreCase);
+        internal Dictionary<string, string> HeadCommits { get; } = new(StringComparer.OrdinalIgnoreCase);
+        internal Dictionary<(string From, string To), int> AheadCounts { get; } = new();
         internal bool Dirty { get; set; }
 
         public GuideGitInfo? Describe(string path)
@@ -335,7 +385,8 @@ public sealed class GuideSourceTests
                 return null;
             }
 
-            return new GuideGitInfo(SourceFixture.Commit, path, GuideGitProbe.CanonicalRepository(remote), Dirty);
+            var head = HeadCommits.GetValueOrDefault(path, SourceFixture.Commit);
+            return new GuideGitInfo(head, path, GuideGitProbe.CanonicalRepository(remote), Dirty);
         }
 
         public GuideGitIdentity? FindIdentity(string path)
@@ -345,5 +396,8 @@ public sealed class GuideSourceTests
 
         public string? ResolveTagCommit(string repositoryRoot, string tag)
             => TagCommits.TryGetValue(tag, out var commit) ? commit : null;
+
+        public int? CountCommitsAhead(string repositoryRoot, string fromCommit, string toCommit)
+            => AheadCounts.TryGetValue((fromCommit, toCommit), out var count) ? count : null;
     }
 }

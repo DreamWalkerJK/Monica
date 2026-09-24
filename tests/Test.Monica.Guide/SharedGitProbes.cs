@@ -19,4 +19,6 @@ internal sealed class CanonicalCheckoutProbe(string root, string remote = "https
     public GuideGitIdentity? FindIdentity(string path) => null;
 
     public string? ResolveTagCommit(string repositoryRoot, string tag) => null;
+
+    public int? CountCommitsAhead(string repositoryRoot, string fromCommit, string toCommit) => null;
 }

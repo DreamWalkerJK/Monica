@@ -341,7 +341,7 @@ public sealed class SetupFacade(SetupSession session)
             // Source bindings are machine-global; the dashboard observes recorded bindings
             // exactly like the CLI doctor does, so a moved or missing checkout surfaces here too.
             var sourceChecks = new GuideSourceService(GuidePaths.ForCurrentUser(), LoadWorkspaceCatalog())
-                .HealthChecks();
+                .HealthChecks(ObserveBundleManifest());
             var checks = health.Checks.Concat(sourceChecks).ToArray();
             var locator = ReadLocator();
             var port = CurrentPort();
@@ -366,6 +366,22 @@ public sealed class SetupFacade(SetupSession session)
                 null, null, false, CurrentPort(),
                 new SetupChecksView(GuideStatus.Error, []),
                 exception.Message, [], exception.Message);
+        }
+    }
+
+    /// <summary>
+    /// The running bundle's manifest, or null for development layouts; it feeds the
+    /// bundle-versus-source staleness observation on the dashboard's source checks.
+    /// </summary>
+    private static ReleaseManifest? ObserveBundleManifest()
+    {
+        try
+        {
+            return GuideReleaseMetadata.Observe(AppContext.BaseDirectory, expectedProductVersion: null).Manifest;
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException)
+        {
+            return null;
         }
     }
 

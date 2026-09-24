@@ -303,6 +303,23 @@ public static class GuideCommandRunner
     }
 
     /// <summary>
+    /// The running bundle's manifest, or null for development layouts and unreadable
+    /// manifests. The manifest's own consistency has its check on the product surface;
+    /// here it only feeds the bundle-versus-source staleness observation.
+    /// </summary>
+    private static ReleaseManifest? ObserveBundleManifest()
+    {
+        try
+        {
+            return GuideReleaseMetadata.Observe(AppContext.BaseDirectory, expectedProductVersion: null).Manifest;
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Appends engine-level checks to read-only reports: the machine-global agent policy
     /// (source binding health and the retired Node-era guide state) joins only the owning
     /// product's reports, while the workspace instruction inspection follows --workspace for
@@ -325,7 +342,7 @@ public static class GuideCommandRunner
         {
             // Bindings are machine-global; only the policy owner's read-only surfaces
             // observe them, and the service stays silent while nothing is bound.
-            checks.AddRange(new GuideSourceService(enginePaths, catalog).HealthChecks());
+            checks.AddRange(new GuideSourceService(enginePaths, catalog).HealthChecks(ObserveBundleManifest()));
             var legacy = LegacyNodeStateCheck();
             if (legacy is not null)
             {

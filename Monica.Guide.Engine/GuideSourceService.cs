@@ -71,8 +71,13 @@ public sealed class GuideSourceService
 
     private string LedgerFile => Path.Combine(_enginePaths.StateDirectory, "source-bindings.json");
 
-    /// <summary>Health of every recorded binding, for doctor surfaces; unbound repositories stay silent.</summary>
-    public IReadOnlyList<GuideCheck> HealthChecks()
+    /// <summary>
+    /// Health of every recorded binding, for doctor surfaces; unbound repositories stay silent.
+    /// With a release manifest, each binding also reports how far the installed release's source
+    /// pin lags the bound checkout — the bundle-versus-source staleness the installed-versus-
+    /// configured reconciliation cannot see.
+    /// </summary>
+    public IReadOnlyList<GuideCheck> HealthChecks(ReleaseManifest? release = null)
     {
         var (ledger, ledgerIssue) = LoadLedger();
         if (ledgerIssue is not null)
@@ -87,8 +92,52 @@ public sealed class GuideSourceService
 
         return ledger.Bindings.Values
             .OrderBy(static binding => binding.Repository, StringComparer.Ordinal)
-            .Select(binding => BindingCheck(Observe(binding)))
+            .SelectMany(binding =>
+            {
+                var observation = Observe(binding);
+                var checks = new List<GuideCheck> { BindingCheck(observation) };
+                var lag = ReleaseLagCheck(release, binding, observation);
+                if (lag is not null)
+                {
+                    checks.Add(lag);
+                }
+
+                return checks;
+            })
             .ToArray();
+    }
+
+    /// <summary>
+    /// The framework repository is the only pin the release manifest carries: the framework pin
+    /// for application products, the bundle's own source commit for the toolbox. A checkout at
+    /// the pin stays silent; an ahead checkout warns so a lagging bundle cannot hide behind a
+    /// green installed-versus-configured reconciliation.
+    /// </summary>
+    private GuideCheck? ReleaseLagCheck(
+        ReleaseManifest? release,
+        GuideSourceBinding binding,
+        GuideSourceObservation observation)
+    {
+        if (release is null
+            || !string.Equals(binding.Repository, "Tairitsua/Monica", StringComparison.OrdinalIgnoreCase)
+            || observation.ObservedCommit is not { } head)
+        {
+            return null;
+        }
+
+        var pin = release.FrameworkCommit ?? release.SourceCommit;
+        if (pin.Length == 0 || string.Equals(pin, head, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var ahead = _git.CountCommitsAhead(binding.SourcePath, pin, head);
+        var detail = ahead is { } count
+            ? $"{count} commit{(count == 1 ? string.Empty : "s")} ahead"
+            : "at a different commit";
+        return Check(SourceWarningId(binding.Repository, "release-lag"), GuideCheckStatus.Warning,
+            $"Installed release pins {release.ProductId} {release.ProductVersion} at {pin[..8]}; "
+            + $"the bound checkout is {detail}. Cut a new release to converge installed skills with source.");
     }
 
     /// <summary>Lists every declared repository with its binding health.</summary>

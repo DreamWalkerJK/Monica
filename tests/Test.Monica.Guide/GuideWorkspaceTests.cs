@@ -827,6 +827,8 @@ public sealed class GuideWorkspaceTests
         public GuideGitIdentity? FindIdentity(string path) => null;
 
         public string? ResolveTagCommit(string repositoryRoot, string tag) => null;
+
+        public int? CountCommitsAhead(string repositoryRoot, string fromCommit, string toCommit) => null;
     }
 
     /// <summary>
@@ -843,5 +845,7 @@ public sealed class GuideWorkspaceTests
                 : null;
 
         public string? ResolveTagCommit(string repositoryRoot, string tag) => null;
+
+        public int? CountCommitsAhead(string repositoryRoot, string fromCommit, string toCommit) => null;
     }
 }
