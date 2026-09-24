@@ -1,6 +1,6 @@
 ---
 name: monica-application-project-unit-development
-description: Create or refactor Monica application ProjectUnits: requests, handlers, domain services, entities, repositories, events, options, and jobs. Use with the chosen microservice or modular-monolith architecture skill.
+description: Create or refactor Monica application ProjectUnits, including requests, handlers, domain services, entities, repositories, events, options, and jobs. Use with the chosen microservice or modular-monolith architecture skill.
 ---
 
 # Monica Application ProjectUnit Development

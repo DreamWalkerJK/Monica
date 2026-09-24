@@ -49,8 +49,6 @@ python3 scripts/check_knowledge_impact.py --paths <changed-path> [more paths]
 
 The checker assigns changed source files to their most specific catalog owner and requires a matching canonical `SKILL.md` or `references/` change. If the implementation change has no effect on reusable usage knowledge, pass `--no-impact "reason"` and include `Knowledge-Impact: none — <concrete reason>` on its own line in the pull request body. The Knowledge Impact workflow enforces this on pull requests. [Monica.Docs](https://monica.dpdns.org/) publishes the release skills from immutable `monica-knowledge.json` bytes and checksum, alongside stable bilingual guides; it does not maintain a second module manual.
 
-When running `dotnet` from WSL with a Windows `dotnet` executable, use Windows paths for project or solution arguments.
-
 ## Pull Requests
 
 1. Open an issue or discussion first for broad design changes.
@@ -91,7 +89,7 @@ BREAKING CHANGE: replace ambient Mo registration with builder.AddMonica(monica =
 
 - Use English for code comments, XML documentation, and developer-facing annotations.
 - Prefer primary constructors for dependency-injected classes with a single constructor.
-- Public module options, guides, builder extensions, abstractions, and models should include useful XML documentation.
+- Follow the [framework coding contracts](skills/monica-development/references/coding-contracts.md) for public XML documentation, options, registration methods, and C# conventions.
 - Facades may return `Res` or `Res<T>`; internal services should use standard .NET return types and exceptions.
 - Keep UI colors on MudBlazor palette variables or the approved Monica theme token contract.
 

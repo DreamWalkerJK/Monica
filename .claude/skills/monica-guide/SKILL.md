@@ -7,6 +7,8 @@ description: Explain, bootstrap, configure, diagnose, update, and route the Moni
 
 The authoritative guide engine is the **Monica.Guide executable** (`Monica.Guide.exe` on Windows, `Monica.Guide` on Linux and macOS); this skill only teaches and routes. Locate the executable and assign it to `$monica-guide`, then use its `overview | status | doctor | configure | unconfigure | init | forget | source <action> | issue <action>` commands as the single source of truth for installation, workspace bootstrap, source lookup state, and the issue-reporting mode.
 
+When changing the Guide implementation, use [framework-development.md](references/framework-development.md) for engine, product, and catalog ownership.
+
 ## Locating the engine
 
 Try in order:

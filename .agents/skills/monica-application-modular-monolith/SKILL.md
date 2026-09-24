@@ -1,6 +1,6 @@
 ---
 name: monica-application-modular-monolith
-description: Design a Monica DDD modular monolith: bounded contexts under Domains, AppHost composition, Platform dependency direction, published language, and persistence ownership.
+description: Design a Monica DDD modular monolith with bounded contexts under Domains, AppHost composition, Platform dependency direction, published language, and persistence ownership.
 ---
 
 # Monica Application Modular Monolith

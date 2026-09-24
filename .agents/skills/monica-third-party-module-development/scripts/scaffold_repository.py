@@ -1473,7 +1473,7 @@ def create_tests_readme(root: Path, manifest: Manifest) -> None:
         Registration tests add only graph-entry modules. Runtime dependencies, provider selection,
         localized navigation, and module-owned resource markers must compose transitively.
 
-        Run one test process at a time. Under WSL, pass Windows project or solution paths.
+        Keep test processes sharing build outputs sequential. Use paths understood by the selected SDK.
         """,
     )
 

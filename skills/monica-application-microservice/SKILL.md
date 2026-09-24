@@ -1,6 +1,6 @@
 ---
 name: monica-application-microservice
-description: Design a Monica DDD microservice solution: subdomain service ownership, Platform dependency direction, published contracts, API/Domain/migration projects, and cross-service collaboration.
+description: Design a Monica DDD microservice solution with subdomain service ownership, Platform dependency direction, published contracts, API/Domain/migration projects, and cross-service collaboration.
 ---
 
 # Monica Application Microservice

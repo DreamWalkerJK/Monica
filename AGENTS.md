@@ -1,195 +1,53 @@
-## Project Overview
+# Monica
 
-Monica is modular .NET infrastructure for agent-driven development. Each module can be used independently; canonical Agent Skills teach both agents and developers how to compose and operate it.
+Monica is modular .NET infrastructure for agent-driven development. `Monica.slnx` is the solution; do not introduce `Monica.sln`.
 
-## Unified Guide Engine
+## Working rules
 
-`Monica.Guide.Engine` is the shared guide engine behind every Monica agent product's setup surface; `Monica.Guide.App` builds the per-platform `Monica.Guide` executable — the token-gated setup wizard plus CLI. Neither is published as a NuGet package. Engine behavior is taught by the `monica-guide` skill; this section keeps only the rules that bind repository work:
+- Code comments and XML documentation in this repository are also English; sibling and consumer repositories own their own conventions.
+- Prefer clear boundaries and behavior on the types that own it. Simplify the design instead of accumulating workarounds. Breaking changes are allowed unless the task requires compatibility; keep refactoring within the requested scope.
+- Document public and developer-facing contracts, including meaningful option defaults, registration prerequisites, and lifecycle/ownership constraints. Use the [coding contracts](skills/monica-development/references/coding-contracts.md) when changing C# APIs.
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before committing or preparing a release; follow its Conventional Commit policy.
 
-- Product definitions in `KnownAgentProducts` are the single source of each product's release contract. Consuming products such as Monica.Workflow pin the engine to their definition and must never grow a local copy of guide behavior.
-- `skills/monica-guide` is a teaching and routing layer only — authoritative engine behavior lives in the executable, and no local engine scripts may be reintroduced there.
-- The workspace-facing catalog projection (managed instruction templates, source repositories, aliases) is authored once in `.monica/agent-skill-catalog.json` and projected into release bundles by `scripts/build_monica_guide_bundle.py`.
+## Task routing
 
-## Skills
+Load the skills relevant to the current work; details belong there rather than in this file.
 
-Proactively invoke these skills when encountering relevant development patterns:
+| Work | Skill |
+| --- | --- |
+| Framework implementation and module boundaries | `monica-framework`, then `monica-development` or `monica-architecture` |
+| Consuming infrastructure in an application | `monica-application` and the matching `monica-infra-*` skill |
+| Blazor components, themes, or user-facing strings | `monica-ui-development`; also `monica-ui-localization` when text or resources change |
+| Framework tests and shared test infrastructure | `monica-unit-testing` |
+| Canonical skills, public guidance, or documentation ownership | `monica-docs-authoring` |
+| Guide engine, setup, or release contracts | `monica-guide`; engine changes use its framework-development reference |
+| Focused simplification of selected code | `code-simplifier`; architecture redesign uses `monica-architecture` |
 
-### /monica-development
+For exact dependency behavior, use `inspect-dependency-source` when available and resolve the version actually in use. For uncertain Microsoft APIs, use `microsoft-docs` or `microsoft-code-reference` with official sources. Read dependency versions from project/package metadata instead of copying them into these instructions.
 
-Invoke when:
-- Writing Facade methods with `Res` or `Res<T>` return types
-- Uncertain about Res implicit conversions or IsFailed pattern
-- Determining whether code belongs in Facades (Res<T>) or internal Services (exceptions)
-- Creating modules (`Module{Name}`, options, builder extensions, registration extensions)
-- Configuring module registration, dependencies, type discovery, startup work, or diagnostics
-- Implementing hosted services (MoBackgroundService, RecordState)
-- Structuring module folders (Abstractions, Models, Facades, Services, Providers)
+## Verification
 
-### /monica-ui-development
+For code changes, use the standard gate:
 
-Invoke when:
-- Creating or modifying Blazor components
-- Styling MudBlazor components (CSS isolation, ::deep selector)
-- Working with MudBlazor APIs or component properties
-- Implementing theme customization or dark mode support
-- Handling component lifecycle (OnAfterRenderAsync)
-
-**Current MudBlazor version**: 9.0.0 (migrated from 8.9.0)
-
-### /monica-ui-localization
-
-Invoke when:
-- Adding, changing, reviewing, or validating Monica UI localization/i18n, user-facing text, `IStringLocalizer<TResource>` usage, `RegisterLocalizedPage(...)` or `RegisterLocalizedCategory(...)` keys, or `zh-CN`/`en-US` resources
-
-## Agent Skill Authoring and Synchronization
-
-- Framework usage knowledge belongs to canonical `skills/monica-infra-*/` packages. Monica.Docs renders those skills and keeps only stable onboarding, concepts, ecosystem, and migration guides. Do not reintroduce a parallel framework `docs/` tree or handwritten module manuals.
-- When public behavior, examples, or reusable development guidance changes, update the owning skill reference and relevant behavioral example/check in the same change. Update `SKILL.md` only when routing or execution guidance changes. Replace obsolete guidance; if no knowledge update is needed, state why.
-- Capability ownership and the module slugs each capability replaces live in each catalog entry's `publication` metadata. Export website content with `python scripts/export_agent_knowledge.py --output <artifact>`; public builds consume an immutable release artifact. Guide manages framework skills and source only; it has no Monica.Docs profile, source binding, or instruction injection.
-- Before completing an infrastructure change, run `python scripts/check_knowledge_impact.py --base <base-ref>`. Update each affected owning skill, or pass `--no-impact "<concrete reason>"` and include that rationale in the PR's Knowledge impact section. Prefer replacing obsolete rules and retaining verified, reusable examples over accumulating session notes.
-
-- Edit Monica-owned Agent Skills only under the canonical `skills/<name>/` tree. Do not edit the corresponding `.agents/skills/<name>/` or `.claude/skills/<name>/` projections directly.
-- When implementation feedback changes a skill rule, update the canonical skill first, regenerate both projections with `python3 scripts/sync_agent_skills.py --write`, and commit the canonical and generated changes together.
-- Before committing any Agent Skill change, run `python3 scripts/validate_agent_skills.py`, `python3 scripts/sync_agent_skills.py --check`, and `python3 scripts/test_agent_skills.py`. Follow `CONTRIBUTING.md` for the complete validation and release workflow.
-
-## UI Theme Color Contract
-
-- First-party Monica UI colors must use `--mud-palette-*` first, or the small supplemental `--mo-color-*` contract defined in `Monica.UI/wwwroot/css/mo-theme-main.css` when MudBlazor palette roles are not expressive enough.
-- `mo-theme-main.css` defines color variables only; do not add shared component styling there as part of color-token cleanup.
-- Shared semantic color tokens are intentionally small. Add to the contract only when a cross-module scenario cannot be expressed with `--mud-palette-*`.
-- New hardcoded UI colors in Razor, CSS, JS, or C# UI visualization payloads are not allowed; emit `var(--mud-palette-*)` or approved `var(--mo-color-*)` values instead.
-
-### /code-simplifier
-
-Invoke when:
-- Cleaning up code changed in the current task or a user-specified area
-- Reviewing current changes or AI-generated code for unnecessary complexity, nesting, duplication, or unclear naming
-- Simplifying or refactoring code while preserving the active task's intended behavior
-- Identifying speculative abstractions introduced by the current change
-
-When this skill is active, its bounded, behavior-preserving scope takes precedence over Monica's general preference for broad refactoring. Review requests report findings without editing; cleanup or refactor requests may change the selected code and directly coupled code required for one coherent simplification.
-
-Do not invoke it for broad architecture review, breaking API redesign, module-boundary restructuring, or speculative refactoring outside the current task. Route Monica module architecture work to `$monica-architecture`.
-
-### Microsoft Documentation Skill
-
-You have access to MCP tools called `microsoft_docs_search`, `microsoft_docs_fetch`, and `microsoft_code_sample_search` - these tools allow you to search through and fetch Microsoft's latest official documentation and code samples, and that information might be more detailed or newer than what's in your training data set.
-
-When handling questions around how to work with native Microsoft technologies, such as C#, ASP.NET Core, Microsoft.Extensions, NuGet, Entity Framework, the `dotnet` runtime - please use these tools for research purposes when dealing with specific / narrowly defined questions that may occur.
-
-### $inspect-dependency-source
-
-Invoke when:
-- Debugging behavior that crosses a NuGet or third-party dependency boundary
-- Exact SDK or package-version semantics affect the diagnosis
-- Third-party source code is needed to validate behavior that public API documentation does not make explicit
-
-Resolve, fetch, and reuse exact dependency source through the user-level shared catalog before relying on a repository's latest branch or ad hoc raw source downloads. Consume the stable `resolve --json` CLI contract; do not read the catalog's internal storage directly.
-
-## Git Commit Requests
-
-When the user asks you to commit changes, read the repository's current commit message guidance first, especially the Conventional Commit rules in `CONTRIBUTING.md`, and use a commit message that follows that policy.
-
-## Monica Repository Coding Annotations
-
-The rules in this section apply only to source files in this Monica repository. Do not carry this
-language policy into sibling or consumer repositories; those repositories follow
-their own `AGENTS.md` files and local documentation conventions.
-
-- All code annotations (comments, XML doc comments, `<summary>`, `<param>`, `<returns>`, etc.) must be written in English.
-- Add necessary developer-facing documentation, not just code that compiles.
-- Public and developer-facing types must have appropriate XML doc comments, especially `Abstractions/`, public `Models/`, `Annotations/`, module `Option` classes, and builder or registration extension methods.
-- `Option` properties must explain purpose, effect, important defaults, and when a developer should configure them.
-- Registration extensions and builder extensions must explain what they register or enable, required prerequisites, and notable side effects or usage constraints.
-- Public abstractions must explain the contract clearly, including intended usage, lifecycle/ownership expectations, nullability semantics, and exception/timeout behavior when relevant.
-- Internal code should also include brief comments for non-obvious logic, especially complex branching, concurrency, normalization rules, caching, retries, or cross-module coordination.
-- Do not add comments for obvious code; comments must provide real developer guidance.
-
-## C# Naming Rules
-
-- Private constant fields must use upper snake case, for example `DEFAULT_SEARCH_TOOL_NAME`.
-
-## Code Quality Principles
-
-- Write reusable, low-coupling and high-cohesion implementations with multiple abstractions
-- Prefer rich models over anemic models: keep behavior on the object that owns the data/state, favor high cohesion and encapsulation, and let services focus on orchestration.
-- Split files to avoid overly large single files
-- **DO NOT** aim for minimal changes, **ALLOW** breaking changes. Always pursue the **optimal, elegant, simple, and clear design**—be open to large-scale refactoring.
-- Instead of just fixing errors and introducing complexity merely to solve problems, you **MUST** focus on simplification to enhance code quality. Refactor whenever possible.
-- **DO NOT** need to consider backward compatibility. 
-- If you feel the design is inadequate or lacks necessary information, you may raise concerns and propose improvements for user confirmation before proceeding.
-
-## Res Usage Policy
-
-- `Res` and `Res<T>` are used in **Facades** — the public entry points defined in infrastructure modules that serve both Minimal API and UI consumers.
-- Facades are defined in the **infrastructure module** (e.g., `Monica.AI/RAG/Facades/RAGFacade.cs`), not in UI modules. UI modules inject Facades directly.
-- **Internal services** (`Services/`) must use standard .NET patterns: direct return types and throw exceptions (e.g., `KeyNotFoundException`, `InvalidOperationException`) for error cases.
-- **Other infrastructure modules** do not consume Facades — they depend on `Abstractions/` interfaces instead.
-- **Critical `string` overload trap**: when a facade method returns `Res<string>`, do **not** write `return Res.Ok(content)`. C# will bind to the non-generic `Res.Ok(string hint)` overload, which drops `Res<string>.Data` and can silently break UI behavior. Always use `return Res.Ok<string>(content)` or another explicit generic construction when `T` is `string`.
-- See the `monica-architecture` skill for the full architecture specification.
-
-## Dependency Injection Guidelines
-
-- Always use primary constructor when creating a class with single constructor using dependency injection
-- After defining `Module{Name}Option`, to use the module options, simply inject `IOptions<TModuleOption>` or `IOptionsSnapshot<TModuleOption>` for usage.
-
-## Development Phase & Optimization Policy
-
-- **Development Stage**: This project is in internal development and has not been released. Backward compatibility is not a concern unless explicitly instructed otherwise.
-- **Optimization First**: Always prioritize the most optimal design and implementation approaches. Proactively identify and propose refactoring or redesign opportunities when improvements are possible.
-
-## Build Warning Policy
-
-- The entire Monica solution must build with **zero warnings**.
-- If any warning appears while working on the current task, you **MUST** resolve it before finishing the task.
-- Do not leave warnings for later cleanup, and do not silence them with suppression or `NoWarn` unless the user explicitly requires that approach.
-
-## Test Verification Policy
-
-- The standard verification gate is: `dotnet build 'Monica.slnx' -m -c Release` (zero warnings) followed by `powershell -File scripts/run-tests.ps1 -NoBuild` (`pwsh` on Linux/macOS). The script enumerates test projects dynamically; its default run covers everything except UI projects and finishes in about 80 seconds.
-- **UI test projects (`Test.Monica.*.UI`, bUnit) are not part of standard verification.** Run them only when the user explicitly asks for UI testing: `scripts/run-tests.ps1 -UiOnly` (UI only) or `-IncludeUi` (full suite). Never run UI tests on your own initiative.
-- **Do not write new UI (component-rendering) tests unless the user explicitly asks.** Verify UI behavior changes during development with browser smoke testing (screenshot → fix → re-verify through the `vision` agent flow). UI test additions are limited to genuine behavior contracts — authorization boundaries, dispose/async-interleaving safety, no-mutation-on-failure guarantees, security properties like credentials staying out of markup — never layout, markup structure, CSS classes, localized-key presence, or visual composition.
-- Existing UI tests were converged on 2026-09-23 under that rule: presentation-only tests were deleted; behavior-contract tests (authorization, late-result suppression, race safety, theme-color contract) stay.
-- Do not run the whole solution with `dotnet test Monica.slnx`: it re-triggers slow serial execution across all 30 projects, including UI projects, and has stalled on UI test hosts. Test the specific projects you touched plus the default gate.
-- CI mirrors this policy: `unit-tests.yml` runs the default gate on push; `ui-tests.yml` is manual dispatch only; the release workflow keeps the full suite.
-
-## WSL Environment - dotnet Build Path Issue
-
-**Environment**: This project runs in WSL (Windows Subsystem for Linux) where dotnet CLI is a Windows binary accessed through WSL interoperability.
-
-**Critical Issue**: When using `dotnet build` commands in WSL, you MUST use Windows path format, not Linux/WSL paths.
-
-**Correct Usage**:
-```bash
-# ✅ CORRECT - Use Windows path format with single quotes
-dotnet build 'D:\Code\MoLibrary\Monica.AI.UI\Monica.AI.UI.csproj'
-
-# ❌ WRONG - WSL path format will fail
-dotnet build /mnt/d/Code/MoLibrary/Monica.AI.UI/Monica.AI.UI.csproj
-
-# ❌ WRONG - Relative paths may fail if current directory is incorrect
-dotnet build Monica.AI.UI/Monica.AI.UI.csproj
+```text
+dotnet build Monica.slnx -m -c Release
+powershell -File scripts/run-tests.ps1 -NoBuild
 ```
 
-**Path Conversion** (if needed):
-```bash
-# Convert WSL path to Windows path
-wslpath -w /mnt/d/Code/MoLibrary/Monica.AI.UI/Monica.AI.UI.csproj
-# Output: D:\Code\MoLibrary\Monica.AI.UI\Monica.AI.UI.csproj
-```
+- Use `pwsh` in place of `powershell` where appropriate. Do not run `dotnet test Monica.slnx`; use the runner or the affected test project.
+- Builds must have zero warnings. Resolve warnings rather than suppressing them with `NoWarn` or other suppressions unless explicitly required by the user.
+- Avoid concurrent build/test processes that share dependencies or output paths. Use MSBuild parallelism inside one build with `-m`.
+- Run or add UI rendering tests only on explicit user request. Use browser smoke checks for UI changes. Requested UI tests protect behavior contracts, not layout, CSS classes, localized-key presence, or visual composition; details are in `monica-unit-testing`.
+- For skill or documentation changes, run their validators described in `CONTRIBUTING.md`; do not run unrelated UI tests.
 
-**Always remember**: In WSL, use Windows path format for all dotnet commands.
+## Knowledge ownership
 
-## Solution File Format
+- Edit Monica skills only in `skills/<name>/`. `.agents/skills/` and `.claude/skills/` are generated projections. Regenerate with `python scripts/sync_agent_skills.py --write` and include canonical and generated changes together.
+- Before completing a skill change, run `python scripts/validate_agent_skills.py`, `python scripts/sync_agent_skills.py --check`, and `python scripts/test_agent_skills.py`.
+- When implementation changes public behavior or yields verified reusable guidance, update the owning skill reference and relevant example or behavioral check in the same change. Replace obsolete guidance rather than appending session notes.
+- Run `python scripts/check_knowledge_impact.py --base <base-ref>` for infrastructure changes. If guidance is unaffected, pass `--no-impact "<concrete reason>"` and record that rationale in the PR's Knowledge impact section.
+- The catalog at `.monica/agent-skill-catalog.json` owns skill routing, source ownership, and release projections. Monica.Docs owns stable editorial guides and renders published skills; do not create parallel module manuals here.
 
-- This repository uses `Monica.slnx`.
-- Do not assume or create `Monica.sln`.
-```bash
-dotnet build 'Monica.slnx' -m
-```
+## Maintaining instructions
 
-## WSL Environment - dotnet Parallel Build Rule
-
-Do **NOT** run multiple independent `dotnet build` commands in parallel when the projects share dependencies or output paths.
-
-Use MSBuild parallelism **inside one build** with `-m`, not by starting several `dotnet build` processes at the same time. Otherwise file locks may cause errors such as `CS2012` or `MSB3026`.
+Keep this file limited to stable repository-wide rules and task routing. Put implementation procedures in the owning skill, contributor/release workflows in `CONTRIBUTING.md`, and machine-specific setup in personal skills or user-level instructions. Dates, incident narratives, test counts, timings, and migration status belong in change history or memory. Update the existing owner instead of duplicating a rule. `CLAUDE.md` imports this file.

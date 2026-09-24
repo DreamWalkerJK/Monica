@@ -1,6 +1,6 @@
 ---
 name: monica-unit-testing
-description: Create, migrate, or review Monica framework tests and shared testing infrastructure: host-owned scenarios, raw ProjectUnit fixtures, Roslyn source-generator tests, result assertions, and isolation.
+description: Create, migrate, or review Monica framework tests and shared testing infrastructure, including host-owned scenarios, raw ProjectUnit fixtures, Roslyn source-generator tests, result assertions, and isolation.
 ---
 
 # Monica Unit Testing
@@ -18,7 +18,7 @@ Use `Monica.Testing` as the shared toolkit and keep runnable framework tests und
    - Roslyn source-generator semantics: build an in-memory `CSharpCompilation` and run the generator through `GeneratorDriver`.
 3. Put reusable assertions, host helpers, and deterministic boundary doubles in `Monica.Testing`; keep scenario-specific data and doubles in the runnable test project.
 4. Prefer public-surface coverage: module registrations, facades, public models and abstractions, stable providers, and observable side effects.
-5. Run one `dotnet test` process at a time with Windows paths under WSL.
+5. Use the repository test runner or the relevant test project. Keep processes that share build outputs sequential.
 
 ## Host-Owned Scenarios
 
@@ -102,6 +102,6 @@ Test source generators with raw Roslyn inputs under a dedicated `tests/Test.Moni
 
 ## Validation
 
-- Use Windows paths for `dotnet build` and `dotnet test` under WSL.
-- Run one build or test process at a time.
+- Match path syntax to the SDK process actually running.
+- Keep build/test processes sharing outputs sequential.
 - Run the relevant runnable test project and the repository's default non-UI gate when required. UI projects run only on explicit user request.

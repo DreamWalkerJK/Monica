@@ -83,4 +83,4 @@ Replace external boundaries, not domain services, repositories or policy logic. 
 
 Read references/standards.md for layout and ownership, references/templates.md for exact API examples, and references/database-isolation.md for provider choices.
 
-Run the relevant test project with absolute Windows paths under WSL. Keep one dotnet build/test process at a time and resolve all build warnings.
+Run the relevant test project using the repository's verification policy and paths understood by the selected SDK. Keep build/test processes sharing outputs sequential and resolve all build warnings.
