@@ -5,9 +5,8 @@ namespace Monica.ProjectUnits.CodeAnalysis.Services;
 
 /// <summary>
 /// Collects test classes from the declared types of one test project. A test class is a concrete,
-/// non-generic class owning at least one Fact/Theory test method; traits declared on the class and on
-/// those methods are merged, because the test framework applies class-level traits to every contained
-/// test and method-level traits refine the class set.
+/// non-generic class owning at least one Fact/Theory test method. Class and method declarations remain
+/// separate so consumers can apply inheritance without inventing cross-method relationships.
 /// </summary>
 internal static class ProjectUnitTestClassScanner
 {
@@ -19,7 +18,10 @@ internal static class ProjectUnitTestClassScanner
         INamedTypeSymbol Symbol,
         int TestMethodCount,
         IReadOnlyList<ProjectUnitSourceTestTrait> Traits,
+        IReadOnlyList<TestMethodCandidate> Methods,
         IReadOnlyList<ProjectUnitSourceDiagnostic> Diagnostics);
+
+    internal sealed record TestMethodCandidate(IMethodSymbol Symbol, IReadOnlyList<ProjectUnitSourceTestTrait> Traits);
 
     internal static IEnumerable<TestClassCandidate> Scan(IEnumerable<INamedTypeSymbol> symbols)
     {
@@ -42,9 +44,14 @@ internal static class ProjectUnitTestClassScanner
             var traits = new Dictionary<(string Key, string Value), ProjectUnitSourceTestTrait>();
             var diagnostics = new List<ProjectUnitSourceDiagnostic>();
             CollectTraits(symbol, symbol.GetAttributes(), traits, diagnostics);
+            var methods = new List<TestMethodCandidate>();
             foreach (var method in testMethods)
             {
-                CollectTraits(symbol, method.GetAttributes(), traits, diagnostics);
+                var methodTraits = new Dictionary<(string Key, string Value), ProjectUnitSourceTestTrait>();
+                CollectTraits(symbol, method.GetAttributes(), methodTraits, diagnostics);
+                methods.Add(new TestMethodCandidate(method, methodTraits.Values
+                    .OrderBy(static trait => trait.Key, StringComparer.Ordinal)
+                    .ThenBy(static trait => trait.Value, StringComparer.Ordinal).ToArray()));
             }
 
             yield return new TestClassCandidate(
@@ -54,6 +61,7 @@ internal static class ProjectUnitTestClassScanner
                     .OrderBy(static trait => trait.Key, StringComparer.Ordinal)
                     .ThenBy(static trait => trait.Value, StringComparer.Ordinal)
                     .ToArray(),
+                methods,
                 diagnostics);
         }
     }
@@ -86,7 +94,14 @@ internal static class ProjectUnitTestClassScanner
                 continue;
             }
 
-            traits[(normalizedKey, normalizedValue)] = new ProjectUnitSourceTestTrait(normalizedKey, normalizedValue);
+            var syntax = attribute.ApplicationSyntaxReference?.GetSyntax();
+            var span = syntax?.GetLocation().GetLineSpan();
+            traits[(normalizedKey, normalizedValue)] = new ProjectUnitSourceTestTrait(normalizedKey, normalizedValue)
+            {
+                Source = span is { } location
+                    ? new ProjectUnitSourceLocation(location.Path, location.StartLinePosition.Line + 1, location.StartLinePosition.Character + 1)
+                    : null
+            };
         }
     }
 

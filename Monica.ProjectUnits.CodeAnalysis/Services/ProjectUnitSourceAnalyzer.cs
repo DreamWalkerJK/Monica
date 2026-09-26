@@ -83,6 +83,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 diagnostics);
         }
 
+        var inputObservation = new SourceInputObservation(root, diagnostics);
         using var workspace = ShadowCopyAnalyzerAssemblyLoader.CreateWorkspace();
         var workspaceDiagnostics = new List<WorkspaceDiagnostic>();
         var workspaceDiagnosticsLock = new Lock();
@@ -119,6 +120,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 continue;
             }
 
+            inputObservation.ObserveBuildInputs(projectPath);
             try
             {
                 var loaded = workspace.CurrentSolution.Projects.FirstOrDefault(project => string.Equals(
@@ -153,6 +155,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 diagnostic.Message)));
         }
 
+        inputObservation.Observe(workspace.CurrentSolution, loadedProjects);
         var analyzedProjects = 0;
         var candidates = new List<AnalyzedProjectUnitCandidate>();
         var testClasses = new List<ProjectUnitSourceTestClass>();
@@ -221,7 +224,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
         }
 
         analyzedProjects += await RetryTransientFailuresAsync(
-            root, transientFailures, testProjectPaths, candidates, testClasses, diagnostics, progress, cancellationToken);
+            root, transientFailures, testProjectPaths, candidates, testClasses, diagnostics, progress, inputObservation, cancellationToken);
 
         Report(
             progress,
@@ -237,7 +240,8 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                                 or "ProjectUnit.Analysis.Project.LoadFailed"
                                 or "ProjectUnit.Analysis.Project.CompilationFailed"
                                 or "ProjectUnit.Analysis.Project.CompilationMissing"
-                                or "ProjectUnit.Analysis.Project.LanguageUnsupported");
+                                or "ProjectUnit.Analysis.Project.LanguageUnsupported"
+                                or "ProjectUnit.Analysis.Project.InputsIncomplete");
         Report(
             progress,
             ProjectUnitSourceAnalysisStage.Completed,
@@ -246,6 +250,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
             null,
             isPartial ? "ProjectUnit analysis completed with partial results." : "ProjectUnit analysis completed.");
 
+        var finalInputs = inputObservation.Capture();
         return new ProjectUnitSourceCatalog(
             ProjectUnitSourceAnalysisContract.Version,
             allProjects.Count,
@@ -263,7 +268,117 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 .ThenBy(static diagnostic => diagnostic.SourcePath, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(static diagnostic => diagnostic.Line)
                 .ThenBy(static diagnostic => diagnostic.Code, StringComparer.Ordinal)
-                .ToArray());
+                .ToArray())
+        {
+            InputPaths = inputObservation.Paths,
+            EvaluationContexts = inputObservation.Contexts,
+            InputsChangedDuringAnalysis = inputObservation.HasChanged(finalInputs),
+            InputObservations = finalInputs
+        };
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> CaptureInputPaths(Solution solution, IReadOnlyList<Project> selected)
+    {
+        var result = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var selectedProject in selected)
+        {
+            var visited = new HashSet<ProjectId>();
+            var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var pending = new Queue<Project>();
+            pending.Enqueue(selectedProject);
+            while (pending.TryDequeue(out var project))
+            {
+                if (!visited.Add(project.Id)) continue;
+                foreach (var path in project.Documents.Select(document => document.FilePath)
+                             .Concat(project.AdditionalDocuments.Select(document => document.FilePath))
+                             .Concat(project.AnalyzerConfigDocuments.Select(document => document.FilePath))
+                             .Concat(project.MetadataReferences.OfType<PortableExecutableReference>().Select(reference => reference.FilePath))
+                             .Concat(project.AnalyzerReferences.Select(reference => reference.FullPath)).Append(project.FilePath))
+                    if (!string.IsNullOrWhiteSpace(path))
+                    {
+                        paths.Add(Path.GetFullPath(path));
+                        if (Path.GetExtension(path) is ".cs" or ".csproj") paths.Add(Path.GetDirectoryName(Path.GetFullPath(path))!);
+                    }
+                foreach (var reference in project.ProjectReferences)
+                    if (solution.GetProject(reference.ProjectId) is { } referenced) pending.Enqueue(referenced);
+            }
+            result[Path.GetFullPath(selectedProject.FilePath!)] = paths.Order(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+        return result;
+    }
+
+    private sealed class SourceInputObservation(string root, List<ProjectUnitSourceDiagnostic> diagnostics)
+    {
+        private readonly Dictionary<string, ProjectUnitSourceInput> _initialStamps = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, EvaluatedProjectInputs?> _evaluations = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> Contexts { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, IReadOnlyList<string>> Paths { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public bool HasChanged(IReadOnlyList<ProjectUnitSourceInput> finalInputs)
+            => finalInputs.Any(input => _initialStamps[input.Path] != input);
+        public IReadOnlyList<ProjectUnitSourceInput> Capture()
+            => _initialStamps.Keys.Order(StringComparer.OrdinalIgnoreCase).Select(ProjectUnitSourceInput.Observe).ToArray();
+
+        public void Observe(Solution solution, IReadOnlyList<Project> projects)
+        {
+            foreach (var (project, paths) in CaptureInputPaths(solution, projects))
+            {
+                ObserveBuildInputs(project);
+                Record(project, paths);
+            }
+        }
+
+        public void ObserveBuildInputs(string selectedProject)
+        {
+            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var pending = new Queue<string>();
+            pending.Enqueue(Path.GetFullPath(selectedProject));
+            while (pending.TryDequeue(out var path))
+            {
+                if (!visited.Add(path)) continue;
+                if (!_evaluations.TryGetValue(path, out var inputs))
+                {
+                    try { inputs = ProjectUnitBuildInputs.Evaluate(path); }
+                    catch (Exception exception) when (exception is not OperationCanceledException)
+                    {
+                        inputs = null;
+                        diagnostics.Add(new ProjectUnitSourceDiagnostic("ProjectUnit.Analysis.Project.InputsIncomplete",
+                            ProjectUnitSourceDiagnosticSeverity.Error,
+                            $"MSBuild input evaluation is incomplete for '{ToRelativePath(root, path)}': {exception.Message}",
+                            ToRelativePath(root, selectedProject)));
+                    }
+                    _evaluations[path] = inputs;
+                }
+                if (inputs is null)
+                {
+                    if (!diagnostics.Any(diagnostic => diagnostic.Code == "ProjectUnit.Analysis.Project.InputsIncomplete"
+                        && diagnostic.ProjectPath == ToRelativePath(root, selectedProject)))
+                        diagnostics.Add(new ProjectUnitSourceDiagnostic("ProjectUnit.Analysis.Project.InputsIncomplete",
+                            ProjectUnitSourceDiagnosticSeverity.Error,
+                            $"Inputs from referenced project '{ToRelativePath(root, path)}' were not completely evaluated.",
+                            ToRelativePath(root, selectedProject)));
+                    continue;
+                }
+                Contexts[path] = inputs.Contexts;
+                Record(selectedProject, inputs.Paths.SelectMany(input =>
+                {
+                    var directory = Path.GetDirectoryName(input)!;
+                    // Design-time loading can create obj/<configuration> after evaluation. Imported
+                    // files still participate in drift checks; disposable directory entries do not.
+                    var isBuildOutput = directory.Split(['/', '\\']).Any(segment =>
+                        segment.Equals("obj", StringComparison.OrdinalIgnoreCase) || segment.Equals("bin", StringComparison.OrdinalIgnoreCase));
+                    return isBuildOutput ? new[] { input } : new[] { input, directory };
+                }));
+                foreach (var reference in inputs.ProjectReferences) pending.Enqueue(reference);
+            }
+        }
+
+        private void Record(string project, IEnumerable<string> paths)
+        {
+            var merged = (Paths.GetValueOrDefault(project) ?? []).Concat(paths)
+                .Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToArray();
+            Paths[project] = merged;
+            foreach (var path in merged) _initialStamps.TryAdd(path, ProjectUnitSourceInput.Observe(path));
+        }
     }
 
     private async Task CollectProjectUnitsAsync(
@@ -339,7 +454,13 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 candidate.Symbol.Name,
                 location,
                 candidate.TestMethodCount,
-                candidate.Traits));
+                candidate.Traits.Select(trait => MapTraitLocation(root, trait)).ToArray())
+            {
+                Methods = candidate.Methods.Select(method => new ProjectUnitSourceTestMethod(
+                    method.Symbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat),
+                    CreateLocation(root, method.Symbol) ?? location,
+                    method.Traits.Select(trait => MapTraitLocation(root, trait)).ToArray())).ToArray()
+            });
         }
     }
 
@@ -358,6 +479,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
         List<ProjectUnitSourceTestClass> testClasses,
         List<ProjectUnitSourceDiagnostic> diagnostics,
         IProgress<ProjectUnitSourceAnalysisProgress>? progress,
+        SourceInputObservation inputObservation,
         CancellationToken cancellationToken)
     {
         if (failures.Count == 0)
@@ -389,9 +511,11 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
+                inputObservation.ObserveBuildInputs(absolutePath);
                 var project = await retryWorkspace.OpenProjectAsync(
                     absolutePath,
                     cancellationToken: cancellationToken);
+                inputObservation.Observe(retryWorkspace.CurrentSolution, [project]);
                 if (project.Language != LanguageNames.CSharp)
                 {
                     continue;
@@ -533,7 +657,10 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
         return results;
     }
 
-    private static ProjectUnitSourceLocation? CreateLocation(string root, INamedTypeSymbol symbol)
+    private static ProjectUnitSourceTestTrait MapTraitLocation(string root, ProjectUnitSourceTestTrait trait)
+        => trait with { Source = trait.Source is { } source ? source with { RelativePath = ToRelativePath(root, source.RelativePath) } : null };
+
+    private static ProjectUnitSourceLocation? CreateLocation(string root, ISymbol symbol)
     {
         var syntax = symbol.DeclaringSyntaxReferences
             .OrderBy(reference => reference.SyntaxTree.FilePath, StringComparer.OrdinalIgnoreCase)
@@ -587,18 +714,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                         dependencies.Add(dependencyKey);
                     }
                 }
-                else if (dependency.MissingDiagnosticCode is not null)
-                {
-                    var diagnostic = new ProjectUnitSourceDiagnostic(
-                        dependency.MissingDiagnosticCode,
-                        ProjectUnitSourceDiagnosticSeverity.Warning,
-                        $"Associated ProjectUnit '{dependency.Symbol.GetRuntimeName()}' was not discovered in the analyzed workspace.",
-                        candidate.ProjectPath,
-                        candidate.Location.RelativePath,
-                        candidate.Location.Line);
-                    unitDiagnostics.Add(diagnostic);
-                    allDiagnostics.Add(diagnostic);
-                }
+
             }
 
             dependenciesByKey[key] = dependencies.Order(StringComparer.Ordinal).ToArray();
@@ -643,7 +759,13 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                     candidate.Candidate.ExecutionPoints,
                     dependenciesByKey[key],
                     dependedBy[key].Order(StringComparer.Ordinal).ToArray(),
-                    diagnosticsByKey[key]);
+                    diagnosticsByKey[key])
+                {
+                    OutgoingReferences = candidate.Candidate.Dependencies.Select(dependency => new ProjectUnitSourceReference(
+                        dependency.Symbol.ContainingAssembly.Name,
+                        dependency.Symbol.GetRuntimeName(),
+                        dependency.MissingDiagnosticCode)).ToArray()
+                };
             })
             .OrderBy(static unit => unit.ProjectPath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(static unit => unit.UnitType)

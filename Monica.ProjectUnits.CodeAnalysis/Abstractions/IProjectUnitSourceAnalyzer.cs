@@ -18,6 +18,14 @@ public interface IProjectUnitSourceAnalyzer
     /// <param name="progress">Optional progress observer. Callbacks may occur on background threads.</param>
     /// <param name="cancellationToken">Cancellation token for project loading and semantic analysis.</param>
     /// <returns>A serializable source catalog. Project failures are represented as diagnostics and partial results.</returns>
+    /// <remarks>
+    /// OutgoingReferences preserve declared assembly/type targets even outside the requested scope. Dependencies
+    /// and DependedBy are conveniences resolved only within that scope; they are not intrinsic source identities.
+    /// Consumers assembling incremental workspace views must resolve outgoing declarations after merging project
+    /// facts. Test class traits and method traits remain separate. InputPaths describes SDK-evaluated imports and
+    /// source/reference files; EvaluationContexts records the corresponding design-time properties. Incomplete
+    /// input evaluation yields partial results. InputsChangedDuringAnalysis reports stamp drift, not cryptographic evidence.
+    /// </remarks>
     Task<ProjectUnitSourceCatalog> AnalyzeAsync(
         ProjectUnitSourceAnalysisRequest request,
         IProgress<ProjectUnitSourceAnalysisProgress>? progress = null,

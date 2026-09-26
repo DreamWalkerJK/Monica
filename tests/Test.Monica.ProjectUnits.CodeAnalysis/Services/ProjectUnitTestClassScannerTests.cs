@@ -10,7 +10,7 @@ namespace Test.Monica.ProjectUnits.CodeAnalysis.Services;
 public sealed class ProjectUnitTestClassScannerTests
 {
     [Fact]
-    public void Scan_collects_test_classes_with_merged_traits_and_skips_non_test_types()
+    public void Scan_preserves_class_and_method_trait_scope_and_skips_non_test_types()
     {
         var compilation = CreateCompilation(SCAN_SOURCE);
         var symbols = GetDeclaredTypes(compilation.Assembly.GlobalNamespace).ToArray();
@@ -31,12 +31,15 @@ public sealed class ProjectUnitTestClassScannerTests
 
         var alpha = candidates["Samples.AlphaServiceTests"];
         alpha.TestMethodCount.Should().Be(2);
-        alpha.Traits.Should().BeEquivalentTo(
+        alpha.Traits.Select(trait => (trait.Key, trait.Value)).Should().BeEquivalentTo(
         [
-            new ProjectUnitSourceTestTrait("REQ", "REQ-ALPHA-1"),
-            new ProjectUnitSourceTestTrait("REQ", "REQ-ALPHA-2"),
-            new ProjectUnitSourceTestTrait("Unit", "Samples.AlphaService")
+            ("REQ", "REQ-ALPHA-1"),
+            ("Unit", "Samples.AlphaService")
         ]);
+        alpha.Methods.Should().HaveCount(2);
+        alpha.Methods.SelectMany(method => method.Traits).Should().ContainSingle()
+            .Which.Value.Should().Be("REQ-ALPHA-2");
+        alpha.Methods.SelectMany(method => method.Traits).Should().OnlyContain(trait => trait.Source != null);
         alpha.Diagnostics.Should().BeEmpty();
 
         // Traits on methods without a Fact/Theory are invisible to the test framework and stay unmerged.
@@ -51,7 +54,7 @@ public sealed class ProjectUnitTestClassScannerTests
             && diagnostic.Severity == ProjectUnitSourceDiagnosticSeverity.Warning);
         candidates["Samples.EmptyTraitTests"].Diagnostics.Should().ContainSingle(diagnostic =>
             diagnostic.Code == "ProjectUnit.Tests.Trait.Invalid");
-        candidates["Samples.DoubleDeclarationTests"].Traits.Should().ContainSingle();
+        candidates["Samples.DoubleDeclarationTests"].Methods.SelectMany(method => method.Traits).Should().ContainSingle();
     }
 
     private const string SCAN_SOURCE = """
