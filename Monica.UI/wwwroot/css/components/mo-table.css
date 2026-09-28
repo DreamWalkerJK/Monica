@@ -1,0 +1,9 @@
+/*
+ * Honor MudTable/MudDataGrid Square on both the root and themed scroll surface.
+ * Explicit component shape must win over broad theme panel selectors.
+ * The surrounding card owns rounding when a table is flush with its edges.
+ */
+.mud-table.mud-table-square,
+.mud-table.mud-table-square > .mud-table-container {
+    border-radius: 0 !important;
+}
