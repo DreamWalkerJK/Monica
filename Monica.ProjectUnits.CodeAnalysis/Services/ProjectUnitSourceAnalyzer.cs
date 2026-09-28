@@ -270,7 +270,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 .ThenBy(static diagnostic => diagnostic.Code, StringComparer.Ordinal)
                 .ToArray())
         {
-            InputPaths = inputObservation.Paths,
+            InputPaths = inputObservation.SnapshotPaths(),
             EvaluationContexts = inputObservation.Contexts,
             InputsChangedDuringAnalysis = inputObservation.HasChanged(finalInputs),
             InputObservations = finalInputs
@@ -311,12 +311,19 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
     {
         private readonly Dictionary<string, ProjectUnitSourceInput> _initialStamps = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, EvaluatedProjectInputs?> _evaluations = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, HashSet<string>> _projectPaths = new(StringComparer.OrdinalIgnoreCase);
         public Dictionary<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> Contexts { get; } = new(StringComparer.OrdinalIgnoreCase);
-        public Dictionary<string, IReadOnlyList<string>> Paths { get; } = new(StringComparer.OrdinalIgnoreCase);
         public bool HasChanged(IReadOnlyList<ProjectUnitSourceInput> finalInputs)
             => finalInputs.Any(input => _initialStamps[input.Path] != input);
         public IReadOnlyList<ProjectUnitSourceInput> Capture()
             => _initialStamps.Keys.Order(StringComparer.OrdinalIgnoreCase).Select(ProjectUnitSourceInput.Observe).ToArray();
+
+        /// <summary>Materializes the per-project input sets once, when the catalog is constructed.</summary>
+        public IReadOnlyDictionary<string, IReadOnlyList<string>> SnapshotPaths()
+            => _projectPaths.ToDictionary(
+                static pair => pair.Key,
+                static pair => (IReadOnlyList<string>)pair.Value.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+                StringComparer.OrdinalIgnoreCase);
 
         public void Observe(Solution solution, IReadOnlyList<Project> projects)
         {
@@ -374,10 +381,20 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
 
         private void Record(string project, IEnumerable<string> paths)
         {
-            var merged = (Paths.GetValueOrDefault(project) ?? []).Concat(paths)
-                .Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToArray();
-            Paths[project] = merged;
-            foreach (var path in merged) _initialStamps.TryAdd(path, ProjectUnitSourceInput.Observe(path));
+            // One filesystem observation per distinct input path: Record runs once per closure
+            // member per selected project, so re-observing the merged set would stat every input
+            // thousands of times over a full solution.
+            if (!_projectPaths.TryGetValue(project, out var set))
+            {
+                set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                _projectPaths[project] = set;
+            }
+            foreach (var path in paths)
+            {
+                if (!set.Add(path)) continue;
+                if (!_initialStamps.ContainsKey(path))
+                    _initialStamps[path] = ProjectUnitSourceInput.Observe(path);
+            }
         }
     }
 
