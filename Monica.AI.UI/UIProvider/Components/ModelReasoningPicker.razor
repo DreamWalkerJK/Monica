@@ -1,0 +1,57 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+<div class="reasoning-picker">
+    <MudMenu Label="@Summary" Variant="Variant.Outlined" EndIcon="@Icons.Material.Outlined.UnfoldMore"
+             AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" AriaLabel="@L["Settings:ReasoningLevels"]"
+             Disabled="@Disabled" FullWidth="true">
+        <ChildContent>
+            <div class="reasoning-menu" @onclick:stopPropagation="true">
+                <MudTextField T="string" @bind-Value="_search" Immediate="true" Placeholder="@L["Settings:SearchReasoning"]"
+                              aria-label="@L["Settings:SearchReasoning"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                              Variant="Variant.Text" Margin="Margin.Dense" />
+                <div class="reasoning-options" role="group" aria-label="@L["Settings:ReasoningLevels"]">
+                    @foreach (var id in Options.Where(id => id.Contains(_search, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        <MudCheckBox T="bool" Value="@Selected.Contains(id, StringComparer.OrdinalIgnoreCase)" ValueChanged="@(value => ToggleAsync(id, value))"
+                                     Label="@id" Dense="true" Color="Color.Primary" />
+                    }
+                    @if (!Options.Any(id => id.Contains(_search, StringComparison.OrdinalIgnoreCase))) { <p>@L["Settings:NoReasoningMatches"]</p> }
+                </div>
+                <div class="reasoning-default">
+                    <MudSelect T="string" Value="@(DefaultLevel ?? string.Empty)" ValueChanged="@ChangeDefaultAsync" Label="@L["Settings:DefaultReasoning"]"
+                               Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem T="string" Value="@string.Empty">@L["Settings:ReasoningAuto"]</MudSelectItem>
+                        @foreach (var id in Selected) { <MudSelectItem T="string" Value="@id">@id</MudSelectItem> }
+                    </MudSelect>
+                </div>
+            </div>
+        </ChildContent>
+    </MudMenu>
+</div>
+
+@code {
+    /// <summary>Supported level identifiers, ordered from low to high. Custom identifiers are retained.</summary>
+    [Parameter] public IReadOnlyList<string> Selected { get; set; } = [];
+    /// <summary>Reports the complete selection without changing protocol mappings owned by the parent.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<string>> SelectedChanged { get; set; }
+    /// <summary>The selected default, or null to use the provider's automatic behavior.</summary>
+    [Parameter] public string? DefaultLevel { get; set; }
+    /// <summary>Reports a default change; deselecting the default resets it to null.</summary>
+    [Parameter] public EventCallback<string?> DefaultLevelChanged { get; set; }
+    /// <summary>Prevents opening the picker while its parent is busy.</summary>
+    [Parameter] public bool Disabled { get; set; }
+    private static readonly string[] StandardLevels = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"];
+    private string _search = string.Empty;
+    private IEnumerable<string> Options => StandardLevels.Concat(Selected).Distinct(StringComparer.OrdinalIgnoreCase);
+    private string Summary => Selected.Count == 0 ? L["Settings:SelectReasoning"] : string.Join(", ", Selected);
+    private async Task ToggleAsync(string id, bool selected)
+    {
+        var ids = selected ? Selected.Append(id) : Selected.Where(value => !value.Equals(id, StringComparison.OrdinalIgnoreCase));
+        var next = Options.Where(value => ids.Contains(value, StringComparer.OrdinalIgnoreCase)).ToArray();
+        await SelectedChanged.InvokeAsync(next);
+        if (!selected && string.Equals(DefaultLevel, id, StringComparison.OrdinalIgnoreCase)) await DefaultLevelChanged.InvokeAsync(null);
+    }
+    private Task ChangeDefaultAsync(string? value) => DefaultLevelChanged.InvokeAsync(string.IsNullOrEmpty(value) ? null : value);
+}
