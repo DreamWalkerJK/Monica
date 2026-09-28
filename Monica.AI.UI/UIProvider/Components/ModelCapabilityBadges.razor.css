@@ -1,0 +1,8 @@
+.model-capabilities { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.capability-badge { --badge-color: var(--mud-palette-text-secondary); display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; border-radius: 6px; font-size: .6875rem; color: var(--badge-color); background: color-mix(in srgb, var(--badge-color) 8%, transparent); }
+.capability-badge.image { --badge-color: var(--mud-palette-info); }
+.capability-badge.document, .capability-badge.embedding { --badge-color: var(--mud-palette-secondary); }
+.capability-badge.tool { --badge-color: var(--mud-palette-success); }
+.capability-badge.reasoning { --badge-color: var(--mud-palette-primary); }
+.model-capabilities ::deep .mud-icon-root { font-size: 14px; }
+.unknown-capabilities { display: inline-flex; align-items: center; gap: 4px; color: var(--mud-palette-text-secondary); font-size: .6875rem; }

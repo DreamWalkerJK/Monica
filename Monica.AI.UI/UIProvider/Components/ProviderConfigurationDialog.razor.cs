@@ -121,6 +121,8 @@ public partial class ProviderConfigurationDialog
             {
                 [nameof(ModelConfigurationDialog.Model)] = model,
                 [nameof(ModelConfigurationDialog.ProviderType)] = _type,
+                [nameof(ModelConfigurationDialog.OnDiscover)] = (Func<CancellationToken, Task<Res<IReadOnlyList<AIModelConfiguration>>>>)(ct =>
+                    OnDiscover(new ProviderConfigurationEdit(BuildConfiguration(), _key, _clearKey), ct)),
                 [nameof(ModelConfigurationDialog.OnSave)] = (Func<AIModelConfiguration, Task<string?>>)(async saved =>
                 {
                     if (_disposed) return L["Error:Generic"];
