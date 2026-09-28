@@ -1,6 +1,17 @@
 .model-form { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
-.reasoning-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.reasoning-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; align-items: center; }
+.metadata-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; font-size: .8125rem; color: var(--mud-palette-text-secondary); }
+.metadata-heading > span { flex: 1; min-width: 180px; }
+.metadata-heading ::deep .mud-button { flex-shrink: 0; text-transform: none; }
+.model-fields { display: flex; flex-direction: column; gap: 22px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.model-fields:disabled { opacity: .7; pointer-events: none; }
+.form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.limits-section { padding-top: 16px; border-top: 1px solid var(--mud-palette-lines-default); }
+.capability-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.limit-preview { display: block; min-height: 18px; margin-top: 6px; font-size: .75rem; color: var(--mud-palette-text-secondary); }
+.advanced-settings { border-top: 1px solid var(--mud-palette-lines-default); padding-top: 14px; }
+.advanced-settings > summary { cursor: pointer; font-size: .8125rem; font-weight: 500; padding: 4px 0; }
+.advanced-settings > p { font-size: .75rem; color: var(--mud-palette-text-secondary); margin: 10px 0; line-height: 1.6; }
+.reasoning-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; align-items: center; margin-bottom: 8px; }
 .reasoning-row.has-budget { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; }
-@media(max-width: 600px) { .form-grid { grid-template-columns: minmax(0, 1fr); }.reasoning-row, .reasoning-row.has-budget { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.model-dialog-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; }
+@media(max-width: 600px) { .form-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; } .model-fields { gap: 18px; } .reasoning-row, .reasoning-row.has-budget { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }

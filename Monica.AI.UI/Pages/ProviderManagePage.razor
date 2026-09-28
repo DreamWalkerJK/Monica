@@ -58,17 +58,29 @@
                     </div>
                 }
                 <div class="models-heading"><MudText Typo="Typo.subtitle1">@L["Settings:Models"]</MudText><div class="provider-actions"><MudButton Size="Size.Small" OnClick="DiscoverAsync" Disabled="@(_busy || !provider.Enabled)" StartIcon="@Icons.Material.Outlined.Search">@L["Settings:Discover"]</MudButton><MudButton Size="Size.Small" OnClick="@(() => EditModelAsync(null))" Disabled="@_busy" StartIcon="@Icons.Material.Filled.Add">@L["Settings:AddModel"]</MudButton></div></div>
-                <div class="model-table-scroll">
-                    <MudTable T="AIModelConfiguration" Items="@provider.Models" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.None">
-                        <HeaderContent><MudTh>@L["Model:Label"]</MudTh><MudTh>@L["Workbench:ContextCapacity"]</MudTh><MudTh>@L["Settings:Capabilities"]</MudTh><MudTh>@L["Settings:Actions"]</MudTh></HeaderContent>
-                        <RowTemplate Context="model">
-                            <MudTd><div class="model-identity"><strong>@(model.DisplayName ?? model.ModelName)</strong><span>@model.ModelName</span>@if(provider.DefaultModel == model.ModelName){<span class="default-model">@L["Provider:Default"]</span>}</div></MudTd>
-                            <MudTd>@(model.ContextWindow is { } capacity ? $"{capacity:N0}" : model.Kind == AIModelKind.Chat ? L["Settings:DefaultContext", ChatContextCapacity.DefaultTokens] : L["Settings:Unknown"])</MudTd>
-                            <MudTd><span class="capability-summary">@Capabilities(model)</span></MudTd>
-                            <MudTd><div class="model-actions"><MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" OnClick="@(() => EditModelAsync(model))" aria-label="@L["Settings:EditModel"]" Disabled="@_busy" /><MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Dense="true" AriaLabel="@L["Settings:ModelActions"]" Disabled="@_busy"><MudMenuItem OnClick="@(() => SaveAsync(provider with { DefaultModel = model.ModelName }))" Disabled="@(model.Kind != AIModelKind.Chat)">@L["Settings:SetDefault"]</MudMenuItem><MudMenuItem OnClick="@(() => TestModelAsync(provider.ProviderId, model.ModelName))" Disabled="@(model.Kind != AIModelKind.Chat)">@L["Settings:TestModel"]</MudMenuItem><MudMenuItem OnClick="@(() => DeleteModelAsync(model))">@L["Settings:DeleteModel"]</MudMenuItem></MudMenu></div></MudTd>
-                        </RowTemplate>
-                        <NoRecordsContent><MudText Typo="Typo.body2">@L["Settings:NoModels"]</MudText></NoRecordsContent>
-                    </MudTable>
+                <div class="configured-models">
+                    @foreach (var model in provider.Models)
+                    {
+                        <article class="configured-model" @key="model.ModelName">
+                            <div class="model-overview">
+                                <div class="model-symbol"><MudIcon Icon="@(model.Kind == AIModelKind.Embedding ? Icons.Material.Outlined.DataArray : Icons.Material.Outlined.Memory)" /></div>
+                                <div class="model-identity">
+                                    <div class="model-title"><strong>@(model.DisplayName ?? model.ModelName)</strong>@if(provider.DefaultModel == model.ModelName){<span class="default-model"><MudIcon Icon="@Icons.Material.Outlined.Star" />@L["Provider:Default"]</span>}</div>
+                                    @if (!string.IsNullOrWhiteSpace(model.DisplayName) && model.DisplayName != model.ModelName) { <span>@model.ModelName</span> }
+                                </div>
+                                <div class="model-actions"><MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" OnClick="@(() => EditModelAsync(model))" aria-label="@L["Settings:EditModel"]" Disabled="@_busy" /><MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Dense="true" AriaLabel="@L["Settings:ModelActions"]" Disabled="@_busy"><MudMenuItem OnClick="@(() => SaveAsync(provider with { DefaultModel = model.ModelName }))" Disabled="@(model.Kind != AIModelKind.Chat)">@L["Settings:SetDefault"]</MudMenuItem><MudMenuItem OnClick="@(() => TestModelAsync(provider.ProviderId, model.ModelName))" Disabled="@(model.Kind != AIModelKind.Chat)">@L["Settings:TestModel"]</MudMenuItem><MudMenuItem OnClick="@(() => DeleteModelAsync(model))">@L["Settings:DeleteModel"]</MudMenuItem></MudMenu></div>
+                            </div>
+                            <div class="model-details">
+                                <ModelCapabilityBadges Model="@model" />
+                                <div class="model-limits">
+                                    <span title="@(model.ContextWindow is { } exact ? L["Settings:ExactTokens", exact] : L["Settings:ContextLimitHelp"])">@L["Settings:ContextShort"] <strong>@(TokenQuantity.Format(model.ContextWindow ?? (model.Kind == AIModelKind.Chat ? ChatContextCapacity.DefaultTokens : null)))</strong>@if(model.ContextWindow is null){<small>@L[model.Kind == AIModelKind.Chat ? "Settings:Fallback" : "Settings:Unknown"]</small>}</span>
+                                    @if(model.MaxOutputTokens is { } output){<span title="@L["Settings:ExactTokens", output]">@L["Settings:OutputShort"] <strong>@TokenQuantity.Format(output)</strong></span>}
+                                    @if(model.ReasoningLevels.Count > 0){<span title="@string.Join(", ", model.ReasoningLevels.Select(level => level.Id))">@L["Settings:EffortCount", model.ReasoningLevels.Count]</span>}
+                                </div>
+                            </div>
+                        </article>
+                    }
+                    @if(provider.Models.Count == 0){<div class="settings-empty"><MudIcon Icon="@Icons.Material.Outlined.Memory" /><p>@L["Settings:NoModels"]</p></div>}
                 </div>
                 @if (_discovered.Count > 0)
                 {
@@ -160,6 +172,7 @@
             {
                 [nameof(ModelConfigurationDialog.Model)] = model,
                 [nameof(ModelConfigurationDialog.ProviderType)] = provider.ProviderType,
+                [nameof(ModelConfigurationDialog.OnDiscover)] = (Func<CancellationToken, Task<Res<IReadOnlyList<AIModelConfiguration>>>>)(ct => Configuration.DiscoverModelsAsync(provider.ProviderId, ct)),
                 [nameof(ModelConfigurationDialog.OnSave)] = (Func<AIModelConfiguration, Task<string?>>)(saved => SaveDialogAsync(new ProviderConfigurationEdit(provider with
                 {
                     Models = provider.Models.Where(item => item.ModelName != model?.ModelName && item.ModelName != saved.ModelName).Append(saved).ToArray(),
@@ -188,17 +201,5 @@
         else Snackbar.Add(L["Settings:TestSucceeded"], Severity.Success);
     }
     private string Source(AIProviderSettings provider) => provider.IsCodeDefined ? provider.HasOverride ? L["Settings:CodeOverride"] : L["Settings:CodeDefaults"] : L["Settings:Persisted"];
-    private string Capabilities(AIModelConfiguration model)
-    {
-        if (model.Kind == AIModelKind.Embedding) return L["Settings:Embedding"];
-        var names = new List<string>();
-        if (model.SupportsImage == true) names.Add(L["Settings:ImageInput"]);
-        if (model.SupportsDocuments == true) names.Add(L["Settings:NativeDocuments"]);
-        if (model.SupportsTools == true) names.Add(L["Settings:FunctionTools"]);
-        if (model.SupportsReasoning == true) names.Add(L["Workbench:Reasoning"]);
-        return names.Count > 0 ? string.Join(" · ", names)
-            : L[model.SupportsImage == false && model.SupportsDocuments == false && model.SupportsTools == false && model.SupportsReasoning == false
-                ? "Settings:TextOnly" : "Settings:Unknown"];
-    }
     public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
 }

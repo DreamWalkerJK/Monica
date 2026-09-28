@@ -131,6 +131,20 @@ MudBlazor intentionally hides several header affordances until hover. If the the
 
 When needed, provide a visible default state and a stronger hover state at the theme level.
 
+### Tables flush with a surrounding card
+
+Use `Square="true"` on a `MudTable` or `MudDataGrid` whose edges meet an enclosing card, such as a table immediately below the card's heading:
+
+```razor
+<MudTable T="JobOperationalSummary" Square="true" Elevation="0">
+    ...
+</MudTable>
+```
+
+The outer card owns the rounded outline and clipping. `components/mo-table.css`, imported by `mo-theme-main.css`, honors the generated `mud-table-square` class on both the table root and its direct `.mud-table-container`. The radius override is important because theme surface selectors can be more specific than MudBlazor's square rule. It changes only the shape; borders, header colors, and horizontal scrolling retain their existing behavior. Standalone tables keep their theme's default shape unless they explicitly request square corners.
+
+Verify the root and scroll container both compute to zero radius in light and dark modes, while the enclosing card retains its radius. Include a rounded theme, a standalone table, and a narrow viewport with horizontal overflow in browser smoke checks.
+
 ### Snackbars and overlays
 
 If you replace the default surface/background treatment, also verify:

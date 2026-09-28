@@ -1,6 +1,5 @@
 @using Microsoft.Extensions.Localization
 @using Monica.AI.Configuration.Models
-@using Monica.AI.Chat.Models
 @using Monica.AI.Providers
 @using Monica.AI.UI.Localization
 @inject IStringLocalizer<AIResource> L
@@ -9,108 +8,95 @@
 <MudDialog>
     <DialogContent>
         <div class="model-form">
-            <MudText Typo="Typo.body2">@L["Settings:ModelHelp"]</MudText>
-            <div class="form-grid">
-                <MudTextField T="string" @bind-Value="_name" Label="@L["Settings:ModelId"]" Required="true" Variant="Variant.Outlined" />
-                <MudTextField T="string" @bind-Value="_display" Label="@L["Settings:DisplayName"]" Variant="Variant.Outlined" />
-                <MudSelect T="AIModelKind" @bind-Value="_kind" Label="@L["Settings:ModelKind"]" Variant="Variant.Outlined">
-                    <MudSelectItem T="AIModelKind" Value="@AIModelKind.Chat">@L["Workbench:Chat"]</MudSelectItem>
-                    <MudSelectItem T="AIModelKind" Value="@AIModelKind.Embedding">@L["Settings:Embedding"]</MudSelectItem>
-                </MudSelect>
-                <MudNumericField T="int?" @bind-Value="_context" Label="@L["Workbench:ContextCapacity"]" Min="1" Variant="Variant.Outlined" Clearable="true" HelperText="@(_kind == AIModelKind.Chat ? L["Settings:ContextDefaultHelp", ChatContextCapacity.DefaultTokens] : L["Settings:UnknownNumber"])" />
-                <MudNumericField T="int?" @bind-Value="_output" Label="@L["Settings:MaxOutput"]" Min="1" Variant="Variant.Outlined" Clearable="true" />
-                @if (_kind == AIModelKind.Embedding) { <MudNumericField T="int?" @bind-Value="_dimensions" Label="@L["Settings:EmbeddingDimensions"]" Min="1" Variant="Variant.Outlined" Clearable="true" /> }
-            </div>
-            @if (_kind == AIModelKind.Chat)
-            {
-                <div class="form-grid">
-                    <CapabilitySelect Label="@L["Settings:ImageInput"]" @bind-Value="_images" />
-                    <CapabilitySelect Label="@L["Settings:NativeDocuments"]" @bind-Value="_documents" />
-                    <CapabilitySelect Label="@L["Settings:FunctionTools"]" @bind-Value="_tools" />
-                    <CapabilitySelect Label="@L["Workbench:Reasoning"]" @bind-Value="_reasoning" />
-                </div>
-                <div class="reasoning-heading"><MudText Typo="Typo.subtitle2">@L["Settings:ReasoningLevels"]</MudText><MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="AddLevel">@L["Settings:AddLevel"]</MudButton></div>
-                @foreach (var level in _levels)
+            <div class="metadata-heading">
+                <span>@L["Settings:ModelHelp"]</span>
+                @if (OnDiscover is not null)
                 {
-                    <div class="reasoning-row @(ProviderType == EAIProviderType.Anthropic ? "has-budget" : null)" @key="level">
-                        <MudTextField T="string" @bind-Value="level.Id" Label="@L["Settings:LevelId"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                        <MudTextField T="string" @bind-Value="level.DisplayName" Label="@L["Settings:DisplayName"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                        <MudTextField T="string" @bind-Value="level.ProviderValue" Label="@L["Settings:ProviderValue"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                        @if (ProviderType == EAIProviderType.Anthropic)
-                        {
-                            <MudNumericField T="int?" @bind-Value="level.Budget" Label="@L["Settings:ThinkingBudget"]" Min="1024" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                        }
-                        <MudIconButton Icon="@Icons.Material.Outlined.Delete" OnClick="@(() => _levels.Remove(level))" aria-label="@L["Settings:RemoveLevel"]" />
-                    </div>
+                    <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.AutoFixHigh" Disabled="@(Busy || string.IsNullOrWhiteSpace(_name))" OnClick="FetchMetadataAsync">@L["Settings:FillMetadata"]</MudButton>
                 }
-                <MudSelect T="string" @bind-Value="_defaultReasoning" Label="@L["Settings:DefaultReasoning"]" Variant="Variant.Outlined" Clearable="true">
-                    @foreach (var level in _levels.Where(level => !string.IsNullOrWhiteSpace(level.Id))) { <MudSelectItem T="string" Value="@level.Id">@level.Id</MudSelectItem> }
-                </MudSelect>
-            }
+            </div>
+            <fieldset class="model-fields" disabled="@Busy">
+                <MudTextField T="string" @bind-Value="_name" Label="@L["Settings:ModelId"]" Required="true" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <div class="form-grid">
+                    <MudTextField T="string" @bind-Value="_display" Label="@L["Settings:DisplayName"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudSelect T="AIModelKind" @bind-Value="_kind" Label="@L["Settings:ModelKind"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem T="AIModelKind" Value="@AIModelKind.Chat">@L["Workbench:Chat"]</MudSelectItem>
+                        <MudSelectItem T="AIModelKind" Value="@AIModelKind.Embedding">@L["Settings:Embedding"]</MudSelectItem>
+                    </MudSelect>
+                </div>
+                <section class="form-grid limits-section">
+                    <div>
+                        <ModelSettingLabel Label="@L["Workbench:ContextCapacity"]" Help="@L["Settings:ContextLimitHelp"]" />
+                        <MudTextField T="string" @bind-Value="_contextText" Immediate="true" Placeholder="256K" aria-label="@L["Workbench:ContextCapacity"]"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Error="@InvalidContext" ErrorText="@L["Settings:InvalidTokenQuantity"]" />
+                        <span class="limit-preview">@TokenPreview(_contextText, _kind == AIModelKind.Chat)</span>
+                    </div>
+                    <div>
+                        <ModelSettingLabel Label="@L["Settings:MaxOutput"]" Help="@L["Settings:OutputLimitHelp"]" />
+                        <MudTextField T="string" @bind-Value="_outputText" Immediate="true" Placeholder="32K" aria-label="@L["Settings:MaxOutput"]"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Error="@InvalidOutput" ErrorText="@L["Settings:InvalidTokenQuantity"]" />
+                        <span class="limit-preview">@TokenPreview(_outputText, false)</span>
+                    </div>
+                </section>
+                @if (_kind == AIModelKind.Embedding)
+                {
+                    <MudNumericField T="int?" @bind-Value="_dimensions" Label="@L["Settings:EmbeddingDimensions"]" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+                }
+                else
+                {
+                    <section>
+                        <ModelSettingLabel Label="@L["Settings:InputTypes"]" Help="@L["Settings:InputTypesHelp"]" />
+                        <div class="capability-choices">
+                            <ModelCapabilityCheckbox Label="@L["Settings:TextInput"]" Value="true" Disabled="true" Locked="true" />
+                            <ModelCapabilityCheckbox Label="@L["Settings:ImageInput"]" @bind-Value="_images" Disabled="@Busy" />
+                            <ModelCapabilityCheckbox Label="@L["Settings:NativeDocuments"]" @bind-Value="_documents" Disabled="@Busy" />
+                        </div>
+                    </section>
+                    <section>
+                        <ModelSettingLabel Label="@L["Settings:Capabilities"]" Help="@L["Settings:CapabilityHelp"]" />
+                        <div class="capability-choices">
+                            <ModelCapabilityCheckbox Label="@L["Settings:FunctionTools"]" @bind-Value="_tools" Disabled="@Busy" />
+                            <ModelCapabilityCheckbox Label="@L["Workbench:Reasoning"]" Value="@_reasoning" ValueChanged="SetReasoning" Disabled="@Busy" />
+                        </div>
+                    </section>
+                    @if (_reasoning != false)
+                    {
+                        <section>
+                            <ModelSettingLabel Label="@L["Settings:ReasoningLevels"]" Help="@L["Settings:ReasoningLevelsHelp"]" />
+                            <ModelReasoningPicker Selected="@SelectedLevelIds" SelectedChanged="SetLevels"
+                                                  @bind-DefaultLevel="_defaultReasoning" Disabled="@Busy" />
+                            <span class="limit-preview">@L["Settings:ReasoningDefaultSummary", _defaultReasoning ?? L["Settings:ReasoningAuto"]]</span>
+                        </section>
+                        <details class="advanced-settings">
+                            <summary>@L["Settings:AdvancedMappings"]</summary>
+                            <p>@L["Settings:MappingHelp"]</p>
+                            @foreach (var level in _levels)
+                            {
+                                <div class="reasoning-row @(ProviderType == EAIProviderType.Anthropic ? "has-budget" : null)" @key="level">
+                                    <MudTextField T="string" @bind-Value="level.Id" Label="@L["Settings:LevelId"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                    <MudTextField T="string" @bind-Value="level.DisplayName" Label="@L["Settings:DisplayName"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                    <MudTextField T="string" @bind-Value="level.ProviderValue" Label="@L["Settings:ProviderValue"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                    @if (ProviderType == EAIProviderType.Anthropic)
+                                    {
+                                        <MudNumericField T="int?" @bind-Value="level.Budget" Label="@L["Settings:ThinkingBudget"]" Min="1024" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                    }
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="@(() => RemoveLevel(level))" aria-label="@L["Settings:RemoveLevel"]" />
+                                </div>
+                            }
+                            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.Add" OnClick="AddLevel">@L["Settings:AddLevel"]</MudButton>
+                        </details>
+                    }
+                }
+            </fieldset>
+            @if (_fetching) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
+            @if (_metadataMessage is not null) { <MudAlert Severity="Severity.Info" Dense="true">@_metadataMessage</MudAlert> }
             @if (_error is not null) { <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert> }
         </div>
     </DialogContent>
-    <DialogActions><MudButton Disabled="@_saving" OnClick="@(() => Dialog.Cancel())">@L["Common:Actions:Cancel"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@_saving">@L["Common:Actions:Save"]</MudButton></DialogActions>
+    <DialogActions>
+        <div class="model-dialog-actions">
+            <MudButton Disabled="@Busy" OnClick="Reset">@L["Settings:ResetForm"]</MudButton>
+            <div><MudButton Disabled="@_saving" OnClick="@(() => Dialog.Cancel())">@L["Common:Actions:Cancel"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@Busy">@L["Common:Actions:Save"]</MudButton></div>
+        </div>
+    </DialogActions>
 </MudDialog>
-@code {
-    [CascadingParameter] public IMudDialogInstance Dialog { get; set; } = null!;
-    [Parameter] public AIModelConfiguration? Model { get; set; }
-    [Parameter] public EAIProviderType ProviderType { get; set; }
-    [Parameter, EditorRequired] public required Func<AIModelConfiguration, Task<string?>> OnSave { get; set; }
-    private bool _saving, _disposed;
-    private string _name = string.Empty;
-    private string? _display, _defaultReasoning, _error;
-    private AIModelKind _kind;
-    private int? _context, _output, _dimensions;
-    private bool? _images, _documents, _tools, _reasoning;
-    private List<ReasoningForm> _levels = [];
-    protected override void OnInitialized()
-    {
-        if (Model is not { } model) return;
-        _name = model.ModelName; _display = model.DisplayName; _kind = model.Kind; _context = model.ContextWindow;
-        _output = model.MaxOutputTokens; _dimensions = model.EmbeddingDimensions;
-        _images = model.SupportsImage; _documents = model.SupportsDocuments; _tools = model.SupportsTools; _reasoning = model.SupportsReasoning;
-        _defaultReasoning = model.DefaultReasoningLevel;
-        _levels = model.ReasoningLevels.Select(level => new ReasoningForm { Id = level.Id, DisplayName = level.DisplayName, ProviderValue = level.ProviderValue, Budget = level.BudgetTokens }).ToList();
-    }
-    private void AddLevel() => _levels.Add(new ReasoningForm());
-    private async Task SaveAsync()
-    {
-        if (_saving) return;
-        if (string.IsNullOrWhiteSpace(_name)) { _error = L["Settings:IdRequired"]; return; }
-        var capacity = _kind == AIModelKind.Chat ? ChatContextCapacity.Resolve(null, _context).Tokens : _context;
-        if (_context is <= 0 || _output is <= 0 || _dimensions is <= 0 || capacity is { } limit && _output >= limit)
-        { _error = L["Settings:InvalidModelLimits"]; return; }
-        if (_levels.Any(level => string.IsNullOrWhiteSpace(level.Id)) || _levels.Select(level => level.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != _levels.Count)
-        { _error = L["Settings:InvalidLevels"]; return; }
-        if (_reasoning == false && _levels.Count > 0 || _levels.Any(level => level.Budget is { } budget
-            && (budget < 1024 || _output is { } maximum && budget >= maximum || string.Equals(level.ProviderValue, "none", StringComparison.OrdinalIgnoreCase))))
-        { _error = L["Settings:InvalidReasoningConfiguration"]; return; }
-        var configuration = (Model ?? new AIModelConfiguration { ModelName = _name.Trim() }) with
-        {
-            ModelName = _name.Trim(), DisplayName = _display, Kind = _kind, ContextWindow = _context, MaxOutputTokens = _output,
-            EmbeddingDimensions = _dimensions, SupportsImage = _images, SupportsDocuments = _documents, SupportsTools = _tools, SupportsReasoning = _reasoning,
-            ReasoningLevels = _levels.Select(level => new AIReasoningLevel { Id = level.Id.Trim(), DisplayName = level.DisplayName, ProviderValue = string.IsNullOrWhiteSpace(level.ProviderValue) ? null : level.ProviderValue.Trim(), BudgetTokens = ProviderType == EAIProviderType.Anthropic ? level.Budget : null }).ToArray(),
-            DefaultReasoningLevel = _levels.Any(level => level.Id == _defaultReasoning) ? _defaultReasoning : null
-        };
-        _saving = true;
-        try
-        {
-            var error = await OnSave(configuration);
-            if (_disposed) return;
-            _error = error;
-            if (error is null) Dialog.Close(DialogResult.Ok(true));
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception exception) { if (!_disposed) _error = exception.Message; }
-        finally { if (!_disposed) _saving = false; }
-    }
-    public void Dispose() => _disposed = true;
-    private sealed class ReasoningForm
-    {
-        public string Id { get; set; } = string.Empty;
-        public string? DisplayName { get; set; }
-        public string? ProviderValue { get; set; }
-        public int? Budget { get; set; }
-    }
-}
