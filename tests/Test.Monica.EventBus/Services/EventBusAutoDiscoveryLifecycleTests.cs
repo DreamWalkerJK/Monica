@@ -125,6 +125,8 @@ public sealed class EventBusAutoDiscoveryLifecycleTests
     private static HostApplicationBuilder CreateBuilder(IEventSubscriptionRegistry? registry = null)
     {
         var builder = Host.CreateApplicationBuilder();
+        // Auto-discovery only subscribes handler types this host registered; dispatch resolves them from DI.
+        builder.Services.AddTransient<AutoDiscoveredHandler>();
         builder.Services.Configure<HostOptions>(options =>
         {
             options.ServicesStartConcurrently = true;

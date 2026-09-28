@@ -21,8 +21,13 @@ internal sealed class EventBusAutoDiscovery
 
     public IReadOnlyList<EventSubscriptionDescriptor> BuildDescriptors(IServiceScopeFactory serviceScopeFactory)
     {
+        using var probeScope = serviceScopeFactory.CreateScope();
         return _registrations
-            .Where(registration => registration.IsAutoRegistered)
+            .Where(static registration => registration.IsAutoRegistered)
+            // Type discovery sees handler classes inside shared assemblies that this host references but
+            // does not own. Only subscribe handler types this host registered; subscribing a foreign host's
+            // handler fails on every delivery and wedges the topic subscription in endless retry.
+            .Where(registration => IsOwnedByThisHost(probeScope.ServiceProvider, registration.HandlerType))
             .Select(registration => new EventSubscriptionDescriptor
             {
                 ServiceKey = null,
@@ -33,5 +38,19 @@ internal sealed class EventBusAutoDiscovery
                 IsAutoDiscovered = true
             })
             .ToList();
+    }
+
+    private static bool IsOwnedByThisHost(IServiceProvider provider, Type handlerType)
+    {
+        try
+        {
+            return provider.GetService(handlerType) is not null;
+        }
+        catch
+        {
+            // The type is registered but cannot be constructed here; keep the subscription so delivery
+            // surfaces the defect instead of silently unsubscribing the owning host's handler.
+            return true;
+        }
     }
 }
