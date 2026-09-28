@@ -1,0 +1,13 @@
+<div class="setting-label">
+    <span>@Label</span>
+    <MudTooltip Text="@Help" Placement="Placement.Top">
+        <MudIconButton Icon="@Icons.Material.Outlined.Info" Size="Size.Small" aria-label="@Label" />
+    </MudTooltip>
+</div>
+
+@code {
+    /// <summary>Localized setting label, also used to name the focusable help button.</summary>
+    [Parameter, EditorRequired] public required string Label { get; set; }
+    /// <summary>Localized guidance displayed on hover or keyboard focus.</summary>
+    [Parameter, EditorRequired] public required string Help { get; set; }
+}

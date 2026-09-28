@@ -1,0 +1,23 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+<span class="capability-choice @(Value == true ? "enabled" : null) @(Value is null ? "unknown" : null)">
+    <MudCheckBox T="bool?" Value="@Value" ValueChanged="@ValueChanged" TriState="true" Dense="true" Disabled="@Disabled" Color="Color.Primary" Label="@Label"
+                 aria-checked="@(Value is null ? "mixed" : Value.Value ? "true" : "false")" />
+    @if (Locked) { <MudIcon Icon="@Icons.Material.Outlined.Lock" Size="Size.Small" /> }
+    else if (Value is null) { <span class="unknown-label">@L["Settings:Unknown"]</span> }
+</span>
+
+@code {
+    /// <summary>Localized capability name and accessible checkbox label.</summary>
+    [Parameter, EditorRequired] public required string Label { get; set; }
+    /// <summary>True means supported, false unsupported, and null unverified.</summary>
+    [Parameter] public bool? Value { get; set; }
+    /// <summary>Reports each change through supported, unsupported, and unverified states.</summary>
+    [Parameter] public EventCallback<bool?> ValueChanged { get; set; }
+    /// <summary>Prevents edits to this capability.</summary>
+    [Parameter] public bool Disabled { get; set; }
+    /// <summary>Shows a lock for required capabilities; callers must also disable editing.</summary>
+    [Parameter] public bool Locked { get; set; }
+}
