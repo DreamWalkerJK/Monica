@@ -1,88 +1,48 @@
 using System.Net.Sockets;
-using System.Text;
 using Microsoft.Extensions.Logging;
-using Monica.DataChannel.Abstractions;
-using Monica.DataChannel.Pipeline;
 using Monica.DataChannel.Providers.TCP.Utils;
 
 namespace Monica.DataChannel.Providers.TCP;
 
-internal sealed partial class TcpClientExtends : IDisposable
+internal sealed partial class TcpClientExtends : IAsyncDisposable
 {
     private readonly TcpConnectionRuntime _runtime;
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
 
-    internal TcpClientExtends(TcpConnectionRuntime runtime)
-    {
-        _runtime = runtime;
-    }
+    internal TcpClientExtends(TcpConnectionRuntime runtime) => _runtime = runtime;
 
     internal bool Connected { get; set; }
     internal DateTime? LastSendMsgTime { get; set; }
     internal TcpClient? Client { get; set; }
-    internal TcpReceiveEventHander? MsgReceivedEvent { get; set; }
+    internal Func<MsgReceivedEventArgs, CancellationToken, Task>? MsgReceivedEvent { get; set; }
     internal bool IsMainThread { get; set; }
     internal bool IsServerConnection { get; set; }
     internal string? ConnectionName { get; set; }
+    internal Guid ConnectionEpoch { get; set; } = Guid.NewGuid();
 
-    internal async Task SendMsg(string? message, ILogger logger, IDataChannelManager? manager)
+    internal async Task SendMsg(ReadOnlyMemory<byte> bytes, ILogger logger, CancellationToken cancellationToken = default)
     {
-        if (!Connected || string.IsNullOrEmpty(message))
-        {
-            return;
-        }
-
-        _runtime.ApplyFailover(this);
-
-        var client = Client ?? throw new InvalidOperationException("TCP client is not initialized.");
-        var bytes = Encoding.UTF8.GetBytes(message);
-
+        await _writeLock.WaitAsync(cancellationToken);
         try
         {
-            client.SendBufferSize = 1024;
-            await client.GetStream().WriteAsync(bytes);
-            LastSendMsgTime = DateTime.UtcNow;
-            logger.LogInformation(
-                "Sent {Length} byte(s) to TCP connection {ConnectionName}: {Message}",
-                bytes.Length,
-                ConnectionName,
-                message);
-        }
-        catch (Exception exception) when (exception is SocketException or IOException)
-        {
-            logger.LogError(exception, "Failed to write to TCP connection {ConnectionName}.", ConnectionName);
-            await HandleSendFailureAsync(message, manager);
-            throw;
-        }
-    }
-
-    private async Task HandleSendFailureAsync(string message, IDataChannelManager? manager)
-    {
-        if (IsServerConnection)
-        {
-            Connected = false;
-            _runtime.HandleServerDisconnect(this);
-            return;
-        }
-
-        var connectionName = ConnectionName;
-        if (manager is not null && !string.IsNullOrEmpty(connectionName))
-        {
-            var channel = manager.Fetch(connectionName);
-            if (channel is not null)
+            if (!Connected || Client is not { } client)
+                throw new IOException($"TCP connection '{ConnectionName}' is not connected.");
+            try
             {
-                await Task.Delay(TimeSpan.FromSeconds(2));
-                await channel.Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Inner, message));
+                await client.GetStream().WriteAsync(bytes, cancellationToken);
+                LastSendMsgTime = DateTime.UtcNow;
+                logger.LogDebug("Sent {Length} byte(s) to TCP connection {ConnectionName}.", bytes.Length, ConnectionName);
+            }
+            catch (Exception exception) when (exception is SocketException or IOException)
+            {
+                Connected = false;
+                client.Dispose();
+                if (IsServerConnection) _runtime.HandleServerDisconnect(this);
+                logger.LogError(exception, "Failed to write to TCP connection {ConnectionName}.", ConnectionName);
+                // The application owns retries: a failed write may already have sent part of the payload.
+                throw;
             }
         }
-
-        if (IsMainThread)
-        {
-            _runtime.RequestFailover();
-            _runtime.ApplyFailover(this);
-        }
-        else
-        {
-            Connected = false;
-        }
+        finally { _writeLock.Release(); }
     }
 }

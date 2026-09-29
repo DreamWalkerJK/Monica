@@ -37,9 +37,10 @@ public class DataChannel(ChannelPipeline pipeline)
     /// The payload passes through transform middleware, if any, and is then received by the outer endpoint.
     /// </summary>
     /// <param name="data">The data to send.</param>
-    public async Task SendDataFromInnerAsync(object data)
+    /// <param name="cancellationToken">Cancels the delivery; cancellation does not prove that no bytes were written.</param>
+    public async Task SendDataFromInnerAsync(object data, CancellationToken cancellationToken = default)
     {
-        await Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Inner, data));
+        await Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Inner, data) { CancellationToken = cancellationToken });
     }
 
     /// <summary>
@@ -47,8 +48,9 @@ public class DataChannel(ChannelPipeline pipeline)
     /// The payload passes through transform middleware, if any, and is then received by the inner endpoint.
     /// </summary>
     /// <param name="data">The data to send.</param>
-    public async Task SendDataFromOuterAsync(object data)
+    /// <param name="cancellationToken">Cancels the delivery.</param>
+    public async Task SendDataFromOuterAsync(object data, CancellationToken cancellationToken = default)
     {
-        await Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Outer, data));
+        await Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Outer, data) { CancellationToken = cancellationToken });
     }
 }

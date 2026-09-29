@@ -196,8 +196,6 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
             if (_isInit)
                 return;
 
-            _isInit = true;
-
             using var scope = ServiceScopeFactory.CreateScope();
             var instance = CreateInstance<IPipelineEndpoint>(scope.ServiceProvider);
             instance.Pipe = Pipe;
@@ -207,6 +205,8 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
             {
                 await communicationCore.InitAsync(cancellationToken);
             }
+            _isInit = true;
+            _isDisposed = false;
         }
         finally
         {
