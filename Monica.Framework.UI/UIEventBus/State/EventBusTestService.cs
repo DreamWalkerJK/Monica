@@ -121,12 +121,17 @@ public sealed class EventBusTestService(
     }
 
     /// <summary>
-    /// Publishes a JSON payload through the exact bus scope and service key of the selected subscription.
+    /// Injects a JSON test payload immediately through the selected subscription's transport or local dispatcher.
+    /// The selected contract, topic, scope, and service key are preserved, including for Outbox-marked events.
+    /// This diagnostic operation does not stage an Outbox message or require a publishing transaction.
     /// </summary>
     /// <param name="subscriptionId">Selected subscription id.</param>
     /// <param name="json">JSON payload to publish.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A result describing whether the publish succeeded.</returns>
+    /// <returns>
+    /// Success after local handlers complete or the distributed transport accepts the message; distributed
+    /// success does not acknowledge consumer completion. Preparation and delivery failures return an error result.
+    /// </returns>
     public async Task<Res> PublishRuntimePayloadAsync(
         EventSubscriptionId subscriptionId,
         string json,
@@ -146,13 +151,29 @@ public sealed class EventBusTestService(
             }
 
             var eventBusResult = GetEventBus(subscription);
-            if (eventBusResult.IsFailed(out var providerError, out var eventBus))
+            if (eventBusResult.IsFailed(out var providerError, out _))
             {
                 return providerError;
             }
 
             var payload = DeserializePayload(subscription.EventType, json);
-            await eventBus.PublishAsync(subscription.EventType, payload, subscription.TopicName, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            await using var scope = serviceScopeFactory.CreateAsyncScope();
+            var services = scope.ServiceProvider;
+            var message = services.GetRequiredService<IEventMessageFactory>().Prepare(
+                subscription.EventType, payload, subscription.Scope, subscription.TopicName, subscription.ServiceKey);
+
+            if (subscription.Scope == EventSubscriptionScope.Local)
+            {
+                await services.GetRequiredService<IEventReceiveDispatcher>().DispatchAsync(message, cancellationToken);
+            }
+            else
+            {
+                var transport = subscription.ServiceKey is null
+                    ? services.GetRequiredService<IEventTransport>()
+                    : services.GetRequiredKeyedService<IEventTransport>(subscription.ServiceKey);
+                await transport.SendAsync(message, cancellationToken);
+            }
 
             logger.LogInformation(
                 "Published EventBus UI runtime test payload for {EventType} on {TopicName} ({Scope}, ServiceKey: {ServiceKey})",
