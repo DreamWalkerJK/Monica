@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using Dapr;
 using Dapr.Client;
+using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Monica.Core.JsonSerialization.Models;
@@ -104,6 +106,143 @@ public sealed class DaprStateStoreProviderTests
             default!,
             default!,
             TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task ReadOperations_WhenRedisReportsMissingKey_ShouldReturnEmptyState()
+    {
+        var dapr = Substitute.For<DaprClient>();
+        ConfigureReadFailure(dapr, CreateReadFailure(StatusCode.Internal,
+            "fail to get state-key from state store test-state-store: redis: nil"));
+        var provider = CreateProvider(dapr);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        Assert.Null(await provider.GetStateAsync<TestState>("state-key", cancellationToken));
+        Assert.Null(await provider.GetRawStateAsync("state-key", cancellationToken));
+        var (value, etag) = await provider.GetStateAndETagAsync<TestState>("state-key", cancellationToken);
+        Assert.Null(value);
+        Assert.Equal(string.Empty, etag);
+        Assert.False(await provider.ExistAsync("state-key", cancellationToken));
+    }
+
+    [Fact]
+    public async Task GetStateAsync_WhenRedisReportsMissingValueType_ShouldReturnDefault()
+    {
+        var dapr = Substitute.For<DaprClient>();
+        dapr.GetStateAsync<int>(
+                "test-state-store", "state-key", null!, null!, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<int>(new RpcException(new Status(StatusCode.Internal,
+                "fail to get state-key from state store test-state-store: redis: nil"))));
+
+        var result = await CreateProvider(dapr).GetStateAsync<int>(
+            "state-key", TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, result);
+    }
+
+    [Theory]
+    [InlineData(StatusCode.Internal, "fail to get state-key from state store test-state-store: dial tcp: connection refused")]
+    [InlineData(StatusCode.Internal, "fail to get state-key from state store test-state-store: WRONGTYPE Operation against a key holding the wrong kind of value")]
+    [InlineData(StatusCode.Internal, "fail to get state-key from state store test-state-store: NOAUTH Authentication required")]
+    [InlineData(StatusCode.Internal, "fail to get different-key from state store test-state-store: redis: nil")]
+    [InlineData(StatusCode.Internal, "fail to get state-key from state store different-store: redis: nil")]
+    [InlineData(StatusCode.Internal, "fail to get state-key from state store test-state-store: redis: nil: unexpected failure")]
+    [InlineData(StatusCode.Unavailable, "fail to get state-key from state store test-state-store: redis: nil")]
+    [InlineData(StatusCode.Cancelled, "fail to get state-key from state store test-state-store: redis: nil")]
+    [InlineData(StatusCode.DeadlineExceeded, "fail to get state-key from state store test-state-store: redis: nil")]
+    public async Task ReadOperations_WhenFailureDoesNotIdentifyMissingKey_ShouldPropagateFailure(
+        StatusCode statusCode, string detail)
+    {
+        var dapr = Substitute.For<DaprClient>();
+        var failure = CreateReadFailure(statusCode, detail);
+        ConfigureReadFailure(dapr, failure);
+        var provider = CreateProvider(dapr);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        var typedError = await Assert.ThrowsAsync<Exception>(() =>
+            provider.GetStateAsync<TestState>("state-key", cancellationToken));
+        var rawError = await Assert.ThrowsAsync<Exception>(() =>
+            provider.GetRawStateAsync("state-key", cancellationToken));
+        var etagError = await Assert.ThrowsAsync<Exception>(() =>
+            provider.GetStateAndETagAsync<TestState>("state-key", cancellationToken));
+        var createError = await Assert.ThrowsAsync<Exception>(() =>
+            provider.TrySaveStateIfNotExistsAsync("state-key", new TestState("ignored"), cancellationToken));
+
+        Assert.Same(failure, typedError.InnerException);
+        Assert.Same(failure, rawError.InnerException);
+        Assert.Same(failure, etagError.InnerException);
+        Assert.Same(failure, createError.InnerException);
+        await dapr.DidNotReceiveWithAnyArgs().TrySaveStateAsync(
+            default!, default!, default(TestState)!, default!, default!, default!, cancellationToken);
+    }
+
+    [Fact]
+    public async Task GetStateAsync_WhenUnstructuredErrorMentionsRedisNil_ShouldPropagateFailure()
+    {
+        var dapr = Substitute.For<DaprClient>();
+        var failure = new InvalidOperationException(
+            "fail to get state-key from state store test-state-store: redis: nil");
+        ConfigureReadFailure(dapr, failure);
+
+        var error = await Assert.ThrowsAsync<Exception>(() => CreateProvider(dapr).GetStateAsync<TestState>(
+            "state-key", TestContext.Current.CancellationToken));
+
+        Assert.Same(failure, error.InnerException);
+    }
+
+    [Fact]
+    public async Task TrySaveStateIfNotExistsAsync_WhenRedisReportsMissingKey_ShouldAttemptConditionalCreate()
+    {
+        var dapr = Substitute.For<DaprClient>();
+        ConfigureReadFailure(dapr, CreateReadFailure(StatusCode.Internal,
+            "fail to get state-key from state store test-state-store: redis: nil"));
+        var value = new TestState("created");
+        dapr.TrySaveStateAsync("test-state-store", "state-key", value, string.Empty, null!,
+                null!, Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        var success = await CreateProvider(dapr).TrySaveStateIfNotExistsAsync(
+            "state-key", value, TestContext.Current.CancellationToken);
+
+        Assert.True(success);
+        await dapr.Received(1).TrySaveStateAsync("test-state-store", "state-key", value, string.Empty,
+            null!, null!, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task TrySaveStateIfNotExistsAsync_WhenWriteFailsWithRedisNil_ShouldPropagateFailure()
+    {
+        var dapr = Substitute.For<DaprClient>();
+        var failure = CreateReadFailure(StatusCode.Internal,
+            "fail to get state-key from state store test-state-store: redis: nil");
+        ConfigureReadFailure(dapr, failure);
+        var value = new TestState("created");
+        dapr.TrySaveStateAsync("test-state-store", "state-key", value, string.Empty, null!,
+                null!, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<bool>(failure));
+
+        var error = await Assert.ThrowsAsync<Exception>(() => CreateProvider(dapr).TrySaveStateIfNotExistsAsync(
+            "state-key", value, TestContext.Current.CancellationToken));
+
+        Assert.Same(failure, error.InnerException);
+    }
+
+    [Fact]
+    public async Task TrySaveStateWithETagAsync_WhenStateExpiresBeforeReadBack_ShouldReturnSuccessWithEmptyETag()
+    {
+        var dapr = Substitute.For<DaprClient>();
+        ConfigureReadFailure(dapr, CreateReadFailure(StatusCode.Internal,
+            "fail to get state-key from state store test-state-store: redis: nil"));
+        var value = new TestState("updated");
+        dapr.TrySaveStateAsync("test-state-store", "state-key", value, "etag-1", null!,
+                null!, Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        var result = await CreateProvider(dapr).TrySaveStateWithETagAsync(
+            "state-key", value, "etag-1", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal(string.Empty, result.NewETag);
     }
 
     [Fact]
@@ -319,6 +458,24 @@ public sealed class DaprStateStoreProviderTests
             query,
             null!,
             TestContext.Current.CancellationToken);
+    }
+
+    private static DaprException CreateReadFailure(StatusCode statusCode, string detail)
+        => new("State operation failed: the Dapr endpoint indicated a failure.",
+            new RpcException(new Status(statusCode, detail)));
+
+    private static void ConfigureReadFailure(DaprClient dapr, Exception failure)
+    {
+        dapr.GetStateAsync<TestState>("test-state-store", "state-key", null!, null!, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<TestState>(failure));
+        dapr.GetStateAsync<object>("test-state-store", "state-key", null!, null!, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<object>(failure));
+        dapr.GetByteStateAsync("test-state-store", "state-key", null!, null!, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<ReadOnlyMemory<byte>>(failure));
+        dapr.GetStateAndETagAsync<TestState>("test-state-store", "state-key", null!, null!, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<(TestState, string)>(failure));
+        dapr.GetByteStateAndETagAsync("test-state-store", "state-key", null!, null!, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<(ReadOnlyMemory<byte>, string)>(failure));
     }
 
     private static DaprStateStoreProvider CreateProvider(
