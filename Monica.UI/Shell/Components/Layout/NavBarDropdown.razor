@@ -1,11 +1,10 @@
 @using Monica.UI.Shell.Models
 @using Monica.UI.Shell.Support
-@inject IStringLocalizer<SharedResource> L
 
 <div class="navbar-item" data-navigation-category-id="@Group.Id.Value">
     <NavigationPopover Group="@Group" ActiveItem="@ActiveItem" Label="@Group.DisplayName" StartIcon="@Group.Icon"
-                       Header="@Group.DisplayName" HeaderDescription="@L["NavBar:CategoryPages"]"
-                       ShowOverview="true" Class="@MenuClass" />
+                       Header="@Group.DisplayName" HeaderDescription="@Group.Description"
+                       ShowOverview="true" OpenOnHover="true" Class="@MenuClass" />
 </div>
 
 @code {

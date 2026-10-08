@@ -161,11 +161,19 @@
     z-index: 1300;
 }
 .context-navigation-host ::deep .mo-context-navigation.mud-drawer--closed { visibility: hidden; pointer-events: none; }
-.context-navigation-host ::deep .mo-context-navigation.mud-drawer-pos-left.mud-drawer--open { left: 64px; }
+.context-navigation-host ::deep .mo-context-navigation.mud-drawer-temporary.mud-drawer-pos-left {
+    left: 64px;
+    transition: none;
+    animation: none;
+    transform: none;
+}
+.context-navigation-host ::deep .mo-context-navigation.mud-drawer--open > .mud-drawer-content { visibility: visible; }
 .context-navigation-host ::deep .mo-context-navigation-overlay {
     position: fixed;
     inset: 0 0 0 64px;
     z-index: 1299;
+    transition: none;
+    animation: none;
 }
 .mo-sidebar[data-collapsed="true"] .sidebar-context { display: none; }
 .mobile-navigation-content { min-height: 0; overflow: auto; padding: 16px 12px 24px; }

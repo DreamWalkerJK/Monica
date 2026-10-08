@@ -18,12 +18,14 @@ public sealed class PageRegistryTests
         var categoryId = registry.RegisterLocalizedCategory<ThirdPartyResource>(
             "Tairitsua.Monica.GachaPool",
             "Navigation:Category",
-            order: 450);
+            order: 450,
+            descriptionKey: "Navigation:CategoryDescription");
         registry.RegisterLocalizedPage<TestPage, ThirdPartyResource>(
             "/gacha-pool",
             "Navigation:Title",
             categoryId: categoryId,
-            addToNav: true);
+            addToNav: true,
+            descriptionKey: "Navigation:PageDescription");
         registry.Seal();
 
         var page = registry.GetRegisteredPages().Single();
@@ -37,6 +39,15 @@ public sealed class PageRegistryTests
             .Should().Be("first-host:ThirdPartyResource:Navigation:Title");
         category.ResolveDisplayName(firstHostCatalog)
             .Should().Be("first-host:ThirdPartyResource:Navigation:Category");
+        category.ResolveDescription(firstHostCatalog)
+            .Should().Be("first-host:ThirdPartyResource:Navigation:CategoryDescription");
+        category.ResolveDescription(secondHostCatalog)
+            .Should().Be("second-host:ThirdPartyResource:Navigation:CategoryDescription");
+        page.Description!.ResourceType.Should().Be(typeof(ThirdPartyResource));
+        page.ResolveDescription(firstHostCatalog)
+            .Should().Be("first-host:ThirdPartyResource:Navigation:PageDescription");
+        navigationItem.Page.ResolveDescription(secondHostCatalog)
+            .Should().Be("second-host:ThirdPartyResource:Navigation:PageDescription");
         navigationItem.CategoryId.Should().Be(categoryId);
         navigationItem.ResolveText(firstHostCatalog)
             .Should().Be("first-host:ThirdPartyResource:Navigation:Title");
@@ -44,6 +55,64 @@ public sealed class PageRegistryTests
             .Should().Be("second-host:ThirdPartyResource:Navigation:Title");
         firstHostCatalog.RequestedResourceTypes.Should().OnlyContain(type => type == typeof(ThirdPartyResource));
         secondHostCatalog.RequestedResourceTypes.Should().OnlyContain(type => type == typeof(ThirdPartyResource));
+    }
+
+    [Fact]
+    public void RegisterPage_WhenDescriptionsAreLiteral_ShouldResolveWithoutRequestingResources()
+    {
+        var registry = new PageRegistry();
+        var categoryId = registry.RegisterCategory(
+            "package.diagnostics", "Diagnostics", description: "Inspect package runtime behavior.");
+        registry.RegisterPage<TestPage>(
+            "package/runtime", "Runtime", categoryId: categoryId, addToNav: true,
+            description: "Trace operations and failures.");
+        registry.Seal();
+        var catalog = new HostLocalizationCatalog("host");
+
+        var group = NavigationTreeBuilder.Build(registry.GetNavigationCategories(), registry.GetNavItems(), catalog)
+            .Should().ContainSingle().Subject;
+
+        group.Description.Should().Be("Inspect package runtime behavior.");
+        group.Items.Single().Page.ResolveDescription(catalog).Should().Be("Trace operations and failures.");
+        catalog.RequestedResourceTypes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RegisterPage_WhenDescriptionsAreOmitted_ShouldPublishNoDescription()
+    {
+        var registry = new PageRegistry();
+        var categoryId = registry.RegisterCategory("package.extra", "Extra");
+        registry.RegisterPage<TestPage>("package/extra", "Extra", categoryId: categoryId, addToNav: true);
+        registry.Seal();
+        var catalog = new HostLocalizationCatalog("host");
+
+        var group = NavigationTreeBuilder.Build(registry.GetNavigationCategories(), registry.GetNavItems(), catalog)
+            .Should().ContainSingle().Subject;
+
+        group.Description.Should().BeNull();
+        group.Items.Single().Page.Description.Should().BeNull();
+        group.Items.Single().Page.ResolveDescription(catalog).Should().BeNull();
+        registry.GetNavigationCategories().Single(category => category.Id == categoryId)
+            .ResolveDescription(catalog).Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Register_WhenOptionalDescriptionIsBlank_ShouldRejectStartupContribution(string blank)
+    {
+        var registry = new PageRegistry();
+        var literalCategory = () => registry.RegisterCategory("package.literal", "Literal", description: blank);
+        var localizedCategory = () => registry.RegisterLocalizedCategory<ThirdPartyResource>(
+            "package.localized", "Navigation:Category", descriptionKey: blank);
+        var literalPage = () => registry.RegisterPage<TestPage>("literal", "Literal", description: blank);
+        var localizedPage = () => registry.RegisterLocalizedPage<TestPage, ThirdPartyResource>(
+            "localized", "Navigation:Title", descriptionKey: blank);
+
+        literalCategory.Should().Throw<ArgumentException>().WithParameterName("description");
+        localizedCategory.Should().Throw<ArgumentException>().WithParameterName("descriptionKey");
+        literalPage.Should().Throw<ArgumentException>().WithParameterName("description");
+        localizedPage.Should().Throw<ArgumentException>().WithParameterName("descriptionKey");
     }
 
     [Fact]
@@ -112,7 +181,25 @@ public sealed class PageRegistryTests
             order: 451);
 
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*tairitsua.monica.gachapool*different label, resource, order, parent, or icon*");
+            .WithMessage("*tairitsua.monica.gachapool*different label, resource, order, parent, icon, or description*");
+    }
+
+    [Fact]
+    public void RegisterCategory_WhenDescriptionChanges_ShouldRejectConflictingMetadata()
+    {
+        var registry = new PageRegistry();
+        var categoryId = registry.RegisterCategory("package.literal", "Literal", description: "First purpose.");
+        registry.RegisterCategory("PACKAGE.LITERAL", "Literal", description: "First purpose.").Should().Be(categoryId);
+        registry.RegisterLocalizedCategory<ThirdPartyResource>(
+            "package.localized", "Navigation:Category", descriptionKey: "Navigation:FirstDescription");
+
+        var literalConflict = () => registry.RegisterCategory(
+            "package.literal", "Literal", description: "Second purpose.");
+        var localizedConflict = () => registry.RegisterLocalizedCategory<ThirdPartyResource>(
+            "package.localized", "Navigation:Category", descriptionKey: "Navigation:SecondDescription");
+
+        literalConflict.Should().Throw<InvalidOperationException>().WithMessage("*description*");
+        localizedConflict.Should().Throw<InvalidOperationException>().WithMessage("*description*");
     }
 
     [Fact]
@@ -195,12 +282,15 @@ public sealed class PageRegistryTests
     public void Build_WhenOnlyNestedDestinationIsAuthorized_ShouldRetainAncestorsAndPruneEmptyBranches()
     {
         var registry = new PageRegistry();
-        var rootId = registry.RegisterCategory("package.root", "Root", order: 20, icon: "root-icon");
+        var rootId = registry.RegisterCategory(
+            "package.root", "Root", order: 20, icon: "root-icon", description: "Explore package capabilities.");
         var branchId = registry.RegisterLocalizedCategory<ThirdPartyResource>(
-            "package.branch", "Navigation:Category", parentId: rootId);
+            "package.branch", "Navigation:Category", parentId: rootId,
+            descriptionKey: "Navigation:CategoryDescription");
         var leafCategoryId = registry.RegisterCategory("package.leaf", "Leaf", parentId: branchId);
         var deniedCategoryId = registry.RegisterLocalizedCategory<SecondResource>(
-            "package.denied", "Navigation:Denied", parentId: rootId);
+            "package.denied", "Navigation:Denied", parentId: rootId,
+            descriptionKey: "Navigation:DeniedDescription");
         registry.RegisterPage<TestPage>("permitted/zeta", "Zeta", categoryId: leafCategoryId, addToNav: true, navOrder: 20);
         registry.RegisterPage<TestPage>("permitted/alpha", "Alpha", categoryId: leafCategoryId, addToNav: true, navOrder: 10);
         registry.RegisterPage<TestPage>("denied", "Denied", categoryId: deniedCategoryId, addToNav: true);
@@ -213,10 +303,12 @@ public sealed class PageRegistryTests
         var root = tree.Should().ContainSingle().Subject;
         root.Id.Should().Be(rootId);
         root.Icon.Should().Be("root-icon");
+        root.Description.Should().Be("Explore package capabilities.");
         root.Items.Should().BeEmpty();
         var branch = root.Children.Should().ContainSingle().Subject;
         branch.Id.Should().Be(branchId);
         branch.DisplayName.Should().Be("host:ThirdPartyResource:Navigation:Category");
+        branch.Description.Should().Be("host:ThirdPartyResource:Navigation:CategoryDescription");
         var leaf = branch.Children.Should().ContainSingle().Subject;
         leaf.Id.Should().Be(leafCategoryId);
         NavigationTreeBuilder.Flatten(tree).Select(static item => item.Href)
@@ -270,12 +362,14 @@ public sealed class PageRegistryTests
         registry.RegisterLocalizedPage<TestPage, ThirdPartyResource>(
             "gacha-pool",
             "Navigation:Title",
-            addToNav: true);
+            addToNav: true,
+            descriptionKey: "Navigation:PageDescription");
         registry.Seal();
         var catalog = new HostLocalizationCatalog("host", resourceNotFound: true);
         var navigationItem = registry.GetNavItems().Single();
 
         navigationItem.ResolveText(catalog).Should().Be("Navigation:Title");
+        navigationItem.Page.ResolveDescription(catalog).Should().Be("Navigation:PageDescription");
         navigationItem.CategoryId.Should().Be(BuiltInNavigationCategoryIds.Uncategorized);
     }
 

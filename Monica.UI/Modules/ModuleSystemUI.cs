@@ -57,7 +57,8 @@ public class ModuleSystemUI : MonicaModule<ModuleSystemUIOption>, IUIModule
             "Navigation:Title",
             order: 10,
             parentId: BuiltInNavigationCategoryIds.Module,
-            icon: Icons.Material.Filled.AccountTree);
+            icon: Icons.Material.Filled.AccountTree,
+            descriptionKey: "Navigation:Description");
 
         registry.RegisterLocalizedPage<ModuleSystemPage, ModuleSystemResource>(
             ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
@@ -66,14 +67,15 @@ public class ModuleSystemUI : MonicaModule<ModuleSystemUIOption>, IUIModule
             workbenchCategory,
             addToNav: true,
             navOrder: 10,
-            accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>));
-        RegisterSection("overview", "Sections:Overview", Icons.Material.Filled.Dashboard, 10, addToNav: false);
-        RegisterSection("performance", "Sections:Performance", Icons.Material.Filled.Timeline, 20);
-        RegisterSection("modules", "Sections:Modules", Icons.Material.Filled.ViewModule, 30);
-        RegisterSection("dependencies", "Sections:Dependencies", Icons.Material.Filled.AccountTree, 40);
-        RegisterSection("discovery", "Sections:Discovery", Icons.Material.Filled.FindInPage, 50);
+            accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>),
+            descriptionKey: "Navigation:Descriptions:Overview");
+        RegisterSection("overview", "Sections:Overview", "Navigation:Descriptions:Overview", Icons.Material.Filled.Dashboard, 10, addToNav: false);
+        RegisterSection("performance", "Sections:Performance", "Navigation:Descriptions:Performance", Icons.Material.Filled.Timeline, 20);
+        RegisterSection("modules", "Sections:Modules", "Navigation:Descriptions:Modules", Icons.Material.Filled.ViewModule, 30);
+        RegisterSection("dependencies", "Sections:Dependencies", "Navigation:Descriptions:Dependencies", Icons.Material.Filled.AccountTree, 40);
+        RegisterSection("discovery", "Sections:Discovery", "Navigation:Descriptions:Discovery", Icons.Material.Filled.FindInPage, 50);
 
-        void RegisterSection(string segment, string labelKey, string icon, int order, bool addToNav = true)
+        void RegisterSection(string segment, string labelKey, string descriptionKey, string icon, int order, bool addToNav = true)
         {
             registry.RegisterLocalizedPage<ModuleSystemPage, ModuleSystemResource>(
                 $"{ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL}/{segment}",
@@ -82,7 +84,8 @@ public class ModuleSystemUI : MonicaModule<ModuleSystemUIOption>, IUIModule
                 workbenchCategory,
                 addToNav,
                 order,
-                accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>));
+                accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>),
+                descriptionKey: descriptionKey);
         }
     }
 }

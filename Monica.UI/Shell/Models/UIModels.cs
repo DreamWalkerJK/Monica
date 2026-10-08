@@ -11,12 +11,14 @@ public sealed class PageDefinition
         string route,
         Type componentType,
         UIRegistryText displayName,
-        Type? accessPolicyType)
+        Type? accessPolicyType,
+        UIRegistryText? description = null)
     {
         Route = route;
         ComponentType = componentType;
         DisplayName = displayName;
         AccessPolicyType = accessPolicyType;
+        Description = description;
     }
 
     /// <summary>
@@ -35,6 +37,11 @@ public sealed class PageDefinition
     public UIRegistryText DisplayName { get; }
 
     /// <summary>
+    /// Gets the optional literal or resource-backed explanation of this page's purpose.
+    /// </summary>
+    public UIRegistryText? Description { get; }
+
+    /// <summary>
     /// Gets the optional circuit-scoped policy type that controls both navigation visibility and direct page access.
     /// </summary>
     public Type? AccessPolicyType { get; }
@@ -47,6 +54,17 @@ public sealed class PageDefinition
     public string ResolveDisplayName(ILocalizationCatalog localizationCatalog)
     {
         return DisplayName.Resolve(localizationCatalog);
+    }
+
+    /// <summary>
+    /// Resolves the optional page description through the specified host localization catalog.
+    /// </summary>
+    /// <param name="localizationCatalog">The localization catalog owned by the current host.</param>
+    /// <returns>The localized description or registered fallback, or null when none was registered.</returns>
+    public string? ResolveDescription(ILocalizationCatalog localizationCatalog)
+    {
+        ArgumentNullException.ThrowIfNull(localizationCatalog);
+        return Description?.Resolve(localizationCatalog);
     }
 
 }

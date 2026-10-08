@@ -54,7 +54,8 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
                     Icons.Material.Filled.Article,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
-                    navOrder: 30)));
+                    navOrder: 30,
+                    descriptionKey: "Pages:LoggingMonitor:Description")));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleLoggingUIOption> context)

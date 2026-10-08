@@ -150,6 +150,100 @@ class LocalizationValidatorTests(unittest.TestCase):
             validator.module_resource_missing_keys,
         )
 
+    def test_navigation_descriptions_support_named_and_positional_resource_keys(self) -> None:
+        navigation = {
+            'Page': 'Page',
+            'Category': 'Category',
+            'CategoryNamed': 'Category explanation',
+            'PagePositional': 'Page purpose',
+            'CategoryPositional': 'Another category explanation',
+            'PageNamed': 'Another page purpose',
+        }
+        self._add_project(
+            'MixedPackage',
+            resources={
+                'ResourceA': {
+                    'en-US': {'Navigation': navigation},
+                    'zh-CN': {'Navigation': navigation},
+                },
+            },
+            sources={
+                'Modules/ModuleDashboard.cs': (
+                    'public sealed class ModuleDashboard : IUIModule\n'
+                    '{\n'
+                    '    void Register(INavigationRegistryBuilder registry)\n'
+                    '    {\n'
+                    '        localization.AddResource<ResourceA>();\n'
+                    '        registry.RegisterLocalizedCategory<ResourceA>(\n'
+                    '            "Acme.Named", "Navigation:Category",\n'
+                    '            descriptionKey: "Navigation:CategoryNamed");\n'
+                    '        registry.RegisterLocalizedPage<Page, ResourceA>(\n'
+                    '            "/positional", "Navigation:Page", null, null, true, 0, null,\n'
+                    '            "Navigation:PagePositional");\n'
+                    '        registry.RegisterLocalizedCategory<ResourceA>(\n'
+                    '            "Acme.Positional", "Navigation:Category", 0, null, null,\n'
+                    '            "Navigation:CategoryPositional");\n'
+                    '        registry.RegisterLocalizedPage<Page, ResourceA>(\n'
+                    '            "/named", "Navigation:Page",\n'
+                    '            descriptionKey: "Navigation:PageNamed");\n'
+                    '    }\n'
+                    '    ModuleRegistration<ModuleLocalization, ModuleLocalizationOption> localization = default!;\n'
+                    '}\n'
+                ),
+            },
+            razor_sdk=False,
+        )
+
+        validator, report = self._validate()
+        resource = self._resource_path('MixedPackage', 'ResourceA')
+
+        for key in navigation:
+            identity = (resource, f'Navigation:{key}')
+            self.assertIn(identity, validator.module_resource_used_keys)
+            self.assertNotIn(identity, validator.unused_keys)
+        self.assertEqual(0, report['summary']['missing_count'])
+        self.assertEqual([], report['resource_resolution_errors'])
+
+    def test_navigation_descriptions_cannot_resolve_from_another_resource(self) -> None:
+        self._add_project(
+            'MixedPackage',
+            resources={
+                'ResourceA': {
+                    'en-US': {'Navigation': {'PageDescription': 'Purpose', 'CategoryDescription': 'Capabilities'}},
+                    'zh-CN': {'Navigation': {'PageDescription': '用途', 'CategoryDescription': '能力'}},
+                },
+                'ResourceB': {
+                    'en-US': {'Navigation': {'Page': 'Page', 'Category': 'Category'}},
+                    'zh-CN': {'Navigation': {'Page': '页面', 'Category': '分类'}},
+                },
+            },
+            sources={
+                'Modules/ModuleDashboard.cs': (
+                    'public sealed class ModuleDashboard : IUIModule\n'
+                    '{\n'
+                    '    void Register(INavigationRegistryBuilder registry)\n'
+                    '    {\n'
+                    '        localization.AddResource<ResourceB>();\n'
+                    '        registry.RegisterLocalizedCategory<ResourceB>(\n'
+                    '            "Acme.Diagnostics", "Navigation:Category",\n'
+                    '            descriptionKey: "Navigation:CategoryDescription");\n'
+                    '        registry.RegisterLocalizedPage<Page, ResourceB>(\n'
+                    '            "/page", "Navigation:Page",\n'
+                    '            descriptionKey: "Navigation:PageDescription");\n'
+                    '    }\n'
+                    '    ModuleRegistration<ModuleLocalization, ModuleLocalizationOption> localization = default!;\n'
+                    '}\n'
+                ),
+            },
+            razor_sdk=False,
+        )
+
+        validator, _ = self._validate()
+        resource = self._resource_path('MixedPackage', 'ResourceB')
+
+        self.assertIn((resource, 'Navigation:PageDescription'), validator.module_resource_missing_keys)
+        self.assertIn((resource, 'Navigation:CategoryDescription'), validator.module_resource_missing_keys)
+
     def test_localized_page_without_explicit_resource_is_rejected(self) -> None:
         self._add_project(
             'MixedPackage',

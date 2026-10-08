@@ -12,13 +12,15 @@ public sealed class NavigationCategoryDefinition
         UIRegistryText displayName,
         int order,
         NavigationCategoryId? parentId = null,
-        string? icon = null)
+        string? icon = null,
+        UIRegistryText? description = null)
     {
         Id = id;
         DisplayName = displayName;
         Order = order;
         ParentId = parentId;
         Icon = icon;
+        Description = description;
     }
 
     /// <summary>
@@ -47,6 +49,11 @@ public sealed class NavigationCategoryDefinition
     public string? Icon { get; }
 
     /// <summary>
+    /// Gets the optional literal or resource-backed explanation of this category's capabilities.
+    /// </summary>
+    public UIRegistryText? Description { get; }
+
+    /// <summary>
     /// Resolves the category label through the specified host localization catalog.
     /// </summary>
     /// <param name="localizationCatalog">The localization catalog owned by the current host.</param>
@@ -56,9 +63,20 @@ public sealed class NavigationCategoryDefinition
         return DisplayName.Resolve(localizationCatalog);
     }
 
+    /// <summary>
+    /// Resolves the optional category description through the specified host localization catalog.
+    /// </summary>
+    /// <param name="localizationCatalog">The localization catalog owned by the current host.</param>
+    /// <returns>The localized description or registered fallback, or null when none was registered.</returns>
+    public string? ResolveDescription(ILocalizationCatalog localizationCatalog)
+    {
+        ArgumentNullException.ThrowIfNull(localizationCatalog);
+        return Description?.Resolve(localizationCatalog);
+    }
+
     internal bool HasSameRegistrationAs(NavigationCategoryDefinition other)
     {
         return Order == other.Order && DisplayName == other.DisplayName
-            && ParentId == other.ParentId && Icon == other.Icon;
+            && ParentId == other.ParentId && Icon == other.Icon && Description == other.Description;
     }
 }

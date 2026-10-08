@@ -8,9 +8,11 @@ namespace Monica.UI.Shell.Models;
 /// <param name="Items">The navigation entries in configured order.</param>
 /// <param name="Children">The nonempty child categories in configured order.</param>
 /// <param name="Icon">The optional category icon.</param>
+/// <param name="Description">The resolved category description, or null when none was registered.</param>
 public sealed record NavigationGroup(
     NavigationCategoryId Id,
     string DisplayName,
     IReadOnlyList<NavigationItem> Items,
     IReadOnlyList<NavigationGroup> Children,
-    string? Icon = null);
+    string? Icon = null,
+    string? Description = null);

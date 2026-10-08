@@ -26,16 +26,26 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
     /// </summary>
     public PageRegistry()
     {
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.AI, "NavBar:Categories:AI", 100, ShellIcons.Sparkle);
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.KnowledgeRetrieval, "NavBar:Categories:KnowledgeRetrieval", 200, ShellIcons.BookSearch);
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Documentation, "NavBar:Categories:Documentation", 300, ShellIcons.Book);
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Configuration, "NavBar:Categories:Configuration", 400, ShellIcons.Sliders);
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Infrastructure, "NavBar:Categories:Infrastructure", 500, ShellIcons.Server);
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Module, "NavBar:Categories:Module", 600, ShellIcons.Cube);
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.TaskScheduling, "NavBar:Categories:TaskScheduling", 700, ShellIcons.CalendarCheck);
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Monitor, "NavBar:Categories:Monitor", 800, ShellIcons.Pulse);
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Debug, "NavBar:Categories:Debug", 900, ShellIcons.Bug);
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Uncategorized, "NavBar:Categories:Uncategorized", 1_000, ShellIcons.Folder);
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.AI, "NavBar:Categories:AI", 100, ShellIcons.Sparkle,
+            "NavBar:CategoryDescriptions:AI");
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.KnowledgeRetrieval, "NavBar:Categories:KnowledgeRetrieval", 200, ShellIcons.BookSearch,
+            "NavBar:CategoryDescriptions:KnowledgeRetrieval");
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Documentation, "NavBar:Categories:Documentation", 300, ShellIcons.Book,
+            "NavBar:CategoryDescriptions:Documentation");
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Configuration, "NavBar:Categories:Configuration", 400, ShellIcons.Sliders,
+            "NavBar:CategoryDescriptions:Configuration");
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Infrastructure, "NavBar:Categories:Infrastructure", 500, ShellIcons.Server,
+            "NavBar:CategoryDescriptions:Infrastructure");
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Module, "NavBar:Categories:Module", 600, ShellIcons.Cube,
+            "NavBar:CategoryDescriptions:Module");
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.TaskScheduling, "NavBar:Categories:TaskScheduling", 700, ShellIcons.CalendarCheck,
+            "NavBar:CategoryDescriptions:TaskScheduling");
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Monitor, "NavBar:Categories:Monitor", 800, ShellIcons.Pulse,
+            "NavBar:CategoryDescriptions:Monitor");
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Debug, "NavBar:Categories:Debug", 900, ShellIcons.Bug,
+            "NavBar:CategoryDescriptions:Debug");
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Uncategorized, "NavBar:Categories:Uncategorized", 1_000, ShellIcons.Folder,
+            "NavBar:CategoryDescriptions:Uncategorized");
     }
 
     /// <inheritdoc />
@@ -44,16 +54,22 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
         string displayName,
         int order = 0,
         NavigationCategoryId? parentId = null,
-        string? icon = null)
+        string? icon = null,
+        string? description = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        if (description is not null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(description);
+        }
         return RegisterCategoryCore(
             new NavigationCategoryDefinition(
                 NavigationCategoryId.Create(categoryId),
                 UIRegistryText.Literal(displayName),
                 order,
                 parentId,
-                icon));
+                icon,
+                description is null ? null : UIRegistryText.Literal(description)));
     }
 
     /// <inheritdoc />
@@ -62,17 +78,23 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
         string displayNameKey,
         int order = 0,
         NavigationCategoryId? parentId = null,
-        string? icon = null)
+        string? icon = null,
+        string? descriptionKey = null)
         where TResource : class, ILocalizationResource
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayNameKey);
+        if (descriptionKey is not null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(descriptionKey);
+        }
         return RegisterCategoryCore(
             new NavigationCategoryDefinition(
                 NavigationCategoryId.Create(categoryId),
                 UIRegistryText.Localized<TResource>(displayNameKey),
                 order,
                 parentId,
-                icon));
+                icon,
+                descriptionKey is null ? null : UIRegistryText.Localized<TResource>(descriptionKey)));
     }
 
     /// <inheritdoc />
@@ -83,17 +105,23 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
         NavigationCategoryId? categoryId = null,
         bool addToNav = false,
         int navOrder = 0,
-        Type? accessPolicyType = null)
+        Type? accessPolicyType = null,
+        string? description = null)
         where TPage : ComponentBase
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        if (description is not null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(description);
+        }
 
         RegisterPageCore(
             new PageDefinition(
                 NormalizeRoute(route),
                 typeof(TPage),
                 UIRegistryText.Literal(displayName),
-                ValidateAccessPolicyType(accessPolicyType)),
+                ValidateAccessPolicyType(accessPolicyType),
+                description is null ? null : UIRegistryText.Literal(description)),
             icon,
             categoryId,
             addToNav,
@@ -108,18 +136,24 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
         NavigationCategoryId? categoryId = null,
         bool addToNav = false,
         int navOrder = 0,
-        Type? accessPolicyType = null)
+        Type? accessPolicyType = null,
+        string? descriptionKey = null)
         where TPage : ComponentBase
         where TResource : class, ILocalizationResource
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayNameKey);
+        if (descriptionKey is not null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(descriptionKey);
+        }
 
         RegisterPageCore(
             new PageDefinition(
                 NormalizeRoute(route),
                 typeof(TPage),
                 UIRegistryText.Localized<TResource>(displayNameKey),
-                ValidateAccessPolicyType(accessPolicyType)),
+                ValidateAccessPolicyType(accessPolicyType),
+                descriptionKey is null ? null : UIRegistryText.Localized<TResource>(descriptionKey)),
             icon,
             categoryId,
             addToNav,
@@ -210,11 +244,16 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
         return accessPolicyType;
     }
 
-    private void AddBuiltInCategory(NavigationCategoryId id, string displayNameKey, int order, string icon)
+    private void AddBuiltInCategory(NavigationCategoryId id, string displayNameKey, int order, string icon, string descriptionKey)
     {
         _categories.Add(
             id,
-            new NavigationCategoryDefinition(id, UIRegistryText.Localized<SharedResource>(displayNameKey), order, icon: icon));
+            new NavigationCategoryDefinition(
+                id,
+                UIRegistryText.Localized<SharedResource>(displayNameKey),
+                order,
+                icon: icon,
+                description: UIRegistryText.Localized<SharedResource>(descriptionKey)));
     }
 
     private NavigationCategoryId RegisterCategoryCore(NavigationCategoryDefinition category)
@@ -235,7 +274,7 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
             }
 
             throw new InvalidOperationException(
-                $"Navigation category '{existing.Id}' is already registered with a different label, resource, order, parent, or icon.");
+                $"Navigation category '{existing.Id}' is already registered with a different label, resource, order, parent, icon, or description.");
         }
     }
 

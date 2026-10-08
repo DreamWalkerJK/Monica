@@ -51,7 +51,8 @@ public class ModuleRuntimeMetricsUI : MonicaModule<ModuleRuntimeMetricsUIOption>
                     Icons.Material.Filled.Speed,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
-                    navOrder: 10)));
+                    navOrder: 10,
+                    descriptionKey: "Pages:RuntimeMetrics:Description")));
     }
 
     /// <inheritdoc />

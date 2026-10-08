@@ -50,7 +50,8 @@ internal static class NavigationTreeBuilder
                     definition.ResolveDisplayName(localizationCatalog),
                     items,
                     children,
-                    definition.Icon ?? items.FirstOrDefault()?.Icon ?? children.FirstOrDefault()?.Icon));
+                    definition.Icon ?? items.FirstOrDefault()?.Icon ?? children.FirstOrDefault()?.Icon,
+                    definition.ResolveDescription(localizationCatalog)));
             }
 
             return groups.AsReadOnly();

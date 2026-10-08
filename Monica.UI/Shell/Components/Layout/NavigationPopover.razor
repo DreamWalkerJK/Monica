@@ -4,10 +4,11 @@
 @using Monica.UI.Shell.Support
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> L
+@inject IJSRuntime JSRuntime
 @implements INavigationEventReceiver
 @implements IAsyncDisposable
 
-<div class="mo-navigation-popover @Class" @onkeydown="HandleActivatorKeyDown">
+<div class="mo-navigation-popover @Class" @ref="_activatorRef" @onkeydown="HandleActivatorKeyDown">
     @if (string.IsNullOrEmpty(Icon))
     {
         <MudButton Variant="Variant.Text" Color="Color.Inherit" Class="mud-menu-button-activator"
@@ -27,7 +28,7 @@
                 OverflowBehavior="OverflowBehavior.FlipAlways" Elevation="8" Duration="0">
         @if (_open)
         {
-            <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
+            <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild" Disabled="@OpenOnHover">
                 <div id="@_popupId" class="@SurfaceClass" @onkeydown="HandlePopoverKeyDown">
                     @if (!string.IsNullOrWhiteSpace(Header))
                     {
@@ -68,13 +69,19 @@
             </MudFocusTrap>
         }
     </MudPopover>
-    <MudOverlay Visible="@_open" AutoClose="true" OnClosed="Close" Class="mud-overlay-popover" LockScroll="false" />
+    <MudOverlay Visible="@(_open && !OpenOnHover)" AutoClose="true" OnClosed="Close" Class="mud-overlay-popover" LockScroll="false" />
 </div>
 
 @code {
     private readonly string _popupId = $"mo-navigation-{Guid.NewGuid():N}";
     private readonly ComponentRenderTracker _renderTracker = new();
+    private ElementReference _activatorRef;
+    private NavigationPopoverInteropSession? _hoverInterop;
     private bool _open;
+    private bool _openedByHover;
+    private bool _focusFirst;
+    private bool _restoreFocus;
+    private long _pointerVersion;
     private bool _disposed;
     private string PopoverClass => ShowOverview ? "mo-navbar-menu-popover mo-navbar-menu-popover--overview" : "mo-navbar-menu-popover";
     private string SurfaceClass => ShowOverview ? "mo-navigation-popover__surface mo-navigation-popover__surface--overview" : "mo-navigation-popover__surface";
@@ -106,6 +113,10 @@
     /// <summary>Gets or sets whether to show a spacious category overview and simple destination rows. Defaults to false for compact menus.</summary>
     [Parameter] public bool ShowOverview { get; set; }
 
+    /// <summary>Gets or sets whether a fine, hover-capable pointer opens this menu without moving keyboard focus. Defaults to false.</summary>
+    /// <remarks>Click, touch, and ArrowDown still open the menu with focus. Hover menus allow native Tab navigation and close when focus leaves.</remarks>
+    [Parameter] public bool OpenOnHover { get; set; }
+
     /// <summary>Gets or sets additional presentation classes on the activator wrapper.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -115,7 +126,27 @@
     /// <summary>Gets or sets the popover's transform origin. Defaults to its top-left corner.</summary>
     [Parameter] public Origin TransformOrigin { get; set; } = Origin.TopLeft;
 
-    protected override void OnInitialized() => Navigation.LocationChanged += HandleLocationChanged;
+    protected override void OnInitialized()
+    {
+        _hoverInterop = new NavigationPopoverInteropSession(JSRuntime, this);
+        Navigation.LocationChanged += HandleLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed || _hoverInterop is not { } hoverInterop)
+        {
+            return;
+        }
+
+        var focusFirst = _focusFirst;
+        var restoreFocus = _restoreFocus;
+        _focusFirst = false;
+        _restoreFocus = false;
+        await hoverInterop.SynchronizeAsync(
+            _activatorRef, _popupId, OpenOnHover, _open, _openedByHover,
+            focusFirst, restoreFocus, _pointerVersion);
+    }
 
     private bool ContainsActive(NavigationGroup group) =>
         ActiveItem is not null && NavigationTreeBuilder.Flatten([group]).Contains(ActiveItem);
@@ -124,17 +155,44 @@
     {
         if (!_disposed)
         {
-            _open = !_open;
+            if (_open && !_openedByHover)
+            {
+                Close(restoreFocus: true);
+            }
+            else
+            {
+                OpenWithFocus();
+            }
         }
     }
 
-    private void Close() => _open = false;
+    private void OpenWithFocus()
+    {
+        _open = true;
+        _openedByHover = false;
+        _focusFirst = OpenOnHover;
+        _restoreFocus = false;
+    }
+
+    private void Close() => Close(restoreFocus: false);
+
+    private void Close(bool restoreFocus)
+    {
+        _restoreFocus = OpenOnHover && _open && restoreFocus;
+        _open = false;
+        _openedByHover = false;
+        _focusFirst = false;
+    }
 
     private void HandleActivatorKeyDown(KeyboardEventArgs args)
     {
         if (!_disposed && args.Key == "ArrowDown")
         {
-            _open = true;
+            OpenWithFocus();
+        }
+        else if (!_disposed && args.Key == "Escape")
+        {
+            Close(restoreFocus: true);
         }
     }
 
@@ -142,9 +200,39 @@
     {
         if (args.Key == "Escape")
         {
-            Close();
+            Close(restoreFocus: true);
         }
     }
+
+    /// <summary>Receives ordered pointer and outside-dismissal notifications from this menu's browser observer.</summary>
+    /// <param name="open">Whether the pointer requested opening this menu or leaving its trigger and popup.</param>
+    /// <param name="interactionVersion">The observer's increasing interaction version, used to reject stale pointer notifications.</param>
+    /// <remarks>The observer never moves focus for hover opening or outside dismissal and stops before its callback reference is released.</remarks>
+    [JSInvokable]
+    public Task UpdatePointerNavigationAsync(bool open, long interactionVersion) => InvokeAsync(() =>
+    {
+        if (_disposed || !OpenOnHover || interactionVersion <= _pointerVersion)
+        {
+            return;
+        }
+
+        _pointerVersion = interactionVersion;
+        if (open)
+        {
+            if (!_open)
+            {
+                _open = true;
+                _openedByHover = true;
+                _restoreFocus = false;
+            }
+        }
+        else
+        {
+            Close();
+        }
+
+        StateHasChanged();
+    });
 
     /// <summary>Closes the popover after any native navigation link click, including the current destination.</summary>
     public Task OnNavigation() => InvokeAsync(() =>
@@ -173,11 +261,16 @@
         }));
     }
 
-    /// <summary>Stops route callbacks and observes renderer work. MudBlazor owns popover, overlay, and focus-trap resources.</summary>
+    /// <summary>Stops route and pointer callbacks and observes renderer work before releasing the menu's browser references.</summary>
     public async ValueTask DisposeAsync()
     {
         _disposed = true;
         Navigation.LocationChanged -= HandleLocationChanged;
+        if (_hoverInterop is { } hoverInterop)
+        {
+            _hoverInterop = null;
+            await hoverInterop.DisposeAsync();
+        }
         await _renderTracker.CompleteAsync();
     }
 }

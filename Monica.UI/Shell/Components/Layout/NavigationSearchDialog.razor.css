@@ -1,0 +1,47 @@
+.navigation-search {
+    width: 100%;
+    min-width: 0;
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-surface);
+    font-family: var(--mud-typography-default-family);
+}
+.search-input-row { display: flex; align-items: center; gap: 18px; padding: 22px 26px; border-bottom: 1px solid var(--mud-palette-divider); }
+.search-input-row ::deep .search-input-icon { width: 26px; height: 26px; flex-shrink: 0; color: var(--mud-palette-primary); }
+.search-input-row ::deep .search-input { flex: 1; min-width: 0; margin: 0; }
+.search-input-row ::deep .mud-input { margin: 0; font-family: var(--mud-typography-default-family); font-size: 24px; font-weight: 400; line-height: 1.4; }
+.search-input-row ::deep .mud-input-slot { padding: 8px 0; }
+.search-input-row ::deep .search-close { flex-shrink: 0; min-width: 0; padding: 6px; border-radius: 6px; }
+kbd { display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; min-width: 23px; border: 1px solid var(--mud-palette-divider); border-radius: 4px; font-family: var(--mo-font-family-mono); font-size: 11px; line-height: 1.5; color: var(--mud-palette-text-secondary); background: var(--mud-palette-background-gray); }
+.search-close kbd { padding: 6px 10px; font-size: 13px; }
+.search-results-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 26px 12px; font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--mud-palette-text-secondary); }
+.search-results { max-height: min(62vh, 580px); min-height: 160px; overflow: auto; padding: 0 14px 14px; scroll-behavior: auto; }
+.search-result { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 82px; padding: 14px 12px; text-align: start; border: 1px solid transparent; border-radius: 6px; background: transparent; color: inherit; font-family: inherit; cursor: pointer; }
+.search-result:hover { background: var(--mud-palette-action-default-hover); }
+.search-result.is-selected { background: var(--mud-palette-primary-hover); border-color: var(--mud-palette-divider); }
+.search-result:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: -2px; }
+.search-result-icon { display: grid; place-items: center; flex-shrink: 0; width: 42px; height: 42px; border: 1px solid var(--mud-palette-divider); border-radius: 6px; color: var(--mud-palette-primary); }
+.search-result-icon ::deep .mud-icon-root { width: 22px; height: 22px; }
+.search-result-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.search-result-title { font-size: 14px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.search-result-description { font-size: 12px; font-weight: 400; line-height: 1.5; color: var(--mud-palette-text-secondary); overflow-wrap: anywhere; }
+.search-result-breadcrumb { font-size: 10px; line-height: 1.4; color: var(--mud-palette-text-secondary); }
+.search-result-category { flex-shrink: 0; max-width: 140px; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mud-palette-text-secondary); text-align: end; overflow-wrap: anywhere; }
+.search-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 210px; padding: 30px; text-align: center; color: var(--mud-palette-text-secondary); }
+.search-empty h2 { margin: 0; color: var(--mud-palette-text-primary); font-size: 16px; font-weight: 500; }
+.search-empty p { margin: 0; font-size: 13px; line-height: 1.5; }
+.search-footer { display: flex; align-items: center; gap: 22px; padding: 14px 26px; border-top: 1px solid var(--mud-palette-divider); font-size: 11px; color: var(--mud-palette-text-secondary); }
+.search-footer > span { display: inline-flex; align-items: center; gap: 5px; }
+.search-shortcut { margin-left: auto; }
+@media (max-width: 600px) {
+    .search-input-row { gap: 10px; padding: 14px 16px; }
+    .search-input-row ::deep .mud-input { font-size: 17px; }
+    .search-input-row ::deep .search-input-icon { width: 22px; height: 22px; }
+    .search-results-heading { padding: 14px 16px 10px; font-size: 9px; }
+    .search-results { max-height: 60vh; padding-inline: 8px; }
+    .search-result { flex-wrap: wrap; gap: 10px; padding: 12px 8px; }
+    .search-result-icon { width: 34px; height: 34px; }
+    .search-result-copy { flex-basis: calc(100% - 44px); }
+    .search-result-category { margin-left: 44px; max-width: 100%; text-align: start; font-size: 9px; }
+    .search-footer { padding: 12px 16px; gap: 14px; }
+    .search-shortcut { display: none !important; }
+}

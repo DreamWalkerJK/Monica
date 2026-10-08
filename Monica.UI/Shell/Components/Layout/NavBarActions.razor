@@ -9,15 +9,9 @@
 @inject IStringLocalizer<SharedResource> L
 
 <div class="navbar-actions">
-    @if (Options.Value.EnableNavBarSearch && Options.Value.NavBarSearchAction is not null)
+    @if (Options.Value.EnableNavBarSearch)
     {
-        <MudIconButton Icon="@ShellIcons.Search"
-                       Color="Color.Default"
-                       Size="Size.Medium"
-                       Class="action-button action-button--secondary"
-                       OnClick="OpenSearchAsync"
-                       aria-label="@L["Layout:SearchTooltip"]"
-                       title="@L["Layout:SearchTooltip"]" />
+        <NavigationSearch />
     }
 
     @if (Options.Value.NavBarNotificationsAction is not null)
@@ -95,8 +89,6 @@
     private bool HasAccountActions =>
         Options.Value.UserProfileAction is not null ||
         Options.Value.UserSettingsAction is not null;
-
-    private Task OpenSearchAsync() => Options.Value.NavBarSearchAction?.Invoke() ?? Task.CompletedTask;
 
     private Task OpenNotificationsAsync() => Options.Value.NavBarNotificationsAction?.Invoke() ?? Task.CompletedTask;
 
