@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
+using System.Globalization;
+using System.Text;
 using Monica.OpenTelemetry.InProcessCollector.Models;
 using Monica.Modules;
 
@@ -15,6 +17,8 @@ internal sealed class InstrumentState(Instrument instrument, ModuleOpenTelemetry
     private long _droppedSamples;
 
     public Instrument Instrument { get; } = instrument;
+
+    public string InstrumentId { get; } = Guid.NewGuid().ToString("N");
 
     public string Kind { get; } = InstrumentKindResolver.Resolve(instrument);
 
@@ -75,7 +79,9 @@ internal sealed class InstrumentState(Instrument instrument, ModuleOpenTelemetry
         var droppedSamples = Interlocked.Read(ref _droppedSamples);
         return new InstrumentSnapshot
         {
+            InstrumentId = InstrumentId,
             MeterName = Instrument.Meter.Name,
+            MeterVersion = Instrument.Meter.Version,
             Name = Instrument.Name,
             Kind = Kind,
             Unit = Instrument.Unit,
@@ -97,7 +103,7 @@ internal sealed class InstrumentState(Instrument instrument, ModuleOpenTelemetry
         var normalized = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var tag in tags)
         {
-            normalized[tag.Key] = tag.Value?.ToString() ?? string.Empty;
+            normalized[tag.Key] = Convert.ToString(tag.Value, CultureInfo.InvariantCulture) ?? string.Empty;
         }
 
         return new Dictionary<string, string>(normalized, StringComparer.Ordinal);
@@ -110,8 +116,13 @@ internal sealed class InstrumentState(Instrument instrument, ModuleOpenTelemetry
             return string.Empty;
         }
 
-        return string.Join(
-            "\u001f",
-            tags.Select(static tag => $"{tag.Key}\u001e{tag.Value}"));
+        var key = new StringBuilder();
+        foreach (var tag in tags)
+        {
+            // Length prefixes preserve control separators, empty strings and arbitrary UTF-16 data.
+            key.Append(tag.Key.Length.ToString(CultureInfo.InvariantCulture)).Append(':').Append(tag.Key);
+            key.Append(tag.Value.Length.ToString(CultureInfo.InvariantCulture)).Append(':').Append(tag.Value);
+        }
+        return key.ToString();
     }
 }
