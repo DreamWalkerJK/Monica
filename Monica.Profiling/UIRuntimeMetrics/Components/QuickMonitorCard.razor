@@ -1,90 +1,89 @@
+@using System.Globalization
 @using Monica.Profiling.RuntimeMetrics.Models
+@using Monica.Profiling.UIRuntimeMetrics.Support
 @inject IStringLocalizer<RuntimeMetricsResource> L
 
-<section class="runtime-vitals" aria-label="@L["Vitals:AriaLabel"]">
-    <article class="runtime-vital runtime-vital--cpu">
-        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Speed" /></span>
-        <div class="runtime-vital__copy">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:Cpu"]</MudText>
-            <MudText Typo="Typo.h5" Color="@ProfilingSeverityColorResolver.GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)">
-                @LoadingOr($"{DataPoint?.CpuUsagePercent ?? 0:F1}%")
-            </MudText>
-        </div>
-        <div class="runtime-vital__progress">
-            <MudProgressLinear Color="@ProfilingSeverityColorResolver.GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)"
-                               Value="@(DataPoint?.CpuUsagePercent ?? 0)" />
-        </div>
-    </article>
+<section class="runtime-vitals" aria-label="@L["Vitals:AriaLabel"]" aria-busy="@(IsLoading && DataPoint is null)">
+    <div class="runtime-vitals__layout">
+        <article class="runtime-vitals__cpu" data-vital="cpu">
+            <div class="runtime-vitals__identity">
+                <span class="runtime-vitals__eyebrow">@L["Vitals:Eyebrow"]</span>
+                <MudIcon Icon="@Icons.Material.Outlined.Speed" Size="Size.Small" aria-hidden="true" />
+            </div>
+            <div class="runtime-vitals__cpu-measurement">
+                <span class="runtime-vitals__label">@L["Vitals:Cpu"]</span>
+                <strong class="runtime-vitals__cpu-value">@RuntimeMetricsDisplayFormatter.Percent(DataPoint?.CpuUsagePercent)</strong>
+            </div>
+            <p class="runtime-vitals__sample">
+                @if (DataPoint is not null)
+                {
+                    <time datetime="@RuntimeMetricsDisplayFormatter.MachineTime(DataPoint.Timestamp)"
+                          title="@RuntimeMetricsDisplayFormatter.MachineTime(DataPoint.Timestamp)">
+                        @L["Vitals:Sampled", RuntimeMetricsDisplayFormatter.LocalTime(DataPoint.Timestamp)]
+                    </time>
+                }
+                else
+                {
+                    @(IsLoading ? L["Common:LoadingValue"] : L["Vitals:Waiting"])
+                }
+            </p>
+        </article>
 
-    <article class="runtime-vital runtime-vital--primary">
-        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Storage" /></span>
-        <div class="runtime-vital__copy">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:WorkingSet"]</MudText>
-            <MudText Typo="Typo.h5" Color="Color.Primary">@LoadingOr($"{DataPoint?.WorkingSetMB ?? 0:F1} MB")</MudText>
+        <div class="runtime-vitals__memory">
+            <article class="runtime-vitals__working-set" data-vital="working-set">
+                <span class="runtime-vitals__label">@L["Vitals:WorkingSet"]</span>
+                <strong class="runtime-vitals__memory-value">@RuntimeMetricsDisplayFormatter.Megabytes(DataPoint?.WorkingSetMB)</strong>
+                @if (DataPoint is not null && PreviousDataPoint is not null)
+                {
+                    <span class="runtime-vitals__delta">
+                        @L["Vitals:Delta", RuntimeMetricsDisplayFormatter.SignedMegabytes(DataPoint.WorkingSetMB - PreviousDataPoint.WorkingSetMB)]
+                    </span>
+                }
+            </article>
+            <article class="runtime-vitals__heap" data-vital="gc-heap">
+                <div class="runtime-vitals__heap-measurement">
+                    <span class="runtime-vitals__label">@L["Vitals:GcHeap"]</span>
+                    <strong class="runtime-vitals__heap-value">@RuntimeMetricsDisplayFormatter.Megabytes(DataPoint?.GcHeapSizeMB)</strong>
+                </div>
+                @if (DataPoint is not null && PreviousDataPoint is not null)
+                {
+                    <span class="runtime-vitals__delta">
+                        @L["Vitals:Delta", RuntimeMetricsDisplayFormatter.SignedMegabytes(DataPoint.GcHeapSizeMB - PreviousDataPoint.GcHeapSizeMB)]
+                    </span>
+                }
+            </article>
         </div>
-        @if (PreviousDataPoint is not null && DataPoint is not null)
-        {
-            var delta = DataPoint.WorkingSetMB - PreviousDataPoint.WorkingSetMB;
-            <span class="runtime-vital__delta @(delta >= 0 ? "is-rising" : "is-falling")">
-                <MudIcon Icon="@(delta >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)" Size="Size.Small" />
-                @L["Vitals:Delta", delta >= 0 ? "+" : string.Empty, delta.ToString("F1"), "MB"]
-            </span>
-        }
-    </article>
 
-    <article class="runtime-vital runtime-vital--info">
-        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.AccountTree" /></span>
-        <div class="runtime-vital__copy">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:Threads"]</MudText>
-            <MudText Typo="Typo.h5" Color="Color.Info">@LoadingOr((DataPoint?.ThreadCount ?? 0).ToString())</MudText>
+        <div class="runtime-vitals__supporting">
+            <article class="runtime-vitals__fact" data-vital="threads">
+                <span class="runtime-vitals__label">@L["Vitals:Threads"]</span>
+                <strong class="runtime-vitals__fact-value">@(DataPoint?.ThreadCount.ToString(CultureInfo.CurrentCulture) ?? "—")</strong>
+            </article>
+            <article class="runtime-vitals__fact" data-vital="gc-time">
+                <span class="runtime-vitals__label">@L["Vitals:GcTime"]</span>
+                <strong class="runtime-vitals__fact-value">@RuntimeMetricsDisplayFormatter.Percent(DataPoint?.TimeInGcPercent)</strong>
+            </article>
+            <article class="runtime-vitals__fact" data-vital="allocation">
+                <span class="runtime-vitals__label">@L["Vitals:AllocationRate"]</span>
+                <strong class="runtime-vitals__fact-value">@RuntimeMetricsDisplayFormatter.ReportedAllocationRate(DataPoint?.AllocationRateBytesPerSecond)</strong>
+            </article>
         </div>
-    </article>
-
-    <article class="runtime-vital runtime-vital--gc">
-        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.CleaningServices" /></span>
-        <div class="runtime-vital__copy">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:GcTime"]</MudText>
-            <MudText Typo="Typo.h5" Color="@ProfilingSeverityColorResolver.GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)">
-                @LoadingOr($"{DataPoint?.TimeInGcPercent ?? 0:F1}%")
-            </MudText>
-        </div>
-        <div class="runtime-vital__progress">
-            <MudProgressLinear Color="@ProfilingSeverityColorResolver.GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)"
-                               Value="@Math.Min(DataPoint?.TimeInGcPercent ?? 0, 100)" />
-        </div>
-    </article>
-
-    <article class="runtime-vital runtime-vital--warning">
-        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DataUsage" /></span>
-        <div class="runtime-vital__copy">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:AllocationRate"]</MudText>
-            <MudText Typo="Typo.h5" Color="Color.Warning">
-                @LoadingOr(ProfilingDisplayFormatter.FormatBytesPerSecond(DataPoint?.AllocationRateBps ?? 0))
-            </MudText>
-        </div>
-    </article>
-
-    <article class="runtime-vital runtime-vital--success">
-        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Memory" /></span>
-        <div class="runtime-vital__copy">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:GcHeap"]</MudText>
-            <MudText Typo="Typo.h5" Color="Color.Success">@LoadingOr($"{DataPoint?.GcHeapSizeMB ?? 0:F1} MB")</MudText>
-        </div>
-        @if (PreviousDataPoint is not null && DataPoint is not null)
-        {
-            var delta = DataPoint.GcHeapSizeMB - PreviousDataPoint.GcHeapSizeMB;
-            <span class="runtime-vital__delta @(delta >= 0 ? "is-rising" : "is-falling")">
-                <MudIcon Icon="@(delta >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)" Size="Size.Small" />
-                @L["Vitals:Delta", delta >= 0 ? "+" : string.Empty, delta.ToString("F1"), "MB"]
-            </span>
-        }
-    </article>
+    </div>
 </section>
 
 @code {
+    /// <summary>
+    /// Gets or sets the latest captured observation, or null before an observation is available.
+    /// </summary>
     [Parameter] public RuntimeMetricsPoint? DataPoint { get; set; }
-    [Parameter] public RuntimeMetricsPoint? PreviousDataPoint { get; set; }
-    [Parameter] public bool IsLoading { get; set; }
 
-    private string LoadingOr(string value) => IsLoading ? L["Common:LoadingValue"] : value;
+    /// <summary>
+    /// Gets or sets the observation from the previous successful view read for memory comparisons.
+    /// </summary>
+    [Parameter] public RuntimeMetricsPoint? PreviousDataPoint { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the view is refreshing. Captured values remain visible during refresh.
+    /// </summary>
+    [Parameter] public bool IsLoading { get; set; }
 }

@@ -1,120 +1,177 @@
 @attribute [Route(PAGE_URL)]
 @using Monica.Profiling.UIRuntimeMetrics.Components
+@using Monica.Profiling.UIRuntimeMetrics.Support
 @inject IServiceProvider ServiceProvider
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<RuntimeMetricsResource> L
 @inject IStringLocalizer<ProfilingResource> ProfilingL
+@inject ILogger<UIRuntimeMetricsPage> Logger
 @implements IAsyncDisposable
 
 <PageTitle>@(_pageState is null ? ProfilingL["Unavailable:RuntimeMetrics:PageTitle"] : L["Pages:RuntimeMetrics:Title"])</PageTitle>
-
 <div class="runtime-metrics-page">
     @if (_pageState is null)
     {
-        <ProfilingModuleUnavailable HeadingId="runtime-metrics-unavailable-title"
-                                    Icon="@Icons.Material.Filled.Speed"
-                                    Eyebrow="@ProfilingL["Unavailable:Eyebrow"]"
-                                    Title="@ProfilingL["Unavailable:RuntimeMetrics:Title"]"
-                                    Description="@ProfilingL["Unavailable:RuntimeMetrics:Description"]" />
+        <ProfilingModuleUnavailable HeadingId="runtime-metrics-unavailable-title" Icon="@Icons.Material.Outlined.Speed"
+            Eyebrow="@ProfilingL["Unavailable:Eyebrow"]" Title="@ProfilingL["Unavailable:RuntimeMetrics:Title"]"
+            Description="@ProfilingL["Unavailable:RuntimeMetrics:Description"]" />
     }
     else
     {
         <header class="runtime-metrics-header">
-            <div class="runtime-metrics-header__identity">
-                <span class="runtime-metrics-header__icon" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Filled.Speed" />
-                </span>
-                <div class="runtime-metrics-header__copy">
-                    <MudText Typo="Typo.overline" Class="runtime-metrics-eyebrow">@L["Page:Eyebrow"]</MudText>
-                    <MudText Typo="Typo.h4">@L["Pages:RuntimeMetrics:Title"]</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+            <div>
+                <span class="runtime-eyebrow"><MudIcon Icon="@Icons.Material.Outlined.Speed" Size="Size.Small" /> @L["Page:Eyebrow"]</span>
+                <h1>@L["Pages:RuntimeMetrics:Title"]</h1>
+                <p>@L["Page:Subtitle"]</p>
+            </div>
+            <div class="runtime-header-controls">
+                <div class="runtime-metrics-header__actions">
+                    <MudSwitch T="bool" Value="_pageState.AutoRefresh" ValueChanged="SetAutoRefresh"
+                               Disabled="@(!_pageState.CanAutoRefresh)" Color="Color.Primary" Label="@L["Page:Actions:AutoRefresh"]" />
+                    <MudButton @ref="_refreshButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh"
+                               OnClick="RefreshDataAsync" Disabled="_pageState.IsLoading">@L["Page:Actions:Refresh"]</MudButton>
+                </div>
+                <div class="runtime-freshness">
+                    <span class="runtime-polling">@PollingLabel</span>
+                    @if (_pageState.SnapshotCapturedAt is { } capturedAt)
+                    {
+                        <span>@L["Page:Captured"] <time data-view-capture datetime="@capturedAt.ToString("O")">@RuntimeMetricsDisplayFormatter.LocalDateTime(capturedAt)</time></span>
+                    }
                 </div>
             </div>
-
-            <div class="runtime-metrics-header__actions">
-                <MudChip T="string"
-                         Size="Size.Small"
-                         Color="@(_pageState.AutoRefresh ? Color.Success : Color.Default)"
-                         Icon="@(_pageState.AutoRefresh ? Icons.Material.Filled.Sensors : Icons.Material.Filled.Pause)">
-                    @(_pageState.AutoRefresh ? L["Page:Status:Live"] : L["Page:Status:Paused"])
-                </MudChip>
-                <MudSwitch T="bool"
-                           Value="@_pageState.AutoRefresh"
-                           ValueChanged="SetAutoRefresh"
-                           Color="Color.Primary"
-                           Label="@L["Page:Actions:AutoRefresh"]" />
-                <MudTooltip Text="@L["Page:Actions:Refresh"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                   Color="Color.Primary"
-                                   Variant="Variant.Outlined"
-                                   OnClick="RefreshDataAsync"
-                                   Disabled="_pageState.IsLoading" />
-                </MudTooltip>
-            </div>
         </header>
-
-        <main class="runtime-metrics-content">
-            <QuickMonitorCard DataPoint="_pageState.CurrentDataPoint"
-                              PreviousDataPoint="_pageState.PreviousDataPoint"
-                              IsLoading="_pageState.IsLoading" />
-
-            <QuickMonitorTrendChart TrendData="_pageState.TrendData" IsLoading="_pageState.IsLoading" />
-        </main>
+        @if (_pageState.LoadError is not null)
+        {
+            <div class="runtime-load-error" role="alert">
+                <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+                <div><strong>@L["Page:Messages:RefreshFailed"]</strong>
+                    <p>@(_pageState.HasSnapshot ? L["Page:Messages:Retained"] : L["Page:Messages:NoSnapshot"])</p>
+                    @if (!string.IsNullOrEmpty(_pageState.LoadError)) { <p>@_pageState.LoadError</p> }
+                </div>
+            </div>
+        }
+        <QuickMonitorCard DataPoint="_pageState.CurrentDataPoint" PreviousDataPoint="_pageState.PreviousDataPoint" IsLoading="_pageState.IsLoading" />
+        <QuickMonitorTrendChart TrendData="_pageState.TrendData" IsLoading="_pageState.IsLoading"
+                                CapturedAt="_pageState.SnapshotCapturedAt" OnInspect="InspectSampleAsync" OnInspectTriggerRemoved="FocusRefreshAsync" />
     }
 </div>
 
 @code {
     public const string PAGE_URL = "/runtime-metrics";
     private RuntimeMetricsPageState? _pageState;
+    private readonly HashSet<Task> _renderTasks = [];
+    private readonly object _renderLock = new();
+    private readonly object _disposeLock = new();
+    private Task? _disposeTask;
+    private IDialogReference? _detailDialog;
+    private MudButton? _refreshButton;
+    private Task<IDialogReference?> _dialogOpen = Task.FromResult<IDialogReference?>(null);
+    private Task _dialogClose = Task.CompletedTask;
+    private bool _openingDialog;
     private bool _disposed;
 
-    protected override void OnInitialized()
+    private string PollingLabel => _pageState is not { CanAutoRefresh: true } ? L["Page:Status:Manual"]
+        : _pageState.AutoRefresh ? L["Page:Status:Live", _pageState.RefreshIntervalMs / 1000d] : L["Page:Status:Paused"];
+
+    protected override async Task OnInitializedAsync()
     {
         _pageState = ServiceProvider.GetService<RuntimeMetricsPageStateFactory>()?.Create();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender || _pageState is null)
-        {
-            return;
-        }
-
+        if (_pageState is null) return;
         _pageState.StateChanged += HandleStateChanged;
-        var result = await _pageState.InitializeAsync();
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add(error.Message ?? L["Page:Messages:RefreshFailed"], Severity.Error);
-        }
+        await _pageState.InitializeAsync();
     }
-
     private async Task RefreshDataAsync()
     {
-        if (_pageState is null)
-        {
-            return;
-        }
-
+        if (_disposed || _pageState is null) return;
         var result = await _pageState.RefreshAsync();
-        if (result.IsFailed(out var error))
+        if (!_disposed && result.Status != ResStatus.Conflict && result.IsFailed(out _))
+            Snackbar.Add(L["Page:Messages:RefreshFailed"], Severity.Error);
+    }
+    private Task SetAutoRefresh(bool value) => _pageState?.SetAutoRefreshAsync(value) ?? Task.CompletedTask;
+    private Task InspectSampleAsync(RuntimeSampleEvidence evidence)
+    {
+        if (_disposed || _openingDialog) return Task.CompletedTask;
+        _openingDialog = true;
+        _dialogOpen = OpenDetailsAsync(evidence);
+        return _dialogClose = ObserveDialogCloseAsync(_dialogOpen);
+    }
+    private async Task<IDialogReference?> OpenDetailsAsync(RuntimeSampleEvidence evidence)
+    {
+        try
         {
-            Snackbar.Add(error.Message ?? L["Page:Messages:RefreshFailed"], Severity.Error);
+            var parameters = new DialogParameters<RuntimeSampleDetailDialog>
+            {
+                { dialog => dialog.Point, evidence.Point }, { dialog => dialog.CapturedAt, evidence.CapturedAt }
+            };
+            var reference = await DialogService.ShowAsync<RuntimeSampleDetailDialog>(L["Details:Title"], parameters,
+                new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = true, BackdropClick = true });
+            if (_disposed) { RetireDialog(reference); return null; }
+            _detailDialog?.Close(DialogResult.Cancel());
+            _detailDialog = reference;
+            return reference;
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Runtime sample inspector could not be opened.");
+            if (!_disposed) Snackbar.Add(L["Details:OpenFailed"], Severity.Error);
+            return null;
+        }
+        finally { _openingDialog = false; }
+    }
+    private static async Task ObserveDialogCloseAsync(Task<IDialogReference?> opening)
+    {
+        if (await opening is { } reference) await reference.Result;
+    }
+    private static void RetireDialog(IDialogReference? reference)
+    {
+        if (reference is null) return;
+        reference.Close(DialogResult.Cancel());
+        // The provider may retire before this page. Complete the admitted result even without its close subscriber.
+        reference.Dismiss(DialogResult.Cancel());
+    }
+    private Task FocusRefreshAsync() => _disposed || _refreshButton is null ? Task.CompletedTask : _refreshButton.FocusAsync().AsTask();
+    private void HandleStateChanged()
+    {
+        if (_disposed) return;
+        var render = ObserveRenderAsync(InvokeAsync(() => { if (!_disposed) StateHasChanged(); }));
+        lock (_renderLock) _renderTasks.Add(render);
+        _ = RemoveRenderAsync(render);
+    }
+    private async Task ObserveRenderAsync(Task render)
+    {
+        try { await render; }
+        catch (Exception exception) { Logger.LogError(exception, "Runtime metrics page rendering failed."); }
+    }
+    private async Task RemoveRenderAsync(Task render)
+    {
+        await render;
+        lock (_renderLock) _renderTasks.Remove(render);
+    }
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeLock)
+        {
+            _disposed = true;
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
         }
     }
-
-    private Task SetAutoRefresh(bool value) => _pageState?.SetAutoRefreshAsync(value) ?? Task.CompletedTask;
-
-    private void HandleStateChanged() { if (!_disposed) _ = InvokeAsync(StateHasChanged); }
-
-    public async ValueTask DisposeAsync()
+    private async Task DisposeCoreAsync()
     {
-        _disposed = true;
-        if (_pageState is null)
-        {
-            return;
-        }
-
+        if (_pageState is null) return;
         _pageState.StateChanged -= HandleStateChanged;
-        await _pageState.DisposeAsync();
+        try { await _pageState.DisposeAsync(); }
+        finally
+        {
+            try { await _dialogOpen; }
+            finally
+            {
+                RetireDialog(_detailDialog);
+                await _dialogClose;
+                Task[] renders;
+                lock (_renderLock) renders = _renderTasks.ToArray();
+                await Task.WhenAll(renders);
+            }
+        }
     }
 }

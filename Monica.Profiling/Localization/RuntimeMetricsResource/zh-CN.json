@@ -1,14 +1,117 @@
 {
-  "Pages": { "RuntimeMetrics": { "Title": "运行时指标", "Description": "跟踪 CPU、内存、线程与垃圾回收随时间的变化。" } },
-  "Page": {
-    "Eyebrow": "运行时插桩",
-    "Subtitle": "在持续采样视图中跟踪进程压力与托管运行时证据。",
-    "Status": { "Live": "实时采样", "Paused": "采样已暂停" },
-    "Actions": { "AutoRefresh": "自动刷新", "Refresh": "刷新证据" },
-    "Messages": { "RefreshFailed": "刷新运行时指标失败。" }
+  "Pages": {
+    "RuntimeMetrics": {
+      "Title": "运行时指标",
+      "Description": "在有限的采样窗口内查看进程 CPU、内存、线程池与 GC 数据。"
+    }
   },
-  "Vitals": { "AriaLabel": "当前运行时关键指标", "Cpu": "CPU", "WorkingSet": "工作集", "Threads": "线程", "GcTime": "GC 时间", "AllocationRate": "分配速率", "GcHeap": "GC 堆", "Delta": "较上次 {0}" },
-  "Trend": { "Eyebrow": "实时窗口", "Title": "运行时压力趋势", "ChartAriaLabel": "CPU 与工作集趋势", "Waiting": "等待更多样本以绘制趋势。", "Metrics": { "Cpu": "当前 CPU", "Memory": "当前工作集" }, "Series": { "Cpu": "CPU", "WorkingSet": "工作集" } },
-  "Recent": { "Eyebrow": "采样证据", "Title": "最近观测", "Count": "{0} 个样本", "Empty": "尚未采集运行时观测。", "Columns": { "Time": "采集时间", "Cpu": "CPU", "WorkingSet": "工作集", "GcHeap": "GC 堆", "Threads": "线程", "GcTime": "GC 时间", "AllocationRate": "分配速率" } },
-  "Common": { "LoadingValue": "采集中…" }
+  "Page": {
+    "Eyebrow": "进程观测",
+    "Subtitle": "观察运行时的变化，将当前测量值与此主机保留的采样记录对照。",
+    "Captured": "视图读取",
+    "Status": {
+      "Live": "每 {0:0.##} 秒刷新视图",
+      "Paused": "视图已暂停 · 主机继续采集",
+      "Manual": "手动刷新视图 · 主机继续采集"
+    },
+    "Actions": {
+      "AutoRefresh": "自动刷新",
+      "Refresh": "刷新视图"
+    },
+    "Messages": {
+      "RefreshFailed": "无法刷新视图。",
+      "Retained": "以下保留上次成功读取的视图，其读取时间尚未更新。",
+      "NoSnapshot": "尚无成功读取的视图可显示。"
+    }
+  },
+  "Vitals": {
+    "AriaLabel": "最新保留的运行时采样",
+    "Eyebrow": "最新观测",
+    "Sampled": "采样时间 {0}",
+    "Waiting": "暂无保留的采样",
+    "Cpu": "进程 CPU",
+    "WorkingSet": "工作集",
+    "Threads": "线程池线程",
+    "GcTime": "GC 时间占比",
+    "AllocationRate": "上报的分配速率",
+    "GcHeap": "托管 GC 堆",
+    "Delta": "较上次视图读取 {0}"
+  },
+  "Trend": {
+    "Eyebrow": "保留窗口",
+    "Title": "进程近期的变化",
+    "Scope": "各指标独立刻度，按实际采样时间展示。达到容量后，较早的记录会移出此窗口。",
+    "Retained": "保留的采样",
+    "Capacity": "{0} / {1}",
+    "Window": "观测跨度",
+    "CollectorInterval": "快照间隔",
+    "Seconds": "{0:0.##} 秒",
+    "CpuChart": "进程 CPU 历史，百分比，UTC 时间轴",
+    "MemoryChart": "工作集历史，十进制兆字节，UTC 时间轴",
+    "UtcPercent": "% · UTC",
+    "UtcMegabytes": "十进制 MB · UTC",
+    "Metrics": {
+      "Cpu": "CPU",
+      "Memory": "工作集"
+    },
+    "Series": {
+      "Cpu": "CPU",
+      "WorkingSet": "工作集"
+    },
+    "NoSelectionTitle": "选择一项测量值",
+    "NoSelection": "选择上方的 CPU 或工作集以显示历史曲线。全部采样仍可在下方查看。",
+    "NoRetentionTitle": "未启用历史保留",
+    "NoRetention": "此主机保留零条采样。采集可以继续，但此视图无法显示最新保留值或趋势。",
+    "SingleTitle": "一条观测记录",
+    "SingleRetention": "此主机仅保留一条采样。可以查看最新值，曲线需要至少两条保留的观测记录。",
+    "SingleWaiting": "保留第二条观测记录后即可展示时间曲线。",
+    "WaitingTitle": "等待观测记录",
+    "Waiting": "采集器尚未向此视图提供保留的采样。刷新可读取当前窗口。",
+    "MeasurementHelp": "MB 按 1,000,000 字节换算。快照包含缓存的运行时计数器，零值不代表计数器已上报。分配速率保留采集器上报值，重复的 GC 增量不是累计总数。"
+  },
+  "Recent": {
+    "Eyebrow": "采样明细",
+    "Title": "曲线背后的观测记录",
+    "Scope": "新记录在前 · 可查看此视图中的精确值",
+    "Empty": "此视图没有保留的观测记录。",
+    "Range": "第 {0}–{1} 条，共 {2} 条保留采样",
+    "Pagination": "保留采样分页",
+    "Inspect": "查看采样 {0}",
+    "Columns": {
+      "Time": "采样时间",
+      "Cpu": "CPU",
+      "WorkingSet": "工作集",
+      "GcHeap": "GC 堆",
+      "Threads": "线程池",
+      "GcTime": "GC 时间",
+      "AllocationRate": "分配速率",
+      "Inspect": "查看采样"
+    }
+  },
+  "Details": {
+    "Title": "运行时采样",
+    "OpenFailed": "无法打开采样详情。",
+    "Frozen": "页面与主机更新时，此采样仍保持不变。以下数值保留记录时的精度。",
+    "Timestamp": "采样时间 · UTC",
+    "ViewCapture": "成功读取视图 · 本地时区偏移",
+    "RecordedValues": "记录的计数器值",
+    "Bytes": "字节",
+    "BytesPerSecond": "字节/秒 · 上报值",
+    "Increment": "缓存增量",
+    "Gen0Size": "Gen 0 大小",
+    "Gen1Size": "Gen 1 大小",
+    "Gen2Size": "Gen 2 大小",
+    "LohSize": "大对象堆",
+    "PohSize": "固定对象堆",
+    "Fragmentation": "GC 碎片率",
+    "Gen0Increment": "Gen 0 GC 增量",
+    "Gen1Increment": "Gen 1 GC 增量",
+    "Gen2Increment": "Gen 2 GC 增量",
+    "CounterHelp": "计数器可能在多个快照中重复。分配速率没有按间隔重新换算；GC 增量不能相加作为累计次数。未上报的计数器也可能显示为零。"
+  },
+  "Common": {
+    "LoadingValue": "正在读取观测记录…",
+    "Unavailable": "—",
+    "Close": "关闭"
+  }
 }

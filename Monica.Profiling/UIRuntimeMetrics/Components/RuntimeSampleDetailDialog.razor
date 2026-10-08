@@ -1,0 +1,54 @@
+@using System.Globalization
+@using Monica.Profiling.RuntimeMetrics.Models
+@using Monica.Profiling.UIRuntimeMetrics.Support
+@using Monica.UI.Shared.Components.Dialogs
+@inject IStringLocalizer<RuntimeMetricsResource> L
+
+<MudDialog>
+    <TitleContent><MoDialogHeading Text="@L["Details:Title"]" /></TitleContent>
+    <DialogContent>
+        <div class="runtime-sample-detail" data-sample-timestamp="@RuntimeMetricsDisplayFormatter.MachineTime(Point.Timestamp)">
+            <p class="runtime-detail-note">@L["Details:Frozen"]</p>
+            <dl class="runtime-detail-identity">
+                <div><dt>@L["Details:Timestamp"]</dt><dd><time data-field="Timestamp" datetime="@RuntimeMetricsDisplayFormatter.MachineTime(Point.Timestamp)">@RuntimeMetricsDisplayFormatter.MachineTime(Point.Timestamp)</time></dd></div>
+                <div><dt>@L["Details:ViewCapture"]</dt><dd><time data-field="CapturedAt" datetime="@CapturedAt.ToString("O")">@RuntimeMetricsDisplayFormatter.LocalDateTime(CapturedAt)</time></dd></div>
+            </dl>
+            <h3>@L["Details:RecordedValues"]</h3>
+            <dl class="runtime-detail-values">
+                @foreach (var field in Fields)
+                {
+                    <div data-field="@field.Name"><dt>@field.Label <small>@field.Unit</small></dt><dd><code>@field.Value</code></dd></div>
+                }
+            </dl>
+            <p class="runtime-detail-note">@L["Details:CounterHelp"]</p>
+        </div>
+    </DialogContent>
+    <DialogActions><MudButton Variant="Variant.Text" OnClick="@(() => MudDialog.Close())">@L["Common:Close"]</MudButton></DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    /// <summary>Gets or sets the immutable retained collector point captured when this inspector opened.</summary>
+    [Parameter, EditorRequired] public RuntimeMetricsPoint Point { get; set; } = null!;
+    /// <summary>Gets or sets the successful view capture that exposed this sample; it stays frozen during polling.</summary>
+    [Parameter, EditorRequired] public DateTimeOffset CapturedAt { get; set; }
+    private IEnumerable<(string Name, string Label, string Value, string Unit)> Fields =>
+    [
+        (nameof(Point.CpuUsagePercent), L["Vitals:Cpu"], Raw(Point.CpuUsagePercent), "%"),
+        (nameof(Point.WorkingSetBytes), L["Vitals:WorkingSet"], Raw(Point.WorkingSetBytes), L["Details:Bytes"]),
+        (nameof(Point.GcHeapSizeBytes), L["Vitals:GcHeap"], Raw(Point.GcHeapSizeBytes), L["Details:Bytes"]),
+        (nameof(Point.ThreadCount), L["Vitals:Threads"], Point.ThreadCount.ToString(CultureInfo.InvariantCulture), ""),
+        (nameof(Point.TimeInGcPercent), L["Vitals:GcTime"], Raw(Point.TimeInGcPercent), "%"),
+        (nameof(Point.AllocationRateBytesPerSecond), L["Vitals:AllocationRate"], Raw(Point.AllocationRateBytesPerSecond), L["Details:BytesPerSecond"]),
+        (nameof(Point.Gen0SizeBytes), L["Details:Gen0Size"], Raw(Point.Gen0SizeBytes), L["Details:Bytes"]),
+        (nameof(Point.Gen1SizeBytes), L["Details:Gen1Size"], Raw(Point.Gen1SizeBytes), L["Details:Bytes"]),
+        (nameof(Point.Gen2SizeBytes), L["Details:Gen2Size"], Raw(Point.Gen2SizeBytes), L["Details:Bytes"]),
+        (nameof(Point.LohSizeBytes), L["Details:LohSize"], Raw(Point.LohSizeBytes), L["Details:Bytes"]),
+        (nameof(Point.PohSizeBytes), L["Details:PohSize"], Raw(Point.PohSizeBytes), L["Details:Bytes"]),
+        (nameof(Point.GcFragmentationPercent), L["Details:Fragmentation"], Raw(Point.GcFragmentationPercent), "%"),
+        (nameof(Point.Gen0GcCount), L["Details:Gen0Increment"], Raw(Point.Gen0GcCount), L["Details:Increment"]),
+        (nameof(Point.Gen1GcCount), L["Details:Gen1Increment"], Raw(Point.Gen1GcCount), L["Details:Increment"]),
+        (nameof(Point.Gen2GcCount), L["Details:Gen2Increment"], Raw(Point.Gen2GcCount), L["Details:Increment"])
+    ];
+    private static string Raw(double value) => RuntimeMetricsDisplayFormatter.Raw(value);
+}

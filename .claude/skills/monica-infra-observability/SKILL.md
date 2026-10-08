@@ -13,6 +13,6 @@ Health, logging, execution timing, tracing, and metrics have independent registr
 | Record events and failures or inspect local log files | [Logging](references/logging.md) |
 | Measure slow or running business operations | [Execution timing](references/execution-timing.md) |
 | Follow a controller, execution, database, or remote call chain | [Tracing](references/tracing.md) |
-| Inspect workload trends or export measurements across instances | [Metrics](references/metrics.md) |
+| Inspect local process history or export measurements across instances | [Metrics](references/metrics.md) |
 
 For module-graph and worker-state diagnostics, use [hosting](../monica-infra-hosting/SKILL.md); for authoring instruments, use [OpenTelemetry development](../monica-opentelemetry/SKILL.md).
