@@ -118,6 +118,16 @@ Global `.mud-button` rules must not force pill radii, padding, or minimum height
 
 ## High-Risk Component Areas
 
+### Drawer positioning belongs to its layout owner
+
+Theme surface rules may paint drawers, but must preserve their fixed or absolute positioning. A broad `position: relative` rule can bring even a closed temporary drawer into the shell grid, consume a content row, and collapse the page. Keep decorative positioning separate from shared paint and exclude `.mud-drawer` from every matching branch. Excluding only an explicit drawer selector is insufficient: a drawer also matches elevated `.mud-paper` selectors.
+
+Verify open and closed temporary drawers, both shell layouts, and a narrow viewport. Inspect computed drawer positioning and the main content height on more than one page; a visible shell with an empty content area can be a layout regression rather than a page loading failure.
+
+### Hidden measurement elements can enlarge the document
+
+Keep navigation measurement rails rendered at their natural width so overflow decisions remain accurate, but position the whole rail outside the viewport horizontally as well as vertically. `visibility: hidden` and an offscreen `top` do not prevent a wide absolute element from expanding the document's horizontal scroll area. Verify document width with a collapsed Sidebar near the desktop breakpoint and a wide or monospace theme, then confirm Topbar still moves destinations into More as space decreases.
+
 ### `MudTabs` with `ApplyEffectsToContainer="true"`
 
 MudBlazor applies rounded, outlined, and elevation classes to the root `.mud-tabs` element in this mode.
