@@ -2,14 +2,14 @@
 
 Grove is an optional theme identified by `MonicaThemeKind.Grove` and the `grove` CSS token. It provides warm stone surfaces, forest accents, and editorial identity without changing the preserved `MonicaThemeKind.Default` palette. Select Grove in Appearance or configure it as a host's first-visit theme explicitly.
 
-Use the shared shell, density, interaction, local-asset, and verification contracts in [Monica's default design language](monica-precision-design-language.md). Sidebar and Topbar placement are independent of theme selection; both must remain usable under Default, Grove, and every other selectable theme.
+Use the shared [working-interface language](monica-workbench-design-language.md) for page composition, readable evidence, responsive containment, and acceptance, and [Precision's theme and shell contract](monica-precision-design-language.md) for shared navigation, interaction, local assets, and card hooks. Sidebar and Topbar placement are independent of theme selection; both must remain usable under Default, Grove, and every other selectable theme.
 
 ## Surface and color roles
 
 - Use a warm stone canvas, a light ordinary surface, a quieter contextual navigation surface, and forest primary/focus accents. Keep the inverse forest identity surface distinct from ordinary working panels.
 - Dark mode uses distinguishable green-black canvas and structural surfaces with a softer light primary accent. Retain separate information, success, warning, and error roles and reinforce their meaning with labels or icons.
 - Source all component paint from MudBlazor palettes or approved semantic tokens. Grove-specific colors belong in its C# palette and theme-owned CSS.
-- Keep the signature focused on the inverse identity surface, editorial typography, and restrained botanical/vector detail. Ordinary filters, lists, tables, and KPI groups use tonal surfaces with low elevation rather than repeated decorative treatments.
+- Grove can express its identity through an inverse identity surface, editorial typography, or restrained botanical/vector detail where the accepted page design calls for it. An ordinary working page does not require a forest hero; the health workbench uses the theme's display font and quiet palette surfaces. Ordinary filters, lists, tables, and KPI groups keep low elevation and avoid repeated decorative treatments.
 
 ## Typography and identity
 

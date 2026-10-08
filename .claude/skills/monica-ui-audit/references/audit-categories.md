@@ -23,14 +23,15 @@ Indicators:
 
 Fix: give the component/state owner one explicit lifetime. Mark it disposed and cancel ordinary lifetime-bound work before teardown; stop scheduling work and detach callbacks/render delegates; recheck lifetime after incomplete awaits; prevent new resource acquisitions; serialize with or drain existing users; then atomically detach shared references for teardown. Always observe resource-producing operations and dispose late-created references instead of publishing them. Stop JS callback producers before disposing their `DotNetObjectReference`, and dispose every resource once. Do not register component-consumed disposable transients. Prefer a non-disposable factory that creates a component-owned resource. Use an explicit component-owned DI scope only after inspecting the full dependency graph and proving it does not require services bound to the existing Blazor circuit scope. Keep JS session state per component/root and cancel all queued work during session cleanup. Use client-side `MutationObserver` for DOM cleanup. Catch `JSDisconnectedException` where server-circuit loss is expected. Do not catch `ObjectDisposedException` from a locally owned interop reference; repair the ownership and teardown ordering.
 
-### P1 — Custom interactive markup replacing MudBlazor primitives
+### P1 — Custom overlays replacing MudBlazor primitives or missing keyboard behavior
 
 Indicators:
 - Custom dropdown/flyout/overlay markup with manual `@onmouseenter` / `@onmouseleave` / `@onclick` state machines
 - Manual `_isOpen`, `_isHovered`, delayed-close `CancellationTokenSource` patterns
 - Custom `<div class="dropdown-menu">` / `<div class="flyout-menu">` / `<div class="popover-panel">` instead of `MudMenu`, `MudPopover`, `MudDialog`, `MudDrawer`
+- A temporary details overlay has no accessible identity, leaks keyboard focus, cannot close with Escape, or fails to restore focus; choosing `MudDrawer` alone does not establish dialog behavior
 
-Fix: replace with MudBlazor primitives. Reference implementation: `NavBarDropdown.razor`, `NavBarMore.razor` in `Monica.UI/Shell/Components/Layout/`.
+Fix: use MudBlazor overlay primitives and inspect their exact source and runtime keyboard behavior. Add the missing focus/dismissal contract at the owning component where required, with trapping mounted only while open. Simple native buttons, links, and status-filter controls are valid; this category concerns overlay behavior, not all native interactive markup. Reference implementation: `NavBarDropdown.razor`, `NavBarMore.razor` in `Monica.UI/Shell/Components/Layout/`. See the shared [interaction guidance](../../monica-ui-development/references/monica-workbench-design-language.md#preserve-interaction-and-runtime-state).
 
 ### P2 — Broken layout containment, sizing, or scroll ownership
 
@@ -41,18 +42,22 @@ Indicators:
 - A component-isolated selector targets a MudBlazor render root it cannot reach; use a scoped native wrapper or a reachable `::deep` descendant selector
 - Long hashes, identifiers, JSON, tables, or code stretch an ancestor instead of wrapping or scrolling inside the intended local surface
 - The page or dialog becomes the horizontal scroll owner when only a table, diff, or code surface should scroll
+- An ostensibly horizontal filter/tab strip has incidental vertical overflow from a negative child margin, clipped focus styling, or mismatched child/container height
+- Responsive cell CSS assumes an enum name is a media-query threshold, so a MudBlazor table stacks earlier than the page's local spacing rules
 - A fixed/minimum height leaves unexplained blank space instead of using content-driven height with a viewport-aware cap
 
-Fix: trace the layout from the dialog/page surface to the failing descendant and assign width, shrink, wrap, and overflow responsibility explicitly. Make operational page roots consume the owner's full available width; apply readable line-length limits to local text regions instead of the page shell. Remove contradictory internal width caps, use `width: 100%`, `min-width: 0`, `minmax(0, 1fr)`, `overflow-wrap`, or a local scroll surface only where each property expresses the intended contract. Keep long identifiers fully accessible for inspection and copying. Justify every retained page-level width cap or fixed/minimum height with a concrete editorial, readability, interaction, or viewport requirement.
+Fix: trace the layout from the dialog/page surface to the failing descendant and assign width, shrink, wrap, and overflow responsibility explicitly. Make operational page roots consume the owner's full available width; apply readable line-length limits to local text regions instead of the page shell. Remove contradictory internal width caps, use `width: 100%`, `min-width: 0`, `minmax(0, 1fr)`, `overflow-wrap`, or a local scroll surface only where each property expresses the intended contract. Measure both scroll dimensions at the smallest owner and inspect extending children rather than hiding a scrollbar. Verify the installed component's source breakpoint and live stacked DOM. Keep long identifiers fully accessible for inspection and copying. Justify every retained page-level width cap or fixed/minimum height with a concrete editorial, readability, interaction, or viewport requirement.
 
 ### P3 — Theme bypass, visual-language drift, or prototype-fidelity loss
 
 Indicators:
 - Inline `Style=` / `style=` attributes for layout or visuals
-- Hardcoded color, shadow, radius, or background values instead of MudBlazor parameters, `var(--mud-palette-*)`, or approved `var(--mo-color-*)` tokens
+- Hardcoded color, shadow paint, or background values instead of MudBlazor parameters, `var(--mud-palette-*)`, or approved `var(--mo-color-*)` tokens; deliberate component-owned spacing and shape measurements are valid
 - Semantically distinct statuses, severities, categories, or progress states collapse into visually identical neutral surfaces when scanability requires differentiation
 - Multiple hierarchy levels and semantic states rely on the same neutral surface plus one accent, producing a flat or monotonous page
-- The page has no subject-specific design thesis or palette/type/layout/signature plan, and its composition could be reused unchanged for an unrelated AI administration product
+- The page has no task-specific information hierarchy, or copies an accepted page's regions without a corresponding decision, evidence, or action
+- Readable descriptions and record names shrink into 10–11px metadata, or excessive bold text makes all hierarchy levels compete
+- A filtered list silently changes the meaning of a whole-scope summary, or empty/missing coverage is presented as success without evidence
 - Light or dark mode is excessively dark, low-contrast, or monotone, so canvas, structural surfaces, borders, text hierarchy, or semantic states collapse together
 - Success, warning, error, information, selection, and runtime states are not meaningfully differentiated when the task requires rapid scanning
 - Repeated facts, properties, metrics, or records are each wrapped in cards instead of rows, lists, definition groups, or tables
@@ -63,7 +68,7 @@ Indicators:
 - Motion uses large travel, bouncing, repeated flourishes, continuous ambient effects, or ignores `prefers-reduced-motion`
 - A surface stacks more than two decorative cues, such as top stripe + ring + shadow, or repeats stripes/rings across every card
 - The same accent rail is repeated across unrelated card groups, replaces a clearer page-specific outline/icon/badge treatment, or appears where it encodes no additional status or category meaning
-- Border radii drift from Default's 6/8/12 scale or a named theme's declared scale, grow across nested surfaces, or override component-owned geometry
+- Border radii drift from the theme baseline without an intentional component contract, grow across nested surfaces, or global theme selectors override component-owned geometry
 - The implementation loses the prototype's typography, density, spacing rhythm, composition, surface roles, width utilization, or responsive reflow
 - Interface, hierarchy, and diagnostic text have no deliberate font-role separation, or monospace is used broadly as decoration
 - A font declared by the prototype/source is missing from local WOFF2 assets, lacks `@font-face`, fails offline, has no explicit fallback stack/CJK coverage, or is silently replaced by a fallback
@@ -71,7 +76,7 @@ Indicators:
 - Component CSS painting route `.active`, `:hover`, or `:focus` states for menu items, nav links, or list items that are themed globally
 - Dark-mode overrides inside component CSS (`[data-theme*="dark"]` in `.razor.css`)
 
-Fix: articulate the subject-specific thesis and palette/type/layout/signature plan; rebuild hierarchy with typography and spacing; assign explicit surface and semantic-color roles; keep ordinary surfaces structurally simple; convert repeated data cards to rows/lists/tables; use Default's 6/8/12 radius scale or the named theme's declared scale while preserving authoritative component-owned geometry; restore useful hover/focus/pressed/selected feedback; and simplify flamboyant, repetitive, or misleading effects. Keep one coherent prototype-backed signature system concentrated in identity/readiness, with only limited non-competing recurrence, and use gradients elsewhere only for continuous-data encoding. Use short purposeful motion, test `prefers-reduced-motion`, vendor role-appropriate fonts locally as WOFF2, and verify both primary and fallback paths. Compare prototype and browser at widths 1440, 929, and 390 in light and dark modes, then self-critique for generic AI-dashboard styling. Keep component-owned layout and token-based presentation in component CSS; move only shared MudBlazor behavior to theme CSS.
+Fix: use the shared [working-interface language](../../monica-ui-development/references/monica-workbench-design-language.md) to rebuild the page around its actual decision, evidence, and actions. Restore readable text, honest summary scope, simple ordinary surfaces, and appropriate list/fact structures. Apply the selected theme's palette and font roles while preserving accepted component geometry and useful interaction feedback. A page does not require a decorative signature surface; any expressive treatment must serve its subject and accepted design. Use short purposeful motion, test reduced motion, verify local fonts and fallbacks, and compare the prototype with real browser states. Keep component-owned layout and token-based presentation in component CSS; move only shared MudBlazor behavior to theme CSS.
 
 ### P4 — Private component classes that force theme coupling
 
@@ -92,5 +97,4 @@ Indicators:
 - Razor components format `System.Type` locally instead of receiving one normalized display value from the producing diagnostics, facade, view-model, or state boundary
 
 Fix: use the shared utilities in `Monica.UI/Shell/Support/` and methods on `Monica.UI/Shell/Models/NavigationItem`. Format user-visible CLR type identities with `Monica.Tool.Extensions.GenericTypeExtensions.GetCleanFullName()` at the producing boundary, then pass the clean string to Razor. Do not expose assembly-qualified type identity in ordinary UI. Showing an assembly name or identity remains valid when assembly loading, binding, inventory, or module provenance is the explicit subject of the view.
-
 

@@ -1,6 +1,6 @@
 # Monica Precision Default Design Language
 
-`MonicaThemeKind.Default` preserves Monica's Precision identity and original palettes: violet accents over cool light surfaces, with Zinc surfaces and Indigo accents in dark mode. Use this contract for the default theme, shared working-interface principles, and prototype handoff. [Grove](monica-grove-design-language.md) is a separate optional theme with its own palette and typography. Shell layout refinements do not replace the default theme. Treat a supplied prototype as an implementation contract for composition, density, typography, spacing, and surface roles.
+`MonicaThemeKind.Default` preserves Monica's Precision identity and original palettes: violet accents over cool light surfaces, with Zinc surfaces and Indigo accents in dark mode. This reference owns Default's theme, shared shell, and card contracts. The shared [working-interface language](monica-workbench-design-language.md) owns task-specific page composition, evidence hierarchy, density, responsive containment, and review. [Grove](monica-grove-design-language.md) is a separate optional theme with its own palette and typography. Shell and page refinements do not replace the default theme. Treat an accepted prototype as an implementation contract for composition, density, typography, spacing, and surface roles.
 
 ## Preserve the shell contract
 
@@ -13,31 +13,9 @@
 - Keep routed content stable when changing layout. The shell owns the viewport and main scroll area; contextual navigation owns its local overflow. Page roots take the full remaining width and available height.
 - Use the shared theme-aware Monica vector mark in the shell and Appearance previews. Theme selection changes its palette and treatment while preserving recognizable Monica identity; component code must not substitute a fixed favicon for this theme contract.
 
-## Define the point of view
-
-- State a one-sentence thesis tied to the page's subject, primary decisions, and operator context before choosing visuals. A system-readiness page and a module-discovery workbench should not inherit the same generic dashboard composition.
-- Plan four things deliberately: palette roles, typography roles and fallbacks, layout rhythm, and one signature treatment. Explain what each contributes to the task.
-- Choose one memorable, subject-specific treatment backed by the accepted prototype—for example an identity/readiness region. Give supporting regions enough color, contrast, and interaction feedback to feel alive while preserving a clear hierarchy around that signature.
-- Reject generic AI-dashboard habits such as interchangeable purple atmosphere, glass panels, ubiquitous glow, oversized marketing heroes, pill overload, or a grid of rounded cards when they do not express Monica data or workflows.
-
-## Build the hierarchy first
-
-1. Establish information priority with type scale, weight, line height, whitespace, alignment, and density.
-2. Name each surface role before styling it: canvas, section, ordinary surface, interactive/raised surface, semantic surface, or visualization.
-3. Use tonal contrast and spacing for grouping. Add decoration only after the hierarchy reads correctly without it.
-4. Keep ordinary surfaces structurally simple. Use low token-based elevation or border/shadow response when it improves separation or spatial focus; reserve the strongest elevation for overlays, menus, dialogs, or content that genuinely sits above another layer.
-
-## Use the available width
-
-- Let operational dashboards, workbenches, administration pages, and diagnostics pages consume the full width provided by their shell. Use `width: 100%` and `min-width: 0` at the page root.
-- Do not center an operational page inside an arbitrary page-level `max-width`. Empty side gutters reduce scanability and data density on wide displays.
-- Limit line length on the explanatory text, empty state, or editorial region that needs it instead of constraining the whole page.
-- Retain a page-level width cap only for an explicitly editorial or reading-focused layout, and record the readability rationale during review.
-- Contain a feature page's drawers within its available content region so they respect the shell's sidebar and header. Do not anchor a page-owned persistent drawer to the viewport origin; verify its open and closed states in both shell layouts and on narrow screens.
-
 ## Control shape and interaction
 
-- Default uses the `6px`, `8px`, and `12px` radius scale: 6 for compact controls, 8 for standard controls and compact surfaces, and 12 for major panels or dialogs. Named themes may define their own deliberate scale while preserving compact controls and component-owned geometry.
+- Default's shared controls use the `6px`, `8px`, and `12px` radius scale: 6 for compact controls, 8 for standard controls and compact surfaces, and 12 for major panels or dialogs. A component may own deliberate geometry established by an accepted page design, such as the health workbench's 10px structural panels and 4px small badges. Keep that geometry consistent within its role rather than forcing every surface through a global theme selector. Named themes may define their own scale while preserving compact controls and component ownership.
 - Use a full circle or pill only when the component's geometry or semantics requires it.
 - Do not multiply a base radius, use `calc()` to derive larger radii, or let nested surfaces become progressively rounder.
 - Give actionable controls and interactive rows or cards clear hover, focus, pressed, and selected feedback. Short token-based changes to color, border, and shadow are welcome; reserve a very small transform for pressed feedback when it reinforces the control's physical response.
@@ -60,18 +38,12 @@
 
 - Preserve Default's existing canvas, surface, primary, identity, and semantic-state palette roles. Define their actual colors in theme palettes or approved semantic tokens, never in component markup or local CSS. A new optional visual direction gets its own theme identity rather than silently replacing `MonicaThemeKind.Default`.
 - Use solid or tonal palette-token surfaces as the default for page shells, app bars, navigation, ordinary cards, KPI tiles, panels, filters, tables, data groups, and status surfaces. Subtle token-based borders, shadows, and interaction responses may add separation and depth without turning every region into a floating card.
-- Use a gradient, glow, or pattern only when an accepted page design gives it a meaningful role. Concentrate expressive treatment in the identity/readiness region; ordinary KPI and data surfaces must retain their semantic surface role. Keep low elevation on working surfaces and reserve stronger shadows for overlays that need separation.
+- Use a gradient, glow, or pattern only when an accepted page design gives it a meaningful role. Concentrate expressive treatment in the page's subject-specific identity region when it needs one; ordinary KPI and data surfaces retain their semantic surface role. The accepted health workbench establishes hierarchy without a decorative identity surface. Keep low elevation on working surfaces and reserve stronger shadows for overlays that need separation.
 - Permit gradients in visualizations only when they encode a continuous scale. Document the mapping and preserve legibility for users who cannot rely on color alone.
 - Keep named expressive-theme illustration inside theme-owned selectors; first-party component CSS must preserve the surface-role contract.
 - Give a surface at most one primary decorative cue and, when necessary, one supporting cue. Count accent stripes, rings, strong borders, shadows, glows, textures, and corner ornaments as cues.
 - Do not repeat top stripes or rings across every card, and do not stack multiple cues on an ordinary surface.
 - Use semantic color to communicate state, selection, or meaning—not ambient ornament.
-
-## Preserve data density
-
-- Render repeated facts, properties, metrics, or records as rows, lists, definition groups, or tables—not as a grid of miniature cards.
-- Use cards only for independently actionable objects or genuinely distinct content groups.
-- Prefer separators, aligned columns, and typographic contrast over nested containers.
 
 ## Preserve typography and assets
 
@@ -88,13 +60,12 @@
 - Give semantic states visibly different token treatments when users must scan or compare them. Reinforce color with text, icon, shape, or position instead of making color the sole signal.
 - Preserve the selectable themes' identities in both modes. Shared shell dimensions and usable controls apply to Grove, MudBlazor, Material Design 3, Fluent Design, Fresh, Macaron Sweetheart, Hermes Teal, Vibe Usage Matrix, Ink Landscape, Zen Ink, and Comic Burst; their palette, type, icon treatment, and theme-owned illustration may differ from Default. Avoid global paint rules that erase those identities or spread expressive decorations into dense operational content.
 
-## Verify fidelity
+## Verify theme and shell fidelity
 
-- Capture the prototype and implementation side by side at viewport widths `1440`, `929`, and `390` in both light and dark modes.
+Use the shared [page acceptance guidance](monica-workbench-design-language.md#accept-each-page-on-real-evidence) for staged page redesigns. For changes to this theme or shell contract:
+
+- Capture the prototype and implementation side by side at viewport widths `1440`, `929`, and `390` in both light and dark modes, including additional component breakpoint boundaries where needed.
 - Verify expanded and collapsed Sidebar navigation, the one-row 56px Topbar, nested menu selection, responsive overflow, and the temporary mobile drawer. Check Appearance Apply/Cancel and reload persistence without losing the current route or page state.
 - Inspect a representative operational page and the Appearance previews in every selectable theme and both color modes. Confirm the Monica mark adapts, text and selected navigation remain readable, and runtime font requests stay local.
-- Compare composition, content density, type metrics, spacing rhythm, surface roles, width utilization, radii, decoration count, and responsive reflow—not only colors.
-- Assert that operational page roots consume the shell's available content width. Record the signature system, its limited placements, and every continuous-data gradient; verify ordinary surfaces have clear roles and proportionate interaction feedback.
-- Fix structural differences before polish. Re-run the comparison after global theme changes and after representative page changes.
-- Ask whether the result could be relabeled as an unrelated AI administration product without meaningful visual changes. If yes, strengthen the subject-specific thesis, layout, or signature treatment without adding more decoration.
-- Reject the handoff while local fonts or fallbacks are unresolved, palette roles or semantic states collapse, ordinary data is over-cardified, interaction feedback is missing or excessive, reduced-motion behavior is broken, decoration exceeds the budget, operational width is wasted, or the implementation no longer matches the prototype's hierarchy.
+- Compare type metrics, surface roles, radii, decoration count, and responsive reflow—not only colors. Record each deliberate signature treatment and every continuous-data gradient.
+- Re-run representative page comparisons after global theme changes. Reject unresolved local fonts, collapsed palette roles or semantic states, overridden component geometry, missing or excessive interaction feedback, broken reduced motion, or decoration beyond the stated budget.

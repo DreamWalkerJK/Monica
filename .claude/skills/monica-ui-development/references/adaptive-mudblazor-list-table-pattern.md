@@ -25,6 +25,12 @@ Prefer a smaller fix for ordinary card/content overflow. For example, a System I
 5. Avoid new shared copy components or broad copy affordances unless the user explicitly asks. If copy is requested, keep it targeted and MudBlazor-native.
 6. Verify in the browser. Builds do not catch overlap, baseline drift, or empty-row centering issues.
 
+For a full page redesign, use the shared [working-interface language](monica-workbench-design-language.md) to choose between a compact column table and readable multi-line evidence rows before applying this CSS-grid technique. This reference addresses adaptive column sizing rather than prescribing a single registry composition.
+
+## Verify the actual responsive threshold
+
+Read `MudTableBase.cs`, `Styles/components/_table.scss`, and `Styles/abstracts/_variables.scss` in the installed MudBlazor source before aligning local cell CSS with `Breakpoint`. In v9.0.0, `Breakpoint.Xs` emits `mud-xs-table`, which stacks at `max-width: 600px`; `Breakpoint.Sm` emits `mud-sm-table`, which stacks at `960px`. Match stacked spacing, `DataLabel` behavior, and first-cell treatment to that actual threshold, and verify immediately above and below it. Selecting `Sm` does not mean the table will remain a column table until 600px.
+
 ## MudTable CSS-Grid Layout
 
 Wrap the table in a page-specific container that owns the column contract:
@@ -145,8 +151,8 @@ Verify this visually for every tab/filter that can be empty.
 Before acceptance or PR:
 
 1. Build affected projects with zero warnings.
-2. Open the page at normal width and confirm there is no initial unwanted horizontal scrollbar.
-3. Resize narrower and confirm true overflow scroll appears only when necessary.
+2. Open the page at normal width and inspect both scroll dimensions at the intended owner; confirm there is no unwanted horizontal or vertical scrollbar.
+3. Resize narrower, including immediately above and below the actual table breakpoint, and confirm true overflow scroll appears only in its designated region when necessary.
 4. Confirm long key/name/ID values show ellipsis, not overlap.
 5. Hover clipped values and confirm the full value appears in `MudTooltip`.
 6. Confirm operational columns remain readable: cron, next/last time, status, duration, actions.
