@@ -467,11 +467,11 @@ public class CustomValidator : ComponentBase
 
 ```razor
 <!-- Correct: Explicitly specify T type -->
-<MudSwitch T="bool" @bind-Checked="@IsEnabled" />
+<MudSwitch T="bool" @bind-Value="@IsEnabled" />
 <MudChip T="string" Value="@chipValue" />
 
 <!-- Wrong: Missing type parameter -->
-<MudSwitch @bind-Checked="@IsEnabled" />
+<MudSwitch @bind-Value="@IsEnabled" />
 ```
 
 ### 10.3 Use MudBlazor Theme System
@@ -491,6 +491,33 @@ public class CustomValidator : ComponentBase
     };
 }
 ```
+
+### 10.4 Reset Debounced Inputs Through Their Owner
+
+A filter reset must clear both the state container and the input's displayed text. In MudBlazor 9, a debounced `MudTextField` can suppress text reconciliation when its external `Value` differs from its internal text. Changing only the parent value can therefore restore results while leaving the old query visible. Capture the rendered field and await its public `ClearAsync()` before resetting the remaining filters:
+
+```razor
+<MudTextField T="string" @ref="_searchField"
+              Value="@State.SearchText" ValueChanged="State.SetSearchText"
+              DebounceInterval="250" />
+
+@code {
+    private MudTextField<string>? _searchField;
+
+    private async Task ClearFiltersAsync()
+    {
+        if (_searchField is { } searchField)
+        {
+            await searchField.ClearAsync();
+        }
+
+        State.SetSearchText(string.Empty);
+        // Reset the other filters through their existing state owner.
+    }
+}
+```
+
+Apply the component-lifetime checks from section 2 when the reset continuation can outlive its component. Let the MudBlazor input own its debounce cancellation; do not introduce another timer or write to its DOM value. Verify the visible query, restored results, pending typing immediately before reset, a subsequent query, and navigation with a pending input. Do not use the removed `TextUpdateSuppression` parameter as a v9 fix.
 
 ## 11. Module Development Best Practices
 

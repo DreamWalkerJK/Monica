@@ -8,100 +8,118 @@
                  Dense="true"
                  Hover="true"
                  RowsPerPage="20"
-                 FixedHeader="true"
-                 Height="520px">
+                 SortMode="SortMode.Multiple"
+                 Breakpoint="Breakpoint.None"
+                 Elevation="0">
         <Columns>
             <TemplateColumn T="DependencyInjectionDescriptorInfo"
                             Title="@L["Page:Grid:Columns:Service"]"
+                            Sortable="true"
                             SortBy="@(item => item.ServiceType)">
                 <CellTemplate>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="di-service-cell">
-                        @if (context.Item.IsAutoRegistered)
-                        {
-                            <MudTooltip Text="@L["Page:Grid:Badges:AutoRegistered"]">
-                                <MudIcon Icon="@Icons.Material.Filled.Bolt" Color="Color.Warning" Size="Size.Small" />
-                            </MudTooltip>
-                        }
-
-                        @if (HasIssue(context.Item, DependencyInjectionDiagnosticSeverity.Warning))
-                        {
-                            <MudTooltip Text="@L["Page:Grid:Badges:Warning"]">
-                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
-                            </MudTooltip>
-                        }
-
-                        @if (HasIssue(context.Item, DependencyInjectionDiagnosticSeverity.Error))
-                        {
-                            <MudTooltip Text="@L["Page:Grid:Badges:Error"]">
-                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Small" />
-                            </MudTooltip>
-                        }
-
-                        @if (context.Item.IsKeyedService)
-                        {
-                            <MudTooltip Text="@L["Page:Grid:Badges:Keyed"]">
-                                <MudIcon Icon="@Icons.Material.Filled.VpnKey" Color="Color.Info" Size="Size.Small" />
-                            </MudTooltip>
-                        }
-
+                    <div class="di-service-cell">
                         <MudTooltip Text="@context.Item.ServiceType">
-                            <MudText Typo="Typo.body2" Class="di-mono-truncate">
-                                @context.Item.ServiceTypeDisplayName
-                            </MudText>
+                            <span class="di-type-name">@context.Item.ServiceTypeDisplayName</span>
                         </MudTooltip>
-                    </MudStack>
+                        @if (!string.IsNullOrWhiteSpace(context.Item.ServiceAssemblyName))
+                        {
+                            <span class="di-assembly-name">@context.Item.ServiceAssemblyName</span>
+                        }
+                        <div class="di-service-markers">
+                            @if (context.Item.IsAutoRegistered)
+                            {
+                                <MudTooltip Text="@L["Page:Grid:Badges:AutoRegistered"]">
+                                    <span class="di-source-marker">@L["Page:Filters:SourceOptions:AutoRegistered"]</span>
+                                </MudTooltip>
+                            }
+
+                            @if (HasIssue(context.Item, DependencyInjectionDiagnosticSeverity.Warning))
+                            {
+                                <MudTooltip Text="@L["Page:Grid:Badges:Warning"]">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Warning" Color="Color.Warning" Size="Size.Small" />
+                                </MudTooltip>
+                            }
+
+                            @if (HasIssue(context.Item, DependencyInjectionDiagnosticSeverity.Error))
+                            {
+                                <MudTooltip Text="@L["Page:Grid:Badges:Error"]">
+                                    <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Color="Color.Error" Size="Size.Small" />
+                                </MudTooltip>
+                            }
+
+                            @if (context.Item.IsKeyedService)
+                            {
+                                <MudTooltip Text="@L["Page:Grid:Badges:Keyed"]">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Key" Color="Color.Info" Size="Size.Small" />
+                                </MudTooltip>
+                            }
+
+                        </div>
+                    </div>
                 </CellTemplate>
             </TemplateColumn>
 
             <TemplateColumn T="DependencyInjectionDescriptorInfo"
                             Title="@L["Page:Grid:Columns:Lifetime"]"
+                            Sortable="true"
                             SortBy="@(item => item.Lifetime)">
                 <CellTemplate>
-                    <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small">
-                        @GetLifetimeText(context.Item.Lifetime)
-                    </MudChip>
+                    <span class="di-lifetime">@GetLifetimeText(context.Item.Lifetime)</span>
                 </CellTemplate>
             </TemplateColumn>
 
             <TemplateColumn T="DependencyInjectionDescriptorInfo"
                             Title="@L["Page:Grid:Columns:Implementation"]"
+                            Sortable="true"
                             SortBy="@(item => item.ImplementationType ?? item.FactoryDisplay ?? string.Empty)">
                 <CellTemplate>
-                    <MudStack Spacing="0" Class="di-implementation-cell">
+                    <div class="di-implementation-cell">
                         <MudTooltip Text="@GetImplementationTooltip(context.Item)">
-                            <MudText Typo="Typo.body2" Class="di-mono-truncate">
-                                @GetImplementationTitle(context.Item)
-                            </MudText>
+                            <span class="di-type-name">@GetImplementationTitle(context.Item)</span>
                         </MudTooltip>
 
-                        @if (!string.IsNullOrWhiteSpace(context.Item.FactoryDisplay))
+                        @if (!string.IsNullOrWhiteSpace(context.Item.ImplementationAssemblyName))
                         {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="di-mono-truncate">
-                                @context.Item.FactoryDisplay
-                            </MudText>
+                            <span class="di-assembly-name">@context.Item.ImplementationAssemblyName</span>
                         }
-                    </MudStack>
+                        @if (!string.IsNullOrWhiteSpace(context.Item.FactoryDisplay) && !string.IsNullOrWhiteSpace(context.Item.ImplementationType))
+                        {
+                            <span class="di-factory-name">@context.Item.FactoryDisplay</span>
+                        }
+                    </div>
                 </CellTemplate>
             </TemplateColumn>
 
             <PropertyColumn T="DependencyInjectionDescriptorInfo"
                             TProperty="string"
                             Property="x => x.ServiceKey"
-                            Title="@L["Page:Grid:Columns:ServiceKey"]" />
+                            Sortable="true"
+                            Title="@L["Page:Grid:Columns:ServiceKey"]">
+                <CellTemplate>
+                    @if (context.Item.IsKeyedService)
+                    {
+                        <code class="di-service-key">@GetTextOrFallback(context.Item.ServiceKey)</code>
+                    }
+                    else
+                    {
+                        <span class="di-unkeyed">@L["Page:Grid:States:Unkeyed"]</span>
+                    }
+                </CellTemplate>
+            </PropertyColumn>
 
             <TemplateColumn T="DependencyInjectionDescriptorInfo"
                             Title="@L["Page:Grid:Columns:Kind"]"
+                            Sortable="true"
                             SortBy="@(item => item.ImplementationKind)">
                 <CellTemplate>
-                    <MudChip T="string" Variant="Variant.Text" Size="Size.Small" Color="Color.Primary">
-                        @L[$"Page:Grid:Kinds:{context.Item.ImplementationKind}"]
-                    </MudChip>
+                    <span class="di-kind">@L[$"Page:Grid:Kinds:{context.Item.ImplementationKind}"]</span>
                 </CellTemplate>
             </TemplateColumn>
 
             <PropertyColumn T="DependencyInjectionDescriptorInfo"
                             TProperty="int"
                             Property="x => x.Index"
+                            Sortable="true"
                             Title="@L["Page:Grid:Columns:Index"]" />
 
             <TemplateColumn T="DependencyInjectionDescriptorInfo"
@@ -110,6 +128,9 @@
                 <CellTemplate>
                     <MudButton Variant="Variant.Text"
                                Color="Color.Primary"
+                               Size="Size.Small"
+                               aria-label="@L["Page:Grid:Actions:ViewDetailsFor", context.Item.ServiceTypeDisplayName]"
+                               Class="di-details-action"
                                OnClick="() => OnViewDetails.InvokeAsync(context.Item)">
                         @L["Page:Grid:Actions:ViewDetails"]
                     </MudButton>
@@ -134,6 +155,11 @@
     private string GetLifetimeText(ServiceLifetime lifetime)
     {
         return L[$"Page:Shared:Lifetimes:{lifetime}"];
+    }
+
+    private string GetTextOrFallback(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? L["Page:States:NotAvailable"] : value;
     }
 
     private string GetImplementationTitle(DependencyInjectionDescriptorInfo item)

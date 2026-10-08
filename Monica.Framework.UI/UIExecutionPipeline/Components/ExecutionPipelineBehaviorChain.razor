@@ -2,17 +2,22 @@
 @inject IStringLocalizer<ExecutionPipelineResource> L
 
 <section class="execution-pipeline-behavior-chain">
-    <header>
-        <ExecutionPipelineHelpLabel Text="@L["Page:Plans:DetailTitle"]"
-                                    HelpText="@L["Page:Help:Plans:AppliedChain"]" />
-        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Plans:DetailDescription"]</MudText>
+    <header class="execution-pipeline-behavior-chain__header">
+        <div>
+            <h3><ExecutionPipelineHelpLabel Text="@L["Page:Plans:DetailTitle"]"
+                                            HelpText="@L["Page:Help:Plans:AppliedChain"]" /></h3>
+            <p>@L["Page:Plans:DetailDescription"]</p>
+        </div>
+        <span class="execution-pipeline-behavior-chain__count" title="@L["Page:Help:Plans:BehaviorCount"]">
+            @L["Page:Plans:AppliedCount", Plan.Behaviors.Length]
+        </span>
     </header>
 
     @if (Plan.Behaviors.IsDefaultOrEmpty)
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" data-testid="execution-pipeline-zero-behaviors">
+        <p class="execution-pipeline-behavior-chain__direct" data-testid="execution-pipeline-zero-behaviors">
             @L["Page:States:NoAppliedBehaviors"]
-        </MudAlert>
+        </p>
     }
     else
     {
@@ -20,33 +25,32 @@
             @foreach (var behavior in Plan.Behaviors)
             {
                 <li data-testid="execution-pipeline-applied-behavior">
-                    <MudTooltip Text="@L["Page:Help:Plans:BehaviorPosition"]" Arrow="true" Placement="Placement.Top">
-                        <span class="execution-pipeline-behavior-chain__position">@behavior.Position</span>
-                    </MudTooltip>
+                    <div class="execution-pipeline-behavior-chain__marker">
+                        <MudTooltip Text="@L["Page:Help:Plans:BehaviorPosition"]" Arrow="true" Placement="Placement.Top">
+                            <span class="execution-pipeline-behavior-chain__position">@behavior.Position</span>
+                        </MudTooltip>
+                    </div>
                     <div class="execution-pipeline-behavior-chain__content">
                         <div class="execution-pipeline-behavior-chain__type">
                             <ExecutionPipelineHelpLabel Text="@L["Page:Plans:ResolvedType"]"
                                                         HelpText="@L["Page:Help:Plans:ResolvedType"]" />
-                            <strong>@behavior.ResolvedType.FullName</strong>
+                            <strong>@behavior.ResolvedType.Name</strong>
+                            <code>@behavior.ResolvedType.FullName</code>
                         </div>
                         @if (behavior.HasDistinctResolvedType)
                         {
                             <div class="execution-pipeline-behavior-chain__registered-type">
                                 <ExecutionPipelineHelpLabel Text="@L["Page:Plans:RegisteredType"]"
                                                             HelpText="@L["Page:Help:Plans:RegisteredType"]" />
-                                <span>@behavior.RegisteredType.FullName</span>
+                                <code>@behavior.RegisteredType.FullName</code>
                             </div>
                         }
-                        <div class="execution-pipeline-behavior-chain__badges">
+                        <div class="execution-pipeline-behavior-chain__policy">
                             <MudTooltip Text="@L["Page:Help:Concepts:BehaviorOrder"]" Arrow="true" Placement="Placement.Top">
-                                <MudChip T="int" Value="@behavior.Order" Size="Size.Small" Variant="Variant.Outlined">
-                                    @L["Page:Plans:Order", behavior.Order]
-                                </MudChip>
+                                <span>@L["Page:Plans:Order", behavior.Order]</span>
                             </MudTooltip>
                             <MudTooltip Text="@L["Page:Help:Concepts:Lifetime"]" Arrow="true" Placement="Placement.Top">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                                    @L[$"Page:Lifetimes:{behavior.Lifetime}"]
-                                </MudChip>
+                                <span>@L[$"Page:Lifetimes:{behavior.Lifetime}"]</span>
                             </MudTooltip>
                             <ExecutionPipelineSourceBadge SourceModuleKey="@behavior.SourceModuleKey" />
                         </div>
@@ -55,6 +59,17 @@
             }
         </ol>
     }
+
+    <div class="execution-pipeline-behavior-chain__terminal">
+        <span class="execution-pipeline-behavior-chain__terminal-mark" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Outlined.SubdirectoryArrowRight" Size="Size.Small" />
+        </span>
+        <div>
+            <h4>@L["Page:Plans:TerminalTitle"]</h4>
+            <code>@Plan.Descriptor.Name</code>
+            <p>@L["Page:Plans:TerminalDescription"]</p>
+        </div>
+    </div>
 </section>
 
 @code {

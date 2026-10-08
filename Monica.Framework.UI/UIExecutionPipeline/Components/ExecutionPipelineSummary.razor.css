@@ -1,100 +1,100 @@
 .execution-pipeline-summary {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.75rem;
-    min-width: 0;
-}
-
-.execution-pipeline-summary__card {
-    min-width: 0;
-}
-
-.execution-pipeline-summary__card ::deep .mud-paper {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.75rem;
+    grid-template-columns: minmax(210px, .85fr) minmax(0, 2fr);
     align-items: center;
-    height: 100%;
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
-    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
-    transition: border-color 160ms ease, box-shadow 160ms ease;
+    gap: 28px;
+    min-width: 0;
+    padding: 23px 26px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 18%, var(--mud-palette-divider));
+    border-radius: 10px;
+    background: linear-gradient(110deg, color-mix(in srgb, var(--mud-palette-primary) 8%, transparent), transparent 62%), var(--mud-palette-surface);
 }
 
-.execution-pipeline-summary__card:hover ::deep .mud-paper {
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-lines-default));
-    box-shadow: var(--mud-elevation-2);
-}
-
-.execution-pipeline-summary__card ::deep .mud-icon-root {
-    padding: 0.5rem;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
-}
-
-.execution-pipeline-summary__card--plans ::deep .mud-paper {
-    border-color: color-mix(in srgb, var(--mud-palette-info) 24%, var(--mud-palette-lines-default));
-    background: color-mix(in srgb, var(--mud-palette-info) 5%, var(--mud-palette-surface));
-}
-
-.execution-pipeline-summary__card--plans:hover ::deep .mud-paper {
-    border-color: color-mix(in srgb, var(--mud-palette-info) 40%, var(--mud-palette-lines-default));
-}
-
-.execution-pipeline-summary__card--plans ::deep .mud-icon-root {
-    background: color-mix(in srgb, var(--mud-palette-info) 12%, transparent);
-}
-
-.execution-pipeline-summary__card--points ::deep .mud-paper {
-    border-color: color-mix(in srgb, var(--mud-palette-secondary) 24%, var(--mud-palette-lines-default));
-    background: color-mix(in srgb, var(--mud-palette-secondary) 5%, var(--mud-palette-surface));
-}
-
-.execution-pipeline-summary__card--points:hover ::deep .mud-paper {
-    border-color: color-mix(in srgb, var(--mud-palette-secondary) 40%, var(--mud-palette-lines-default));
-}
-
-.execution-pipeline-summary__card--points ::deep .mud-icon-root {
-    background: color-mix(in srgb, var(--mud-palette-secondary) 12%, transparent);
-}
-
-.execution-pipeline-summary__card--faults-clear ::deep .mud-paper {
-    border-color: color-mix(in srgb, var(--mud-palette-success) 24%, var(--mud-palette-lines-default));
-    background: color-mix(in srgb, var(--mud-palette-success) 5%, var(--mud-palette-surface));
-}
-
-.execution-pipeline-summary__card--faults-clear:hover ::deep .mud-paper {
-    border-color: color-mix(in srgb, var(--mud-palette-success) 40%, var(--mud-palette-lines-default));
-}
-
-.execution-pipeline-summary__card--faults-clear ::deep .mud-icon-root {
-    background: color-mix(in srgb, var(--mud-palette-success) 12%, transparent);
-}
-
-.execution-pipeline-summary__card--faults-found ::deep .mud-paper {
-    border-color: color-mix(in srgb, var(--mud-palette-error) 24%, var(--mud-palette-lines-default));
-    background: color-mix(in srgb, var(--mud-palette-error) 5%, var(--mud-palette-surface));
-}
-
-.execution-pipeline-summary__card--faults-found:hover ::deep .mud-paper {
-    border-color: color-mix(in srgb, var(--mud-palette-error) 40%, var(--mud-palette-lines-default));
-}
-
-.execution-pipeline-summary__card--faults-found ::deep .mud-icon-root {
-    background: color-mix(in srgb, var(--mud-palette-error) 12%, transparent);
-}
-
-.execution-pipeline-summary__card span {
+.execution-pipeline-summary__scope {
+    display: flex;
+    align-items: center;
+    gap: 14px;
     min-width: 0;
 }
 
-@media (max-width: 900px) {
+.execution-pipeline-summary__mark {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-divider));
+    border-radius: 9px;
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 9%, var(--mud-palette-surface));
+}
+
+.execution-pipeline-summary__scope strong {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.execution-pipeline-summary__scope p {
+    margin: 6px 0 0;
+    color: var(--execution-muted-text, var(--mud-palette-text-secondary));
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.execution-pipeline-summary__facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 22px;
+    min-width: 0;
+    margin: 0;
+}
+
+.execution-pipeline-summary__facts > div {
+    min-width: 0;
+    padding-left: 20px;
+    border-left: 1px solid var(--mud-palette-divider);
+}
+
+.execution-pipeline-summary__facts dt {
+    color: var(--execution-muted-text, var(--mud-palette-text-secondary));
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.execution-pipeline-summary__facts dd {
+    margin: 9px 0 0;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-font-family-mono);
+    font-size: 25px;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.execution-pipeline-summary__faults[data-has-faults="true"] dd {
+    color: var(--mud-palette-error);
+}
+
+@container execution-page (max-width: 1050px) {
     .execution-pipeline-summary {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .execution-pipeline-summary__facts > div:first-child {
+        padding-left: 0;
+        border-left: 0;
     }
 }
 
-@media (max-width: 520px) {
+@container execution-page (max-width: 520px) {
     .execution-pipeline-summary {
-        grid-template-columns: 1fr;
+        padding: 22px 20px;
+    }
+    .execution-pipeline-summary__facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+    }
+    .execution-pipeline-summary__facts > div:nth-child(odd) {
+        padding-left: 0;
+        border-left: 0;
     }
 }

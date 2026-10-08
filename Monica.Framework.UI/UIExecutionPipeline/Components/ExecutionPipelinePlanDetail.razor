@@ -4,39 +4,50 @@
 @if (Plan is null)
 {
     <div class="execution-pipeline-plan-detail__empty" data-testid="execution-pipeline-plan-unselected">
-        <MudIcon Icon="@Icons.Material.Filled.TouchApp" Color="Color.Secondary" Size="Size.Large" />
-        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:States:SelectPlan"]</MudText>
+        <MudIcon Icon="@Icons.Material.Outlined.TouchApp" Size="Size.Large" />
+        <p>@L["Page:States:SelectPlan"]</p>
     </div>
 }
 else
 {
     <article class="execution-pipeline-plan-detail" data-testid="execution-pipeline-plan-detail">
         <header class="execution-pipeline-plan-detail__header">
-            <div>
-                <MudTooltip Text="@Plan.Descriptor.FullName" Arrow="true" Placement="Placement.Top">
-                    <MudText Typo="Typo.h5">@Plan.Descriptor.Name</MudText>
+            <div class="execution-pipeline-plan-detail__identity">
+                <span class="execution-pipeline-plan-detail__eyebrow">@L["Page:Plans:SelectedOperation"]</span>
+                <MudTooltip Text="@L["Page:Help:Concepts:ExecutionPoint"]" Arrow="true" Placement="Placement.Top">
+                    <code class="execution-pipeline-plan-detail__point">@Plan.Descriptor.Point.Value</code>
                 </MudTooltip>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@Plan.Descriptor.ComponentType.FullName</MudText>
+                <h2 title="@Plan.Descriptor.FullName">@Plan.Descriptor.Name</h2>
+                <p>@Plan.Descriptor.ComponentType.FullName</p>
             </div>
-            <MudTooltip Text="@L["Page:Help:Concepts:PlanStatus"]" Arrow="true" Placement="Placement.Top">
-                <ExecutionPipelineStatusBadge Status="@Plan.Status" />
-            </MudTooltip>
+            <div class="execution-pipeline-plan-detail__status">
+                <MudTooltip Text="@L["Page:Help:Concepts:PlanStatus"]" Arrow="true" Placement="Placement.Top">
+                    <ExecutionPipelineStatusBadge Status="@Plan.Status" />
+                </MudTooltip>
+                <small>@L["Page:Plans:MaterializationStatus"]</small>
+            </div>
         </header>
-
-        <ExecutionPipelinePlanOverview Plan="@Plan" />
 
         @if (Plan.Error is { } error)
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" data-testid="execution-pipeline-plan-error">
-                <ExecutionPipelineHelpLabel Text="@L["Page:Plans:Fault"]"
-                                            HelpText="@L["Page:Help:Plans:Fault"]" />
+            <section class="execution-pipeline-plan-detail__error" role="alert" data-testid="execution-pipeline-plan-error">
+                <div class="execution-pipeline-plan-detail__error-heading">
+                    <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+                    <ExecutionPipelineHelpLabel Text="@L["Page:Plans:Fault"]"
+                                                HelpText="@L["Page:Help:Plans:Fault"]" />
+                </div>
                 <div class="execution-pipeline-plan-detail__error-type">
                     <ExecutionPipelineHelpLabel Text="@L["Page:Plans:ExceptionType"]"
                                                 HelpText="@L["Page:Help:Plans:ExceptionType"]" />
-                    <span>@error.ExceptionType</span>
+                    <code>@error.ExceptionType</code>
                 </div>
-                <MudText Typo="Typo.body2">@error.Message</MudText>
-            </MudAlert>
+                <p>@error.Message</p>
+            </section>
+        }
+
+        @if (Plan.Status == ExecutionPipelinePlanStatus.Building)
+        {
+            <p class="execution-pipeline-plan-detail__building" role="status">@L["Page:States:PlanBuilding"]</p>
         }
 
         @if (Plan.Status == ExecutionPipelinePlanStatus.Ready || !Plan.Behaviors.IsDefaultOrEmpty)
@@ -44,6 +55,7 @@ else
             <ExecutionPipelineBehaviorChain Plan="@Plan" />
         }
 
+        <ExecutionPipelinePlanOverview Plan="@Plan" />
         <ExecutionPipelineTechnicalIdentity Plan="@Plan" />
     </article>
 }

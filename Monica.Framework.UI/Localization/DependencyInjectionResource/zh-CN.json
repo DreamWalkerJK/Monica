@@ -12,7 +12,18 @@
       "Description": "查看最终的 ServiceCollection，并标记由 Monica 约定注册生成的描述符。",
       "Eyebrow": "Monica / 运行时组合",
       "Refresh": "刷新",
-      "GeneratedAt": "快照生成时间：{0}"
+      "GeneratedAt": "注册表生成于 · {0}"
+    },
+    "Composition": {
+      "RegistryLabel": "最终服务集合",
+      "CachedHint": "此处展示主机最终注册集合的缓存快照。刷新会重新读取该注册表。",
+      "LifetimesTitle": "注册生命周期",
+      "CategoriesHint": "注册类别可能重叠。",
+      "Instances": "实例"
+    },
+    "Registry": {
+      "Title": "服务注册表",
+      "Description": "查看服务标识、实现、服务键与约定注册来源。"
     },
     "Summary": {
       "AriaLabel": "依赖注入注册摘要",
@@ -25,7 +36,13 @@
     },
     "Issues": {
       "Title": "自动注册问题",
-      "Description": "这些警告和错误来自 Monica 约定注册诊断。有些错误只会显示在这里，因为它们没有生成最终的服务描述符。"
+      "Description": "约定注册诊断覆盖整个主机，不受注册表筛选条件影响；这里也包含未生成最终描述符的问题。",
+      "SearchLabel": "查找约定注册问题",
+      "SearchPlaceholder": "搜索源类型、程序集、生命周期或暴露服务",
+      "Showing": "显示 {0} / {1} 个问题",
+      "Empty": "此组证据中没有约定注册问题。",
+      "NoMatches": "没有匹配此搜索的问题。清空搜索可查看完整问题索引。",
+      "NoExposures": "没有暴露服务标识。"
     },
     "States": {
       "Loading": "正在加载依赖注入诊断信息...",
@@ -45,9 +62,12 @@
       "LifetimeLabel": "生命周期",
       "MarkersLabel": "标记",
       "Showing": "显示 {0} / {1} 个描述符",
+      "CombinationHint": "每组内匹配任意已选项，同时满足所有筛选组。",
+      "StandardHint": "标准表示没有服务键、警告或错误标记。",
       "Actions": {
         "SelectAll": "全选",
-        "Clear": "清空"
+        "Clear": "清空",
+        "Reset": "重置筛选"
       },
       "SourceOptions": {
         "AutoRegistered": "自动注册",
@@ -66,7 +86,7 @@
         "Lifetime": "生命周期",
         "Implementation": "实现",
         "ServiceKey": "键",
-        "Kind": "类型",
+        "Kind": "实现方式",
         "Index": "序号",
         "Actions": "操作"
       },
@@ -77,7 +97,11 @@
         "Keyed": "Keyed 服务"
       },
       "Actions": {
-        "ViewDetails": "详情"
+        "ViewDetails": "详情",
+        "ViewDetailsFor": "查看 {0} 的详情"
+      },
+      "States": {
+        "Unkeyed": "无键"
       },
       "Kinds": {
         "Type": "类型",
@@ -91,7 +115,7 @@
       "Sections": {
         "Descriptor": "描述符",
         "Implementation": "实现",
-        "AutoRegistration": "自动注册"
+        "AutoRegistration": "约定注册来源"
       },
       "Fields": {
         "ServiceType": "服务类型",
@@ -150,10 +174,12 @@
       "IssueKinds": {
         "MissingExposedServices": {
           "Title": "未找到暴露服务类型",
+          "Summary": "发现的实现没有暴露任何服务标识，因此未注册描述符。",
           "Description": "Monica 将 {0} 识别为 {1}，但没有找到任何暴露服务类型，因此不会注册任何描述符。"
         },
         "ConcreteTypeOnlyExposure": {
           "Title": "只暴露了具体类型",
+          "Summary": "这些实现仅暴露具体类型，没有暴露抽象类型。",
           "Description": "Monica 只为 {0} 注册了具体类型。如果其他组件应依赖该服务，请考虑暴露抽象类型。"
         }
       }
