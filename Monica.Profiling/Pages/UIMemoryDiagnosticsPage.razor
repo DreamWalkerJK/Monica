@@ -1,0 +1,83 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.Profiling.UIMemoryAnalysis.Components
+@using Monica.Profiling.UIMemoryAnalysis.Support
+@inject IServiceProvider ServiceProvider
+@inject IStringLocalizer<MemoryAnalysisResource> L
+@inject ILogger<UIMemoryDiagnosticsPage> Logger
+@implements IAsyncDisposable
+
+<MemoryWorkspace Section="diagnostics" TitleKey="Pages:MemoryAnalysis:Diagnostics:Title" DescriptionKey="Pages:MemoryAnalysis:Diagnostics:Description" Available="@(_state is not null)">
+    <Actions>
+        @if (_state is not null)
+        {
+            <div class="memory-diagnostics-refresh"><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="RefreshAsync" Disabled="_state.IsLoading">@L["Page:Actions:Refresh"]</MudButton><span>@L["Diagnostics:ManualRead"]</span></div>
+        }
+    </Actions>
+    <ChildContent>
+        @if (_state is not null)
+        {
+            <DiagnosticActionsCard Options="_state.Options" OnForceGC="ForceGcAsync" OnCreateDump="CreateDumpAsync" IsLoading="_state.IsLoading" />
+            @if (_state.IsActionRunning)
+            {
+                <div class="memory-diagnostic-running" role="status"><MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" /><div><strong>@L["Diagnostics:Running"]</strong><p>@L["Diagnostics:Started"] @MemoryAnalysisDisplayFormatter.LocalDateTime(_state.ActionStartedAt)</p></div></div>
+            }
+            @if (_state.LastAction is { } action)
+            {
+                <section class="memory-diagnostic-result" data-action-status="@action.Status" aria-live="polite">
+                    <header><div><span>@L["Diagnostics:Outcome:Eyebrow"]</span><h2>@(action.Action == MemoryDiagnosticAction.GarbageCollection ? L["Diagnostics:ManualGc:Title"] : L["Diagnostics:Dump:Title"])</h2></div><strong class="@(action.IsSuccessful ? "memory-action-success" : "memory-action-failed")">@(action.IsSuccessful ? L["Diagnostics:Outcome:Completed"] : L["Diagnostics:Outcome:Failed"])</strong></header>
+                    <dl><div><dt>@L["Diagnostics:Started"]</dt><dd><time datetime="@action.StartedAt.ToString("O")">@MemoryAnalysisDisplayFormatter.LocalDateTime(action.StartedAt)</time></dd></div><div><dt>@L["Diagnostics:Outcome:Finished"]</dt><dd><time datetime="@action.CompletedAt.ToString("O")">@MemoryAnalysisDisplayFormatter.LocalDateTime(action.CompletedAt)</time></dd></div><div><dt>@L["Diagnostics:Outcome:Status"]</dt><dd>@action.Status</dd></div>
+                        @if (action.Generation is { } generation) { <div><dt>@L["Diagnostics:Generation"]</dt><dd>@(generation < 0 ? L["Diagnostics:FullCollection"] : L["Common:Generation", generation])</dd></div> }</dl>
+                    @if (!string.IsNullOrEmpty(action.Message)) { <p class="memory-action-message">@action.Message</p> }
+                    @if (action.ServerDumpPath is { } path) { <div class="memory-dump-path"><span>@L["Diagnostics:Outcome:ServerPath"]</span><code>@path</code><p>@L["Diagnostics:Dump:ServerFile"]</p></div> }
+                </section>
+            }
+            @if (_state.LoadError is not null)
+            {
+                <div class="memory-diagnostic-read-error" role="alert"><strong>@L["Page:Messages:RefreshFailed"]</strong><p>@(_state.HasSnapshot ? L["Page:Messages:Retained"] : L["Page:Messages:NoSnapshot"])</p>@if (!string.IsNullOrEmpty(_state.LoadError)) { <p>@_state.LoadError</p> }</div>
+            }
+            @if (_state.SnapshotCapturedAt is { } capturedAt)
+            {
+                <div class="memory-diagnostic-evidence"><span>@L["Diagnostics:Outcome:ReadScope"]</span><time data-memory-view-capture datetime="@capturedAt.ToString("O")">@MemoryAnalysisDisplayFormatter.LocalDateTime(capturedAt)</time><span>@L["Overview:WorkingSet"] <strong>@MemoryAnalysisDisplayFormatter.Bytes(_state.CurrentSnapshot?.WorkingSetBytes)</strong></span></div>
+            }
+        }
+    </ChildContent>
+</MemoryWorkspace>
+
+@code {
+    public const string PAGE_URL = "/memory-analysis/diagnostics";
+    private MemoryAnalysisPageState? _state;
+    private readonly object _renderLock = new();
+    private readonly object _disposeLock = new();
+    private readonly HashSet<Task> _renders = [];
+    private Task? _disposeTask;
+    private bool _disposed;
+    protected override async Task OnInitializedAsync()
+    {
+        _state = ServiceProvider.GetService<MemoryAnalysisPageStateFactory>()?.Create(false);
+        if (_state is null) return;
+        _state.StateChanged += StateChanged;
+        await _state.InitializeAsync();
+    }
+    private async Task RefreshAsync() { if (!_disposed && _state is not null) await _state.RefreshAsync(); }
+    private async Task ForceGcAsync(int generation) { if (!_disposed && _state is not null) await _state.ForceGarbageCollectionAsync(generation); }
+    private async Task CreateDumpAsync() { if (!_disposed && _state is not null) await _state.CreateGcDumpAsync(); }
+    private void StateChanged()
+    {
+        if (_disposed) return;
+        var task = ObserveRenderAsync(InvokeAsync(() => { if (!_disposed) StateHasChanged(); }));
+        lock (_renderLock) _renders.Add(task);
+        _ = ReleaseRenderAsync(task);
+    }
+    private async Task ObserveRenderAsync(Task task) { try { await task; } catch (Exception exception) { Logger.LogError(exception, "Memory diagnostics rendering failed."); } }
+    private async Task ReleaseRenderAsync(Task task) { await task; lock (_renderLock) _renders.Remove(task); }
+    public ValueTask DisposeAsync() { lock (_disposeLock) { _disposed = true; return new ValueTask(_disposeTask ??= DisposeCoreAsync()); } }
+    private async Task DisposeCoreAsync()
+    {
+        if (_state is null) return;
+        _state.StateChanged -= StateChanged;
+        await _state.DisposeAsync();
+        Task[] renders;
+        lock (_renderLock) renders = _renders.ToArray();
+        await Task.WhenAll(renders);
+    }
+}

@@ -35,7 +35,7 @@ public static class ModuleTypeAllocationBuilderExtensions
         /// <summary>
         /// Starts allocation collection with the host and registers the hosted-service dependency required for it.
         /// </summary>
-        /// <param name="samplingMode">The sampling mode used when automatic collection starts.</param>
+        /// <param name="samplingMode">The requested legacy mode when automatic collection starts. Both enabled modes use the same CLR allocation-tick stream.</param>
         /// <returns>The same host-bound registration.</returns>
         public ModuleRegistration<ModuleTypeAllocation, ModuleTypeAllocationOption> StartAutomatically(
             AllocationSamplingMode samplingMode = AllocationSamplingMode.High)
@@ -55,7 +55,6 @@ public static class ModuleTypeAllocationBuilderExtensions
 /// </summary>
 public class ModuleTypeAllocation : MonicaModule<ModuleTypeAllocationOption>
 {
-    /// <inheritdoc />
     /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleTypeAllocationOption> context)
     {
@@ -93,20 +92,24 @@ public class ModuleTypeAllocationOption : ModuleOptions<ModuleTypeAllocation>
     public bool AutoStartCollection { get; internal set; }
 
     /// <summary>
-    /// Selects the allocation sampling mode used when automatic collection starts.
+    /// Selects the requested legacy mode used when automatic collection starts; defaults to High.
+    /// Low and High use the same current-process CLR allocation-tick stream and do not imply distinct
+    /// sampling percentages, event rates, or fidelity.
     /// Set this to <see cref="AllocationSamplingMode.Disabled" /> to keep auto-start registration without beginning collection.
     /// </summary>
     public AllocationSamplingMode DefaultSamplingMode { get; set; } = AllocationSamplingMode.High;
 
     /// <summary>
-    /// Caps the number of tracked types kept in the live allocation ranking.
-    /// Larger values preserve more fidelity at the cost of additional memory.
+    /// Caps retained rows in the live type ranking; defaults to 500. Larger values keep more type rows
+    /// at the cost of memory, without changing event sampling. Evicted rows remain in cumulative totals.
+    /// Set this to zero for totals-only collection with no retained type rows. Negative values are invalid.
     /// </summary>
     public int MaxTrackedTypes { get; set; } = 500;
 
     /// <summary>
-    /// Stops automatic allocation collection after the configured duration.
-    /// Leave this as <see langword="null" /> to keep collection running until it is stopped manually.
+    /// Stops each started ETW session after the configured duration, whether started manually or with
+    /// the host. Defaults to ten minutes. Set this to <see langword="null" /> to require explicit stop
+    /// or host retirement. Non-null values must be from 1 through 4294967294 milliseconds, inclusive.
     /// </summary>
     public TimeSpan? AutoStopAfter { get; set; } = TimeSpan.FromMinutes(10);
 }

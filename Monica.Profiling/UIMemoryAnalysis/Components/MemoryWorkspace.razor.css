@@ -1,0 +1,17 @@
+.memory-workspace { --memory-ink-muted:color-mix(in srgb,var(--mud-palette-text-secondary) 60%,var(--mud-palette-text-primary)); --memory-accent-ink:color-mix(in srgb,var(--mud-palette-primary) 45%,var(--mud-palette-text-primary)); width:100%; min-width:0; padding:32px; color:var(--mud-palette-text-primary); container-type:inline-size; }
+.memory-workspace-header { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; margin-bottom:26px; }
+.memory-workspace-header > div { min-width:0; }
+.memory-workspace-eyebrow { display:flex; align-items:center; gap:8px; color:var(--memory-accent-ink); font-size:11px; letter-spacing:.1em; font-weight:600; }
+.memory-workspace-header h1 { margin:12px 0 10px; font-size:36px; line-height:1.2; font-weight:500; letter-spacing:-.03em; overflow-wrap:anywhere; }
+.memory-workspace-header p { margin:0; color:var(--memory-ink-muted); font-size:13px; line-height:1.7; max-width:74ch; }
+.memory-workspace-actions { flex-shrink:0; }
+.memory-route-navigation { display:flex; flex-wrap:wrap; gap:6px; padding:6px; margin:0 0 24px; border:1px solid var(--mud-palette-lines-default); border-radius:10px; background:var(--mud-palette-surface); }
+.memory-route-navigation ::deep .mud-nav-item { width:auto; min-width:0; }
+.memory-route-navigation ::deep .mud-nav-link { width:auto; min-height:40px; padding:8px 16px; gap:8px; border-radius:6px; color:var(--memory-ink-muted); font-size:13px; }
+.memory-route-navigation ::deep .mud-nav-link-text { margin-left:0; }
+.memory-route-navigation ::deep .mud-nav-link.active { background:color-mix(in srgb,var(--mud-palette-primary) 9%,var(--mud-palette-surface)); color:var(--memory-accent-ink); }
+.memory-route-navigation ::deep .mud-icon-root { width:18px; height:18px; }
+.memory-workspace-content { min-width:0; }
+@container (max-width:900px) { .memory-workspace-header { flex-direction:column; gap:18px; } .memory-workspace-actions { width:100%; } }
+@media (max-width:1000px) { .memory-workspace { padding:24px; } }
+@media (max-width:600px) { .memory-workspace { padding:24px 16px; } .memory-workspace-header h1 { font-size:30px; } .memory-route-navigation { gap:4px; } .memory-route-navigation ::deep .mud-nav-item { flex:1 1 calc(50% - 4px); } .memory-route-navigation ::deep .mud-nav-link { padding:8px 10px; } }

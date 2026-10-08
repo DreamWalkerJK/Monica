@@ -1,207 +1,365 @@
 @using Monica.Profiling.TypeAllocation.Models
+@using Monica.Profiling.UIMemoryAnalysis.Support
 @inject TypeAllocationPanelStateFactory StateFactory
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<MemoryAnalysisResource> L
-@implements IDisposable
+@inject ILogger<TypeAllocationCard> Logger
+@implements IAsyncDisposable
 
-<section class="allocation-panel">
-    <header class="allocation-header">
-        <div class="allocation-header__identity">
-            <span class="allocation-header__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Category" /></span>
-            <div><MudText Typo="Typo.overline" Class="allocation-eyebrow">@L["Allocation:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Allocation:Title"]</MudText></div>
-        </div>
-
-        <div class="allocation-header__actions">
-            @if (!State.IsCollecting)
+@{
+    var view = State.GetView();
+    var snapshot = view.Snapshot;
+    var heap = view.Source == TypeAllocationDataSource.HeapSnapshot;
+    var countLabel = L[heap ? "Allocation:Ranking:Columns:Objects" : "Allocation:Ranking:Columns:Ticks"];
+    var bytesLabel = L[heap ? "Allocation:Ranking:Columns:HeapBytes" : "Allocation:Ranking:Columns:EstimatedBytes"];
+}
+<section class="allocation-panel" data-allocation-source="@view.Source" aria-busy="@Busy.ToString().ToLowerInvariant()">
+    <div class="allocation-controls">
+        <header class="allocation-collector">
+            <span class="allocation-eyebrow">@L["Allocation:Eyebrow"]</span>
+            <MudIcon Icon="@Icons.Material.Outlined.Category" Class="allocation-collector__icon" aria-hidden="true" />
+            <h2>@L["Allocation:Title"]</h2>
+            <p class="allocation-collector__status" data-collector-status="@(State.LiveSnapshot is null ? "unknown" : State.IsCollecting ? "collecting" : "idle")">
+                <span class="allocation-status-dot" aria-hidden="true"></span>
+                @L[State.LiveSnapshot is null ? "Allocation:Status:Unknown" : State.IsCollecting ? "Allocation:Status:Collecting" : "Allocation:Status:Idle"]
+            </p>
+            @if (State.LiveCapturedAt is { } liveRead)
             {
-                <MudSelect T="AllocationSamplingMode" @bind-Value="State.SelectedMode" Label="@L["Allocation:SamplingMode"]" Variant="Variant.Outlined" Margin="Margin.Dense">
-                    <MudSelectItem Value="AllocationSamplingMode.Low">@L["Allocation:Modes:LowWithRate"]</MudSelectItem>
-                    <MudSelectItem Value="AllocationSamplingMode.High">@L["Allocation:Modes:HighWithRate"]</MudSelectItem>
-                </MudSelect>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="StartCollection" Disabled="IsLoading" StartIcon="@Icons.Material.Filled.PlayArrow">@L["Allocation:Actions:Start"]</MudButton>
+                <div class="allocation-collector__read"><span>@L["Allocation:Sources:ViewRead"]</span><time datetime="@liveRead.ToString("O")">@MemoryAnalysisDisplayFormatter.LocalDateTime(liveRead)</time></div>
             }
-            else
-            {
-                <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.Sensors">@L["Allocation:Collecting", GetModeDisplayName(State.CurrentMode)]</MudChip>
-                <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="StopCollection" Disabled="IsLoading" StartIcon="@Icons.Material.Filled.Stop">@L["Allocation:Actions:Stop"]</MudButton>
-            }
-            <MudButton Variant="Variant.Outlined" Color="Color.Info" OnClick="TakeHeapSnapshot" Disabled="@(IsLoading || State.IsSnapshotting)" StartIcon="@Icons.Material.Filled.CameraAlt">
-                @(State.IsSnapshotting ? L["Allocation:Actions:Snapshotting"] : L["Allocation:Actions:Snapshot"])
-            </MudButton>
-            <MudTooltip Text="@L["Allocation:Actions:Refresh"]"><MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="RefreshData" Disabled="IsLoading" /></MudTooltip>
-            <MudTooltip Text="@L["Allocation:Actions:Reset"]"><MudIconButton Icon="@Icons.Material.Filled.DeleteSweep" OnClick="ResetData" Disabled="@(IsLoading || State.IsCollecting)" Color="Color.Warning" /></MudTooltip>
+        </header>
+        <div class="allocation-actions">
+            <div class="allocation-actions__primary">
+                @if (!State.IsCollecting)
+                {
+                    <div class="allocation-mode-field">
+                        <MudSelect T="AllocationSamplingMode" Value="State.SelectedMode" ValueChanged="@(value => State.SelectedMode = value)"
+                                   Disabled="@Busy" Label="@L["Allocation:SamplingMode"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="AllocationSamplingMode.Low">@L["Allocation:Modes:Low"]</MudSelectItem>
+                            <MudSelectItem Value="AllocationSamplingMode.High">@L["Allocation:Modes:High"]</MudSelectItem>
+                        </MudSelect>
+                    </div>
+                    <MudButton Variant="Variant.Filled" Color="Color.Default" OnClick="StartCollection" Disabled="@(Busy || !State.CanStartCollection)" StartIcon="@Icons.Material.Outlined.PlayArrow">@L["Allocation:Actions:Start"]</MudButton>
+                }
+                else
+                {
+                    <span class="allocation-observed-mode">@GetModeDisplayName(State.CurrentMode)</span>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="StopCollection" Disabled="@Busy" StartIcon="@Icons.Material.Outlined.Stop">@L["Allocation:Actions:Stop"]</MudButton>
+                }
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="TakeHeapSnapshotAsync" Disabled="@(Busy || !State.CanTakeHeapSnapshot)" StartIcon="@Icons.Material.Outlined.CameraAlt">
+                    @(State.IsSnapshotting ? L["Allocation:Actions:Snapshotting"] : L["Allocation:Actions:Snapshot"])
+                </MudButton>
+            </div>
+            <p>@L["Allocation:Sources:ModeHelp"]</p>
+            <div class="allocation-capabilities">
+                @if (!State.CanStartCollection) { <p>@L["Allocation:Capabilities:WindowsRequired"]</p> }
+                else { <p>@L["Allocation:Capabilities:Etw"]</p> }
+                <p>@L[State.CanTakeHeapSnapshot ? "Allocation:Capabilities:Heap" : "Allocation:Capabilities:HeapVersion"]</p>
+            </div>
+            <div class="allocation-actions__secondary">
+                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RefreshData" Disabled="@Busy" StartIcon="@Icons.Material.Outlined.Refresh">@L["Allocation:Actions:Refresh"]</MudButton>
+                <MudButton Variant="Variant.Text" OnClick="ResetData" Disabled="@(Busy || State.IsCollecting)" StartIcon="@Icons.Material.Outlined.DeleteOutline">@L["Allocation:Actions:Reset"]</MudButton>
+            </div>
         </div>
-    </header>
+    </div>
 
-    @if (State.Snapshot is not null)
+    @if (State.LoadError is not null)
     {
-        <div class="allocation-summary" aria-label="@L["Allocation:SummaryAriaLabel"]">
-            <div><strong class="mud-primary-text">@State.Snapshot.UniqueTypeCount</strong><span>@L["Allocation:Summary:UniqueTypes"]</span></div>
-            <div><strong class="mud-info-text">@ProfilingDisplayFormatter.FormatCount(State.Snapshot.TotalAllocationCount)</strong><span>@L["Allocation:Summary:Allocations"]</span></div>
-            <div><strong class="mud-warning-text">@ProfilingDisplayFormatter.FormatBytes(State.Snapshot.TotalBytes)</strong><span>@L["Allocation:Summary:Bytes"]</span></div>
-            <div><strong class="mud-success-text">@State.Snapshot.Duration.ToString(@"mm\:ss")</strong><span>@L["Allocation:Summary:Duration"]</span></div>
+        <div class="allocation-error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" /><div>
+            <strong>@L["Allocation:Messages:LoadFailed"]</strong><p>@L["Allocation:Errors:Retained"]</p>
+            @if (!string.IsNullOrEmpty(State.LoadError)) { <p>@State.LoadError</p> }
+        </div></div>
+    }
+    @if (State.LastAction is { } action)
+    {
+        <div class="allocation-action-result" data-action="@action.Operation" data-action-status="@((int)action.Status)" role="status">
+            <span>@L["Allocation:Action:Title"]</span><strong>@ActionLabel(action.Operation)</strong>
+            <span>@L[action.IsSuccessful ? "Allocation:Action:Completed" : "Allocation:Action:Failed"]</span>
+            <code>@((int)action.Status)</code><time datetime="@action.CompletedAt.ToString("O")">@MemoryAnalysisDisplayFormatter.LocalDateTime(action.CompletedAt)</time>
+            @if (!string.IsNullOrEmpty(action.Message)) { <p>@action.Message</p> }
         </div>
-
-        @if (State.Snapshot.DataSource != TypeAllocationDataSource.None)
-        {
-            <MudAlert Severity="@(State.Snapshot.DataSource == TypeAllocationDataSource.HeapSnapshot ? Severity.Info : Severity.Success)" Variant="Variant.Outlined" Dense="true">
-                @L[State.Snapshot.DataSource == TypeAllocationDataSource.HeapSnapshot ? "Allocation:Sources:HeapSnapshot" : "Allocation:Sources:Live", ProfilingDisplayFormatter.FormatLocalTime(State.Snapshot.Timestamp)]
-            </MudAlert>
-        }
     }
 
-    <article class="allocation-table-panel">
-        <header class="allocation-table-panel__header">
-            <div><MudText Typo="Typo.overline" Class="allocation-eyebrow">@L["Allocation:Ranking:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Allocation:Ranking:Title"]</MudText></div>
-            <div class="allocation-table-panel__controls">
-                <MudTooltip Text="@(State.ShowFullTypeName ? L["Allocation:Actions:ShowShortNames"] : L["Allocation:Actions:ShowFullNames"])">
-                    <MudToggleIconButton @bind-Toggled="State.ShowFullTypeName" Icon="@Icons.Material.Filled.ShortText" ToggledIcon="@Icons.Material.Filled.Subject" ToggledColor="Color.Primary" />
-                </MudTooltip>
-                <MudNumericField T="int" @bind-Value="State.TopN" Label="@L["Allocation:Ranking:Limit"]" Min="5" Max="200" Variant="Variant.Outlined" Margin="Margin.Dense" />
+    <article class="allocation-registry">
+        <header class="allocation-registry__heading">
+            <div><span class="allocation-eyebrow">@L["Allocation:Ranking:Eyebrow"]</span><h2>@L["Allocation:Ranking:Title"]</h2></div>
+            <div class="allocation-source-choice" role="group" aria-label="@L["Allocation:Sources:AriaLabel"]">
+                <MudButton Variant="Variant.Text" Class="@(heap ? null : "allocation-source-selected")" aria-pressed="@(!heap)" OnClick="@(() => State.SelectedSource = TypeAllocationDataSource.AllocationTracking)">@L["Allocation:Sources:LiveTitle"]</MudButton>
+                <MudButton Variant="Variant.Text" Class="@(heap ? "allocation-source-selected" : null)" aria-pressed="@heap" OnClick="@(() => State.SelectedSource = TypeAllocationDataSource.HeapSnapshot)">@L["Allocation:Sources:HeapTitle"]</MudButton>
             </div>
         </header>
-
-        @if (State.Snapshot?.Types.Count > 0)
+        <div class="allocation-source-context">
+            <p>@L[heap ? "Allocation:Sources:HeapHelp" : "Allocation:Sources:LiveHelp"]</p>
+            <div class="allocation-source-times">
+                <span>@SourceLabel(snapshot?.DataSource ?? TypeAllocationDataSource.None)</span>
+                @if (snapshot is not null)
+                {
+                    <span>@L["Allocation:Sources:Timestamp"] <time datetime="@MemoryAnalysisDisplayFormatter.MachineTime(snapshot.Timestamp)">@MemoryAnalysisDisplayFormatter.LocalSnapshotTime(snapshot.Timestamp)</time></span>
+                }
+                @if (view.CapturedAt is { } capturedAt)
+                {
+                    <span>@L["Allocation:Sources:ViewRead"] <time datetime="@capturedAt.ToString("O")">@MemoryAnalysisDisplayFormatter.LocalDateTime(capturedAt)</time></span>
+                }
+            </div>
+            @if (heap && State.IsCollecting) { <p class="allocation-preserved">@L["Allocation:Sources:Preserved"]</p> }
+        </div>
+        <div class="allocation-summary" aria-label="@L["Allocation:SummaryAriaLabel"]">
+            <div><span>@L["Allocation:Summary:UniqueTypes"]</span><strong data-allocation-total="types">@MemoryAnalysisDisplayFormatter.Count(snapshot?.UniqueTypeCount)</strong></div>
+            <div><span>@L[heap ? "Allocation:Summary:Objects" : "Allocation:Summary:Ticks"]</span><strong data-allocation-total="count">@MemoryAnalysisDisplayFormatter.Count(snapshot?.TotalAllocationCount)</strong></div>
+            <div class="allocation-summary__bytes"><span>@L[heap ? "Allocation:Summary:HeapBytes" : "Allocation:Summary:EstimatedBytes"]</span><strong data-allocation-total="bytes">@MemoryAnalysisDisplayFormatter.Bytes(snapshot?.TotalBytes)</strong></div>
+            <div><span>@L[heap ? "Allocation:Summary:HeapDuration" : "Allocation:Summary:LiveDuration"]</span><strong>@(snapshot is null ? L["Common:Unavailable"] : L["Allocation:Summary:DurationValue", snapshot.Duration.TotalSeconds])</strong></div>
+        </div>
+        <p class="allocation-duration-help">@L["Allocation:Sources:DurationHelp"]</p>
+        @if (!string.IsNullOrEmpty(snapshot?.ErrorMessage))
         {
-            <div class="allocation-table-scroll">
-                <MudSimpleTable Dense="true" Hover="true" FixedHeader="true">
-                    <thead><tr><th>#</th><th>@L["Allocation:Ranking:Columns:Type"]</th><th class="number-cell">@L["Allocation:Ranking:Columns:Instances"]</th><th class="number-cell">@L["Allocation:Ranking:Columns:TotalSize"]</th><th class="number-cell">@L["Allocation:Ranking:Columns:AverageSize"]</th><th class="number-cell">@L["Allocation:Ranking:Columns:Share"]</th><th>LOH</th></tr></thead>
+            <div class="allocation-error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" /><div><strong>@L["Allocation:Errors:SourceFailed"]</strong><p>@snapshot.ErrorMessage</p></div></div>
+        }
+        @if (snapshot?.DroppedEventCount > 0)
+        {
+            <p class="allocation-coverage-note"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />@L["Allocation:DroppedEvents", MemoryAnalysisDisplayFormatter.Count(snapshot.DroppedEventCount)]</p>
+        }
+        <div class="allocation-filter">
+            <div class="allocation-search-field">
+                <MudTextField T="string" @ref="_searchField" Value="State.SearchQuery" ValueChanged="@(value => State.SearchQuery = value)"
+                              Label="@L["Allocation:Ranking:Search"]" Placeholder="@L["Allocation:Ranking:SearchPlaceholder"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" DebounceInterval="0" Clearable="true"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+            </div>
+            <div class="allocation-order-field">
+                <MudSelect T="TypeAllocationSortOrder" Value="State.SortOrder" ValueChanged="@(value => State.SortOrder = value)" Label="@L["Allocation:Ranking:Order"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="TypeAllocationSortOrder.BytesDescending">@L["Allocation:Ranking:Sort:Bytes"]</MudSelectItem>
+                    <MudSelectItem Value="TypeAllocationSortOrder.CountDescending">@L["Allocation:Ranking:Sort:Count"]</MudSelectItem>
+                    <MudSelectItem Value="TypeAllocationSortOrder.NameAscending">@L["Allocation:Ranking:Sort:Name"]</MudSelectItem>
+                </MudSelect>
+            </div>
+            <div class="allocation-page-size-field">
+                <MudSelect T="int" Value="State.TopN" ValueChanged="@(value => State.TopN = value)" Label="@L["Allocation:Ranking:Limit"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="5">5</MudSelectItem><MudSelectItem Value="10">10</MudSelectItem><MudSelectItem Value="30">30</MudSelectItem><MudSelectItem Value="60">60</MudSelectItem><MudSelectItem Value="100">100</MudSelectItem><MudSelectItem Value="200">200</MudSelectItem>
+                </MudSelect>
+            </div>
+        </div>
+        <div class="allocation-filter-meta">
+            <MudSwitch T="bool" Value="State.ShowFullTypeName" ValueChanged="@(value => State.ShowFullTypeName = value)" Color="Color.Primary" Label="@L["Allocation:Actions:ShowFullNames"]" Size="Size.Small" />
+            @if (snapshot is not null) { <span>@L["Allocation:Ranking:Scope", view.Count, snapshot.UniqueTypeCount]</span> }
+        </div>
+
+        <div class="allocation-table-frame">
+            @if (view.VisibleTypes.Count > 0)
+            {
+                <MudSimpleTable Dense="false" Elevation="0" Class="allocation-types">
+                    <thead><tr><th>@L["Allocation:Ranking:Columns:Type"]</th><th>@countLabel</th><th>@bytesLabel</th><th>@L["Allocation:Ranking:Columns:Share"]</th><th><span class="allocation-sr-only">@L["Allocation:Ranking:Columns:Inspect"]</span></th></tr></thead>
                     <tbody>
-                        @{ var rank = 1; }
-                        @foreach (var type in State.Snapshot.Types.Take(State.TopN))
+                        @foreach (var type in view.VisibleTypes)
                         {
-                            <tr>
-                                <td>@rank</td>
-                                <td class="type-name-cell"><MudTooltip Text="@type.TypeName" Placement="Placement.Right"><span class="diagnostic-value">@(State.ShowFullTypeName ? type.TypeName : type.ShortTypeName)</span></MudTooltip></td>
-                                <td class="number-cell">@ProfilingDisplayFormatter.FormatCount(type.AllocationCount)</td>
-                                <td class="number-cell">@ProfilingDisplayFormatter.FormatBytes(type.TotalBytes)</td>
-                                <td class="number-cell">@ProfilingDisplayFormatter.FormatBytes((long)type.AverageSize)</td>
-                                <td class="number-cell"><div class="allocation-share"><MudProgressLinear Value="@type.BytesPercentage" Color="@ProfilingSeverityColorResolver.GetPercentageColor(type.BytesPercentage)" Size="Size.Small" /><span>@type.BytesPercentage.ToString("F1")%</span></div></td>
-                                <td>@if (type.IsLargeObjectHeap) { <MudChip T="string" Size="Size.Small" Color="Color.Warning">LOH</MudChip> }</td>
+                            <tr @key="type.TypeName" data-type-name="@type.TypeName">
+                                <td class="allocation-type" data-label="@L["Allocation:Ranking:Columns:Type"]"><code title="@type.TypeName">@(State.ShowFullTypeName ? type.TypeName : type.ShortTypeName)</code></td>
+                                <td data-label="@countLabel" class="allocation-number">@MemoryAnalysisDisplayFormatter.Count(type.AllocationCount)</td>
+                                <td data-label="@bytesLabel" class="allocation-number">@MemoryAnalysisDisplayFormatter.Bytes(type.TotalBytes)</td>
+                                <td data-label="@L["Allocation:Ranking:Columns:Share"]" class="allocation-number">@MemoryAnalysisDisplayFormatter.RatioPercent(type.TotalBytes, snapshot!.TotalBytes)</td>
+                                <td class="allocation-inspect"><MudIconButton Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" aria-label="@L["Allocation:Ranking:Inspect", type.TypeName]" OnClick="@(() => InspectTypeAsync(view, type))" /></td>
                             </tr>
-                            rank++;
                         }
                     </tbody>
                 </MudSimpleTable>
-            </div>
-        }
-        else if (!State.IsCollecting && State.Snapshot?.DataSource == TypeAllocationDataSource.None)
-        {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Allocation:Ranking:Empty"]</MudAlert>
-        }
-        else if (State.IsCollecting && State.Snapshot?.Types.Count == 0)
-        {
-            <div class="allocation-loading"><MudProgressCircular Indeterminate="true" Size="Size.Small" /><MudText>@L["Allocation:Ranking:Collecting"]</MudText></div>
-        }
+                <footer class="allocation-pager">
+                    <span>@L["Allocation:Ranking:Range", view.FirstVisible, view.LastVisible, view.Count]</span>
+                    <MudPagination Count="view.PageCount" Selected="view.Page" SelectedChanged="State.SetPage" Color="Color.Default" Size="Size.Small" ShowFirstButton="true" ShowLastButton="true" BoundaryCount="0" MiddleCount="1" aria-label="@L["Allocation:Ranking:Pagination"]" />
+                </footer>
+            }
+            else
+            {
+                <div class="allocation-empty">
+                    @if (Busy && snapshot is null)
+                    {
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" /><p>@L["Common:LoadingValue"]</p>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Outlined.Category" aria-hidden="true" />
+                        <h3>@EmptyTitle(view)</h3><p>@EmptyHelp(view)</p>
+                    }
+                </div>
+            }
+        </div>
+        <p class="allocation-registry-help">@L["Allocation:Ranking:Coverage"]</p>
     </article>
-
-    @if (State.Snapshot?.DroppedEventCount > 0)
-    {
-        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Allocation:DroppedEvents", State.Snapshot.DroppedEventCount]</MudAlert>
-    }
-
-    <MudExpansionPanels Elevation="0">
-        <MudExpansionPanel Text="@L["Allocation:Guidance:Title"]">
-            <div class="allocation-guidance">
-                <div><strong>@L["Allocation:Guidance:Live:Title"]</strong><span>@L["Allocation:Guidance:Live:Description"]</span></div>
-                <div><strong>@L["Allocation:Guidance:Low:Title"]</strong><span>@L["Allocation:Guidance:Low:Description"]</span></div>
-                <div><strong>@L["Allocation:Guidance:High:Title"]</strong><span>@L["Allocation:Guidance:High:Description"]</span></div>
-                <div><strong>@L["Allocation:Guidance:Snapshot:Title"]</strong><span>@L["Allocation:Guidance:Snapshot:Description"]</span></div>
-            </div>
-        </MudExpansionPanel>
-    </MudExpansionPanels>
 </section>
 
 @code {
+    /// <summary>Gets or sets a parent-owned refresh indicator; retained allocation evidence stays visible.</summary>
     [Parameter] public bool IsLoading { get; set; }
     private TypeAllocationPanelState State { get; set; } = null!;
+    private MudTextField<string>? _searchField;
+    private readonly object _disposeLock = new();
+    private readonly object _renderLock = new();
+    private readonly HashSet<Task> _renderTasks = [];
+    private Task? _disposeTask;
+    private Task<IDialogReference?> _dialogOpen = Task.FromResult<IDialogReference?>(null);
+    private Task _dialogClose = Task.CompletedTask;
+    private IDialogReference? _detailDialog;
+    private bool _openingDialog;
+    private volatile bool _disposed;
+    private bool Busy => IsLoading || State.IsLoading;
 
     protected override async Task OnInitializedAsync()
     {
         State = StateFactory.Create();
         State.StateChanged += HandleStateChanged;
         var result = await State.InitializeAsync();
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add(error.Message ?? L["Allocation:Messages:LoadFailed"], Severity.Error);
-        }
+        ShowFailure(result, "Allocation:Messages:LoadFailed");
     }
 
-    private void RefreshData() => ShowResult(State.RefreshData(), "Allocation:Messages:RefreshFailed");
-
-    private Task StartCollection()
+    private void RefreshData() => ShowFailure(State.RefreshData(), "Allocation:Messages:RefreshFailed");
+    private void StartCollection() => ShowResult(State.StartCollection(), "Allocation:Messages:StartFailed", L["Allocation:Messages:Started", GetModeDisplayName(State.SelectedMode)], Severity.Success);
+    private void StopCollection() => ShowResult(State.StopCollection(), "Allocation:Messages:StopFailed", L["Allocation:Messages:Stopped"], Severity.Success);
+    private void ResetData() => ShowResult(State.ResetData(), "Allocation:Messages:ResetFailed", L["Allocation:Messages:Reset"], Severity.Info);
+    private async Task TakeHeapSnapshotAsync()
     {
-        var result = State.StartCollection();
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add(error.Message ?? L["Allocation:Messages:StartFailed"], Severity.Error);
-        }
-        else
-        {
-            Snackbar.Add(L["Allocation:Messages:Started", GetModeDisplayName(State.SelectedMode)], Severity.Success);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private void StopCollection()
-    {
-        var result = State.StopCollection();
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add(error.Message ?? L["Allocation:Messages:StopFailed"], Severity.Error);
-        }
-        else
-        {
-            Snackbar.Add(L["Allocation:Messages:Stopped"], Severity.Success);
-        }
-    }
-
-    private async Task TakeHeapSnapshot()
-    {
-        Snackbar.Add(L["Allocation:Messages:SnapshotStarting"], Severity.Info);
+        if (_disposed || Busy) return;
         var result = await State.TakeHeapSnapshotAsync();
-        if (result.IsFailed(out var error, out var snapshot))
-        {
-            Snackbar.Add(error.Message ?? L["Allocation:Messages:SnapshotFailed"], Severity.Error);
-            return;
-        }
-
-        Snackbar.Add(L["Allocation:Messages:SnapshotCompleted", snapshot!.UniqueTypeCount], Severity.Success);
+        if (_disposed || result.Status == ResStatus.Conflict) return;
+        if (result.IsFailed(out var error, out var snapshot)) Snackbar.Add(FailureText(error, "Allocation:Messages:SnapshotFailed"), Severity.Error);
+        else Snackbar.Add(L["Allocation:Messages:SnapshotCompleted", snapshot!.UniqueTypeCount], Severity.Success);
     }
-
-    private void ResetData()
+    private void ShowResult(Res result, string fallback, string success, Severity severity)
     {
-        var result = State.ResetData();
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add(error.Message ?? L["Allocation:Messages:ResetFailed"], Severity.Error);
-            return;
-        }
-
-        Snackbar.Add(L["Allocation:Messages:Reset"], Severity.Info);
+        if (_disposed || result.Status == ResStatus.Conflict) return;
+        if (result.IsFailed(out var error)) Snackbar.Add(FailureText(error, fallback), Severity.Error);
+        else Snackbar.Add(success, severity);
     }
-
-    private void ShowResult(Res result, string fallbackKey)
+    private void ShowFailure(Res result, string fallback)
     {
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add(error.Message ?? L[fallbackKey], Severity.Error);
-        }
+        if (!_disposed && result.Status != ResStatus.Conflict && result.IsFailed(out var error)) Snackbar.Add(FailureText(error, fallback), Severity.Error);
     }
-
+    private string FailureText(Res error, string fallback) => string.IsNullOrEmpty(error.Message) ? L[fallback] : error.Message;
     private string GetModeDisplayName(AllocationSamplingMode mode) => mode switch
     {
-        AllocationSamplingMode.Low => L["Allocation:Modes:Low"],
-        AllocationSamplingMode.High => L["Allocation:Modes:High"],
-        _ => L["Common:Unknown"]
+        AllocationSamplingMode.Low => L["Allocation:Modes:Low"], AllocationSamplingMode.High => L["Allocation:Modes:High"], _ => L["Common:Unknown"]
     };
+    private string SourceLabel(TypeAllocationDataSource source) => L[source switch
+    {
+        TypeAllocationDataSource.HeapSnapshot => "Allocation:Sources:HeapTitle",
+        TypeAllocationDataSource.AllocationTracking => "Allocation:Sources:LiveTitle", _ => "Allocation:Sources:None"
+    }];
+    private string ActionLabel(TypeAllocationOperation operation) => L[operation switch
+    {
+        TypeAllocationOperation.Start => "Allocation:Actions:Start", TypeAllocationOperation.Stop => "Allocation:Actions:Stop",
+        TypeAllocationOperation.Reset => "Allocation:Actions:Reset", _ => "Allocation:Actions:Snapshot"
+    }];
+    private string EmptyTitle(TypeAllocationView view) => view.Snapshot?.Types.Count > 0 ? L["Allocation:Empty:NoMatchesTitle"]
+        : view.Source == TypeAllocationDataSource.HeapSnapshot ? L["Allocation:Empty:HeapTitle"]
+        : view.Snapshot is null ? L["Allocation:Empty:UnreadTitle"]
+        : State.IsCollecting ? L["Allocation:Empty:CollectingTitle"] : L["Allocation:Empty:LiveTitle"];
+    private string EmptyHelp(TypeAllocationView view) => view.Snapshot?.Types.Count > 0 ? L["Allocation:Empty:NoMatchesHelp"]
+        : view.Source == TypeAllocationDataSource.HeapSnapshot ? L["Allocation:Empty:HeapHelp"]
+        : view.Snapshot is null ? L["Allocation:Empty:UnreadHelp"]
+        : State.IsCollecting ? L["Allocation:Empty:CollectingHelp"] : L["Allocation:Empty:LiveHelp"];
 
-    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
-
-    public void Dispose()
+    private Task InspectTypeAsync(TypeAllocationView view, TypeAllocationInfo row)
+    {
+        if (_disposed || _openingDialog || view.Inspect(row) is not { } evidence) return Task.CompletedTask;
+        _openingDialog = true;
+        _dialogOpen = OpenInspectorAsync(evidence);
+        return _dialogClose = ObserveDialogCloseAsync(_dialogOpen, evidence);
+    }
+    private async Task<IDialogReference?> OpenInspectorAsync(TypeAllocationEvidence evidence)
+    {
+        try
+        {
+            var parameters = new DialogParameters<TypeAllocationDetailDialog> { { dialog => dialog.Evidence, evidence } };
+            var reference = await DialogService.ShowAsync<TypeAllocationDetailDialog>(L["Allocation:Details:Title"], parameters,
+                new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = true, BackdropClick = true });
+            if (_disposed) { RetireDialog(reference); return null; }
+            RetireDialog(_detailDialog);
+            _detailDialog = reference;
+            return reference;
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Allocation type inspector could not be opened.");
+            if (!_disposed) Snackbar.Add(L["Allocation:Details:OpenFailed"], Severity.Error);
+            return null;
+        }
+    }
+    private async Task ObserveDialogCloseAsync(Task<IDialogReference?> opening, TypeAllocationEvidence evidence)
+    {
+        IDialogReference? reference = null;
+        try
+        {
+            reference = await opening;
+            if (reference is null) return;
+            await reference.Result;
+            if (_disposed) return;
+            var current = State.GetView();
+            if (current.Source != evidence.Source || current.CapturedAt != evidence.CapturedAt
+                || current.Snapshot?.Timestamp != evidence.SnapshotTimestamp
+                || !current.VisibleTypes.Any(row => row.TypeName == evidence.TypeName))
+            {
+                try { if (_searchField is not null) await _searchField.FocusAsync(); }
+                catch (Exception exception) { Logger.LogError(exception, "Allocation registry focus could not be restored."); }
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_detailDialog, reference)) _detailDialog = null;
+            _openingDialog = false;
+        }
+    }
+    private static void RetireDialog(IDialogReference? reference)
+    {
+        if (reference is null) return;
+        reference.Close(DialogResult.Cancel());
+        // Complete admitted close even if the native provider retired before this component.
+        reference.Dismiss(DialogResult.Cancel());
+    }
+    private void HandleStateChanged()
+    {
+        if (_disposed) return;
+        var render = ObserveRenderAsync(InvokeAsync(() => { if (!_disposed) StateHasChanged(); }));
+        lock (_renderLock) _renderTasks.Add(render);
+        _ = RemoveRenderAsync(render);
+    }
+    private async Task ObserveRenderAsync(Task render)
+    {
+        try { await render; }
+        catch (Exception exception) { Logger.LogError(exception, "Allocation workspace rendering failed."); }
+    }
+    private async Task RemoveRenderAsync(Task render)
+    {
+        await render;
+        lock (_renderLock) _renderTasks.Remove(render);
+    }
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeLock)
+        {
+            _disposed = true;
+            return new(_disposeTask ??= DisposeCoreAsync());
+        }
+    }
+    private async Task DisposeCoreAsync()
     {
         State.StateChanged -= HandleStateChanged;
-        State.Dispose();
+        var stateDrain = State.DisposeAsync().AsTask();
+        try
+        {
+            try { await _dialogOpen; }
+            finally
+            {
+                RetireDialog(_detailDialog);
+                await _dialogClose;
+            }
+        }
+        finally
+        {
+            try { await stateDrain; }
+            finally
+            {
+                Task[] renders;
+                lock (_renderLock) renders = _renderTasks.ToArray();
+                await Task.WhenAll(renders);
+            }
+        }
     }
 }

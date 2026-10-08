@@ -6,32 +6,38 @@ namespace Monica.Profiling.TypeAllocation.Models;
 public class TypeAllocationSnapshot
 {
     /// <summary>
-    /// snapshot timestamp
+    /// UTC evidence time. Active ETW views use their read time; stopped ETW evidence retains its stop
+    /// time. Heap snapshots use scan completion time, not an exact native clone creation timestamp.
     /// </summary>
     public DateTime Timestamp { get; init; } = DateTime.UtcNow;
 
     /// <summary>
-    /// Collection duration (measured from start of collection or last reset)
+    /// Elapsed current/last ETW session window (or since reset), retained after stop. ETW totals may
+    /// include earlier sessions until reset. Heap snapshots instead report total scan operation time.
     /// </summary>
     public TimeSpan Duration { get; init; }
 
     /// <summary>
-    /// All tracked types and their allocation information, sorted by TotalBytes in descending order
+    /// Retained type rows, sorted by TotalBytes in descending order. Totals-only ETW collection keeps
+    /// this list empty while cumulative source counters continue to update.
     /// </summary>
     public IReadOnlyList<TypeAllocationInfo> Types { get; init; } = [];
 
     /// <summary>
-    /// Total allocations for all types
+    /// Observed allocation-tick count for ETW, or enumerated non-free object count for a heap scan.
+    /// ETW ticks are not allocated-object counts; ETW counters are cumulative until reset.
     /// </summary>
     public long TotalAllocationCount { get; init; }
 
     /// <summary>
-    /// Total bytes of all types
+    /// ETW tick allocation volume attributed to the threshold-crossing types, or enumerated heap
+    /// object bytes. Excluded types are omitted; evicted ranking rows remain in ETW cumulative totals.
     /// </summary>
     public long TotalBytes { get; init; }
 
     /// <summary>
-    /// Unique type number ��
+    /// Number of retained type rows in this snapshot, rather than all types ever observed.
+    /// Zero does not imply zero allocation volume when totals-only collection is configured.
     /// </summary>
     public int UniqueTypeCount => Types.Count;
 
@@ -41,12 +47,14 @@ public class TypeAllocationSnapshot
     public bool IsCollecting { get; init; }
 
     /// <summary>
-    /// Current sampling mode
+    /// Requested legacy mode for current/last ETW evidence, retained after stop. Both enabled modes
+    /// currently use the same CLR allocation-tick event strategy; this does not imply a sample rate.
     /// </summary>
     public AllocationSamplingMode SamplingMode { get; init; }
 
     /// <summary>
-    /// Number of events dropped (e.g. due to unknown type)
+    /// Current-process ticks skipped for unknown type names or invalid byte payloads. This does not
+    /// measure ETW session transport loss, excluded types, or ranking eviction.
     /// </summary>
     public long DroppedEventCount { get; init; }
 
@@ -72,12 +80,14 @@ public enum AllocationSamplingMode
     Disabled = 0,
 
     /// <summary>
-    /// Low frequency sampling (~5 events/second) - lower overhead
+    /// Legacy enabled-mode alias for CLR GCAllocationTick collection. It uses the same event stream
+    /// as High; no fixed event frequency, allocation percentage, or reduced-overhead guarantee exists.
     /// </summary>
     Low = 1,
 
     /// <summary>
-    /// High frequency sampling (~100 events/second) - higher accuracy
+    /// Legacy enabled-mode alias for CLR GCAllocationTick collection. It uses the same event stream
+    /// as Low; it does not enable the separate CLR GCSampledObjectAllocationHigh strategy.
     /// </summary>
     High = 2
 }
@@ -93,12 +103,13 @@ public enum TypeAllocationDataSource
     None = 0,
 
     /// <summary>
-    /// Real-time allocation tracking (ETW/EventPipe)
+    /// Current-process CLR allocation-tick tracking through Windows ETW. No EventPipe provider is
+    /// implemented by this data source.
     /// </summary>
     AllocationTracking = 1,
 
     /// <summary>
-    /// Heap snapshot (ClrMD)
+    /// Windows ClrMD process-clone heap scan. Enumerated objects need not be root-reachable.
     /// </summary>
     HeapSnapshot = 2
 }

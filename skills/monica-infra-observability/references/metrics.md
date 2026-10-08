@@ -2,6 +2,8 @@
 
 Use Runtime Metrics to inspect the current process and its bounded local history. Use OpenTelemetry exporters when measurements must leave the process, survive restarts, or combine multiple instances. The two registrations have independent collection and retention; enabling the local Runtime Metrics page does not require OpenTelemetry.
 
+For immediate memory and last-GC observations, optional allocation tracking, heap census, or explicit GC/dump actions, use [Memory analysis](memory-analysis.md). Its history route consumes the same local Runtime Metrics collector; these tasks do not require an exporter.
+
 ## Runtime Metrics
 
 Register the collector and, for a Blazor host, its shell page inside `builder.AddMonica(monica => { ... })`:

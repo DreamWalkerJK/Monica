@@ -1,0 +1,13 @@
+.allocation-detail { min-width: 0; padding: 4px 4px 12px; color: var(--mud-palette-text-primary); --allocation-detail-secondary: color-mix(in srgb, var(--mud-palette-text-secondary) 60%, var(--mud-palette-text-primary)); }
+.allocation-detail-note { margin: 0 0 18px; color: var(--allocation-detail-secondary); font-size: 12px; line-height: 1.8; }
+.allocation-detail-identity { min-width: 0; display: grid; gap: 10px; padding: 20px; border-radius: 8px; border: 1px solid var(--mud-palette-lines-default); background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface)); }
+.allocation-detail-identity > span { font-size: 11px; color: var(--allocation-detail-secondary); }
+.allocation-detail code { font-family: var(--mo-font-family-mono); font-size: 12px; color: inherit; padding: 0; background: none; overflow-wrap: anywhere; white-space: normal; }
+.allocation-detail-context { display: grid; gap: 16px; margin: 20px 0; }
+.allocation-detail dt { color: var(--allocation-detail-secondary); font-size: 11px; line-height: 1.6; }
+.allocation-detail dd { margin: 7px 0 0; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.allocation-detail-context time { font-family: var(--mo-font-family-mono); font-size: 11px; }
+.allocation-detail-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 26px; margin-bottom: 22px; }
+.allocation-detail-values > div { min-width: 0; padding: 16px 0; border-bottom: 1px solid var(--mud-palette-lines-default); }
+.allocation-detail-values small { display: block; margin-top: 4px; font-size: 10px; }
+@media (max-width: 500px) { .allocation-detail-values { grid-template-columns: minmax(0, 1fr); } .allocation-detail-identity { padding: 18px; } }
