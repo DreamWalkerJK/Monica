@@ -9,85 +9,64 @@
 @inject IStringLocalizer<SystemInfoResource> L
 
 <section class="system-info-dossier">
-    <aside class="system-info-dossier__index" aria-label="@L["Page:Index:AriaLabel"]">
-        <div class="system-info-dossier__index-heading">
-            <strong>@L["Page:Index:Title"]</strong>
-            <span>@L["Page:Index:Hint"]</span>
-        </div>
-        <nav class="system-info-dossier__desktop-nav">
+    <nav class="system-info-dossier__navigation" aria-label="@L["Page:Index:AriaLabel"]">
+        <div class="system-info-dossier__desktop-nav">
             @foreach (var dossierSection in Sections)
             {
                 <button type="button"
                         class="system-info-dossier__nav-item @(_selectedSection == dossierSection.Id ? "is-active" : null)"
                         aria-current="@(_selectedSection == dossierSection.Id ? "location" : null)"
                         @onclick="@(() => NavigateToSectionAsync(dossierSection.Id))">
-                    <span>@dossierSection.Number</span>
-                    <MudIcon Icon="@dossierSection.Icon" Size="Size.Small" />
-                    <b>@L[dossierSection.TitleKey]</b>
+                    <span aria-hidden="true">@dossierSection.Number</span>
+                    @L[dossierSection.TitleKey]
                 </button>
             }
-        </nav>
-        <div class="system-info-dossier__mobile-nav">
-            <MudSelect T="string"
-                       Label="@L["Page:Index:Hint"]"
-                       Value="@_selectedSection"
-                       ValueChanged="NavigateToSectionAsync"
-                       FullWidth="true">
+        </div>
+        <label class="system-info-dossier__mobile-nav">
+            <span>@L["Page:Index:Hint"]</span>
+            <select value="@_selectedSection" @onchange="NavigateFromSelectAsync">
                 @foreach (var dossierSection in Sections)
                 {
-                    <MudSelectItem T="string" Value="@dossierSection.Id">@L[dossierSection.TitleKey]</MudSelectItem>
+                    <option value="@dossierSection.Id">@L[dossierSection.TitleKey]</option>
                 }
-            </MudSelect>
-        </div>
-        <div class="system-info-dossier__captured">
-            <span><i></i>@L["Page:Status:Captured"]</span>
-            <strong>@SystemInfoDisplayFormatter.FormatTime(Snapshot.CapturedAtUtc, CultureInfo.CurrentCulture)</strong>
-        </div>
-    </aside>
+            </select>
+        </label>
+    </nav>
 
     <div class="system-info-dossier__canvas">
-        <section class="system-info-evidence system-info-evidence--runtime mo-card-surface" id="runtime-section">
+        <section class="system-info-evidence" id="runtime-section" aria-labelledby="system-info-runtime-title">
             <EvidenceHeader Number="01"
+                            HeadingId="system-info-runtime-title"
                             Title="@L["Page:Sections:Runtime:Title"]"
-                            Description="@L["Page:Sections:Runtime:Description"]"
-                            Count="5"
-                            CountLabel="@L["Page:Sections:Runtime:EvidenceLabel", 5]" />
-            <div class="system-info-runtime-layout">
-                <dl class="system-info-definition-list">
-                    <EvidenceRow Icon="@Icons.Material.Filled.DeveloperMode" Label="@L["Page:Sections:Runtime:DotNetRuntime"]" Value="@Snapshot.Process.RuntimeVersion" Tone="primary" />
-                    <EvidenceRow Icon="@Icons.Material.Filled.Architecture" Label="@L["Page:Sections:Runtime:ProcessArchitecture"]" Value="@ProcessArchitecture" Tone="info" />
-                    <EvidenceRow Icon="@Icons.Material.Filled.AdminPanelSettings" Label="@L["Page:Sections:Runtime:Privilege"]" Value="@Privilege" />
-                    <EvidenceRow Icon="@Icons.Material.Filled.Layers" Label="@L["Page:Sections:Runtime:SystemPageSize"]" Value="@SystemInfoDisplayFormatter.FormatByteCount(Snapshot.Process.PageSizeBytes, CultureInfo.CurrentCulture)" />
-                    <EvidenceRow Icon="@Icons.Material.Filled.TouchApp" Label="@L["Page:Sections:Runtime:UserInteractive"]" Value="@Interactive" />
-                </dl>
-                <div class="system-info-memory-plate">
-                    <div class="system-info-memory-plate__topline"><span>@L["Page:Pulse:WorkingSet"]</span><b>@L["Page:Status:Snapshot"]</b></div>
-                    <div class="system-info-memory-reading">
-                        <strong class="system-info-metric">@SystemInfoDisplayFormatter.FormatScaledBytes(Snapshot.Process.WorkingSetBytes, CultureInfo.CurrentCulture)</strong>
-                    </div>
-                    <code>@SystemInfoDisplayFormatter.FormatByteCount(Snapshot.Process.WorkingSetBytes, CultureInfo.CurrentCulture)</code>
-                    <p>@L["Page:Sections:Runtime:WorkingSetAtCapture"]</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="system-info-evidence mo-card-surface" id="environment-section">
-            <EvidenceHeader Number="02"
-                            Title="@L["Page:Sections:Environment:Title"]"
-                            Description="@L["Page:Sections:Environment:Description"]"
-                            Count="6" />
-            <dl class="system-info-environment-grid">
-                <EvidenceTile Icon="@Icons.Material.Filled.Dns" Label="@L["Page:Sections:Environment:Machine"]" Value="@Snapshot.Host.MachineName" Tone="primary" />
-                <EvidenceTile Icon="@Icons.Material.Filled.Person" Label="@L["Page:Sections:Environment:ProcessUser"]" Value="@ProcessUser" Tone="info" />
-                <EvidenceTile Icon="@Icons.Material.Filled.DesktopWindows" Label="@L["Page:Sections:Environment:OperatingSystem"]" Value="@Snapshot.Host.OperatingSystem" />
-                <EvidenceTile Icon="@Icons.Material.Filled.Schedule" Label="@L["Page:Sections:Environment:TimeZone"]" Value="@Snapshot.Host.TimeZone.ToDisplayString()" />
-                <EvidenceTile Icon="@Icons.Material.Filled.FolderOpen" Label="@L["Page:Sections:Environment:WorkingDirectory"]" Value="@Snapshot.Host.CurrentDirectory" Wide="true" />
-                <EvidenceTile Icon="@Icons.Material.Filled.Feed" Label="@L["Page:Sections:Environment:ProcessPath"]" Value="@Snapshot.Process.ProcessPath" Wide="true" />
+                            Description="@L["Page:Sections:Runtime:Description"]" />
+            <dl class="system-info-definition-list">
+                <EvidenceRow Label="@L["Page:Sections:Runtime:DotNetRuntime"]" Value="@Snapshot.Process.RuntimeVersion" />
+                <EvidenceRow Label="@L["Page:Sections:Runtime:ProcessArchitecture"]" Value="@ProcessArchitecture" />
+                <EvidenceRow Label="@L["Page:Sections:Runtime:Privilege"]" Value="@Privilege" />
+                <EvidenceRow Label="@L["Page:Sections:Runtime:SystemPageSize"]" Value="@SystemInfoDisplayFormatter.FormatByteCount(Snapshot.Process.PageSizeBytes, CultureInfo.CurrentCulture)" />
+                <EvidenceRow Label="@L["Page:Sections:Runtime:UserInteractive"]" Value="@Interactive" />
             </dl>
         </section>
 
-        <section class="system-info-evidence system-info-evidence--wide mo-card-surface" id="endpoints-section">
+        <section class="system-info-evidence" id="environment-section" aria-labelledby="system-info-host-title">
+            <EvidenceHeader Number="02"
+                            HeadingId="system-info-host-title"
+                            Title="@L["Page:Sections:Environment:Title"]"
+                            Description="@L["Page:Sections:Environment:Description"]" />
+            <dl class="system-info-environment-grid">
+                <EvidenceTile Label="@L["Page:Sections:Environment:Machine"]" Value="@Snapshot.Host.MachineName" />
+                <EvidenceTile Label="@L["Page:Sections:Environment:ProcessUser"]" Value="@ProcessUser" />
+                <EvidenceTile Label="@L["Page:Sections:Environment:OperatingSystem"]" Value="@Snapshot.Host.OperatingSystem" />
+                <EvidenceTile Label="@L["Page:Sections:Environment:OperatingSystemBitness"]" Value="@OperatingSystemBitness" />
+                <EvidenceTile Label="@L["Page:Sections:Environment:TimeZone"]" Value="@Snapshot.Host.TimeZone.ToDisplayString()" />
+                <EvidenceTile Label="@L["Page:Sections:Environment:WorkingDirectory"]" Value="@Snapshot.Host.CurrentDirectory" Wide="true" />
+                <EvidenceTile Label="@L["Page:Sections:Environment:ProcessPath"]" Value="@Snapshot.Process.ProcessPath" Wide="true" />
+            </dl>
+        </section>
+
+        <section class="system-info-evidence" id="endpoints-section" aria-labelledby="system-info-endpoints-title">
             <EvidenceHeader Number="03"
+                            HeadingId="system-info-endpoints-title"
                             Title="@L["Page:Sections:Endpoints:Title"]"
                             Description="@L["Page:Sections:Endpoints:Description"]"
                             Count="@Snapshot.Endpoints.Length"
@@ -95,9 +74,8 @@
             @if (Snapshot.Endpoints.Length == 0)
             {
                 <div class="system-info-empty-state">
-                    <MudIcon Icon="@Icons.Material.Filled.PortableWifiOff" Size="Size.Large" />
                     <strong>@L["Page:Sections:Endpoints:EmptyTitle"]</strong>
-                    <span>@L["Page:Sections:Endpoints:EmptyDescription"]</span>
+                    <p>@L["Page:Sections:Endpoints:EmptyDescription"]</p>
                 </div>
             }
             else
@@ -105,33 +83,36 @@
                 <div class="system-info-endpoints">
                     @foreach (var endpoint in Snapshot.Endpoints)
                     {
-                        <article class="system-info-endpoint">
-                            <span class="system-info-endpoint__scheme" title="@L["Page:Sections:Endpoints:Transport"]">@endpoint.Scheme.ToUpperInvariant()</span>
-                            <strong title="@endpoint.Address">@endpoint.Address</strong>
-                            <span>@L["Page:Sections:Endpoints:ListeningAddress"]</span>
-                            <span class="system-info-endpoint__bound"><i></i>@L["Page:Status:Bound"]</span>
-                            <MudIconButton Icon="@Icons.Material.Filled.NorthEast"
-                                           Color="Color.Primary"
-                                           Size="Size.Small"
-                                           title="@L["Page:Sections:Endpoints:Inspect"]"
-                                           aria-label="@L["Page:Sections:Endpoints:InspectAria", endpoint.Address]"
-                                           OnClick="@(() => InspectEndpointAsync(endpoint))" />
+                        <article class="system-info-endpoint" @key="endpoint.Address">
+                            <div class="system-info-endpoint__context">
+                                <span title="@L["Page:Sections:Endpoints:Transport"]">@Display(endpoint.Scheme).ToUpperInvariant()</span>
+                                <span class="system-info-endpoint__bound"><i aria-hidden="true"></i>@L["Page:Status:Bound"]</span>
+                            </div>
+                            <button type="button"
+                                    class="system-info-endpoint__inspect"
+                                    title="@L["Page:Sections:Endpoints:Inspect"]"
+                                    aria-label="@L["Page:Sections:Endpoints:InspectAria", endpoint.Address]"
+                                    @onclick="@(() => InspectEndpointAsync(endpoint))">
+                                <span>
+                                    <strong>@endpoint.Address</strong>
+                                    <small>@L["Page:Sections:Endpoints:ListeningAddress"]</small>
+                                </span>
+                                <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" />
+                            </button>
                         </article>
                     }
                 </div>
             }
         </section>
 
-        <section class="system-info-evidence mo-card-surface" id="artifact-section">
+        <section class="system-info-evidence" id="artifact-section" aria-labelledby="system-info-artifact-title">
             <EvidenceHeader Number="04"
+                            HeadingId="system-info-artifact-title"
                             Title="@L["Page:Sections:Artifact:Title"]"
                             Description="@L["Page:Sections:Artifact:Description"]" />
-            <div class="system-info-artifact-feature">
-                <span>@L["Page:Sections:Artifact:Product"]</span>
-                <strong title="@Snapshot.Artifact.ProductName">@Display(Snapshot.Artifact.ProductName)</strong>
-                <small title="@Snapshot.Artifact.ProductVersion">@L["Page:Sections:Artifact:ProductVersion"]: @Display(Snapshot.Artifact.ProductVersion)</small>
-            </div>
             <dl class="system-info-artifact-grid">
+                <ArtifactCell Label="@L["Page:Sections:Artifact:Product"]" Value="@Display(Snapshot.Artifact.ProductName)" />
+                <ArtifactCell Label="@L["Page:Sections:Artifact:ProductVersion"]" Value="@Display(Snapshot.Artifact.ProductVersion)" />
                 <ArtifactCell Label="@L["Page:Sections:Artifact:FileVersion"]" Value="@Display(Snapshot.Artifact.FileVersion)" />
                 <ArtifactCell Label="@L["Page:Sections:Artifact:ArtifactTimestamp"]" Value="@SystemInfoDisplayFormatter.FormatDateTime(Snapshot.Artifact.ArtifactTimestampUtc, CultureInfo.CurrentCulture)" />
                 <ArtifactCell Label="@L["Page:Sections:Artifact:Company"]" Value="@Display(Snapshot.Artifact.CompanyName)" />
@@ -144,19 +125,23 @@
 @code {
     private static readonly DossierSection[] Sections =
     [
-        new("01", "runtime-section", "Page:Sections:Runtime:Title", Icons.Material.Filled.Speed),
-        new("02", "environment-section", "Page:Sections:Environment:Title", Icons.Material.Filled.Fingerprint),
-        new("03", "endpoints-section", "Page:Sections:Endpoints:Title", Icons.Material.Filled.SettingsInputAntenna),
-        new("04", "artifact-section", "Page:Sections:Artifact:Title", Icons.Material.Filled.Inventory2)
+        new("01", "runtime-section", "Page:Sections:Runtime:Title"),
+        new("02", "environment-section", "Page:Sections:Environment:Title"),
+        new("03", "endpoints-section", "Page:Sections:Endpoints:Title"),
+        new("04", "artifact-section", "Page:Sections:Artifact:Title")
     ];
 
     [Parameter, EditorRequired] public SystemInfoSnapshot Snapshot { get; set; } = null!;
 
     private string _selectedSection = Sections[0].Id;
 
-    private string ProcessArchitecture => L[Snapshot.Process.Is64BitProcess
+    private string ProcessArchitecture => $"{Snapshot.Process.Architecture} · {L[Snapshot.Process.Is64BitProcess
         ? "Page:Sections:Runtime:Values:Process64Bit"
-        : "Page:Sections:Runtime:Values:Process32Bit"].Value;
+        : "Page:Sections:Runtime:Values:Process32Bit"]}";
+
+    private string OperatingSystemBitness => L[Snapshot.Process.Is64BitOperatingSystem
+        ? "Page:Sections:Environment:Values:System64Bit"
+        : "Page:Sections:Environment:Values:System32Bit"].Value;
 
     private string Privilege => L[Snapshot.Process.IsPrivileged
         ? "Page:Sections:Runtime:Values:Privileged"
@@ -171,6 +156,9 @@
         : $"{Snapshot.Host.UserDomainName}\\{Snapshot.Host.UserName}";
 
     private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+    private Task NavigateFromSelectAsync(ChangeEventArgs args) =>
+        NavigateToSectionAsync(args.Value?.ToString() ?? Sections[0].Id);
 
     private async Task NavigateToSectionAsync(string section)
     {
@@ -191,5 +179,5 @@
             new DialogOptions { CloseOnEscapeKey = true, FullWidth = true, MaxWidth = MaxWidth.Small });
     }
 
-    private sealed record DossierSection(string Number, string Id, string TitleKey, string Icon);
+    private sealed record DossierSection(string Number, string Id, string TitleKey);
 }

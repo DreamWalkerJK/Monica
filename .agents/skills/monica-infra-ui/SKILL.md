@@ -10,6 +10,7 @@ The shell hosts pages; feature UI modules add operational views, while Markdown 
 | Task | Read |
 | --- | --- |
 | Compose the shell, add feature pages, configure navigation, or authorize operational pages | [Shell and access](references/shell-and-access.md) |
+| Inspect host identity, process evidence, startup timing, or configured operational links | [System information](references/system-information.md) |
 | Publish searchable documents, use the viewer, or serve local images | [Markdown](references/markdown.md) |
 | Set theme/language defaults or integrate custom page localization | [Theme and localization](references/theme-and-localization.md) |
 
