@@ -112,7 +112,7 @@ Rules:
 
 ## Domain Event
 
-Use domain events to describe meaningful business facts.
+Use domain events to describe meaningful business facts or shared application notifications. Follow the authoritative [event naming and placement rules](01-project-unit-naming-and-boundaries.md), including for technical envelopes.
 
 ```csharp
 using Monica.EventBus.Events;
@@ -139,3 +139,5 @@ Rules:
 - Keep event payloads stable, serializable, and focused on what consumers need.
 - Do not expose the full entity graph in an event.
 - Apply the same temporal meaning to events: `DateTime` is a timezone-free wall-clock value, while `DateTimeOffset` represents an instant or explicit offset.
+- Add delivery metadata such as `[Outbox]` using the persistence skill's [transactional-event guidance](../../monica-infra-persistence/references/transactional-events.md); delivery configuration does not replace the event's base class, metadata, or placement.
+- When renaming or relocating an existing contract, inspect its declared event name and every explicit topic override. Preserve deployed topic identities deliberately rather than allowing a CLR-name change to rename the transport contract.

@@ -11,14 +11,16 @@ The current Monica project-unit discovery logic recognizes these core patterns:
 | `DomainService` | `DomainService` | `Domain*` | Reusable domain logic that spans multiple entities or workflows |
 | `Entity` | `Entity<TKey>` or `Entity` plus `IEntity` | Place under `Entities/` | Own state, invariants, and behavior |
 | `Repository` | `IRepository<TEntity>` or `IRepository<TEntity, TKey>` plus implementation | `IRepository*` and `Repository*` | Persistence access for one aggregate or entity family |
-| `DomainEvent` | `DomainEvent` or `IDomainEvent` | `Event*` | A business fact worth publishing or reacting to |
-| `DomainEventHandler` | `DomainEventHandler<TEvent>` or `IDistributedEventHandler<TEvent>` | `DomainEventHandler*` | React to distributed events |
-| `LocalEventHandler` | `LocalEventHandler<TEvent>` or `ILocalEventHandler<TEvent>` | `LocalEventHandler*` | React to in-process events |
+| `DomainEvent` | `DomainEvent` | `Event*` | An application fact or shared notification contract worth publishing or reacting to |
+| `DomainEventHandler` | `DomainEventHandler<TEvent>` | `DomainEventHandler*` | React to distributed events |
+| `LocalEventHandler` | `LocalEventHandler<TEvent>` | `LocalEventHandler*` | React to in-process events |
 | `Configuration` | `[Configuration]` class | `*Options` | Typed runtime configuration |
 | `RecurringJob` | `RecurringJob` | `Worker*` | Scheduled background work |
 | `TriggeredJob` | `TriggeredJob<TArgs>` | `Job*` | On-demand asynchronous work |
 
 For concrete folder placement in microservice and modular-monolith layouts, use [01-project-unit-naming-and-boundaries.md](01-project-unit-naming-and-boundaries.md).
+
+The framework also recognizes `IDomainEvent`, `IDistributedEventHandler<TEvent>`, and `ILocalEventHandler<TEvent>` implementations. The table selects the base classes used by application units; transport-level interface support does not replace those conventions.
 
 ## Agent Context Contract
 

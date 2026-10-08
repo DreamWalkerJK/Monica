@@ -13,6 +13,8 @@ Use this skill for unit-level application development in Monica-based DDD projec
 
 Choose the owning subdomain and project with `$monica-application-microservice` or `$monica-application-modular-monolith`. Use [unit overview](references/00-project-unit-overview.md) and [composition map](references/02-project-unit-composition-map.md) when the feature's units are unclear; load only the matching unit example below. Keep rich entity behavior in the domain and orchestration in handlers.
 
+When adding or refactoring application EventBus events and consumers, including outbox or inbox adoption, load the [event contract](references/12-entity-request-event-template.md) and [handler](references/14-event-handler-template.md) templates before changing their delivery configuration.
+
 ## Ground Rules
 
 - Use Monica-native base classes and interfaces only. Do not introduce `Our*` wrappers or FIPS-specific conventions.

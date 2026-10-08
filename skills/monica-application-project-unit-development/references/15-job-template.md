@@ -4,7 +4,7 @@
 
 - Work should run on a schedule.
 - Work should be triggered asynchronously with typed parameters.
-- The business logic is long-running or retriable enough that it should not stay inside an event handler or request handler.
+- Work needs its own execution policy, operator control, or execution history.
 
 ## Rules
 

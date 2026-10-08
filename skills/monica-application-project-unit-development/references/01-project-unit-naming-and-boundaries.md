@@ -48,6 +48,8 @@ Use the same leaf folder semantics across solution styles. Keep folders flat and
 | `Configuration` | `{Subdomain}Service.Domain/Configurations/` | `Domains/{Subdomain}/Configurations/` |
 | `Utility` helper | `{Subdomain}Service.Domain/Utilities/` | `Domains/{Subdomain}/Utilities/` |
 
+Application EventBus contracts, including shared technical envelopes, use `Event*` names and inherit `Monica.EventBus.Events.DomainEvent`. Place them in the owning published language's `Events/` folder, separate from domain implementation and persistence entities. Generic synchronization envelopes belong to the solution's shared system published language; business-specific facts belong to their business subdomain. Open generic contract types are excluded from ProjectUnit discovery.
+
 ## Folder Scanability Rules
 
 - Prefer prefix naming inside a folder instead of adding sub-folders with one or two files.
