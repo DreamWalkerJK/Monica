@@ -33,6 +33,8 @@ Indicators:
 
 Fix: use MudBlazor overlay primitives and inspect their exact source and runtime keyboard behavior. Add the missing focus/dismissal contract at the owning component where required, with trapping mounted only while open. Simple native buttons, links, and status-filter controls are valid; this category concerns overlay behavior, not all native interactive markup. Reference implementation: `NavBarDropdown.razor`, `NavBarMore.razor` in `Monica.UI/Shell/Components/Layout/`. See the shared [interaction guidance](../../monica-ui-development/references/monica-workbench-design-language.md#preserve-interaction-and-runtime-state).
 
+For a controlled native input with a separate reset action, verify both displayed text and the filtered model. Clear must empty the actual input, restore the results, and allow that same query to be entered again. Check pending debounce as well as settled input; row counts alone do not prove correct native control ownership. See [component communication](../../monica-ui-development/references/blazor-best-practices.md#13-component-communication) for the native reset path.
+
 ### P2 — Broken layout containment, sizing, or scroll ownership
 
 Indicators:

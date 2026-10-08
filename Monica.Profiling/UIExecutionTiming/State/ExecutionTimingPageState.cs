@@ -6,26 +6,76 @@ using Monica.Profiling.ExecutionTiming.Models;
 
 namespace Monica.Profiling.UIExecutionTiming.State;
 
+/// <summary>
+/// Owns a rendered page's retained timing snapshot and polling loop, not the host's measurements.
+/// </summary>
+/// <remarks>
+/// Only one refresh is admitted at a time. Both facade reads must succeed before either list and its
+/// capture time are replaced. Disposal drains admitted work; late calls are inert and cannot restart polling.
+/// </remarks>
+/// <param name="executionTimingFacade">The host-owned timing diagnostics facade.</param>
+/// <param name="options">The page's polling configuration.</param>
+/// <param name="timeProvider">The page clock, or the system clock when none is registered.</param>
 public sealed class ExecutionTimingPageState(
     ExecutionTimingFacade executionTimingFacade,
-    IOptions<ModuleExecutionTimingUIOption> options)
+    IOptions<ModuleExecutionTimingUIOption> options,
+    TimeProvider? timeProvider = null)
     : IAsyncDisposable
 {
-    private readonly ModuleExecutionTimingUIOption _option = options.Value;
+    /// <summary>Creates page-owned state using the system clock.</summary>
+    /// <param name="facade">The host-owned timing diagnostics facade.</param>
+    /// <param name="configuration">The page polling configuration.</param>
+    public ExecutionTimingPageState(ExecutionTimingFacade facade, IOptions<ModuleExecutionTimingUIOption> configuration)
+        : this(facade, configuration, null)
+    {
+    }
+
+    private readonly object _sync = new();
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private readonly SemaphoreSlim _transitionGate = new(1, 1);
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     private CancellationTokenSource? _refreshCancellation;
     private Task _refreshLoop = Task.CompletedTask;
+    private Task? _disposeTask;
     private bool _disposed;
 
+    /// <summary>Notifies subscribers after a live page's loading, snapshot or polling state changes.</summary>
     public event Action? StateChanged;
 
+    /// <summary>Gets the completed statistics from the latest successful pair of reads.</summary>
     public IReadOnlyList<ExecutionTimingStatistics> Statistics { get; private set; } = [];
 
+    /// <summary>Gets running invocation evidence from the latest successful pair of reads.</summary>
     public IReadOnlyList<RunningExecutionTimingInfo> RunningOperations { get; private set; } = [];
 
+    /// <summary>Gets whether an admitted facade read is in progress.</summary>
     public bool IsLoading { get; private set; }
 
-    public bool AutoRefresh { get; private set; } = true;
+    /// <summary>Gets whether at least one pair of reads succeeded, including a genuinely empty snapshot.</summary>
+    public bool HasSnapshot { get; private set; }
 
+    /// <summary>Gets the UTC page-clock time after the latest successful pair of reads.</summary>
+    public DateTimeOffset? SnapshotCapturedAt { get; private set; }
+
+    /// <summary>
+    /// Gets the latest actual read failure. Null means no outstanding failure; an empty message is still a failure.
+    /// A failed refresh retains both lists and their capture time until a later success clears the error.
+    /// </summary>
+    public string? LoadError { get; private set; }
+
+    /// <summary>Gets the configured page polling interval. Non-positive values require manual refresh.</summary>
+    public int RefreshIntervalMs { get; } = options.Value.AutoRefreshIntervalMs;
+
+    /// <summary>Gets whether this page's configuration permits timer-based refresh.</summary>
+    public bool CanAutoRefresh => RefreshIntervalMs > 0;
+
+    /// <summary>Gets the effective polling preference; manual-only pages always return false.</summary>
+    public bool AutoRefresh { get; private set; } = options.Value.AutoRefreshIntervalMs > 0;
+
+    /// <summary>
+    /// Captures current evidence and starts configured polling. A busy or disposed page returns Conflict
+    /// with an empty message; it does not change the retained snapshot or error.
+    /// </summary>
     public async Task<Res> InitializeAsync()
     {
         var result = await RefreshAsync();
@@ -33,96 +83,187 @@ public sealed class ExecutionTimingPageState(
         return result;
     }
 
-    public async Task SetAutoRefreshAsync(bool value)
+    /// <summary>
+    /// Serializes polling transitions. Pausing preserves the snapshot and does not stop host measurements.
+    /// Enabling a manual-only or disposed page is inert.
+    /// </summary>
+    public Task SetAutoRefreshAsync(bool value) => UpdateAutoRefreshAsync(value);
+
+    /// <summary>
+    /// Captures both timing lists without changing the polling preference. Concurrent or disposed calls
+    /// return Conflict with an empty message. Actual query failures retain the previous successful snapshot.
+    /// </summary>
+    public Task<Res> RefreshAsync() => Task.FromResult(Refresh());
+
+    /// <summary>
+    /// Stops and drains the page loop and any admitted read. Repeated calls share the same completion.
+    /// The facade and host-owned timing collector remain available to other pages.
+    /// </summary>
+    public ValueTask DisposeAsync()
     {
-        if (AutoRefresh == value)
+        lock (_sync)
         {
-            return;
+            if (_disposeTask is null)
+            {
+                _disposed = true;
+                AutoRefresh = false;
+                IsLoading = false;
+                _disposeTask = DisposeCoreAsync();
+            }
+
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private Res Refresh(CancellationToken pollingCancellation = default)
+    {
+        lock (_sync)
+        {
+            if (_disposed || pollingCancellation.IsCancellationRequested || !_refreshGate.Wait(0))
+            {
+                return InactiveResult();
+            }
+
+            IsLoading = true;
         }
 
-        AutoRefresh = value;
-        await UpdateAutoRefreshAsync();
-        NotifyStateChanged();
-    }
-
-    public Task<Res> RefreshAsync()
-    {
-        return RunAsync(() => Task.FromResult(LoadData()));
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_disposed)
+        try
         {
-            return;
+            NotifyStateChanged();
+            return LoadData(pollingCancellation);
+        }
+        finally
+        {
+            lock (_sync)
+            {
+                if (!_disposed)
+                {
+                    IsLoading = false;
+                }
+            }
+
+            _refreshGate.Release();
+            NotifyStateChanged();
+        }
+    }
+
+    private Res LoadData(CancellationToken pollingCancellation)
+    {
+        lock (_sync)
+        {
+            // A loading subscriber can retire the page before the first synchronous query begins.
+            if (_disposed || pollingCancellation.IsCancellationRequested)
+            {
+                return InactiveResult();
+            }
         }
 
-        _disposed = true;
-        await StopRefreshLoopAsync();
-        StateChanged = null;
-    }
-
-    private Res LoadData()
-    {
         var statisticsResult = executionTimingFacade.GetStatistics();
         if (statisticsResult.IsFailed(out var statisticsError, out var statistics))
         {
-            return Res.Fail(statisticsError.Message ?? "Failed to load execution timing statistics.");
+            return RetainFailure(statisticsError, pollingCancellation);
+        }
+
+        lock (_sync)
+        {
+            if (_disposed || pollingCancellation.IsCancellationRequested)
+            {
+                return InactiveResult();
+            }
         }
 
         var runningResult = executionTimingFacade.GetRunningOperations();
         if (runningResult.IsFailed(out var runningError, out var runningOperations))
         {
-            return Res.Fail(runningError.Message ?? "Failed to load running execution timing operations.");
+            return RetainFailure(runningError, pollingCancellation);
         }
 
-        Statistics = statistics;
-        RunningOperations = runningOperations;
-        return Res.Ok();
+        lock (_sync)
+        {
+            if (_disposed || pollingCancellation.IsCancellationRequested)
+            {
+                return InactiveResult();
+            }
+
+            // These are two diagnostic reads, not an atomic collector transaction.
+            var capturedAt = _timeProvider.GetUtcNow();
+            Statistics = statistics;
+            RunningOperations = runningOperations;
+            SnapshotCapturedAt = capturedAt;
+            HasSnapshot = true;
+            LoadError = null;
+            return Res.Ok();
+        }
     }
 
-    private async Task<Res> RunAsync(Func<Task<Res>> action)
+    private Res RetainFailure(Res error, CancellationToken pollingCancellation)
     {
-        if (IsLoading)
+        lock (_sync)
         {
-            return Res.Fail("The execution timing page is already busy.");
+            if (_disposed || pollingCancellation.IsCancellationRequested)
+            {
+                return InactiveResult();
+            }
+
+            LoadError = error.Message ?? string.Empty;
+            return error;
         }
+    }
 
-        IsLoading = true;
-        NotifyStateChanged();
-
+    private async Task UpdateAutoRefreshAsync(bool? requestedValue = null)
+    {
+        await _transitionGate.WaitAsync();
         try
         {
-            return await action();
+            lock (_sync)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                if (requestedValue.HasValue)
+                {
+                    AutoRefresh = requestedValue.Value && CanAutoRefresh;
+                }
+            }
+
+            NotifyStateChanged();
+
+            if (!AutoRefresh)
+            {
+                await StopRefreshLoopAsync();
+                return;
+            }
+
+            lock (_sync)
+            {
+                if (!_disposed && _refreshCancellation is null)
+                {
+                    _refreshCancellation = new CancellationTokenSource();
+                    _refreshLoop = RunRefreshLoopAsync(_refreshCancellation.Token);
+                }
+            }
         }
         finally
         {
-            IsLoading = false;
-            NotifyStateChanged();
+            _transitionGate.Release();
         }
-    }
-
-    private async Task UpdateAutoRefreshAsync()
-    {
-        await StopRefreshLoopAsync();
-
-        if (!AutoRefresh || _option.AutoRefreshIntervalMs <= 0)
-        {
-            return;
-        }
-
-        _refreshCancellation = new CancellationTokenSource();
-        _refreshLoop = RunRefreshLoopAsync(_refreshCancellation.Token);
     }
 
     private async Task RunRefreshLoopAsync(CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(_option.AutoRefreshIntervalMs));
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(RefreshIntervalMs), _timeProvider);
         try
         {
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
-                await RefreshAsync();
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                Refresh(cancellationToken);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -130,18 +271,17 @@ public sealed class ExecutionTimingPageState(
         }
     }
 
+    // Only the serialized transition owner calls this method. The loop never acquires that gate.
     private async Task StopRefreshLoopAsync()
     {
         var cancellation = _refreshCancellation;
+        var refreshLoop = _refreshLoop;
         _refreshCancellation = null;
         cancellation?.Cancel();
 
         try
         {
-            await _refreshLoop;
-        }
-        catch (OperationCanceledException)
-        {
+            await refreshLoop;
         }
         finally
         {
@@ -150,11 +290,36 @@ public sealed class ExecutionTimingPageState(
         }
     }
 
-    private void NotifyStateChanged()
+    private async Task DisposeCoreAsync()
     {
-        if (!_disposed)
+        await _transitionGate.WaitAsync();
+        try
         {
-            StateChanged?.Invoke();
+            await StopRefreshLoopAsync();
+        }
+        finally
+        {
+            _transitionGate.Release();
+        }
+
+        await _refreshGate.WaitAsync();
+        _refreshGate.Release();
+        lock (_sync)
+        {
+            StateChanged = null;
         }
     }
+
+    private void NotifyStateChanged()
+    {
+        lock (_sync)
+        {
+            if (!_disposed)
+            {
+                StateChanged?.Invoke();
+            }
+        }
+    }
+
+    private static Res InactiveResult() => Res.Fail(string.Empty, ResStatus.Conflict);
 }

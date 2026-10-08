@@ -19,7 +19,7 @@ Prefer a smaller fix for ordinary card/content overflow. For example, a System I
 ## Non-Negotiable Rules
 
 1. Do not hard-code visible substrings such as `InstanceId[..8] + "..."` for layout. Render the full value and let CSS ellipsis control the visible text.
-2. Put full values in `MudTooltip` when clipping is possible.
+2. Provide full-value access when clipping is possible. Use `MudTooltip` for concise values, or an explicitly named, keyboard-accessible native inspector for long technical identities. Keep the exact encoded value in the rendered data and search contract.
 3. Use scoped `.razor.css`; do not add broad/global CSS for one table.
 4. Keep visuals theme-first. Use MudBlazor defaults and `var(--mud-palette-*)`; do not introduce gradients, custom colors, fonts, or decorative effects for a layout fix.
 5. Avoid new shared copy components or broad copy affordances unless the user explicitly asks. If copy is requested, keep it targeted and MudBlazor-native.
@@ -30,6 +30,10 @@ For a full page redesign, use the shared [working-interface language](monica-wor
 ## Verify the actual responsive threshold
 
 Read `MudTableBase.cs`, `Styles/components/_table.scss`, and `Styles/abstracts/_variables.scss` in the installed MudBlazor source before aligning local cell CSS with `Breakpoint`. In v9.0.0, `Breakpoint.Xs` emits `mud-xs-table`, which stacks at `max-width: 600px`; `Breakpoint.Sm` emits `mud-sm-table`, which stacks at `960px`. Match stacked spacing, `DataLabel` behavior, and first-cell treatment to that actual threshold, and verify immediately above and below it. Selecting `Sm` does not mean the table will remain a column table until 600px.
+
+When converting column rows to a stacked grid, reset the wide cell-width contract with matching selector specificity. A class-specific `width: 37%` can beat a generic narrow `tbody td { width: auto; }`, leaving the identity inside a thin strip even when its grid cell spans the full row. Inspect computed cell widths and the actual text-to-row insets after reflow; a page with no overflow can still waste most of its usable width. Retain visible measurement-group labels when hiding the wide header, especially when several groups reuse captions such as Mean/Latest or contain unavailable values.
+
+Bound opaque machine-key previews with CSS when their provenance would dominate working rows; preserve the full searchable value and expose exact identity in the inspector. Do not cap meaningful descriptions or replace identities with shortened string data. Inspect populated host records rather than assuming friendly fixture keys represent real metadata density.
 
 ## MudTable CSS-Grid Layout
 
@@ -154,8 +158,8 @@ Before acceptance or PR:
 2. Open the page at normal width and inspect both scroll dimensions at the intended owner; confirm there is no unwanted horizontal or vertical scrollbar.
 3. Resize narrower, including immediately above and below the actual table breakpoint, and confirm true overflow scroll appears only in its designated region when necessary.
 4. Confirm long key/name/ID values show ellipsis, not overlap.
-5. Hover clipped values and confirm the full value appears in `MudTooltip`.
-6. Confirm operational columns remain readable: cron, next/last time, status, duration, actions.
+5. Confirm clipped values have full-value access through `MudTooltip` or the named keyboard-accessible inspector; verify actual technical identities, not only short fixture values.
+6. Confirm operational columns remain readable: cron, next/last time, status, duration, actions. Inspect native filter/order controls too: the actual selected value must retain its meaning and direction at the narrowest owner in each theme, rather than merely fitting the outer control. A theme's larger input type can require a scoped compact font or a shorter localized label.
 7. Confirm badges, icons, plain text, and actions align on one visual row.
 8. Check empty states for centered full-width messages.
 9. Save screenshots for populated and empty/narrow cases when the task is UI-facing.

@@ -1,15 +1,108 @@
 {
-  "Pages": { "ExecutionTiming": { "Title": "执行耗时" } },
-  "Page": {
-    "Eyebrow": "运行时插桩",
-    "Subtitle": "检查正在执行的操作，并对比延迟、频率与内存分配证据。",
-    "Status": { "Live": "实时采样", "Paused": "采样已暂停" },
-    "Actions": { "AutoRefresh": "自动刷新", "Refresh": "刷新证据" },
-    "Messages": { "RefreshFailed": "刷新执行耗时证据失败。" }
+  "Pages": {
+    "ExecutionTiming": {
+      "Title": "执行耗时"
+    }
   },
-  "Summary": { "AriaLabel": "执行耗时摘要", "Running": "正在运行", "Operations": "操作类型", "Samples": "已记录样本", "Average": "平均延迟" },
-  "Running": { "Eyebrow": "活动跨度", "Title": "执行中的操作", "Empty": "当前没有正在运行的操作。" },
-  "Statistics": { "Eyebrow": "聚合证据", "Title": "已完成操作统计", "Empty": "尚未记录已完成的耗时样本。" },
-  "Columns": { "Name": "操作", "Description": "说明", "StartedAt": "开始时间", "CurrentDuration": "当前延迟", "RunningFor": "运行时长", "Executions": "执行次数", "AverageDuration": "平均延迟", "LastDuration": "最近延迟", "Rate": "每分钟", "AverageMemory": "平均分配", "LastMemory": "最近分配", "LastRecordedAt": "最后观测" },
-  "Common": { "Count": "{0} 条记录", "Unavailable": "—" }
+  "Page": {
+    "Eyebrow": "运行时 / 耗时证据",
+    "Subtitle": "查找高耗时的操作标识，检查当前主机捕获的执行证据。",
+    "Status": {
+      "Live": "自动刷新 · {0} 秒",
+      "Paused": "视图已暂停",
+      "Manual": "仅手动刷新"
+    },
+    "Actions": {
+      "AutoRefresh": "自动刷新",
+      "Refresh": "刷新证据"
+    },
+    "Captured": "捕获于",
+    "Loading": "正在读取本地耗时证据…",
+    "Messages": {
+      "RefreshFailed": "无法刷新耗时证据。",
+      "Retained": "保留最近一次成功的快照。可刷新后重试。",
+      "NoSnapshot": "尚无成功获取的快照。"
+    }
+  },
+  "Summary": {
+    "AriaLabel": "完整快照的耗时范围",
+    "Running": "捕获时执行中",
+    "Operations": "已完成操作标识",
+    "Samples": "已完成样本",
+    "Average": "各标识均值的平均值",
+    "AverageBasis": "每个操作标识具有相同权重。",
+    "Scope": "当前主机的累计证据。暂停视图不会暂停记录。"
+  },
+  "Statistics": {
+    "Eyebrow": "已完成 / 排序证据",
+    "Title": "操作耗时目录",
+    "Empty": "尚无已完成样本。",
+    "EmptyHelp": "通过 Monica 执行管线测量的业务操作将在完成后显示。",
+    "Search": "查找操作",
+    "SearchPlaceholder": "名称或完整操作标识",
+    "Ordering": {
+      "Mean": "平均耗时降序",
+      "Latest": "最近耗时降序",
+      "Samples": "样本数量降序",
+      "Identity": "完整标识 · A–Z"
+    },
+    "DurationPair": "耗时",
+    "FrequencyPair": "完成记录",
+    "AllocationPair": "分配记录",
+    "RelativeMean": "平均耗时为当前快照最大标识均值的 {0}%。",
+    "ComparisonHelp": "横条以完整快照中最大的标识平均耗时为基准进行对比。",
+    "RateHelp": "频率为首次完成以来每分钟的累计完成数；分母至少为一分钟。",
+    "Pagination": "已完成操作分页"
+  },
+  "Running": {
+    "Eyebrow": "执行中 / 已捕获实例",
+    "Title": "进行中的执行",
+    "Empty": "捕获时没有执行中的实例。",
+    "Search": "查找已捕获的执行实例",
+    "AgeBasis": "捕获时的运行时长",
+    "CapturedHelp": "实例列表及运行时长均属于本次捕获。暂停视图时仍继续记录。",
+    "Pagination": "已捕获执行实例分页"
+  },
+  "Columns": {
+    "Name": "操作标识",
+    "Description": "说明",
+    "StartedAt": "开始时间",
+    "RunningFor": "捕获时长",
+    "Executions": "样本",
+    "AverageDuration": "平均",
+    "LastDuration": "最近",
+    "Rate": "累计 / 分钟",
+    "AverageMemory": "平均",
+    "LastMemory": "最近",
+    "LastRecordedAt": "最近完成时间"
+  },
+  "Details": {
+    "CompletedTitle": "已完成操作证据",
+    "RunningTitle": "已捕获执行实例证据",
+    "CaptureHelp": "数值来自成功获取的页面快照：",
+    "DisplayName": "显示名称",
+    "OperationKey": "完整操作标识",
+    "InvocationId": "执行实例 ID",
+    "FirstRecordedAt": "首次完成时间",
+    "AllocationHelp": "分配数据是可选记录的证据。不可用与零不同；收集器不提供已跟踪样本的分母。",
+    "MeanDuration": "平均耗时",
+    "LatestDuration": "最近耗时",
+    "MeanAllocation": "平均内存分配",
+    "LatestAllocation": "最近内存分配",
+    "RecordedMilliseconds": "记录值：{0} 毫秒",
+    "RecordedBytes": "记录值：{0} 字节",
+    "OpenFailed": "无法打开证据详情。"
+  },
+  "Common": {
+    "Unavailable": "—",
+    "VisibleCount": "{0} / {1} 条记录",
+    "Order": "排序方式",
+    "Clear": "清除搜索",
+    "Details": "详情",
+    "Inspect": "查看 {0}",
+    "Close": "关闭",
+    "NoMatches": "没有匹配的证据。",
+    "NoMatchesHelp": "修改或清除查询以查看已捕获记录。",
+    "PageRange": "第 {0}–{1} 条，共 {2} 条"
+  }
 }

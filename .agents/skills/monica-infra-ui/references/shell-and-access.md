@@ -1,5 +1,7 @@
 # Compose the shell and protect feature pages
 
+For a custom page's native modal, `Monica.UI.Shared.Components.Dialogs.MoDialogHeading` supplies a visible localized heading and names the enclosing dialog when placed in `TitleContent`. Pass the page's localized `Text`; the shell's normal dialog provider retains focus and dismissal ownership. See [native dialog heading authoring](../../monica-ui-development/references/blazor-best-practices.md#14-native-dialog-headings) for component and local-asset lifetime requirements rather than copying feature-specific interop into the host.
+
 Use a Web host. Register selected feature UI modules in `AddMonica(...)`, then complete the same application's lifecycle with `UseMonica()` and `MapMonica()` so the shell can map static assets, antiforgery, Razor components, feature endpoints, and additional page assemblies. `AddUIShell()` installs interactive server services, MudBlazor, browser storage, theme and navigation preference state, and the startup page catalog; feature UI modules contribute their pages.
 
 ```csharp

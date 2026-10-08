@@ -24,6 +24,14 @@ This document defines best practices for developing Blazor UI in the Monica fram
 - Use EventCallback for child-to-parent events
 - Use state containers for complex state management
 
+When a page resets a debounced native input, reset the input owner as well as the filtered model. In MudBlazor 9, `MudTextField.ClearAsync()` through a component reference clears its internal text/value path; changing only a parent query can restore rows while leaving stale text visible. Native browser checks must assert both the actual input value and the restored results, re-enter the identical query, and cover clearing a pending debounce, rather than treating row counts alone as a successful reset.
+
+### 1.4 Native Dialog Headings
+
+Use `Monica.UI.Shared.Components.Dialogs.MoDialogHeading` inside a native `MudDialog`'s `TitleContent` when the modal needs a localized accessible name. Supply the caller's localized `Text`; optional `Class` adds presentation classes. The normal Monica shell supplies the native dialog provider. Keep dialog focus, Escape, backdrop and result handling with MudBlazor.
+
+In MudBlazor 9, `MudDialog.UserAttributes` are applied to its content rather than the enclosing `role="dialog"` owner. Putting `aria-label` on that component does not name the modal. `MoDialogHeading` mounts a unique visible heading, then its local module assigns `aria-labelledby` and `aria-modal` to the nearest native dialog after render. It owns and drains its import/use/disposal, including a late import after retirement; it does not mutate DOM during disposal or create callbacks. Verify the outer dialog's localized accessible name and native focus restoration in the browser.
+
 ## 2. Lifecycle Best Practices
 
 ### 2.1 Separate Data Initialization from DOM-Dependent JS Interop

@@ -1,0 +1,87 @@
+@using Monica.Profiling.ExecutionTiming.Models
+@inject IStringLocalizer<ExecutionTimingResource> L
+
+<section class="timing-running timing-evidence-panel">
+    <header class="timing-panel-heading">
+        <div><span class="timing-panel-eyebrow">@L["Running:Eyebrow"]</span><h2>@L["Running:Title"]</h2></div>
+        <span class="timing-result-count">@L["Common:VisibleCount", Matches.Count, Operations.Count]</span>
+    </header>
+    @if (Operations.Count != 0)
+    {
+        <div class="timing-running-search"><MudTextField T="string" @ref="_searchField" Value="_query" ValueChanged="SearchChanged" Immediate="true"
+            DebounceInterval="180" Label="@L["Running:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+            Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+            @if (_query.Length != 0) { <MudButton Variant="Variant.Text" OnClick="ClearSearchAsync">@L["Common:Clear"]</MudButton> }
+        </div>
+    }
+    @if (Matches.Count != 0)
+    {
+        <div class="timing-active-list">
+            @foreach (var operation in Matches.Skip((_page - 1) * PageSize).Take(PageSize))
+            {
+                <article class="timing-active-operation" @key="operation.InvocationId" data-invocation-id="@operation.InvocationId">
+                    <div class="timing-active-identity">
+                        @if (!string.Equals(operation.DisplayName, operation.OperationKey, StringComparison.Ordinal))
+                        {
+                            <strong>@operation.DisplayName</strong>
+                        }
+                        <code title="@operation.OperationKey">@operation.OperationKey</code>
+                        <span class="timing-invocation-id">@L["Details:InvocationId"] <code>@operation.InvocationId</code></span>
+                        <p>@(operation.Description ?? L["Common:Unavailable"])</p>
+                    </div>
+                    <div class="timing-active-age"><span>@L["Columns:RunningFor"]</span>
+                        <strong>@ExecutionTimingDisplayFormatter.FormatRunningDuration(operation, CapturedAt)</strong>
+                        <small>@L["Running:AgeBasis"]</small></div>
+                    <MudIconButton Icon="@Icons.Material.Outlined.ArrowForward" Color="Color.Primary" Size="Size.Small"
+                                   aria-label="@L["Common:Inspect", operation.InvocationId]"
+                                   OnClick="@(() => OnInspect.InvokeAsync(new TimingRunningEvidence(operation, CapturedAt)))" />
+                </article>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="timing-running-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" Size="Size.Small" />
+            <span>@(Operations.Count == 0 ? L["Running:Empty"] : L["Common:NoMatches"])</span></div>
+    }
+    <footer class="timing-running-footer"><span>@L["Running:CapturedHelp"]</span>
+        @if (PageCount > 1)
+        {
+            <MudPagination Count="@PageCount" Selected="_page" SelectedChanged="ChangePage" ShowFirstButton="true" ShowLastButton="true"
+                           Color="Color.Primary" Size="Size.Small" aria-label="@L["Running:Pagination"]" />
+        }
+    </footer>
+</section>
+
+@code {
+    /// <summary>Gets or sets all concrete invocations in the successful page capture.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<RunningExecutionTimingInfo> Operations { get; set; } = [];
+    /// <summary>Gets or sets the successful page capture used for invocation ages.</summary>
+    [Parameter, EditorRequired] public DateTimeOffset CapturedAt { get; set; }
+    /// <summary>Gets or sets the action that opens immutable captured invocation evidence.</summary>
+    [Parameter] public EventCallback<TimingRunningEvidence> OnInspect { get; set; }
+    private const int PageSize = 6;
+    private string _query = string.Empty;
+    private MudTextField<string>? _searchField;
+    private int _page = 1;
+    private IReadOnlyList<RunningExecutionTimingInfo> Matches
+    {
+        get
+        {
+            var terms = _query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return Operations.Where(item => terms.All(term => item.OperationKey.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || item.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || item.InvocationId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
+                || item.Description?.Contains(term, StringComparison.OrdinalIgnoreCase) == true)).ToArray();
+        }
+    }
+    private int PageCount => Math.Max(1, (Matches.Count + PageSize - 1) / PageSize);
+    protected override void OnParametersSet() => _page = Math.Clamp(_page, 1, PageCount);
+    private void SearchChanged(string value) { _query = value ?? string.Empty; _page = 1; }
+    private async Task ClearSearchAsync()
+    {
+        SearchChanged(string.Empty);
+        if (_searchField is not null) await _searchField.ClearAsync();
+    }
+    private void ChangePage(int value) => _page = Math.Clamp(value, 1, PageCount);
+}
