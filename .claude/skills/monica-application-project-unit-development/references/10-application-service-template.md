@@ -22,7 +22,7 @@
 - Use the inherited `Logger` in handler methods when logging is needed. Monica resolves it after activation from the
   host that owns the service instance; do not access it from a constructor.
 - Make the request implement `IResultRequest<TResponse>` or `IResultRequest`.
-- Query requests bound to a GET endpoint are read-only by convention and open no write transaction. Add Core [ReadOnlyOperation] only to read requests without a GET binding.
+- GET-bound queries use the Web API read convention and open no automatic write transaction. For a read without a GET binding, put `[ExecutionTransaction(ExecutionTransactionMode.None)]` on its concrete `Handle` method. Ordinary writes need no attribute; use the same method declaration for any transaction override or context selection, following the persistence [transaction contract](../../monica-infra-persistence/references/transactions.md).
 - Keep the handler thin. Push reusable rules into `DomainService` or the entity itself.
 - Catch exceptions only when you are adding boundary-specific context. Do not smother useful failures.
 - Put `[ApiEndpoint]` on the request type. It owns the HTTP method, request-specific route, binding source, and optional generated operation name.

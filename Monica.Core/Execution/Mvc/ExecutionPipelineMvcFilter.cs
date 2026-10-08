@@ -1,5 +1,4 @@
 using System.Runtime.ExceptionServices;
-using System.Reflection;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Http;
@@ -35,9 +34,7 @@ internal sealed class ExecutionPipelineMvcFilter(IExecutionPipeline executionPip
             controllerType,
             actionDescriptor.MethodInfo,
             isBusinessOperation: true,
-            transactionMode: (actionDescriptor.MethodInfo.GetCustomAttribute<ExecutionTransactionAttribute>(inherit: true)
-                ?? controllerType.GetCustomAttribute<ExecutionTransactionAttribute>(inherit: true))?.Mode
-                ?? (IsReadOnly(context, actionDescriptor) ? ExecutionTransactionMode.None : ExecutionTransactionMode.Automatic));
+            transactionMode: IsReadOnly(context) ? ExecutionTransactionMode.None : ExecutionTransactionMode.Automatic);
         var input = new MvcActionExecutionInput(
             context.HttpContext,
             context.Controller,
@@ -67,10 +64,8 @@ internal sealed class ExecutionPipelineMvcFilter(IExecutionPipeline executionPip
         return MvcActionExecutionResult.FromExecutedAction(context);
     }
 
-    private static bool IsReadOnly(ActionExecutingContext context, ControllerActionDescriptor action)
+    private static bool IsReadOnly(ActionExecutingContext context)
         => HttpMethods.IsGet(context.HttpContext.Request.Method)
             || HttpMethods.IsHead(context.HttpContext.Request.Method)
-            || HttpMethods.IsOptions(context.HttpContext.Request.Method)
-            || action.MethodInfo.IsDefined(typeof(ReadOnlyOperationAttribute), inherit: true)
-            || action.ControllerTypeInfo.IsDefined(typeof(ReadOnlyOperationAttribute), inherit: true);
+            || HttpMethods.IsOptions(context.HttpContext.Request.Method);
 }

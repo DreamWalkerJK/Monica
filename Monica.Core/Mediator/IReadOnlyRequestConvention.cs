@@ -7,8 +7,7 @@ namespace Monica.Core.Mediator;
 /// </summary>
 /// <remarks>
 /// Register stateless singleton implementations. A convention only supplies the default: an explicit
-/// <see cref="ReadOnlyOperationAttribute"/> or <see cref="ExecutionTransactionAttribute"/> on the request,
-/// its handler, or the handle method still decides the transaction mode first. Transport modules use
+/// <see cref="ExecutionTransactionAttribute"/> on the concrete handle method overrides it. Transport modules use
 /// conventions to derive read-only intent from metadata the request already carries, such as its
 /// endpoint binding, so both generated endpoints and direct <see cref="IMediator.Send{TResponse}"/> calls
 /// observe the same classification.

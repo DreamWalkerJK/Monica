@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Monica.Core.Execution;
 using Monica.Core.Modularity.Extensions;
 using Monica.DependencyInjection.Abstractions;
 using Monica.Modules;
@@ -9,7 +10,6 @@ using Monica.Repository.Persistence.Services;
 using Monica.Repository.Outbox.Models;
 using Monica.Repository.Inbox.Annotations;
 using Monica.Repository.Inbox.Models;
-using Monica.Repository.UnitOfWork.Annotations;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
 using Monica.EventBus.Annotations;
@@ -109,6 +109,53 @@ public sealed class SharedTransactionTests
         Assert.Single(await verify.ServiceProvider.GetRequiredService<SecondDbContext>().HardDeleteRows.ToListAsync(TestContext.Current.CancellationToken));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExecuteAsync_WhenMethodSelectsContext_ShouldUseSelectionUnlessScopeOptionsOverrideIt(bool overrideSelection)
+    {
+        var token = TestContext.Current.CancellationToken;
+        await using var first = new SqliteConnection("Data Source=:memory:");
+        await using var second = new SqliteConnection("Data Source=:memory:");
+        await first.OpenAsync(token);
+        await second.OpenAsync(token);
+        using var host = CreateHost(first, second, DbContextProviderType.Default);
+        await using (var setup = host.Services.CreateAsyncScope())
+        {
+            await setup.ServiceProvider.GetRequiredService<TestRepositoryDbContext>().Database.EnsureCreatedAsync(token);
+            await setup.ServiceProvider.GetRequiredService<SecondDbContext>().Database.EnsureCreatedAsync(token);
+        }
+        await using (var operation = host.Services.CreateAsyncScope())
+        {
+            var handler = new SelectedContextHandler(
+                operation.ServiceProvider.GetRequiredService<TestRepositoryDbContext>(),
+                operation.ServiceProvider.GetRequiredService<SecondDbContext>());
+            var descriptor = ExecutionDescriptor.ForMethod<ExecutionUnit, ExecutionUnit>(
+                new ExecutionPoint("test.context-selection"),
+                typeof(SelectedContextHandler),
+                typeof(SelectedContextHandler).GetMethod(nameof(SelectedContextHandler.ExecuteAsync)),
+                isBusinessOperation: true,
+                transactionMode: ExecutionTransactionMode.Automatic);
+            var features = new ExecutionFeatureCollection();
+            if (overrideSelection)
+            {
+                features.Set(new UnitOfWorkScopeOptions([typeof(TestRepositoryDbContext)]));
+            }
+            await operation.ServiceProvider.GetRequiredService<IExecutionPipeline>().ExecuteAsync(
+                descriptor,
+                ExecutionUnit.Value,
+                handler,
+                handler.ExecuteAsync,
+                token,
+                features);
+        }
+        await using var verify = host.Services.CreateAsyncScope();
+        Assert.Equal(overrideSelection ? 1 : 0, await verify.ServiceProvider.GetRequiredService<TestRepositoryDbContext>()
+            .HardDeleteRows.CountAsync(token));
+        Assert.Equal(overrideSelection ? 0 : 1, await verify.ServiceProvider.GetRequiredService<SecondDbContext>()
+            .HardDeleteRows.CountAsync(token));
+    }
+
     [Fact]
     public async Task RunAsync_WhenPrimaryWasFlushedFirst_ShouldFlushLaterParticipantProjectionOnOwner()
     {
@@ -198,18 +245,30 @@ public sealed class SharedTransactionTests
     {
         public DbSet<HardDeleteRow> HardDeleteRows => Set<HardDeleteRow>();
     }
+
+    private sealed class SelectedContextHandler(TestRepositoryDbContext first, SecondDbContext second)
+    {
+        [ExecutionTransaction(ExecutionTransactionMode.Automatic, DbContextTypes = new[] { typeof(SecondDbContext) })]
+        public Task ExecuteAsync()
+        {
+            first.Add(new HardDeleteRow { Title = "first" });
+            second.Add(new HardDeleteRow { Title = "second" });
+            return Task.CompletedTask;
+        }
+    }
 }
 
 [EventName("tests.shared-incoming.v1")]
 public sealed record SharedIncomingNotice(string Value);
 
 [Inbox("tests.shared-handler.v1")]
-[UnitOfWorkContext(typeof(TestRepositoryDbContext), typeof(SharedTransactionTests.SecondDbContext))]
 public sealed class SharedInboxHandler(
     TestRepositoryDbContext primary,
     SharedTransactionTests.SecondDbContext secondary,
     IDistributedEventBus bus) : IDistributedEventHandler<SharedIncomingNotice>
 {
+    [ExecutionTransaction(ExecutionTransactionMode.Automatic,
+        DbContextTypes = new[] { typeof(TestRepositoryDbContext), typeof(SharedTransactionTests.SecondDbContext) })]
     public async Task HandleEventAsync(SharedIncomingNotice eventData, CancellationToken cancellationToken)
     {
         primary.Add(new HardDeleteRow { Title = "primary:" + eventData.Value });
