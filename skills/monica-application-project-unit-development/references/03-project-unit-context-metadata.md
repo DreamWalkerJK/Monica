@@ -10,9 +10,15 @@ Resolve these facts from repository conventions and source requirements before w
 - `$RequirementId$`: a stable requirement identifier owned by the application or its workflow system.
 - `$SubdomainTag$`: the bounded context or subdomain tag.
 - `$FeatureTag$`: the capability or feature tag.
-- A concise title and one-sentence responsibility specific to this unit.
+- `$Title$` and `$Description$`: a concise title and one-sentence responsibility specific to this unit, in the catalog language below.
 
 If any fact cannot be discovered, ask one focused question. Do not invent ownership or requirement IDs.
+
+## Catalog Language
+
+Resolve the application's configured workspace language before writing human-readable metadata. It governs the title and `Description` even though the values are C# strings: `zh-CN` uses Chinese and `en-US` uses English. For Monica Workflow, read `language` in `.workflow/workspace.yml` or the resolved workspace context. If no workspace language is configured, follow the application's existing catalog convention. English requirements for conversation, code comments, XML documentation or framework guidance do not override the application catalog language.
+
+Keep `Owner`, tags, requirement IDs, namespaces and CLR type names stable. Localize the human title and responsibility without translating these identities.
 
 ## Annotation Pattern
 
@@ -20,9 +26,9 @@ If any fact cannot be discovered, ask one focused question. Do not invent owners
 using Monica.ProjectUnits.Annotations;
 
 [ProjectUnitMetadata(
-    "Approve Order",
+    "$Title$",
     Owner = "$Owner$",
-    Description = "Approves an eligible order.",
+    Description = "$Description$",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
 public sealed class CommandHandlerApproveOrder : ApplicationService<CommandApproveOrder>
