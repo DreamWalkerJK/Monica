@@ -107,7 +107,6 @@
       "RemainingStartup": "Remaining startup",
       "ActiveModules": "Active modules",
       "Declared": "{0} declared",
-      "DirectEdges": "{0} direct edges",
       "ServiceRegistration": "Service registration",
       "Exact": "Exact",
       "FinalCompositionInterval": "Final composition interval",
@@ -115,7 +114,6 @@
       "TypeDiscovery": "Type discovery",
       "Queries": "{0} distinct queries",
       "Matches": "{0} compiled matches",
-      "Findings": "Findings",
       "Errors": "{0} errors",
       "Warnings": "{0} warnings"
     },
@@ -163,11 +161,13 @@
       "TimelineRegion": "Interactive module composition timeline",
       "Selected": "Selected interval",
       "TableAlternative": "Interval table alternative",
-      "SpanDescription": "{0}; {1}; starts at {2}; ends at {3}; duration {4}."
+      "SpanDescription": "{0}; {1}; starts at {2}; ends at {3}; duration {4}.",
+      "SpanId": "Span ID"
     },
     "Contributors": {
       "Eyebrow": "SERIAL + STARTUP WORK",
-      "Title": "Top contributors"
+      "Title": "Top contributors",
+      "Empty": "No module contributions match these filters."
     },
     "Filters": {
       "Limit": "Rows",
@@ -202,7 +202,8 @@
       "Module": "Module",
       "WorkItem": "Work item",
       "Queue": "Queue",
-      "State": "State"
+      "State": "State",
+      "End": "End"
     }
   },
   "Modules": {
@@ -223,7 +224,8 @@
       "Active": "Active",
       "Ui": "UI modules",
       "Web": "Web modules",
-      "MaximumDepth": "Maximum depth"
+      "MaximumDepth": "Maximum depth",
+      "ScopeHint": "Whole-snapshot totals; UI and Web capabilities may overlap."
     },
     "Filters": {
       "Search": "Search modules",
@@ -302,7 +304,8 @@
       "Requires": "Direct dependencies",
       "RequiredBy": "Direct dependents",
       "NoDependencies": "No direct dependencies",
-      "NoDependents": "No direct dependents"
+      "NoDependents": "No direct dependents",
+      "Inspect": "Inspect module"
     },
     "Table": {
       "Show": "Show direct-edge table",
@@ -320,10 +323,14 @@
       "Types": "Types enumerated",
       "Plans": "Non-empty plans",
       "Queries": "Distinct queries",
-      "Matches": "Matches"
+      "Matches": "Matches",
+      "ScopeHint": "Matches count type-query observations and can exceed the number of enumerated types."
     },
     "Stages": {
-      "Title": "Five factual stages"
+      "Title": "Recorded discovery stages",
+      "Description": "Recorded in execution order. Expand a stage to inspect its span identity.",
+      "SpanId": "Span identity",
+      "Empty": "No discovery stage intervals were recorded."
     },
     "Queries": {
       "Title": "Query contributions",
@@ -339,7 +346,8 @@
       "Added": "Services added",
       "Replaced": "Services replaced",
       "Skipped": "Conditional adds skipped",
-      "Excluded": "Types excluded"
+      "Excluded": "Types excluded",
+      "Description": "Service mutations recorded at the discovery commit boundary."
     },
     "Inventory": {
       "Eyebrow": "ASSEMBLY RESOLUTION",
@@ -348,11 +356,6 @@
       "Loading": "Loading the cached assembly inventory…",
       "Failed": "The assembly inventory could not be loaded.",
       "PanelTitle": "Assembly records and scan evidence",
-      "Scanned": "{0} scanned",
-      "NotScanned": "{0} resolved, not scanned",
-      "Excluded": "{0} excluded",
-      "FailedCount": "{0} resolution failed",
-      "Partial": "{0} partial loads",
       "Search": "Search assemblies or paths",
       "Summary": {
         "EntryAssembly": "Entry assembly",
@@ -377,7 +380,8 @@
         "Attention": "Attention ({0})",
         "ScanScope": "Scan scope ({0})",
         "Excluded": "Excluded ({0})",
-        "All": "All ({0})"
+        "All": "All ({0})",
+        "Hint": "Attention and scan scope can overlap. Counts describe the complete cached inventory."
       },
       "Columns": {
         "Outcome": "Outcome",
@@ -573,5 +577,12 @@
     "StartupWorkCommitFailed": "Module {0} failed while committing startup work from {1}.",
     "CompositionFailed": "Module composition failed. Inspect the related modules and trace spans for causal evidence.",
     "Unknown": "Unrecognized finding code: {0}"
+  },
+  "Atlas": {
+    "Overview": {
+      "StartupNotTracked": "Application startup was not tracked in this host.",
+      "DirectDependencies": "Direct dependencies",
+      "ContributionHint": "Callback and startup-work cost; values can overlap in wall-clock time."
+    }
   }
 }

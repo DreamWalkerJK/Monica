@@ -403,6 +403,12 @@ public class CustomValidator : ComponentBase
 }
 ```
 
+### 8.3 Give Temporary Drawers a Modal Keyboard Lifecycle
+
+A temporary `MudDrawer` supplies placement and its overlay; give an inspector an accessible dialog name, initial focus, contained Tab navigation, Escape dismissal, and return focus to its opening control. Use the existing open-state callback for every dismissal so selection, URL state, and cached data follow the same lifecycle.
+
+In MudBlazor v9, mount `MudFocusTrap` conditionally inside an open drawer, with `DefaultFocus.FirstChild` and a first focusable Close control. Its initial render saves the opening focus and disposal restores it. Keeping a trap mounted and toggling `Disabled` does not save focus for each opening or restore it on disabling. Let the primitive own its interop; do not add a second JavaScript focus manager. Put header and locally scrolling body inside the trap, and keep the header outside that body’s scroll area. Verify focus entry, forward and reverse Tab containment, Escape, overlay dismissal, and focus return in the actual browser. A drawer opened directly through a URL has no opening control to restore.
+
 ## 9. Component Reuse Patterns
 
 ### 9.1 Generic Components
