@@ -20,6 +20,13 @@ These conventions mirror the current `Monica.ProjectUnits` default discovery rul
 | `TriggeredJob` | Class name starts with `Job` | `Job*` |
 | `RequestDto` | Implements `IResultRequest<T>` or `IResultRequest` | Prefer `Command*`, `Query*`, or `Request*` |
 
+## Source File Names
+
+- Name a standalone ProjectUnit source file exactly after its primary CLR type, followed by `.cs`. Retain the complete prefix: `CommandApproveOrder` belongs in `CommandApproveOrder.cs`, and `CommandHandlerApproveOrder` belongs in `CommandHandlerApproveOrder.cs`.
+- Give independent command and query contracts separate files named after their respective types. Do not drop `Command`, `Query`, or `Request` from published request filenames.
+- Local HTTP-only request and response types may share their handler's file; name that file after the handler. A closely coupled response DTO may share a published request's file; name that file after the primary request type.
+- When adding a unit, follow this rule even if nearby legacy files omit their type prefixes.
+
 ## Additional Support-Type Conventions
 
 These are not part of `Monica.ProjectUnits` discovery, but they are part of the recommended business-project layout.

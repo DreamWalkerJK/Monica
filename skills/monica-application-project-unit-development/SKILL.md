@@ -18,7 +18,7 @@ When adding or refactoring application EventBus events and consumers, including 
 ## Ground Rules
 
 - Use Monica-native base classes and interfaces only. Do not introduce `Our*` wrappers or FIPS-specific conventions.
-- Follow the naming, placement, and boundary rules in [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md). These rules are aligned with the current `Monica.ProjectUnits` discovery behavior.
+- Follow the [type naming, source filename, placement, and boundary rules](references/01-project-unit-naming-and-boundaries.md). Type conventions align with `Monica.ProjectUnits` discovery; file conventions keep source navigation consistent.
 - Keep persistence concerns in repositories and persistence classes, not in request handlers. Use `$monica-infra-persistence` for the current operation, transaction, and provider contracts.
 - Keep repository implementations in the owning subdomain or service infrastructure boundary. Do not move a repository or adapter to `Platform` just because it uses an external library; only project-common reusable infrastructure belongs in `Platform`.
 - Keep contracts stable: requests, DTOs, and events are not persistence entities.
