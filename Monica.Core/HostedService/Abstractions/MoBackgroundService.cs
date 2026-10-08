@@ -168,6 +168,8 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService,
             return;
 
         _heartbeatCts = new CancellationTokenSource();
+        // Let queued work observe cancellation inside the loop so StopAsync can await it
+        // normally and continue with background cleanup and the stopped hook.
         _heartbeatTask = Task.Run(async () =>
         {
             while (!_heartbeatCts.Token.IsCancellationRequested)
@@ -187,7 +189,7 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService,
                     Logger.LogWarning(ex, "{ServiceName} heartbeat error", ServiceName);
                 }
             }
-        }, _heartbeatCts.Token);
+        });
     }
 
     /// <summary>
