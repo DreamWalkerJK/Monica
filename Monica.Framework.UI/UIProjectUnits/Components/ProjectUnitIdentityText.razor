@@ -1,0 +1,17 @@
+@for (var index = 0; index < _segments.Length; index++)
+{
+    if (index > 0)
+    {
+        <text>.</text><wbr />
+    }
+    @_segments[index]
+}
+
+@code {
+    /// <summary>Gets or sets the exact encoded identity, with optional line breaks after namespace separators.</summary>
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+
+    private string[] _segments = [];
+
+    protected override void OnParametersSet() => _segments = Value.Split('.');
+}

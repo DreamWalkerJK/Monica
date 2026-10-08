@@ -9,7 +9,7 @@
     <header class="pu-catalog__header">
         <div>
             <span class="pu-catalog__eyebrow">@L["ProjectUnitMonitor:Header:Eyebrow"]</span>
-            <h2>@L["ProjectUnitMonitor:Header:Title"]</h2>
+            <h1>@L["ProjectUnitMonitor:Header:Title"]</h1>
             <p>@L["ProjectUnitMonitor:Header:Description"]</p>
         </div>
         <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="LoadProjectUnitsAsync"
@@ -34,83 +34,106 @@
         }
         @if (_loaded && _projectUnits.Count != 0)
         {
-            <ProjectUnitFilterPanel @ref="_filterPanel" Units="_projectUnits"
-                                    @bind-FilterText="_filterText"
-                                    @bind-SelectedUnitTypes="_selectedUnitTypes"
-                                    @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies"
-                                    @bind-ShowOnlyWithAlerts="_showOnlyWithAlerts"
-                                    OnFiltersChanged="ApplyFilters" />
-            <div class="pu-catalog__result-heading">
-                <span class="pu-catalog__count">@L["ProjectUnitMonitor:Summary:VisibleCount", _filteredProjectUnits.Count, _projectUnits.Count]</span>
-                <div class="pu-catalog__result-actions">
-                    <span>@L["ProjectUnitMonitor:Summary:SortHint"]</span>
-                    @if (HasActiveFilters)
+            <div class="pu-catalog__workspace">
+                <aside class="pu-catalog__filters" aria-label="@L["ProjectUnitFilterPanel:Sections:TypeFilter"]">
+                    <ProjectUnitFilterPanel @ref="_filterPanel" Units="_projectUnits"
+                                            @bind-FilterText="_filterText"
+                                            @bind-SelectedUnitTypes="_selectedUnitTypes"
+                                            @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies"
+                                            @bind-ShowOnlyWithAlerts="_showOnlyWithAlerts"
+                                            OnFiltersChanged="ApplyFilters" />
+                </aside>
+                <div class="pu-catalog__results">
+                    <div class="pu-catalog__result-heading">
+                        <span class="pu-catalog__count">@L["ProjectUnitMonitor:Summary:VisibleCount", _filteredProjectUnits.Count, _projectUnits.Count]</span>
+                        <div class="pu-catalog__result-actions">
+                            @if (_filteredProjectUnits.Count == 0)
+                            {
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="true"
+                                           StartIcon="@Icons.Material.Outlined.SortByAlpha"
+                                           aria-label="@L["ProjectUnitMonitor:Sorting:KeyNone"]" aria-pressed="false">
+                                    @L["ProjectUnitMonitor:Sorting:KeyNone"]
+                                </MudButton>
+                            }
+                            @if (HasActiveFilters)
+                            {
+                                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="ResetFiltersAsync">@L["ProjectUnitMonitor:Actions:Reset"]</MudButton>
+                            }
+                        </div>
+                    </div>
+                    @if (_filteredProjectUnits.Count != 0)
                     {
-                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="ResetFiltersAsync">@L["ProjectUnitMonitor:Actions:Reset"]</MudButton>
+                        <div class="pu-catalog__grid">
+                            <MudDataGrid T="ProjectUnitSummary" @ref="_grid" Items="@_filteredProjectUnits"
+                                         SortMode="SortMode.Multiple" ShowColumnOptions="false" Breakpoint="Breakpoint.None"
+                                         Dense="true" Hover="true" ReadOnly="true" RowsPerPage="@DefaultPageSize">
+                                <ToolBarContent>
+                                    <div class="pu-catalog__sort-controls">
+                                        <p class="pu-catalog__sort-hint">@L["ProjectUnitMonitor:Summary:SortHint"] <span>@L["ProjectUnitMonitor:Summary:SortBy"]</span></p>
+                                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="CycleKeySortAsync" Disabled="@_loading"
+                                                   StartIcon="@Icons.Material.Outlined.SortByAlpha" aria-label="@KeySortLabel"
+                                                   aria-pressed="@(_grid?.SortDefinitions.ContainsKey(nameof(ProjectUnitSummary.Key)) == true ? "true" : "false")">
+                                            @KeySortLabel
+                                        </MudButton>
+                                    </div>
+                                </ToolBarContent>
+                                <Columns>
+                                    <PropertyColumn T="ProjectUnitSummary" TProperty="string" Property="x => x.Title"
+                                                    Title="@L["ProjectUnitMonitor:Columns:Name"]" Sortable="true"
+                                                    HeaderClass="pu-catalog__name-column" CellClass="pu-catalog__name-column">
+                                        <CellTemplate>
+                                            <div class="pu-catalog__unit-name" data-unit-key="@context.Item.Key">
+                                                <strong>@context.Item.Title</strong>
+                                                <code><ProjectUnitIdentityText Value="@context.Item.Key" /></code>
+                                                @if (!string.IsNullOrWhiteSpace(context.Item.Description))
+                                                {
+                                                    <span>@context.Item.Description</span>
+                                                }
+                                            </div>
+                                        </CellTemplate>
+                                    </PropertyColumn>
+                                    <PropertyColumn T="ProjectUnitSummary" TProperty="string" Property="x => x.Key"
+                                                    Title="@L["ProjectUnitMonitor:Columns:FullName"]" Sortable="true" Hidden="true"
+                                                    HeaderClass="pu-catalog__key-column" CellClass="pu-catalog__key-column">
+                                        <CellTemplate><code>@context.Item.Key</code></CellTemplate>
+                                    </PropertyColumn>
+                                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Type"]" Sortable="false"
+                                                    HeaderClass="pu-catalog__type-column" CellClass="pu-catalog__type-column">
+                                        <CellTemplate>
+                                            <span class="pu-catalog__type">@L.GetProjectUnitTypeText(context.Item.UnitType)</span>
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Dependencies"]" Sortable="false"
+                                                    HeaderClass="pu-catalog__count-column" CellClass="pu-catalog__count-column">
+                                        <CellTemplate><span class="pu-catalog__number">@context.Item.Dependencies.Count</span></CellTemplate>
+                                    </TemplateColumn>
+                                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:DependedBy"]" Sortable="false"
+                                                    HeaderClass="pu-catalog__count-column" CellClass="pu-catalog__count-column">
+                                        <CellTemplate><span class="pu-catalog__number">@context.Item.DependedByCount</span></CellTemplate>
+                                    </TemplateColumn>
+                                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Actions"]" Sortable="false"
+                                                    HeaderClass="pu-catalog__actions-column" CellClass="pu-catalog__actions-column">
+                                        <CellTemplate>
+                                            <MudIconButton Size="Size.Small" Icon="@Icons.Material.Outlined.ArrowForward"
+                                                           Color="Color.Primary" aria-label="@L["ProjectUnitMonitor:Actions:Inspect", context.Item.Title]"
+                                                           OnClick="@(() => ViewDetails(context.Item))" />
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                </Columns>
+                                <PagerContent><MudDataGridPager T="ProjectUnitSummary" PageSizeOptions="@PageSizeOptions" /></PagerContent>
+                            </MudDataGrid>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="pu-catalog__state" role="status">
+                            <MudIcon Icon="@Icons.Material.Outlined.SearchOff" />
+                            <p>@L["ProjectUnitMonitor:States:NoMatches"]</p>
+                            <MudButton Variant="Variant.Text" OnClick="ResetFiltersAsync">@L["ProjectUnitMonitor:Actions:Reset"]</MudButton>
+                        </div>
                     }
                 </div>
             </div>
-            @if (_filteredProjectUnits.Count != 0)
-            {
-                <div class="pu-catalog__grid">
-                    <span class="pu-catalog__mobile-sort">@L["ProjectUnitMonitor:Summary:SortBy"]</span>
-                    <MudDataGrid T="ProjectUnitSummary" @ref="_grid" Items="@_filteredProjectUnits"
-                                 SortMode="SortMode.Multiple" ShowColumnOptions="false" Breakpoint="Breakpoint.None"
-                                 Dense="true" Hover="true" ReadOnly="true" RowsPerPage="@DefaultPageSize">
-                        <Columns>
-                            <PropertyColumn T="ProjectUnitSummary" TProperty="string" Property="x => x.Title"
-                                            Title="@L["ProjectUnitMonitor:Columns:Name"]" Sortable="true"
-                                            HeaderClass="pu-catalog__name-column" CellClass="pu-catalog__name-column">
-                                <CellTemplate>
-                                    <div class="pu-catalog__unit-name" data-unit-key="@context.Item.Key">
-                                        <strong>@context.Item.Title</strong>
-                                        @if (!string.IsNullOrWhiteSpace(context.Item.Description))
-                                        {
-                                            <span>@context.Item.Description</span>
-                                        }
-                                    </div>
-                                </CellTemplate>
-                            </PropertyColumn>
-                            <PropertyColumn T="ProjectUnitSummary" TProperty="string" Property="x => x.Key"
-                                            Title="@L["ProjectUnitMonitor:Columns:FullName"]" Sortable="true"
-                                            HeaderClass="pu-catalog__key-column" CellClass="pu-catalog__key-column">
-                                <CellTemplate><code>@context.Item.Key</code></CellTemplate>
-                            </PropertyColumn>
-                            <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Type"]" Sortable="false"
-                                            HeaderClass="pu-catalog__type-column" CellClass="pu-catalog__type-column">
-                                <CellTemplate>
-                                    <span class="pu-catalog__type">@L.GetProjectUnitTypeText(context.Item.UnitType)</span>
-                                </CellTemplate>
-                            </TemplateColumn>
-                            <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Dependencies"]" Sortable="false"
-                                            HeaderClass="pu-catalog__count-column" CellClass="pu-catalog__count-column">
-                                <CellTemplate><span class="pu-catalog__number">@context.Item.Dependencies.Count</span></CellTemplate>
-                            </TemplateColumn>
-                            <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:DependedBy"]" Sortable="false"
-                                            HeaderClass="pu-catalog__count-column" CellClass="pu-catalog__count-column">
-                                <CellTemplate><span class="pu-catalog__number">@context.Item.DependedByCount</span></CellTemplate>
-                            </TemplateColumn>
-                            <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Actions"]" Sortable="false"
-                                            HeaderClass="pu-catalog__actions-column" CellClass="pu-catalog__actions-column">
-                                <CellTemplate>
-                                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Outlined.ArrowForward"
-                                                   Color="Color.Primary" aria-label="@L["ProjectUnitMonitor:Actions:Inspect", context.Item.Title]"
-                                                   OnClick="@(() => ViewDetails(context.Item))" />
-                                </CellTemplate>
-                            </TemplateColumn>
-                        </Columns>
-                        <PagerContent><MudDataGridPager T="ProjectUnitSummary" PageSizeOptions="@PageSizeOptions" /></PagerContent>
-                    </MudDataGrid>
-                </div>
-            }
-            else
-            {
-                <div class="pu-catalog__state" role="status">
-                    <MudIcon Icon="@Icons.Material.Outlined.SearchOff" />
-                    <p>@L["ProjectUnitMonitor:States:NoMatches"]</p>
-                    <MudButton Variant="Variant.Text" OnClick="ResetFiltersAsync">@L["ProjectUnitMonitor:Actions:Reset"]</MudButton>
-                </div>
-            }
         }
         else if (_loaded)
         {
@@ -142,6 +165,21 @@
 
     private bool HasActiveFilters => !string.IsNullOrEmpty(_filterText) || _showOnlyWithDependencies || _showOnlyWithAlerts
                                     || !_selectedUnitTypes.ToHashSet().SetEquals(AvailableUnitTypes());
+
+    private string KeySortLabel => _grid?.SortDefinitions.TryGetValue(nameof(ProjectUnitSummary.Key), out var sort) == true
+        ? L[sort.Descending ? "ProjectUnitMonitor:Sorting:KeyDescending" : "ProjectUnitMonitor:Sorting:KeyAscending"]
+        : L["ProjectUnitMonitor:Sorting:KeyNone"];
+
+    private async Task CycleKeySortAsync()
+    {
+        if (_disposed || _grid is null) return;
+        if (!_grid.SortDefinitions.TryGetValue(nameof(ProjectUnitSummary.Key), out var sort))
+            await _grid.ExtendSortAsync(nameof(ProjectUnitSummary.Key), SortDirection.Ascending, static unit => unit.Key);
+        else if (!sort.Descending)
+            await _grid.ExtendSortAsync(nameof(ProjectUnitSummary.Key), SortDirection.Descending, static unit => unit.Key);
+        else
+            await _grid.RemoveSortAsync(nameof(ProjectUnitSummary.Key));
+    }
 
     protected override Task OnInitializedAsync() => LoadProjectUnitsAsync();
 

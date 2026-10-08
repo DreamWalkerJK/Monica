@@ -1,0 +1,49 @@
+@using Monica.Framework.UI.Pages
+@inject IStringLocalizer<ProjectUnitsResource> L
+
+<div class="project-units-workspace">
+    <div class="project-units-workspace__navigation">
+        <div class="project-units-workspace__context">
+            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" />
+            <span>@L["Workspace:Context"]</span>
+            <span class="project-units-workspace__separator" aria-hidden="true">/</span>
+            <span>@L["Pages:ProjectUnits:Title"]</span>
+        </div>
+        <nav class="project-units-workspace__nav" aria-label="@L["Workspace:NavigationLabel"]">
+            @foreach (var entry in Entries)
+            {
+                <NavLink href="@entry.Route" Match="NavLinkMatch.All" ActiveClass="is-active"
+                         class="project-units-workspace__link"
+                         aria-current="@(string.Equals(ActiveRoute, entry.Route, StringComparison.OrdinalIgnoreCase) ? "page" : null)">
+                    <MudIcon Icon="@entry.Icon" Size="Size.Small" />
+                    <span>@L[entry.LabelKey]</span>
+                </NavLink>
+            }
+        </nav>
+    </div>
+    <div class="project-units-workspace__content">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    /// <summary>Gets or sets the exact route rendered by this workspace instance.</summary>
+    [Parameter, EditorRequired]
+    public string ActiveRoute { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the active page content; other route content is not mounted.</summary>
+    [Parameter, EditorRequired]
+    public RenderFragment? ChildContent { get; set; }
+
+    private static readonly WorkspaceEntry[] Entries =
+    [
+        new(UIProjectUnitsPage.PAGE_URL, "Page:Tabs:StatusOverview", Icons.Material.Outlined.SpaceDashboard),
+        new(UIProjectUnitsCatalogPage.PAGE_URL, "Page:Tabs:ProjectUnit", Icons.Material.Outlined.AccountTree),
+        new(UIProjectUnitsGraphPage.PAGE_URL, "Page:Tabs:ArchitectureVisualization", Icons.Material.Outlined.Hub),
+        new(UIProjectUnitsEventsPage.PAGE_URL, "Page:Tabs:DomainEventTester", Icons.Material.Outlined.Event),
+        new(UIProjectUnitsRequestFiltersPage.PAGE_URL, "Page:Tabs:RequestFilterManager", Icons.Material.Outlined.FilterAlt),
+        new(UIProjectUnitsEnumsPage.PAGE_URL, "Page:Tabs:EnumInfo", Icons.Material.Outlined.DataObject)
+    ];
+
+    private sealed record WorkspaceEntry(string Route, string LabelKey, string Icon);
+}

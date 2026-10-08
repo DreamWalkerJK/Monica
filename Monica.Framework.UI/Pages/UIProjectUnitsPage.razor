@@ -3,60 +3,17 @@
 @using Monica.Framework.UI.UIProjectUnits.Components
 @inject IStringLocalizer<ProjectUnitsResource> L
 
-<PageTitle>@L["Page:PageTitle"]</PageTitle>
+<PageTitle>@L["Pages:ProjectUnits:Overview:Title"]</PageTitle>
 
-<div class="project-units-page">
-    <div class="project-units-page__container">
-        <header class="project-units-page__header">
-            <span class="project-units-page__eyebrow">@L["Page:Header:Eyebrow"]</span>
-            <h1>@L["Page:Header:Title"]</h1>
-            <p>@L["Page:Header:Description"]</p>
-        </header>
+<ProjectUnitsWorkspace ActiveRoute="@PAGE_URL">
+    <header class="project-units-overview-heading">
+        <span class="project-units-overview-heading__eyebrow">@L["Page:Header:Eyebrow"]</span>
+        <h1>@L["Page:Header:Title"]</h1>
+        <p>@L["Page:Header:Description"]</p>
+    </header>
 
-        <div class="project-units-page__content">
-            <MudTabs Elevation="0"
-                     Rounded="false"
-                     KeepPanelsAlive="false"
-                     Class="project-units-page__workspace">
-                <MudTabPanel Text="@L["Page:Tabs:StatusOverview"]"
-                             Icon="@Icons.Material.Outlined.SpaceDashboard"
-                             PanelClass="project-units-tab-panel">
-                    <ProjectUnitDashboard />
-                </MudTabPanel>
-
-                <MudTabPanel Text="@L["Page:Tabs:ProjectUnit"]"
-                             Icon="@Icons.Material.Outlined.AccountTree"
-                             PanelClass="project-units-tab-panel">
-                    <ProjectUnitMonitor />
-                </MudTabPanel>
-
-                <MudTabPanel Text="@L["Page:Tabs:ArchitectureVisualization"]"
-                             Icon="@Icons.Material.Outlined.Hub"
-                             PanelClass="project-units-tab-panel">
-                    <ProjectUnitVisualization />
-                </MudTabPanel>
-
-                <MudTabPanel Text="@L["Page:Tabs:DomainEventTester"]"
-                             Icon="@Icons.Material.Outlined.Event"
-                             PanelClass="project-units-tab-panel">
-                    <DomainEventTester />
-                </MudTabPanel>
-
-                <MudTabPanel Text="@L["Page:Tabs:RequestFilterManager"]"
-                             Icon="@Icons.Material.Outlined.FilterAlt"
-                             PanelClass="project-units-tab-panel">
-                    <RequestFilterManager />
-                </MudTabPanel>
-
-                <MudTabPanel Text="@L["Page:Tabs:EnumInfo"]"
-                             Icon="@Icons.Material.Outlined.DataObject"
-                             PanelClass="project-units-tab-panel">
-                    <EnumInfoViewer />
-                </MudTabPanel>
-            </MudTabs>
-        </div>
-    </div>
-</div>
+    <ProjectUnitDashboard />
+</ProjectUnitsWorkspace>
 
 @code {
     public const string PAGE_URL = "/project-units";

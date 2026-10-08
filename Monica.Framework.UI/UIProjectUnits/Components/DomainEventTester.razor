@@ -14,7 +14,7 @@
     <header class="event-desk__heading">
         <div>
             <span class="event-desk__eyebrow">@L["DomainEventTester:Desk:Eyebrow"]</span>
-            <h2>@L["DomainEventTester:Header:Title"]</h2>
+            <h1>@L["DomainEventTester:Header:Title"]</h1>
             <p>@L["DomainEventTester:Header:Description"]</p>
         </div>
         <div class="event-desk__refresh">
@@ -48,7 +48,7 @@
                             aria-pressed="@(_selectedEvent?.Info.Key == descriptor.Info.Key ? "true" : "false")"
                             disabled="@(_loading || _publishing)" @onclick="@(() => SelectEvent(descriptor))">
                         <span class="event-descriptor__title">@descriptor.Info.Title</span>
-                        <code>@descriptor.Info.Key</code>
+                        <code><ProjectUnitIdentityText Value="@descriptor.Info.Key" /></code>
                     </button>
                 }
                 @if (!_loading && _loadError is null && _domainEvents.Count == 0)

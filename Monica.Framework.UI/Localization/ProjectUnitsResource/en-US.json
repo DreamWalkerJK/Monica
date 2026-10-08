@@ -1,11 +1,35 @@
 {
   "Pages": {
     "ProjectUnits": {
-      "Title": "Project Units"
+      "Title": "Project Units",
+      "Description": "Explore the host's discovered units, architecture relationships, context completeness, and operational tools.",
+      "Overview": {
+        "Title": "Project unit overview",
+        "Description": "Review catalog composition, context completeness, and units that need attention."
+      },
+      "Catalog": {
+        "Title": "Project unit catalog",
+        "Description": "Find discovered units by identity, type, relationships, and diagnostics; inspect their full evidence."
+      },
+      "Graph": {
+        "Title": "Project unit relationships",
+        "Description": "Trace directed dependencies, explore connected units, and inspect the architecture graph."
+      },
+      "Events": {
+        "Title": "Domain event tools",
+        "Description": "Inspect event descriptors and prepare editable payloads for this host's distributed event bus."
+      },
+      "RequestFilters": {
+        "Title": "Request path controls",
+        "Description": "Review disabled request paths and manage the host's configured request filter."
+      },
+      "Enums": {
+        "Title": "Enum reference",
+        "Description": "Browse assembly and enum identities, value descriptions, and search matches."
+      }
     }
   },
   "Page": {
-    "PageTitle": "Project Units",
     "Header": {
       "Title": "Project Units",
       "Eyebrow": "Monica / Architecture Registry",
@@ -19,6 +43,10 @@
       "RequestFilterManager": "Request paths",
       "EnumInfo": "Enums"
     }
+  },
+  "Workspace": {
+    "Context": "Architecture",
+    "NavigationLabel": "Project Units views"
   },
   "Shared": {
     "Actions": {
@@ -264,6 +292,11 @@
       "VisibleCount": "Showing {0} of {1} project units",
       "SortHint": "Name and full name support multiple sorting.",
       "SortBy": "Sort by"
+    },
+    "Sorting": {
+      "KeyAscending": "Full key: ascending",
+      "KeyDescending": "Full key: descending",
+      "KeyNone": "Sort by full key"
     },
     "Actions": {
       "Reset": "Reset filters",

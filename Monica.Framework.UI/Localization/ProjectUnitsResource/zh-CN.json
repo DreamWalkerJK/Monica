@@ -1,11 +1,35 @@
 {
   "Pages": {
     "ProjectUnits": {
-      "Title": "项目单元"
+      "Title": "项目单元",
+      "Description": "查看当前宿主发现的单元、架构关系、上下文完整度与运行工具。",
+      "Overview": {
+        "Title": "项目单元概览",
+        "Description": "查看单元目录的构成、上下文完整度，以及需要关注的单元。"
+      },
+      "Catalog": {
+        "Title": "项目单元目录",
+        "Description": "按标识、类型、关系与诊断查找已发现的单元，并查看完整证据。"
+      },
+      "Graph": {
+        "Title": "项目单元依赖关系",
+        "Description": "追踪有向依赖、浏览连通单元，并查看架构关系图。"
+      },
+      "Events": {
+        "Title": "领域事件工具",
+        "Description": "查看事件描述，并为当前宿主的分布式事件总线准备可编辑的载荷。"
+      },
+      "RequestFilters": {
+        "Title": "请求路径控制",
+        "Description": "查看已禁用的请求路径，并管理宿主已配置的请求过滤器。"
+      },
+      "Enums": {
+        "Title": "枚举参考",
+        "Description": "浏览程序集与枚举标识、值的说明，以及搜索匹配项。"
+      }
     }
   },
   "Page": {
-    "PageTitle": "项目单元",
     "Header": {
       "Title": "项目单元",
       "Eyebrow": "Monica / 架构目录",
@@ -19,6 +43,10 @@
       "RequestFilterManager": "请求路径",
       "EnumInfo": "枚举参考"
     }
+  },
+  "Workspace": {
+    "Context": "架构",
+    "NavigationLabel": "项目单元视图"
   },
   "Shared": {
     "Actions": {
@@ -264,6 +292,11 @@
       "VisibleCount": "显示 {0} / {1} 个项目单元",
       "SortHint": "名称与完整名称支持多列排序。",
       "SortBy": "排序方式"
+    },
+    "Sorting": {
+      "KeyAscending": "完整标识：升序",
+      "KeyDescending": "完整标识：降序",
+      "KeyNone": "按完整标识排序"
     },
     "Actions": {
       "Reset": "重置筛选",

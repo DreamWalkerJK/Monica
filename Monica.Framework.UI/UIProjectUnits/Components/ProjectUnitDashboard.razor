@@ -60,6 +60,10 @@
                     <div><strong>@_snapshot.DistinctUnitTypes</strong><span>@L["ProjectUnitDashboard:Metrics:UnitTypes"]</span></div>
                 </div>
                 <p class="pu-dashboard__scope">@L["ProjectUnitDashboard:Service:Scope"]</p>
+                <div class="pu-dashboard__entry-links">
+                    <NavLink href="/project-units/catalog">@L["Page:Tabs:ProjectUnit"] <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></NavLink>
+                    <NavLink href="/project-units/graph">@L["Page:Tabs:ArchitectureVisualization"] <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></NavLink>
+                </div>
                 <MudButton Variant="Variant.Outlined" OnClick="LoadDashboardAsync" Disabled="@_loading"
                            StartIcon="@Icons.Material.Outlined.Refresh" Class="pu-dashboard__refresh">
                     @L["Shared:Actions:Refresh"]
@@ -84,7 +88,9 @@
                         </div>
                     }
                 </div>
-                <div class="pu-dashboard__topology" data-testid="project-unit-architecture-health">
+
+            </section>
+                <section class="pu-dashboard__topology" data-testid="project-unit-architecture-health">
                     <h4>@L["ProjectUnitDashboard:Sections:ArchitectureHealth"]</h4>
                     <p>@L["ProjectUnitDashboard:Sections:ArchitectureHealthHint"]</p>
                     <dl>
@@ -94,8 +100,7 @@
                         <div><dt>@L["ProjectUnitDashboard:Health:Warnings"]</dt><dd data-severity="warning">@_snapshot.Alerts.WarningCount</dd></div>
                         <div><dt>@L["ProjectUnitDashboard:Health:Information"]</dt><dd>@_snapshot.Alerts.InformationCount</dd></div>
                     </dl>
-                </div>
-            </section>
+                </section>
         </div>
         @if (_loading)
         {

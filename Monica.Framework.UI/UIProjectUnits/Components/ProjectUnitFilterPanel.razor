@@ -25,7 +25,7 @@
             <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="SelectAllTypesAsync">@L["Shared:Actions:SelectAll"]</MudButton>
             <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="ClearAllTypesAsync">@L["Shared:Actions:Clear"]</MudButton>
         </div>
-        <div class="pu-filter-panel__chips">
+        <div class="pu-filter-panel__chips" tabindex="0" aria-label="@L["ProjectUnitFilterPanel:Sections:TypeFilter"]">
             <MudChipSet T="EProjectUnitType" SelectionMode="SelectionMode.MultiSelection"
                         SelectedValues="SelectedUnitTypes" SelectedValuesChanged="OnSelectedUnitTypesChangedAsync">
                 @foreach (var option in _unitTypeOptions)
