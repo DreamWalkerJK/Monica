@@ -16,7 +16,6 @@ namespace $ContractNamespace$.Requests;
 [ApiEndpoint(ApiHttpMethod.Get, "$QueryRoute$", Binding = ApiRequestBinding.Query)]
 [ProjectUnitMetadata(
     "$FeatureName$ Query",
-    Owner = "$Owner$",
     Description = "Requests the $FeatureName$ query use case.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -25,7 +24,6 @@ public sealed record Query$FeatureName$(long Id) : IResultRequest<$ResponseName$
 [ApiEndpoint(ApiHttpMethod.Post, "$CommandRoute$", Binding = ApiRequestBinding.Body)]
 [ProjectUnitMetadata(
     "$FeatureName$ Command",
-    Owner = "$Owner$",
     Description = "Requests the $FeatureName$ command use case.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -57,7 +55,6 @@ namespace $DomainNamespace$.Entities;
 
 [ProjectUnitMetadata(
     "Order",
-    Owner = "$Owner$",
     Description = "Owns order state transitions and invariants.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -115,14 +112,20 @@ Rules:
 Use domain events to describe meaningful business facts or shared application notifications. Follow the authoritative [event naming and placement rules](01-project-unit-naming-and-boundaries.md), including for technical envelopes.
 
 ```csharp
+using Monica.EventBus.Annotations;
 using Monica.EventBus.Events;
 using Monica.ProjectUnits.Annotations;
 
 namespace $ContractNamespace$.Events;
 
+public static class Const
+{
+    public const string EventOrderApproved = "ordering.order-approved";
+}
+
+[EventName(Const.EventOrderApproved)]
 [ProjectUnitMetadata(
     "Order Approved Event",
-    Owner = "$Owner$",
     Description = "Publishes the fact that an order was approved.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -136,6 +139,7 @@ public sealed class EventOrderApproved : DomainEvent
 Rules:
 
 - Name events after facts, not handlers.
+- Define the transport identity once in the owning published language's constant container (`Const` in this template) and reference it directly from `[EventName]`. Reuse an existing constant entry and container when available; do not add a duplicate alias on the event class.
 - Keep event payloads stable, serializable, and focused on what consumers need.
 - Do not expose the full entity graph in an event.
 - Apply the same temporal meaning to events: `DateTime` is a timezone-free wall-clock value, while `DateTimeOffset` represents an instant or explicit offset.

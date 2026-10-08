@@ -28,7 +28,6 @@ namespace $DomainNamespace$.DomainServices;
 
 [ProjectUnitMetadata(
     "$FeatureName$ Domain Rules",
-    Owner = "$Owner$",
     Description = "Enforces reusable domain rules for $FeatureName$.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]

@@ -71,7 +71,6 @@ namespace $ApplicationNamespace$.HandlersQuery;
     OperationName = "$OperationName$")]
 [ProjectUnitMetadata(
     "$FeatureName$ Query",
-    Owner = "$Owner$",
     Description = "Requests the $FeatureName$ use case.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -79,7 +78,6 @@ public sealed record Query$FeatureName$(long Id) : IResultRequest<$ResponseName$
 
 [ProjectUnitMetadata(
     "$FeatureName$",
-    Owner = "$Owner$",
     Description = "Coordinates the $FeatureName$ query boundary.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -121,7 +119,6 @@ namespace $ApplicationNamespace$.HandlersCommand;
     OperationName = "$OperationName$")]
 [ProjectUnitMetadata(
     "$FeatureName$ Command",
-    Owner = "$Owner$",
     Description = "Requests the $FeatureName$ use case.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -129,7 +126,6 @@ public sealed record Command$FeatureName$(long Id) : IResultRequest;
 
 [ProjectUnitMetadata(
     "$FeatureName$",
-    Owner = "$Owner$",
     Description = "Coordinates the $FeatureName$ command boundary.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]

@@ -31,7 +31,6 @@ using Monica.ProjectUnits.Annotations;
 
 [ProjectUnitMetadata(
     "Approve Order",
-    Owner = "Ordering Team",
     Description = "Approves an eligible order.",
     Tags = ["ordering", "approval"])]
 [ProjectUnitRequirement("ORD-REQ-001")]

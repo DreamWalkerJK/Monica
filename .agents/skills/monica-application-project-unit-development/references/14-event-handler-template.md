@@ -32,7 +32,6 @@ namespace $ApplicationNamespace$.HandlersEvent;
 
 [ProjectUnitMetadata(
     "Notify Warehouse After Order Approval",
-    Owner = "$Owner$",
     Description = "Coordinates the warehouse reaction to an approved order.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -60,7 +59,6 @@ namespace $ApplicationNamespace$.HandlersEvent;
 
 [ProjectUnitMetadata(
     "Refresh Order Read Model",
-    Owner = "$Owner$",
     Description = "Refreshes the local read model after order approval.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]

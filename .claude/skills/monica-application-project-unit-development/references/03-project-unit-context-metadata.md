@@ -6,13 +6,14 @@ Use this reference before creating or changing any discovered ProjectUnit. The a
 
 Resolve these facts from repository conventions and source requirements before writing code:
 
-- `$Owner$`: the team, role, or capability accountable for the unit.
 - `$RequirementId$`: a stable requirement identifier owned by the application or its workflow system.
 - `$SubdomainTag$`: the bounded context or subdomain tag.
 - `$FeatureTag$`: the capability or feature tag.
 - `$Title$` and `$Description$`: a concise title and one-sentence responsibility specific to this unit, in the catalog language below.
 
-If any fact cannot be discovered, ask one focused question. Do not invent ownership or requirement IDs.
+If any required fact cannot be discovered, ask one focused question. Do not invent requirement IDs.
+
+Leave `Owner` unset while the application does not use ownership mapping. If the project adopts ownership later, reference a project-defined `Const` entry that maps to a stable team or member ID. Do not use arbitrary service names, team labels, roles, or capabilities as owner values. Ownership is optional and does not block creating a unit.
 
 ## Catalog Language
 
@@ -27,7 +28,6 @@ using Monica.ProjectUnits.Annotations;
 
 [ProjectUnitMetadata(
     "$Title$",
-    Owner = "$Owner$",
     Description = "$Description$",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]

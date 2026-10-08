@@ -23,7 +23,7 @@ When adding or refactoring application EventBus events and consumers, including 
 - Keep repository implementations in the owning subdomain or service infrastructure boundary. Do not move a repository or adapter to `Platform` just because it uses an external library; only project-common reusable infrastructure belongs in `Platform`.
 - Keep contracts stable: requests, DTOs, and events are not persistence entities.
 - Add explicit `[ProjectUnitMetadata]` and one or more `[ProjectUnitRequirement]` annotations to every discovered unit, following the [metadata, ownership and catalog language rules](references/03-project-unit-context-metadata.md). Do not rely on metadata inherited from a base class.
-- Treat missing metadata, description, ownership, and requirement references as four independent catalog debts. Do not collapse them into one readiness score.
+- Keep metadata, description, and requirement traceability explicit. Resolve optional ownership through the [metadata rules](references/03-project-unit-context-metadata.md).
 - If a handler returns `Res<string>`, use `Res.Ok<string>(value)` instead of `Res.Ok(value)` to avoid the non-generic string overload.
 - Make HTTP contracts request-owned. Put `[ApiEndpoint]` on the request type and keep route, verb, binding, and optional operation name off the `ApplicationService` handler.
 - A request is published for generated RPC clients only when it is attributed source in the exact namespace `*.PublishedLanguages.Domain{DomainName}.Requests`. Attributed requests outside that boundary remain local HTTP endpoints.

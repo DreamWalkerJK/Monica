@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.Logging.Abstractions;
 using Monica.Core.TypeDiscovery.Models;
 using Monica.DependencyInjection.Abstractions;
+using Monica.EventBus.Annotations;
 using Monica.EventBus.Events;
 using Monica.Modules;
 using Monica.ProjectUnits.Annotations;
@@ -52,8 +53,9 @@ public sealed class ProjectUnitEventTemplateTests
         var distributedUnit = catalog.GetUnits<UnitDomainEventHandler>().Should().ContainSingle().Which;
         var localUnit = catalog.GetUnits<UnitLocalEventHandler>().Should().ContainSingle().Which;
         eventUnit.Type.IsSubclassOf(typeof(DomainEvent)).Should().BeTrue();
-        eventUnit.Type.Name.Should().StartWith("Event");
+        eventUnit.Type.Name.Should().Be("EventOrderApproved");
         eventUnit.Type.Namespace.Should().Be("Platform.Protocol.PublishedLanguages.DomainOrdering.Events");
+        EventNameAttribute.GetNameOrDefault(eventUnit.Type).Should().Be("ordering.order-approved");
         distributedUnit.Type.BaseType!.GetGenericTypeDefinition().Should().Be(typeof(DomainEventHandler<>));
         localUnit.Type.BaseType!.GetGenericTypeDefinition().Should().Be(typeof(LocalEventHandler<>));
         distributedUnit.EventType.Should().Be(eventUnit.Type);
@@ -72,7 +74,7 @@ public sealed class ProjectUnitEventTemplateTests
                 Enum.Parse<ProjectUnitSourceType>(runtimeUnit.UnitType.ToString()));
             sourceUnit.ExecutionPoints.Should().Equal(runtimeUnit.ExecutionPoints);
             sourceUnit.HasExplicitMetadata.Should().BeTrue();
-            sourceUnit.Owner.Should().Be("Ordering Team");
+            sourceUnit.Owner.Should().BeNull();
             sourceUnit.RequirementIds.Should().Equal("ORD-REQ-001");
             sourceUnit.Diagnostics.Should().BeEmpty();
             if (runtimeUnit is UnitDomainEventHandler or UnitLocalEventHandler)
@@ -108,7 +110,6 @@ public sealed class ProjectUnitEventTemplateTests
             ["$ContractNamespace$"] = "Platform.Protocol.PublishedLanguages.DomainOrdering",
             ["$ApplicationNamespace$"] = "OrderingService.API",
             ["$DomainNamespace$"] = "OrderingService.Domain",
-            ["$Owner$"] = "Ordering Team",
             ["$SubdomainTag$"] = "ordering",
             ["$FeatureTag$"] = "approval",
             ["$RequirementId$"] = "ORD-REQ-001"
