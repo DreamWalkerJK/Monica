@@ -6,8 +6,9 @@
     "Title": "健康检查",
     "Eyebrow": "运维监控",
     "Heading": "主机健康状态",
-    "Subtitle": "查看当前主机的即时就绪状态和经过安全处理的健康检查信息。",
-    "CurrentHost": "当前主机 · {0}"
+    "Subtitle": "查看主机就绪状态与依赖检查，及时定位需要关注的问题。",
+    "CurrentHost": "当前主机 · {0}",
+    "LastChecked": "最近更新"
   },
   "Access": {
     "Checking": "正在检查看板访问权限…",
@@ -19,7 +20,8 @@
     "Retry": "重试",
     "Details": "查看详情",
     "DetailsFor": "查看 {0} 的详情",
-    "Close": "关闭详情"
+    "Close": "关闭详情",
+    "ClearFilters": "清除筛选"
   },
   "State": {
     "Loading": "正在执行健康检查",
@@ -30,10 +32,22 @@
   "Overview": {
     "ReadinessLabel": "就绪状态",
     "ReadinessChecks": "{0} 项就绪检查",
-    "Ready": "已就绪，可以接收流量",
-    "ReadyDegraded": "已就绪，但部分依赖已降级",
-    "NotReady": "尚未就绪，不能接收流量",
-    "DurationMilliseconds": "最近检查耗时 {0:0.##} 毫秒"
+    "Ready": "必要检查已通过，主机可以接收流量。",
+    "ReadyDegraded": "主机可以接收流量，但部分必要检查处于降级状态。",
+    "NotReady": "必要检查通过前，主机暂时无法接收流量。",
+    "SnapshotDuration": "快照耗时",
+    "DurationMilliseconds": "最近检查耗时 {0:0.##} 毫秒",
+    "AutoRefresh": "每 10 秒更新",
+    "Distribution": "全部已注册检查",
+    "AttentionTitle": "需要关注",
+    "AllClear": "当前快照没有不健康或降级的检查项。",
+    "CoverageMissingTitle": "尚未配置就绪检查",
+    "CoverageMissingDescription": "当前没有已注册的就绪检查，无法根据这份快照判断主机是否可以接收流量。",
+    "Headlines": {
+      "Healthy": "已就绪",
+      "Degraded": "已就绪，存在降级",
+      "Unhealthy": "尚未就绪"
+    }
   },
   "Status": {
     "Healthy": "健康",
@@ -45,13 +59,13 @@
     "NameLabel": "名称或描述",
     "NamePlaceholder": "搜索检查项",
     "StatusLabel": "状态",
-    "AnyStatus": "全部状态",
+    "AnyStatus": "全部检查",
     "TagLabel": "标签",
     "Results": "显示 {0} / {1} 项"
   },
   "Table": {
-    "Eyebrow": "当前证据",
-    "Title": "已注册检查项",
+    "Eyebrow": "当前快照",
+    "Title": "检查项",
     "Subtitle": "该视图仅展示即时状态，不保存历史记录。",
     "Columns": {
       "Name": "名称",

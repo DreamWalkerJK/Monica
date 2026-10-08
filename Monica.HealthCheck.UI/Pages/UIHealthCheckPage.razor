@@ -27,20 +27,23 @@
         <MudDrawerContainer Class="health-drawer-container">
             <header class="health-page-header">
                 <div class="health-page-heading">
-                    <MudText Typo="Typo.overline">@L["Page:Eyebrow"]</MudText>
-                    <MudText Typo="Typo.h4">@L["Page:Heading"]</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+                    <span class="health-page-eyebrow">@L["Page:Eyebrow"]</span>
+                    <h1>@L["Page:Heading"]</h1>
+                    <p>@L["Page:Subtitle"]</p>
+                    <span class="health-host"><MudIcon Icon="@Icons.Material.Outlined.Dns" Size="Size.Small" />@L["Page:CurrentHost", session.HostName]</span>
                 </div>
                 <div class="health-page-actions">
-                    <MudChip T="string"
-                             Icon="@Icons.Material.Filled.Dns"
-                             Variant="Variant.Outlined"
-                             Color="Color.Info">
-                        @L["Page:CurrentHost", session.HostName]
-                    </MudChip>
-                    <MudButton Variant="Variant.Filled"
+                    @if (session.Snapshot is { } snapshot)
+                    {
+                        <div class="health-last-check">
+                            <span>@L["Page:LastChecked"]</span>
+                            <time datetime="@snapshot.CheckedAt.ToString("O")" title="@snapshot.CheckedAt.ToLocalTime().ToString("F")">@snapshot.CheckedAt.ToLocalTime().ToString("HH:mm:ss")</time>
+                        </div>
+                    }
+                    <MudButton Variant="Variant.Outlined"
                                Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Refresh"
+                               StartIcon="@Icons.Material.Outlined.Refresh"
+                               Class="health-refresh"
                                Disabled="@session.IsRefreshing"
                                OnClick="@(() => RefreshAsync(session))">
                         @L["Actions:Refresh"]
@@ -78,11 +81,10 @@
                     </div>
                     break;
                 case HealthCheckPageLoadState.Ready when session.Snapshot is not null:
-                    <main class="health-page-content">
+                    <div class="health-page-content">
                         <HealthCheckOverview Session="@session" />
-                        <HealthCheckFilters Session="@session" />
                         <HealthCheckEntryTable Session="@session" />
-                    </main>
+                    </div>
                     break;
             }
 

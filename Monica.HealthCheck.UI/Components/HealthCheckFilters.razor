@@ -1,46 +1,41 @@
 @inject IStringLocalizer<HealthCheckResource> L
 
-<section class="health-filters" aria-label="@L["Filters:AriaLabel"]">
-    <MudTextField T="string"
-                  Value="@Session.NameFilter"
-                  ValueChanged="@Session.SetNameFilterAsync"
-                  Label="@L["Filters:NameLabel"]"
-                  Placeholder="@L["Filters:NamePlaceholder"]"
-                  Immediate="true"
-                  Clearable="true"
-                  Adornment="Adornment.Start"
-                  AdornmentIcon="@Icons.Material.Filled.Search" />
-
-    <MudSelect T="HealthCheckState?"
-               Value="@Session.StatusFilter"
-               ValueChanged="@Session.SetStatusFilterAsync"
-               Label="@L["Filters:StatusLabel"]"
-               Clearable="true">
-        <MudSelectItem T="HealthCheckState?" Value="@(null)">@L["Filters:AnyStatus"]</MudSelectItem>
-        <MudSelectItem T="HealthCheckState?" Value="@HealthCheckState.Healthy">@L["Status:Healthy"]</MudSelectItem>
-        <MudSelectItem T="HealthCheckState?" Value="@HealthCheckState.Degraded">@L["Status:Degraded"]</MudSelectItem>
-        <MudSelectItem T="HealthCheckState?" Value="@HealthCheckState.Unhealthy">@L["Status:Unhealthy"]</MudSelectItem>
-    </MudSelect>
-
-    <MudSelect T="string"
-               Value="@Session.TagFilter"
-               ValueChanged="@Session.SetTagFilterAsync"
-               Label="@L["Filters:TagLabel"]"
-               Clearable="true">
-        @foreach (var tag in Session.AvailableTags)
-        {
-            <MudSelectItem T="string" Value="@tag">@tag</MudSelectItem>
-        }
-    </MudSelect>
-
-    <div class="filter-result-count" aria-live="polite">
-        <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Secondary" Size="Size.Small" />
-        <MudText Typo="Typo.body2" Color="Color.Secondary">
-            @L["Filters:Results", Session.FilteredEntries.Count, Session.Snapshot?.Entries.Count ?? 0]
-        </MudText>
+<div class="health-filters" aria-label="@L["Filters:AriaLabel"]">
+    <div class="health-filter-controls">
+        <MudTextField T="string" Value="@Session.NameFilter" ValueChanged="@Session.SetNameFilterAsync"
+                      Placeholder="@L["Filters:NamePlaceholder"]" aria-label="@L["Filters:NameLabel"]"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Clearable="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Class="health-search" />
+        <div class="health-tag-control">
+            <MudSelect T="string" Value="@Session.TagFilter" ValueChanged="@Session.SetTagFilterAsync"
+                   Label="@L["Filters:TagLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                   Clearable="true" Class="health-tag-filter">
+            @foreach (var tag in Session.AvailableTags)
+            {
+                <MudSelectItem T="string" Value="@tag">@tag</MudSelectItem>
+            }
+            </MudSelect>
+        </div>
     </div>
-</section>
+    <div class="health-filter-bottom">
+        <div class="health-status-filters" role="group" aria-label="@L["Filters:StatusLabel"]">
+            <button type="button" class="status-filter @(Session.StatusFilter is null ? "is-selected" : null)" aria-pressed="@(Session.StatusFilter is null ? "true" : "false")" @onclick="@(() => Session.SetStatusFilterAsync(null))">@L["Filters:AnyStatus"]<span>@(Session.Snapshot?.Entries.Count ?? 0)</span></button>
+            @foreach (var status in States)
+            {
+                <button type="button" class="status-filter state-@status.ToString().ToLowerInvariant() @(Session.StatusFilter == status ? "is-selected" : null)" aria-pressed="@(Session.StatusFilter == status ? "true" : "false")" @onclick="@(() => Session.SetStatusFilterAsync(status))"><i></i>@L.GetStatusText(status)<span>@Count(status)</span></button>
+            }
+        </div>
+        <span class="filter-result-count" aria-live="polite">@L["Filters:Results", Session.FilteredEntries.Count, Session.Snapshot?.Entries.Count ?? 0]</span>
+    </div>
+</div>
 
 @code {
     [Parameter, EditorRequired] public HealthCheckPageSession Session { get; set; } = default!;
+    private static readonly HealthCheckState[] States = [HealthCheckState.Unhealthy, HealthCheckState.Degraded, HealthCheckState.Healthy];
+    private int Count(HealthCheckState status) => status switch
+    {
+        HealthCheckState.Healthy => Session.Snapshot?.HealthyCount ?? 0,
+        HealthCheckState.Degraded => Session.Snapshot?.DegradedCount ?? 0,
+        _ => Session.Snapshot?.UnhealthyCount ?? 0
+    };
 }

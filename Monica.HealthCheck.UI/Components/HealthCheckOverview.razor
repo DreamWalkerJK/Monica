@@ -2,65 +2,61 @@
 
 @if (Session.Snapshot is { } snapshot)
 {
-    var readinessStatus = Session.ReadinessStatus;
-    <section class="health-overview" aria-labelledby="health-readiness-title">
-        <MudAlert Severity="@HealthCheckDisplay.Severity(readinessStatus)"
-                  Variant="Variant.Filled"
-                  Icon="@HealthCheckDisplay.Icon(readinessStatus)">
-            <div class="readiness-content">
-                <div>
-                    <MudText Typo="Typo.overline">@L["Overview:ReadinessLabel"]</MudText>
-                    <MudText Typo="Typo.h6" id="health-readiness-title">@ReadinessText(readinessStatus)</MudText>
-                </div>
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                    @L["Overview:ReadinessChecks", Session.ReadinessEntryCount]
-                </MudChip>
-            </div>
-        </MudAlert>
-
-        <div class="health-summary-grid">
-            <article class="health-summary health-summary--healthy">
-                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
-                <div>
-                    <MudText Typo="Typo.h4">@snapshot.HealthyCount</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Status:Healthy"]</MudText>
-                </div>
-            </article>
-            <article class="health-summary health-summary--degraded">
-                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
-                <div>
-                    <MudText Typo="Typo.h4">@snapshot.DegradedCount</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Status:Degraded"]</MudText>
-                </div>
-            </article>
-            <article class="health-summary health-summary--unhealthy">
-                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
-                <div>
-                    <MudText Typo="Typo.h4">@snapshot.UnhealthyCount</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Status:Unhealthy"]</MudText>
-                </div>
-            </article>
-            <article class="health-summary health-summary--evidence">
-                <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Info" Size="Size.Large" />
-                <div>
-                    <MudText Typo="Typo.subtitle1">@snapshot.CheckedAt.ToLocalTime().ToString("G")</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @L["Overview:DurationMilliseconds", snapshot.Duration.TotalMilliseconds]
-                    </MudText>
-                </div>
-            </article>
+    var readiness = Session.ReadinessStatus;
+    var coverageMissing = Session.ReadinessEntryCount == 0;
+    var attention = snapshot.Entries.Where(static entry => entry.Status != HealthCheckState.Healthy)
+        .OrderByDescending(static entry => entry.Status).ThenBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+    <section class="health-overview state-@(coverageMissing ? "unconfigured" : readiness.ToString().ToLowerInvariant())" aria-labelledby="health-readiness-title">
+        <div class="health-readiness">
+            <div class="readiness-label"><span class="readiness-dot"></span>@L["Overview:ReadinessLabel"]</div>
+            <h2 id="health-readiness-title">@Headline(readiness, coverageMissing)</h2>
+            <p class="readiness-description">@ReadinessText(readiness, coverageMissing)</p>
+            <div class="readiness-meta"><MudIcon Icon="@Icons.Material.Outlined.FactCheck" Size="Size.Small" /><span>@L["Overview:ReadinessChecks", Session.ReadinessEntryCount]</span><span class="meta-separator">·</span><span>@L["Overview:AutoRefresh"]</span></div>
+            <dl class="health-distribution" aria-label="@L["Overview:Distribution"]">
+                <div class="distribution-healthy @(snapshot.HealthyCount == 0 ? "is-zero" : null)"><dt>@L["Status:Healthy"]</dt><dd>@snapshot.HealthyCount</dd></div>
+                <div class="distribution-degraded @(snapshot.DegradedCount == 0 ? "is-zero" : null)"><dt>@L["Status:Degraded"]</dt><dd>@snapshot.DegradedCount</dd></div>
+                <div class="distribution-unhealthy @(snapshot.UnhealthyCount == 0 ? "is-zero" : null)"><dt>@L["Status:Unhealthy"]</dt><dd>@snapshot.UnhealthyCount</dd></div>
+                <div class="distribution-duration"><dt>@L["Overview:SnapshotDuration"]</dt><dd title="@L["Overview:DurationMilliseconds", snapshot.Duration.TotalMilliseconds]">@L["Common:DurationMilliseconds", snapshot.Duration.TotalMilliseconds]</dd></div>
+            </dl>
         </div>
+        <aside class="health-attention" aria-labelledby="health-attention-title">
+            <div class="attention-heading"><h3 id="health-attention-title">@L["Overview:AttentionTitle"]</h3><span>@attention.Length</span></div>
+            @if (attention.Length == 0)
+            {
+                <div class="attention-clear"><MudIcon Icon="@Icons.Material.Outlined.CheckCircleOutline" Color="Color.Success" /><p>@L["Overview:AllClear"]</p></div>
+            }
+            else
+            {
+                <div class="attention-list">
+                    @foreach (var entry in attention)
+                    {
+                        <button class="attention-entry" type="button" @onclick="@(() => Session.OpenDetailsAsync(entry))" aria-label="@L["Actions:DetailsFor", entry.Name]">
+                            <span class="attention-entry-state"><MudIcon Icon="@(entry.Status == HealthCheckState.Degraded ? Icons.Material.Outlined.WarningAmber : Icons.Material.Outlined.ErrorOutline)" Color="@HealthCheckDisplay.Color(entry.Status)" Size="Size.Small" />@L.GetStatusText(entry.Status)</span>
+                            <strong>@entry.Name</strong>
+                            <span class="attention-entry-description">@(string.IsNullOrWhiteSpace(entry.Description) ? L["Details:NoDescription"] : entry.Description)</span>
+                            <span class="attention-entry-action">@L["Actions:Details"]<MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></span>
+                        </button>
+                    }
+                </div>
+            }
+        </aside>
     </section>
 }
 
 @code {
     [Parameter, EditorRequired] public HealthCheckPageSession Session { get; set; } = default!;
 
-    private string ReadinessText(HealthCheckState status) => status switch
+    private string Headline(HealthCheckState status, bool missing) => missing ? L["Overview:CoverageMissingTitle"] : status switch
+    {
+        HealthCheckState.Healthy => L["Overview:Headlines:Healthy"],
+        HealthCheckState.Degraded => L["Overview:Headlines:Degraded"],
+        _ => L["Overview:Headlines:Unhealthy"]
+    };
+
+    private string ReadinessText(HealthCheckState status, bool missing) => missing ? L["Overview:CoverageMissingDescription"] : status switch
     {
         HealthCheckState.Healthy => L["Overview:Ready"],
         HealthCheckState.Degraded => L["Overview:ReadyDegraded"],
-        HealthCheckState.Unhealthy => L["Overview:NotReady"],
         _ => L["Overview:NotReady"]
     };
 }
