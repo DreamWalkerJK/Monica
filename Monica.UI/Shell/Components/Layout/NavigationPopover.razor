@@ -1,0 +1,183 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using MudBlazor.Interfaces
+@using Monica.UI.Shell.Models
+@using Monica.UI.Shell.Support
+@inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> L
+@implements INavigationEventReceiver
+@implements IAsyncDisposable
+
+<div class="mo-navigation-popover @Class" @onkeydown="HandleActivatorKeyDown">
+    @if (string.IsNullOrEmpty(Icon))
+    {
+        <MudButton Variant="Variant.Text" Color="Color.Inherit" Class="mud-menu-button-activator"
+                   StartIcon="@StartIcon" EndIcon="@ShellIcons.ChevronDown" OnClick="Toggle"
+                   aria-label="@Label" aria-expanded="@(_open ? "true" : "false")" aria-controls="@_popupId">
+            @Label
+        </MudButton>
+    }
+    else
+    {
+        <MudIconButton Icon="@Icon" Color="Color.Inherit" Class="mud-menu-icon-button-activator"
+                       OnClick="Toggle" title="@Label"
+                       aria-label="@Label" aria-expanded="@(_open ? "true" : "false")" aria-controls="@_popupId" />
+    }
+
+    <MudPopover Open="@_open" Class="@PopoverClass" AnchorOrigin="@AnchorOrigin" TransformOrigin="@TransformOrigin"
+                OverflowBehavior="OverflowBehavior.FlipAlways" Elevation="8" Duration="0">
+        @if (_open)
+        {
+            <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
+                <div id="@_popupId" class="@SurfaceClass" @onkeydown="HandlePopoverKeyDown">
+                    @if (!string.IsNullOrWhiteSpace(Header))
+                    {
+                        @if (ShowOverview)
+                        {
+                            <div class="mo-navigation-popover__overview">
+                                <span class="mo-navigation-popover__eyebrow">@L["NavBar:Explore"]</span>
+                                <h2>@Header</h2>
+                                @if (!string.IsNullOrWhiteSpace(HeaderDescription))
+                                {
+                                    <p>@HeaderDescription</p>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mo-navigation-popover__header">@Header</div>
+                        }
+                    }
+                    <CascadingValue Value="@((INavigationEventReceiver)this)" IsFixed="true">
+                        <MudNavMenu Class="mo-navigation-popover__pages" aria-label="@Label">
+                            @if (Group is { } group)
+                            {
+                                <NavigationTree Group="@group" ActiveItem="@ActiveItem" ShowPageIcons="@(!ShowOverview)" />
+                            }
+                            else
+                            {
+                                @foreach (var root in Groups)
+                                {
+                                    <MudNavGroup @key="root.Id" Title="@root.DisplayName" Icon="@root.Icon" ExpandIcon="@ShellIcons.ChevronDown" Expanded="@ContainsActive(root)">
+                                        <NavigationTree Group="@root" ActiveItem="@ActiveItem" ShowPageIcons="@(!ShowOverview)" />
+                                    </MudNavGroup>
+                                }
+                            }
+                        </MudNavMenu>
+                    </CascadingValue>
+                </div>
+            </MudFocusTrap>
+        }
+    </MudPopover>
+    <MudOverlay Visible="@_open" AutoClose="true" OnClosed="Close" Class="mud-overlay-popover" LockScroll="false" />
+</div>
+
+@code {
+    private readonly string _popupId = $"mo-navigation-{Guid.NewGuid():N}";
+    private readonly ComponentRenderTracker _renderTracker = new();
+    private bool _open;
+    private bool _disposed;
+    private string PopoverClass => ShowOverview ? "mo-navbar-menu-popover mo-navbar-menu-popover--overview" : "mo-navbar-menu-popover";
+    private string SurfaceClass => ShowOverview ? "mo-navigation-popover__surface mo-navigation-popover__surface--overview" : "mo-navigation-popover__surface";
+
+    /// <summary>Gets or sets one authorized category to render directly. When set, it takes precedence over <see cref="Groups"/>.</summary>
+    [Parameter] public NavigationGroup? Group { get; set; }
+
+    /// <summary>Gets or sets authorized root categories shown as expandable branches when <see cref="Group"/> is absent.</summary>
+    [Parameter] public IReadOnlyList<NavigationGroup> Groups { get; set; } = [];
+
+    /// <summary>Gets or sets the single active destination used to expand its ancestors.</summary>
+    [Parameter] public NavigationItem? ActiveItem { get; set; }
+
+    /// <summary>Gets or sets the localized activator and navigation label. Required for an accessible icon activator.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Gets or sets an optional icon activator. When absent, the activator displays <see cref="Label"/>.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Gets or sets an optional leading icon on a text activator. Ignored when <see cref="Icon"/> supplies an icon-only activator.</summary>
+    [Parameter] public string? StartIcon { get; set; }
+
+    /// <summary>Gets or sets an optional localized heading inside the popover.</summary>
+    [Parameter] public string? Header { get; set; }
+
+    /// <summary>Gets or sets a localized description beneath the heading when <see cref="ShowOverview"/> is enabled.</summary>
+    [Parameter] public string? HeaderDescription { get; set; }
+
+    /// <summary>Gets or sets whether to show a spacious category overview and simple destination rows. Defaults to false for compact menus.</summary>
+    [Parameter] public bool ShowOverview { get; set; }
+
+    /// <summary>Gets or sets additional presentation classes on the activator wrapper.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Gets or sets the activator's anchor point. Defaults to its bottom-left corner.</summary>
+    [Parameter] public Origin AnchorOrigin { get; set; } = Origin.BottomLeft;
+
+    /// <summary>Gets or sets the popover's transform origin. Defaults to its top-left corner.</summary>
+    [Parameter] public Origin TransformOrigin { get; set; } = Origin.TopLeft;
+
+    protected override void OnInitialized() => Navigation.LocationChanged += HandleLocationChanged;
+
+    private bool ContainsActive(NavigationGroup group) =>
+        ActiveItem is not null && NavigationTreeBuilder.Flatten([group]).Contains(ActiveItem);
+
+    private void Toggle()
+    {
+        if (!_disposed)
+        {
+            _open = !_open;
+        }
+    }
+
+    private void Close() => _open = false;
+
+    private void HandleActivatorKeyDown(KeyboardEventArgs args)
+    {
+        if (!_disposed && args.Key == "ArrowDown")
+        {
+            _open = true;
+        }
+    }
+
+    private void HandlePopoverKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            Close();
+        }
+    }
+
+    /// <summary>Closes the popover after any native navigation link click, including the current destination.</summary>
+    public Task OnNavigation() => InvokeAsync(() =>
+    {
+        if (!_disposed && _open)
+        {
+            Close();
+            StateHasChanged();
+        }
+    });
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        if (_disposed || !_open)
+        {
+            return;
+        }
+
+        _renderTracker.Queue(() => InvokeAsync(() =>
+        {
+            if (!_disposed && _open)
+            {
+                Close();
+                StateHasChanged();
+            }
+        }));
+    }
+
+    /// <summary>Stops route callbacks and observes renderer work. MudBlazor owns popover, overlay, and focus-trap resources.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        Navigation.LocationChanged -= HandleLocationChanged;
+        await _renderTracker.CompleteAsync();
+    }
+}

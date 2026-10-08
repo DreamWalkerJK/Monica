@@ -112,7 +112,7 @@ public sealed class PageRegistryTests
             order: 451);
 
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*tairitsua.monica.gachapool*different label, resource, or order*");
+            .WithMessage("*tairitsua.monica.gachapool*different label, resource, order, parent, or icon*");
     }
 
     [Fact]
@@ -129,6 +129,99 @@ public sealed class PageRegistryTests
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*unregistered categories*tairitsua.monica.gachapool*");
+    }
+
+    [Fact]
+    public void RegisterCategory_WhenParentIsRegisteredLater_ShouldPublishParentAndIcon()
+    {
+        var registry = new PageRegistry();
+        var parentId = NavigationCategoryId.Create("package.parent");
+        var childId = registry.RegisterCategory("package.child", "Child", parentId: parentId, icon: "child-icon");
+        registry.RegisterCategory(parentId.Value, "Parent");
+        registry.Seal();
+
+        var child = registry.GetNavigationCategories().Single(category => category.Id == childId);
+        child.ParentId.Should().Be(parentId);
+        child.Icon.Should().Be("child-icon");
+    }
+
+    [Fact]
+    public void Seal_WhenCategoryReferencesMissingParent_ShouldRejectHierarchy()
+    {
+        var registry = new PageRegistry();
+        registry.RegisterCategory("package.child", "Child", parentId: NavigationCategoryId.Create("package.missing"));
+
+        var act = registry.Seal;
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*unregistered parents*package.missing*");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Seal_WhenCategoryHierarchyContainsCycle_ShouldRejectHierarchy(bool selfReference)
+    {
+        var registry = new PageRegistry();
+        var firstId = NavigationCategoryId.Create("package.first");
+        var secondId = NavigationCategoryId.Create("package.second");
+        registry.RegisterCategory(firstId.Value, "First", parentId: selfReference ? firstId : secondId);
+        if (!selfReference)
+        {
+            registry.RegisterCategory(secondId.Value, "Second", parentId: firstId);
+        }
+
+        var act = registry.Seal;
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*hierarchy contains a cycle*package.first*");
+    }
+
+    [Fact]
+    public void RegisterCategory_WhenParentOrIconConflicts_ShouldRejectCollision()
+    {
+        var registry = new PageRegistry();
+        registry.RegisterCategory("package.child", "Child", icon: "first-icon");
+
+        var changedIcon = () => registry.RegisterCategory("package.child", "Child", icon: "second-icon");
+        var changedParent = () => registry.RegisterCategory(
+            "package.child", "Child", parentId: BuiltInNavigationCategoryIds.Module, icon: "first-icon");
+
+        changedIcon.Should().Throw<InvalidOperationException>();
+        changedParent.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Build_WhenOnlyNestedDestinationIsAuthorized_ShouldRetainAncestorsAndPruneEmptyBranches()
+    {
+        var registry = new PageRegistry();
+        var rootId = registry.RegisterCategory("package.root", "Root", order: 20, icon: "root-icon");
+        var branchId = registry.RegisterLocalizedCategory<ThirdPartyResource>(
+            "package.branch", "Navigation:Category", parentId: rootId);
+        var leafCategoryId = registry.RegisterCategory("package.leaf", "Leaf", parentId: branchId);
+        var deniedCategoryId = registry.RegisterLocalizedCategory<SecondResource>(
+            "package.denied", "Navigation:Denied", parentId: rootId);
+        registry.RegisterPage<TestPage>("permitted/zeta", "Zeta", categoryId: leafCategoryId, addToNav: true, navOrder: 20);
+        registry.RegisterPage<TestPage>("permitted/alpha", "Alpha", categoryId: leafCategoryId, addToNav: true, navOrder: 10);
+        registry.RegisterPage<TestPage>("denied", "Denied", categoryId: deniedCategoryId, addToNav: true);
+        registry.Seal();
+        var catalog = new HostLocalizationCatalog("host");
+        var authorizedItems = registry.GetNavItems().Where(item => item.Href.StartsWith("permitted/", StringComparison.Ordinal)).ToArray();
+
+        var tree = NavigationTreeBuilder.Build(registry.GetNavigationCategories(), authorizedItems, catalog);
+
+        var root = tree.Should().ContainSingle().Subject;
+        root.Id.Should().Be(rootId);
+        root.Icon.Should().Be("root-icon");
+        root.Items.Should().BeEmpty();
+        var branch = root.Children.Should().ContainSingle().Subject;
+        branch.Id.Should().Be(branchId);
+        branch.DisplayName.Should().Be("host:ThirdPartyResource:Navigation:Category");
+        var leaf = branch.Children.Should().ContainSingle().Subject;
+        leaf.Id.Should().Be(leafCategoryId);
+        NavigationTreeBuilder.Flatten(tree).Select(static item => item.Href)
+            .Should().Equal("permitted/alpha", "permitted/zeta");
+        catalog.RequestedResourceTypes.Should().NotContain(typeof(SecondResource));
     }
 
     [Fact]

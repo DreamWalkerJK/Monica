@@ -20,13 +20,26 @@ public class MudBlazorDefaultTheme : ThemeDefinitionBase
         {
             PaletteLight = _lightPalette,
             PaletteDark = _darkPalette,
-            LayoutProperties = new LayoutProperties(),
-            Typography = MonicaTypographyDefaults.CreateFallback()
+            LayoutProperties = new LayoutProperties { AppbarHeight = "56px", DrawerMiniWidthLeft = "64px", DrawerMiniWidthRight = "64px" },
+            Typography = MonicaTypographyDefaults.CreateFallback(),
+            Shadows = MonicaShadowDefaults.Create()
         };
     }
     private readonly PaletteLight _lightPalette = new()
     {
         Black = "#110e2d",
+        Primary = "#594ae2",
+        PrimaryContrastText = "#ffffff",
+        Info = "#1667b8",
+        InfoContrastText = "#ffffff",
+        Success = "#278246",
+        SuccessContrastText = "#ffffff",
+        Warning = "#956217",
+        WarningContrastText = "#ffffff",
+        Error = "#c02e49",
+        ErrorContrastText = "#ffffff",
+        Background = "#f5f4fa",
+        Surface = "#ffffff",
         AppbarText = "#424242",
         AppbarBackground = "rgba(255,255,255,0.8)",
         DrawerBackground = "#ffffff",
@@ -37,21 +50,26 @@ public class MudBlazorDefaultTheme : ThemeDefinitionBase
 
     private readonly PaletteDark _darkPalette = new()
     {
-        Primary = "#7e6fff",
+        Primary = "#9d91ff",
+        PrimaryContrastText = "#171427",
+        InfoContrastText = "#101b2d",
+        SuccessContrastText = "#0b2513",
+        WarningContrastText = "#2d210d",
+        ErrorContrastText = "#2d1015",
         Surface = "#1e1e2d",
         Background = "#1a1a27",
         BackgroundGray = "#151521",
-        AppbarText = "#92929f",
+        AppbarText = "#eeedf5",
         AppbarBackground = "rgba(26,26,39,0.8)",
         DrawerBackground = "#1a1a27",
-        ActionDefault = "#74718e",
+        ActionDefault = "#aca8c0",
         ActionDisabled = "#9999994d",
         ActionDisabledBackground = "#605f6d4d",
-        TextPrimary = "#b2b0bf",
-        TextSecondary = "#92929f",
+        TextPrimary = "#eeedf5",
+        TextSecondary = "#b0adbf",
         TextDisabled = "#ffffff33",
-        DrawerIcon = "#92929f",
-        DrawerText = "#92929f",
+        DrawerIcon = "#b0adbf",
+        DrawerText = "#eeedf5",
         GrayLight = "#2a2833",
         GrayLighter = "#1e1e2d",
         Info = "#4a86ff",

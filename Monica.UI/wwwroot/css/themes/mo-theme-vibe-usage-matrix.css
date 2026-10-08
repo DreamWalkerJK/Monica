@@ -75,7 +75,7 @@
     --mo-vibe-ink-dim: rgba(0, 179, 54, 0.42);
     --mo-vibe-ghost: rgba(0, 179, 54, 0.18);
     --mo-vibe-glow: rgba(0, 179, 54, 0.10);
-    --mo-vibe-panel-shadow: 0 0 0 1px rgba(0, 179, 54, 0.08), 0 18px 40px rgba(6, 43, 18, 0.10);
+    --mo-vibe-panel-shadow: var(--mud-elevation-2);
     --mo-vibe-scanline-opacity: 0.06;
     --mo-vibe-selection-text: #041206;
     --mo-vibe-corner-ink: rgba(0, 179, 54, 0.34);
@@ -105,7 +105,7 @@
     --mo-vibe-ink-dim: rgba(0, 255, 65, 0.38);
     --mo-vibe-ghost: rgba(0, 255, 65, 0.18);
     --mo-vibe-glow: rgba(0, 255, 65, 0.18);
-    --mo-vibe-panel-shadow: 0 0 0 1px rgba(0, 255, 65, 0.08), 0 18px 40px rgba(0, 0, 0, 0.45);
+    --mo-vibe-panel-shadow: var(--mud-elevation-2);
     --mo-vibe-scanline-opacity: 0.12;
     --mo-vibe-selection-text: #050505;
     --mo-vibe-corner-ink: rgba(0, 255, 65, 0.40);
@@ -152,66 +152,13 @@
     color: var(--mo-vibe-selection-text);
 }
 
-.mo-theme-vibe-usage-matrix-light .mo-layout,
-.mo-theme-vibe-usage-matrix-dark .mo-layout,
-.mo-theme-vibe-usage-matrix-light .mo-main-content,
-.mo-theme-vibe-usage-matrix-dark .mo-main-content,
-.mo-theme-vibe-usage-matrix-light .mo-body-content,
-.mo-theme-vibe-usage-matrix-dark .mo-body-content {
-    background: transparent;
-}
-
 .mo-theme-vibe-usage-matrix-light :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select),
-.mo-theme-vibe-usage-matrix-dark :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select),
-.mo-theme-vibe-usage-matrix-light :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title),
-.mo-theme-vibe-usage-matrix-dark :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title) {
+.mo-theme-vibe-usage-matrix-dark :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select){
     font-family: var(--mo-vibe-font);
 }
 
-.mo-theme-vibe-usage-matrix-light .navbar-link,
-.mo-theme-vibe-usage-matrix-dark .navbar-link,
-.mo-theme-vibe-usage-matrix-light .navbar-measure-link,
-.mo-theme-vibe-usage-matrix-dark .navbar-measure-link {
-    color: var(--mo-vibe-ink-muted);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-}
-
-.mo-theme-vibe-usage-matrix-light .navbar-link:hover,
-.mo-theme-vibe-usage-matrix-dark .navbar-link:hover {
-    color: var(--mo-vibe-ink-bright);
-    background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
-}
-
-.mo-theme-vibe-usage-matrix-light .navbar-link::before,
-.mo-theme-vibe-usage-matrix-dark .navbar-link::before {
-    height: 1px;
-    background: var(--mud-palette-primary);
-    box-shadow: 0 0 10px rgba(0, 255, 65, 0.28);
-}
-
-.mo-theme-vibe-usage-matrix-light :is(.more-menu, .flyout-menu, .dropdown-menu),
-.mo-theme-vibe-usage-matrix-dark :is(.more-menu, .flyout-menu, .dropdown-menu) {
-    background: var(--mo-vibe-panel-strong);
-    border: 1px solid var(--mo-vibe-ghost);
-    border-radius: 0;
-    box-shadow: var(--mo-vibe-panel-shadow);
-    backdrop-filter: blur(12px);
-}
-
-.mo-theme-vibe-usage-matrix-light :is(.more-menu-header, .flyout-menu-header),
-.mo-theme-vibe-usage-matrix-dark :is(.more-menu-header, .flyout-menu-header) {
-    color: var(--mo-vibe-ink-muted);
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-}
-
-.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
-.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .mud-tabs),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .mud-tabs) {
     background: var(--mo-vibe-panel);
     border: 1px solid var(--mo-vibe-ghost);
     border-radius: 0;
@@ -285,14 +232,14 @@
     background: var(--mud-palette-primary);
     border-color: var(--mud-palette-primary);
     color: #050505;
-    box-shadow: 0 0 12px rgba(0, 255, 65, 0.20);
+    box-shadow: var(--mud-elevation-2);
 }
 
 .mo-theme-vibe-usage-matrix-light .mud-button-filled-primary:hover,
 .mo-theme-vibe-usage-matrix-dark .mud-button-filled-primary:hover {
     background: color-mix(in srgb, var(--mud-palette-primary) 84%, white);
     border-color: color-mix(in srgb, var(--mud-palette-primary) 84%, white);
-    box-shadow: 0 0 18px rgba(0, 255, 65, 0.32);
+    box-shadow: var(--mud-elevation-2);
     transform: translateY(-1px);
 }
 
@@ -305,41 +252,8 @@
 .mo-theme-vibe-usage-matrix-dark :is(.mud-button-text:hover, .mud-button-outlined:hover) {
     background: var(--mo-vibe-panel-strong);
     border-color: var(--mo-vibe-ink-dim);
-    box-shadow: 0 0 16px rgba(0, 255, 65, 0.16);
+    box-shadow: var(--mud-elevation-2);
     transform: translateY(-1px);
-}
-
-.mo-theme-vibe-usage-matrix-light :is(.mud-button, .mud-navmenu .mud-nav-link, .navbar-link, .navbar-measure-link, .theme-card),
-.mo-theme-vibe-usage-matrix-dark :is(.mud-button, .mud-navmenu .mud-nav-link, .navbar-link, .navbar-measure-link, .theme-card) {
-    position: relative;
-    overflow: hidden;
-}
-
-.mo-theme-vibe-usage-matrix-light :is(.mud-button, .mud-navmenu .mud-nav-link, .navbar-link, .navbar-measure-link, .theme-card)::after,
-.mo-theme-vibe-usage-matrix-dark :is(.mud-button, .mud-navmenu .mud-nav-link, .navbar-link, .navbar-measure-link, .theme-card)::after {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    pointer-events: none;
-    opacity: 0;
-    background: linear-gradient(
-        120deg,
-        transparent 0%,
-        transparent 34%,
-        color-mix(in srgb, var(--mo-vibe-sweep) 90%, transparent) 47%,
-        rgba(255, 255, 255, 0.22) 50%,
-        color-mix(in srgb, var(--mo-vibe-sweep) 90%, transparent) 53%,
-        transparent 66%,
-        transparent 100%
-    );
-    transform: translateX(-125%);
-    transition: transform 320ms ease, opacity 180ms ease;
-}
-
-.mo-theme-vibe-usage-matrix-light :is(.mud-button:hover, .mud-navmenu .mud-nav-link:hover, .navbar-link:hover, .navbar-measure-link:hover, .theme-card:hover)::after,
-.mo-theme-vibe-usage-matrix-dark :is(.mud-button:hover, .mud-navmenu .mud-nav-link:hover, .navbar-link:hover, .navbar-measure-link:hover, .theme-card:hover)::after {
-    opacity: 1;
-    transform: translateX(125%);
 }
 
 .mo-theme-vibe-usage-matrix-light :is(.mud-chip, .mud-alert, .mud-snackbar .mud-snackbar-message),
@@ -449,7 +363,7 @@
 .mo-theme-vibe-usage-matrix-light .mud-tab-slider,
 .mo-theme-vibe-usage-matrix-dark .mud-tab-slider {
     background: var(--mud-palette-primary);
-    box-shadow: 0 0 12px rgba(0, 255, 65, 0.30);
+    box-shadow: var(--mud-elevation-2);
 }
 
 .mo-theme-vibe-usage-matrix-light :is(.mud-input-outlined, .mud-select),
@@ -503,7 +417,7 @@
     background: var(--mo-vibe-panel-strong);
     border-color: var(--mo-vibe-ghost);
     color: var(--mo-vibe-ink-bright);
-    box-shadow: 0 0 16px rgba(0, 255, 65, 0.12);
+    box-shadow: var(--mud-elevation-2);
     transform: translateX(1px);
 }
 
@@ -515,13 +429,13 @@
     color: var(--mo-vibe-ink-bright);
 }
 
-.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
-.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .mud-tabs),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .mud-tabs) {
     overflow: hidden;
 }
 
-.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before,
-.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before {
+.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .mud-tabs)::before,
+.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .mud-tabs)::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -556,10 +470,10 @@
     overflow: visible;
 }
 
-.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover, .theme-card:hover),
-.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover, .theme-card:hover) {
+.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover) {
     border-color: color-mix(in srgb, var(--mud-palette-primary) 58%, var(--mo-vibe-ghost));
-    box-shadow: 0 0 0 1px rgba(0, 255, 65, 0.10), 0 0 26px rgba(0, 255, 65, 0.12);
+    box-shadow: var(--mud-elevation-2);
 }
 
 .mo-theme-vibe-usage-matrix-light :is(.mud-table, .mud-data-grid),
@@ -613,27 +527,6 @@
 .mo-theme-vibe-usage-matrix-dark :is(.mud-data-grid .sort-direction-icon.mud-direction-asc, .mud-data-grid .sort-direction-icon.mud-direction-desc) {
     opacity: 1;
     color: var(--mo-vibe-ink-bright);
-}
-
-.mo-theme-vibe-usage-matrix-light .theme-card,
-.mo-theme-vibe-usage-matrix-dark .theme-card {
-    background: var(--mo-vibe-panel);
-    border: 1px solid var(--mo-vibe-ghost);
-    border-radius: 0;
-    box-shadow: none;
-}
-
-.mo-theme-vibe-usage-matrix-light .theme-card:hover,
-.mo-theme-vibe-usage-matrix-dark .theme-card:hover {
-    transform: translateY(-1px);
-    background: var(--mo-vibe-panel-strong);
-    box-shadow: var(--mo-vibe-panel-shadow);
-}
-
-.mo-theme-vibe-usage-matrix-light .theme-card.selected,
-.mo-theme-vibe-usage-matrix-dark .theme-card.selected {
-    border-color: var(--mud-palette-primary);
-    background: color-mix(in srgb, var(--mo-vibe-panel-strong) 86%, transparent);
 }
 
 :root[data-theme="vibe-usage-matrix-light"] .mud-tooltip,

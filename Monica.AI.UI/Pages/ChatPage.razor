@@ -5,10 +5,10 @@
 <PageTitle>@L["Pages:AIChat:Title"]</PageTitle>
 <HeadContent><link href="_content/Monica.AI.UI/css/ai-chat-page.css" rel="stylesheet" /></HeadContent>
 <div class="ai-chat-shell">
-    <MudLayout Class="ai-chat-layout">
+    <MudDrawerContainer Class="ai-chat-layout">
         @if (PageState.ShowSessionList)
         {
-            <MudDrawer @bind-Open="_sessionDrawerOpen" Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Md"
+            <MudDrawer @bind-Open="_sessionDrawerOpen" Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Md" Fixed="false"
                        Width="264px" Elevation="0" Class="ai-session-drawer">
                 <SessionList Sessions="@PageState.Sessions" CurrentSessionId="@PageState.CurrentSessionId"
                              IsLoading="@PageState.IsHistoryLoading" OnNewSession="@PageState.CreateNewSessionAsync"
@@ -47,7 +47,7 @@
                 <ChatContainer State="@PageState" ShowTrajectory="@_trajectory" OnInspect="InspectStep" />
             }
         </MudMainContent>
-    </MudLayout>
+    </MudDrawerContainer>
 </div>
 <ChatArchiveDialog @bind-Open="_archiveOpen" Sessions="@PageState.ArchivedSessions"
                    Disabled="@PageState.IsHistoryBusy" HasConflict="@PageState.HasHistoryConflict"

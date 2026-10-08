@@ -80,7 +80,13 @@ Use CSS for:
 - component-specific visual language
 - light/dark-only decorative behavior
 
-### 3. Prefer shared MudBlazor selectors over page-specific hooks
+### 3. Isolate theme previews from application wrapper styles
+
+Do not attach global `.mo-theme-*` wrapper classes to individual preview icons or cards. Those classes can own viewport-sized `::before`/`::after` decoration and broad descendant surface rules; applying one to a small preview can repaint the surrounding dialog.
+
+Use component-scoped `data-theme` selectors and explicit palette/brand variables for the preview subtree. `MonicaIcon` accepts `ThemeKind` and `IsDarkMode` for this purpose while retaining its own `mo-brand-icon` class. Its preview must not inherit application-wrapper decoration. Verify all Appearance cards in light and dark modes, including expressive themes as both previews and the active surrounding theme.
+
+### 4. Prefer shared MudBlazor selectors over page-specific hooks
 
 Theme CSS should target stable shared structures such as:
 
@@ -92,7 +98,7 @@ Theme CSS should target stable shared structures such as:
 
 Do not rely on page-only classes when the intent is a reusable theme behavior. If a temporary page-specific hook is added during diagnosis, remove it after the shared selector is in place.
 
-### 4. Keep theme CSS component-oriented
+### 5. Keep theme CSS component-oriented
 
 A good theme file usually looks like:
 
@@ -105,6 +111,10 @@ A good theme file usually looks like:
 7. dialogs, menus, snackbars, overlays
 
 Avoid scattering one-off page fixes throughout the theme file.
+
+### 6. Keep shared button geometry overridable
+
+Global `.mud-button` rules must not force pill radii, padding, or minimum height with `!important`. Appearance preview cards and compact shell triggers own their geometry; broad forced button paint can turn cards into pills and make real trigger widths differ from the navigation measurement rail. Set modest theme defaults without overriding component-owned shape or spacing. Inspect compiled isolation selectors and live computed styles when a local rule loses, and verify Appearance cards, ordinary actions, and Topbar overflow together.
 
 ## High-Risk Component Areas
 

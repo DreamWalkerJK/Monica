@@ -1,106 +1,172 @@
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
+@using Monica.UI.Shared.Components.Branding
+@using Monica.UI.Shell.Models
 @using Monica.UI.Shell.State
-@using Monica.UI.Shell.Support
 @using Monica.UI.Theming
 @inject ThemeState ThemeService
+@inject ShellState Shell
 @inject IStringLocalizer<SharedResource> L
-@implements IAsyncDisposable
 
 <MudDialog>
     <DialogContent>
         <div class="theme-dialog">
             <header class="theme-dialog__header">
-                <span class="theme-dialog__mark" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Filled.Palette" />
-                </span>
+                <span class="theme-dialog__mark" aria-hidden="true"><MonicaIcon Size="46px" /></span>
                 <div>
-                    <MudText Typo="Typo.overline">@L["Theme:SelectStyle"]</MudText>
                     <MudText Typo="Typo.h5" HtmlTag="h2">@L["Theme:Settings"]</MudText>
+                    <MudText Typo="Typo.body2" Class="theme-dialog__intro">@L["Theme:Introduction"]</MudText>
                 </div>
             </header>
 
-            <section class="theme-dialog__section" aria-labelledby="theme-style-heading">
-                <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="theme-style-heading">@L["Theme:SelectStyle"]</MudText>
-                <div class="theme-dialog__options" aria-labelledby="theme-style-heading">
-                    @foreach (var theme in _themeOptions)
-                    {
-                        var isSelected = ThemeService.CurrentThemeKind == theme.Kind;
-                        <button type="button"
-                                class="theme-dialog__option @(isSelected ? "is-selected" : string.Empty)"
-                                aria-pressed="@(isSelected ? "true" : "false")"
-                                @onclick="() => OnThemeChanged(theme.Kind)">
-                            <span class="theme-dialog__radio" aria-hidden="true"><i></i></span>
-                            <span class="theme-dialog__option-copy">
-                                <strong>@theme.DisplayName</strong>
-                                <small>@theme.Description</small>
-                            </span>
-                            @if (isSelected)
-                            {
-                                <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
-                            }
-                        </button>
-                    }
+            <section class="theme-dialog__section" aria-labelledby="appearance-mode-heading">
+                <div class="theme-dialog__section-heading">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="appearance-mode-heading">@L["Theme:ColorMode"]</MudText>
+                    <div class="theme-dialog__modes" aria-labelledby="appearance-mode-heading">
+                        <MudButton Variant="Variant.Text" Class="@GetModeClass(false)" StartIcon="@Icons.Material.Outlined.LightMode"
+                                   aria-pressed="@(!_isDarkMode ? "true" : "false")" OnClick="() => _isDarkMode = false">@L["Theme:Light"]</MudButton>
+                        <MudButton Variant="Variant.Text" Class="@GetModeClass(true)" StartIcon="@Icons.Material.Outlined.DarkMode"
+                                   aria-pressed="@(_isDarkMode ? "true" : "false")" OnClick="() => _isDarkMode = true">@L["Theme:Dark"]</MudButton>
+                    </div>
                 </div>
             </section>
 
-            <section class="theme-dialog__mode">
-                <div>
-                    <MudText Typo="Typo.subtitle2">@L["Theme:DarkMode"]</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        @L["Theme:CurrentTheme"]: @GetCurrentThemeDisplayName()
-                    </MudText>
+            <section class="theme-dialog__section" aria-labelledby="appearance-navigation-heading">
+                <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="appearance-navigation-heading">@L["Theme:NavigationLayout"]</MudText>
+                <div class="theme-dialog__layouts" aria-labelledby="appearance-navigation-heading">
+                    <div class="theme-dialog__layout-wrapper">
+                        <MudButton Variant="Variant.Text" Class="@GetLayoutClass(ShellNavigationLayout.Sidebar)"
+                                   aria-pressed="@(_layout == ShellNavigationLayout.Sidebar ? "true" : "false")"
+                                   OnClick="() => _layout = ShellNavigationLayout.Sidebar">
+                            <span class="theme-dialog__layout-illustration theme-dialog__layout-illustration--sidebar" aria-hidden="true">
+                                <span class="theme-dialog__layout-header"></span><span class="theme-dialog__layout-navigation"></span><span class="theme-dialog__layout-body"></span>
+                            </span>
+                            <span class="theme-dialog__layout-copy"><strong>@L["Theme:Sidebar"]</strong><small>@L["Theme:SidebarDescription"]</small></span>
+                            @if (_layout == ShellNavigationLayout.Sidebar)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="theme-dialog__layout-check" />
+                            }
+                        </MudButton>
+                    </div>
+                    <div class="theme-dialog__layout-wrapper">
+                        <MudButton Variant="Variant.Text" Class="@GetLayoutClass(ShellNavigationLayout.Topbar)"
+                                   aria-pressed="@(_layout == ShellNavigationLayout.Topbar ? "true" : "false")"
+                                   OnClick="() => _layout = ShellNavigationLayout.Topbar">
+                            <span class="theme-dialog__layout-illustration theme-dialog__layout-illustration--topbar" aria-hidden="true">
+                                <span class="theme-dialog__layout-header"></span><span class="theme-dialog__layout-navigation"></span><span class="theme-dialog__layout-body"></span>
+                            </span>
+                            <span class="theme-dialog__layout-copy"><strong>@L["Theme:Topbar"]</strong><small>@L["Theme:TopbarDescription"]</small></span>
+                            @if (_layout == ShellNavigationLayout.Topbar)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="theme-dialog__layout-check" />
+                            }
+                        </MudButton>
+                    </div>
                 </div>
-                <MudSwitch T="bool" @bind-Value="ThemeService.IsDarkMode" Color="Color.Primary" />
+            </section>
+
+            <section class="theme-dialog__section" aria-labelledby="appearance-theme-heading">
+                <div class="theme-dialog__section-heading">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="appearance-theme-heading">@L["Theme:SelectStyle"]</MudText>
+                    <MudText Typo="Typo.caption" Class="theme-dialog__selection">@ThemeDisplayTextProvider.GetCurrentThemeSummary(L, _themeKind, _isDarkMode)</MudText>
+                </div>
+                <div class="theme-dialog__themes" aria-labelledby="appearance-theme-heading">
+                    @foreach (var option in _themeOptions)
+                    {
+                        var selected = _themeKind == option.Kind;
+                        <div class="theme-dialog__theme-wrapper">
+                            <MudButton Variant="Variant.Text" Class="@(selected ? "theme-dialog__theme is-selected" : "theme-dialog__theme")"
+                                       aria-pressed="@(selected ? "true" : "false")" OnClick="() => _themeKind = option.Kind">
+                                <span class="theme-dialog__preview" style="@GetPreviewStyle(option.Kind)" aria-hidden="true">
+                                    <span class="theme-dialog__preview-top">
+                                        <MonicaIcon ThemeKind="@option.Kind" IsDarkMode="@_isDarkMode" Size="18px" />
+                                        <span class="theme-dialog__preview-line"></span><span class="theme-dialog__preview-dot"></span>
+                                    </span>
+                                    <span class="theme-dialog__preview-content">
+                                        <span class="theme-dialog__preview-nav"><i></i><i></i><i></i></span>
+                                        <span class="theme-dialog__preview-panels"><i></i><span><i></i><i></i></span></span>
+                                    </span>
+                                </span>
+                                <span class="theme-dialog__theme-copy">
+                                    <span class="theme-dialog__theme-name"><strong>@option.DisplayName</strong>
+                                        @if (selected)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                                        }
+                                    </span>
+                                    <small>@option.Description</small>
+                                </span>
+                            </MudButton>
+                        </div>
+                    }
+                </div>
             </section>
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">
-            @L["Common:Close"]
-        </MudButton>
+        <div class="theme-dialog__actions">
+            <MudButton OnClick="Cancel" Disabled="@_applying" Variant="Variant.Text">@L["Theme:Cancel"]</MudButton>
+            <MudButton OnClick="ApplyAsync" Disabled="@(_applying || !HasChanges)" Color="Color.Primary" Variant="Variant.Filled">@L["Theme:Apply"]</MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
 @code {
-    private readonly ComponentRenderTracker _renderTracker = new();
+    private readonly Dictionary<MonicaThemeKind, MudTheme> _previewThemes = [];
     private IReadOnlyList<(MonicaThemeKind Kind, string DisplayName, string Description)> _themeOptions = [];
+    private MonicaThemeKind _themeKind;
+    private ShellNavigationLayout _layout;
+    private bool _isDarkMode;
+    private bool _applying;
 
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = null!;
 
+    private bool HasChanges => _themeKind != ThemeService.CurrentThemeKind || _isDarkMode != ThemeService.IsDarkMode || _layout != Shell.Layout;
+
     protected override void OnInitialized()
     {
-        RefreshThemeOptions();
-        ThemeService.OnThemeChanged += HandleThemeChanged;
+        _themeKind = ThemeService.CurrentThemeKind;
+        _isDarkMode = ThemeService.IsDarkMode;
+        _layout = Shell.Layout;
+        _themeOptions = ThemeDisplayTextProvider.GetThemeOptions(L)
+            .OrderBy(option => option.Kind == MonicaThemeKind.Default ? -1 : (int)option.Kind)
+            .ToArray();
+        foreach (var option in _themeOptions)
+        {
+            _previewThemes[option.Kind] = ThemeCatalog.GetTheme(option.Kind).CreateTheme();
+        }
     }
 
-    public async ValueTask DisposeAsync()
+    private string GetModeClass(bool dark) => _isDarkMode == dark ? "theme-dialog__mode is-selected" : "theme-dialog__mode";
+    private string GetLayoutClass(ShellNavigationLayout layout) => _layout == layout ? "theme-dialog__layout is-selected" : "theme-dialog__layout";
+
+    private string GetPreviewStyle(MonicaThemeKind kind)
     {
-        ThemeService.OnThemeChanged -= HandleThemeChanged;
-        await _renderTracker.CompleteAsync();
+        var theme = _previewThemes[kind];
+        Palette palette = _isDarkMode ? theme.PaletteDark : theme.PaletteLight;
+        return $"--mud-palette-primary:{palette.Primary};--mud-palette-background:{palette.Background};--mud-palette-surface:{palette.Surface};--mud-palette-text-primary:{palette.TextPrimary};--mud-palette-lines-default:{palette.LinesDefault};--mud-palette-drawer-background:{palette.DrawerBackground};";
     }
 
-    private void HandleThemeChanged()
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task ApplyAsync()
     {
-        _renderTracker.Queue(() => InvokeAsync(StateHasChanged));
+        if (_applying || !HasChanges)
+        {
+            return;
+        }
+
+        _applying = true;
+        try
+        {
+            ThemeService.SetTheme(_themeKind, _isDarkMode);
+            await Shell.SetLayoutAsync(_layout);
+            MudDialog.Close();
+        }
+        finally
+        {
+            _applying = false;
+        }
     }
-
-    private void Close()
-    {
-        MudDialog.Close();
-    }
-
-    private void OnThemeChanged(MonicaThemeKind newTheme) => ThemeService.CurrentThemeKind = newTheme;
-
-    private string GetCurrentThemeDisplayName()
-    {
-        return ThemeDisplayTextProvider.GetCurrentThemeSummary(L, ThemeService.CurrentThemeKind, ThemeService.IsDarkMode);
-    }
-
-    private void RefreshThemeOptions()
-    {
-        _themeOptions = ThemeDisplayTextProvider.GetThemeOptions(L);
-    }
-
 }

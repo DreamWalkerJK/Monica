@@ -40,16 +40,7 @@ public class ModuleSystemUI : MonicaModule<ModuleSystemUIOption>, IUIModule
         module.Require<ModuleLocalization, ModuleLocalizationOption>(
             static option => option.AddResource<ModuleSystemResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
-            option.ConfigureNavigation(static registry => registry.RegisterLocalizedPage<
-                ModuleSystemPage,
-                ModuleSystemResource>(
-                ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
-                "Navigation:Title",
-                Icons.Material.Filled.AccountTree,
-                BuiltInNavigationCategoryIds.Module,
-                addToNav: true,
-                navOrder: 10,
-                accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>))));
+            option.ConfigureNavigation(RegisterNavigation));
     }
 
     /// <inheritdoc />
@@ -57,6 +48,42 @@ public class ModuleSystemUI : MonicaModule<ModuleSystemUIOption>, IUIModule
     {
         context.Services.AddSingleton<ModuleSystemWorkbenchSessionFactory>();
         context.Services.TryAddScoped<OperationalPageAccessPolicy<ModuleSystemUIOption>>();
+    }
+
+    private static void RegisterNavigation(INavigationRegistryBuilder registry)
+    {
+        var workbenchCategory = registry.RegisterLocalizedCategory<ModuleSystemResource>(
+            "monica.module.workbench",
+            "Navigation:Title",
+            order: 10,
+            parentId: BuiltInNavigationCategoryIds.Module,
+            icon: Icons.Material.Filled.AccountTree);
+
+        registry.RegisterLocalizedPage<ModuleSystemPage, ModuleSystemResource>(
+            ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
+            "Sections:Overview",
+            Icons.Material.Filled.Dashboard,
+            workbenchCategory,
+            addToNav: true,
+            navOrder: 10,
+            accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>));
+        RegisterSection("overview", "Sections:Overview", Icons.Material.Filled.Dashboard, 10, addToNav: false);
+        RegisterSection("performance", "Sections:Performance", Icons.Material.Filled.Timeline, 20);
+        RegisterSection("modules", "Sections:Modules", Icons.Material.Filled.ViewModule, 30);
+        RegisterSection("dependencies", "Sections:Dependencies", Icons.Material.Filled.AccountTree, 40);
+        RegisterSection("discovery", "Sections:Discovery", Icons.Material.Filled.FindInPage, 50);
+
+        void RegisterSection(string segment, string labelKey, string icon, int order, bool addToNav = true)
+        {
+            registry.RegisterLocalizedPage<ModuleSystemPage, ModuleSystemResource>(
+                $"{ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL}/{segment}",
+                labelKey,
+                icon,
+                workbenchCategory,
+                addToNav,
+                order,
+                accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>));
+        }
     }
 }
 

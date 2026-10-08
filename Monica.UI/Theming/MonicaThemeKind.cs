@@ -6,12 +6,12 @@ namespace Monica.UI.Theming;
 public enum MonicaThemeKind
 {
     /// <summary>
-    /// The default Monica theme with a modern SaaS visual style.
+    /// Monica's Precision theme with vivid signal colors and clear operational hierarchy.
     /// </summary>
     Default = 0,
 
     /// <summary>
-    /// The baseline MudBlazor theme without Monica-specific visual styling.
+    /// The baseline MudBlazor palette and component geometry with Monica's shared density and identity.
     /// </summary>
     MudBlazor = 1,
 
@@ -58,5 +58,10 @@ public enum MonicaThemeKind
     /// <summary>
     /// An inked comic theme with bold print-paper surfaces.
     /// </summary>
-    ComicBurst = 10
+    ComicBurst = 10,
+
+    /// <summary>
+    /// Warm stone surfaces, forest accents, and editorial page identity.
+    /// </summary>
+    Grove = 11
 }

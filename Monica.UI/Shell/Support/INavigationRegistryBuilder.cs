@@ -21,16 +21,27 @@ public interface INavigationRegistryBuilder
     /// <param name="categoryId">The durable category identifier.</param>
     /// <param name="displayName">The category label.</param>
     /// <param name="order">The category order. Lower values render first.</param>
+    /// <param name="parentId">The optional parent category. The default is a top-level category.</param>
+    /// <param name="icon">The optional category icon. The default is <see langword="null"/>.</param>
     /// <returns>The validated category identifier for use by page registrations.</returns>
+    /// <remarks>
+    /// A parent may be registered by a later module; every parent must exist and the hierarchy must be acyclic when
+    /// startup registration is sealed. Categories with no authorized descendant pages are omitted by the shell.
+    /// </remarks>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="categoryId"/> is not a valid category identifier or
     /// <paramref name="displayName"/> is null, empty, or whitespace.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the registry has been sealed, or when the identifier was already registered with a different
-    /// label or order.
+    /// label, order, parent, or icon.
     /// </exception>
-    NavigationCategoryId RegisterCategory(string categoryId, string displayName, int order = 0);
+    NavigationCategoryId RegisterCategory(
+        string categoryId,
+        string displayName,
+        int order = 0,
+        NavigationCategoryId? parentId = null,
+        string? icon = null);
 
     /// <summary>
     /// Registers a category localized through a module-owned resource marker type.
@@ -39,9 +50,13 @@ public interface INavigationRegistryBuilder
     /// <param name="categoryId">The durable category identifier.</param>
     /// <param name="displayNameKey">The localization key for the category label.</param>
     /// <param name="order">The category order. Lower values render first.</param>
+    /// <param name="parentId">The optional parent category. The default is a top-level category.</param>
+    /// <param name="icon">The optional category icon. The default is <see langword="null"/>.</param>
     /// <returns>The validated category identifier for use by page registrations.</returns>
     /// <remarks>
     /// The contributing module must add <typeparamref name="TResource"/> to the Localization module's resource catalog.
+    /// A parent may be registered by a later module; every parent must exist and the hierarchy must be acyclic when
+    /// startup registration is sealed. Categories with no authorized descendant pages are omitted by the shell.
     /// </remarks>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="categoryId"/> is not a valid category identifier or
@@ -49,12 +64,14 @@ public interface INavigationRegistryBuilder
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the registry has been sealed, or when the identifier was already registered with a different
-    /// localization resource, key, or order.
+    /// localization resource, key, order, parent, or icon.
     /// </exception>
     NavigationCategoryId RegisterLocalizedCategory<TResource>(
         string categoryId,
         string displayNameKey,
-        int order = 0)
+        int order = 0,
+        NavigationCategoryId? parentId = null,
+        string? icon = null)
         where TResource : class, ILocalizationResource;
 
     /// <summary>

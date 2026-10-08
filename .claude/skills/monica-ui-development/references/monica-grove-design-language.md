@@ -1,0 +1,22 @@
+# Monica Grove Theme Design Language
+
+Grove is an optional theme identified by `MonicaThemeKind.Grove` and the `grove` CSS token. It provides warm stone surfaces, forest accents, and editorial identity without changing the preserved `MonicaThemeKind.Default` palette. Select Grove in Appearance or configure it as a host's first-visit theme explicitly.
+
+Use the shared shell, density, interaction, local-asset, and verification contracts in [Monica's default design language](monica-precision-design-language.md). Sidebar and Topbar placement are independent of theme selection; both must remain usable under Default, Grove, and every other selectable theme.
+
+## Surface and color roles
+
+- Use a warm stone canvas, a light ordinary surface, a quieter contextual navigation surface, and forest primary/focus accents. Keep the inverse forest identity surface distinct from ordinary working panels.
+- Dark mode uses distinguishable green-black canvas and structural surfaces with a softer light primary accent. Retain separate information, success, warning, and error roles and reinforce their meaning with labels or icons.
+- Source all component paint from MudBlazor palettes or approved semantic tokens. Grove-specific colors belong in its C# palette and theme-owned CSS.
+- Keep the signature focused on the inverse identity surface, editorial typography, and restrained botanical/vector detail. Ordinary filters, lists, tables, and KPI groups use tonal surfaces with low elevation rather than repeated decorative treatments.
+
+## Typography and identity
+
+- Serve IBM Plex Sans locally for interface and dense data text, Playfair Display for major editorial headings, Noto Serif SC for CJK display coverage, and Geist Mono for diagnostic/code evidence. Preserve the declared fallback stacks and local WOFF2 delivery.
+- Keep navigation labels, controls, table headers, and supporting titles in the interface family. Serif display text establishes page identity rather than slowing repeated operational scanning.
+- Keep Sidebar typography light: contextual identity uses 22px at weight 550 with separate 11px metadata lines and a quiet divider; category headings use 17px at weight 500; destination labels use 13px at weight 400, or 500 when active. Use 42px rows with 4–6px gaps and quiet 4px dots rather than prominent leaf icons. These component-owned metrics do not replace Default's global typography.
+- Built-in category controls use local SVG outlines at 20px with 1.5px strokes. Keep registered custom icons usable and retain accessible labels on icon-only controls.
+- Collapsed desktop navigation opens a full-height 226px temporary context beside the 64px rail, without changing persisted collapse or reserving expanded page width. Keep the rail available for category switching; support native keyboard disclosure and links, Escape, and outside dismissal. Restore category-trigger focus on dismissal while allowing a changed route to focus its destination. Verify rail scrolling in short viewports.
+- Use the shared Monica vector component with Grove's leaf accent, palette, and frame treatment. A preview uses its scoped theme parameters and token roles; it must not acquire global application wrapper styles.
+- Verify the theme in both color modes and both desktop navigation layouts, including collapsed navigation, nested popups, Appearance previews, and the temporary mobile drawer. Compare type metrics, content density, and surface separation as well as color.

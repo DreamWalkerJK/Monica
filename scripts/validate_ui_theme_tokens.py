@@ -32,6 +32,12 @@ THEME_DEFINITION_FILES = {
     REPO_ROOT / "Monica.UI" / "wwwroot" / "css" / "mo-theme-main.css",
 }
 ALLOWED_SEMANTIC_TOKENS = {
+    "--mo-color-brand-background",
+    "--mo-color-brand-foreground",
+    "--mo-color-brand-accent",
+    "--mo-color-navigation-rail-background",
+    "--mo-color-navigation-rail-text",
+    "--mo-color-navigation-context-background",
     "--mo-color-page-hero-background",
     "--mo-color-page-hero-text",
     "--mo-color-page-hero-action",

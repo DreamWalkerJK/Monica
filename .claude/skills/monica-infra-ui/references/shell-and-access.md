@@ -1,10 +1,11 @@
 # Compose the shell and protect feature pages
 
-Use a Web host. Register selected feature UI modules in `AddMonica(...)`, then complete the same application's lifecycle with `UseMonica()` and `MapMonica()` so the shell can map static assets, antiforgery, Razor components, feature endpoints, and additional page assemblies. `AddUIShell()` installs interactive server services, MudBlazor, browser storage, theme state, and the startup page catalog; feature UI modules contribute their pages.
+Use a Web host. Register selected feature UI modules in `AddMonica(...)`, then complete the same application's lifecycle with `UseMonica()` and `MapMonica()` so the shell can map static assets, antiforgery, Razor components, feature endpoints, and additional page assemblies. `AddUIShell()` installs interactive server services, MudBlazor, browser storage, theme and navigation preference state, and the startup page catalog; feature UI modules contribute their pages.
 
 ```csharp
 using Monica.Core.Modularity.Extensions;
 using Monica.Modules;
+using Monica.UI.Shell.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddMonica(monica =>
@@ -12,6 +13,7 @@ builder.AddMonica(monica =>
     monica.AddUIShell(options =>
     {
         options.OperationalPageAccess.AuthorizationPolicy = "OperationsViewer";
+        options.DefaultNavigationLayout = ShellNavigationLayout.Sidebar;
     });
     monica.AddModuleSystemUI();
 });
@@ -26,8 +28,43 @@ The host must register the named ASP.NET Core `OperationsViewer` policy and the 
 
 Operational pages are accessible by default in Development. Outside Development, a missing effective `OperationalPageAccess.AuthorizationPolicy` denies access unless an individual page supplies a policy override. `OperationalPageAccess.DebugMode` bypasses access checks in every environment; use it only in an explicitly trusted diagnostic host. `EnableDebug` is separate: it controls detailed Blazor/SignalR errors and defaults to true in DEBUG builds and false otherwise. Feature pages must evaluate their access policy before protected work; hiding a navigation link alone is not authorization.
 
-UI modules contribute routes and navigation during `Describe(...)` through `ModuleShellUIOption.ConfigureNavigation(...)`. `INavigationRegistryBuilder.RegisterPage<TPage>` or `RegisterLocalizedPage<TPage,TResource>` records a route, optional stable category ID, label, icon, and access-policy type. Register a custom category before using it for `addToNav: true`; localized pages also need the module's resource marker registered with Localization. Contributions are startup-only and the registry seals during endpoint configuration. Duplicate routes, unknown navigation categories, or a late contribution fail rather than silently replacing a page. A route that works through in-app navigation but 404s on refresh points first to missing `MapMonica()` or an unregistered page assembly.
+UI modules contribute routes and navigation during `Describe(...)` through `ModuleShellUIOption.ConfigureNavigation(...)`. `INavigationRegistryBuilder.RegisterPage<TPage>` or `RegisterLocalizedPage<TPage,TResource>` records a route, optional stable category ID, label, icon, and access-policy type. Localized pages and categories need the module's resource marker registered with Localization. Contributions are startup-only and the registry seals during endpoint configuration. Duplicate routes, unknown navigation categories, missing category parents, category cycles, or a late contribution fail rather than silently replacing a page. A route that works through in-app navigation but 404s on refresh points first to missing `MapMonica()` or an unregistered page assembly.
 
-`ModuleShellUIOption.AppName`, `AppId`, and `AppVersion` override the host's application identity in the shell. Navigation search appears only when `NavBarSearchAction` is configured; `EnableNavBarSearch` defaults to true but does not create a search action. `MaxVisibleCategories` defaults to 10, with excess categories under More. Theme and language defaults are in [theme and localization](theme-and-localization.md).
+Categories support multiple levels through the optional `parentId` argument on `RegisterCategory(...)` and `RegisterLocalizedCategory<TResource>(...)`. A missing parent argument creates a root category; `icon` optionally supplies that category's shell icon. Parent contributions may arrive later in startup, but every reference must resolve before the registry is sealed. Use stable category IDs independently of translated labels. The catalog publishes a flat immutable list of definitions with parent metadata; the shell evaluates each page's access policy before constructing its navigation tree and prunes branches with no authorized destinations.
 
-Source and checks: `Monica.UI/Modules/ModuleShellUI.cs`, `OperationalPageAccessOption.cs`, `Monica.UI/Shell/Support/INavigationRegistryBuilder.cs`, `OperationalPageAccessPolicy.cs`, `tests/Test.Monica.UI/Shell/Support/PageRegistryTests.cs`, and `OperationalPageAccessEvaluatorTests.cs`.
+For example, a feature module can add a localized branch beneath the shell's Module category in its navigation callback:
+
+```csharp
+module.Require<ModuleLocalization, ModuleLocalizationOption>(
+    static options => options.AddResource<ExampleResource>());
+module.Require<ModuleShellUI, ModuleShellUIOption>(static options =>
+    options.ConfigureNavigation(static registry =>
+    {
+        var diagnostics = registry.RegisterLocalizedCategory<ExampleResource>(
+            "example.diagnostics",
+            "Navigation:Diagnostics",
+            order: 20,
+            parentId: BuiltInNavigationCategoryIds.Module,
+            icon: Icons.Material.Filled.AccountTree);
+        registry.RegisterLocalizedPage<ExampleDiagnosticsPage, ExampleResource>(
+            "/example-diagnostics",
+            "Navigation:Overview",
+            icon: Icons.Material.Filled.Dashboard,
+            categoryId: diagnostics,
+            addToNav: true,
+            navOrder: 10,
+            accessPolicyType: typeof(ExampleDiagnosticsAccessPolicy));
+    }));
+```
+
+This example belongs in a UI module's `Describe(ModuleDescriptor module)` method. `ExampleResource` must implement `ILocalizationResource`, `ExampleDiagnosticsPage` must declare the matching Blazor route, and the host must register `ExampleDiagnosticsAccessPolicy` as an `IPageAccessPolicy`. A deeper branch uses the returned `diagnostics` identity as its parent. Register actual routable pages rather than deriving menu entries from URL segments. The built-in module diagnostics branch exposes Overview, Performance, Modules, Dependencies, and Discovery under the existing `/module-system-dashboard` routes; each entry retains the module's operational access policy. When destinations overlap, the shell selects the longest matching route so only one leaf is active.
+
+`DefaultNavigationLayout` defaults to `ShellNavigationLayout.Sidebar`: a 64px category rail and collapsible 226px contextual sidebar. Built-in category icons use locally defined, lightweight SVG strokes; custom registered icons remain supported. Category icons come from registry metadata rather than translated labels, while leaf destinations use quiet dots. `ShellNavigationLayout.Topbar` uses one 56px row, shows category icons alongside their labels, and expands nested categories inside a popup with category identity above its destinations. The Appearance dialog owns the infrequent layout switch; navigation placement and theme selection are independent preferences. At widths up to 929px, both preferences use temporary drawer navigation; selecting a desktop layout does not reserve a sidebar on a narrow screen. The shell owns viewport height and scrolling, while operational pages consume its available content width. Changing layout or collapsing the sidebar preserves the current route and routed page instance.
+
+Selecting a category on the collapsed desktop rail opens a temporary, full-height 226px context panel beside the 64px rail. The page keeps its collapsed-layout width, and the rail remains available to switch categories. Opening or dismissing this panel does not persist an expanded sidebar. Destination selection, Escape, and outside dismissal close the panel; dismissal returns focus to its category trigger, while route navigation allows the destination heading to receive focus. Crossing into the mobile viewport closes the desktop context instead of retaining hidden open state; focus remains on visible navigation rather than returning to a hidden rail trigger. Preserve native keyboard access to category controls, nested group disclosure, and links. Verify both expanded and collapsed navigation in short viewports so the category rail scrolls and its controls remain reachable.
+
+`ShellState` restores browser preferences after the first interactive render through `IBrowserStorage`. Layout and sidebar collapse persist under `mo:shell:preferences`; saved browser preferences override the configured default. Components consuming this circuit-scoped state must not initialize browser storage during prerendering or dispose the injected storage service.
+
+`ModuleShellUIOption.AppName`, `AppId`, and `AppVersion` override the host's application identity in the shell. Navigation search appears only when `NavBarSearchAction` is configured; `EnableNavBarSearch` defaults to true but does not create a search action. `MaxVisibleCategories` defaults to 10 and limits visible Topbar root categories; available width can move additional categories into More. Sidebar and temporary drawer navigation retain the complete authorized hierarchy. Theme and language defaults are in [theme and localization](theme-and-localization.md).
+
+Source and checks: `Monica.UI/Modules/ModuleShellUI.cs`, `ModuleSystemUI.cs`, `Monica.UI/Shell/Models/NavigationCategoryDefinition.cs`, `Monica.UI/Shell/Support/INavigationRegistryBuilder.cs`, `NavigationTreeBuilder.cs`, `ShellIcons.cs`, `OperationalPageAccessPolicy.cs`, `Monica.UI/Shell/Components/Layout/NavBar.razor`, its code-behind, `Monica.UI/Shell/State/ShellState.cs`, and `tests/Test.Monica.UI/Shell/Support/PageRegistryTests.cs`.

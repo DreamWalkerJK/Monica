@@ -33,6 +33,23 @@ public sealed class ModuleSystemUIModuleTests
         page.ComponentType.Should().Be(typeof(ModuleSystemPage));
         page.DisplayName.ResourceType.Should().Be(typeof(ModuleSystemResource));
         page.AccessPolicyType.Should().Be(typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>));
+
+        var workbenchPages = catalog.GetRegisteredPages()
+            .Where(definition => definition.ComponentType == typeof(ModuleSystemPage))
+            .ToArray();
+        workbenchPages.Should().HaveCount(6)
+            .And.OnlyContain(definition => definition.AccessPolicyType == page.AccessPolicyType);
+        workbenchPages.Select(static definition => definition.Route).Should().BeEquivalentTo(
+            route,
+            $"{route}/overview",
+            $"{route}/performance",
+            $"{route}/modules",
+            $"{route}/dependencies",
+            $"{route}/discovery");
+        var workbenchCategory = catalog.GetNavigationCategories()
+            .Single(definition => definition.Id == NavigationCategoryId.Create("monica.module.workbench"));
+        workbenchCategory.ParentId.Should().Be(BuiltInNavigationCategoryIds.Module);
+        catalog.GetNavItems().Count(item => item.CategoryId == workbenchCategory.Id).Should().Be(5);
     }
 
     [Fact]

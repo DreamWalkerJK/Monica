@@ -1,0 +1,155 @@
+/* Grove: stone working surfaces and a forest identity, with editorial page headings. */
+:root[data-theme="grove-light"],
+:root[data-theme="grove-dark"],
+.mo-theme-grove-light,
+.mo-theme-grove-dark {
+    --mo-grove-font-body: var(--mud-typography-default-family, var(--mo-font-family-body));
+    --mo-grove-font-display: var(--mud-typography-h1-family, var(--mo-font-family-display));
+    --mo-grove-font-mono: var(--mo-font-family-mono);
+    --mo-grove-radius-control: 6px;
+    --mo-grove-radius-surface: 8px;
+    --mo-grove-radius-overlay: 12px;
+    --mo-grove-focus-ring: color-mix(in srgb, var(--mud-palette-primary) 20%, transparent);
+    --mo-button-border-radius: var(--mo-grove-radius-control);
+    --mo-card-border-radius: var(--mo-grove-radius-surface);
+    --mo-card-padding: 20px;
+    --mo-dialog-border-radius: var(--mo-grove-radius-overlay);
+    --mo-input-border-radius: var(--mo-grove-radius-control);
+    --mo-chip-border-radius: 4px;
+    --mo-nav-menu-border-radius: var(--mo-grove-radius-surface);
+    --mo-tooltip-bg: var(--mud-palette-dark);
+    --mo-tooltip-text: var(--mud-palette-dark-text);
+    --mo-tooltip-border: var(--mud-palette-divider);
+    --mo-color-page-hero-background: var(--mud-palette-dark);
+    --mo-color-page-hero-text: var(--mud-palette-dark-text);
+    --mo-color-page-hero-action: var(--mud-palette-dark-text);
+    --mo-color-navigation-context-background: var(--mud-palette-drawer-background);
+}
+
+:root[data-theme="grove-light"],
+.mo-theme-grove-light {
+    --mo-color-navigation-rail-background: var(--mud-palette-dark);
+    --mo-color-navigation-rail-text: var(--mud-palette-dark-text);
+}
+
+:root[data-theme="grove-dark"],
+.mo-theme-grove-dark {
+    --mo-color-navigation-rail-background: color-mix(in srgb, var(--mud-palette-background) 92%, var(--mud-palette-dark));
+    --mo-color-navigation-rail-text: var(--mud-palette-dark-text);
+}
+
+.mo-theme-grove-light,
+.mo-theme-grove-dark {
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-background);
+    font-family: var(--mo-grove-font-body);
+}
+
+.mo-theme-grove-light :is(code, kbd, samp, pre),
+.mo-theme-grove-dark :is(code, kbd, samp, pre) {
+    font-family: var(--mo-grove-font-mono);
+}
+
+.mo-theme-grove-light .mud-button,
+.mo-theme-grove-dark .mud-button {
+    border-radius: var(--mo-button-border-radius);
+    font-family: var(--mo-grove-font-body);
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.mo-theme-grove-light .mud-icon-button,
+.mo-theme-grove-dark .mud-icon-button {
+    border-radius: var(--mo-grove-radius-control);
+}
+
+.mo-theme-grove-light .mud-input-outlined .mud-input-outlined-border,
+.mo-theme-grove-dark .mud-input-outlined .mud-input-outlined-border {
+    border-width: 1px !important;
+    border-radius: var(--mo-input-border-radius) !important;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.mo-theme-grove-light .mud-input-outlined:focus-within .mud-input-outlined-border,
+.mo-theme-grove-dark .mud-input-outlined:focus-within .mud-input-outlined-border {
+    border-color: var(--mud-palette-primary) !important;
+    box-shadow: 0 0 0 3px var(--mo-grove-focus-ring);
+}
+
+.mo-theme-grove-light .mud-card:not(.mo-self-painted),
+.mo-theme-grove-dark .mud-card:not(.mo-self-painted) {
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default) !important;
+    border-radius: var(--mo-card-border-radius) !important;
+}
+
+.mo-theme-grove-light .mud-card-content,
+.mo-theme-grove-dark .mud-card-content {
+    padding: var(--mo-card-padding);
+}
+
+.mo-theme-grove-light :is(.mud-table-container, .mud-data-grid),
+.mo-theme-grove-dark :is(.mud-table-container, .mud-data-grid) {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mo-grove-radius-surface);
+    background: var(--mud-palette-surface);
+}
+
+.mo-theme-grove-light .mud-chip,
+.mo-theme-grove-dark .mud-chip {
+    border-radius: var(--mo-chip-border-radius);
+    font-family: var(--mo-grove-font-body);
+    font-weight: 600;
+}
+
+.mo-theme-grove-light .mud-alert,
+.mo-theme-grove-dark .mud-alert {
+    border-radius: var(--mo-grove-radius-surface);
+    box-shadow: none;
+}
+
+.mo-theme-grove-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]),
+.mo-theme-grove-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mo-grove-radius-surface);
+    background: var(--mud-palette-surface);
+    box-shadow: none;
+}
+
+.mo-theme-grove-light .mud-tabs > .mud-tabs-tabbar,
+.mo-theme-grove-dark .mud-tabs > .mud-tabs-tabbar {
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+}
+
+.mo-theme-grove-light .mud-tabs > .mud-tabs-panels,
+.mo-theme-grove-dark .mud-tabs > .mud-tabs-panels {
+    background: var(--mud-palette-surface);
+}
+
+.mo-theme-grove-light .mud-dialog,
+.mo-theme-grove-dark .mud-dialog {
+    border-radius: var(--mo-dialog-border-radius) !important;
+}
+
+:root[data-theme="grove-light"] .mud-tooltip,
+:root[data-theme="grove-dark"] .mud-tooltip,
+.mo-theme-grove-light .mud-tooltip,
+.mo-theme-grove-dark .mud-tooltip {
+    max-width: min(28rem, calc(100vw - 32px));
+    border: 1px solid var(--mo-tooltip-border);
+    border-radius: var(--mo-grove-radius-control);
+    color: var(--mo-tooltip-text);
+    background: var(--mo-tooltip-bg);
+    font-family: var(--mo-grove-font-body);
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.45;
+    text-align: start;
+    white-space: normal;
+}
+
+:root[data-theme="grove-light"] .mud-tooltip.mud-tooltip-arrow::after,
+:root[data-theme="grove-dark"] .mud-tooltip.mud-tooltip-arrow::after {
+    border-top-color: var(--mo-tooltip-bg);
+}

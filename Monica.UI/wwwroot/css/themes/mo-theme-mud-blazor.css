@@ -1,20 +1,19 @@
-/* MudBlazor Default Theme - completely maintains the original MudBlazor style */
-/* This file is empty, no custom styles are added, and MudBlazor’s default styles are completely used. */
+/* MudBlazor baseline keeps its component geometry and uses the shared density and identity contract. */
 
 /* Light Theme Placeholder */
 :root[data-theme="mud-blazor-light"],
 .mo-theme-mud-blazor-light {
-    /* No custom variables, completely using MudBlazor default values */
+    --mo-brand-frame-radius: 6px;
 }
 
 /* Dark Theme Placeholder */
 :root[data-theme="mud-blazor-dark"],
 .mo-theme-mud-blazor-dark {
-    /* No custom variables, completely using MudBlazor default values */
+    --mo-brand-frame-radius: 6px;
 }
 
-/* No custom styles, keep MudBlazor original look */
+/* Additional shared working-surface rules are composed by mo-theme-main.css. */
 .mo-theme-mud-blazor-light,
 .mo-theme-mud-blazor-dark {
-    /* This theme does not cover any MudBlazor component styles */
+    font-family: var(--mud-typography-default-family);
 }

@@ -2,6 +2,8 @@
 
 Register `AddAI()` for code-driven chat, then add a real provider with `AddOpenAIProvider(...)`, `AddAnthropicProvider(...)`, or `AddProvider<TProvider>(...)`. `AddFakeProvider(...)` supports development. `AddAIUI()` adds chat and management pages plus knowledge-base inventory, skill, MCP, localization, and shell dependencies, but does not choose provider credentials, models, or deployment storage and identity. Its pages are an application interface; code callers use `ChatFacade` and the other facades directly. Register modules inside one `builder.AddMonica(...)` callback; a Web host completes Monica with `app.UseMonica()` and `app.MapMonica()`.
 
+The packaged chat page fills the shell's available content height and owns its internal scrolling. Session history and its narrow-screen backdrop stay inside that content region in both Sidebar and Topbar layouts, leaving application navigation available. When embedding or customizing chat, provide a bounded parent height with `min-height: 0`; keep the history drawer page-relative with `MudDrawerContainer` and `Fixed="false"`, and keep its overlay local. A nested `MudLayout` with a viewport-fixed drawer can place history over the shell's sidebar or header. The containment contract is implemented by `Monica.AI.UI/Pages/ChatPage.razor` and its isolated stylesheet; shell hosting belongs to [UI shell and access](../../monica-infra-ui/references/shell-and-access.md).
+
 ```csharp
 builder.AddMonica(monica =>
 {

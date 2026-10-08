@@ -1,6 +1,30 @@
 /* Monica Macaron Sweetheart Theme - playful pastel candy UI */
 
 @font-face {
+    font-family: 'Nunito';
+    src: url('../../fonts/Nunito-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Nunito';
+    src: url('../../fonts/Nunito-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Nunito';
+    src: url('../../fonts/Nunito-SemiBold.woff2') format('woff2');
+    font-weight: 600 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
     font-family: 'Xiaolai';
     src: url('../../fonts/Xiaolai-Regular.woff2') format('woff2');
     font-weight: 400;
@@ -69,13 +93,13 @@
     --mo-macaron-border-strong: rgba(var(--mud-palette-primary-rgb), 0.38);
     --mo-macaron-hover: rgba(var(--mud-palette-primary-rgb), 0.10);
     --mo-macaron-selected: rgba(var(--mud-palette-primary-rgb), 0.16);
-    --mo-macaron-shadow: 0 10px 24px -18px rgba(244, 143, 177, 0.40);
-    --mo-macaron-shadow-strong: 0 14px 34px -22px rgba(244, 143, 177, 0.52);
+    --mo-macaron-shadow: var(--mud-elevation-2);
+    --mo-macaron-shadow-strong: var(--mud-elevation-4);
     --mo-macaron-focus: rgba(var(--mud-palette-primary-rgb), 0.22);
     --mo-appbar-background: color-mix(in srgb, var(--mo-macaron-surface-strong) 84%, transparent);
     --mo-appbar-dark-background: var(--mo-appbar-background);
     --mo-appbar-border-bottom: 1px solid var(--mo-macaron-border);
-    --mo-appbar-box-shadow: 0 10px 30px -24px rgba(var(--mud-palette-primary-rgb), 0.60);
+    --mo-appbar-box-shadow: var(--mud-elevation-2);
     --mo-appbar-menu-item-text: var(--mo-macaron-muted);
     --mo-appbar-menu-item-icon: var(--mo-macaron-muted);
     --mo-appbar-menu-item-hover-background: var(--mo-macaron-hover);
@@ -100,13 +124,13 @@
     --mo-macaron-border-strong: rgba(var(--mud-palette-primary-rgb), 0.42);
     --mo-macaron-hover: rgba(var(--mud-palette-primary-rgb), 0.12);
     --mo-macaron-selected: rgba(var(--mud-palette-primary-rgb), 0.18);
-    --mo-macaron-shadow: 0 10px 24px -18px rgba(18, 10, 16, 0.44);
-    --mo-macaron-shadow-strong: 0 16px 36px -22px rgba(18, 10, 16, 0.58);
+    --mo-macaron-shadow: var(--mud-elevation-2);
+    --mo-macaron-shadow-strong: var(--mud-elevation-4);
     --mo-macaron-focus: rgba(var(--mud-palette-primary-rgb), 0.26);
     --mo-appbar-background: color-mix(in srgb, var(--mo-macaron-surface-strong) 84%, transparent);
     --mo-appbar-dark-background: var(--mo-appbar-background);
     --mo-appbar-border-bottom: 1px solid var(--mo-macaron-border);
-    --mo-appbar-box-shadow: 0 10px 30px -24px rgba(var(--mud-palette-primary-rgb), 0.60);
+    --mo-appbar-box-shadow: var(--mud-elevation-2);
     --mo-appbar-menu-item-text: var(--mo-macaron-muted);
     --mo-appbar-menu-item-icon: var(--mo-macaron-muted);
     --mo-appbar-menu-item-hover-background: var(--mo-macaron-hover);
@@ -125,9 +149,7 @@
 }
 
 .mo-theme-macaron-sweetheart-light :is(.mud-typography, .mud-button, .mud-chip, .mud-alert, .mud-table, .mud-data-grid, .mud-input, .mud-select),
-.mo-theme-macaron-sweetheart-dark :is(.mud-typography, .mud-button, .mud-chip, .mud-alert, .mud-table, .mud-data-grid, .mud-input, .mud-select),
-.mo-theme-macaron-sweetheart-light :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title),
-.mo-theme-macaron-sweetheart-dark :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title) {
+.mo-theme-macaron-sweetheart-dark :is(.mud-typography, .mud-button, .mud-chip, .mud-alert, .mud-table, .mud-data-grid, .mud-input, .mud-select){
     font-family: var(--mo-macaron-font-body);
     letter-spacing: 0;
 }
@@ -138,65 +160,22 @@
     letter-spacing: 0;
 }
 
-.mo-theme-macaron-sweetheart-light .mo-layout,
-.mo-theme-macaron-sweetheart-dark .mo-layout,
-.mo-theme-macaron-sweetheart-light .mo-main-content,
-.mo-theme-macaron-sweetheart-dark .mo-main-content,
-.mo-theme-macaron-sweetheart-light .mo-body-content,
-.mo-theme-macaron-sweetheart-dark .mo-body-content {
-    background: var(--mo-macaron-bg);
-}
-
-.mo-theme-macaron-sweetheart-light .mo-body-content {
-    background:
-        linear-gradient(180deg, color-mix(in srgb, var(--mo-macaron-bg) 92%, var(--mud-palette-secondary)) 0%, var(--mo-macaron-bg) 16rem);
-}
-
-.mo-theme-macaron-sweetheart-dark .mo-body-content {
-    background:
-        linear-gradient(180deg, color-mix(in srgb, var(--mo-macaron-bg) 86%, var(--mud-palette-primary)) 0%, var(--mo-macaron-bg) 14rem);
-}
-
 .mo-theme-macaron-sweetheart-light .mud-appbar,
 .mo-theme-macaron-sweetheart-dark .mud-appbar {
     border-bottom: 1px solid var(--mo-macaron-border);
-    box-shadow: 0 10px 30px -24px rgba(var(--mud-palette-primary-rgb), 0.60);
+    box-shadow: var(--mud-elevation-2);
 }
 
-.mo-theme-macaron-sweetheart-light .navbar-link,
-.mo-theme-macaron-sweetheart-dark .navbar-link,
-.mo-theme-macaron-sweetheart-light .navbar-measure-link,
-.mo-theme-macaron-sweetheart-dark .navbar-measure-link {
-    border-radius: 999px;
-    color: var(--mo-macaron-muted);
-    font-weight: 500;
-}
-
-.mo-theme-macaron-sweetheart-light .navbar-link:hover,
-.mo-theme-macaron-sweetheart-dark .navbar-link:hover,
-.mo-theme-macaron-sweetheart-light .navbar-link.active,
-.mo-theme-macaron-sweetheart-dark .navbar-link.active {
-    background: var(--mo-macaron-hover);
-    color: var(--mo-macaron-text);
-}
-
-.mo-theme-macaron-sweetheart-light .navbar-link::before,
-.mo-theme-macaron-sweetheart-dark .navbar-link::before {
-    height: 3px;
-    background: var(--mud-palette-primary);
-    border-radius: 999px;
-}
-
-.mo-theme-macaron-sweetheart-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
-.mo-theme-macaron-sweetheart-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+.mo-theme-macaron-sweetheart-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .mud-tabs),
+.mo-theme-macaron-sweetheart-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .mud-tabs) {
     background: var(--mo-macaron-surface);
     border: 1px solid var(--mo-macaron-border);
     border-radius: var(--mo-macaron-radius);
     box-shadow: var(--mo-macaron-shadow);
 }
 
-.mo-theme-macaron-sweetheart-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card),
-.mo-theme-macaron-sweetheart-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card) {
+.mo-theme-macaron-sweetheart-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar)),
+.mo-theme-macaron-sweetheart-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar)) {
     transition:
         background-color var(--mo-macaron-transition),
         border-color var(--mo-macaron-transition),
@@ -204,8 +183,8 @@
         transform var(--mo-macaron-transition);
 }
 
-.mo-theme-macaron-sweetheart-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover),
-.mo-theme-macaron-sweetheart-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
+.mo-theme-macaron-sweetheart-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover),
+.mo-theme-macaron-sweetheart-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover) {
     border-color: var(--mo-macaron-border-strong);
     box-shadow: var(--mo-macaron-shadow-strong);
     transform: translateY(-1px);
@@ -260,7 +239,7 @@
 .mo-theme-macaron-sweetheart-light .mud-button-filled-primary,
 .mo-theme-macaron-sweetheart-dark .mud-button-filled-primary {
     background: var(--mud-palette-primary);
-    box-shadow: 0 12px 26px -18px rgba(var(--mud-palette-primary-rgb), 0.82);
+    box-shadow: var(--mud-elevation-2);
     color: var(--mud-palette-primary-text);
 }
 
@@ -493,17 +472,6 @@
     background: var(--mo-macaron-selected);
     color: var(--mud-palette-primary);
     font-weight: 500;
-}
-
-.mo-theme-macaron-sweetheart-light .theme-card,
-.mo-theme-macaron-sweetheart-dark .theme-card {
-    background: var(--mo-macaron-surface);
-}
-
-.mo-theme-macaron-sweetheart-light .theme-card.selected,
-.mo-theme-macaron-sweetheart-dark .theme-card.selected {
-    background: var(--mo-macaron-selected);
-    border-color: var(--mud-palette-primary);
 }
 
 @media (prefers-reduced-motion: reduce) {

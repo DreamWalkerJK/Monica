@@ -15,6 +15,7 @@ using Monica.UI.Pages;
 using Monica.UI.Shell.Components;
 using Monica.UI.Shared.Components.Markdown;
 using Monica.UI.Shell.State;
+using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
 using Monica.UI.Theming;
 using MudBlazor;
@@ -143,6 +144,7 @@ public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequired
         // Register theme service (Scoped: each Blazor circuit gets its own theme state)
         services.AddScoped<ThemeState>();
         services.AddScoped<IThemeState>(sp => sp.GetRequiredService<ThemeState>());
+        services.AddScoped<ShellState>();
 
         // Register the default markdown asset resolver so Markdown components work without optional modules.
         services.TryAddScoped<IMoMarkdownAssetResolver, PassThroughMarkdownAssetResolver>();
@@ -293,6 +295,15 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     /// precedence over this option on later visits.
     /// </remarks>
     public bool DefaultDarkMode { get; set; }
+
+    /// <summary>
+    /// The desktop navigation layout used when the browser has no saved shell preference.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="ShellNavigationLayout.Sidebar"/>. Appearance settings persist a browser-specific
+    /// override. Both layouts use a temporary navigation drawer on narrow screens.
+    /// </remarks>
+    public ShellNavigationLayout DefaultNavigationLayout { get; set; } = ShellNavigationLayout.Sidebar;
 
     /// <summary>
     /// The maximum number of categories displayed in the top navigation bar (the excess will be placed in the "More" menu)

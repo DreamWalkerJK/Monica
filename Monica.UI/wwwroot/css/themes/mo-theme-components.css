@@ -1,0 +1,268 @@
+/* Shared working-surface contract. Theme identity comes from palette, type, and deliberate accents. */
+:root[data-theme],
+[class*="mo-theme-"] {
+    --mo-appbar-background: var(--mud-palette-appbar-background);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mud-palette-divider);
+    --mo-appbar-box-shadow: none;
+    --mo-navbar-brand-logo-size: 32px;
+    --mo-navbar-brand-name-size: 0.9375rem;
+    --mo-navbar-brand-name-weight: 600;
+    --mo-appbar-menu-item-border: 1px solid transparent;
+    --mo-appbar-menu-item-border-radius: 6px;
+    --mo-appbar-menu-item-margin-block: 2px;
+    --mo-appbar-menu-item-margin-inline: 6px;
+    --mo-appbar-menu-item-padding-block: 8px;
+    --mo-appbar-menu-item-padding-inline: 12px;
+    --mo-appbar-menu-item-min-height: 36px;
+    --mo-appbar-menu-item-gap: 10px;
+    --mo-appbar-menu-item-text: var(--mud-palette-text-primary);
+    --mo-appbar-menu-item-icon: var(--mud-palette-text-secondary);
+    --mo-appbar-menu-item-font-family: var(--mud-typography-default-family);
+    --mo-appbar-menu-item-font-size: 0.8125rem;
+    --mo-appbar-menu-item-font-weight: 400;
+    --mo-appbar-menu-item-letter-spacing: 0;
+    --mo-appbar-menu-item-text-transform: none;
+    --mo-appbar-menu-item-shadow: none;
+    --mo-appbar-menu-item-transform: none;
+    --mo-appbar-menu-item-hover-border: 1px solid transparent;
+    --mo-appbar-menu-item-hover-shadow: none;
+    --mo-appbar-menu-item-hover-transform: none;
+    --mo-appbar-menu-item-hover-background: var(--mud-palette-action-default-hover);
+    --mo-appbar-menu-item-hover-text: var(--mud-palette-text-primary);
+    --mo-appbar-menu-item-hover-icon: var(--mud-palette-text-primary);
+    --mo-appbar-menu-item-active-border: 1px solid transparent;
+    --mo-appbar-menu-item-active-shadow: none;
+    --mo-appbar-menu-item-active-transform: none;
+    --mo-appbar-menu-item-active-background: var(--mud-palette-primary-hover);
+    --mo-appbar-menu-item-active-text: var(--mud-palette-primary);
+    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
+    --mo-appbar-menu-item-active-font-weight: 600;
+    --mo-appbar-menu-item-transition: background-color 140ms ease, color 140ms ease;
+
+    --mo-color-navigation-rail-background: var(--mud-palette-background-gray);
+    --mo-color-navigation-rail-text: var(--mud-palette-text-secondary);
+    --mo-color-navigation-context-background: var(--mud-palette-drawer-background);
+}
+
+/* A preview resets only brand roles; it never becomes an application theme wrapper. */
+:root[data-theme],
+[class*="mo-theme-"],
+.mo-brand-icon[data-theme] {
+    --mo-color-brand-background: var(--mud-palette-primary);
+    --mo-color-brand-foreground: var(--mud-palette-primary-text);
+    --mo-color-brand-accent: var(--mud-palette-primary-text);
+    --mo-brand-frame-radius: 8px;
+    --mo-brand-frame-width: 0;
+    --mo-brand-mark-width: 3;
+    --mo-brand-stroke-cap: round;
+    --mo-brand-stroke-join: round;
+    --mo-brand-grid-opacity: 0;
+    --mo-brand-leaf-opacity: 0;
+    --mo-brand-heart-opacity: 0;
+    --mo-brand-spark-opacity: 0;
+    --mo-brand-seal-opacity: 0;
+}
+
+/* Keep controls steady and data surfaces readable across expressive themes. */
+[class*="mo-theme-"] .mud-button,
+[class*="mo-theme-"] .mud-button:not(.mud-button-disabled):hover {
+    transform: none;
+    text-transform: none;
+    letter-spacing: 0;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease !important;
+}
+
+[class*="mo-theme-"] .mud-card:not(.mo-self-painted) {
+    box-shadow: none !important;
+    transform: none !important;
+    transition: border-color 140ms ease, box-shadow 140ms ease !important;
+}
+
+[class*="mo-theme-"] .mud-card:not(.mo-self-painted):hover {
+    box-shadow: var(--mo-card-hover-shadow) !important;
+    transform: none !important;
+}
+
+[class*="mo-theme-"] :is(.mud-table-container, .mud-data-grid) {
+    box-shadow: none !important;
+    background: var(--mud-palette-surface) !important;
+}
+
+[class*="mo-theme-"] .mud-table-head .mud-table-cell {
+    background: var(--mud-palette-background-gray) !important;
+    color: var(--mud-palette-text-secondary) !important;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+[class*="mo-theme-"] :is(.mud-table, .mud-data-grid) .mud-table-cell {
+    border-bottom-color: var(--mud-palette-divider);
+}
+
+[class*="mo-theme-"] .mud-dialog {
+    background: var(--mud-palette-surface) !important;
+    border: 1px solid var(--mud-palette-divider) !important;
+    box-shadow: var(--mud-elevation-24) !important;
+}
+
+/* Overlay depth is separate from panel paint; the shell owns its navigation popovers. */
+:root[data-theme] .mud-popover:not(.mo-navbar-menu-popover):not(.mud-tooltip) {
+    box-shadow: var(--mud-elevation-8) !important;
+}
+
+:root[data-theme] :is(.mud-tooltip, .mud-snackbar) {
+    box-shadow: var(--mud-elevation-4) !important;
+}
+
+[class*="mo-theme-"] :is(.mud-button-root, .mud-icon-button, .mud-nav-link, .mud-menu-item):focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+:root[data-theme$="-light"] { color-scheme: light; }
+:root[data-theme$="-dark"] { color-scheme: dark; }
+
+/* Identity variants use one consistent Monica monogram and a theme-owned accent. */
+:root[data-theme^="grove-"],
+[class*="mo-theme-grove-"],
+.mo-brand-icon[data-theme^="grove-"] {
+    --mo-color-brand-background: var(--mud-palette-dark);
+    --mo-color-brand-foreground: var(--mud-palette-dark-text);
+    --mo-color-brand-accent: var(--mud-palette-primary);
+    --mo-brand-frame-radius: 10px;
+    --mo-brand-leaf-opacity: 1;
+}
+
+:root[data-theme="grove-light"],
+.mo-theme-grove-light {
+    --mo-color-navigation-rail-background: var(--mud-palette-dark);
+    --mo-color-navigation-rail-text: var(--mud-palette-dark-text);
+}
+
+:root[data-theme="grove-dark"],
+.mo-theme-grove-dark {
+    --mo-color-navigation-rail-background: color-mix(in srgb, var(--mud-palette-background) 92%, var(--mud-palette-dark));
+    --mo-color-navigation-rail-text: var(--mud-palette-dark-text);
+}
+
+
+:root[data-theme="grove-light"],
+.mo-theme-grove-light,
+.mo-brand-icon[data-theme="grove-light"] {
+    --mo-color-brand-accent: var(--mud-palette-tertiary);
+}
+
+:root[data-theme^="material-design-3-"],
+[class*="mo-theme-material-design-3-"],
+.mo-brand-icon[data-theme^="material-design-3-"] {
+    --mo-color-brand-background: var(--mud-palette-tertiary);
+    --mo-color-brand-foreground: var(--mud-palette-tertiary-text);
+    --mo-color-brand-accent: var(--mud-palette-primary);
+    --mo-brand-frame-radius: 18px;
+    --mo-brand-mark-width: 3.5;
+}
+
+:root[data-theme^="fluent-design-"],
+[class*="mo-theme-fluent-design-"],
+.mo-brand-icon[data-theme^="fluent-design-"] {
+    --mo-brand-frame-radius: 5px;
+    --mo-brand-mark-width: 2.5;
+    --mo-brand-stroke-cap: square;
+    --mo-brand-stroke-join: miter;
+}
+
+:root[data-theme^="fresh-"],
+[class*="mo-theme-fresh-"],
+.mo-brand-icon[data-theme^="fresh-"] {
+    --mo-brand-frame-radius: 12px;
+    --mo-brand-leaf-opacity: 1;
+}
+
+:root[data-theme^="macaron-sweetheart-"],
+[class*="mo-theme-macaron-sweetheart-"],
+.mo-brand-icon[data-theme^="macaron-sweetheart-"] {
+    --mo-color-brand-background: color-mix(in srgb, var(--mud-palette-primary) 12%, var(--mud-palette-surface));
+    --mo-color-brand-foreground: var(--mud-palette-primary);
+    --mo-color-brand-accent: var(--mud-palette-primary);
+    --mo-brand-frame-radius: 14px;
+    --mo-brand-mark-width: 3.5;
+    --mo-brand-heart-opacity: 1;
+}
+
+:root[data-theme^="macaron-sweetheart-"],
+[class*="mo-theme-macaron-sweetheart-"] {
+    --mo-macaron-radius-xs: 8px;
+    --mo-macaron-radius-sm: 10px;
+    --mo-macaron-radius: 12px;
+    --mo-macaron-radius-lg: 16px;
+}
+
+:root[data-theme^="hermes-teal-"],
+[class*="mo-theme-hermes-teal-"],
+.mo-brand-icon[data-theme^="hermes-teal-"] {
+    --mo-color-brand-accent: var(--mud-palette-secondary);
+    --mo-brand-frame-radius: 2px;
+    --mo-brand-mark-width: 2;
+    --mo-brand-frame-width: 0.8;
+    --mo-brand-stroke-cap: square;
+    --mo-brand-stroke-join: miter;
+}
+
+:root[data-theme^="vibe-usage-matrix-"],
+[class*="mo-theme-vibe-usage-matrix-"],
+.mo-brand-icon[data-theme^="vibe-usage-matrix-"] {
+    --mo-color-brand-background: var(--mud-palette-background);
+    --mo-color-brand-foreground: var(--mud-palette-primary);
+    --mo-color-brand-accent: var(--mud-palette-primary);
+    --mo-brand-frame-radius: 0px;
+    --mo-brand-frame-width: 1;
+    --mo-brand-mark-width: 2;
+    --mo-brand-stroke-cap: square;
+    --mo-brand-stroke-join: miter;
+    --mo-brand-grid-opacity: 0.2;
+}
+
+:root[data-theme^="vibe-usage-matrix-"],
+[class*="mo-theme-vibe-usage-matrix-"] {
+    --mo-vibe-surface-pattern: transparent;
+    --mo-vibe-sweep: transparent;
+}
+
+:root[data-theme^="ink-landscape-"],
+[class*="mo-theme-ink-landscape-"],
+.mo-brand-icon[data-theme^="ink-landscape-"],
+:root[data-theme^="zen-ink-"],
+[class*="mo-theme-zen-ink-"],
+.mo-brand-icon[data-theme^="zen-ink-"] {
+    --mo-color-brand-background: var(--mud-palette-surface);
+    --mo-color-brand-foreground: var(--mud-palette-primary);
+    --mo-color-brand-accent: var(--mud-palette-error);
+    --mo-brand-frame-radius: 2px;
+    --mo-brand-frame-width: 0.8;
+    --mo-brand-mark-width: 3.5;
+    --mo-brand-stroke-cap: square;
+    --mo-brand-seal-opacity: 1;
+}
+
+:root[data-theme^="comic-burst-"],
+[class*="mo-theme-comic-burst-"],
+.mo-brand-icon[data-theme^="comic-burst-"] {
+    --mo-color-brand-accent: var(--mud-palette-text-primary);
+    --mo-brand-frame-radius: 0px;
+    --mo-brand-frame-width: 1.5;
+    --mo-brand-mark-width: 4;
+    --mo-brand-stroke-cap: square;
+    --mo-brand-stroke-join: miter;
+    --mo-brand-spark-opacity: 1;
+}
+
+:root[data-theme^="comic-burst-"],
+[class*="mo-theme-comic-burst-"] {
+    --mo-comic-border-panel: 2px solid var(--mo-comic-ink);
+    --mo-comic-shadow-panel: 3px 3px 0 var(--mo-comic-shadow);
+    --mo-comic-shadow-control: 2px 2px 0 var(--mo-comic-shadow);
+    --mo-comic-shadow-subtle: 2px 2px 0 var(--mo-comic-shadow);
+}

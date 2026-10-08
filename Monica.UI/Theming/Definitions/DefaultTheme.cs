@@ -8,8 +8,8 @@ namespace Monica.UI.Theming.Definitions;
 public sealed class DefaultTheme : ThemeDefinitionBase
 {
     public override MonicaThemeKind Kind => MonicaThemeKind.Default;
-    public override string DisplayName => "默认主题";
-    public override string Description => "以鲜明信号色、技术字体和清晰信息层次构建的精密运维界面";
+    public override string DisplayName => "Default";
+    public override string Description => "Vivid signal colors, technical typography, and clear operational hierarchy.";
 
     public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
     public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.GithubDark;
@@ -27,7 +27,7 @@ public sealed class DefaultTheme : ThemeDefinitionBase
             DrawerMiniWidthRight = "64px",
             AppbarHeight = "56px"
         },
-        Shadows = new Shadow { Elevation = CreateElevationScale() },
+        Shadows = MonicaShadowDefaults.Create(),
         Typography = MonicaTypographyDefaults.CreatePrecision()
     };
 
@@ -189,35 +189,5 @@ public sealed class DefaultTheme : ThemeDefinitionBase
         GrayDark = "#52525b", // Zinc 600
         GrayDarker = "#3f3f46" // Zinc 700
     };
-
-    private static string[] CreateElevationScale() =>
-    [
-        "none",
-        "0 1px 2px rgba(10, 16, 28, 0.06)",
-        "0 2px 6px -1px rgba(10, 16, 28, 0.08)",
-        "0 4px 10px -2px rgba(10, 16, 28, 0.09)",
-        "0 6px 14px -3px rgba(10, 16, 28, 0.10)",
-        "0 8px 18px -4px rgba(10, 16, 28, 0.11)",
-        "0 10px 22px -5px rgba(10, 16, 28, 0.12)",
-        "0 12px 26px -6px rgba(10, 16, 28, 0.13)",
-        "0 14px 30px -7px rgba(10, 16, 28, 0.14)",
-        "0 16px 34px -8px rgba(10, 16, 28, 0.15)",
-        "0 18px 38px -9px rgba(10, 16, 28, 0.16)",
-        "0 20px 42px -10px rgba(10, 16, 28, 0.17)",
-        "0 22px 46px -11px rgba(10, 16, 28, 0.18)",
-        "0 24px 50px -12px rgba(10, 16, 28, 0.19)",
-        "0 24px 54px -12px rgba(10, 16, 28, 0.20)",
-        "0 26px 58px -13px rgba(10, 16, 28, 0.21)",
-        "0 26px 62px -13px rgba(10, 16, 28, 0.22)",
-        "0 28px 64px -14px rgba(10, 16, 28, 0.23)",
-        "0 28px 68px -14px rgba(10, 16, 28, 0.24)",
-        "0 30px 70px -15px rgba(10, 16, 28, 0.25)",
-        "0 30px 72px -15px rgba(10, 16, 28, 0.26)",
-        "0 30px 74px -15px rgba(10, 16, 28, 0.27)",
-        "0 30px 76px -16px rgba(10, 16, 28, 0.28)",
-        "0 30px 78px -16px rgba(10, 16, 28, 0.29)",
-        "0 30px 80px -16px rgba(10, 16, 28, 0.30)",
-        "0 32px 84px -17px rgba(10, 16, 28, 0.32)"
-    ];
 
 }

@@ -42,9 +42,13 @@ public interface IPageCatalog
     IReadOnlyList<NavigationItem> GetNavItems();
 
     /// <summary>
-    /// Gets all category definitions in deterministic configured order.
+    /// Gets all category definitions in deterministic configured order, including nested categories.
     /// </summary>
     /// <returns>The immutable navigation-category snapshot for the current host.</returns>
+    /// <remarks>
+    /// This flat snapshot retains each category's parent identity. The shell builds a hierarchy after evaluating
+    /// page access so empty and unauthorized branches do not expose navigation labels.
+    /// </remarks>
     /// <exception cref="InvalidOperationException">
     /// Thrown when called before the UI shell seals startup registrations during endpoint configuration.
     /// </exception>

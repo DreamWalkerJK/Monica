@@ -48,6 +48,26 @@ function calculateVisibleCategoryCount(desktopNav, measurementRail, maxVisibleCa
     return 0;
 }
 
+export async function focusContextNavigation(tree) {
+    const previousFocus = document.activeElement;
+    // Inherited visibility can remain hidden until the drawer's opening transition resolves.
+    while (tree.isConnected && document.activeElement === previousFocus &&
+        tree.closest(".mo-context-navigation.mud-drawer--open") &&
+        !window.matchMedia("(max-width: 929px)").matches) {
+        const target = window.getTabbableElements(tree)[0];
+        if (!target) {
+            return;
+        }
+
+        if (window.getComputedStyle(target).visibility === "visible" && target.getClientRects().length > 0) {
+            target.focus({ preventScroll: true });
+            return;
+        }
+
+        await new Promise(resolve => window.requestAnimationFrame(resolve));
+    }
+}
+
 export function createNavBarLayoutObserver(
     desktopNav,
     measurementRail,
@@ -57,6 +77,18 @@ export function createNavBarLayoutObserver(
     let disposed = false;
     let frameId = 0;
     let lastVisibleCount = -1;
+    let lastMobile = null;
+    const mobileViewport = window.matchMedia("(max-width: 929px)");
+    const pendingNotifications = new Set();
+
+    const notify = (method, ...args) => {
+        const notification = dotNetRef.invokeMethodAsync(method, ...args).catch(() => {
+            // A disconnected circuit can reject a callback already queued before observer disposal.
+        }).finally(() => {
+            pendingNotifications.delete(notification);
+        });
+        pendingNotifications.add(notification);
+    };
 
     const notifyVisibleCount = () => {
         if (disposed) {
@@ -69,12 +101,36 @@ export function createNavBarLayoutObserver(
             maxVisibleCategories,
             safetyMarginPx);
 
-        if (visibleCount === lastVisibleCount) {
+        const isMobile = mobileViewport.matches;
+        if (visibleCount === lastVisibleCount && isMobile === lastMobile) {
             return;
         }
 
         lastVisibleCount = visibleCount;
-        void dotNetRef.invokeMethodAsync("UpdateVisibleCategoryCountAsync", visibleCount);
+        lastMobile = isMobile;
+        notify("UpdateVisibleCategoryCountAsync", visibleCount, isMobile);
+    };
+
+    const handleFocusIn = (event) => {
+        if (disposed || mobileViewport.matches || !(event.target instanceof Element)) {
+            return;
+        }
+
+        const layout = desktopNav.closest(".mo-layout");
+        const context = layout?.querySelector(".mo-context-navigation.mud-drawer--open");
+        if (!context || context.getClientRects().length === 0) {
+            return;
+        }
+
+        const styles = window.getComputedStyle(context);
+        if (styles.display === "none" || styles.visibility === "hidden") {
+            return;
+        }
+
+        const sidebar = layout.querySelector(".mo-sidebar");
+        if (!context.contains(event.target) && !sidebar?.contains(event.target)) {
+            notify("CloseContextNavigationOnFocusExitAsync");
+        }
     };
 
     const scheduleMeasurement = () => {
@@ -99,11 +155,12 @@ export function createNavBarLayoutObserver(
     resizeObserver.observe(desktopNav);
     resizeObserver.observe(measurementRail);
     window.addEventListener("resize", scheduleMeasurement);
+    window.addEventListener("focusin", handleFocusIn);
 
     scheduleMeasurement();
 
     return {
-        dispose() {
+        async dispose() {
             if (disposed) {
                 return;
             }
@@ -117,6 +174,8 @@ export function createNavBarLayoutObserver(
 
             resizeObserver.disconnect();
             window.removeEventListener("resize", scheduleMeasurement);
+            window.removeEventListener("focusin", handleFocusIn);
+            await Promise.allSettled(Array.from(pendingNotifications));
         }
     };
 }

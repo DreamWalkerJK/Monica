@@ -3,6 +3,7 @@
 @using Monica.Modules
 @using Monica.UI.Localization
 @using Monica.UI.Shell.State
+@using Monica.UI.Shell.Support
 @inject UserContextState UserContext
 @inject IOptions<ModuleShellUIOption> Options
 @inject IStringLocalizer<SharedResource> L
@@ -10,7 +11,7 @@
 <div class="navbar-actions">
     @if (Options.Value.EnableNavBarSearch && Options.Value.NavBarSearchAction is not null)
     {
-        <MudIconButton Icon="@Icons.Material.Filled.Search"
+        <MudIconButton Icon="@ShellIcons.Search"
                        Color="Color.Default"
                        Size="Size.Medium"
                        Class="action-button action-button--secondary"
@@ -21,7 +22,7 @@
 
     @if (Options.Value.NavBarNotificationsAction is not null)
     {
-        <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+        <MudIconButton Icon="@ShellIcons.Bell"
                        Color="Color.Default"
                        Size="Size.Medium"
                        Class="action-button action-button--secondary"
@@ -45,7 +46,7 @@
             <ActivatorContent Context="menu">
                 <MudButton Variant="Variant.Text"
                            Class="user-button"
-                           StartIcon="@Icons.Material.Filled.AccountCircle"
+                           StartIcon="@ShellIcons.UserCircle"
                            OnClick="@(() => menu.ToggleAsync())">
                     <span class="user-name">@UserContext.UserName</span>
                 </MudButton>
@@ -53,13 +54,13 @@
             <ChildContent>
                 @if (Options.Value.UserProfileAction is not null)
                 {
-                    <MudMenuItem Icon="@Icons.Material.Filled.Person" OnClick="OpenProfileAsync">
+                    <MudMenuItem Icon="@ShellIcons.User" OnClick="OpenProfileAsync">
                         @L["Layout:UserMenu:Profile"]
                     </MudMenuItem>
                 }
                 @if (Options.Value.UserSettingsAction is not null)
                 {
-                    <MudMenuItem Icon="@Icons.Material.Filled.Settings" OnClick="OpenSettingsAsync">
+                    <MudMenuItem Icon="@ShellIcons.Sliders" OnClick="OpenSettingsAsync">
                         @L["Layout:UserMenu:Settings"]
                     </MudMenuItem>
                 }
@@ -69,7 +70,7 @@
                 }
                 @if (Options.Value.UserLogoutAction is not null)
                 {
-                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
+                    <MudMenuItem Icon="@ShellIcons.Logout" OnClick="LogoutAsync">
                         @L["Layout:UserMenu:Logout"]
                     </MudMenuItem>
                 }
@@ -79,7 +80,7 @@
     else
     {
         <div class="user-identity" aria-label="@UserContext.UserName">
-            <MudIcon Icon="@Icons.Material.Filled.AccountCircle" />
+            <MudIcon Icon="@ShellIcons.UserCircle" />
             <span class="user-name">@UserContext.UserName</span>
         </div>
     }
