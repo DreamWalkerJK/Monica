@@ -10,10 +10,15 @@
          DropShadow="false"
          Modal="true"
          OpenChanged="HandleOpenChangedAsync">
-    <MoContextMenuItems TItem="TItem"
-                        Items="Items"
-                        ContextItem="ContextItem"
-                        OnItemSelected="HandleItemSelectedAsync" />
+    @if (Visible && _menuOpen)
+    {
+        <MudFocusTrap DefaultFocus="DefaultFocus.Element">
+            <MoContextMenuItems TItem="TItem"
+                                Items="Items"
+                                ContextItem="ContextItem"
+                                OnItemSelected="HandleItemSelectedAsync" />
+        </MudFocusTrap>
+    }
 </MudMenu>
 
 @code {

@@ -5,55 +5,26 @@
  * @module projectUnitCardRenderer
  */
 
-import { getModernNodeStyle } from '../../Monica.UI/js/d3js/d3-graph-base.js';
+const MUTED_INK = 'var(--project-units-muted-ink, color-mix(in srgb, var(--mud-palette-text-secondary) 85%, var(--mud-palette-text-primary)))';
+const ACCENT_INK = 'var(--project-units-accent-ink, color-mix(in srgb, var(--mud-palette-primary) 80%, var(--mud-palette-text-primary)))';
+const CHIP_COLOR_MAP = Object.fromEntries(
+    ['primary', 'secondary', 'tertiary', 'info', 'success', 'warning', 'error', 'dark'].map(role => [role, {
+        background: 'color-mix(in srgb, var(--mud-palette-' + role + ') 8%, var(--mud-palette-surface))',
+        border: 'color-mix(in srgb, var(--mud-palette-' + role + ') 25%, var(--mud-palette-divider))',
+        text: 'color-mix(in srgb, var(--mud-palette-' + role + ') 65%, var(--mud-palette-text-primary))'
+    }]));
+CHIP_COLOR_MAP.default = { background: 'var(--mud-palette-surface)', border: 'var(--mud-palette-divider)', text: MUTED_INK };
+CHIP_COLOR_MAP.dark.text = MUTED_INK;
 
-const CHIP_COLOR_MAP = {
-    primary: {
-        background: 'var(--mo-color-state-info-soft-background)',
-        border: 'var(--mud-palette-primary)',
-        text: 'var(--mud-palette-primary)'
-    },
-    info: {
-        background: 'var(--mo-color-state-info-soft-background)',
-        border: 'var(--mud-palette-info)',
-        text: 'var(--mud-palette-info)'
-    },
-    secondary: {
-        background: 'rgba(var(--mud-palette-secondary-rgb), 0.12)',
-        border: 'var(--mud-palette-secondary)',
-        text: 'var(--mud-palette-secondary)'
-    },
-    tertiary: {
-        background: 'rgba(var(--mud-palette-tertiary-rgb), 0.12)',
-        border: 'var(--mud-palette-tertiary)',
-        text: 'var(--mud-palette-tertiary)'
-    },
-    success: {
-        background: 'var(--mo-color-state-success-soft-background)',
-        border: 'var(--mud-palette-success)',
-        text: 'var(--mud-palette-success)'
-    },
-    warning: {
-        background: 'var(--mo-color-state-warning-soft-background)',
-        border: 'var(--mud-palette-warning)',
-        text: 'var(--mud-palette-warning)'
-    },
-    error: {
-        background: 'var(--mo-color-state-error-soft-background)',
-        border: 'var(--mud-palette-error)',
-        text: 'var(--mud-palette-error)'
-    },
-    dark: {
-        background: 'rgba(var(--mud-palette-dark-rgb), 0.12)',
-        border: 'var(--mud-palette-dark)',
-        text: 'var(--mud-palette-dark)'
-    },
-    default: {
-        background: 'rgba(var(--mud-palette-text-secondary-rgb), 0.10)',
-        border: 'var(--mud-palette-text-secondary)',
-        text: 'var(--mud-palette-text-secondary)'
-    }
-};
+function getCardStyle() {
+    return {
+        backgroundColor: 'var(--mud-palette-surface)',
+        strokeColor: 'var(--mud-palette-divider)', strokeWidth: 1.8,
+        headerColor: 'color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface))',
+        headerTextColor: ACCENT_INK, contentTextColor: 'var(--mud-palette-text-primary)',
+        footerColor: 'color-mix(in srgb, var(--mud-palette-text-primary) 3%, var(--mud-palette-surface))'
+    };
+}
 
 /**
  * Project unit card renderer class
@@ -62,21 +33,21 @@ const CHIP_COLOR_MAP = {
 export class ProjectUnitCardRenderer {
     constructor(isDarkMode = false, sizeConfig = null) {
         this.isDarkMode = isDarkMode;
-        this.style = getModernNodeStyle(isDarkMode, 'complex');
+        this.style = getCardStyle();
         
         // Card layout configuration
         this.config = {
             minWidth: sizeConfig?.minWidth || 180,
             maxWidth: sizeConfig?.maxWidth || 280,
             padding: 12,
-            borderRadius: 0,  // 直角设计
+            borderRadius: 6,
             
             // Title bar configuration
             header: {
-                height: 40,
+                height: 36,
                 padding: 12,
-                fontSize: '14px',
-                fontWeight: '600'
+                fontSize: '13px',
+                fontWeight: '500'
             },
             
             // Content area configuration (display method information, etc.)
@@ -95,7 +66,7 @@ export class ProjectUnitCardRenderer {
                 chipHeight: 20,
                 chipPadding: 8,
                 chipFontSize: '11px',
-                chipBorderRadius: 10
+                chipBorderRadius: 4
             }
         };
     }
@@ -161,7 +132,7 @@ export class ProjectUnitCardRenderer {
             this._measureContext = this._measureCanvas.getContext('2d');
         }
         
-        this._measureContext.font = `${fontWeight} ${fontSize} -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+        this._measureContext.font = `${fontWeight} ${fontSize} ${this.fontFamily || getComputedStyle(document.documentElement).fontFamily}`;
         const metrics = this._measureContext.measureText(text);
         return metrics.width;
     }
@@ -184,7 +155,7 @@ export class ProjectUnitCardRenderer {
         
         chips.forEach((chip, index) => {
             const hasIcon = chip.icon && chip.icon.trim() !== '';
-            const chipWidth = this.estimateChipWidth(chip.text, hasIcon);
+            const chipWidth = this.estimateChipWidth(chip.text, hasIcon, availableWidth);
             
             if (index > 0) {
                 currentRowWidth += chipSpacing;
@@ -217,20 +188,6 @@ export class ProjectUnitCardRenderer {
             .attr('class', 'project-unit-card')
             .attr('data-alert-level', nodeData.alertLevel || 'none');
         
-        // add shadow
-        const shadowFilter = card.append('filter')
-            .attr('id', `shadow-${nodeData.id || Math.random().toString(36).substr(2, 9)}`)
-            .attr('x', '-50%')
-            .attr('y', '-50%')
-            .attr('width', '200%')
-            .attr('height', '200%');
-        
-        shadowFilter.append('feDropShadow')
-            .attr('dx', 0)
-            .attr('dy', 2)
-            .attr('stdDeviation', 3)
-            .attr('flood-opacity', 0.15);
-        
         // Draw card background
         const cardBackground = card.append('rect')
             .attr('class', 'card-background')
@@ -243,7 +200,6 @@ export class ProjectUnitCardRenderer {
             .attr('fill', style.backgroundColor)
             .attr('stroke', style.strokeColor)
             .attr('stroke-width', style.strokeWidth)
-            .style('filter', `url(#shadow-${nodeData.id || Math.random().toString(36).substr(2, 9)})`)
             .style('cursor', 'pointer');
         
         // Draw the three card sections.
@@ -298,9 +254,9 @@ export class ProjectUnitCardRenderer {
                 .attr('text-anchor', 'middle')
                 .attr('fill', style.contentTextColor)
                 .style('font-size', config.content.fontSize)
-                .style('opacity', 0.6)
+                .attr('fill', MUTED_INK)
                 .style('pointer-events', 'none')
-                .text(nodeData.noMetadataText || 'No metadata');
+                .text(nodeData.noMetadataText || '');
             return;
         }
         
@@ -310,7 +266,7 @@ export class ProjectUnitCardRenderer {
         contentItems.forEach((item, index) => {
             const y = firstItemY + index * lineHeight;
             
-            const keyText = `${item.key}:`;
+            const keyText = this.fitText(`${item.key}:`, (width - config.content.padding * 2) * 0.4, config.content.fontSize, '500');
             const keyWidth = this.estimateTextWidth(keyText, config.content.fontSize, '500');
             
             // Key name
@@ -322,31 +278,14 @@ export class ProjectUnitCardRenderer {
                 .attr('fill', style.contentTextColor)
                 .style('font-size', config.content.fontSize)
                 .style('font-weight', '500')
-                .style('opacity', 0.8)
+                .attr('fill', MUTED_INK)
                 .style('pointer-events', 'none')
                 .text(keyText);
             
             // value (smart truncation)
             const valueStartX = -width / 2 + config.content.padding + keyWidth + 5;
-            let displayValue = item.value;
-            
-            // Special handling of method information
-            if (item.kind === 'method') {
-                const colonIndex = item.value.indexOf(':');
-                if (colonIndex > 0) {
-                    const methodName = item.value.substring(0, colonIndex);
-                    const description = item.value.substring(colonIndex + 1).trim();
-                    
-                    if (description.length > 30) {
-                        displayValue = `${methodName}: ${description.substring(0, 27)}...`;
-                    }
-                } else if (item.value.length > 35) {
-                    displayValue = item.value.substring(0, 32) + '...';
-                }
-            } else if (item.value.length > 40) {
-                displayValue = item.value.substring(0, 37) + '...';
-            }
-            
+            const displayValue = this.fitText(item.value, width / 2 - config.content.padding - valueStartX, config.content.fontSize);
+
             const valueText = card.append('text')
                 .attr('class', 'content-value')
                 .attr('x', valueStartX)
@@ -391,7 +330,7 @@ export class ProjectUnitCardRenderer {
         
         chips.forEach((chip, index) => {
             const hasIcon = chip.icon && chip.icon.trim() !== '';
-            const chipWidth = this.estimateChipWidth(chip.text, hasIcon);
+            const chipWidth = this.estimateChipWidth(chip.text, hasIcon, availableWidth);
             const needSpacing = currentRow.length > 0 ? chipSpacing : 0;
             
             if (currentRow.length > 0 && currentRowWidth + needSpacing + chipWidth > availableWidth) {
@@ -433,20 +372,20 @@ export class ProjectUnitCardRenderer {
             
             const rowTotalWidth = row.reduce((total, chip, index) => {
                 const hasIcon = chip.icon && chip.icon.trim() !== '';
-                return total + this.estimateChipWidth(chip.text, hasIcon) + (index > 0 ? chipSpacing : 0);
+                return total + this.estimateChipWidth(chip.text, hasIcon, availableWidth) + (index > 0 ? chipSpacing : 0);
             }, 0);
             
             let currentX = width / 2 - config.footer.padding - rowTotalWidth;
             
             row.forEach((chip, chipIndex) => {
                 const hasIcon = chip.icon && chip.icon.trim() !== '';
-                const chipWidth = this.estimateChipWidth(chip.text, hasIcon);
+                const chipWidth = this.estimateChipWidth(chip.text, hasIcon, availableWidth);
                 
                 if (chipIndex > 0) {
                     currentX += chipSpacing;
                 }
                 
-                this.drawChip(container, chip, currentX, rowY);
+                this.drawChip(container, chip, currentX, rowY, availableWidth);
                 currentX += chipWidth;
             });
         });
@@ -455,13 +394,13 @@ export class ProjectUnitCardRenderer {
     /**
      * Draw a single Chip
      */
-    drawChip(container, chipData, x, y) {
+    drawChip(container, chipData, x, y, availableWidth) {
         const { config } = this;
         const hasIcon = chipData.icon && chipData.icon.trim() !== '';
         const iconSize = 14;
         const iconPadding = hasIcon ? 4 : 0;
         
-        const chipWidth = this.estimateChipWidth(chipData.text, hasIcon);
+        const chipWidth = this.estimateChipWidth(chipData.text, hasIcon, availableWidth);
         const colors = this.getChipColors(chipData.color);
         
         // Chip background
@@ -476,7 +415,7 @@ export class ProjectUnitCardRenderer {
             .attr('fill', colors.background)
             .attr('stroke', colors.border)
             .attr('stroke-width', 1)
-            .style('opacity', 0.9);
+            .style('opacity', 1);
         
         let textX = x + chipWidth / 2;
         
@@ -488,7 +427,7 @@ export class ProjectUnitCardRenderer {
         }
         
         // Chip text
-        container.append('text')
+        const text = container.append('text')
             .attr('class', 'chip-text')
             .attr('x', textX)
             .attr('y', y + 3)
@@ -497,7 +436,8 @@ export class ProjectUnitCardRenderer {
             .style('font-size', config.footer.chipFontSize)
             .style('font-weight', '500')
             .style('pointer-events', 'none')
-            .text(chipData.text);
+            .text(this.fitText(chipData.text, chipWidth - config.footer.chipPadding * 2 - (hasIcon ? iconSize + iconPadding : 0), config.footer.chipFontSize, '500'));
+        text.append('title').text(chipData.text);
     }
     
     /**
@@ -521,7 +461,7 @@ export class ProjectUnitCardRenderer {
     /**
      * Estimate Chip Width
      */
-    estimateChipWidth(text, hasIcon = false) {
+    estimateChipWidth(text, hasIcon = false, availableWidth = Infinity) {
         const { config } = this;
         const textWidth = this.estimateTextWidth(text, config.footer.chipFontSize, '500');
         
@@ -532,7 +472,7 @@ export class ProjectUnitCardRenderer {
         width += textWidth;
         width += config.footer.chipPadding;
         
-        return width;
+        return Math.min(width, availableWidth);
     }
     
     /**
@@ -564,7 +504,7 @@ export class ProjectUnitCardRenderer {
             .style('font-size', config.header.fontSize)
             .style('font-weight', config.header.fontWeight)
             .style('pointer-events', 'none')
-            .text(nodeData.title);
+            .text(this.fitText(nodeData.title, width - config.header.padding * 2 - (nodeData.icon ? iconSize + iconTextSpacing : 0), config.header.fontSize, config.header.fontWeight));
     }
     
     /**
@@ -628,12 +568,29 @@ export class ProjectUnitCardRenderer {
         }
     }
     
+    setFontFamily(family) {
+        this.fontFamily = family;
+    }
+
+    fitText(value, availableWidth, fontSize, fontWeight = 'normal') {
+        const text = String(value ?? '');
+        if (this.estimateTextWidth(text, fontSize, fontWeight) <= availableWidth) return text;
+        const characters = Array.from(text);
+        let lower = 0, upper = characters.length;
+        while (lower < upper) {
+            const middle = Math.ceil((lower + upper) / 2);
+            if (this.estimateTextWidth(characters.slice(0, middle).join('') + '…', fontSize, fontWeight) <= availableWidth) lower = middle;
+            else upper = middle - 1;
+        }
+        return characters.slice(0, lower).join('') + '…';
+    }
+
     /**
      * Update theme
      */
     updateTheme(isDarkMode) {
         this.isDarkMode = isDarkMode;
-        this.style = getModernNodeStyle(isDarkMode, 'complex');
+        this.style = getCardStyle();
     }
 }
 

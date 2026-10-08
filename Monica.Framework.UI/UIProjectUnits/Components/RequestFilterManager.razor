@@ -1,336 +1,268 @@
 @using Monica.ProjectUnits.Facades
-@using Monica.Core.Results;
+@using Monica.Core.Results
+@using Monica.ProjectUnits.Models
 @inject ProjectUnitsFacade ProjectUnitsFacade
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ProjectUnitsResource> L
+@implements IDisposable
 
-<div class="project-units-tab-section">
-    <MudStack Row="true"
-              Justify="Justify.SpaceBetween"
-              AlignItems="AlignItems.Center"
-              Class="project-units-tab-section__header">
-        <div class="project-units-tab-section__identity">
-            <div class="project-units-tab-section__icon">
-                <MudIcon Icon="@Icons.Material.Filled.FilterAlt" />
-            </div>
-            <div class="project-units-tab-section__copy">
-                <MudText Typo="Typo.h6">@L["RequestFilterManager:Header:Title"]</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="project-units-tab-section__description">
-                    @L["RequestFilterManager:Header:Description"]
-                </MudText>
-            </div>
+<section class="request-path-desk">
+    <header class="request-path-desk__heading">
+        <div>
+            <span class="request-path-desk__eyebrow">@L["RequestFilterManager:Desk:Eyebrow"]</span>
+            <h2>@L["RequestFilterManager:Header:Title"]</h2>
+            <p>@L["RequestFilterManager:Header:Description"]</p>
         </div>
-        <div class="project-units-tab-section__actions">
-            <MudButton Variant="Variant.Filled"
-                      Color="Color.Primary"
-                      OnClick="LoadDisabledUrlsAsync"
-                      StartIcon="@Icons.Material.Filled.Refresh"
-                      Disabled="@_loading">
+        <div class="request-path-desk__refresh">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="LoadDisabledUrlsAsync"
+                       StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@(_loading || _managing)">
                 @L["RequestFilterManager:Actions:RefreshState"]
             </MudButton>
         </div>
-    </MudStack>
-    <div class="project-units-tab-section__body">
-        <MudGrid>
-            <MudItem xs="12" md="6">
-                <MudPaper Class="pa-4 project-units-tool-card" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6" Class="mb-3">@L["RequestFilterManager:Sections:UrlManagement"]</MudText>
-                    <MudStack Spacing="3">
-                        <MudTextField @bind-Value="_newUrl"
-                                     Label="@L["RequestFilterManager:Fields:UrlPath"]"
-                                     Variant="Variant.Outlined"
-                                     Placeholder="@L["RequestFilterManager:Fields:UrlPlaceholder"]" />
-
-                        <MudStack Row="true" Spacing="2">
-                            <MudButton Variant="Variant.Filled"
-                                      Color="Color.Error"
-                                      OnClick="@(() => ManageUrlAsync(true))"
-                                      StartIcon="@Icons.Material.Filled.Block"
-                                      Disabled="@_managing">
-                                @L["RequestFilterManager:Actions:Disable"]
-                            </MudButton>
-                            <MudButton Variant="Variant.Filled"
-                                      Color="Color.Success"
-                                      OnClick="@(() => ManageUrlAsync(false))"
-                                      StartIcon="@Icons.Material.Filled.CheckCircle"
-                                      Disabled="@_managing">
+    </header>
+    @if (_loadError is not null)
+    {
+        <div class="request-path-desk__error" role="alert">@_loadError</div>
+    }
+    <div class="request-path-desk__workspace">
+        <section class="request-path-ledger">
+            <header>
+                <div>
+                    <span class="request-path-desk__eyebrow">@L["RequestFilterManager:Desk:StateLabel"]</span>
+                    <h3>@L["RequestFilterManager:Sections:DisabledUrls"]</h3>
+                </div>
+                @if (_hasState)
+                {
+                    <span class="request-path-ledger__count">@_disabledUrls.Count</span>
+                }
+            </header>
+            @if (_loading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            }
+            @if (_hasState)
+            {
+                <div class="request-path-availability">
+                    <span class="request-path-availability__status">@(_isAvailable ? L["RequestFilterManager:Desk:Available"] : L["RequestFilterManager:Desk:Unavailable"])</span>
+                    <p>@(_isAvailable ? L["RequestFilterManager:Desk:AvailabilityHint"] : L["RequestFilterManager:Desk:UnavailableHint"])</p>
+                </div>
+            }
+            <div class="request-path-ledger__list" tabindex="0" aria-label="@L["RequestFilterManager:Sections:DisabledUrls"]">
+                @foreach (var path in _disabledUrls)
+                {
+                    <div class="request-path-row">
+                        <code>@path</code>
+                        <div>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => EnableSingleUrlAsync(path))"
+                                       Disabled="@(!CanManage)" aria-label="@L["RequestFilterManager:Desk:EnablePath", path]">
                                 @L["RequestFilterManager:Actions:Enable"]
                             </MudButton>
-                        </MudStack>
-                    </MudStack>
-                </MudPaper>
-            </MudItem>
+                        </div>
+                    </div>
+                }
+                @if (_hasState && _isAvailable && !_loading && _disabledUrls.Count == 0)
+                {
+                    <div class="request-path-desk__empty">
+                        <MudIcon Icon="@Icons.Material.Outlined.Route" />
+                        <p>@L["RequestFilterManager:States:EmptyDisabledUrls"]</p>
+                    </div>
+                }
+            </div>
+            @if (_disabledUrls.Count > 0)
+            {
+                <footer>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="EnableAllUrlsAsync"
+                               StartIcon="@Icons.Material.Outlined.CheckCircle" Disabled="@(!CanManage)">
+                        @L["RequestFilterManager:Actions:EnableAllUrls"]
+                    </MudButton>
+                </footer>
+            }
+        </section>
 
-            <MudItem xs="12" md="6">
-                <MudPaper Class="pa-4 project-units-tool-card" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6" Class="mb-3">@L["RequestFilterManager:Sections:BatchManagement"]</MudText>
-                    <MudStack Spacing="3">
-                        <MudTextField @bind-Value="_batchUrls"
-                                     Label="@L["RequestFilterManager:Fields:BatchUrls"]"
-                                     Variant="Variant.Outlined"
-                                     Lines="5"
-                                     Placeholder="@L["RequestFilterManager:Fields:BatchUrlsPlaceholder"]" />
-
-                        <MudStack Row="true" Spacing="2">
-                            <MudButton Variant="Variant.Outlined"
-                                      Color="Color.Error"
-                                      OnClick="@(() => BatchManageUrlsAsync(true))"
-                                      StartIcon="@Icons.Material.Filled.Block"
-                                      Disabled="@_managing">
-                                @L["RequestFilterManager:Actions:BatchDisable"]
-                            </MudButton>
-                            <MudButton Variant="Variant.Outlined"
-                                      Color="Color.Success"
-                                      OnClick="@(() => BatchManageUrlsAsync(false))"
-                                      StartIcon="@Icons.Material.Filled.CheckCircle"
-                                      Disabled="@_managing">
-                                @L["RequestFilterManager:Actions:BatchEnable"]
-                            </MudButton>
-                        </MudStack>
-                    </MudStack>
-                </MudPaper>
-            </MudItem>
-
-            <MudItem xs="12">
-                <MudPaper Class="pa-4 project-units-tool-card" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6" Class="mb-3">@L["RequestFilterManager:Sections:DisabledUrls"]</MudText>
-                    @if (_loading)
-                    {
-                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
-                    }
-                    else if (_disabledUrls.Any())
-                    {
-                        <MudStack Spacing="2">
-                            @foreach (var url in _disabledUrls)
-                            {
-                                <MudChip T="string" Size="Size.Medium" 
-                                        Color="Color.Error" 
-                                        Icon="@Icons.Material.Filled.Block"
-                                        OnClose="@(() => EnableSingleUrlAsync(url))">
-                                    @url
-                                </MudChip>
-                            }
-                        </MudStack>
-
-                        <MudDivider Class="my-4" />
-
-                        <MudButton Variant="Variant.Outlined"
-                                  Color="Color.Success"
-                                  OnClick="EnableAllUrlsAsync"
-                                  StartIcon="@Icons.Material.Filled.CheckCircle"
-                                  Disabled="@_managing">
-                            @L["RequestFilterManager:Actions:EnableAllUrls"]
-                        </MudButton>
-                    }
-                    else
-                    {
-                        <MudAlert Severity="Severity.Success">
-                            @L["RequestFilterManager:States:EmptyDisabledUrls"]
-                        </MudAlert>
-                    }
-                </MudPaper>
-            </MudItem>
-        </MudGrid>
+        <section class="request-path-controls">
+            <header>
+                <h3>@(_batchMode ? L["RequestFilterManager:Sections:BatchManagement"] : L["RequestFilterManager:Sections:UrlManagement"])</h3>
+                <p>@L["RequestFilterManager:Desk:ControlsHint"]</p>
+            </header>
+            <div class="request-path-modes" role="group" aria-label="@L["RequestFilterManager:Desk:ModeLabel"]">
+                <button type="button" aria-pressed="@(!_batchMode ? "true" : "false")"
+                        disabled="@(_managing)" @onclick="@(() => SetInputMode(false))">@L["RequestFilterManager:Desk:SingleMode"]</button>
+                <button type="button" aria-pressed="@(_batchMode ? "true" : "false")"
+                        disabled="@(_managing)" @onclick="@(() => SetInputMode(true))">@L["RequestFilterManager:Desk:BatchMode"]</button>
+            </div>
+            <div class="request-path-input">
+                @if (_batchMode)
+                {
+                    <MudTextField T="string" @bind-Value="_batchUrls" Label="@L["RequestFilterManager:Fields:BatchUrls"]"
+                                  Variant="Variant.Outlined" Lines="8" Immediate="true" Disabled="@(!CanManage)"
+                                  Placeholder="@L["RequestFilterManager:Fields:BatchUrlsPlaceholder"]" />
+                    <p class="request-path-input__count">@L["RequestFilterManager:Desk:BatchCount", GetBatchPaths().Count]</p>
+                }
+                else
+                {
+                    <MudTextField T="string" @bind-Value="_newUrl" Label="@L["RequestFilterManager:Fields:UrlPath"]"
+                                  Variant="Variant.Outlined" Immediate="true" Disabled="@(!CanManage)"
+                                  Placeholder="@L["RequestFilterManager:Fields:UrlPlaceholder"]" />
+                }
+            </div>
+            <div class="request-path-actions" aria-busy="@(_managing ? "true" : "false")">
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Outlined.Block"
+                           OnClick="@(() => ApplyInputAsync(true))" Disabled="@(!CanManage)">
+                    @(_batchMode ? L["RequestFilterManager:Actions:BatchDisable"] : L["RequestFilterManager:Actions:Disable"])
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Outlined.CheckCircle"
+                           OnClick="@(() => ApplyInputAsync(false))" Disabled="@(!CanManage)">
+                    @(_batchMode ? L["RequestFilterManager:Actions:BatchEnable"] : L["RequestFilterManager:Actions:Enable"])
+                </MudButton>
+                @if (_managing)
+                {
+                    <span class="request-path-actions__busy" role="status">@L["RequestFilterManager:Desk:Applying"]</span>
+                }
+            </div>
+        </section>
     </div>
-</div>
+</section>
 
 @code {
     private List<string> _disabledUrls = [];
     private bool _loading;
     private bool _managing;
+    private bool _disposed;
+    private bool _hasState;
+    private bool _isAvailable;
+    private bool _batchMode;
+    private string? _loadError;
     private string _newUrl = string.Empty;
     private string _batchUrls = string.Empty;
+    private bool CanManage => !_disposed && _hasState && _isAvailable && !_loading && !_managing && _loadError is null;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnInitializedAsync() => LoadDisabledUrlsAsync();
+
+    private void SetInputMode(bool batch)
     {
-        if (firstRender)
-        {
-            await LoadDisabledUrlsAsync();
-        }
+        if (_disposed || _managing) return;
+        _batchMode = batch;
     }
 
     private async Task LoadDisabledUrlsAsync()
     {
+        if (_disposed || _loading || _managing) return;
         _loading = true;
-        StateHasChanged();
-
+        _loadError = null;
         try
         {
-            var result = await ProjectUnitsFacade.ManageRequestFilterAsync(null, null);
+            var result = await ProjectUnitsFacade.GetRequestFilterStateAsync();
+            if (_disposed) return;
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add(L["Shared:Messages:LoadFailed", error], Severity.Error);
+                _loadError = L["Shared:Messages:LoadFailed", error];
+                Snackbar.Add(_loadError, Severity.Error);
                 return;
             }
-
-            _disabledUrls = data;
+            _disabledUrls = data.DisabledPaths.ToList();
+            _isAvailable = data.IsAvailable;
+            _hasState = true;
         }
         catch (Exception ex)
         {
-            Snackbar.Add(L["Shared:Messages:LoadException", ex.Message], Severity.Error);
+            if (_disposed) return;
+            _loadError = L["Shared:Messages:LoadException", ex.Message];
+            Snackbar.Add(_loadError, Severity.Error);
         }
         finally
         {
-            _loading = false;
-            StateHasChanged();
+            if (!_disposed)
+            {
+                _loading = false;
+                StateHasChanged();
+            }
         }
     }
 
-    private async Task ManageUrlAsync(bool disable)
+    private Task ApplyInputAsync(bool disable) => _batchMode ? BatchManageUrlsAsync(disable) : ManageUrlAsync(disable);
+
+    private Task ManageUrlAsync(bool disable)
     {
+        if (!CanManage) return Task.CompletedTask;
         if (string.IsNullOrWhiteSpace(_newUrl))
         {
             Snackbar.Add(L["RequestFilterManager:Messages:RequireUrl"], Severity.Warning);
-            return;
+            return Task.CompletedTask;
         }
-
-        _managing = true;
-        StateHasChanged();
-
-        try
-        {
-            var urls = new List<string> { _newUrl.Trim() };
-            var result = await ProjectUnitsFacade.ManageRequestFilterAsync(urls, disable);
-
-            if (result.IsFailed(out var error, out var data))
-            {
-                Snackbar.Add(L["RequestFilterManager:Messages:OperationFailed", error], Severity.Error);
-                return;
-            }
-
-            _disabledUrls = data;
-            _newUrl = string.Empty;
-
-            Snackbar.Add(
-                disable
-                    ? L["RequestFilterManager:Messages:DisableSucceeded"]
-                    : L["RequestFilterManager:Messages:EnableSucceeded"],
-                Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["RequestFilterManager:Messages:OperationException", ex.Message], Severity.Error);
-        }
-        finally
-        {
-            _managing = false;
-            StateHasChanged();
-        }
+        return ApplyPathsAsync([_newUrl.Trim()], disable,
+            error => L["RequestFilterManager:Messages:OperationFailed", error],
+            exception => L["RequestFilterManager:Messages:OperationException", exception.Message],
+            disable ? L["RequestFilterManager:Messages:DisableSucceeded"] : L["RequestFilterManager:Messages:EnableSucceeded"],
+            () => _newUrl = string.Empty);
     }
 
-    private async Task BatchManageUrlsAsync(bool disable)
+    private List<string> GetBatchPaths() => _batchUrls
+        .Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
+        .Select(path => path.Trim()).Where(path => !string.IsNullOrWhiteSpace(path)).ToList();
+
+    private Task BatchManageUrlsAsync(bool disable)
     {
+        if (!CanManage) return Task.CompletedTask;
         if (string.IsNullOrWhiteSpace(_batchUrls))
         {
             Snackbar.Add(L["RequestFilterManager:Messages:RequireBatchUrls"], Severity.Warning);
-            return;
+            return Task.CompletedTask;
         }
-
-        var urls = _batchUrls.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
-                            .Select(u => u.Trim())
-                            .Where(u => !string.IsNullOrWhiteSpace(u))
-                            .ToList();
-
-        if (!urls.Any())
+        var paths = GetBatchPaths();
+        if (paths.Count == 0)
         {
             Snackbar.Add(L["RequestFilterManager:Messages:NoValidUrls"], Severity.Warning);
-            return;
+            return Task.CompletedTask;
         }
-
-        _managing = true;
-        StateHasChanged();
-
-        try
-        {
-            var result = await ProjectUnitsFacade.ManageRequestFilterAsync(urls, disable);
-
-            if (result.IsFailed(out var error, out var data))
-            {
-                Snackbar.Add(L["RequestFilterManager:Messages:BatchOperationFailed", error], Severity.Error);
-                return;
-            }
-
-            _disabledUrls = data;
-            _batchUrls = string.Empty;
-
-            Snackbar.Add(
-                disable
-                    ? L["RequestFilterManager:Messages:BatchDisableSucceeded", urls.Count]
-                    : L["RequestFilterManager:Messages:BatchEnableSucceeded", urls.Count],
-                Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["RequestFilterManager:Messages:BatchOperationException", ex.Message], Severity.Error);
-        }
-        finally
-        {
-            _managing = false;
-            StateHasChanged();
-        }
+        return ApplyPathsAsync(paths, disable,
+            error => L["RequestFilterManager:Messages:BatchOperationFailed", error],
+            exception => L["RequestFilterManager:Messages:BatchOperationException", exception.Message],
+            disable ? L["RequestFilterManager:Messages:BatchDisableSucceeded", paths.Count] : L["RequestFilterManager:Messages:BatchEnableSucceeded", paths.Count],
+            () => _batchUrls = string.Empty);
     }
 
-    private async Task EnableSingleUrlAsync(string url)
+    private Task EnableSingleUrlAsync(string url) => ApplyPathsAsync([url], false,
+        error => L["RequestFilterManager:Messages:EnableSingleFailed", error],
+        exception => L["RequestFilterManager:Messages:EnableSingleException", exception.Message],
+        L["RequestFilterManager:Messages:EnableSingleSucceeded", url]);
+
+    private Task EnableAllUrlsAsync() => _disabledUrls.Count == 0 ? Task.CompletedTask :
+        ApplyPathsAsync(_disabledUrls.ToList(), false,
+            error => L["RequestFilterManager:Messages:EnableAllFailed", error],
+            exception => L["RequestFilterManager:Messages:EnableAllException", exception.Message],
+            L["RequestFilterManager:Messages:EnableAllSucceeded"]);
+
+    private async Task ApplyPathsAsync(List<string> paths, bool disable, Func<object, string> failureMessage,
+        Func<Exception, string> exceptionMessage, string successMessage, Action? clearInput = null)
     {
+        if (!CanManage) return;
         _managing = true;
-        StateHasChanged();
-
         try
         {
-            var urls = new List<string> { url };
-            var result = await ProjectUnitsFacade.ManageRequestFilterAsync(urls, false);
-
+            var result = await ProjectUnitsFacade.ManageRequestFilterAsync(paths, disable);
+            if (_disposed) return;
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add(L["RequestFilterManager:Messages:EnableSingleFailed", error], Severity.Error);
+                Snackbar.Add(failureMessage(error), Severity.Error);
                 return;
             }
-
             _disabledUrls = data;
-            Snackbar.Add(L["RequestFilterManager:Messages:EnableSingleSucceeded", url], Severity.Success);
+            clearInput?.Invoke();
+            Snackbar.Add(successMessage, Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add(L["RequestFilterManager:Messages:EnableSingleException", ex.Message], Severity.Error);
+            if (!_disposed) Snackbar.Add(exceptionMessage(ex), Severity.Error);
         }
         finally
         {
-            _managing = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task EnableAllUrlsAsync()
-    {
-        if (!_disabledUrls.Any())
-        {
-            return;
-        }
-
-        _managing = true;
-        StateHasChanged();
-
-        try
-        {
-            var result = await ProjectUnitsFacade.ManageRequestFilterAsync(_disabledUrls.ToList(), false);
-
-            if (result.IsFailed(out var error, out var data))
+            if (!_disposed)
             {
-                Snackbar.Add(L["RequestFilterManager:Messages:EnableAllFailed", error], Severity.Error);
-                return;
+                _managing = false;
+                StateHasChanged();
             }
-
-            _disabledUrls = data;
-            Snackbar.Add(L["RequestFilterManager:Messages:EnableAllSucceeded"], Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["RequestFilterManager:Messages:EnableAllException", ex.Message], Severity.Error);
-        }
-        finally
-        {
-            _managing = false;
-            StateHasChanged();
         }
     }
+
+    public void Dispose() => _disposed = true;
 }

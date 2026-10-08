@@ -5,472 +5,355 @@
 @inject IStringLocalizer<ProjectUnitsResource> L
 @implements IAsyncDisposable
 
-<MudDialog @bind-Visible="Visible" Options="_dialogOptions" OnBackdropClick="CloseAsync">
+<MudDialog Visible="@Visible" VisibleChanged="HandleVisibleChangedAsync" Options="_dialogOptions" OnBackdropClick="CloseAsync">
     <TitleContent>
-        <div class="project-unit-detail__dialog-title">
-            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Primary" />
-            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Title"]</MudText>
-        </div>
+        <ProjectUnitDialogHeading Text="@L["ProjectUnitDetailDialog:Title"]" />
     </TitleContent>
     <DialogContent>
         @if (_loading)
         {
-            <div class="project-unit-detail__loading" data-testid="project-unit-detail-loading">
+            <div class="pu-dossier__state" data-testid="project-unit-detail-loading" role="status">
                 <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                <MudText Color="Color.Secondary">@L["ProjectUnitDetailDialog:States:Loading"]</MudText>
+                <p>@L["ProjectUnitDetailDialog:States:Loading"]</p>
             </div>
         }
         else if (_loadError is not null)
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" data-testid="project-unit-detail-error">
-                @_loadError
-            </MudAlert>
+            <div class="pu-dossier__error" data-testid="project-unit-detail-error" role="status">@_loadError</div>
         }
         else if (_detail is not null)
         {
             var summary = _detail.Summary;
-            <article class="project-unit-detail" data-testid="project-unit-detail">
-                <header class="project-unit-detail__hero">
-                    <div class="project-unit-detail__identity">
-                        <div class="project-unit-detail__icon" data-color-role="@ProjectUnitVisualizationConfig.GetUnitTypeColorRole(summary.UnitType)">
-                            <MudIcon Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(summary.UnitType)" Size="Size.Large" />
-                        </div>
-                        <div class="project-unit-detail__heading">
-                            <MudText Typo="Typo.h5">@summary.Title</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="project-unit-detail__key">
-                                @summary.Key
-                            </MudText>
-                        </div>
+            <article class="pu-dossier project-unit-detail" data-testid="project-unit-detail" data-unit-key="@summary.Key">
+                <header class="pu-dossier__identity">
+                    <div class="pu-dossier__identity-top">
+                        <span class="pu-dossier__eyebrow">@L["ProjectUnitDetailDialog:Sections:Identity"]</span>
+                        <span class="pu-dossier__type">@L.GetProjectUnitTypeText(summary.UnitType)</span>
                     </div>
-                    <div class="project-unit-detail__badges">
-                        <MudChip T="string" Size="Size.Small"
-                                 Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(summary.UnitType)"
-                                 Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(summary.UnitType)">
-                            @L.GetProjectUnitTypeText(summary.UnitType)
-                        </MudChip>
-                        <MudChip T="string" Size="Size.Small"
-                                 Color="@(summary.HasExplicitMetadata ? Color.Success : Color.Warning)"
-                                 Variant="Variant.Outlined"
-                                 Icon="@(summary.HasExplicitMetadata ? Icons.Material.Filled.Verified : Icons.Material.Filled.Info)">
-                            @(summary.HasExplicitMetadata
-                                ? L["ProjectUnitDetailDialog:Badges:MetadataDeclared"]
-                                : L["ProjectUnitDetailDialog:Badges:MetadataMissing"])
-                        </MudChip>
+                    <h3>@summary.Title</h3>
+                    <code>@summary.Key</code>
+                    <div class="pu-dossier__metadata" data-declared="@summary.HasExplicitMetadata.ToString().ToLowerInvariant()">
+                        <MudIcon Icon="@(summary.HasExplicitMetadata ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Info)" Size="Size.Small" />
+                        @(summary.HasExplicitMetadata ? L["ProjectUnitDetailDialog:Badges:MetadataDeclared"] : L["ProjectUnitDetailDialog:Badges:MetadataMissing"])
                     </div>
-                </header>
-
-                @if (!string.IsNullOrWhiteSpace(summary.Description))
-                {
-                    <MudText Typo="Typo.body1" Class="project-unit-detail__description">@summary.Description</MudText>
-                }
-
-                <div class="project-unit-detail__facts">
-                    <div class="project-unit-detail__fact">
-                        <MudIcon Icon="@Icons.Material.Filled.Badge" Color="Color.Primary" Size="Size.Small" />
-                        <span>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDetailDialog:Fields:Owner"]</MudText>
-                            <MudText Typo="Typo.body2">@(summary.Owner ?? L["Shared:Labels:NotDeclared"])</MudText>
-                        </span>
-                    </div>
-                    <div class="project-unit-detail__fact">
-                        <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Info" Size="Size.Small" />
-                        <span>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDetailDialog:Fields:Dependencies"]</MudText>
-                            <MudText Typo="Typo.body2">@summary.Dependencies.Count</MudText>
-                        </span>
-                    </div>
-                    <div class="project-unit-detail__fact">
-                        <MudIcon Icon="@Icons.Material.Filled.CallReceived" Color="Color.Success" Size="Size.Small" />
-                        <span>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDetailDialog:Fields:DependedBy"]</MudText>
-                            <MudText Typo="Typo.body2">@summary.DependedByCount</MudText>
-                        </span>
-                    </div>
-                    <div class="project-unit-detail__fact">
-                        <MudIcon Icon="@Icons.Material.Filled.Functions" Color="Color.Secondary" Size="Size.Small" />
-                        <span>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDetailDialog:Fields:Methods"]</MudText>
-                            <MudText Typo="Typo.body2">@summary.MethodCount</MudText>
-                        </span>
-                    </div>
-                </div>
-
-                <section class="project-unit-detail__section">
-                    <div class="project-unit-detail__section-title">
-                        <MudIcon Icon="@Icons.Material.Filled.AssignmentTurnedIn" Color="Color.Secondary" />
-                        <div>
-                            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Sections:Requirements"]</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @L["ProjectUnitDetailDialog:Sections:RequirementsHint"]
-                            </MudText>
-                        </div>
-                    </div>
-                    @if (_detail.Requirements.Count == 0)
+                    @if (!string.IsNullOrWhiteSpace(summary.Description))
                     {
-                        <MudAlert Severity="Severity.Info" Variant="Variant.Text">
-                            @L["ProjectUnitDetailDialog:States:NoRequirements"]
-                        </MudAlert>
+                        <p>@summary.Description</p>
                     }
                     else
                     {
-                        <div class="project-unit-detail__requirements">
+                        <p class="pu-dossier__absence">@L["ProjectUnitDetailDialog:States:NoDescription"]</p>
+                    }
+                </header>
+                <dl class="pu-dossier__facts">
+                    <div><dt>@L["ProjectUnitDetailDialog:Fields:Owner"]</dt><dd>@(summary.Owner ?? L["Shared:Labels:NotDeclared"])</dd></div>
+                    <div><dt>@L["ProjectUnitDetailDialog:Fields:Dependencies"]</dt><dd>@summary.Dependencies.Count</dd></div>
+                    <div><dt>@L["ProjectUnitDetailDialog:Fields:DependedBy"]</dt><dd>@summary.DependedByCount</dd></div>
+                    <div><dt>@L["ProjectUnitDetailDialog:Fields:Methods"]</dt><dd>@summary.MethodCount</dd></div>
+                </dl>
+                <section class="pu-dossier__section">
+                    <header><span class="pu-dossier__section-index" aria-hidden="true">01</span><div><h4>@L["ProjectUnitDetailDialog:Sections:Requirements"]</h4><p>@L["ProjectUnitDetailDialog:Sections:RequirementsHint"]</p></div><span class="pu-dossier__section-count">@_detail.Requirements.Count</span></header>
+                    @if (_detail.Requirements.Count == 0)
+                    {
+                        <p class="pu-dossier__absence">@L["ProjectUnitDetailDialog:States:NoRequirements"]</p>
+                    }
+                    else
+                    {
+                        <ul class="pu-dossier__requirements">
                             @foreach (var requirement in _detail.Requirements)
                             {
-                                <div class="project-unit-detail__requirement" data-resolved="@requirement.IsResolved.ToString().ToLowerInvariant()">
-                                    <MudIcon Icon="@(requirement.IsResolved ? Icons.Material.Filled.Link : Icons.Material.Filled.LinkOff)"
-                                             Color="@(requirement.IsResolved ? Color.Primary : Color.Default)" />
-                                    <div class="project-unit-detail__requirement-copy">
+                                <li data-resolved="@requirement.IsResolved.ToString().ToLowerInvariant()">
+                                    <div>
                                         @if (requirement.IsResolved)
                                         {
-                                            <a href="@requirement.Href" target="_blank" rel="noopener noreferrer"
-                                               class="project-unit-detail__requirement-link">
-                                                @requirement.Title
-                                                <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" />
-                                            </a>
+                                            <a href="@requirement.Href" target="_blank" rel="noopener noreferrer">@requirement.Title <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" /></a>
                                         }
                                         else
                                         {
-                                            <MudText Typo="Typo.body2">@requirement.Title</MudText>
+                                            <span>@requirement.Title</span>
                                         }
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@requirement.Id</MudText>
+                                        <code>@requirement.Id</code>
                                     </div>
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                             Color="@(requirement.IsResolved ? Color.Success : Color.Default)">
-                                        @(requirement.IsResolved
-                                            ? L["ProjectUnitDetailDialog:Badges:Resolved"]
-                                            : L["ProjectUnitDetailDialog:Badges:Unresolved"])
-                                    </MudChip>
-                                </div>
+                                    <span class="pu-dossier__resolution">@(requirement.IsResolved ? L["ProjectUnitDetailDialog:Badges:Resolved"] : L["ProjectUnitDetailDialog:Badges:Unresolved"])</span>
+                                </li>
                             }
-                        </div>
+                        </ul>
                     }
                 </section>
-
                 @if (summary.Tags.Count != 0)
                 {
-                    <section class="project-unit-detail__section">
-                        <div class="project-unit-detail__section-title">
-                            <MudIcon Icon="@Icons.Material.Filled.Label" Color="Color.Tertiary" />
-                            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Sections:Tags"]</MudText>
-                        </div>
-                        <MudChipSet T="string">
-                            @foreach (var tag in summary.Tags)
-                            {
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@tag</MudChip>
-                            }
-                        </MudChipSet>
-                    </section>
+                    <section class="pu-dossier__tags"><h4>@L["ProjectUnitDetailDialog:Sections:Tags"]</h4><ul>@foreach (var tag in summary.Tags) { <li>@tag</li> }</ul></section>
                 }
-
-                <section class="project-unit-detail__section">
-                    <div class="project-unit-detail__section-title">
-                        <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Info" />
-                        <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Sections:Relationships"]</MudText>
-                    </div>
-                    <div class="project-unit-detail__relationships">
-                        <div>
-                            <MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Dependencies"]</MudText>
-                            @if (summary.Dependencies.Count == 0)
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Shared:Labels:None"]</MudText>
-                            }
+                <section class="pu-dossier__section">
+                    <header><span class="pu-dossier__section-index" aria-hidden="true">02</span><div><h4>@L["ProjectUnitDetailDialog:Sections:Relationships"]</h4><p>@L["ProjectUnitDetailDialog:Sections:RelationshipsHint"]</p></div></header>
+                    <div class="pu-dossier__relationships">
+                        <div><h5>@L["ProjectUnitDetailDialog:Fields:Dependencies"] <span>@summary.Dependencies.Count</span></h5>
+                            @if (summary.Dependencies.Count == 0) { <p class="pu-dossier__absence">@L["Shared:Labels:None"]</p> }
                             else
                             {
-                                <div class="project-unit-detail__reference-list">
-                                    @foreach (var dependency in summary.Dependencies)
+                                <ul class="pu-dossier__references">
+                                    @foreach (var reference in summary.Dependencies)
                                     {
-                                        <button type="button" class="project-unit-detail__reference" @onclick="@(() => LoadDetailAsync(dependency.Key))">
-                                            <MudIcon Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(dependency.UnitType)" Size="Size.Small" />
-                                            <span>@dependency.Title</span>
-                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
-                                        </button>
+                                        <li><button type="button" @onclick="@(() => InspectRelatedUnitAsync(reference.Key))"><span><strong>@reference.Title</strong><code>@reference.Key</code><small>@L.GetProjectUnitTypeText(reference.UnitType)</small></span><MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></button></li>
                                     }
-                                </div>
+                                </ul>
                             }
                         </div>
-                        <div>
-                            <MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:DependedBy"]</MudText>
-                            @if (_detail.Dependents.Count == 0)
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Shared:Labels:None"]</MudText>
-                            }
+                        <div><h5>@L["ProjectUnitDetailDialog:Fields:DependedBy"] <span>@_detail.Dependents.Count</span></h5>
+                            @if (_detail.Dependents.Count == 0) { <p class="pu-dossier__absence">@L["Shared:Labels:None"]</p> }
                             else
                             {
-                                <div class="project-unit-detail__reference-list">
-                                    @foreach (var dependent in _detail.Dependents)
+                                <ul class="pu-dossier__references">
+                                    @foreach (var reference in _detail.Dependents)
                                     {
-                                        <button type="button" class="project-unit-detail__reference" @onclick="@(() => LoadDetailAsync(dependent.Key))">
-                                            <MudIcon Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(dependent.UnitType)" Size="Size.Small" />
-                                            <span>@dependent.Title</span>
-                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
-                                        </button>
+                                        <li><button type="button" @onclick="@(() => InspectRelatedUnitAsync(reference.Key))"><span><strong>@reference.Title</strong><code>@reference.Key</code><small>@L.GetProjectUnitTypeText(reference.UnitType)</small></span><MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></button></li>
                                     }
-                                </div>
+                                </ul>
                             }
                         </div>
                     </div>
                 </section>
-
                 @if (_detail.Configuration is not null)
                 {
-                    <section class="project-unit-detail__section">
-                        <div class="project-unit-detail__section-title">
-                            <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Warning" />
-                            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Sections:Configuration"]</MudText>
-                        </div>
-                        <div class="project-unit-detail__configuration">
-                            <div>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDetailDialog:Fields:DefinitionKey"]</MudText>
-                                <code>@_detail.Configuration.DefinitionKey</code>
-                            </div>
-                            <MudChip T="string" Size="Size.Small"
-                                     Color="@(_detail.Configuration.IsOffline is true ? Color.Success : Color.Info)"
-                                     Icon="@(_detail.Configuration.IsOffline is true ? Icons.Material.Filled.CloudOff : Icons.Material.Filled.Cloud)">
-                                @L.GetConfigurationModeText(_detail.Configuration.IsOffline)
-                            </MudChip>
-                        </div>
+                    <section class="pu-dossier__section pu-dossier__configuration">
+                        <header><MudIcon Icon="@Icons.Material.Outlined.Settings" Size="Size.Small" /><div><h4>@L["ProjectUnitDetailDialog:Sections:Configuration"]</h4><p>@L["ProjectUnitDetailDialog:Sections:ConfigurationHint"]</p></div></header>
+                        <dl><div><dt>@L["ProjectUnitDetailDialog:Fields:DefinitionKey"]</dt><dd><code>@_detail.Configuration.DefinitionKey</code></dd></div><div><dt>@L["ProjectUnitDetailDialog:Fields:ConfigurationMode"]</dt><dd>@L.GetConfigurationModeText(_detail.Configuration.IsOffline)</dd></div></dl>
                         @if (_detail.Configuration.Usages.Count != 0)
                         {
-                            <div class="project-unit-detail__usage-list">
+                            <ul class="pu-dossier__references">
                                 @foreach (var usage in _detail.Configuration.Usages)
                                 {
-                                    <div class="project-unit-detail__usage">
-                                        <button type="button" class="project-unit-detail__reference" @onclick="@(() => LoadDetailAsync(usage.Unit.Key))">
-                                            <span>@usage.Unit.Title</span>
-                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
-                                        </button>
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                                            @L.GetConfigurationUsageText(usage.UsageType)
-                                        </MudChip>
-                                    </div>
+                                        <li><button type="button" @onclick="@(() => InspectRelatedUnitAsync(usage.Unit.Key))"><span><strong>@usage.Unit.Title</strong><code>@usage.Unit.Key</code><small>@L.GetConfigurationUsageText(usage.UsageType)</small></span><MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></button></li>
                                 }
-                            </div>
+                            </ul>
                         }
                     </section>
                 }
-
                 @if (_detail.ConstructorParameters.Count != 0 || _detail.Methods.Count != 0)
                 {
-                    <section class="project-unit-detail__section">
-                        <div class="project-unit-detail__section-title">
-                            <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Primary" />
-                            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Sections:TechnicalShape"]</MudText>
-                        </div>
+                    <section class="pu-dossier__section">
+                        <header><span class="pu-dossier__section-index" aria-hidden="true">03</span><div><h4>@L["ProjectUnitDetailDialog:Sections:TechnicalShape"]</h4><p>@L["ProjectUnitDetailDialog:Sections:TechnicalHint"]</p></div></header>
                         @if (_detail.ConstructorParameters.Count != 0)
                         {
-                            <MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:ConstructorParameters"]</MudText>
-                            <div class="project-unit-detail__code-list">
-                                @foreach (var parameter in _detail.ConstructorParameters)
-                                {
-                                    <code>@parameter</code>
-                                }
-                            </div>
+                            <h5>@L["ProjectUnitDetailDialog:Fields:ConstructorParameters"]</h5>
+                            <ul class="pu-dossier__parameters">@foreach (var parameter in _detail.ConstructorParameters) { <li><code>@parameter</code></li> }</ul>
                         }
                         @if (_detail.Methods.Count != 0)
                         {
-                            <MudExpansionPanels Class="project-unit-detail__methods" Elevation="0">
-                                <MudExpansionPanel Text="@L["ProjectUnitDetailDialog:Sections:PublicMethods", _detail.Methods.Count]">
-                                    <div class="project-unit-detail__method-list">
-                                        @foreach (var method in _detail.Methods)
-                                        {
-                                            <div class="project-unit-detail__method">
-                                                <code>@method.Signature</code>
-                                                <div class="project-unit-detail__method-badges">
-                                                    @if (method.IsAsync)
-                                                    {
-                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info">@L.GetMethodModifierText(ProjectUnitsMethodModifier.Async)</MudChip>
-                                                    }
-                                                    @if (method.IsStatic)
-                                                    {
-                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L.GetMethodModifierText(ProjectUnitsMethodModifier.Static)</MudChip>
-                                                    }
-                                                    @if (method.IsVirtual)
-                                                    {
-                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L.GetMethodModifierText(ProjectUnitsMethodModifier.Virtual)</MudChip>
-                                                    }
-                                                    @if (method.IsAbstract)
-                                                    {
-                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L.GetMethodModifierText(ProjectUnitsMethodModifier.Abstract)</MudChip>
-                                                    }
-                                                </div>
-                                                @if (!string.IsNullOrWhiteSpace(method.Description))
-                                                {
-                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@method.Description</MudText>
-                                                }
-                                            </div>
-                                        }
-                                    </div>
-                                </MudExpansionPanel>
-                            </MudExpansionPanels>
+                            <details class="pu-dossier__methods"><summary>@L["ProjectUnitDetailDialog:Sections:PublicMethods", _detail.Methods.Count]</summary>
+                                <ul>
+                                    @foreach (var method in _detail.Methods)
+                                    {
+                                        <li><code>@method.Signature</code><div class="pu-dossier__modifiers">
+                                            @if (method.IsAsync) { <span>@L.GetMethodModifierText(ProjectUnitsMethodModifier.Async)</span> }
+                                            @if (method.IsStatic) { <span>@L.GetMethodModifierText(ProjectUnitsMethodModifier.Static)</span> }
+                                            @if (method.IsVirtual) { <span>@L.GetMethodModifierText(ProjectUnitsMethodModifier.Virtual)</span> }
+                                            @if (method.IsAbstract) { <span>@L.GetMethodModifierText(ProjectUnitsMethodModifier.Abstract)</span> }
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(method.Description)) { <p>@method.Description</p> }
+                                        </li>
+                                    }
+                                </ul>
+                            </details>
                         }
                     </section>
                 }
-
                 @if (summary.Alerts.Count != 0)
                 {
-                    <section class="project-unit-detail__section">
-                        <div class="project-unit-detail__section-title">
-                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
-                            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Fields:Alerts"]</MudText>
-                        </div>
-                        <div class="project-unit-detail__alerts">
+                    <section class="pu-dossier__section"><header><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" /><h4>@L["ProjectUnitDetailDialog:Fields:Alerts"]</h4><span class="pu-dossier__section-count">@summary.Alerts.Count</span></header>
+                        <ul class="pu-dossier__alerts">
                             @foreach (var alert in summary.Alerts)
                             {
-                                <MudAlert Severity="@GetAlertSeverity(alert.Level)" Variant="Variant.Outlined" Dense="true">
-                                    <strong>@L.GetAlertLevelText(alert.Level)</strong>
-                                    @alert.Message
-                                    @if (!string.IsNullOrWhiteSpace(alert.Source))
-                                    {
-                                        <span class="project-unit-detail__alert-source">@alert.Source</span>
-                                    }
-                                </MudAlert>
+                                <li data-severity="@GetAlertTone(alert.Level)"><strong>@L.GetAlertLevelText(alert.Level)</strong><p>@alert.Message</p>
+                                    @if (!string.IsNullOrWhiteSpace(alert.Source)) { <code>@alert.Source</code> }
+                                </li>
                             }
-                        </div>
+                        </ul>
                     </section>
                 }
             </article>
         }
     </DialogContent>
     <DialogActions>
-        @if (_detail is not null && OnNodeFocus.HasDelegate)
-        {
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.CenterFocusStrong" OnClick="FocusCurrentAsync">
-                @L["ProjectUnitDetailDialog:Actions:FocusInGraph"]
-            </MudButton>
-        }
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CloseAsync">
-            @L["Shared:Actions:Close"]
-        </MudButton>
+        <div class="pu-dossier__actions">
+            @if (_detail is not null && OnNodeFocus.HasDelegate)
+            {
+                <MudButton Class="pu-dossier__focus" Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.CenterFocusStrong" OnClick="FocusCurrentAsync">@L["ProjectUnitDetailDialog:Actions:FocusInGraph"]</MudButton>
+            }
+            <MudButton @ref="_closeButton" Class="pu-dossier__close" Variant="Variant.Filled" Color="Color.Primary" OnClick="CloseAsync">@L["Shared:Actions:Close"]</MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [Parameter]
-    public bool Visible { get; set; }
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public ProjectUnitSummary? SelectedUnit { get; set; }
+    [Parameter] public EventCallback<string> OnNodeFocus { get; set; }
 
-    [Parameter]
-    public EventCallback<bool> VisibleChanged { get; set; }
-
-    [Parameter]
-    public ProjectUnitSummary? SelectedUnit { get; set; }
-
-    [Parameter]
-    public EventCallback<string> OnNodeFocus { get; set; }
-
-    private readonly DialogOptions _dialogOptions = new()
-    {
-        MaxWidth = MaxWidth.Large,
-        FullWidth = true,
-        BackdropClick = true,
-        CloseOnEscapeKey = true
-    };
-
-    private CancellationTokenSource? _loadCancellation;
+    private readonly DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = true, CloseOnEscapeKey = true, CloseButton = true };
+    private DetailRequest? _loadRequest;
+    private MudButton? _closeButton;
     private ProjectUnitDetail? _detail;
     private string? _loadError;
     private string? _selectedSourceKey;
     private bool _loading;
     private bool _wasVisible;
+    private bool _closing;
+    private bool _disposed;
+    private int _loadVersion;
 
     protected override async Task OnParametersSetAsync()
     {
-        var shouldLoad = Visible
-                         && SelectedUnit is not null
-                         && (!_wasVisible || !string.Equals(_selectedSourceKey, SelectedUnit.Key, StringComparison.Ordinal));
-
-        _wasVisible = Visible;
-        if (!shouldLoad)
+        if (_disposed) return;
+        if (!Visible)
         {
+            _wasVisible = false;
+            await CancelPendingLoadAsync();
             return;
         }
+        var shouldLoad = SelectedUnit is not null && (!_wasVisible || !string.Equals(_selectedSourceKey, SelectedUnit.Key, StringComparison.Ordinal));
+        _wasVisible = true;
+        if (shouldLoad)
+        {
+            _selectedSourceKey = SelectedUnit!.Key;
+            await LoadDetailAsync(SelectedUnit.Key);
+        }
+    }
 
-        _selectedSourceKey = SelectedUnit!.Key;
-        await LoadDetailAsync(SelectedUnit.Key);
+    private async Task InspectRelatedUnitAsync(string key)
+    {
+        if (_disposed || !Visible || _closing) return;
+        // The close action stays mounted inside MudDialog's native focus trap while
+        // the clicked reference is replaced. Keep native Escape and focus return intact.
+        if (_closeButton is not null) await _closeButton.FocusAsync();
+        if (_disposed || !Visible || _closing) return;
+        await LoadDetailAsync(key);
     }
 
     private async Task LoadDetailAsync(string key)
     {
-        await CancelPendingLoadAsync();
-        var cancellation = new CancellationTokenSource();
-        _loadCancellation = cancellation;
+        if (_disposed || !Visible || _closing) return;
+        var request = new DetailRequest(++_loadVersion);
+        var previous = _loadRequest;
+        _loadRequest = request;
         _loading = true;
+        _detail = null;
         _loadError = null;
         StateHasChanged();
-
         try
         {
-            var result = await DataSource.GetDetailAsync(key, cancellation.Token);
+            if (previous is not null) await previous.CancelAsync();
+            if (!IsCurrent(request)) return;
+            var result = await DataSource.GetDetailAsync(key, request.Token);
+            if (!IsCurrent(request)) return;
             if (result.IsFailed(out var error, out var detail))
             {
-                _detail = null;
                 _loadError = L["ProjectUnitDetailDialog:States:LoadFailed", error];
                 return;
             }
-
             _detail = detail;
         }
-        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-        {
-        }
+        catch (OperationCanceledException) when (request.Token.IsCancellationRequested) { }
         catch (Exception exception)
         {
-            _detail = null;
-            _loadError = L["ProjectUnitDetailDialog:States:LoadFailed", exception.Message];
+            if (IsCurrent(request)) _loadError = L["ProjectUnitDetailDialog:States:LoadFailed", exception.Message];
         }
         finally
         {
-            if (ReferenceEquals(_loadCancellation, cancellation))
+            if (ReferenceEquals(_loadRequest, request))
             {
-                _loadCancellation.Dispose();
-                _loadCancellation = null;
-                _loading = false;
-                StateHasChanged();
+                _loadRequest = null;
+                if (!_disposed)
+                {
+                    _loading = false;
+                    StateHasChanged();
+                }
             }
+            await request.DisposeAsync();
         }
     }
+
+    private bool IsCurrent(DetailRequest request) => !_disposed && Visible && !_closing && request.Version == _loadVersion
+        && ReferenceEquals(_loadRequest, request) && !request.Token.IsCancellationRequested;
 
     private async Task FocusCurrentAsync()
     {
-        if (_detail is null || !OnNodeFocus.HasDelegate)
-        {
-            return;
-        }
-
+        if (_disposed || _detail is null || !OnNodeFocus.HasDelegate) return;
         var key = _detail.Summary.Key;
         await CloseAsync();
-        await OnNodeFocus.InvokeAsync(key);
+        if (!_disposed) await OnNodeFocus.InvokeAsync(key);
     }
+
+    private Task HandleVisibleChangedAsync(bool visible) => visible || !Visible ? Task.CompletedTask : CloseAsync();
 
     private async Task CloseAsync()
     {
-        await CancelPendingLoadAsync();
-        await VisibleChanged.InvokeAsync(false);
+        if (_disposed || _closing) return;
+        _closing = true;
+        Visible = false;
+        _wasVisible = false;
+        try
+        {
+            await CancelPendingLoadAsync();
+            if (!_disposed) await VisibleChanged.InvokeAsync(false);
+        }
+        finally { _closing = false; }
     }
 
     private async Task CancelPendingLoadAsync()
     {
-        if (_loadCancellation is null)
-        {
-            return;
-        }
-
-        await _loadCancellation.CancelAsync();
-        _loadCancellation.Dispose();
-        _loadCancellation = null;
+        ++_loadVersion;
+        var request = _loadRequest;
+        _loadRequest = null;
+        _loading = false;
+        if (request is not null) await request.CancelAsync();
     }
 
-    private static Severity GetAlertSeverity(EAlertLevel level)
-    {
-        return level switch
-        {
-            EAlertLevel.Error => Severity.Error,
-            EAlertLevel.Warning => Severity.Warning,
-            _ => Severity.Info
-        };
-    }
+    private static string GetAlertTone(EAlertLevel level) => level switch { EAlertLevel.Error => "error", EAlertLevel.Warning => "warning", _ => "info" };
 
     public async ValueTask DisposeAsync()
     {
+        if (_disposed) return;
+        _disposed = true;
         await CancelPendingLoadAsync();
+    }
+
+    // A request owns its source until its producer finishes. Cancellation callers never
+    // dispose a source that a newer interleaved load might replace.
+    private sealed class DetailRequest : IAsyncDisposable
+    {
+        private readonly CancellationTokenSource _source = new();
+        private readonly object _gate = new();
+        private Task? _cancelTask;
+        private bool _completed;
+        public DetailRequest(int version)
+        {
+            Version = version;
+            Token = _source.Token;
+        }
+
+        public int Version { get; }
+        public CancellationToken Token { get; }
+
+        public Task CancelAsync()
+        {
+            lock (_gate)
+            {
+                if (_completed) return Task.CompletedTask;
+                return _cancelTask ??= _source.CancelAsync();
+            }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            Task? cancellation;
+            lock (_gate) { _completed = true; cancellation = _cancelTask; }
+            try
+            {
+                if (cancellation is not null) await cancellation;
+            }
+            finally { _source.Dispose(); }
+        }
     }
 }
