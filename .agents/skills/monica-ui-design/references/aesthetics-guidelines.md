@@ -4,6 +4,8 @@ Use the shared [working-interface language](../../monica-ui-development/referenc
 
 Before drawing, inspect the real content and identify the first decision, its supporting evidence, and the next action. Record the page's task and intentional composition in the design artifact. If several directions are requested, vary information hierarchy and interaction meaningfully rather than supplying the same dashboard in several accent colors.
 
+Choose the page's visual character deliberately. A strong identity field, expressive typography, a richer feature composition, intentional color contrast, or depth can improve appeal and comprehension. A restrained composition is also valid, but neutral panels and small muted labels are not inherently more refined. Compare the proposed direction with the previous page and accepted examples; preserve useful identity rather than flattening it in the name of consistency. Do not require gradients, heroes, or any other fixed decorative treatment on every page.
+
 Use representative names, descriptions, status combinations, long values, and empty states. Mark fixture data explicitly in a standalone prototype; never present it as live host evidence. Model only actions and data that the implementation can supply, and record unresolved assumptions instead of hiding them behind decorative controls.
 
 Make the prototype's primary interactions usable: search and filters change results, selection exposes relevant details, and close/dismiss paths work. Demonstrate the relevant wide, intermediate, and phone reflow. A prototype may approximate a primitive's paint, but its handoff must identify the actual MudBlazor control and any keyboard or focus behavior to verify in implementation.

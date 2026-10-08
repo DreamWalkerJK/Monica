@@ -1,6 +1,6 @@
 # Monica working-interface design language
 
-Use this reference when designing, implementing, or reviewing an operational Monica page. It captures reusable principles from the accepted health workbench without making that page's readiness panel and registry a template for every module. Theme identity remains owned by [Precision Default](monica-precision-design-language.md) and [Grove](monica-grove-design-language.md); component mechanics remain owned by the implementation references.
+Use this reference when designing, implementing, or reviewing an operational Monica page. It captures reusable principles from accepted page work without making the health workbench's readiness panel, registry, or restrained surface treatment a template for every module. Choose an intentional visual direction for each page; neither minimalism nor a decorative hero is mandatory. Theme identity remains owned by [Precision Default](monica-precision-design-language.md) and [Grove](monica-grove-design-language.md); component mechanics remain owned by the implementation references.
 
 ## Start from the operator's task
 
@@ -14,7 +14,7 @@ Different tasks need different compositions:
 | Configuration and editing | Selection or context, grouped editable fields, validation, then save/apply state |
 | Discovery and exploration | Search or category selection, comparable results, then contextual details |
 | Execution and logs | Scope and time selection, ordered events or records, then evidence for the selected event |
-| Reading and documentation | Navigation and a readable content measure, with supporting actions kept quiet |
+| Reading and documentation | Navigation and a readable content measure, with supporting actions given appropriate priority |
 
 These are starting points, not required regions. Do not add an attention panel to a page with no actionable attention state, or a headline statistic where the actual task is editing. A page should communicate its subject even when its title is hidden.
 
@@ -24,37 +24,37 @@ Distinguish summary scope from filtered results. A whole-host state, all-registr
 
 Keep missing coverage, loading, stale evidence, query failure, access denial, no records, and no filter matches distinct. Zero records do not prove success. A live snapshot does not establish history, availability, a trend, or a percentage. Do not add simulated metrics, fabricated comparison periods, or decorative charts that the facade cannot support. Keep bounded, sanitized facade evidence encoded as text.
 
-## Make hierarchy through type and spacing
+## Make hierarchy through composition, type, and spacing
 
-Keep page identity concise: an optional quiet category label, a clear title, a short task description when useful, and small host or scope metadata. Group the primary action and last-update information where they can be found without competing with the title. Avoid a tall marketing hero on an operational page.
+Give page identity appropriate prominence: a category label when useful, a clear title, task context, and host or scope metadata. An identity or feature region can carry stronger color, larger display type, an asymmetric composition, or a deliberate graphic treatment when it makes the page more legible and distinctive. Group actions and last-update information where they can be found. Keep the amount of introductory space proportionate to the task rather than forbidding or requiring a prominent hero.
 
 Use the selected theme's interface, display, and diagnostic families. Major identity headings may use the theme's display role; controls, repeated evidence, section titles, and table headers use its interface role. Monospace is useful for identifiers, durations, code, and diagnostic values, not for every sentence.
 
-The health workbench provides a useful initial density:
+The accepted health workbench provides one useful density example, not a required scale for all page families:
 
 | Role | Starting treatment |
 | --- | --- |
-| Page identity | 28–36px, weight 500, restrained line height |
+| Page identity | 28–36px, weight 500, deliberate line height |
 | Section heading | 16–18px, weight 500 |
 | Names and explanatory evidence | About 13px, weight 400; selected names may use 500 |
 | Secondary labels, timestamps, tags, and counts | 10–11px where they remain comfortably readable |
 | Major current decision | One larger statement when that decision merits priority |
 
-Tune these values for the actual content, theme metrics, CJK text, viewport, and accessibility needs. They are role-based starting points, not global CSS overrides. Do not shrink descriptions into metadata to fit a layout. Reserve 600 or heavier weights for a small number of labels or critical emphasis instead of making every heading, row, and control bold. Verify the loaded local font and fallback in computed styles.
+Tune these values for the actual content, theme metrics, CJK text, viewport, and accessibility needs. They are role-based starting points, not global CSS overrides. Do not shrink descriptions into metadata to fit a layout. Use weight and scale contrast intentionally; a more expressive title or key value can be heavier while repeated evidence remains easy to scan. Avoid making every heading, row, and control equally bold. Verify the loaded local font and fallback in computed styles.
 
 Use a consistent spacing rhythm: enough separation between page sections, less within a related group, and compact gaps between a value and its label. The accepted workbench uses roughly 24px section gaps and 20–28px surface padding on desktop, reducing local padding on phones. Let content and available width determine the final measurements. Alignment and readable line lengths matter more than matching every pixel value.
 
-## Keep ordinary surfaces quiet
+## Give surfaces distinct roles and character
 
-Use the full width supplied by the shell for working pages. Limit only local explanatory or reading text when needed. Assign canvas, ordinary surface, contextual surface, raised overlay, and semantic-state roles before styling. A border, a restrained tonal difference, and whitespace usually provide sufficient separation for ordinary evidence.
+Use the full width supplied by the shell for working pages. Limit only local explanatory or reading text when needed. Assign canvas, identity, ordinary evidence, contextual, raised-overlay, and semantic-state roles before styling. Choose color fields, inverse surfaces, tonal contrast, borders, depth, and spacing to make those roles visibly distinct. Do not flatten every region into the same neutral bordered panel. A page may be restrained or expressive; judge whether its visual treatment strengthens the task and hierarchy rather than enforcing quietness as a quality rule.
 
-Repeated facts belong in rows, lists, definition groups, contiguous statistic strips, or tables. Use an independent card only for an independently actionable object or a genuinely distinct content group. Integrate filters with the results they control; avoid separating a filter bar and its registry into competing floating cards. A name, readable description, and quieter tags can form one row rather than several columns of truncated fragments.
+Repeated facts belong in rows, lists, definition groups, contiguous statistic strips, or tables. Use an independent card for an independently actionable object or a genuinely distinct content group, and design the group's character rather than wrapping every field in another container. Integrate filters with the results they control. A name, readable description, and secondary tags can form one row rather than several columns of truncated fragments. Richer feature groups, contrasting identity panels, and varied section compositions remain valid when their roles are clear.
 
-Use small semantic dots, labels, or tonal badges when they aid scanning. Reinforce color with text or a recognizable icon. A zero attention count can remain neutral rather than signaling a live warning. Avoid a large saturated state banner when a prominent statement and a small severity cue already communicate the decision.
+Choose semantic dots, labels, badges, banners, or contrasting state surfaces according to the decision's importance and urgency. Reinforce color with text or a recognizable icon. Keep severity meaning accurate; for example, a zero attention count does not imply a live warning. Use identity and primary palette roles for expressive composition instead of borrowing error or success colors as unrelated decoration.
 
-Keep working surfaces at low or zero elevation. Reserve stronger shadows for overlays that require separation. Structural panels and nested facts do not acquire the shared card-hover hook simply because they have a border. Keep shape and spacing component-owned; theme defaults must not force rounded pills or oversized controls over that geometry. See [theme CSS](theme-css-guide.md) for shared geometry and [Precision Default](monica-precision-design-language.md) for card hooks and decorative limits.
+Set elevation and effects according to the intended spatial hierarchy and theme. Depth can help a feature surface or interactive group stand out, but large repeated shadows must not obscure evidence or make every region compete. Gradients, patterns, and illustration can contribute to an intentional page direction when legibility and semantic states remain clear; none is a default requirement. Structural panels and nested facts do not acquire the shared card-hover hook simply because they have a border. Keep shape and spacing component-owned; theme defaults must not force rounded pills or oversized controls over that geometry. See [theme CSS](theme-css-guide.md) for shared geometry and [Precision Default](monica-precision-design-language.md) for card hooks and theme fidelity.
 
-Prefer recognizable outlined icons for compact actions and evidence. Use existing local shell vectors or suitable MudBlazor outlined icons according to the context; elegance comes from consistent weight, size, alignment, and restraint rather than replacing an entire icon library. Icon-only actions need accessible names. Do not add decorative icons to every fact or leaf row.
+Choose recognizable icons with consistent weight, size, and alignment. Existing local shell vectors and suitable MudBlazor outlined icons serve compact actions and evidence well; a feature region may use a more prominent icon treatment when it establishes useful identity. Icon-only actions need accessible names. Avoid adding an icon to every fact or leaf row without a useful purpose.
 
 Preserve Default's existing palette and every selectable theme's identity. Components express roles through MudBlazor palette variables or approved Monica tokens, while themes supply paint and font roles. Do not hardcode the Grove palette into a shared component, introduce external runtime fonts, or flatten all themes into one visual style.
 
@@ -82,4 +82,4 @@ For a staged redesign, make each page or related page family independently revie
 
 Compare the design and implementation through composition, evidence density, typography, spacing, surface roles, and interactions. Inspect Default and Grove in both modes and exercise representative rounded or expressive themes. When shared theme behavior changes, cover every selectable theme in both modes. Verify Topbar and Sidebar containment, a phone, the table's actual breakpoint boundary, and a useful intermediate width. A screenshot checks appearance; fresh browser errors, computed metrics, and interaction checks establish behavior and containment. Follow repository build/test policy; do not introduce UI rendering tests solely for a visual redesign.
 
-Fix structural and behavioral differences before adding polish. Reject a page that invents data, hides meaningful evidence, overuses cards or semantic color, shrinks working text into metadata, has incidental scrollbars, loses keyboard access, or copies the health page's regions without serving its own task. Update this shared reference only when a later accepted page establishes reusable guidance; page-specific choices stay with their owning design report.
+Fix structural and behavioral differences before adding polish. Review the page's visual character as well as correctness: a technically contained page can still fail when its composition is generic, its hierarchy is flattened, or its identity is lost. Reject invented data, hidden evidence, misleading severity, unreadable working text, incidental scrollbars, lost keyboard access, or copied regions that do not serve the page's task. Retain the accepted health workbench as one successful example, not a universal requirement for neutral surfaces or understated presentation. Update this shared reference when accepted feedback establishes reusable guidance; page-specific choices stay with their owning design report.

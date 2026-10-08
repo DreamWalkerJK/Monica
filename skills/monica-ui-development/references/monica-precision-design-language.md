@@ -37,13 +37,12 @@
 ## Use color and effects deliberately
 
 - Preserve Default's existing canvas, surface, primary, identity, and semantic-state palette roles. Define their actual colors in theme palettes or approved semantic tokens, never in component markup or local CSS. A new optional visual direction gets its own theme identity rather than silently replacing `MonicaThemeKind.Default`.
-- Use solid or tonal palette-token surfaces as the default for page shells, app bars, navigation, ordinary cards, KPI tiles, panels, filters, tables, data groups, and status surfaces. Subtle token-based borders, shadows, and interaction responses may add separation and depth without turning every region into a floating card.
-- Use a gradient, glow, or pattern only when an accepted page design gives it a meaningful role. Concentrate expressive treatment in the page's subject-specific identity region when it needs one; ordinary KPI and data surfaces retain their semantic surface role. The accepted health workbench establishes hierarchy without a decorative identity surface. Keep low elevation on working surfaces and reserve stronger shadows for overlays that need separation.
+- Choose palette-token surfaces according to their role in the page's visual plan. Identity and feature regions may use inverse colors, prominent primary accents, or other deliberate contrast; evidence regions still need readable text and distinguishable states. Do not reduce every section to an identical neutral panel merely to satisfy a minimal aesthetic.
+- A gradient, glow, pattern, illustration, or stronger depth treatment may contribute to an intentional page direction. Give it a clear role, retain theme identity and legibility, and review its effect alongside real content. Expressive treatment need not be confined to a hero, and a hero is not required. The accepted health workbench is one restrained composition; it does not prohibit more expressive working pages.
 - Permit gradients in visualizations only when they encode a continuous scale. Document the mapping and preserve legibility for users who cannot rely on color alone.
 - Keep named expressive-theme illustration inside theme-owned selectors; first-party component CSS must preserve the surface-role contract.
-- Give a surface at most one primary decorative cue and, when necessary, one supporting cue. Count accent stripes, rings, strong borders, shadows, glows, textures, and corner ornaments as cues.
-- Do not repeat top stripes or rings across every card, and do not stack multiple cues on an ordinary surface.
-- Use semantic color to communicate state, selection, or meaning—not ambient ornament.
+- Coordinate accent stripes, rings, borders, shadows, textures, and graphic detail into a coherent hierarchy rather than stacking unrelated effects. Repetition may establish a purposeful visual system, but it must not make every region compete for primary attention.
+- Use semantic state colors to communicate state accurately. Use identity, primary, and contextual palette roles for expressive composition; do not turn a decorative accent into a false severity signal.
 
 ## Preserve typography and assets
 
@@ -67,5 +66,5 @@ Use the shared [page acceptance guidance](monica-workbench-design-language.md#ac
 - Capture the prototype and implementation side by side at viewport widths `1440`, `929`, and `390` in both light and dark modes, including additional component breakpoint boundaries where needed.
 - Verify expanded and collapsed Sidebar navigation, the one-row 56px Topbar, nested menu selection, responsive overflow, and the temporary mobile drawer. Check Appearance Apply/Cancel and reload persistence without losing the current route or page state.
 - Inspect a representative operational page and the Appearance previews in every selectable theme and both color modes. Confirm the Monica mark adapts, text and selected navigation remain readable, and runtime font requests stay local.
-- Compare type metrics, surface roles, radii, decoration count, and responsive reflow—not only colors. Record each deliberate signature treatment and every continuous-data gradient.
-- Re-run representative page comparisons after global theme changes. Reject unresolved local fonts, collapsed palette roles or semantic states, overridden component geometry, missing or excessive interaction feedback, broken reduced motion, or decoration beyond the stated budget.
+- Compare type metrics, surface roles, radii, visual hierarchy, and responsive reflow—not only colors. Record each deliberate feature treatment and every continuous-data gradient.
+- Re-run representative page comparisons after global theme changes. Reject unresolved local fonts, collapsed palette roles or semantic states, overridden component geometry, missing or excessive interaction feedback, broken reduced motion, or effects that obscure the task or flatten the hierarchy.

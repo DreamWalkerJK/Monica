@@ -61,12 +61,13 @@ Indicators:
 - Light or dark mode is excessively dark, low-contrast, or monotone, so canvas, structural surfaces, borders, text hierarchy, or semantic states collapse together
 - Success, warning, error, information, selection, and runtime states are not meaningfully differentiated when the task requires rapid scanning
 - Repeated facts, properties, metrics, or records are each wrapped in cards instead of rows, lists, definition groups, or tables
-- More than one visual system competes as the page's signature treatment, or a gradient/glow/pattern is not backed by the accepted prototype or continuous-data semantics
-- A page shell, app bar, navigation surface, ordinary card, KPI tile, panel, filter, table, data group, or status surface uses a decorative gradient
+- Unrelated effects compete as the page's signature treatment, or a gradient/glow/pattern has no clear role in the page's intentional visual plan
+- Color, depth, illustration, or a gradient obscures evidence, lowers contrast, or makes semantic states hard to distinguish
+- A uniformly neutral composition erases useful identity and hierarchy even though its geometry and token usage are correct
 - Actionable controls, rows, or cards lack visible hover, focus, pressed, or selected feedback
 - Informational surfaces translate, scale, change the cursor, or use strong lift on hover, falsely implying an unavailable action; subtle border, tonal, or low-shadow spatial-focus feedback is valid
 - Motion uses large travel, bouncing, repeated flourishes, continuous ambient effects, or ignores `prefers-reduced-motion`
-- A surface stacks more than two decorative cues, such as top stripe + ring + shadow, or repeats stripes/rings across every card
+- A surface stacks unrelated decorative cues, or repeated strong treatments give every region equal prominence without serving the page's hierarchy
 - The same accent rail is repeated across unrelated card groups, replaces a clearer page-specific outline/icon/badge treatment, or appears where it encodes no additional status or category meaning
 - Border radii drift from the theme baseline without an intentional component contract, grow across nested surfaces, or global theme selectors override component-owned geometry
 - The implementation loses the prototype's typography, density, spacing rhythm, composition, surface roles, width utilization, or responsive reflow
@@ -76,7 +77,7 @@ Indicators:
 - Component CSS painting route `.active`, `:hover`, or `:focus` states for menu items, nav links, or list items that are themed globally
 - Dark-mode overrides inside component CSS (`[data-theme*="dark"]` in `.razor.css`)
 
-Fix: use the shared [working-interface language](../../monica-ui-development/references/monica-workbench-design-language.md) to rebuild the page around its actual decision, evidence, and actions. Restore readable text, honest summary scope, simple ordinary surfaces, and appropriate list/fact structures. Apply the selected theme's palette and font roles while preserving accepted component geometry and useful interaction feedback. A page does not require a decorative signature surface; any expressive treatment must serve its subject and accepted design. Use short purposeful motion, test reduced motion, verify local fonts and fallbacks, and compare the prototype with real browser states. Keep component-owned layout and token-based presentation in component CSS; move only shared MudBlazor behavior to theme CSS.
+Fix: use the shared [working-interface language](../../monica-ui-development/references/monica-workbench-design-language.md) to rebuild the page around its actual decision, evidence, and actions. Restore readable text, honest summary scope, intentional surface roles, and appropriate list/fact structures. Apply the selected theme's palette and font roles while preserving accepted component geometry and useful interaction feedback. Neither a neutral minimal treatment nor a decorative hero is mandatory: expressive color, feature composition, and depth are valid when they strengthen identity and hierarchy without obscuring evidence. Use short purposeful motion, test reduced motion, verify local fonts and fallbacks, and compare the prototype with real browser states. Keep component-owned layout and token-based presentation in component CSS; move only shared MudBlazor behavior to theme CSS.
 
 ### P4 — Private component classes that force theme coupling
 
@@ -97,4 +98,3 @@ Indicators:
 - Razor components format `System.Type` locally instead of receiving one normalized display value from the producing diagnostics, facade, view-model, or state boundary
 
 Fix: use the shared utilities in `Monica.UI/Shell/Support/` and methods on `Monica.UI/Shell/Models/NavigationItem`. Format user-visible CLR type identities with `Monica.Tool.Extensions.GenericTypeExtensions.GetCleanFullName()` at the producing boundary, then pass the clean string to Razor. Do not expose assembly-qualified type identity in ordinary UI. Showing an assembly name or identity remains valid when assembly loading, binding, inventory, or module provenance is the explicit subject of the view.
-
