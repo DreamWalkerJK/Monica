@@ -47,47 +47,7 @@
       "Unknown": "Unknown"
     }
   },
-  "Page": {
-    "Dialogs": {
-      "ServiceDetailTitle": "Service details - {0}"
-    },
-    "Header": {
-      "Description": "Inspect live service health, topology, domain boundaries, and the identity of this host from one operational workspace.",
-      "Eyebrow": "Monica / Live service directory",
-      "Live": "Live refresh",
-      "Paused": "Refresh paused",
-      "Title": "Service discovery"
-    },
-    "Metrics": {
-      "AriaLabel": "Live service discovery summary",
-      "Domains": "Domains",
-      "Instances": "Running instances",
-      "Running": "Running services",
-      "Services": "Discovered services"
-    },
-    "Messages": {
-      "DomainNotFound": "Domain not found: {0}",
-      "LoadDomainsFailed": "Failed to get domain information: {0}",
-      "LoadServicesFailed": "Failed to get service list: {0}",
-      "ServiceListRefreshed": "Service list refreshed.",
-      "SwitchedToDomainDetail": "Switched to domain details: {0}"
-    },
-    "PageTitle": "Service Discovery Management",
-    "ServiceList": {
-      "Description": "Search the registry, compare runtime status, and inspect the evidence reported by each service.",
-      "Title": "Service list (including predefined services)"
-    },
-    "States": {
-      "NoServices": "No services available."
-    },
-    "Tabs": {
-      "CurrentInstance": "Current instance",
-      "DomainDependencyGraph": "Domain dependency graph",
-      "DomainManagement": "Domain management",
-      "ServiceGraph": "Service topology",
-      "ServiceList": "Service list"
-    }
-  },
+  "Page": {},
   "CurrentInstance": {
     "Errors": {
       "ClientInfoNotConfigured": "Service Discovery client info is not configured for the current service.",
@@ -99,13 +59,11 @@
       "BuildTime": "Build time",
       "CurrentETag": "Current ETag",
       "CurrentStatus": "Current status",
-      "DomainName": "Domain name",
       "InstanceId": "Instance ID",
       "LastHeartbeat": "Last heartbeat",
       "LeaderBecomeTime": "Became leader at",
       "LeaderInstanceId": "Leader instance ID",
       "Metadata": "Metadata",
-      "ProjectName": "Project name",
       "RegistrationTime": "Registration time",
       "ReleaseVersion": "Release version",
       "AppId": "App ID"
@@ -113,7 +71,6 @@
     "HeaderTitle": "Current instance",
     "Sections": {
       "ClusterLeaderInfo": "Cluster leader information",
-      "InstanceDetails": "Instance details",
       "LeaderStatus": "Leader status"
     },
     "States": {
@@ -223,29 +180,14 @@
         "StatusCount": "{0}: {1}"
       }
     },
-    "Description": "Explore domain boundaries and the service relationships that cross them.",
     "Messages": {
       "ClearedFilters": "Cleared all filters.",
       "CopiedDomainName": "Domain name copied to clipboard.",
-      "DomainSummary": "Domain: {0}\nServices: {1}\nDependencies: {2}",
       "FilteredDomain": "Filtered domain: {0}",
-      "GetDomainsFailed": "Failed to get domains: {0}",
-      "GetServicesFailed": "Failed to get service status: {0}",
       "LoadFailed": "Failed to load domain graph data: {0}",
       "ShowingDependencies": "Showing dependencies related to {0}"
     },
-    "Summary": {
-      "ArrowLegend": "Arrows: dependencies",
-      "NodeLegend": "Nodes: domains",
-      "ShowingDomainsAndDependencies": "Showing {0} / {1} domains and {2} / {3} dependencies"
-    },
-    "Title": "Domain dependency graph",
-    "Tooltips": {
-      "FilterSettings": "Filter settings",
-      "LayoutSettings": "Layout settings",
-      "RefreshData": "Refresh data",
-      "ResetView": "Reset view"
-    }
+    "Title": "Domain dependency graph"
   },
   "ServiceFilter": {
     "Labels": {
@@ -276,24 +218,10 @@
       "BuildTime": "Build time",
       "Domain": "Domain",
       "InstanceCount": "Instances",
-      "InstanceStatus": "Instance status",
       "LastHeartbeat": "Last heartbeat",
       "OverallStatus": "Overall status",
       "ProjectName": "Project",
       "ServiceName": "Service name"
-    },
-    "ContextMenu": {
-      "CopyServiceId": "Copy service ID",
-      "Export": "Export",
-      "ExportCsv": "Export as CSV",
-      "ExportExcel": "Export as Excel",
-      "ExportJson": "Export as JSON",
-      "Management": "Management",
-      "RefreshList": "Refresh list",
-      "RestartService": "Restart service",
-      "StopService": "Stop service",
-      "ViewDetails": "View details",
-      "ViewLogs": "View logs"
     },
     "Dialogs": {
       "ServiceDetailTitle": "Service details"
@@ -313,7 +241,6 @@
       "FocusService": "Focus this service",
       "ViewServiceDetails": "View service details"
     },
-    "Description": "Inspect service health and runtime placement across the live registry.",
     "Graph": {
       "Labels": {
         "AppId": "AppId",
@@ -331,21 +258,12 @@
       "FilteredDomain": "Filtered domain: {0}",
       "FilteredProject": "Filtered project: {0}",
       "FilteredStatus": "Filtered status: {0}",
-      "GetDomainColorsException": "An error occurred while assigning domain colors: {0}",
-      "GetDomainColorsFailed": "Failed to get domain colors: {0}",
-      "LoadException": "An exception occurred while loading service data: {0}",
-      "LoadFailed": "Failed to load service data: {0}"
+      "LoadException": "An exception occurred while loading service data: {0}"
     },
     "Summary": {
       "ShowingServices": "Showing {0} / {1} services"
     },
-    "Title": "Service topology",
-    "Tooltips": {
-      "FilterSettings": "Filter settings",
-      "LayoutSettings": "Layout settings",
-      "RefreshData": "Refresh data",
-      "ResetView": "Reset view"
-    }
+    "Title": "Service topology"
   },
   "ServiceDetail": {
     "Configuration": {
@@ -385,8 +303,7 @@
     },
     "Dialogs": {
       "ConfirmActionTitle": "Confirm action",
-      "ConfirmDelete": "Delete",
-      "ForceDeleteLeaderMessage": "Are you sure you want to force delete the leader of service '{0}'? This will trigger a new leader election."
+      "ConfirmDelete": "Delete"
     },
     "ElectionStatus": {
       "Actions": {
@@ -399,8 +316,7 @@
       },
       "Fields": {
         "BecameLeaderAt": "Became leader at:",
-        "CurrentETag": "Current ETag:",
-        "Status": "Status:"
+        "CurrentETag": "Current ETag:"
       },
       "Sections": {
         "CurrentStatus": "Current election status",
@@ -418,7 +334,6 @@
       "Columns": {
         "AssemblyVersion": "Assembly version",
         "BuildTime": "Build time",
-        "EvictionTime": "Evicted at",
         "HeartbeatHealth": "Heartbeat health",
         "InstanceId": "Instance ID",
         "LastHeartbeat": "Last heartbeat",
@@ -426,10 +341,6 @@
         "ReleaseVersion": "Release version",
         "Role": "Role",
         "Status": "Status"
-      },
-      "Values": {
-        "Evicted": "Evicted",
-        "LeaderInstance": "Leader instance"
       }
     },
     "Messages": {
@@ -437,10 +348,6 @@
       "DeleteLeaderSucceeded": "Leader deleted. A new election will start shortly."
     },
     "Metadata": {
-      "Columns": {
-        "Key": "Key",
-        "Value": "Value"
-      },
       "InstanceTitle": "Instance {0} metadata",
       "States": {
         "NoInstances": "No instance information available.",
@@ -480,6 +387,184 @@
       "GetServicesStatusFailed": "Failed to get service status: {0}",
       "InfoProviderNotConfigured": "IServiceDiscoveryCatalogProvider is not configured for the current service.",
       "StateManagerNotConfigured": "Service Discovery state manager is not configured for the current service."
+    }
+  },
+  "Workbench": {
+    "ReadFailed": "The selected provider could not supply a discovery capture. Check the host logs for the failed read.",
+    "Eyebrow": "Monica / Discovery atlas",
+    "Navigation": "Service Discovery workspaces",
+    "Views": {
+      "Registry": {
+        "Title": "Service registry",
+        "Label": "Registry",
+        "Description": "Read the current membership, compare reported instance evidence, and inspect expected services that have no registrations."
+      },
+      "Atlas": {
+        "Title": "Service atlas",
+        "Label": "Service atlas",
+        "Description": "Explore the service inventory spatially, with a complete native roster alongside the map."
+      },
+      "Dependencies": {
+        "Title": "Subdomain dependencies",
+        "Label": "Dependencies",
+        "Description": "Trace declared dependencies between subdomains. These relationships describe declarations, rather than observed traffic."
+      },
+      "Domains": {
+        "Title": "Subdomain directory",
+        "Label": "Subdomains",
+        "Description": "Explore catalog identities, their owning services, and external services that declare a dependency on them."
+      },
+      "Host": {
+        "Title": "Current host",
+        "Label": "Current host",
+        "Description": "Inspect this instance’s registration and election evidence in the context of its application and selected store."
+      }
+    },
+    "RegistryScope": "Selected store / current snapshot",
+    "Membership": "Registration membership",
+    "RegistryComposition": "{0} registered services · {1} instances",
+    "MembershipHelp": "An unexpired registration confirms membership in this store. It is separate from host readiness and health probes.",
+    "RegistryReadFailed": "Registry capture failed",
+    "RegistryTitle": "Services & instance evidence",
+    "ExpectedCount": "{0} predefined services have no current registrations",
+    "LoadingRegistry": "Reading registrations",
+    "EmptyRegistry": "No services in this capture",
+    "EmptyRegistryHelp": "The provider read succeeded and returned no registrations or predefined services.",
+    "FilterMiss": "No matching evidence",
+    "FilterMissHelp": "Adjust the search or selections to show services in the captured registry.",
+    "ResetFilters": "Reset filters",
+    "ShownCount": "{0} / {1} services shown",
+    "ObservedInstanceHelp": "Build and heartbeat cells show one observed instance; inspect a service for every instance.",
+    "Registered": "registered",
+    "ExpectedOnly": "predefined only",
+    "HeartbeatReportedLeader": "heartbeat-reported leader",
+    "ObservedBuild": "Observed build",
+    "Actions": "Actions",
+    "CopyId": "Copy application ID {0}",
+    "InspectService": "Inspect service {0}",
+    "CatalogScope": "Catalog / read-only",
+    "DomainCatalog": "Subdomain catalog",
+    "CatalogHelp": "Catalog definitions and registrations are read independently from the selected providers.",
+    "CatalogReadFailed": "Catalog capture failed",
+    "FindDomain": "Find a subdomain",
+    "CatalogEntries": "Catalog entries",
+    "CatalogEmpty": "The catalog returned no subdomains.",
+    "SelectedDomain": "Selected subdomain",
+    "NoCatalogDescription": "No description was supplied by the catalog.",
+    "DomainServicesFailed": "Related service evidence could not be read",
+    "DomainServicesUnavailable": "The catalog identity remains available. Ownership and dependency evidence are unavailable for this failed refresh.",
+    "Ownership": "Ownership",
+    "OwnedServices": "Owning services",
+    "OwnedServicesHelp": "Registrations that report this subdomain as their owner.",
+    "InstancesCount": "{0} registered instances",
+    "NoOwnedServices": "No captured service reports this subdomain as its owner.",
+    "Declarations": "Dependency declarations",
+    "DependentServices": "External dependants",
+    "DependentServicesHelp": "Services owned elsewhere that declare a dependency on this subdomain.",
+    "NoDependentServices": "No captured external service declares this dependency.",
+    "ChooseDomain": "Choose a subdomain",
+    "ChooseDomainHelp": "Select a catalog entry to inspect its identity and service relationships.",
+    "DomainUnlisted": "This endpoint is outside the catalog",
+    "DomainUnlistedHelp": "{0} has no matching catalog definition. A dependency declaration alone does not establish a registered subdomain.",
+    "QueryingHost": "Querying host",
+    "CurrentHostScope": "Inspect this host’s identity, registration evidence and local election state alongside the application’s provider lease.",
+    "CurrentHostReadFailed": "Current host capture failed",
+    "LastSuccessfulCapture": "The last successful capture remains visible below.",
+    "CapturedUTC": "Captured at · UTC",
+    "FrozenUTC": "Frozen at · UTC",
+    "RegistrationEvidence": "Registration evidence",
+    "LocalTimes": "Event timestamps are shown in local time.",
+    "HeartbeatAgeAtCapture": "Heartbeat age at capture",
+    "HeartbeatAgeSeconds": "{0:N0} seconds",
+    "BuildIdentity": "Build identity",
+    "DeclaredDependencies": "Declared subdomain dependencies",
+    "NoDeclaredDependencies": "No subdomain dependencies declared.",
+    "LocalElectionScope": "Local election state belongs to the querying host. It is independent of the provider’s current application leader lease.",
+    "LeaseScope": "Provider lease for this application at capture time. Its reported leader time can advance during renewal.",
+    "NoLeaderLease": "No leader lease was present in the successful provider read.",
+    "MetadataScope": "Metadata exposed by this host at capture time.",
+    "NoCurrentHostCapture": "No current host capture yet",
+    "NoCurrentHostCaptureHelp": "Refresh to read this host and its application’s provider lease.",
+    "FrozenServiceCapture": "Frozen service capture",
+    "FrozenServiceHelp": "This inspector retains the selected service read. Directory polling does not replace its registration or metadata evidence.",
+    "InstanceEvidenceScope": "Leadership badges reflect the captured registration heartbeat. Disappearances are observations made by this UI, rather than provider eviction records.",
+    "HeartbeatInferenceScope": "Heartbeat health is evaluated at capture time using the querying host’s heartbeat period and registration TTL. Event timestamps use local time.",
+    "HeartbeatInferenceFrozenScope": "Heartbeat health is evaluated when this inspector freezes the selected read, using the querying host’s heartbeat period and registration TTL. The original read time is unavailable. Event timestamps use local time.",
+    "ObservedDisappearance": "Observed disappearance",
+    "DisappearanceObservedAt": "Disappearance observed at",
+    "ConfigurationScope": "These settings belong to the querying host and were captured when the inspector opened. They do not describe the selected remote service’s configuration.",
+    "IsolationBehaviorCaveat": "The current FastShutdown implementation logs isolation and revokes local leadership; it does not stop the host.",
+    "ForceDeleteScope": "Delete the current leader key for application {0}. Membership remains registered, and a host may acquire the lease again on its next heartbeat.",
+    "LeaderDeleteCaptureUnchanged": "The delete completed. This frozen capture remains unchanged; refresh the directory for new provider evidence.",
+    "ForceDeleteConfirmation": "Delete the current leader key for application {0}? This targets the application key even if leadership changed since capture. It does not remove registrations or stop a host, and the lease may be acquired again.",
+    "CatalogUnavailable": "Catalog evidence is unavailable. Refresh to retry; a failed read does not establish that this endpoint is absent.",
+    "SortBy": "Order by",
+    "ReverseSort": "Reverse sort direction"
+  },
+  "Atlas": {
+    "Shared": {
+      "Layout": "Layout",
+      "Filters": "Filters",
+      "FitView": "Fit view",
+      "Loading": "Capturing the registry…",
+      "Refreshing": "Refreshing snapshot…",
+      "RetainedSnapshot": "Refresh failed · previous snapshot retained",
+      "CaptureFailed": "Registry snapshot unavailable",
+      "RetryHint": "Refresh to try reading the provider again.",
+      "GraphUnavailable": "The visual atlas could not be loaded",
+      "NativeAlternative": "Use the evidence list beside the map to inspect the same captured records.",
+      "FilterMiss": "No records match these filters",
+      "FilterMissHint": "Clear or adjust the filters to bring records back into view.",
+      "NativeEvidence": "Readable evidence",
+      "RecordActions": "Actions for {0}",
+      "Captured": "Snapshot captured",
+      "GestureHint": "Drag to pan · scroll to zoom · select a node to inspect",
+      "StatusLegend": "Registry status legend",
+      "ClipboardFailed": "The browser could not copy this value. Try copying it directly from the readable evidence."
+    },
+    "Services": {
+      "Eyebrow": "Membership atlas",
+      "Description": "Explore the services visible in this registry, then inspect their registered instances and identity.",
+      "MapLabel": "Service map",
+      "Roster": "Service roster",
+      "RosterHint": "The same filtered services, readable and accessible without using the graph.",
+      "InstanceCount": "{0} registered instances",
+      "NoEdges": "These are registry members. No service-to-service dependency edges are inferred from domain membership.",
+      "MembershipHint": "Registry presence describes membership; it does not prove application health or availability.",
+      "Empty": "No services in this snapshot",
+      "EmptyHint": "Registered services and preloaded catalog entries will appear when the provider returns them."
+    },
+    "Domains": {
+      "Eyebrow": "Declared dependency atlas",
+      "Description": "Follow directed domain declarations from the registry and distinguish catalog domains from unresolved endpoints.",
+      "MapLabel": "Directed domain map",
+      "MapSummary": "{0}/{1} endpoints · {2}/{3} declarations",
+      "Evidence": "Dependency evidence",
+      "Ledger": "Declarations",
+      "Roster": "Domains",
+      "LedgerHint": "Each row is a declared source → target relationship. The count is the number of services declaring it.",
+      "RosterHint": "Catalog domains and declared endpoints in the filtered map, including domains without dependencies.",
+      "ServiceCount": "{0} services in this domain",
+      "Declarations": "Declared by {0} services",
+      "Unlisted": "Unlisted endpoint",
+      "UnlistedEdge": "Includes an endpoint absent from the domain catalog",
+      "UnlistedDescription": "This name appears in registry evidence but is absent from the domain catalog.",
+      "UnlistedSummary": "{0} is a declared endpoint, not a domain in the current catalog.",
+      "FocusRelationship": "Show related declarations",
+      "EdgeHint": "Arrows follow declared dependencies. They describe dependency declarations, not observed traffic or runtime calls.",
+      "CatalogNode": "Catalog domain",
+      "SnapshotHint": "Declarations are derived from one captured registry snapshot; no dependency history is stored here.",
+      "Empty": "No domains or declared endpoints",
+      "EmptyHint": "Domain catalog entries and registry declarations will appear when the provider returns them.",
+      "EmptyRoster": "No endpoints in the current view",
+      "EmptyLedger": "No directed declarations in the current view",
+      "Unassigned": "Unassigned",
+      "UnassignedScope": "{0} services have no owning domain. They are excluded as domain nodes; their real service identities and target declarations are available in Unassigned evidence.",
+      "UnassignedHint": "All services without an owning domain in the captured snapshot, independent of domain filters. AppId → target rows retain their real declarations without inventing a source domain.",
+      "NoOwner": "No owning domain",
+      "UnassignedDeclarations": "Declarations from this unassigned service",
+      "NoUnassignedDeclarations": "No dependency targets declared.",
+      "NoUnassignedServices": "No unassigned services in this snapshot."
     }
   }
 }

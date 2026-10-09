@@ -47,47 +47,7 @@
       "Unknown": "未知"
     }
   },
-  "Page": {
-    "Dialogs": {
-      "ServiceDetailTitle": "服务详情 - {0}"
-    },
-    "Header": {
-      "Description": "在一个运维工作区中检查实时服务健康、拓扑关系、领域边界以及当前宿主身份。",
-      "Eyebrow": "Monica / 实时服务目录",
-      "Live": "实时刷新",
-      "Paused": "刷新已暂停",
-      "Title": "服务发现"
-    },
-    "Metrics": {
-      "AriaLabel": "实时服务发现摘要",
-      "Domains": "业务域",
-      "Instances": "运行实例",
-      "Running": "运行服务",
-      "Services": "发现服务"
-    },
-    "Messages": {
-      "DomainNotFound": "未找到域: {0}",
-      "LoadDomainsFailed": "获取域信息失败: {0}",
-      "LoadServicesFailed": "获取服务列表失败: {0}",
-      "ServiceListRefreshed": "服务列表已刷新",
-      "SwitchedToDomainDetail": "已切换到域详情: {0}"
-    },
-    "PageTitle": "服务发现管理",
-    "ServiceList": {
-      "Description": "搜索服务注册表、比较运行状态，并检查每个服务上报的运行证据。",
-      "Title": "服务列表（包含预定义服务）"
-    },
-    "States": {
-      "NoServices": "暂无服务信息"
-    },
-    "Tabs": {
-      "CurrentInstance": "当前实例",
-      "DomainDependencyGraph": "子域依赖图",
-      "DomainManagement": "子域管理",
-      "ServiceGraph": "微服务架构图",
-      "ServiceList": "服务列表"
-    }
-  },
+  "Page": {},
   "CurrentInstance": {
     "Errors": {
       "ClientInfoNotConfigured": "当前服务未配置注册中心客户端信息",
@@ -99,13 +59,11 @@
       "BuildTime": "构建时间",
       "CurrentETag": "当前 ETag",
       "CurrentStatus": "当前状态",
-      "DomainName": "子域名称",
       "InstanceId": "实例 ID",
       "LastHeartbeat": "最后心跳",
       "LeaderBecomeTime": "成为 Leader 时间",
       "LeaderInstanceId": "Leader 实例 ID",
       "Metadata": "元数据",
-      "ProjectName": "项目名称",
       "RegistrationTime": "注册时间",
       "ReleaseVersion": "发布版本",
       "AppId": "App ID"
@@ -113,7 +71,6 @@
     "HeaderTitle": "当前实例信息",
     "Sections": {
       "ClusterLeaderInfo": "集群 Leader 信息",
-      "InstanceDetails": "实例详情",
       "LeaderStatus": "Leader 状态"
     },
     "States": {
@@ -223,29 +180,14 @@
         "StatusCount": "{0}: {1} 个"
       }
     },
-    "Description": "检查业务域边界以及跨越边界的服务依赖关系。",
     "Messages": {
       "ClearedFilters": "已清除所有筛选",
       "CopiedDomainName": "已复制域名到剪贴板",
-      "DomainSummary": "域: {0}\n服务数: {1}\n依赖关系: {2}",
       "FilteredDomain": "已筛选域: {0}",
-      "GetDomainsFailed": "获取域信息失败: {0}",
-      "GetServicesFailed": "获取服务状态失败: {0}",
       "LoadFailed": "加载域数据失败: {0}",
       "ShowingDependencies": "显示与 {0} 相关的依赖关系"
     },
-    "Summary": {
-      "ArrowLegend": "箭头：依赖",
-      "NodeLegend": "节点：子域",
-      "ShowingDomainsAndDependencies": "显示 {0} / {1} 个子域，{2} / {3} 个依赖关系"
-    },
-    "Title": "子域依赖关系图",
-    "Tooltips": {
-      "FilterSettings": "筛选设置",
-      "LayoutSettings": "布局设置",
-      "RefreshData": "刷新数据",
-      "ResetView": "重置视图"
-    }
+    "Title": "子域依赖关系图"
   },
   "ServiceFilter": {
     "Labels": {
@@ -276,24 +218,10 @@
       "BuildTime": "构建时间",
       "Domain": "领域",
       "InstanceCount": "实例数",
-      "InstanceStatus": "实例状态",
       "LastHeartbeat": "最后心跳",
       "OverallStatus": "整体状态",
       "ProjectName": "项目名",
       "ServiceName": "服务名称"
-    },
-    "ContextMenu": {
-      "CopyServiceId": "复制服务 ID",
-      "Export": "导出",
-      "ExportCsv": "导出为 CSV",
-      "ExportExcel": "导出为 Excel",
-      "ExportJson": "导出为 JSON",
-      "Management": "管理操作",
-      "RefreshList": "刷新列表",
-      "RestartService": "重启服务",
-      "StopService": "停止服务",
-      "ViewDetails": "查看详情",
-      "ViewLogs": "查看日志"
     },
     "Dialogs": {
       "ServiceDetailTitle": "服务详情"
@@ -313,7 +241,6 @@
       "FocusService": "聚焦此服务",
       "ViewServiceDetails": "查看服务详情"
     },
-    "Description": "检查实时注册表中的服务健康状态与运行实例分布。",
     "Graph": {
       "Labels": {
         "AppId": "AppId",
@@ -331,21 +258,12 @@
       "FilteredDomain": "已筛选域: {0}",
       "FilteredProject": "已筛选项目: {0}",
       "FilteredStatus": "已筛选状态: {0}",
-      "GetDomainColorsException": "分配域颜色时发生异常: {0}",
-      "GetDomainColorsFailed": "获取域颜色信息失败: {0}",
-      "LoadException": "加载服务数据异常: {0}",
-      "LoadFailed": "加载服务数据失败: {0}"
+      "LoadException": "加载服务数据异常: {0}"
     },
     "Summary": {
       "ShowingServices": "显示 {0} / {1} 个微服务"
     },
-    "Title": "微服务架构图",
-    "Tooltips": {
-      "FilterSettings": "筛选设置",
-      "LayoutSettings": "布局设置",
-      "RefreshData": "刷新数据",
-      "ResetView": "重置视图"
-    }
+    "Title": "微服务架构图"
   },
   "ServiceDetail": {
     "Configuration": {
@@ -385,8 +303,7 @@
     },
     "Dialogs": {
       "ConfirmActionTitle": "确认操作",
-      "ConfirmDelete": "确定删除",
-      "ForceDeleteLeaderMessage": "确定要强制删除服务 '{0}' 的 Leader 吗？此操作将触发新一轮 Leader 选举。"
+      "ConfirmDelete": "确定删除"
     },
     "ElectionStatus": {
       "Actions": {
@@ -399,8 +316,7 @@
       },
       "Fields": {
         "BecameLeaderAt": "成为 Leader 时间:",
-        "CurrentETag": "当前 ETag:",
-        "Status": "状态:"
+        "CurrentETag": "当前 ETag:"
       },
       "Sections": {
         "CurrentStatus": "当前选举状态",
@@ -418,7 +334,6 @@
       "Columns": {
         "AssemblyVersion": "程序集版本",
         "BuildTime": "构建时间",
-        "EvictionTime": "驱逐时间",
         "HeartbeatHealth": "心跳健康度",
         "InstanceId": "实例 ID",
         "LastHeartbeat": "最后心跳",
@@ -426,10 +341,6 @@
         "ReleaseVersion": "发布版本",
         "Role": "角色",
         "Status": "状态"
-      },
-      "Values": {
-        "Evicted": "已驱逐",
-        "LeaderInstance": "领导者实例"
       }
     },
     "Messages": {
@@ -437,10 +348,6 @@
       "DeleteLeaderSucceeded": "已成功删除 Leader，新一轮选举即将开始"
     },
     "Metadata": {
-      "Columns": {
-        "Key": "键",
-        "Value": "值"
-      },
       "InstanceTitle": "实例 {0} 元数据",
       "States": {
         "NoInstances": "没有可显示的实例信息",
@@ -480,6 +387,184 @@
       "GetServicesStatusFailed": "获取服务状态失败: {0}",
       "InfoProviderNotConfigured": "当前服务未配置 IServiceDiscoveryCatalogProvider",
       "StateManagerNotConfigured": "当前服务未配置注册中心状态管理器"
+    }
+  },
+  "Workbench": {
+    "ReadFailed": "选定提供程序无法提供服务发现快照，请查看主机日志中的读取失败记录。",
+    "Eyebrow": "Monica / 服务发现图谱",
+    "Navigation": "服务发现工作区",
+    "Views": {
+      "Registry": {
+        "Title": "服务注册目录",
+        "Label": "注册目录",
+        "Description": "查看当前成员注册、比较实例上报的证据，并检查尚无注册实例的预定义服务。"
+      },
+      "Atlas": {
+        "Title": "服务图谱",
+        "Label": "服务图谱",
+        "Description": "通过图谱探索服务目录，并在原生列表中查看完整服务证据。"
+      },
+      "Dependencies": {
+        "Title": "子域依赖",
+        "Label": "依赖声明",
+        "Description": "追踪子域之间声明的依赖关系；这些关系表示依赖声明，而非观测到的流量。"
+      },
+      "Domains": {
+        "Title": "子域目录",
+        "Label": "子域目录",
+        "Description": "浏览目录中的子域身份、归属服务，以及声明依赖这些子域的外部服务。"
+      },
+      "Host": {
+        "Title": "当前主机",
+        "Label": "当前主机",
+        "Description": "在应用和选定存储的范围内检查此实例的注册与选举证据。"
+      }
+    },
+    "RegistryScope": "选定存储 / 当前快照",
+    "Membership": "注册成员",
+    "RegistryComposition": "{0} 个已注册服务 · {1} 个实例",
+    "MembershipHelp": "未过期的注册表示当前存储中的成员关系，与主机就绪状态和健康探针分别记录。",
+    "RegistryReadFailed": "注册目录读取失败",
+    "RegistryTitle": "服务与实例证据",
+    "ExpectedCount": "{0} 个预定义服务当前没有注册实例",
+    "LoadingRegistry": "正在读取注册信息",
+    "EmptyRegistry": "本次快照中没有服务",
+    "EmptyRegistryHelp": "提供程序读取成功，未返回注册记录或预定义服务。",
+    "FilterMiss": "没有匹配的证据",
+    "FilterMissHelp": "调整搜索或筛选条件以查看快照中的服务。",
+    "ResetFilters": "重置筛选",
+    "ShownCount": "显示 {0} / {1} 个服务",
+    "ObservedInstanceHelp": "构建和心跳单元格显示一个观测实例；打开服务检查器可查看所有实例。",
+    "Registered": "已注册",
+    "ExpectedOnly": "仅预定义",
+    "HeartbeatReportedLeader": "心跳上报的领导实例",
+    "ObservedBuild": "观测构建",
+    "Actions": "操作",
+    "CopyId": "复制应用 ID {0}",
+    "InspectService": "检查服务 {0}",
+    "CatalogScope": "目录 / 只读",
+    "DomainCatalog": "子域目录",
+    "CatalogHelp": "从选定提供程序分别读取目录定义和注册记录。",
+    "CatalogReadFailed": "目录读取失败",
+    "FindDomain": "查找子域",
+    "CatalogEntries": "目录条目",
+    "CatalogEmpty": "目录未返回子域。",
+    "SelectedDomain": "所选子域",
+    "NoCatalogDescription": "目录未提供描述。",
+    "DomainServicesFailed": "无法读取关联服务证据",
+    "DomainServicesUnavailable": "目录身份仍然可用；本次刷新失败，无法提供服务归属和依赖证据。",
+    "Ownership": "归属",
+    "OwnedServices": "归属服务",
+    "OwnedServicesHelp": "将此子域上报为自身归属的注册服务。",
+    "InstancesCount": "{0} 个已注册实例",
+    "NoOwnedServices": "快照中没有服务将此子域上报为归属。",
+    "Declarations": "依赖声明",
+    "DependentServices": "外部依赖方",
+    "DependentServicesHelp": "归属于其他子域、但声明依赖此子域的服务。",
+    "NoDependentServices": "快照中没有外部服务声明此依赖。",
+    "ChooseDomain": "选择子域",
+    "ChooseDomainHelp": "选择目录条目以检查其身份与服务关系。",
+    "DomainUnlisted": "此端点不在目录中",
+    "DomainUnlistedHelp": "{0} 没有匹配的目录定义；依赖声明本身不代表已注册子域。",
+    "QueryingHost": "查询主机",
+    "CurrentHostScope": "查看当前主机的身份、注册证据和本地选举状态，并对照应用在提供程序中的领导租约。",
+    "CurrentHostReadFailed": "当前主机快照读取失败",
+    "LastSuccessfulCapture": "下方保留上一次成功读取的快照。",
+    "CapturedUTC": "快照时间 · UTC",
+    "FrozenUTC": "固定时间 · UTC",
+    "RegistrationEvidence": "注册证据",
+    "LocalTimes": "事件时间以本地时区显示。",
+    "HeartbeatAgeAtCapture": "快照时的心跳年龄",
+    "HeartbeatAgeSeconds": "{0:N0} 秒",
+    "BuildIdentity": "构建身份",
+    "DeclaredDependencies": "声明的子域依赖",
+    "NoDeclaredDependencies": "未声明子域依赖。",
+    "LocalElectionScope": "本地选举状态属于查询主机，与提供程序中应用当前的领导租约分别记录。",
+    "LeaseScope": "快照时提供程序中的应用租约；续约可能更新其报告的领导时间。",
+    "NoLeaderLease": "成功读取提供程序时未发现领导租约。",
+    "MetadataScope": "此主机在快照时提供的元数据。",
+    "NoCurrentHostCapture": "尚无当前主机快照",
+    "NoCurrentHostCaptureHelp": "刷新以读取此主机及其应用在提供程序中的租约。",
+    "FrozenServiceCapture": "固定服务快照",
+    "FrozenServiceHelp": "此检查器保留所选服务的读取结果；目录轮询不会替换其中的注册和元数据证据。",
+    "InstanceEvidenceScope": "领导标记来自快照中的注册心跳；消失记录是此界面的观察结果，并非提供程序的驱逐记录。",
+    "HeartbeatInferenceScope": "心跳健康度按快照时间及查询主机的心跳周期和注册 TTL 计算；事件时间以本地时区显示。",
+    "HeartbeatInferenceFrozenScope": "心跳健康度在检查器固定所选读取结果时，按查询主机的心跳周期和注册 TTL 计算。原始读取时间不可用；事件时间以本地时区显示。",
+    "ObservedDisappearance": "观察到消失",
+    "DisappearanceObservedAt": "观察到消失的时间",
+    "ConfigurationScope": "这些设置属于查询主机，并在检查器打开时读取；它们不代表所选远程服务的配置。",
+    "IsolationBehaviorCaveat": "当前 FastShutdown 实现记录隔离并撤销本地领导身份，不会停止主机。",
+    "ForceDeleteScope": "删除应用 {0} 当前的领导键；成员注册保持不变，主机可能在下一次心跳时重新获取租约。",
+    "LeaderDeleteCaptureUnchanged": "删除已完成；此固定快照保持不变，请刷新目录以读取新的提供程序证据。",
+    "ForceDeleteConfirmation": "是否删除应用 {0} 当前的领导键？即使快照后领导身份发生变化，操作仍针对该应用键。它不会删除注册或停止主机，租约也可能被再次获取。",
+    "CatalogUnavailable": "目录证据不可用，请刷新重试；读取失败不能表明此端点不存在。",
+    "SortBy": "排序方式",
+    "ReverseSort": "反转排序方向"
+  },
+  "Atlas": {
+    "Shared": {
+      "Layout": "布局",
+      "Filters": "筛选",
+      "FitView": "适应视图",
+      "Loading": "正在读取注册表…",
+      "Refreshing": "正在更新快照…",
+      "RetainedSnapshot": "更新失败 · 保留上一次快照",
+      "CaptureFailed": "无法获取注册表快照",
+      "RetryHint": "点击刷新以重新读取提供程序。",
+      "GraphUnavailable": "图谱无法加载",
+      "NativeAlternative": "可通过图谱旁的证据列表查看同一份快照中的记录。",
+      "FilterMiss": "没有匹配筛选条件的记录",
+      "FilterMissHint": "清除或调整筛选条件以重新显示记录。",
+      "NativeEvidence": "可读证据",
+      "RecordActions": "{0} 的操作",
+      "Captured": "快照读取时间",
+      "GestureHint": "拖动平移 · 滚动缩放 · 点击节点查看详情",
+      "StatusLegend": "注册表状态图例",
+      "ClipboardFailed": "浏览器无法复制此值，可从可读证据中直接复制。"
+    },
+    "Services": {
+      "Eyebrow": "服务成员图谱",
+      "Description": "浏览注册表中可见的服务，查看其实例注册信息与身份。",
+      "MapLabel": "服务地图",
+      "Roster": "服务名册",
+      "RosterHint": "同一组筛选后的服务，可直接阅读和操作，无需使用图谱。",
+      "InstanceCount": "{0} 个注册实例",
+      "NoEdges": "此处展示注册表中的服务成员；不会根据领域归属推断服务之间的依赖关系。",
+      "MembershipHint": "注册表中的存在表示成员关系，不代表应用健康或可用。",
+      "Empty": "当前快照中没有服务",
+      "EmptyHint": "提供程序返回已注册服务或预加载目录条目后，将显示在此处。"
+    },
+    "Domains": {
+      "Eyebrow": "已声明依赖图谱",
+      "Description": "沿注册表中的领域依赖声明追踪方向，区分目录领域与未解析端点。",
+      "MapLabel": "领域有向图",
+      "MapSummary": "{0}/{1} 个端点 · {2}/{3} 条依赖声明",
+      "Evidence": "依赖证据",
+      "Ledger": "依赖声明",
+      "Roster": "领域",
+      "LedgerHint": "每行表示一条已声明的源领域 → 目标领域关系；数量为声明该关系的服务数。",
+      "RosterHint": "筛选图谱中的目录领域与声明端点，包括没有依赖关系的领域。",
+      "ServiceCount": "此领域中有 {0} 个服务",
+      "Declarations": "由 {0} 个服务声明",
+      "Unlisted": "未列入目录的端点",
+      "UnlistedEdge": "包含未列入领域目录的端点",
+      "UnlistedDescription": "此名称出现在注册表证据中，但未列入领域目录。",
+      "UnlistedSummary": "{0} 是已声明端点，并非当前目录中的领域。",
+      "FocusRelationship": "显示相关声明",
+      "EdgeHint": "箭头沿已声明的依赖方向展示；表示依赖声明，不表示观测到的流量或运行时调用。",
+      "CatalogNode": "目录领域",
+      "SnapshotHint": "依赖声明来源于一次注册表快照；此处不保存依赖历史。",
+      "Empty": "没有领域或已声明端点",
+      "EmptyHint": "提供程序返回领域目录条目与注册表声明后，将显示在此处。",
+      "EmptyRoster": "当前视图中没有端点",
+      "EmptyLedger": "当前视图中没有有向依赖声明",
+      "Unassigned": "未归属",
+      "UnassignedScope": "{0} 个服务没有归属领域，因此不会作为领域节点显示；可在“未归属”证据中查看其真实服务身份与目标声明。",
+      "UnassignedHint": "快照中所有未归属领域的服务，不受领域筛选条件影响。AppId → 目标的行保留其真实声明，不会虚构源领域。",
+      "NoOwner": "没有归属领域",
+      "UnassignedDeclarations": "此未归属服务的依赖声明",
+      "NoUnassignedDeclarations": "未声明依赖目标。",
+      "NoUnassignedServices": "当前快照中没有未归属服务。"
     }
   }
 }

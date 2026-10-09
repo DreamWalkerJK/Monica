@@ -417,6 +417,24 @@ A temporary `MudDrawer` supplies placement and its overlay; give an inspector an
 
 In MudBlazor v9, mount `MudFocusTrap` conditionally inside an open drawer, with `DefaultFocus.FirstChild` and a first focusable Close control. Its initial render saves the opening focus and disposal restores it. Keeping a trap mounted and toggling `Disabled` does not save focus for each opening or restore it on disabling. Let the primitive own its interop; do not add a second JavaScript focus manager. Put header and locally scrolling body inside the trap, and keep the header outside that body’s scroll area. Verify focus entry, forward and reverse Tab containment, Escape, overlay dismissal, and focus return in the actual browser. A drawer opened directly through a URL has no opening control to restore.
 
+### 8.4 Serialize ARIA States as Strings
+
+Native Razor markup must emit literal `"true"` and `"false"` for ARIA state attributes. Binding a C# `bool` directly can produce a minimized empty attribute for true and omit the attribute for false; neither expresses an ARIA boolean state. This also prevents selectors such as `[aria-pressed="true"]` from styling the selected control.
+
+```razor
+<button type="button" aria-pressed="@(IsSelected ? "true" : "false")" @onclick="Select">
+    Select view
+</button>
+```
+
+Apply the same string serialization to `aria-expanded`, `aria-selected`, and `aria-hidden` where those states are needed. Verify the actual attribute value, visible selected treatment, and keyboard activation in the browser. Keep genuine HTML boolean attributes such as `disabled` bound to `bool`.
+
+For a MudBlazor v9 `MudMenu` icon activator, set its `AriaLabel` parameter. A raw `aria-label` user attribute belongs to the outer menu container and does not name the generated trigger button. Verify the name on the focusable activator itself.
+
+### 8.5 Keep Focus in a Parent Dialog After Confirmation
+
+A nested confirmation cannot restore focus to an opening control that was disabled or removed by its action. Verify both Cancel and successful completion, then Tab and Escape in the still-open parent dialog. When native restoration has no usable destination, request focus on a stable parent heading or control after the parent renders. Use a native element's `FocusAsync` rather than another focus manager; retain and drain the admitted focus operation during retirement, and skip restoration when a newer confirmation owns focus.
+
 ## 9. Component Reuse Patterns
 
 ### 9.1 Generic Components

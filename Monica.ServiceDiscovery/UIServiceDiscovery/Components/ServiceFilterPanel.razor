@@ -8,7 +8,7 @@
     <MudPaper Class="service-filter-panel__surface" Elevation="0" Outlined="true">
         <div class="service-filter-panel__main">
             <div class="service-filter-panel__search">
-                <MudTextField @bind-Value="FilterText"
+                <MudTextField T="string" @ref="_searchInput" @bind-Value="FilterText"
                               Label="@L["ServiceFilter:Labels:Search"]"
                               HelperText="@L["ServiceFilter:Labels:SearchHelp"]"
                               Variant="Variant.Outlined"
@@ -47,7 +47,9 @@
                             <MudChip T="ServiceStatus"
                                      Value="status"
                                      Color="@status.GetColor()"
-                                     Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
+                                     Icon="@status.GetIcon()"
+                                     Class="@(isSelected ? "status-filter status-filter--selected" : "status-filter")"
+                                     Variant="Variant.Outlined"
                                      Size="Size.Small">
                                 @GetStatusLabel(status)
                             </MudChip>
@@ -111,6 +113,7 @@
 
     [Parameter] public IReadOnlyCollection<string> SelectedDomains { get; set; } = new HashSet<string>();
     [Parameter] public EventCallback<IReadOnlyCollection<string>> SelectedDomainsChanged { get; set; }
+    [Parameter] public EventCallback<bool> DomainSelectionIntentChanged { get; set; }
 
     [Parameter] public bool ShowOnlyWithInstances { get; set; }
     [Parameter] public EventCallback<bool> ShowOnlyWithInstancesChanged { get; set; }
@@ -120,27 +123,20 @@
 
     private List<ServiceStatus> AllStatuses { get; set; } = new();
     private List<string> AllDomains { get; set; } = new();
-    private bool _isInitialized = false;
+    private MudTextField<string>? _searchInput;
+
+    /// <summary>Synchronizes an external search action with the native input and its pending debounce.</summary>
+    public async Task SetSearchAsync(string value)
+    {
+        FilterText = value;
+        if (_searchInput is not null) await _searchInput.SetTextAsync(value);
+        await OnFilterTextChanged();
+    }
 
     protected override void OnParametersSet()
     {
         AllStatuses = Enum.GetValues<ServiceStatus>().ToList();
-        AllDomains = AllServices.Select(s => s.DomainName ?? L["Shared:Values:Unknown"].Value).Distinct().OrderBy(d => d).ToList();
-
-        if (!_isInitialized)
-        {
-            if (!SelectedStatuses.Any())
-            {
-                SelectedStatuses = new HashSet<ServiceStatus>(AllStatuses);
-            }
-
-            if (!SelectedDomains.Any())
-            {
-                SelectedDomains = new HashSet<string>(AllDomains);
-            }
-
-            _isInitialized = true;
-        }
+        AllDomains = AllServices.Select(s => string.IsNullOrWhiteSpace(s.DomainName) ? L["Shared:Values:Unknown"].Value : s.DomainName).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(d => d).ToList();
     }
 
     private async Task OnFilterTextChanged()
@@ -157,6 +153,12 @@
     }
 
     private async Task OnSelectedDomainsChanged(IReadOnlyCollection<string> values)
+    {
+        await DomainSelectionIntentChanged.InvokeAsync(false);
+        await UpdateDomainsAsync(values);
+    }
+
+    private async Task UpdateDomainsAsync(IReadOnlyCollection<string> values)
     {
         SelectedDomains = values;
         await SelectedDomainsChanged.InvokeAsync(values);
@@ -177,7 +179,8 @@
     private async Task SelectAllDomains()
     {
         var allDomains = new HashSet<string>(AllDomains);
-        await OnSelectedDomainsChanged(allDomains);
+        await DomainSelectionIntentChanged.InvokeAsync(true);
+        await UpdateDomainsAsync(allDomains);
     }
 
     private async Task ClearAllDomains()

@@ -3,65 +3,27 @@
 @using Monica.ServiceDiscovery.Models
 @inject IStringLocalizer<ServiceDiscoveryResource> L
 
-<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
-    <MudGrid>
-        <MudItem xs="12" sm="6" md="4">
-            <MudTextField @bind-Value="FilterText"
-                          Label="@L["DomainFilter:Labels:Search"]"
-                          HelperText="@L["DomainFilter:Labels:SearchHelp"]"
-                          Variant="Variant.Outlined"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true"
-                          DebounceInterval="300"
-                          OnDebounceIntervalElapsed="OnFilterTextChanged" />
-        </MudItem>
-        <MudItem xs="12" md="6">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">@L["DomainFilter:Labels:DomainFilter"]</MudText>
-            <div class="d-flex flex-wrap gap-1 mb-2">
-                <MudButton Size="Size.Small"
-                           Variant="Variant.Text"
-                           Color="Color.Primary"
-                           OnClick="SelectAllDomains">
-                    @L["Shared:Actions:SelectAll"]
-                </MudButton>
-                <MudButton Size="Size.Small"
-                           Variant="Variant.Text"
-                           Color="Color.Secondary"
-                           OnClick="ClearAllDomains">
-                    @L["Shared:Actions:Clear"]
-                </MudButton>
-            </div>
-            <MudChipSet T="string"
-                        SelectionMode="SelectionMode.MultiSelection"
-                        SelectedValues="SelectedDomains"
-                        SelectedValuesChanged="OnSelectedDomainsChanged">
-                @foreach (var domain in AllDomainNames)
-                {
-                    var isSelected = SelectedDomains.Contains(domain);
-                    <MudChip T="string"
-                             Value="domain"
-                             Color="@(isSelected ? Color.Info : Color.Default)"
-                             Size="Size.Small">
-                        @domain
-                    </MudChip>
-                }
-            </MudChipSet>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="2">
-            <MudStack>
-                <MudSwitch T="bool" Value="ShowOnlyWithServices"
-                           ValueChanged="OnShowOnlyWithServicesChanged"
-                           Label="@L["DomainFilter:Labels:ShowOnlyWithServices"]"
-                           Color="Color.Primary" />
-                <MudSwitch T="bool" Value="ShowOnlyWithDependencies"
-                           ValueChanged="OnShowOnlyWithDependenciesChanged"
-                           Label="@L["DomainFilter:Labels:ShowOnlyWithDependencies"]"
-                           Color="Color.Warning" />
-            </MudStack>
-        </MudItem>
-    </MudGrid>
-</MudPaper>
+<div class="atlas-domain-filter">
+    <div class="atlas-domain-filter__search">
+        <MudTextField T="string" @ref="_searchInput" @bind-Value="FilterText" Label="@L["DomainFilter:Labels:Search"]" HelperText="@L["DomainFilter:Labels:SearchHelp"]"
+            Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Immediate="true"
+            DebounceInterval="300" OnDebounceIntervalElapsed="OnFilterTextChanged" />
+    </div>
+    <div class="atlas-domain-filter__choices">
+        <div class="atlas-domain-filter__heading"><span>@L["DomainFilter:Labels:DomainFilter"]</span><div>
+            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="SelectAllDomains">@L["Shared:Actions:SelectAll"]</MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="ClearAllDomains">@L["Shared:Actions:Clear"]</MudButton>
+        </div></div>
+        <MudChipSet T="string" SelectionMode="SelectionMode.MultiSelection" SelectedValues="SelectedDomains" SelectedValuesChanged="OnSelectedDomainsChanged">
+            @foreach (var domain in AllDomainNames)
+            { <MudChip T="string" Value="domain" Color="Color.Default" Size="Size.Small">@domain</MudChip> }
+        </MudChipSet>
+    </div>
+    <div class="atlas-domain-filter__switches">
+        <MudSwitch T="bool" Value="ShowOnlyWithServices" ValueChanged="OnShowOnlyWithServicesChanged" Label="@L["DomainFilter:Labels:ShowOnlyWithServices"]" Color="Color.Primary" />
+        <MudSwitch T="bool" Value="ShowOnlyWithDependencies" ValueChanged="OnShowOnlyWithDependenciesChanged" Label="@L["DomainFilter:Labels:ShowOnlyWithDependencies"]" Color="Color.Primary" />
+    </div>
+</div>
 
 @code {
     [Parameter] public string FilterText { get; set; } = string.Empty;
@@ -69,6 +31,10 @@
 
     [Parameter] public IReadOnlyCollection<string> SelectedDomains { get; set; } = new HashSet<string>();
     [Parameter] public EventCallback<IReadOnlyCollection<string>> SelectedDomainsChanged { get; set; }
+    /// <summary>
+    /// Reports explicit Select All intent before values change; manual selections and Clear report false.
+    /// </summary>
+    [Parameter] public EventCallback<bool> DomainSelectionIntentChanged { get; set; }
 
     [Parameter] public bool ShowOnlyWithServices { get; set; }
     [Parameter] public EventCallback<bool> ShowOnlyWithServicesChanged { get; set; }
@@ -80,17 +46,20 @@
     [Parameter] public List<DomainInfo> AllDomains { get; set; } = new();
 
     private List<string> AllDomainNames { get; set; } = new();
+    private MudTextField<string>? _searchInput;
+
+    /// <summary>Synchronizes an external search action with the native input and its pending debounce.</summary>
+    public async Task SetSearchAsync(string value)
+    {
+        FilterText = value;
+        if (_searchInput is not null) await _searchInput.SetTextAsync(value);
+        await OnFilterTextChanged();
+    }
 
     protected override void OnParametersSet()
     {
-        AllDomainNames = AllDomains.Select(d => d.Name).OrderBy(n => n).ToList();
+        AllDomainNames = AllDomains.Select(d => d.Name).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(n => n).ToList();
 
-        if (!SelectedDomains.Any())
-        {
-            var allDomains = new HashSet<string>(AllDomainNames);
-            SelectedDomains = allDomains;
-            SelectedDomainsChanged.InvokeAsync(allDomains);
-        }
     }
 
     private async Task OnFilterTextChanged()
@@ -99,9 +68,12 @@
         await OnFiltersChanged.InvokeAsync();
     }
 
-    private async Task OnSelectedDomainsChanged(IReadOnlyCollection<string> values)
+    private Task OnSelectedDomainsChanged(IReadOnlyCollection<string> values) => SetSelectedDomainsAsync(values, selectAll: false);
+
+    private async Task SetSelectedDomainsAsync(IReadOnlyCollection<string> values, bool selectAll)
     {
         SelectedDomains = values;
+        await DomainSelectionIntentChanged.InvokeAsync(selectAll);
         await SelectedDomainsChanged.InvokeAsync(values);
         await OnFiltersChanged.InvokeAsync();
     }
@@ -109,12 +81,12 @@
     private async Task SelectAllDomains()
     {
         var allDomains = new HashSet<string>(AllDomainNames);
-        await OnSelectedDomainsChanged(allDomains);
+        await SetSelectedDomainsAsync(allDomains, selectAll: true);
     }
 
     private async Task ClearAllDomains()
     {
-        await OnSelectedDomainsChanged(new HashSet<string>());
+        await SetSelectedDomainsAsync(new HashSet<string>(), selectAll: false);
     }
 
     private async Task OnShowOnlyWithServicesChanged(bool value)

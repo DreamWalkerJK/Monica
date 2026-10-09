@@ -89,4 +89,24 @@ Overview distinguishes tracked application startup from Monica composition. Modu
 
 Opening a module through its portable `?module=` ID shows the detail drawer; closing it removes that query without clearing synchronized selection. Module and Help inspectors support modal keyboard focus and Escape dismissal. Configuration is a lazy, bounded, read-only projection with the host's sensitivity policy. Export produces a sanitized portable baseline without option values, assembly paths, raw failures, or stack traces. Import compares a compatible JSON file of at most 10 MiB in the page session; it does not mutate host composition. Remove baseline clears that comparison.
 
-Source and checks: `Monica.UI/Modules/ModuleShellUI.cs`, `ModuleSystemUI.cs`, `Monica.UI/Shell/Models/NavigationCategoryDefinition.cs`, `Monica.UI/Shell/Support/INavigationRegistryBuilder.cs`, `NavigationTreeBuilder.cs`, `ShellIcons.cs`, `OperationalPageAccessPolicy.cs`, `Monica.UI/Shell/Components/Layout/NavBar.razor`, its code-behind, `Monica.UI/Shell/State/ShellState.cs`, `Monica.UI/Pages/ModuleSystemPage.razor`, `Monica.UI/UIModuleSystem/State/ModuleSystemWorkbenchSession.cs`, and `tests/Test.Monica.UI/Shell/Support/PageRegistryTests.cs`.
+## Read Service Discovery evidence
+
+`AddServiceDiscoveryUI()` requires Service Discovery, localization, and the shell. Configure the underlying role and storage through the hosting skill's [Service Discovery contract](../../monica-infra-hosting/references/service-discovery.md). The UI contributes five separate Monitor destinations:
+
+| Route | Workspace |
+| --- | --- |
+| `/service-discovery-manage` | Registry: searchable service identity, a paged service ledger, and instance inspection. |
+| `/service-discovery-manage/service-map` | Service map: graphical membership and a native service roster. |
+| `/service-discovery-manage/dependencies` | Dependencies: declared subdomain relationships and a native relationship ledger. |
+| `/service-discovery-manage/subdomains` | Subdomains: catalog identity, owned services, and external dependants. |
+| `/service-discovery-manage/current-host` | Current host: local identity, registration, configuration, and election evidence. |
+
+The subdomain directory accepts an escaped `?domain=` catalog name, matched without regard to case. An absent catalog entry is distinct from a failed catalog read. The graphical views retain native lists so service inspection and dependency navigation do not require pointer access to a graph.
+
+Opening a service creates a detached, frozen native inspector. Its originating capture time and the time it was frozen are separate facts; periodic page refresh does not rewrite the open inspector. Instance registrations, retained UI-observed disappearances, complete metadata, and release evidence remain inspectable. Configuration and local election state are explicitly scoped to the querying host, including when the selected service is remote. For membership, failure, lease, retention, and force-delete semantics, read [captured diagnostics and provider reads](../../monica-infra-hosting/references/service-discovery.md#captured-diagnostics-and-provider-reads).
+
+Registry and current-host pages own their cancellable refresh loops; graph and directory captures refresh on demand. Failed reads retain the previous successful capture with a failure notice rather than displaying a successful empty registry. The host owns access to these diagnostics and their underlying APIs; navigation visibility does not replace authorization.
+
+For embedded workspaces migrating from the former tabbed page, navigate through the dedicated routes instead of `ServiceDiscoveryPageState.SelectedDomain` or `ActiveTabIndex`. The scoped registry/current-host state no longer implements `IDisposable` or exposes timer/callback setup (`Initialize`, `ConfigureAutoRefresh`, or `UpdateAutoRefresh`). The consuming component owns and drains its cancellable polling loop before retirement; it must not dispose borrowed state. Set the registry's filter properties and call `ApplyFilters()`, or use `SetSelectedDomains(...)` for deliberate domain selection. Empty status or domain selections mean no matches. `SelectAllDomains()` follows domain membership arriving in subsequent successful captures; an explicitly cleared selection remains empty after recovery.
+
+Source and checks: `Monica.UI/Modules/ModuleShellUI.cs`, `ModuleSystemUI.cs`, `Monica.UI/Shell/Models/NavigationCategoryDefinition.cs`, `Monica.UI/Shell/Support/INavigationRegistryBuilder.cs`, `NavigationTreeBuilder.cs`, `ShellIcons.cs`, `OperationalPageAccessPolicy.cs`, `Monica.UI/Shell/Components/Layout/NavBar.razor`, its code-behind, `Monica.UI/Shell/State/ShellState.cs`, `Monica.UI/Pages/ModuleSystemPage.razor`, `Monica.UI/UIModuleSystem/State/ModuleSystemWorkbenchSession.cs`, `Monica.ServiceDiscovery/Modules/ModuleServiceDiscoveryUI.cs`, `Monica.ServiceDiscovery/Pages/UIServiceDiscoveryPage.razor`, its section pages, `Monica.ServiceDiscovery/UIServiceDiscovery/Components/DiscoveryInspectorHost.razor`, and `tests/Test.Monica.UI/Shell/Support/PageRegistryTests.cs`.

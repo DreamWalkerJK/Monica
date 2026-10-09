@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Monica.Modules;
 using Monica.ServiceDiscovery.Abstractions;
 using Monica.ServiceDiscovery.Events;
 using Monica.ServiceDiscovery.Models;
@@ -12,10 +14,12 @@ public sealed class ServiceDiscoveryQueryService(IServiceProvider serviceProvide
         return ConvertToRegisteredServiceStatus(await GetRegisteredInstancesAsync());
     }
 
-    public async Task<List<RegisteredServiceStatus>> GetMergedServicesStatusAsync()
+    public async Task<List<RegisteredServiceStatus>> GetMergedServicesStatusAsync(CancellationToken cancellationToken = default)
     {
-        var registeredServices = ConvertToRegisteredServiceStatus(await GetRegisteredInstancesAsync());
+        var registeredServices = ConvertToRegisteredServiceStatus(await GetRegisteredInstancesAsync(cancellationToken));
+        // The catalog contract has no cancellation parameter. Drain its read, then reject retired evidence.
         var predefinedServices = await GetCatalogProvider().GetPreloadedServicesAsync();
+        cancellationToken.ThrowIfCancellationRequested();
 
         var mergedServices = new List<RegisteredServiceStatus>(registeredServices);
 
@@ -39,9 +43,12 @@ public sealed class ServiceDiscoveryQueryService(IServiceProvider serviceProvide
         return mergedServices;
     }
 
-    public async Task<List<DomainInfo>> GetDomainsAsync()
+    public async Task<List<DomainInfo>> GetDomainsAsync(CancellationToken cancellationToken = default)
     {
-        return await GetCatalogProvider().GetAllDomainsAsync();
+        cancellationToken.ThrowIfCancellationRequested();
+        var domains = await GetCatalogProvider().GetAllDomainsAsync();
+        cancellationToken.ThrowIfCancellationRequested();
+        return domains;
     }
 
     public async Task<DomainDetailInfo> GetDomainDetailAsync(string domainName)
@@ -72,20 +79,25 @@ public sealed class ServiceDiscoveryQueryService(IServiceProvider serviceProvide
         return await GetStateManager().GetLeaderStateAsync();
     }
 
-    public async Task<CurrentInstanceSnapshot> GetCurrentInstanceSnapshotAsync()
+    public async Task<CurrentInstanceSnapshot> GetCurrentInstanceSnapshotAsync(CancellationToken cancellationToken = default)
     {
         var clientInfo = GetClientInfo();
         var leaderService = GetLeaderService();
 
+        var lease = await GetStateManager().GetLeaderStateAsync(cancellationToken);
         return new CurrentInstanceSnapshot
         {
-            CurrentInstance = clientInfo.GetServiceStatus(),
-            IsLeaderElectionEnabled = true,
+            CurrentInstance = ServiceDiscoverySnapshot.Copy(clientInfo.GetServiceStatus(isHeartbeatInfo: false)),
+            IsLeaderElectionEnabled = serviceProvider.GetRequiredService<IOptions<ModuleServiceDiscoveryOption>>().Value.Role
+                is ServiceDiscoveryRole.Registry or ServiceDiscoveryRole.Standalone,
             CurrentLeaderStatus = leaderService.CurrentStatus,
             IsLeader = leaderService.IsLeader,
             LeaderBecomeTime = leaderService.LeaderBecomeTime,
             CurrentETag = leaderService.CurrentETag,
-            ClusterLeaderState = await GetStateManager().GetLeaderStateAsync()
+            ClusterLeaderState = lease is null ? null : new LeaderState
+            {
+                AppId = lease.AppId, InstanceId = lease.InstanceId, BecomeLeaderTime = lease.BecomeLeaderTime
+            }
         };
     }
 
@@ -150,9 +162,9 @@ public sealed class ServiceDiscoveryQueryService(IServiceProvider serviceProvide
         await GetStateManager().ForceDeleteLeaderKeyAsync(appId);
     }
 
-    public Task<List<InstanceState>> GetRegisteredInstancesAsync()
+    public Task<List<InstanceState>> GetRegisteredInstancesAsync(CancellationToken cancellationToken = default)
     {
-        return GetStateManager().GetAllInstancesAsync();
+        return GetStateManager().GetAllInstancesAsync(cancellationToken);
     }
 
     private async Task<List<RegisteredServiceStatus>> GetDomainRelatedServicesAsync(string domainName)
@@ -179,13 +191,15 @@ public sealed class ServiceDiscoveryQueryService(IServiceProvider serviceProvide
                     AppName = firstInstance.AppName,
                     DomainName = firstInstance.DomainName,
                     ProjectName = firstInstance.ProjectName,
-                    DependentSubDomains = firstInstance.DependentSubDomains,
+                    DependentSubDomains = firstInstance.DependentSubDomains?.ToList(),
                     Instances = group.ToDictionary(
                         instance => instance.InstanceId,
                         instance =>
                         {
-                            instance.Status = ServiceStatus.Running;
-                            return instance;
+                            // An unexpired registration represents membership, not a health probe.
+                            var captured = ServiceDiscoverySnapshot.Copy(instance);
+                            captured.Status = ServiceStatus.Running;
+                            return captured;
                         })
                 };
             })

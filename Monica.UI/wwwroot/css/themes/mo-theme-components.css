@@ -102,6 +102,12 @@
     border-bottom-color: var(--mud-palette-divider);
 }
 
+/* Flush tables delegate their outer corners to the enclosing surface. */
+:root[data-theme] :is(.mud-table, .mud-data-grid).mud-table-square,
+:root[data-theme] :is(.mud-table, .mud-data-grid).mud-table-square > .mud-table-container {
+    border-radius: 0 !important;
+}
+
 [class*="mo-theme-"] .mud-dialog {
     background: var(--mud-palette-surface) !important;
     border: 1px solid var(--mud-palette-divider) !important;
