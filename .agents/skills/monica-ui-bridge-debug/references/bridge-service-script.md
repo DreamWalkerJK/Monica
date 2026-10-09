@@ -79,6 +79,12 @@ Default probe behavior:
 
 If rule 2 succeeds before rule 1, the command returns success with `ready-with-warning` unless `--strict-marker` is provided.
 
+### Stale CSS imports after dependent builds
+
+The consumer's generated `<App>.styles.css` imports fingerprinted CSS bundles from Razor class libraries. Rebuilding one of those libraries while the bridge keeps running can replace its bundle without regenerating the consumer's import and static-asset manifest. The affected page then renders markup with CSS isolation scope attributes but no matching styles; an obsolete bundle request may even respond with an empty body. A successful page or stylesheet entry-point status alone does not prove that the imported bundle loaded.
+
+Inspect the live page's scope attribute and computed style, read its generated `.styles.css` import, and request that exact imported URL. If it is missing or empty, stop the project-owned bridge with `cleanup`, build the consumer project, and run `run` plus `wait-ready` again. Confirm the new import resolves to nonempty CSS with the expected selectors, then refresh the browser and review the rendered page. Do not add component CSS overrides to compensate for a stale host manifest.
+
 ## WSL path behavior
 
 When the script detects WSL plus a Windows `dotnet.exe`, it converts the project path to Windows format before invoking `dotnet run`.
