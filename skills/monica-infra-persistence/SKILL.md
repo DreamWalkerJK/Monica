@@ -1,6 +1,6 @@
 ---
 name: monica-infra-persistence
-description: Use when integrating Monica Repository, UnitOfWork, transactional domain events, outbox, or inbox in an application, or diagnosing their save and commit behavior.
+description: Use when integrating Monica Repository, UnitOfWork, transactional domain events, outbox, or inbox in an application, diagnosing save and commit behavior, or inspecting DbContext connections, activity, and migrations.
 ---
 
 # Monica persistence
@@ -10,6 +10,7 @@ Repositories and UnitOfWork cover a local database operation; use transactional-
 | Task | Read |
 | --- | --- |
 | Register a context, choose its provider mode, or use repositories | [Repositories](references/repositories.md) |
+| Inspect registered contexts, provider sessions, migration history, or migration updates | [Repository diagnostics](references/repository-diagnostics.md) |
 | Set a write boundary, select participants, or understand save and rollback | [Transactions](references/transactions.md) |
 | Stage domain events or configure outbox, inbox, and projections | [Transactional events](references/transactional-events.md) |
 | Diagnose a failed save, transaction, or delivery | [Troubleshooting](references/troubleshooting.md) |

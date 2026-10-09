@@ -1,11 +1,15 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <RootNamespace>Test.Monica.Repository</RootNamespace>
     <IsTestProject>true</IsTestProject>
+    <!-- Host-owned Repository UI state scenarios execute the real shell endpoint/static-asset pipeline. -->
+    <OutputType>Library</OutputType>
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Monica.Repository\Monica.Repository.csproj" />
+    <ProjectReference Include="..\..\Monica.Repository.UI\Monica.Repository.UI.csproj" />
     <ProjectReference Include="..\..\Monica.Testing\Monica.Testing.csproj" />
   </ItemGroup>
 

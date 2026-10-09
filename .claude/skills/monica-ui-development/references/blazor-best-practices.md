@@ -60,58 +60,13 @@ Use initialization and parameter lifecycle methods for data work. Keep the compo
 
 ### 2.2 Bound Async Work to the Component Lifetime
 
-```csharp
-@implements IAsyncDisposable
+Blazor component code is re-entrant at every incomplete `await`. Keep the component renderable before awaiting data, stop new admission when it retires, pass a cached lifetime token where possible, and recheck cancellation/retirement before adopting evidence or invoking UI work. Retrieve the token while its cancellation source is live rather than reading the source's `Token` property after a disposal window.
 
-@code {
-    private readonly CancellationTokenSource _componentLifetime = new();
-    private bool _disposed;
+Cancellation alone does not establish completion. Retain the actual admitted data, parameter-synchronization, polling, focus, or clipboard task; cancel and independently drain each owned task before disposing its cancellation source or other resources. A tokenless or cancellation-ignoring provider can continue after a cancellation wrapper completes. A failure while observing one task must not abandon another; guarantee final resource release and preserve unexpected failures. Idempotent retirement must not start another teardown or release a resource twice.
 
-    protected override async Task OnInitializedAsync()
-    {
-        if (_disposed)
-        {
-            return;
-        }
+A circuit-scoped state injected from DI is borrowed by its routed consumers. It can hold detached evidence and serialize operations while accepting the component's token; the component owns its own cancellation and admitted work, not disposal of the injected state. A component-created session is different: follow its explicit ownership contract and drain it before disposal. The [page-state pattern](../../monica-architecture/references/page-state-pattern.md) supplies a complete component-owned cancellation/drain example and explains the state boundary.
 
-        await LoadDataAsync(_componentLifetime.Token);
-    }
-
-    private async Task LoadDataAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            var data = await DataService.GetDataAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (_disposed)
-            {
-                return;
-            }
-
-            ProcessData(data);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        if (_disposed)
-        {
-            return ValueTask.CompletedTask;
-        }
-
-        _disposed = true;
-        _componentLifetime.Cancel();
-        _componentLifetime.Dispose();
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
-Blazor component code is re-entrant at every incomplete `await`. Disposal can run before an awaited lifecycle or event continuation resumes, so cancellation alone is insufficient: pass the lifetime token where possible and recheck cancellation/disposal after awaits that can outlive the component. Track and observe any work that is not returned directly to the renderer.
+An async dialog open or JS import produces a resource. Observe the actual task and close/dispose a result arriving after retirement, instead of canceling the await and losing the result. Dialog results, native focus ownership, and interop teardown have their own mechanics; see the dialog heading contract above and the interop section below.
 
 ### 2.3 Keep Single Ownership of JS Interop References
 
@@ -434,6 +389,10 @@ For a MudBlazor v9 `MudMenu` icon activator, set its `AriaLabel` parameter. A ra
 ### 8.5 Keep Focus in a Parent Dialog After Confirmation
 
 A nested confirmation cannot restore focus to an opening control that was disabled or removed by its action. Verify both Cancel and successful completion, then Tab and Escape in the still-open parent dialog. When native restoration has no usable destination, request focus on a stable parent heading or control after the parent renders. Use a native element's `FocusAsync` rather than another focus manager; retain and drain the admitted focus operation during retirement, and skip restoration when a newer confirmation owns focus.
+
+### 8.6 Preserve Focus While a Dialog Action Is Busy
+
+Setting native `Disabled` on a focused action during an incomplete await can move focus to the document body, outside the dialog's keyboard handling. For a temporary busy state such as clipboard copying, keep the action focusable, expose explicit `aria-disabled="true"`, and reject repeat admission in the handler before starting asynchronous work. ARIA alone does not prevent activation. Retain native disabling for unavailable actions or retirement. Preserve the existing cancellation and task-drain ownership; no additional JavaScript focus manager is needed. Verify that keyboard activation keeps focus inside the dialog and that subsequent Tab and Escape still work while the operation is busy and after it completes.
 
 ## 9. Component Reuse Patterns
 
