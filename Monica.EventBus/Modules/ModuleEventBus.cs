@@ -199,5 +199,11 @@ public class ModuleEventBusOption : ModuleOptions<ModuleEventBus>
     /// implement <see cref="IDistributedEventHandler{TEvent}"/> or
     /// <see cref="ILocalEventHandler{TEvent}"/>.
     /// </summary>
+    /// <remarks>
+    /// Automatic subscriptions include only concrete handler types registered in the host container.
+    /// When automatic handlers are discovered, the container must expose <see cref="IServiceProviderIsService"/>
+    /// so discovery can inspect registrations without activating handlers. Disabled or empty discovery does
+    /// not require the inspector. Construction and asynchronous scope disposal occur during delivery.
+    /// </remarks>
     public bool DisableAutoDiscovery { get; set; }
 }
