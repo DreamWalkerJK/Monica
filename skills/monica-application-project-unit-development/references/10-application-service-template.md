@@ -19,6 +19,7 @@
 ## Rules
 
 - Derive from `ApplicationService<TRequest, TResponse>` or `ApplicationService<TRequest>`.
+- Declare business collaborators in the constructor, preferably a primary constructor, and inject only dependencies the handler uses. Current-user access and ID generation are explicit application dependencies; do not add them to a shared service base or resolve them through `IServiceProvider` / `CachedServiceProvider`.
 - Use the inherited `Logger` in handler methods when logging is needed. Monica resolves it after activation from the
   host that owns the service instance; do not access it from a constructor.
 - Make the request implement `IResultRequest<TResponse>` or `IResultRequest`.
