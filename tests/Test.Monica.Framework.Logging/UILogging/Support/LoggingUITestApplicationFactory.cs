@@ -4,7 +4,7 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Modules;
 using Monica.Testing.Hosting;
 
-namespace Test.Monica.Framework.UI.Logging;
+namespace Test.Monica.Framework.Logging.UILogging.Support;
 
 /// <summary>
 /// Composes the production logging UI graph with a scenario-owned log directory and disabled output sinks.
@@ -14,7 +14,9 @@ internal sealed class LoggingUITestApplicationFactory(
     bool enableMinimalApiByDefault = false,
     bool? enableMinimalApi = null,
     int? endpointPort = null,
-    Action<HttpContext>? configureRequest = null)
+    Action<HttpContext>? configureRequest = null,
+    Action<ModuleLoggingOption>? configureLogging = null,
+    Action<ModuleLoggingUIOption>? configureLoggingUi = null)
     : MonicaTestApplicationFactory<ModuleLoggingUI>, IDisposable
 {
     private readonly DirectoryInfo _logDirectory = Directory.CreateTempSubdirectory("monica-logging-ui-");
@@ -35,16 +37,20 @@ internal sealed class LoggingUITestApplicationFactory(
             options.MonicaEndpointPort = endpointPort;
             options.AutoAddMonicaHttpListener = false;
         });
+        builder.ConfigureTypeDiscovery(discovery => discovery.ExcludeDefault());
         builder.AddLogging(options =>
         {
             options.EnableConsoleSink = false;
             options.EnableFileSink = false;
             options.LogDirectory = LogDirectory;
+            configureLogging?.Invoke(options);
         });
         builder.AddLoggingUI(options =>
         {
             options.EnableMinimalApi = enableMinimalApi;
             options.LogDirectory = LogDirectory;
+            options.PollingInterval = TimeSpan.FromDays(1);
+            configureLoggingUi?.Invoke(options);
         }).ConfigureApplicationBuilder(context =>
         {
             if (configureRequest is null)

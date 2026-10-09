@@ -3,372 +3,272 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Results;
+using Monica.Logging.Services.Support;
 using Monica.Modules;
 
 namespace Monica.Framework.UI.UILogging.Support;
 
-/// <summary>
-/// Log reading results
-/// </summary>
-/// <param name="Lines">Log line collection</param>
-/// <param name="StartLineNumber">Start line number (absolute line number of the first line)</param>
-public readonly record struct LogReadResult(IReadOnlyList<string> Lines, long StartLineNumber);
+/// <summary>Complete physical lines read from one observed file generation.</summary>
+public readonly record struct LogReadResult(IReadOnlyList<string> Lines, long StartLineNumber)
+{
+    public bool FileExists { get; init; }
+    public long TotalLineCount { get; init; }
+    public string Generation { get; init; } = string.Empty;
+    public bool SourceReset { get; init; }
+    public DateTimeOffset ReadAt { get; init; }
+}
 
 /// <summary>
-/// Underlying log file reading service
+/// A reader-owned UTF-8 file cursor. Only LF-terminated physical lines are published; a CR before LF
+/// is removed. Incomplete bytes and text remain pending until the writer completes that line.
 /// </summary>
+/// <remarks>
+/// Reads are serialized. Cancellation throws and does not adopt an incomplete read. Truncation and
+/// observable replacement invalidate the generation. Detection uses length, creation time, and prior
+/// prefix/end bytes; it is not an operating-system file identity and cannot prove every in-place rewrite.
+/// A file read is bounded to its opening length, not a filesystem-atomic archive snapshot.
+/// </remarks>
 public sealed class LogTailService(
     IOptions<ModuleLoggingOption> loggingOptions,
     IOptions<ModuleLoggingUIOption> uiOptions,
     ILogger<LogTailService> logger)
 {
+    private readonly SemaphoreSlim _readGate = new(1, 1);
+    private readonly object _sync = new();
+    private readonly TimeSpan _pollingInterval = GetPollingInterval(uiOptions.Value);
+    private readonly int _retainedTailLimit = (int)Math.Min(int.MaxValue, Math.Max(2L, (long)uiOptions.Value.MaxDisplayLines * 2));
     private string _logFilePath = ResolveLogFilePath(loggingOptions.Value, uiOptions.Value);
-    private readonly TimeSpan _pollingInterval = uiOptions.Value.PollingInterval;
-    private readonly object _syncRoot = new();
+    private Cursor _cursor = Cursor.Empty(Guid.NewGuid().ToString("N"));
 
-    private long _lastPosition;
-    private long _currentLineNumber;
-    private bool _isInitialized;
+    public string LogFilePath { get { lock (_sync) return _logFilePath; } }
+    public string LogDirectory => Path.GetDirectoryName(LogFilePath) ?? AppContext.BaseDirectory;
+    public bool LogFileExists => File.Exists(LogFilePath);
+    public long CurrentLineNumber { get { lock (_sync) return _cursor.LineCount; } }
+    public long TotalFileLineCount => CurrentLineNumber;
+    public string Generation { get { lock (_sync) return _cursor.Generation; } }
+    public TimeSpan PollingInterval => _pollingInterval;
 
-    public string LogFilePath => _logFilePath;
+    /// <summary>Creates a fully independent cursor using the same immutable module configuration.</summary>
+    internal LogTailService CreateReader() => new(loggingOptions, uiOptions, logger);
 
-    /// <summary>
-    /// Does the current log file exist?
-    /// </summary>
-    public bool LogFileExists => File.Exists(_logFilePath);
-
-    public string LogDirectory => Path.GetDirectoryName(_logFilePath) ?? AppContext.BaseDirectory;
-
-    /// <summary>
-    /// Current line number (absolute line number of the last line read)
-    /// </summary>
-    public long CurrentLineNumber
+    /// <summary>Copies an adopted cursor for transactional session reads; no mutable byte arrays are shared with an in-progress read.</summary>
+    internal LogTailService CreateCursorCopy()
     {
-        get
-        {
-            lock (_syncRoot)
-            {
-                return _currentLineNumber;
-            }
-        }
+        var reader = CreateReader();
+        lock (_sync) { reader._logFilePath = _logFilePath; reader._cursor = _cursor; }
+        return reader;
     }
 
-    /// <summary>
-    /// Total number of lines in the file (statistics during initialization)
-    /// </summary>
-    public long TotalFileLineCount
-    {
-        get
-        {
-            lock (_syncRoot)
-            {
-                return _currentLineNumber;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Switch to new log file
-    /// </summary>
-    /// <param name="newFilePath">New log file full path</param>
+    /// <summary>Switches this cursor only; callers must stop their own following loop before switching.</summary>
     public void SwitchToFile(string newFilePath)
     {
-        lock (_syncRoot)
-        {
-            _logFilePath = newFilePath;
-            _lastPosition = 0;
-            _currentLineNumber = 0;
-            _isInitialized = false;
-        }
-
-        logger.LogInformation("已切换到日志文件: {FilePath}", newFilePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newFilePath);
+        var path = Path.GetFullPath(newFilePath);
+        _readGate.Wait();
+        try { lock (_sync) { _logFilePath = path; _cursor = Cursor.Empty(Guid.NewGuid().ToString("N")); } }
+        finally { _readGate.Release(); }
     }
 
+    /// <summary>Reads the latest requested complete lines and adopts a fresh cursor after success.</summary>
+    public Task<Res<LogReadResult>> ReadLatestLinesAsync(int lineCount, CancellationToken cancellationToken = default)
+        => ReadAsync(Math.Max(1, lineCount), latest: true, cancellationToken);
+
     /// <summary>
-    /// Read N lines of logs before the specified line number
+    /// Polls appended complete lines once, retaining at most the effective raw retention limit from a burst.
+    /// Counts and absolute numbering still include all complete lines. Replacement returns the initial window.
     /// </summary>
-    /// <param name="beforeLineNumber">Read before this line number</param>
-    /// <param name="lineCount">Number of lines to read</param>
-    /// <param name="cancellationToken">Cancellation Token</param>
-    /// <returns>The log lines read and the starting line number</returns>
+    public Task<Res<LogReadResult>> ReadNextAsync(CancellationToken cancellationToken = default)
+        => ReadAsync(Math.Clamp(uiOptions.Value.DefaultFetchLines, 1, Math.Max(1, uiOptions.Value.MaxDisplayLines)), latest: false, cancellationToken);
+
+    private async Task<Res<LogReadResult>> ReadAsync(int lineLimit, bool latest, CancellationToken token)
+    {
+        await _readGate.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            token.ThrowIfCancellationRequested();
+            string path;
+            Cursor before;
+            lock (_sync) { path = _logFilePath; before = _cursor; }
+            if (!File.Exists(path))
+            {
+                var absent = Cursor.Empty(before.Exists ? Guid.NewGuid().ToString("N") : before.Generation) with { Initialized = true };
+                token.ThrowIfCancellationRequested();
+                lock (_sync) _cursor = absent;
+                return Result([], 1, absent, before.Exists);
+            }
+
+            await using var stream = OpenRead(path);
+            var length = stream.Length;
+            var creation = File.GetCreationTimeUtc(path);
+            var changed = before.Initialized && (!before.Exists || length < before.Position
+                || creation != before.CreationTime
+                || !await BytesMatchAsync(stream, 0, before.Prefix, length, token).ConfigureAwait(false)
+                || !await BytesMatchAsync(stream, Math.Max(0, before.Position - before.Anchor.Length), before.Anchor, length, token).ConfigureAwait(false));
+            var reset = latest || !before.Initialized || changed;
+            var generation = changed ? Guid.NewGuid().ToString("N") : before.Generation;
+            var position = reset ? 0 : before.Position;
+            var lineCount = reset ? 0 : before.LineCount;
+            var pending = reset ? new List<byte>() : new List<byte>(before.Pending);
+            var queueLimit = reset ? lineLimit : _retainedTailLimit;
+            var queue = new Queue<string>();
+            stream.Position = position;
+            var bytes = new byte[65536];
+            while (position < length)
+            {
+                token.ThrowIfCancellationRequested();
+                var read = await stream.ReadAsync(bytes.AsMemory(0, (int)Math.Min(bytes.Length, length - position)), token).ConfigureAwait(false);
+                if (read == 0) throw new IOException("The log file changed extent while it was being read. Retry the read.");
+                position += read;
+                for (var index = 0; index < read; index++)
+                {
+                    if (bytes[index] != (byte)'\n') { pending.Add(bytes[index]); continue; }
+                    if (pending.Count > 0 && pending[^1] == (byte)'\r') pending.RemoveAt(pending.Count - 1);
+                    var lineBytes = pending.ToArray();
+                    var skipBom = lineCount == 0 && lineBytes.AsSpan().StartsWith(Encoding.UTF8.Preamble) ? Encoding.UTF8.Preamble.Length : 0;
+                    queue.Enqueue(Encoding.UTF8.GetString(lineBytes.AsSpan(skipBom)));
+                    pending.Clear();
+                    lineCount++;
+                    if (queue.Count > queueLimit) queue.Dequeue();
+                }
+            }
+            var prefix = await ReadBytesAsync(stream, 0, (int)Math.Min(256, length), token).ConfigureAwait(false);
+            var anchor = await ReadBytesAsync(stream, Math.Max(0, length - 256), (int)Math.Min(256, length), token).ConfigureAwait(false);
+            var after = new Cursor(generation, true, true, length, lineCount, pending.ToArray(), creation, prefix, anchor);
+            token.ThrowIfCancellationRequested();
+            lock (_sync) _cursor = after;
+            return Result(Array.AsReadOnly(queue.ToArray()), Math.Max(1, lineCount - queue.Count + 1), after, changed || !before.Initialized);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to read log file {FilePath}.", LogFilePath);
+            return $"Failed to read log file: {ex.Message}";
+        }
+        finally { _readGate.Release(); }
+    }
+
+    /// <summary>Reads earlier complete physical lines without moving this cursor or changing its source generation.</summary>
     public async Task<Res<LogReadResult>> ReadLinesBeforeAsync(long beforeLineNumber, int lineCount, CancellationToken cancellationToken = default)
     {
+        await _readGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
-        {
-            if (!File.Exists(_logFilePath))
-            {
-                logger.LogWarning("日志文件不存在: {File}", _logFilePath);
-                return new LogReadResult(Array.Empty<string>(), 0);
-            }
-
-            var lines = new List<string>();
-            var startLineNumber = Math.Max(1, beforeLineNumber - lineCount);
-            var endLineNumber = beforeLineNumber - 1;
-
-            if (endLineNumber < startLineNumber)
-            {
-                return new LogReadResult(Array.Empty<string>(), startLineNumber);
-            }
-
-            await using var stream = new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            using var reader = new StreamReader(stream, Encoding.UTF8);
-
-            long currentLine = 1;
-            while (currentLine <= endLineNumber)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var line = await reader.ReadLineAsync();
-                if (line is null)
-                {
-                    break;
-                }
-
-                if (currentLine >= startLineNumber)
-                {
-                    lines.Add(line);
-                }
-
-                currentLine++;
-            }
-
-            return new LogReadResult(lines, startLineNumber);
-        }
-        catch (OperationCanceledException)
-        {
-            return new LogReadResult(Array.Empty<string>(), 0);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "读取指定行之前的日志失败");
-            return $"读取日志失败: {ex.Message}";
-        }
-    }
-
-    /// <summary>
-    /// Read the most recent N lines of logs
-    /// </summary>
-    public async Task<Res<LogReadResult>> ReadLatestLinesAsync(int lineCount, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            if (!File.Exists(_logFilePath))
-            {
-                logger.LogWarning("日志文件不存在: {File}", _logFilePath);
-                lock (_syncRoot)
-                {
-                    _lastPosition = 0;
-                    _currentLineNumber = 0;
-                    _isInitialized = true;
-                }
-
-                return new LogReadResult(Array.Empty<string>(), 0);
-            }
-
-            var queue = new Queue<string>(lineCount);
-            long totalLineCount = 0;
-
-            await using var stream = new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            using var reader = new StreamReader(stream, Encoding.UTF8);
-
-            while (true)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var line = await reader.ReadLineAsync();
-                if (line is null)
-                {
-                    break;
-                }
-
-                totalLineCount++;
-
-                if (queue.Count == lineCount)
-                {
-                    queue.Dequeue();
-                }
-
-                queue.Enqueue(line);
-            }
-
-            var startLineNumber = Math.Max(1, totalLineCount - queue.Count + 1);
-
-            lock (_syncRoot)
-            {
-                _lastPosition = stream.Position;
-                _currentLineNumber = totalLineCount;
-                _isInitialized = true;
-            }
-
-            return new LogReadResult(queue.ToList(), startLineNumber);
-        }
-        catch (OperationCanceledException)
-        {
-            return new LogReadResult(Array.Empty<string>(), 0);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "读取日志文件失败");
-            return $"读取日志文件失败: {ex.Message}";
-        }
-    }
-
-    /// <summary>
-    /// Monitor new content in log files
-    /// </summary>
-    public async IAsyncEnumerable<string> WatchAsync([EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        EnsureInitialized();
-
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            List<string> newLines;
-            try
-            {
-                newLines = await ReadNewLinesInternalAsync(cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                yield break;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "监听日志文件发生异常");
-                await Task.Delay(_pollingInterval, cancellationToken);
-                continue;
-            }
-
-            if (newLines.Count == 0)
-            {
-                await Task.Delay(_pollingInterval, cancellationToken);
-                continue;
-            }
-
-            foreach (var line in newLines)
-            {
-                if (line != null)
-                {
-                    yield return line;
-                }
-            }
-        }
-    }
-
-    private async Task<List<string>> ReadNewLinesInternalAsync(CancellationToken cancellationToken)
-    {
-        var result = new List<string>();
-
-        if (!File.Exists(_logFilePath))
-        {
-            return result;
-        }
-
-        await using var stream = new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-
-        long startPosition;
-        bool isFileRotated = false;
-        lock (_syncRoot)
-        {
-            // Detect if a file is rotated (file size is smaller than last position)
-            if (stream.Length < _lastPosition)
-            {
-                _lastPosition = 0;
-                _currentLineNumber = 0;
-                isFileRotated = true;
-            }
-
-            startPosition = _lastPosition;
-        }
-
-        if (startPosition > stream.Length)
-        {
-            startPosition = 0;
-            isFileRotated = true;
-        }
-
-        stream.Seek(startPosition, SeekOrigin.Begin);
-        using var reader = new StreamReader(stream, Encoding.UTF8);
-
-        while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var line = await reader.ReadLineAsync();
-            if (line is null)
-            {
-                break;
-            }
-
-            result.Add(line);
+            var start = Math.Max(1, beforeLineNumber - Math.Max(1, lineCount));
+            var lines = await ReadRangeAsync(LogFilePath, start, beforeLineNumber - 1, cancellationToken).ConfigureAwait(false);
+            return new LogReadResult(lines, start) { Generation = Generation, FileExists = File.Exists(LogFilePath), TotalLineCount = TotalFileLineCount, ReadAt = DateTimeOffset.UtcNow };
         }
-
-        lock (_syncRoot)
-        {
-            _lastPosition = stream.Position;
-            // Increase line number count
-            _currentLineNumber += result.Count;
-        }
-
-        if (isFileRotated && result.Count > 0)
-        {
-            logger.LogInformation("检测到日志文件轮转，行号已重置");
-        }
-
-        return result;
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { return $"Failed to read earlier log lines: {ex.Message}"; }
+        finally { _readGate.Release(); }
     }
 
-    private void EnsureInitialized()
+    /// <summary>Compatibility line stream. Source-aware readers should use ReadNextAsync instead.</summary>
+    public async IAsyncEnumerable<string> WatchAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (_isInitialized)
+        while (true)
         {
-            return;
-        }
-
-        lock (_syncRoot)
-        {
-            if (_isInitialized)
-            {
-                return;
-            }
-
-            try
-            {
-                if (File.Exists(_logFilePath))
-                {
-                    var info = new FileInfo(_logFilePath);
-                    _lastPosition = info.Length;
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "初始化日志文件位置失败");
-                _lastPosition = 0;
-            }
-            finally
-            {
-                _isInitialized = true;
-            }
+            var result = await ReadNextAsync(cancellationToken).ConfigureAwait(false);
+            if (result.IsFailed(out var error, out var batch)) throw new IOException(error.Message);
+            foreach (var line in batch.Lines) yield return line;
+            await Task.Delay(_pollingInterval, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    private static string ResolveLogFilePath(ModuleLoggingOption option, ModuleLoggingUIOption uiOption)
+    /// <summary>Checks the last adopted fingerprint without changing the cursor.</summary>
+    internal async Task<bool> IsCurrentAsync(string generation, CancellationToken token)
     {
-        if (!string.IsNullOrWhiteSpace(uiOption.LogDirectory))
+        await _readGate.WaitAsync(token).ConfigureAwait(false);
+        try
         {
-            var directory = Path.GetFullPath(uiOption.LogDirectory);
-            var fileName = !string.IsNullOrWhiteSpace(option.LogFilePath)
-                ? Path.GetFileName(option.LogFilePath)
-                : option.LogFileName;
-            return Path.Combine(directory, fileName);
+            Cursor current;
+            string path;
+            lock (_sync) { current = _cursor; path = _logFilePath; }
+            if (current.Generation != generation || !current.Exists || !File.Exists(path)) return false;
+            await using var stream = OpenRead(path);
+            return stream.Length >= current.Position && File.GetCreationTimeUtc(path) == current.CreationTime
+                && await BytesMatchAsync(stream, 0, current.Prefix, stream.Length, token).ConfigureAwait(false)
+                && await BytesMatchAsync(stream, Math.Max(0, current.Position - current.Anchor.Length), current.Anchor, stream.Length, token).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(ex, "The observed log source could not be verified: {FilePath}.", LogFilePath);
+            return false;
+        }
+        finally { _readGate.Release(); }
+    }
 
-        if (!string.IsNullOrWhiteSpace(option.LogFilePath))
+    internal static async Task<IReadOnlyList<string>> ReadRangeAsync(string path, long start, long end, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (start > end || !File.Exists(path)) return [];
+        await using var stream = OpenRead(path);
+        var length = stream.Length;
+        var bytes = new byte[65536];
+        var pending = new List<byte>();
+        var lines = new List<string>();
+        long position = 0, number = 0;
+        while (position < length && number < end)
         {
-            return Path.GetFullPath(option.LogFilePath);
+            var read = await stream.ReadAsync(bytes.AsMemory(0, (int)Math.Min(bytes.Length, length - position)), token).ConfigureAwait(false);
+            if (read == 0) throw new IOException("The log file changed extent while reading context.");
+            position += read;
+            for (var index = 0; index < read && number < end; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                if (bytes[index] != (byte)'\n') { pending.Add(bytes[index]); continue; }
+                if (pending.Count > 0 && pending[^1] == (byte)'\r') pending.RemoveAt(pending.Count - 1);
+                var raw = pending.ToArray();
+                var skipBom = number == 0 && raw.AsSpan().StartsWith(Encoding.UTF8.Preamble) ? Encoding.UTF8.Preamble.Length : 0;
+                number++;
+                if (number >= start) lines.Add(Encoding.UTF8.GetString(raw.AsSpan(skipBom)));
+                pending.Clear();
+            }
         }
+        return Array.AsReadOnly(lines.ToArray());
+    }
 
-        {
-            var directory = option.LogDirectory ?? Path.Combine(AppContext.BaseDirectory, "Logs");
-            var logDirectory = Path.GetFullPath(directory);
-            return Path.Combine(logDirectory, option.LogFileName);
-        }
-        
+    internal static string ResolveLogFilePath(ModuleLoggingOption logging, ModuleLoggingUIOption ui)
+        => !string.IsNullOrWhiteSpace(ui.LogDirectory)
+            ? Path.Combine(Path.GetFullPath(ui.LogDirectory), Path.GetFileName(LogFileLocation.Resolve(logging)))
+            : LogFileLocation.Resolve(logging);
+
+    private static TimeSpan GetPollingInterval(ModuleLoggingUIOption options)
+    {
+        if (options.PollingInterval <= TimeSpan.Zero || options.PollingInterval.TotalMilliseconds > uint.MaxValue - 1)
+            throw new ArgumentOutOfRangeException(nameof(options.PollingInterval), "Polling interval must be positive and supported by Task.Delay.");
+        return options.PollingInterval < TimeSpan.FromMilliseconds(1) ? TimeSpan.FromMilliseconds(1) : options.PollingInterval;
+    }
+
+    private static LogReadResult Result(IReadOnlyList<string> lines, long start, Cursor cursor, bool reset)
+        => new(lines, start) { Generation = cursor.Generation, FileExists = cursor.Exists, TotalLineCount = cursor.LineCount, SourceReset = reset, ReadAt = DateTimeOffset.UtcNow };
+
+    private static FileStream OpenRead(string path) => new(path, new FileStreamOptions
+    {
+        Mode = FileMode.Open, Access = FileAccess.Read, Share = FileShare.ReadWrite | FileShare.Delete,
+        Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+    });
+
+    private static async Task<bool> BytesMatchAsync(FileStream stream, long offset, byte[] expected, long length, CancellationToken token)
+    {
+        if (expected.Length == 0) return true;
+        if (offset + expected.Length > length) return false;
+        var bytes = await ReadBytesAsync(stream, offset, expected.Length, token).ConfigureAwait(false);
+        return bytes.AsSpan().SequenceEqual(expected);
+    }
+
+    private static async Task<byte[]> ReadBytesAsync(FileStream stream, long offset, int count, CancellationToken token)
+    {
+        stream.Position = offset;
+        var bytes = new byte[count];
+        await stream.ReadExactlyAsync(bytes, token).ConfigureAwait(false);
+        return bytes;
+    }
+
+    private sealed record Cursor(string Generation, bool Initialized, bool Exists, long Position, long LineCount,
+        byte[] Pending, DateTime CreationTime, byte[] Prefix, byte[] Anchor)
+    {
+        public static Cursor Empty(string generation) => new(generation, false, false, 0, 0, [], default, [], []);
     }
 }

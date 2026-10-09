@@ -3,9 +3,10 @@ using AwesomeAssertions;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Test.Monica.Framework.Logging.UILogging.Support;
 using Xunit;
 
-namespace Test.Monica.Framework.UI.Logging;
+namespace Test.Monica.Framework.Logging.Modules;
 
 /// <summary>
 /// Verifies download framing and file ownership while an active log changes during its response.

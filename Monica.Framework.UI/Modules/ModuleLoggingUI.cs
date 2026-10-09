@@ -48,6 +48,7 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
             static option => option.AddResource<LoggingResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
+            {
                 registry.RegisterLocalizedPage<UILoggingMonitorPage, LoggingResource>(
                     UILoggingMonitorPage.PAGE_URL,
                     "Pages:LoggingMonitor:Title",
@@ -55,7 +56,16 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 30,
-                    descriptionKey: "Pages:LoggingMonitor:Description")));
+                    descriptionKey: "Pages:LoggingMonitor:Description");
+                registry.RegisterLocalizedPage<UILoggingFilesPage, LoggingResource>(
+                    UILoggingFilesPage.PAGE_URL,
+                    "Pages:LoggingFiles:Title",
+                    Icons.Material.Outlined.FolderOpen,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 31,
+                    descriptionKey: "Pages:LoggingFiles:Description");
+            }));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleLoggingUIOption> context)
@@ -65,6 +75,7 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
         services.AddSingleton<LogTailService>();
         services.AddSingleton<LogFileQueryService>();
         services.AddSingleton<LoggingService>();
+        services.AddScoped<LoggingWorkspaceSession>();
     }
 
     public override void ConfigureEndpoints(WebModuleContext<ModuleLoggingUIOption> context)
@@ -74,9 +85,9 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
             var tagName = Option.GetApiGroupName();
 
             endpoints.MapGet("/logging-ui/files",
-                async ([FromServices] LoggingService loggingService) =>
+                async ([FromServices] LoggingService loggingService, HttpContext httpContext) =>
                 {
-                    var result = await loggingService.ListFilesAsync();
+                    var result = await loggingService.ListFilesAsync(httpContext.RequestAborted);
                     return result.GetResponse();
                 })
                 .WithName("列出日志文件")
@@ -97,7 +108,7 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
                   [FromServices] LoggingService loggingService,
                   HttpContext httpContext) =>
             {
-                var result = await loggingService.OpenFileAsync(filePath);
+                var result = await loggingService.OpenFileAsync(filePath, httpContext.RequestAborted);
                 if (result.IsFailed(out var error, out var stream))
                 {
                     return error.GetResponse();
@@ -119,9 +130,9 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
             .WithDescription("下载指定的日志文件");
 
         downloads.MapGet("/current/export",
-            async ([FromServices] LoggingService loggingService) =>
+            async ([FromServices] LoggingService loggingService, HttpContext httpContext) =>
             {
-                var result = await loggingService.ExportBufferAsync();
+                var result = await loggingService.ExportBufferAsync(httpContext.RequestAborted);
                 if (result.IsFailed(out var error, out var export))
                 {
                     return error.GetResponse();
@@ -146,17 +157,17 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
 public class ModuleLoggingUIOption : MinimalApiModuleOptions<ModuleLoggingUI>
 {
     /// <summary>
-    /// Number of log lines obtained during initialization
+    /// Number of complete physical lines read initially; default 500 and clamped to the effective display limit.
     /// </summary>
     public int DefaultFetchLines { get; set; } = 500;
 
     /// <summary>
-    /// The maximum number of display lines allowed in the temporary log pool
+    /// Maximum visible physical lines; default 5,000 and clamped to at least one. Readers retain twice this many raw lines.
     /// </summary>
     public int MaxDisplayLines { get; set; } = 5000;
 
     /// <summary>
-    /// Log polling interval
+    /// Reader polling interval; default one second. Must be positive and at most 4,294,967,294 milliseconds; positive sub-millisecond values are clamped to one millisecond.
     /// </summary>
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(1);
 
@@ -171,7 +182,7 @@ public class ModuleLoggingUIOption : MinimalApiModuleOptions<ModuleLoggingUI>
     public IReadOnlyList<int> PresetLineCounts { get; set; } = new[] { 200, 500, 1000, 2500, 5000 };
 
     /// <summary>
-    /// Log directory priority setting
+    /// Explicit UI inspection directory. Defaults to the resolved Logging file sink directory; custom logger factories must configure their own inspection path.
     /// </summary>
     public string? LogDirectory { get; set; }
 }

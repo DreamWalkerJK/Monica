@@ -8,10 +8,13 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.UILogging.Models;
+using Monica.Framework.UI.UILogging.State;
 using Monica.Testing.Hosting;
+using Monica.Testing.Results;
+using Test.Monica.Framework.Logging.UILogging.Support;
 using Xunit;
 
-namespace Test.Monica.Framework.UI.Logging;
+namespace Test.Monica.Framework.Logging.Modules;
 
 /// <summary>
 /// Verifies the UI download contract through the real module graph and in-memory HTTP server.
@@ -130,6 +133,31 @@ public sealed class ModuleLoggingUITests
         using var body = JsonDocument.Parse(
             await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         body.RootElement.ValueKind.Should().Be(JsonValueKind.Object);
+    }
+
+    [Fact]
+    public async Task ExportCurrent_WhenTheLegacyReaderHasAKeywordFilter_ShouldPreserveItsExistingFilterHeaderAndAllRetainedLines()
+    {
+        using var factory = new LoggingUITestApplicationFactory();
+        await using var application = await factory.CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        application.Services.GetRequiredService<ScreenLogBuffer>().Reset(BufferLines);
+        var filtered = (await application.Services.GetRequiredService<LoggingService>().UpdateFilterAsync("%20", true)).ShouldSucceed()!;
+        filtered.Lines.Should().ContainSingle().Which.Raw.Should().Be(BufferLines[1]);
+        using var client = CreateClient(application);
+
+        using var response = await client.GetAsync("/logging-ui/current/export", TestContext.Current.CancellationToken);
+        var text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/plain");
+        response.Content.Headers.ContentDisposition?.FileNameStar.Should().MatchRegex(@"^temp-logs-\d{14}\.log$");
+        var firstLineEnd = text.IndexOf('\n') + 1;
+        firstLineEnd.Should().BeGreaterThan(0);
+        text[..firstLineEnd].Should().StartWith("# Exported at ");
+        text[firstLineEnd..].Should().Be(
+            $"# Filter: Keyword=%20, OnlyCapture=True{Environment.NewLine}" +
+            $"# Total Stored Lines: {BufferLines.Length}{Environment.NewLine}{Environment.NewLine}" +
+            string.Join(Environment.NewLine, BufferLines) + Environment.NewLine);
     }
 
     private static HttpClient CreateClient(MonicaTestApplication application) =>

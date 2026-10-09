@@ -100,7 +100,9 @@ public class ModuleLoggingOption : ModuleOptions<ModuleLogging>
     /// </summary>
     public string? LogFilePath { get; set; }
 
+    /// <summary>Base directory for the default file sink. Logs is appended before LogFileName; defaults to AppContext.BaseDirectory.</summary>
     public string? LogDirectory { get; set; }
+    /// <summary>File name beneath the Logs child directory; defaults to the entry assembly name with a .log extension.</summary>
     public string LogFileName { get; set; } = $"{Assembly.GetEntryAssembly()!.GetName().Name}.log";
 
     public bool EnableThreadNameEnricher { get; set; }
