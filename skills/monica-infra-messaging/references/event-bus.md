@@ -4,6 +4,8 @@ For application EventBus contracts and consumers, including outbox or inbox refa
 
 `monica.AddEventBus()` registers the local bus, scoped publishing gateway, handler discovery, subscription registry, and receive dispatcher. Use `ILocalEventBus` when publisher and handlers run in one process; implement `ILocalEventHandler<TEvent>` in the host's discovery scope, or use `IEventBus.SubscribeAsync<TEvent,...>` for an explicit subscription. `DisableAutoDiscovery` disables the scan. A handler receives a cancellation token and should pass it to its own I/O.
 
+Automatic subscriptions include only concrete handler types registered in the host container. When automatic handlers are discovered, the container must expose `IServiceProviderIsService`, as Microsoft DI does, so discovery can inspect registrations without constructing handlers. Disabled or empty discovery does not require this inspector; a discovered automatic handler without it causes a clear startup error. Each delivery activates its handler in a fresh asynchronously disposed DI scope; constructor failures remain delivery failures rather than removing the subscription during discovery.
+
 EventBus execution defaults to an automatic UnitOfWork when that behavior is registered. Put any `ExecutionTransactionAttribute` override or context selection on the concrete `HandleEventAsync` method, following the persistence [transaction contract](../../monica-infra-persistence/references/transactions.md).
 
 For example, a discovered handler for `OrderApproved` uses the exact event type named by the publisher:

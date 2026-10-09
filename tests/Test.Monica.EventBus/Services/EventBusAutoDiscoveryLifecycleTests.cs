@@ -16,6 +16,141 @@ namespace Test.Monica.EventBus.Services;
 
 public sealed class EventBusAutoDiscoveryLifecycleTests
 {
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task StartingAsync_WhenDiscoveryIsDisabledOrEmpty_ShouldNotRequireRegistrationInspector(
+        bool disableAutoDiscovery, bool discoverHandlers)
+    {
+        var builder = CreateBuilder(disableAutoDiscovery: disableAutoDiscovery, discoverHandlers: discoverHandlers);
+        RemoveRegistrationInspectorFromLifecycle(builder);
+        using var host = builder.Build();
+
+        await host.StartAsync(TestContext.Current.CancellationToken);
+
+        host.Services.GetRequiredService<IEventSubscriptionRegistry>().GetAll().Should().BeEmpty();
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task StartingAsync_WhenAutomaticHandlersHaveNoRegistrationInspector_ShouldFailWithoutConstructingHandlers()
+    {
+        var state = new DiscoveryActivationState();
+        var builder = CreateBuilder();
+        builder.Services.AddSingleton(state);
+        builder.Services.AddScoped<LazyDiscoveryHandler>();
+        RemoveRegistrationInspectorFromLifecycle(builder);
+        using var host = builder.Build();
+
+        Func<Task> start = () => host.StartAsync(TestContext.Current.CancellationToken);
+        await start.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("EventBus automatic discovery requires IServiceProviderIsService registration metadata from the host container.");
+
+        host.Services.GetRequiredService<IEventSubscriptionRegistry>().GetAll().Should().BeEmpty();
+        state.Constructions.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task StartingAsync_WhenHandlerIsRegistered_ShouldDeferConstructionToEachDelivery()
+    {
+        var state = new DiscoveryActivationState();
+        var builder = CreateBuilder();
+        builder.Services.AddSingleton(state);
+        builder.Services.AddScoped<LazyDiscoveryHandler>();
+        using var host = builder.Build();
+
+        await host.StartAsync(TestContext.Current.CancellationToken);
+
+        var registry = host.Services.GetRequiredService<IEventSubscriptionRegistry>();
+        registry.GetAll().Count(subscription => subscription.HandlerType == typeof(LazyDiscoveryHandler))
+            .Should().Be(2);
+        state.Constructions.Should().Be(0);
+
+        await PublishAsync(host, new DiscoveryProbeEvent());
+        await PublishAsync(host, new SecondaryDiscoveryProbeEvent());
+
+        state.Constructions.Should().Be(2);
+        state.Deliveries.Should().Be(2);
+        state.HandlerDisposals.Should().Be(2);
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task StartingAsync_WhenHandlerIsUnregistered_ShouldExcludeItsSubscription()
+    {
+        using var host = CreateBuilder().Build();
+
+        await host.StartAsync(TestContext.Current.CancellationToken);
+
+        var registry = host.Services.GetRequiredService<IEventSubscriptionRegistry>();
+        registry.GetAll().Should().HaveCount(2);
+        registry.GetAll().Should().NotContain(subscription =>
+            subscription.HandlerType == typeof(UnregisteredDiscoveryHandler));
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task StartingAsync_WhenRegisteredConstructorThrows_ShouldKeepSubscriptionAndFailOnlyOnDelivery()
+    {
+        var state = new DiscoveryActivationState();
+        var builder = CreateBuilder();
+        builder.Services.AddSingleton(state);
+        builder.Services.AddScoped<ThrowingDiscoveryHandler>();
+        using var host = builder.Build();
+
+        await host.StartAsync(TestContext.Current.CancellationToken);
+
+        var registry = host.Services.GetRequiredService<IEventSubscriptionRegistry>();
+        registry.GetAll().Should().ContainSingle(subscription =>
+            subscription.HandlerType == typeof(ThrowingDiscoveryHandler) && subscription.IsAutoDiscovered);
+        state.Constructions.Should().Be(0);
+
+        Func<Task> publish = () => PublishAsync(host, new ThrowingDiscoveryEvent());
+        await publish.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Handler construction failed.");
+
+        state.Constructions.Should().Be(1);
+        state.Deliveries.Should().Be(0);
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StartingAsync_WhenHandlerOrDependencyRequiresAsyncDisposal_ShouldActivateAndDisposeOnlyDuringDelivery(
+        bool hasAsyncOnlyDependency)
+    {
+        var state = new DiscoveryActivationState();
+        var builder = CreateBuilder();
+        builder.Services.AddSingleton(state);
+        var handlerType = hasAsyncOnlyDependency
+            ? typeof(AsyncDependentDiscoveryHandler)
+            : typeof(AsyncOnlyDiscoveryHandler);
+        builder.Services.AddScoped(handlerType);
+        if (hasAsyncOnlyDependency) builder.Services.AddScoped<AsyncOnlyDiscoveryDependency>();
+        using var host = builder.Build();
+
+        await host.StartAsync(TestContext.Current.CancellationToken);
+
+        var registry = host.Services.GetRequiredService<IEventSubscriptionRegistry>();
+        registry.GetAll().Should().ContainSingle(subscription =>
+            subscription.HandlerType == handlerType && subscription.IsAutoDiscovered);
+        state.Constructions.Should().Be(0);
+        state.DependencyConstructions.Should().Be(0);
+        state.HandlerDisposals.Should().Be(0);
+        state.DependencyDisposals.Should().Be(0);
+
+        await PublishAsync(host, new DiscoveryProbeEvent());
+        await PublishAsync(host, new DiscoveryProbeEvent());
+
+        state.Constructions.Should().Be(2);
+        state.Deliveries.Should().Be(2);
+        state.HandlerDisposals.Should().Be(hasAsyncOnlyDependency ? 0 : 2);
+        state.DependencyConstructions.Should().Be(hasAsyncOnlyDependency ? 2 : 0);
+        state.DependencyDisposals.Should().Be(hasAsyncOnlyDependency ? 2 : 0);
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
     [Fact]
     public async Task HostLifecycle_ShouldActivateBeforeProviderAndRemoveOnlyOwnedSubscriptionsBeforeProviderStops()
     {
@@ -122,7 +257,26 @@ public sealed class EventBusAutoDiscoveryLifecycleTests
         await registry.UnsubscribeAsync(manual.Id, TestContext.Current.CancellationToken);
     }
 
-    private static HostApplicationBuilder CreateBuilder(IEventSubscriptionRegistry? registry = null)
+    private static async Task PublishAsync<TEvent>(IHost host, TEvent message) where TEvent : class
+    {
+        await using var scope = host.Services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<ILocalEventBus>()
+            .PublishAsync(message, cancellationToken: TestContext.Current.CancellationToken);
+    }
+
+    private static void RemoveRegistrationInspectorFromLifecycle(HostApplicationBuilder builder)
+    {
+        var registration = builder.Services.Single(descriptor =>
+            descriptor.ServiceType == typeof(IHostedService) &&
+            descriptor.ImplementationType?.Name == "EventBusAutoDiscoveryLifecycle");
+        var factory = ActivatorUtilities.CreateFactory(registration.ImplementationType!, [typeof(IServiceProviderIsService)]);
+        builder.Services.Remove(registration);
+        // Supply an absent inspector explicitly while retaining the real host, module and lifecycle.
+        builder.Services.AddSingleton<IHostedService>(provider => (IHostedService)factory(provider, [null]));
+    }
+
+    private static HostApplicationBuilder CreateBuilder(IEventSubscriptionRegistry? registry = null,
+        bool disableAutoDiscovery = false, bool discoverHandlers = true)
     {
         var builder = Host.CreateApplicationBuilder();
         // Auto-discovery only subscribes handler types this host registered; dispatch resolves them from DI.
@@ -134,10 +288,12 @@ public sealed class EventBusAutoDiscoveryLifecycleTests
         });
         builder.AddMonica(monica =>
         {
-            monica.ConfigureTypeDiscovery(options => options
-                .ExcludeDefault()
-                .Add(typeof(EventBusAutoDiscoveryLifecycleTests).Assembly));
-            monica.AddEventBus();
+            monica.ConfigureTypeDiscovery(options =>
+            {
+                options.ExcludeDefault();
+                if (discoverHandlers) options.Add(typeof(EventBusAutoDiscoveryLifecycleTests).Assembly);
+            });
+            monica.AddEventBus(options => options.DisableAutoDiscovery = disableAutoDiscovery);
         });
 
         if (registry is not null)
@@ -170,6 +326,126 @@ public sealed class EventBusAutoDiscoveryLifecycleTests
 public sealed record LifecycleEvent;
 
 public sealed record SecondaryLifecycleEvent;
+
+public sealed record DiscoveryProbeEvent;
+
+public sealed record SecondaryDiscoveryProbeEvent;
+
+public sealed record UnregisteredDiscoveryEvent;
+
+public sealed record ThrowingDiscoveryEvent;
+
+public sealed class DiscoveryActivationState
+{
+    public int Constructions { get; set; }
+    public int Deliveries { get; set; }
+    public int HandlerDisposals { get; set; }
+    public int DependencyConstructions { get; set; }
+    public int DependencyDisposals { get; set; }
+}
+
+public sealed class LazyDiscoveryHandler :
+    ILocalEventHandler<DiscoveryProbeEvent>,
+    ILocalEventHandler<SecondaryDiscoveryProbeEvent>,
+    IDisposable
+{
+    private readonly DiscoveryActivationState _state;
+
+    public LazyDiscoveryHandler(DiscoveryActivationState state)
+    {
+        _state = state;
+        _state.Constructions++;
+    }
+
+    public Task HandleEventAsync(DiscoveryProbeEvent eventData, CancellationToken cancellationToken)
+    {
+        _state.Deliveries++;
+        return Task.CompletedTask;
+    }
+
+    public Task HandleEventAsync(SecondaryDiscoveryProbeEvent eventData, CancellationToken cancellationToken)
+    {
+        _state.Deliveries++;
+        return Task.CompletedTask;
+    }
+
+    public void Dispose() => _state.HandlerDisposals++;
+}
+
+public sealed class UnregisteredDiscoveryHandler : ILocalEventHandler<UnregisteredDiscoveryEvent>
+{
+    public Task HandleEventAsync(UnregisteredDiscoveryEvent eventData, CancellationToken cancellationToken)
+        => Task.CompletedTask;
+}
+
+public sealed class ThrowingDiscoveryHandler : ILocalEventHandler<ThrowingDiscoveryEvent>
+{
+    public ThrowingDiscoveryHandler(DiscoveryActivationState state)
+    {
+        state.Constructions++;
+        throw new InvalidOperationException("Handler construction failed.");
+    }
+
+    public Task HandleEventAsync(ThrowingDiscoveryEvent eventData, CancellationToken cancellationToken)
+        => Task.CompletedTask;
+}
+
+public sealed class AsyncOnlyDiscoveryHandler : ILocalEventHandler<DiscoveryProbeEvent>, IAsyncDisposable
+{
+    private readonly DiscoveryActivationState _state;
+
+    public AsyncOnlyDiscoveryHandler(DiscoveryActivationState state)
+    {
+        _state = state;
+        _state.Constructions++;
+    }
+
+    public Task HandleEventAsync(DiscoveryProbeEvent eventData, CancellationToken cancellationToken)
+    {
+        _state.Deliveries++;
+        return Task.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _state.HandlerDisposals++;
+        return ValueTask.CompletedTask;
+    }
+}
+
+public sealed class AsyncOnlyDiscoveryDependency : IAsyncDisposable
+{
+    private readonly DiscoveryActivationState _state;
+
+    public AsyncOnlyDiscoveryDependency(DiscoveryActivationState state)
+    {
+        _state = state;
+        _state.DependencyConstructions++;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _state.DependencyDisposals++;
+        return ValueTask.CompletedTask;
+    }
+}
+
+public sealed class AsyncDependentDiscoveryHandler : ILocalEventHandler<DiscoveryProbeEvent>
+{
+    private readonly DiscoveryActivationState _state;
+
+    public AsyncDependentDiscoveryHandler(DiscoveryActivationState state, AsyncOnlyDiscoveryDependency dependency)
+    {
+        _state = state;
+        _state.Constructions++;
+    }
+
+    public Task HandleEventAsync(DiscoveryProbeEvent eventData, CancellationToken cancellationToken)
+    {
+        _state.Deliveries++;
+        return Task.CompletedTask;
+    }
+}
 
 public sealed class AutoDiscoveredHandler :
     ILocalEventHandler<LifecycleEvent>,
