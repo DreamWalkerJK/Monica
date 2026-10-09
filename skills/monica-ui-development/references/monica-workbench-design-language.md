@@ -68,6 +68,8 @@ Check small-text contrast against the rendered background in every theme and col
 
 A status-filter group must make the domain's actual statuses distinguishable. Resolve each status through its documented semantic palette role; do not repaint every option Primary when selected. Success, Warning, Error, Info, and neutral roles express different meanings. Use Primary or a neutral role for an aggregate such as All, and do not assign a severity to an absence or to a zero count merely to add color. Text or a recognizable icon must carry the same meaning so hue is not the only distinction.
 
+Apply the same status-to-palette mapping to repeated row labels and badges. Derive their paint from the displayed status, never from record presence, registration count, or an independent state axis.
+
 | State | Required treatment |
 | --- | --- |
 | Default | Keep each option's semantic cue visible through its dot, icon, text, or outline; labels and counts remain readable. |

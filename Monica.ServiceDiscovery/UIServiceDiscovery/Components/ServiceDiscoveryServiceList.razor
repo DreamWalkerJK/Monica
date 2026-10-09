@@ -24,7 +24,7 @@
                 <CellTemplate><div class="registry-members"><strong>@context.Item.TotalInstanceCount</strong><span>@(context.Item.TotalInstanceCount > 0 ? L["Workbench:Registered"] : L["Workbench:ExpectedOnly"])</span></div><div class="registry-instance-marks">@foreach (var instance in context.Item.Instances.Values.Take(3)) { <MudTooltip Text="@($"{instance.InstanceId} · {instance.Status.GetText(L)}{(instance.IsLeader ? " · " + L["Workbench:HeartbeatReportedLeader"].Value : string.Empty)}")"><span class="registry-instance-mark">@(instance.IsLeader ? "◇" : "·")</span></MudTooltip> } @if(context.Item.TotalInstanceCount > 3) { <span>+@(context.Item.TotalInstanceCount - 3)</span> }</div></CellTemplate>
             </TemplateColumn>
             <TemplateColumn Title="@L["ServiceList:Columns:OverallStatus"]" Sortable="false">
-                <CellTemplate><span class="registry-membership-status" data-registered="@(context.Item.TotalInstanceCount > 0 ? "true" : "false")">@context.Item.OverallStatus.GetText(L)</span></CellTemplate>
+                <CellTemplate><span class="registry-membership-status" data-status-tone="@context.Item.OverallStatus.GetColor()">@context.Item.OverallStatus.GetText(L)</span></CellTemplate>
             </TemplateColumn>
             <TemplateColumn Title="@L["Workbench:ObservedBuild"]" Sortable="false">
                 <CellTemplate>@{ var observed=context.Item.GetValidInstanceInfo(); }<div class="registry-observed"><code>@Value(observed?.AssemblyVersion)</code><time>@Time(observed?.BuildTime)</time></div></CellTemplate>

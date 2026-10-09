@@ -69,6 +69,7 @@ Indicators:
 - Light or dark mode is excessively dark, low-contrast, or monotone, so canvas, structural surfaces, borders, text hierarchy, or semantic states collapse together
 - Success, warning, error, information, selection, and runtime states are not meaningfully differentiated when the task requires rapid scanning
 - Every selected status filter is repainted Primary, losing the distinct semantic meanings visible before selection
+- A row status, badge, or filter derives paint from record presence, registration count, or another state axis instead of the actual displayed status
 - Default, selected, or zero-count status labels, counts, icons, or necessary control boundaries fail contrast; opacity makes an available zero-count option unreadable, or its zero is styled as an active alert
 - Repeated facts, properties, metrics, or records are each wrapped in cards instead of rows, lists, definition groups, or tables
 - A working page, filter, dialog, or supporting feature surface introduces a gradient

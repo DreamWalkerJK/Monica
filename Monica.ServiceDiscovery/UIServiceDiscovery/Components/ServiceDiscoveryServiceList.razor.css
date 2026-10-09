@@ -23,8 +23,11 @@
 .registry-members span { color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); font-size: 11px; }
 .registry-instance-marks { display: flex; gap: 5px; align-items: center; font-size: 11px; min-height: 18px; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); }
 .registry-instance-mark { display: inline-block; width: 12px; font-size: 15px; }
-.registry-membership-status { display: inline-block; border-radius: 6px; padding: 4px 7px; font-size: 11px; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); background: var(--mud-palette-background); white-space: nowrap; }
-.registry-membership-status[data-registered="true"] { color: color-mix(in srgb,var(--mud-palette-success) 55%,var(--mud-palette-text-primary)); background: color-mix(in srgb,var(--mud-palette-success) 8%,var(--mud-palette-surface)); }
+.registry-membership-status { --registry-status-tone: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); display: inline-block; border-radius: 6px; padding: 4px 7px; font-size: 11px; color: color-mix(in srgb, var(--registry-status-tone) 35%, var(--mud-palette-text-primary)); background: color-mix(in srgb, var(--registry-status-tone) 8%, var(--mud-palette-surface)); white-space: nowrap; }
+.registry-membership-status[data-status-tone="Success"] { --registry-status-tone: var(--mud-palette-success); }
+.registry-membership-status[data-status-tone="Info"] { --registry-status-tone: var(--mud-palette-info); }
+.registry-membership-status[data-status-tone="Error"] { --registry-status-tone: var(--mud-palette-error); }
+.registry-membership-status[data-status-tone="Warning"] { --registry-status-tone: var(--mud-palette-warning); }
 .registry-observed { display: grid; gap: 7px; min-width: 112px; max-width: 170px; overflow-wrap: anywhere; }
 .registry-observed { min-width: 150px; }
 .registry-observed code { font-size: 11px; }
