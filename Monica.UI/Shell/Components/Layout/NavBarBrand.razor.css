@@ -39,4 +39,11 @@
 @media (max-width: 929px) {
     .brand-name { max-width: min(160px, 26vw); font-size: 14px; }
     .brand-appid { display: none; }
+    .navbar-brand:not(.navbar-brand--contextual) .brand-version {
+        min-width: 0;
+        flex-shrink: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 }

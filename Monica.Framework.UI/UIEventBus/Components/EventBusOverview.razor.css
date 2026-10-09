@@ -1,0 +1,71 @@
+.eventbus-overview { display: grid; gap: 28px; min-width: 0; }
+.eventbus-overview-lead { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 24px; }
+.eventbus-registration { padding: 28px; border-radius: var(--mud-default-borderradius); border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 30%, var(--mud-palette-divider)); background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface)); }
+.eventbus-registration-top { display: flex; align-items: center; justify-content: space-between; }
+.eventbus-registration-top ::deep .mud-icon-root { color: var(--mud-palette-primary); width: 28px; height: 28px; }
+.eventbus-eyebrow { font-size: .68rem; font-weight: 600; letter-spacing: .12em; line-height: 1.6; text-transform: uppercase; color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-text-primary)); }
+.eventbus-registration-headline { display: flex; align-items: center; gap: 24px; margin: 22px 0 28px; }
+.eventbus-registration-headline > strong { font-family: var(--mo-font-family-mono); font-size: clamp(3rem, 5vw, 4.5rem); font-weight: 500; line-height: 1; letter-spacing: -.07em; color: var(--mud-palette-text-primary); }
+h2 { font-size: 1.1rem; font-weight: 600; line-height: 1.5; margin: 0; }
+p { font-size: .8rem; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); line-height: 1.7; margin: 7px 0 0; }
+.eventbus-registration-distribution { display: flex; gap: 4px; height: 6px; overflow: hidden; border-radius: 3px; background: var(--mud-palette-divider); }
+.eventbus-registration-distribution > span[data-state="Active"] { background: var(--mud-palette-success); }
+.eventbus-registration-distribution > span[data-state="Inactive"] { background: var(--mud-palette-text-secondary); }
+.eventbus-registration-distribution > span[data-state="Pending"] { background: var(--mud-palette-warning); }
+.eventbus-registration-distribution > span[data-state="Disposed"] { background: var(--mud-palette-error); }
+.eventbus-registration-states { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0 24px; }
+.eventbus-registration-states > div { --count-color: var(--mud-palette-text-secondary); display: grid; gap: 6px; }
+.eventbus-registration-states > div[data-state="Active"] { --count-color: var(--mud-palette-success); }
+.eventbus-registration-states > div[data-state="Pending"] { --count-color: var(--mud-palette-warning); }
+.eventbus-registration-states > div[data-state="Disposed"] { --count-color: var(--mud-palette-error); }
+.eventbus-registration-states span { font-size: .72rem; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); }
+.eventbus-registration-states strong { font-family: var(--mo-font-family-mono); font-size: 1.4rem; font-weight: 500; color: color-mix(in srgb, var(--count-color) 45%, var(--mud-palette-text-primary)); }
+.eventbus-registration-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-top: 1px solid color-mix(in srgb, var(--mud-palette-primary) 15%, var(--mud-palette-divider)); padding-top: 14px; }
+.eventbus-registration-footer > span { font-size: .73rem; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); }
+.eventbus-registration-footer ::deep .mud-button { text-transform: none; font-size: .78rem; padding: 6px 0; color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)); }
+.eventbus-runtime-summary { padding: 28px; border: 1px solid var(--mud-palette-divider); border-radius: var(--mud-default-borderradius); background: var(--mud-palette-surface); }
+.eventbus-runtime-summary h2 { margin-top: 16px; }
+.eventbus-runtime-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 22px 0; border-bottom: 1px solid var(--mud-palette-divider); }
+.eventbus-runtime-counts > div { display: flex; flex-direction: column; align-items: start; gap: 10px; }
+.eventbus-runtime-counts > div > span { font-size: .72rem; line-height: 1.7; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); }
+.eventbus-runtime-counts strong { font-family: var(--mo-font-family-mono); font-size: 1.6rem; font-weight: 500; }
+.eventbus-runtime-counts small { color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); font-size: .86rem; }
+.eventbus-runtime-note { margin: 14px 0; font-size: .74rem; }
+.eventbus-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding: 0 0 18px; }
+.eventbus-section-heading h2 { margin-top: 5px; }
+.eventbus-section-count { font-family: var(--mo-font-family-mono); font-size: .75rem; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); white-space: nowrap; }
+.eventbus-clipped-table { overflow: hidden; border: 1px solid var(--mud-palette-divider); border-radius: var(--mud-default-borderradius); background: var(--mud-palette-surface); min-width: 0; }
+.eventbus-clipped-table ::deep .mud-table, .eventbus-clipped-table ::deep .mud-table-container { border-radius: 0; background: transparent; }
+.eventbus-clipped-table ::deep th { padding: 14px 20px; font-size: .73rem; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); font-weight: 500; background: color-mix(in srgb, var(--mud-palette-background) 60%, var(--mud-palette-surface)); }
+.eventbus-clipped-table ::deep td { padding: 18px 20px; vertical-align: middle; font-size: .8rem; }
+.eventbus-clipped-table ::deep .mud-table-pagination { padding: 6px 12px; }
+code, time { font-family: var(--mo-font-family-mono); font-size: .74rem; line-height: 1.65; overflow-wrap: anywhere; }
+.eventbus-topic-name { display: block; max-width: 32rem; }
+.eventbus-muted { display: block; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); font-size: .72rem; margin-top: 4px; overflow-wrap: anywhere; }
+.eventbus-topic-error { font-size: .74rem; max-width: 32rem; overflow-wrap: anywhere; color: color-mix(in srgb, var(--mud-palette-error) 35%, var(--mud-palette-text-primary)); }
+.eventbus-empty { padding: 36px 24px; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); text-align: center; }
+.eventbus-route-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.eventbus-route-groups > section { min-width: 0; }
+.eventbus-route-groups ::deep .eventbus-group-link { justify-content: start; text-align: left; padding: 0; font-size: .82rem; text-transform: none; overflow-wrap: anywhere; line-height: 1.6; }
+@media (max-width: 1000px) { .eventbus-overview-lead { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 800px) { .eventbus-route-groups { grid-template-columns: minmax(0, 1fr); } }
+.eventbus-cell { min-width: 0; }
+.eventbus-route-groups .eventbus-clipped-table ::deep th:last-child, .eventbus-route-groups .eventbus-clipped-table ::deep td:last-child { width: 88px; white-space: nowrap; }
+@media (max-width: 600px) {
+    .eventbus-registration, .eventbus-runtime-summary { padding: 20px; }
+    .eventbus-registration-headline { gap: 16px; }
+    .eventbus-registration-states { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .eventbus-runtime-counts { gap: 10px; }
+    .eventbus-section-heading { align-items: start; }
+    .eventbus-clipped-table ::deep .mud-table-row { padding: 0; }
+    .eventbus-clipped-table ::deep .mud-table-cell { padding: 8px 16px; align-items: start; border-bottom: 0; }
+    .eventbus-clipped-table ::deep .mud-table-cell:first-child { padding-top: 20px; }
+    .eventbus-clipped-table ::deep .mud-table-cell:last-child { padding-bottom: 20px; }
+    .eventbus-clipped-table ::deep .mud-table-cell::before { color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); font-size: .7rem; }
+    .eventbus-topic-ledger ::deep .mud-table-cell { display: grid; grid-template-columns: minmax(80px, 34%) minmax(0, 1fr); gap: 12px; }
+    .eventbus-topic-ledger ::deep .mud-table-cell::before { display: block; width: auto; padding-right: 0; }
+    .eventbus-clipped-table ::deep .mud-table-cell.mud-table-empty-row { display: table-cell; padding: 0; }
+    .eventbus-clipped-table ::deep .mud-table-cell.mud-table-empty-row::before { display: none; }
+    .eventbus-clipped-table ::deep .mud-table-pagination { padding: 6px 16px; }
+    .eventbus-route-groups .eventbus-clipped-table ::deep td, .eventbus-route-groups .eventbus-clipped-table ::deep th { padding: 16px; }
+}

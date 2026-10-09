@@ -1,60 +1,29 @@
 {
   "Pages": {
     "EventBusMonitor": {
-      "Title": "Event Bus Monitor"
+      "Title": "Event bus circulation"
+    },
+    "EventBusProviders": {
+      "Title": "Event bus providers"
+    },
+    "EventBusSubscriptions": {
+      "Title": "Event bus subscriptions"
+    },
+    "EventBusChanges": {
+      "Title": "Event bus changes"
+    },
+    "EventBusTestTools": {
+      "Title": "Event bus test tools"
     }
   },
   "Page": {
-    "PageTitle": "Event Bus Monitor",
     "Header": {
-      "Title": "Event Bus Monitor",
-      "Eyebrow": "Monica / Event circulation",
-      "Description": "Observe subscriptions, providers, topology changes, and runtime test listeners across the host event bus.",
       "Refresh": "Refresh"
     },
-    "Summary": {
-      "AriaLabel": "Event bus runtime summary",
-      "Subscriptions": "Subscriptions",
-      "Active": "Active routes",
-      "Unhealthy": "Unhealthy",
-      "Providers": "Providers",
-      "RecentChanges": "Recent changes"
-    },
-    "Tabs": {
-      "Overview": "Overview",
-      "Providers": "Providers",
-      "Subscriptions": "Subscriptions",
-      "TestTools": "Test Tools"
-    },
-    "RecentChanges": {
-      "Title": "Recent Changes"
-    },
-    "States": {
-      "LoadingSubscriptions": "Loading subscriptions..."
-    },
     "Messages": {
-      "LoadSubscriptionsFailed": "Failed to load subscriptions: {0}",
-      "LoadStatisticsFailed": "Failed to load statistics: {0}",
-      "LoadProvidersFailed": "Failed to load providers: {0}",
-      "LoadDataFailed": "Failed to load data: {0}",
-      "RefreshSucceeded": "Data refreshed.",
-      "RefreshProvidersFailed": "Failed to refresh providers: {0}",
-      "RefreshProvidersSucceeded": "Provider list refreshed.",
-      "RealtimeUpdateFailed": "Real-time update failed: {0}",
-      "ActivateFailed": "Activation failed: {0}",
       "ActivateSucceeded": "Subscription activated.",
-      "DeactivateFailed": "Deactivation failed: {0}",
       "DeactivateSucceeded": "Subscription deactivated.",
-      "StopRuntimeListenerFailed": "Failed to stop test listener: {0}",
-      "UnsubscribeFailed": "Removal failed: {0}",
       "UnsubscribeSucceeded": "Subscription removed."
-    },
-    "DialogTitles": {
-      "SubscriptionDetail": "Subscription Details - {0}",
-      "SubscriptionTest": "Test Subscription - {0}",
-      "SubscriptionList": "Subscription List",
-      "EventTypeSubscriptions": "Event type: {0}",
-      "TopicSubscriptions": "Topic: {0}"
     }
   },
   "SubscriptionTable": {
@@ -62,37 +31,20 @@
       "EventType": "Event Type",
       "TopicName": "Topic",
       "Handler": "Handler",
-      "Scope": "Scope",
-      "State": "State",
-      "CreatedAt": "Created At",
       "Actions": "Actions"
     },
     "Labels": {
-      "Auto": "Auto",
-      "DeclaringType": "Declaring type",
-      "MethodName": "Method name",
-      "MethodSignature": "Method signature",
-      "StaticMethod": "Static method",
-      "InstanceMethod": "Instance method",
       "TestListening": "Test listener active",
-      "RunningFor": "Running for {0}",
       "RuntimeError": "Last error: {0} ({1})"
     },
-    "States": {
-      "Empty": "No subscriptions found."
-    }
+    "States": {}
   },
   "SubscriptionFilter": {
-    "Title": "Filters",
     "Clear": "Clear Filters",
     "Provider": "Provider",
-    "Status": "Status",
-    "RuntimeStatus": "Runtime status",
     "Scope": "Scope",
     "DiscoveryMode": "Discovery Mode",
     "Search": "Search",
-    "SearchPlaceholder": "Event type or topic name",
-    "Applied": "{0} filters applied",
     "Options": {
       "All": "All"
     }
@@ -105,22 +57,9 @@
       "Activate": "Activate subscription"
     }
   },
-  "Statistics": {
-    "Sections": {
-      "TopEventTypes": "Top Event Types",
-      "TopEventTypesDescription": "Routes with the broadest subscription reach.",
-      "TopTopics": "Top Topics",
-      "TopTopicsDescription": "Channels carrying the most registered handlers."
-    },
-    "States": {
-      "Empty": "No data.",
-      "Loading": "Loading statistics..."
-    }
-  },
   "SubscriptionDetail": {
     "Title": "Subscription Details",
     "Sections": {
-      "BasicInformation": "Basic Information",
       "HandlerInformation": "Handler Information",
       "Lifecycle": "Lifecycle",
       "Runtime": "Runtime Status",
@@ -128,30 +67,22 @@
     },
     "Fields": {
       "SubscriptionId": "Subscription ID",
-      "State": "State",
       "EventType": "Event Type",
       "TopicName": "Topic",
-      "Scope": "Scope",
       "ServiceKey": "Service Key",
       "HandlerType": "Handler Type",
       "DeclaringType": "Declaring Type",
       "MethodName": "Method Name",
       "MethodSignature": "Method Signature",
-      "HandlerFactory": "Handler Factory",
-      "DiscoveryMode": "Discovery Mode",
-      "Key": "Key",
-      "Value": "Value"
+      "HandlerFactory": "Handler Factory"
     },
     "Timeline": {
       "Created": "Created",
       "Activated": "Activated",
-      "Deactivated": "Deactivated",
-      "CurrentState": "Current State",
-      "ActiveRunning": "Active - running for {0}"
+      "Deactivated": "Deactivated"
     },
     "Runtime": {
       "NoData": "The provider has not reported runtime status for this topic yet.",
-      "State": "Runtime state",
       "StateSince": "In state since",
       "Provider": "Reporting provider",
       "ConsecutiveFailures": "Consecutive failures",
@@ -168,12 +99,6 @@
       "NotSelected": "No subscription selected."
     }
   },
-  "ChangesFeed": {
-    "DefaultTitle": "Recent Changes",
-    "Truncated": "Showing the latest {0} of {1} changes",
-    "Empty": "No change records.",
-    "Count": "{0} items"
-  },
   "Providers": {
     "Title": "Registered EventBus Providers",
     "Refresh": "Refresh",
@@ -182,9 +107,6 @@
       "Empty": "No registered EventBus providers were found."
     },
     "Card": {
-      "Subscriptions": "Subscriptions: {0}",
-      "Active": "Active: {0}",
-      "UnhealthyTopics": "Unhealthy topics: {0}",
       "ViewDetails": "View Details"
     },
     "Detail": {
@@ -207,8 +129,7 @@
         "NoDedicatedConfiguration": "This provider uses shared infrastructure and has no dedicated module configuration projection.",
         "AccessDenied": "You are not authorized to inspect this provider's configuration diagnostics.",
         "LoadFailed": "Configuration diagnostics are unavailable. The ModuleSystem diagnostics facade may not be registered for this host.",
-        "DefaultProfileFallback": "Service key '{0}' does not own a named option profile, so this view shows the provider module's shared default configuration.",
-        "Retry": "Retry"
+        "DefaultProfileFallback": "Service key '{0}' does not own a named option profile, so this view shows the provider module's shared default configuration."
       }
     },
     "Capabilities": {
@@ -221,7 +142,6 @@
     "Columns": {
       "EventType": "Event Type",
       "Topic": "Topic",
-      "State": "State",
       "DiscoveryMode": "Discovery Mode"
     }
   },
@@ -229,36 +149,17 @@
     "Publish": {
       "Title": "Publish Test Message",
       "TopicName": "Topic",
-      "TopicHelper": "Defaults to the event type full name",
       "MessageContent": "Message Content",
       "MessagePlaceholder": "Enter a test message...",
       "Sending": "Sending...",
       "Send": "Send Message"
     },
     "Subscribe": {
-      "Title": "Subscribe to Test Messages",
       "TopicName": "Topic",
-      "TopicHelper": "Defaults to the event type full name",
       "Start": "Start Listening",
       "Stop": "Stop Listening",
       "Clear": "Clear Messages",
-      "ListeningStatus": "Listening... Topic: {0} | Received: {1}",
-      "NotListening": "Not listening",
-      "NoMessages": "No received messages yet.",
-      "NoMessagesHint": "Messages appear here in real time and refresh every 500 ms."
-    },
-    "Messages": {
-      "MessageId": "Message ID: {0}",
-      "MessageContent": "Message content:",
-      "CreatedAt": "Created: {0}",
-      "ReceivedAt": "Received: {0}"
-    },
-    "Instructions": {
-      "Title": "Usage notes:",
-      "Publish": "1. Publish a message: enter a topic and message content, then click \"Send Message\".",
-      "Subscribe": "2. Subscribe to a topic: enter a topic, then click \"Start Listening\" to see messages below.",
-      "DefaultTopic": "3. The default topic is {0}.",
-      "MultiTab": "4. You can test publish and subscribe flows across multiple browser tabs."
+      "NoMessages": "No received messages yet."
     },
     "Validation": {
       "MessageRequired": "Message content is required.",
@@ -266,7 +167,6 @@
     },
     "Snackbars": {
       "PublishFailed": "Publish failed: {0}",
-      "PublishSucceeded": "Message published.",
       "SubscribeFailed": "Subscribe failed: {0}",
       "SubscribeSucceeded": "Subscribed and listening for messages.",
       "UnsubscribeFailed": "Unsubscribe failed: {0}",
@@ -296,8 +196,6 @@
     },
     "States": {
       "NotSelected": "No subscription selected.",
-      "Listening": "Listening, received {0}",
-      "NotListening": "Not listening",
       "NoMessages": "No received messages yet."
     },
     "Messages": {
@@ -305,7 +203,6 @@
       "JsonValidationFailed": "JSON validation failed.",
       "JsonValidationSucceeded": "JSON validation succeeded.",
       "PublishFailed": "Publish failed.",
-      "PublishSucceeded": "Test event published.",
       "StartListeningFailed": "Failed to start listening.",
       "StartListeningSucceeded": "Listening started.",
       "StopListeningFailed": "Failed to stop listening.",
@@ -465,5 +362,201 @@
       "HoursAgo": "{0}h ago",
       "DaysAgo": "{0}d ago"
     }
+  },
+  "Workbench": {
+    "Eyebrow": "Monica / Event circulation",
+    "Captured": "Latest capture",
+    "NoCapture": "Not captured",
+    "Navigation": "Event bus workflows",
+    "AutoRefresh": "Refresh every 3 seconds",
+    "Scope": "Current host · registration snapshots and reported topic evidence",
+    "ReadFailed": "Capture unavailable",
+    "UnavailableHelp": "No complete capture has succeeded. Counts are unavailable.",
+    "PreviousCaptureHelp": "The previous successful capture remains visible; it may be out of date.",
+    "Loading": "Capturing registrations, providers, and reported topics…",
+    "OperationFailed": "The operation could not be completed. Refresh and try again.",
+    "Overview": "Overview",
+    "Providers": "Providers",
+    "Subscriptions": "Subscriptions",
+    "Changes": "Changes",
+    "TestTools": "Test tools",
+    "OverviewDescription": "Understand handler registrations and inspect the transport evidence behind delivery concerns.",
+    "ProvidersDescription": "Compare actual bus registrations, declared capabilities, and exact service-key ownership.",
+    "SubscriptionsDescription": "Find a handler, inspect its routing evidence, and manage its registration lifecycle.",
+    "ChangesDescription": "Review registry notifications observed by this circuit, with the evidence recorded at each change.",
+    "TestToolsDescription": "Publish diagnostic messages and inspect real receipt through temporary listeners.",
+    "EmptyKey": "Empty key (\"\")",
+    "WhitespaceKey": "Whitespace key ({0} characters)",
+    "RetainedListeners": "Retained row listeners",
+    "RetainedListenersHelp": "These listeners belong to this circuit and continue after their test dialogs close. Reopen a test or stop the listener here.",
+    "RemovedListenerSource": "Source registration no longer present"
+  },
+  "Registry": {
+    "EventRoute": "Event / topic",
+    "ProviderScope": "Provider / scope",
+    "Registration": "Registration",
+    "ReportedRuntime": "Reported runtime",
+    "Inspect": "Inspect {0}",
+    "LocalRuntime": "Local · no transport report",
+    "NotReported": "Not reported",
+    "SearchPlaceholder": "Search event types, handlers, topics, or subscription IDs",
+    "ExactKey": "Match exact service key",
+    "EmptyKeyPlaceholder": "Empty value matches the empty key",
+    "AllRegistrations": "All registrations",
+    "Title": "Registered handlers",
+    "Shown": "Showing {0} of {1} registrations",
+    "RuntimeHelp": "Registration and reported topic state are independent. Local handlers have no external transport report; missing distributed evidence does not prove health.",
+    "ExactRoute": "Exact route selection",
+    "ProviderMissing": "The selected provider is not present in this capture. No registrations are shown for this selection.",
+    "RemoveTitle": "Remove this subscription?",
+    "RemoveHelp": "This removes the exact registration below. Activating it again requires a new subscription.",
+    "RemoveListenerHelp": "Any diagnostic row listener owned by this circuit for this registration will be stopped first.",
+    "Cancel": "Cancel",
+    "ConfirmRemove": "Remove subscription",
+    "MissingProviderSelection": "Selected provider is no longer present",
+    "NoMatches": "No registrations match these filters.",
+    "EmptyHost": "No visible handler registrations are present in this host."
+  },
+  "Inspector": {
+    "FrozenCapture": "Frozen evidence · captured",
+    "CounterScope": "Cumulative counts reported by this provider for this topic; they do not measure end-to-end business success or a rate.",
+    "NoTimestamp": "Not recorded",
+    "RetainedError": "This is retained error evidence. It may remain after the reported topic has recovered.",
+    "RetainedErrors": "Latest {0} retained errors reported by the provider.",
+    "Routing": "Routing & lifecycle",
+    "RegistrationHelp": "Registry membership is independent of transport delivery.",
+    "LocalHelp": "This is a local handler. External topic status is not applicable.",
+    "NoMetadata": "No metadata was recorded for this registration."
+  },
+  "Overview": {
+    "RegistrationKicker": "Host registration map",
+    "RegisteredHandlers": "Registered handlers",
+    "RegistrationHelp": "Every visible registration in this host, across local and distributed buses.",
+    "DiscoveryCounts": "{0} discovered · {1} registered manually",
+    "ExploreRegistry": "Explore subscriptions",
+    "RuntimeKicker": "Provider-reported evidence",
+    "ReportedTopics": "{0} reported topics",
+    "RuntimeHelp": "Transport reports have their own scope. An active handler is not proof of successful delivery.",
+    "ReportedProblems": "Reported problems",
+    "ReportedCoverage": "Distributed handlers with a report",
+    "LocalHandlers": "Local handlers",
+    "CoverageHelp": "Coverage counts matched distributed handlers. Topic reports may exist without a visible handler; local handlers are outside this coverage.",
+    "ExploreProviders": "Inspect {0} providers",
+    "TransportEvidence": "Delivery evidence",
+    "TopicLedger": "Reported topic states",
+    "TopicLedgerHelp": "Current snapshots from the host status store, including topics without a matching visible handler.",
+    "TopicCount": "{0} topics",
+    "MatchedHandlers": "Matched handlers",
+    "StateChanged": "State changed",
+    "InspectTopic": "Inspect topic {0}",
+    "TopicInspector": "Topic runtime evidence",
+    "NoReportedTopics": "No topic reports are available. This does not establish transport health.",
+    "RegistrationMap": "Registration distribution",
+    "EventTypes": "Event types",
+    "EventTypesHelp": "All registered event types, ordered by handler count.",
+    "Topics": "Registered topics",
+    "TopicsHelp": "All registered topics across scopes and exact service keys.",
+    "Handlers": "Handlers",
+    "NoRegistrations": "No visible handler registrations are present."
+  },
+  "ProviderDirectory": {
+    "Eyebrow": "Transport directory",
+    "Scope": "Compare registered transports, their declared capabilities, and subscriptions in this host.",
+    "Search": "Search keys, implementations, or bus modes",
+    "Shown": "Showing {0} of {1} providers",
+    "Loading": "Capturing provider registrations…",
+    "EmptyHelp": "No EventBus provider registrations were discovered in this host.",
+    "NoMatches": "No matching providers",
+    "ClearSearch": "Clear search",
+    "Keyed": "Named provider registrations",
+    "Default": "Default provider registrations",
+    "Registrations": "Registrations",
+    "Active": "Active registrations",
+    "ReportedProblems": "Reported topic problems",
+    "Inspect": "Inspect {0} · {1}",
+    "CountsHelp": "Active registrations describe registry membership, not successful delivery. Topic problems count reported Recovering or Failed distributed topics for the exact service key; they may include topics without a matching registry row."
+  },
+  "ProviderInspector": {
+    "Title": "Provider details",
+    "Captured": "Captured (UTC)",
+    "Scope": "This inspector freezes the selected provider and its subscription rows when opened. Capabilities describe the provider contract; they are not a live transport availability check.",
+    "CapabilitiesHelp": "These capabilities are declared by the provider. No publish or connection test is performed here.",
+    "LoadingOptions": "Checking access and loading redacted configuration…",
+    "SubscriptionScope": "{0} captured rows belong to this exact service key and bus scope. Registration and reported topic runtime are independent states.",
+    "Registration": "Registration",
+    "Runtime": "Topic runtime",
+    "NotApplicable": "Not applicable to local bus",
+    "NotReported": "Not reported",
+    "NotSelected": "No provider selected.",
+    "ReloadOptions": "Reload configuration"
+  },
+  "TestBench": {
+    "Eyebrow": "Default distributed provider",
+    "Title": "Test a distributed event",
+    "Scope": "Publish and receive TestEventMessage on the default distributed bus.",
+    "EventContract": "Event contract",
+    "PublishHelp": "Choose a topic and send a real message through this provider.",
+    "AcceptanceHelp": "A successful publish confirms provider acceptance. Check the receiver to see whether this listener received the message.",
+    "Accepted": "Publish accepted by the provider.",
+    "ReceiveTitle": "Listen and inspect receipts",
+    "ReceiveHelp": "Listen on the same topic before publishing to observe receipts.",
+    "Listening": "Listening",
+    "Stopped": "Stopped",
+    "Retained": "Retained receipts · {0}",
+    "Retention": "Latest 100, in memory",
+    "EmptyHelp": "Start the listener, then publish to its topic. Provider acceptance alone does not prove receipt.",
+    "Received": "Received (local)",
+    "MessageId": "Message ID",
+    "CreatedUtc": "Created (UTC)",
+    "ListenerLifetime": "This page owns its listener and attempts to stop it when you leave. If removal fails, the next visit recovers the same listener so you can retry Stop. Recent receipts remain in this browser circuit until cleared or the circuit ends.",
+    "PreparingListener": "Preparing listener…",
+    "ListenerUnavailable": "Listener unavailable"
+  },
+  "RuntimeTest": {
+    "Target": "Captured test target",
+    "Fanout": "This publishes a real event to the selected row's exact topic, service key, and bus scope. Every matching handler can receive it; it does not invoke only this handler.",
+    "Compose": "Compose a typed event",
+    "ValidationHelp": "Validation checks JSON deserialization against the registered event type.",
+    "AcceptanceHelp": "Publish acceptance and listener receipt are different evidence. A successful publish does not confirm any handler completed.",
+    "Receive": "Capture matching events",
+    "ReceiveHelp": "An additional test listener receives events for this exact target.",
+    "Started": "Started at {0} (local)",
+    "EmptyHelp": "Start listening before publishing. Only payloads actually received by this listener appear here.",
+    "ListenerLifetime": "This listener belongs to the browser circuit and keeps running after this dialog closes. Stop it explicitly here or in the registry. Only a bounded set of recent payloads is retained in memory."
+  },
+  "ChangeLedger": {
+    "Eyebrow": "Session observations",
+    "Title": "Subscription changes",
+    "Scope": "The latest {0} accepted subscription changes observed in this browser circuit, retained in memory. This is not durable host history.",
+    "Observed": "Observed changes",
+    "Retained": "Retained entries",
+    "FeedLossTitle": "Observation feed has gaps",
+    "FeedLoss": "The live feed reported {0} lost notifications. These are separate from entries that aged out of the retained window and cannot be reconstructed here.",
+    "WindowTruncated": "{0} earlier observed entries are outside the latest {1}-entry window. This is window retention, not feed loss.",
+    "Search": "Search event types, topics, service keys, or subscription IDs",
+    "ChangeType": "Change type",
+    "AllChanges": "All changes",
+    "ClearFilters": "Clear filters",
+    "FilterScope": "Filter counts describe the retained window. Newest observations first.",
+    "Shown": "Showing {0} of {1} retained entries",
+    "RecordedChange": "Recorded change · UTC",
+    "Subscription": "Event and subscription",
+    "Route": "Topic and provider scope",
+    "Registration": "Recorded registration",
+    "Runtime": "Recorded topic runtime",
+    "Evidence": "Evidence",
+    "SubscriptionId": "Subscription ID",
+    "ServiceKey": "Service key",
+    "LocalRuntime": "Not applicable to local bus",
+    "NotReported": "Not reported at observation",
+    "InspectEvidence": "Inspect recorded evidence",
+    "Inspect": "Inspect subscription {0}, {1}, recorded at {2}",
+    "Empty": "No changes observed yet",
+    "EmptyHelp": "Observation starts when an EventBus workbench mounts. Existing registrations do not create past entries, and activity while no workbench is mounted is not captured.",
+    "NoMatches": "No matching observations",
+    "NoMatchesHelp": "Try another search or change type. Filters apply only to entries in this retained session window.",
+    "RowsPerPage": "Entries per page",
+    "PageInfo": "{first_item}–{last_item} of {all_items}",
+    "EvidenceHelp": "Registration and reported topic runtime are independent states recorded with each observation. Inspect opens that frozen evidence, including removed subscriptions; it does not look up the current registry row."
   }
 }

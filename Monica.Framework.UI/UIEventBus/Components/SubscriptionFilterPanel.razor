@@ -1,256 +1,91 @@
 @using Monica.Framework.UI.UIEventBus.Models
 @using Monica.EventBus.Models
+@using Monica.Framework.UI.UIEventBus.Support
 @inject IStringLocalizer<EventBusResource> L
 
-<MudPaper Class="pa-4 mb-4" Elevation="2">
-    <MudStack Spacing="3">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Primary" />
-                <MudText Typo="Typo.h6">@L["SubscriptionFilter:Title"]</MudText>
-            </MudStack>
-            @if (Filter?.HasAnyFilter == true)
+<div class="subscription-filters">
+    <div class="subscription-filter-search">
+        <MudTextField T="string" Value="@Filter?.SearchText" ValueChanged="SearchChanged" Immediate="true"
+            Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="@L["Registry:SearchPlaceholder"]"
+            aria-label="@L["SubscriptionFilter:Search"]" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+        <MudSelect T="string" Value="@(SelectedProviderId ?? Filter?.SelectedProvider?.UniqueId ?? All)" ValueChanged="ProviderChanged"
+            Variant="Variant.Outlined" Margin="Margin.Dense" Label="@L["SubscriptionFilter:Provider"]">
+            <MudSelectItem T="string" Value="@All">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
+            @if (SelectedProviderId != null && !Providers.Any(provider => provider.UniqueId == SelectedProviderId)) { <MudSelectItem T="string" Value="@SelectedProviderId">@L["Registry:MissingProviderSelection"]</MudSelectItem> }
+            @foreach (var provider in Providers)
             {
-                <MudButton StartIcon="@Icons.Material.Filled.Clear"
-                          Color="Color.Secondary"
-                          Variant="Variant.Text"
-                          Size="Size.Small"
-                          OnClick="ClearFilter">
-                    @L["SubscriptionFilter:Clear"]
-                </MudButton>
+                <MudSelectItem T="string" Value="@provider.UniqueId">@EventBusPresentation.KeyText(provider.ServiceKey, L) · @L.GetProviderKindText(provider.ProviderType) · @L.GetProviderModeText(provider.IsDistributed)</MudSelectItem>
             }
-        </MudStack>
-
-        <MudGrid Spacing="2">
-            <!-- Provider selector -->
-            @if (Providers.Any())
+        </MudSelect>
+    </div>
+    <div class="subscription-filter-details">
+        <MudSelect T="string" Value="@(Filter?.TopicRuntimeState?.ToString() ?? All)" ValueChanged="RuntimeChanged"
+            Variant="Variant.Outlined" Margin="Margin.Dense" Label="@L["Registry:ReportedRuntime"]">
+            <MudSelectItem T="string" Value="@All">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
+            @foreach (var runtime in Enum.GetValues<TopicSubscriptionRuntimeState>())
             {
-                <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="string"
-                               Label="@L["SubscriptionFilter:Provider"]"
-                               @bind-Value="SelectedProviderId"
-                               OpenChanged="ApplyFilterOnSelectClosedAsync">
-                        <MudSelectItem T="string" Value="@AllSelectionValue">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
-                        @foreach (var provider in Providers)
-                        {
-                            <MudSelectItem T="string" Value="@provider.UniqueId">
-                                @L.GetProviderDisplayName(provider) (@L.GetProviderKindText(provider.ProviderType), @L.GetProviderModeText(provider.IsDistributed))
-                            </MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
+                <MudSelectItem T="string" Value="@runtime.ToString()">@L.GetTopicRuntimeStateText(runtime)</MudSelectItem>
             }
-
-            <!-- Status filtering -->
-            <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
-                <MudSelect T="string"
-                          Label="@L["SubscriptionFilter:Status"]"
-                          @bind-Value="SelectedState"
-                          OpenChanged="ApplyFilterOnSelectClosedAsync">
-                    <MudSelectItem T="string" Value="@AllSelectionValue">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Active)">@L.GetSubscriptionStateText(EventSubscriptionState.Active)</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Pending)">@L.GetSubscriptionStateText(EventSubscriptionState.Pending)</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Inactive)">@L.GetSubscriptionStateText(EventSubscriptionState.Inactive)</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Disposed)">@L.GetSubscriptionStateText(EventSubscriptionState.Disposed)</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-
-            <!-- Runtime status filtering -->
-            <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
-                <MudSelect T="string"
-                          Label="@L["SubscriptionFilter:RuntimeStatus"]"
-                          @bind-Value="SelectedTopicRuntimeState"
-                          OpenChanged="ApplyFilterOnSelectClosedAsync">
-                    <MudSelectItem T="string" Value="@AllSelectionValue">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(TopicSubscriptionRuntimeState.Subscribing)">@L.GetTopicRuntimeStateText(TopicSubscriptionRuntimeState.Subscribing)</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(TopicSubscriptionRuntimeState.Healthy)">@L.GetTopicRuntimeStateText(TopicSubscriptionRuntimeState.Healthy)</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(TopicSubscriptionRuntimeState.Recovering)">@L.GetTopicRuntimeStateText(TopicSubscriptionRuntimeState.Recovering)</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(TopicSubscriptionRuntimeState.Failed)">@L.GetTopicRuntimeStateText(TopicSubscriptionRuntimeState.Failed)</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(TopicSubscriptionRuntimeState.Stopped)">@L.GetTopicRuntimeStateText(TopicSubscriptionRuntimeState.Stopped)</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-
-            <!-- Range filtering -->
-            <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
-                <MudSelect T="string"
-                          Label="@L["SubscriptionFilter:Scope"]"
-                          @bind-Value="SelectedScope"
-                          OpenChanged="ApplyFilterOnSelectClosedAsync">
-                    <MudSelectItem T="string" Value="@AllSelectionValue">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionScope.Local)">@L.GetSubscriptionScopeText(EventSubscriptionScope.Local)</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionScope.Distributed)">@L.GetSubscriptionScopeText(EventSubscriptionScope.Distributed)</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-
-            <!-- Automatic discovery filtering -->
-            <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
-                <MudSelect T="string"
-                          Label="@L["SubscriptionFilter:DiscoveryMode"]"
-                          @bind-Value="SelectedDiscoveryMode"
-                          OpenChanged="ApplyFilterOnSelectClosedAsync">
-                    <MudSelectItem T="string" Value="@AllSelectionValue">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
-                    <MudSelectItem T="string" Value="@AutoDiscoveredSelectionValue">@L.GetDiscoveryModeText(true)</MudSelectItem>
-                    <MudSelectItem T="string" Value="@ManualSelectionValue">@L.GetDiscoveryModeText(false)</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-
-            <!-- Search text -->
-            <MudItem xs="12" sm="6" md="3">
-                <MudTextField T="string"
-                             Label="@L["SubscriptionFilter:Search"]"
-                             @bind-Value="Filter!.SearchText"
-                             Placeholder="@L["SubscriptionFilter:SearchPlaceholder"]"
-                             Clearable="true"
-                             Immediate="false"
-                             OnDebounceIntervalElapsed="ApplyFilterAsync"
-                             DebounceInterval="500"
-                             Adornment="Adornment.Start"
-                             AdornmentIcon="@Icons.Material.Filled.Search" />
-            </MudItem>
-        </MudGrid>
-
+        </MudSelect>
+        <MudSelect T="string" Value="@(Filter?.Scope?.ToString() ?? All)" ValueChanged="ScopeChanged"
+            Variant="Variant.Outlined" Margin="Margin.Dense" Label="@L["SubscriptionFilter:Scope"]">
+            <MudSelectItem T="string" Value="@All">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
+            @foreach (var scope in Enum.GetValues<EventSubscriptionScope>())
+            {
+                <MudSelectItem T="string" Value="@scope.ToString()">@L.GetSubscriptionScopeText(scope)</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="string" Value="@(Filter?.IsAutoDiscovered?.ToString() ?? All)" ValueChanged="DiscoveryChanged"
+            Variant="Variant.Outlined" Margin="Margin.Dense" Label="@L["SubscriptionFilter:DiscoveryMode"]">
+            <MudSelectItem T="string" Value="@All">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
+            <MudSelectItem T="string" Value="@bool.TrueString">@L.GetDiscoveryModeText(true)</MudSelectItem>
+            <MudSelectItem T="string" Value="@bool.FalseString">@L.GetDiscoveryModeText(false)</MudSelectItem>
+        </MudSelect>
+        <div class="subscription-exact-key">
+            <MudCheckBox T="bool" Value="@(Filter?.ServiceKey != null)" ValueChanged="ExactKeyChanged" Dense="true" Label="@L["Registry:ExactKey"]" />
+            @if (Filter?.ServiceKey != null)
+            {
+                <MudTextField T="string" Value="@Filter.ServiceKey" ValueChanged="KeyChanged" Immediate="true" Margin="Margin.Dense" Variant="Variant.Outlined"
+                    aria-label="@L["Registry:ExactKey"]" Placeholder="@L["Registry:EmptyKeyPlaceholder"]" />
+            }
+        </div>
+    </div>
+    <div class="subscription-filter-footer">
+        <div class="subscription-state-filters" role="group" aria-label="@L["Registry:Registration"]">
+            <span class="subscription-state-filter" data-tone="Primary" data-selected="@(Filter?.State == null ? "true" : "false")">
+                <MudButton OnClick="() => StateChanged(null)" aria-pressed="@(Filter?.State == null ? "true" : "false")">@L["Registry:AllRegistrations"] <span class="state-count">@Subscriptions.Count</span></MudButton>
+            </span>
+            @foreach (var state in Enum.GetValues<EventSubscriptionState>())
+            {
+                var tone = state switch { EventSubscriptionState.Active => Color.Success, EventSubscriptionState.Pending => Color.Warning, EventSubscriptionState.Disposed => Color.Error, _ => Color.Default };
+                <span class="subscription-state-filter" data-tone="@tone" data-selected="@(Filter?.State == state ? "true" : "false")">
+                    <MudButton OnClick="() => StateChanged(state)" aria-pressed="@(Filter?.State == state ? "true" : "false")">@L.GetSubscriptionStateText(state) <span class="state-count">@Subscriptions.Count(row => row.State == state)</span></MudButton>
+                </span>
+            }
+        </div>
         @if (Filter?.HasAnyFilter == true)
         {
-            <MudChip T="string"
-                    Color="Color.Info"
-                    Size="Size.Small"
-                    Icon="@Icons.Material.Filled.Info">
-                @L["SubscriptionFilter:Applied", GetFilterCount()]
-            </MudChip>
+            <MudButton Size="Size.Small" OnClick="ClearFilter" StartIcon="@Icons.Material.Outlined.FilterAltOff">@L["SubscriptionFilter:Clear"]</MudButton>
         }
-    </MudStack>
-</MudPaper>
+    </div>
+</div>
 
 @code {
-    private const string AllSelectionValue = "__all__";
-    private const string AutoDiscoveredSelectionValue = "__auto__";
-    private const string ManualSelectionValue = "__manual__";
-
-    [Parameter]
-    public SubscriptionFilter? Filter { get; set; }
-
-    [Parameter]
-    public EventCallback OnFilterChanged { get; set; }
-
-    [Parameter]
-    public List<EventBusProviderInfo> Providers { get; set; } = [];
-
-    private string SelectedProviderId
-    {
-        get => Filter?.SelectedProvider?.UniqueId ?? AllSelectionValue;
-        set
-        {
-            if (Filter is null)
-            {
-                return;
-            }
-
-            Filter.SelectedProvider = value == AllSelectionValue
-                ? null
-                : Providers.FirstOrDefault(provider => provider.UniqueId == value);
-        }
-    }
-
-    private string SelectedState
-    {
-        get => Filter?.State?.ToString() ?? AllSelectionValue;
-        set
-        {
-            if (Filter is null)
-            {
-                return;
-            }
-
-            Filter.State = Enum.TryParse<EventSubscriptionState>(value, out var state)
-                ? state
-                : null;
-        }
-    }
-
-    private string SelectedTopicRuntimeState
-    {
-        get => Filter?.TopicRuntimeState?.ToString() ?? AllSelectionValue;
-        set
-        {
-            if (Filter is null)
-            {
-                return;
-            }
-
-            Filter.TopicRuntimeState = Enum.TryParse<TopicSubscriptionRuntimeState>(value, out var runtimeState)
-                ? runtimeState
-                : null;
-        }
-    }
-
-    private string SelectedScope
-    {
-        get => Filter?.Scope?.ToString() ?? AllSelectionValue;
-        set
-        {
-            if (Filter is null)
-            {
-                return;
-            }
-
-            Filter.Scope = Enum.TryParse<EventSubscriptionScope>(value, out var scope)
-                ? scope
-                : null;
-        }
-    }
-
-    private string SelectedDiscoveryMode
-    {
-        get => Filter?.IsAutoDiscovered switch
-        {
-            true => AutoDiscoveredSelectionValue,
-            false => ManualSelectionValue,
-            _ => AllSelectionValue
-        };
-        set
-        {
-            if (Filter is null)
-            {
-                return;
-            }
-
-            Filter.IsAutoDiscovered = value switch
-            {
-                AutoDiscoveredSelectionValue => true,
-                ManualSelectionValue => false,
-                _ => null
-            };
-        }
-    }
-
-    private async Task ApplyFilterAsync()
-    {
-        await OnFilterChanged.InvokeAsync();
-    }
-
-    private Task ApplyFilterOnSelectClosedAsync(bool isOpen)
-    {
-        return isOpen ? Task.CompletedTask : ApplyFilterAsync();
-    }
-
-    private async Task ClearFilter()
-    {
-        Filter?.Clear();
-        await ApplyFilterAsync();
-    }
-
-    private int GetFilterCount()
-    {
-        if (Filter == null) return 0;
-
-        int count = 0;
-        if (Filter.State.HasValue) count++;
-        if (Filter.TopicRuntimeState.HasValue) count++;
-        if (Filter.Scope.HasValue) count++;
-        if (Filter.IsAutoDiscovered.HasValue) count++;
-        if (!string.IsNullOrWhiteSpace(Filter.SearchText)) count++;
-        if (Filter.SelectedProvider != null) count++;
-
-        return count;
-    }
+    private const string All = "__all__";
+    [Parameter] public SubscriptionFilter? Filter { get; set; }
+    [Parameter] public EventCallback OnFilterChanged { get; set; }
+    [Parameter] public string? SelectedProviderId { get; set; }
+    [Parameter] public EventCallback<string?> OnProviderSelectionChanged { get; set; }
+    [Parameter] public List<EventBusProviderInfo> Providers { get; set; } = [];
+    [Parameter] public IReadOnlyList<SubscriptionViewModel> Subscriptions { get; set; } = [];
+    private Task SearchChanged(string? value) { if (Filter != null) Filter.SearchText = value; return Notify(); }
+    private async Task ProviderChanged(string value) { if (Filter != null) Filter.SelectedProvider = Providers.FirstOrDefault(provider => provider.UniqueId == value); await OnProviderSelectionChanged.InvokeAsync(value == All ? null : value); await Notify(); }
+    private Task RuntimeChanged(string value) { if (Filter != null) Filter.TopicRuntimeState = Enum.TryParse<TopicSubscriptionRuntimeState>(value, out var result) ? result : null; return Notify(); }
+    private Task ScopeChanged(string value) { if (Filter != null) Filter.Scope = Enum.TryParse<EventSubscriptionScope>(value, out var result) ? result : null; return Notify(); }
+    private Task DiscoveryChanged(string value) { if (Filter != null) Filter.IsAutoDiscovered = bool.TryParse(value, out var result) ? result : null; return Notify(); }
+    private Task StateChanged(EventSubscriptionState? value) { if (Filter != null) Filter.State = value; return Notify(); }
+    private Task ExactKeyChanged(bool value) { if (Filter != null) Filter.ServiceKey = value ? "" : null; return Notify(); }
+    private Task KeyChanged(string? value) { if (Filter != null) Filter.ServiceKey = value ?? ""; return Notify(); }
+    private async Task ClearFilter() { Filter?.Clear(); await OnProviderSelectionChanged.InvokeAsync(null); await Notify(); }
+    private Task Notify() => OnFilterChanged.InvokeAsync();
 }

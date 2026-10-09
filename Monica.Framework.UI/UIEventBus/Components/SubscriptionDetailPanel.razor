@@ -1,392 +1,75 @@
 @using Monica.Framework.UI.UIEventBus.Models
+@using Monica.Framework.UI.UIEventBus.Support
 @using Monica.EventBus.Models
 @inject IStringLocalizer<EventBusResource> L
 
-@if (Subscription != null)
+@if (Subscription is { } row)
 {
-    <div class="subscription-detail-wrapper">
-        <MudGrid Spacing="3">
-            <!-- Basic information -->
-            <MudItem xs="12">
-                <MudCard Elevation="2">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Primary" />
-                                <MudText Typo="Typo.h6">@L["SubscriptionDetail:Sections:BasicInformation"]</MudText>
-                            </MudStack>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        <MudGrid Spacing="2">
-                            <MudItem xs="12" sm="6">
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:SubscriptionId"]</MudText>
-                                    <MudText Typo="Typo.body2" Class="subscription-detail__technical">@Subscription.SubscriptionId</MudText>
-                                </MudStack>
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:State"]</MudText>
-                                    <MudChip T="string" Color="@Subscription.StateColor" Size="Size.Small">
-                                        @L.GetSubscriptionStateText(Subscription.State)
-                                    </MudChip>
-                                </MudStack>
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:EventType"]</MudText>
-                                    <MudText Typo="Typo.body2" Class="subscription-detail__technical">@Subscription.EventType</MudText>
-                                </MudStack>
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:TopicName"]</MudText>
-                                    <MudText Typo="Typo.body2">@Subscription.TopicName</MudText>
-                                </MudStack>
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:Scope"]</MudText>
-                                    <MudChip T="string" Color="@Subscription.ScopeColor" Size="Size.Small">
-                                        @L.GetSubscriptionScopeText(Subscription.Scope)
-                                    </MudChip>
-                                </MudStack>
-                            </MudItem>
-                            @if (!string.IsNullOrEmpty(Subscription.ServiceKey))
-                            {
-                                <MudItem xs="12">
-                                    <MudStack Spacing="1">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:ServiceKey"]</MudText>
-                                        <MudText Typo="Typo.body2">@Subscription.ServiceKey</MudText>
-                                    </MudStack>
-                                </MudItem>
-                            }
-                        </MudGrid>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-
-            <!-- Runtime status (distributed providers only) -->
-            @if (Subscription.Scope == EventBus.Models.EventSubscriptionScope.Distributed)
-            {
-                <MudItem xs="12">
-                    <MudCard Elevation="2">
-                        <MudCardHeader>
-                            <CardHeaderContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Color="Color.Tertiary" />
-                                    <MudText Typo="Typo.h6">@L["SubscriptionDetail:Sections:Runtime"]</MudText>
-                                </MudStack>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent>
-                            @if (Subscription.TopicStatus is { } status)
-                            {
-                                <MudGrid Spacing="2">
-                                    <MudItem xs="12" sm="6" md="3">
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:State"]</MudText>
-                                            <MudChip T="string" Color="@SubscriptionViewModel.GetRuntimeStateColor(status.State)" Size="Size.Small">
-                                                @L.GetTopicRuntimeStateText(status.State)
-                                            </MudChip>
-                                        </MudStack>
-                                    </MudItem>
-                                    <MudItem xs="12" sm="6" md="3">
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:StateSince"]</MudText>
-                                            <MudText Typo="Typo.body2">@L.FormatEventBusRelativeTime(status.StateChangedAt)</MudText>
-                                        </MudStack>
-                                    </MudItem>
-                                    <MudItem xs="12" sm="6" md="3">
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:Provider"]</MudText>
-                                            <MudText Typo="Typo.body2">@L.GetProviderKindText(status.Provider)</MudText>
-                                        </MudStack>
-                                    </MudItem>
-                                    <MudItem xs="12" sm="6" md="3">
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:ConsecutiveFailures"]</MudText>
-                                            <MudText Typo="Typo.body2">@status.ConsecutiveFailures</MudText>
-                                        </MudStack>
-                                    </MudItem>
-                                    <MudItem xs="12" sm="6" md="3">
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:RecoveryCount"]</MudText>
-                                            <MudText Typo="Typo.body2">@status.RecoveryCount</MudText>
-                                        </MudStack>
-                                    </MudItem>
-                                    <MudItem xs="12" sm="6" md="3">
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:MessageErrorCount"]</MudText>
-                                            <MudText Typo="Typo.body2">@status.MessageErrorCount</MudText>
-                                        </MudStack>
-                                    </MudItem>
-                                    <MudItem xs="12" sm="6" md="3">
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:ProcessedMessages"]</MudText>
-                                            <MudText Typo="Typo.body2">@status.ProcessedMessages</MudText>
-                                        </MudStack>
-                                    </MudItem>
-                                    <MudItem xs="12" sm="6" md="3">
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:LastMessageAt"]</MudText>
-                                            <MudText Typo="Typo.body2">@(status.LastMessageReceivedAt.HasValue ? L.FormatEventBusRelativeTime(status.LastMessageReceivedAt.Value) : "-")</MudText>
-                                        </MudStack>
-                                    </MudItem>
-                                    <MudItem xs="12" sm="6" md="3">
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:LastErrorAt"]</MudText>
-                                            <MudText Typo="Typo.body2">@(status.LastErrorAt.HasValue ? L.FormatEventBusRelativeTime(status.LastErrorAt.Value) : "-")</MudText>
-                                        </MudStack>
-                                    </MudItem>
-
-                                    @if (!string.IsNullOrEmpty(status.LastErrorMessage))
-                                    {
-                                        <MudItem xs="12">
-                                            <MudStack Spacing="1">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:LastError"]</MudText>
-                                                <MudText Typo="Typo.body2">@status.LastErrorMessage</MudText>
-                                                @if (!string.IsNullOrEmpty(status.LastErrorException))
-                                                {
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:ExceptionDetails"]</MudText>
-                                                    <pre class="subscription-detail__technical subscription-detail__error-text">@status.LastErrorException</pre>
-                                                }
-                                            </MudStack>
-                                        </MudItem>
-                                    }
-
-                                    @if (status.RecentErrors.Count > 0)
-                                    {
-                                        <MudItem xs="12">
-                                            <MudStack Spacing="1">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:RecentErrors"]</MudText>
-                                                <MudList T="string" Dense="true">
-                                                    @foreach (var error in status.RecentErrors.Reverse())
-                                                    {
-                                                        <MudListItem T="string">
-                                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                                <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Color="Color.Error" />
-                                                                <MudText Typo="Typo.body2" Class="subscription-detail__technical">@error.Message</MudText>
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L.FormatEventBusRelativeTime(error.OccurredAt)</MudText>
-                                                            </MudStack>
-                                                        </MudListItem>
-                                                    }
-                                                </MudList>
-                                            </MudStack>
-                                        </MudItem>
-                                    }
-                                </MudGrid>
-                            }
-                            else
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:NoData"]</MudText>
-                            }
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-            }
-
-            <!-- Processor information -->
-            <MudItem xs="12">
-                <MudCard Elevation="2">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Secondary" />
-                                <MudText Typo="Typo.h6">@L["SubscriptionDetail:Sections:HandlerInformation"]</MudText>
-                            </MudStack>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        <MudGrid Spacing="2">
-                            <MudItem xs="12">
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:HandlerType"]</MudText>
-                                    @if (Subscription.IsActionHandler)
-                                    {
-                                        <MudStack Spacing="2">
-                                            <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Functions">
-                                                @L["Shared:Labels:ActionHandler"]
-                                            </MudChip>
-
-                                            @if (!string.IsNullOrEmpty(Subscription.ActionDeclaringType))
-                                            {
-                                                <MudStack Spacing="1">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:DeclaringType"]</MudText>
-                                                    <MudText Typo="Typo.body2" Class="subscription-detail__technical">
-                                                        @Subscription.ActionDeclaringType
-                                                    </MudText>
-                                                </MudStack>
-                                            }
-
-                                            @if (!string.IsNullOrEmpty(Subscription.ActionMethodName))
-                                            {
-                                                <MudStack Spacing="1">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:MethodName"]</MudText>
-                                                    <MudText Typo="Typo.body2" Class="subscription-detail__technical">
-                                                        @Subscription.ActionMethodName
-                                                    </MudText>
-                                                </MudStack>
-                                            }
-
-                                            @if (!string.IsNullOrEmpty(Subscription.ActionMethodSignature))
-                                            {
-                                                <MudStack Spacing="1">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:MethodSignature"]</MudText>
-                                                    <MudText Typo="Typo.body2" Class="subscription-detail__technical">
-                                                        @Subscription.ActionMethodSignature
-                                                    </MudText>
-                                                </MudStack>
-                                            }
-
-                                            @if (Subscription.ActionIsStatic.HasValue)
-                                            {
-                                                <MudChip T="string" Size="Size.Small"
-                                                         Color="@(Subscription.ActionIsStatic.Value ? Color.Secondary : Color.Default)">
-                                                    @(Subscription.ActionIsStatic.Value ? L["SubscriptionTable:Labels:StaticMethod"] : L["SubscriptionTable:Labels:InstanceMethod"])
-                                                </MudChip>
-                                            }
-                                        </MudStack>
-                                    }
-                                    else
-                                    {
-                                        <MudText Typo="Typo.body2" Class="subscription-detail__technical">@Subscription.HandlerType</MudText>
-                                    }
-                                </MudStack>
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:HandlerFactory"]</MudText>
-                                    <MudText Typo="Typo.body2">@Subscription.HandlerFactoryType</MudText>
-                                </MudStack>
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:DiscoveryMode"]</MudText>
-                                    @if (Subscription.IsAutoDiscovered)
-                                    {
-                                        <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.AutoAwesome">
-                                            @L.GetDiscoveryModeText(true)
-                                        </MudChip>
-                                    }
-                                    else
-                                    {
-                                        <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.TouchApp">
-                                            @L.GetDiscoveryModeText(false)
-                                        </MudChip>
-                                    }
-                                </MudStack>
-                            </MudItem>
-                        </MudGrid>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-
-            <!-- life cycle -->
-            <MudItem xs="12">
-                <MudCard Elevation="2">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Tertiary" />
-                                <MudText Typo="Typo.h6">@L["SubscriptionDetail:Sections:Lifecycle"]</MudText>
-                            </MudStack>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        <MudTimeline TimelineOrientation="TimelineOrientation.Vertical">
-                            <MudTimelineItem Color="Color.Info" Size="Size.Small">
-                                <ItemContent>
-                                    <MudStack Spacing="1">
-                                        <MudText Typo="Typo.body2" Class="subscription-detail__timeline-label">@L["SubscriptionDetail:Timeline:Created"]</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@Subscription.CreatedAtDisplay</MudText>
-                                    </MudStack>
-                                </ItemContent>
-                            </MudTimelineItem>
-
-                            @if (Subscription.ActivatedAt.HasValue)
-                            {
-                                <MudTimelineItem Color="Color.Success" Size="Size.Small">
-                                    <ItemContent>
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.body2" Class="subscription-detail__timeline-label">@L["SubscriptionDetail:Timeline:Activated"]</MudText>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@Subscription.ActivatedAtDisplay</MudText>
-                                        </MudStack>
-                                    </ItemContent>
-                                </MudTimelineItem>
-                            }
-
-                            @if (Subscription.DeactivatedAt.HasValue)
-                            {
-                                <MudTimelineItem Color="Color.Warning" Size="Size.Small">
-                                    <ItemContent>
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.body2" Class="subscription-detail__timeline-label">@L["SubscriptionDetail:Timeline:Deactivated"]</MudText>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@Subscription.DeactivatedAtDisplay</MudText>
-                                        </MudStack>
-                                    </ItemContent>
-                                </MudTimelineItem>
-                            }
-
-                            @if (Subscription.State == EventBus.Models.EventSubscriptionState.Active)
-                            {
-                                <MudTimelineItem Color="Color.Success" Size="Size.Small">
-                                    <ItemContent>
-                                        <MudStack Spacing="1">
-                                            <MudText Typo="Typo.body2" Class="subscription-detail__timeline-label">@L["SubscriptionDetail:Timeline:CurrentState"]</MudText>
-                                            <MudText Typo="Typo.caption" Color="Color.Success">
-                                                @L["SubscriptionDetail:Timeline:ActiveRunning", L.GetSubscriptionDurationText(Subscription)]
-                                            </MudText>
-                                        </MudStack>
-                                    </ItemContent>
-                                </MudTimelineItem>
-                            }
-                        </MudTimeline>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-
-            <!-- metadata -->
-            @if (Subscription.Metadata.Any())
-            {
-                <MudItem xs="12">
-                    <MudCard Elevation="2">
-                        <MudCardHeader>
-                            <CardHeaderContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Default" />
-                                    <MudText Typo="Typo.h6">@L["SubscriptionDetail:Sections:Metadata"]</MudText>
-                                </MudStack>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent>
-                            <MudSimpleTable Dense="true" Hover="true">
-                                <thead>
-                                    <tr>
-                                        <th>@L["SubscriptionDetail:Fields:Key"]</th>
-                                        <th>@L["SubscriptionDetail:Fields:Value"]</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var metadata in Subscription.Metadata)
-                                    {
-                                        <tr>
-                                            <td class="subscription-detail__technical">@metadata.Key</td>
-                                            <td class="subscription-detail__technical">@metadata.Value</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </MudSimpleTable>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-            }
-        </MudGrid>
+    <div class="subscription-inspector">
+        <header class="subscription-inspector-identity"><span>@L.GetSubscriptionScopeText(row.Scope) · @L.GetDiscoveryModeText(row.IsAutoDiscovered)</span><h2>@row.EventTypeShortName</h2><code>@row.EventType</code></header>
+        <div class="subscription-inspector-capture"><span>@L["Inspector:FrozenCapture"]</span><time>@EventBusPresentation.Timestamp(CapturedAt)</time></div>
+        <MudTabs Elevation="0" Rounded="false">
+            <MudTabPanel Text="@L["Inspector:Routing"]">
+                <section class="subscription-inspector-section">
+                    <div class="subscription-inspector-status"><EventBusStatusBadge Tone="row.StateColor">@L.GetSubscriptionStateText(row.State)</EventBusStatusBadge><p>@L["Inspector:RegistrationHelp"]</p></div>
+                    <dl class="subscription-inspector-facts">
+                        <div><dt>@L["SubscriptionDetail:Fields:SubscriptionId"]</dt><dd><code>@row.SubscriptionId</code></dd></div>
+                        <div><dt>@L["SubscriptionDetail:Fields:ServiceKey"]</dt><dd><code>@EventBusPresentation.KeyText(row.ServiceKey, L)</code></dd></div>
+                        <div class="subscription-inspector-wide"><dt>@L["SubscriptionDetail:Fields:EventType"]</dt><dd><code>@row.EventType</code></dd></div>
+                        <div class="subscription-inspector-wide"><dt>@L["SubscriptionDetail:Fields:TopicName"]</dt><dd><code>@row.TopicName</code></dd></div>
+                    </dl>
+                    <h3>@L["SubscriptionDetail:Sections:HandlerInformation"]</h3>
+                    <dl class="subscription-inspector-facts">
+                        @if (row.HandlerType != null)
+                        {
+                            <div class="subscription-inspector-wide"><dt>@L["SubscriptionDetail:Fields:HandlerType"]</dt><dd><code>@row.HandlerType</code></dd></div>
+                        }
+                        else
+                        {
+                            <div><dt>@L["SubscriptionDetail:Fields:DeclaringType"]</dt><dd><code>@row.ActionDeclaringType</code></dd></div>
+                            <div><dt>@L["SubscriptionDetail:Fields:MethodName"]</dt><dd><code>@row.ActionMethodName</code></dd></div>
+                            <div class="subscription-inspector-wide"><dt>@L["SubscriptionDetail:Fields:MethodSignature"]</dt><dd><code>@row.ActionMethodSignature</code></dd></div>
+                            <div><dt>@L["Shared:Fields:StaticMethod"]</dt><dd>@(row.ActionIsStatic is { } isStatic ? L[isStatic ? "Shared:Common:Yes" : "Shared:Common:No"].Value : L["Shared:Labels:Unknown"].Value)</dd></div>
+                        }
+                        <div class="subscription-inspector-wide"><dt>@L["SubscriptionDetail:Fields:HandlerFactory"]</dt><dd><code>@row.HandlerFactoryType</code></dd></div>
+                    </dl>
+                    <h3>@L["SubscriptionDetail:Sections:Lifecycle"]</h3>
+                    <dl class="subscription-inspector-facts">
+                        <div><dt>@L["SubscriptionDetail:Timeline:Created"]</dt><dd><time>@EventBusPresentation.Timestamp(row.CreatedAt)</time></dd></div>
+                        <div><dt>@L["SubscriptionDetail:Timeline:Activated"]</dt><dd><time>@(row.ActivatedAt is { } activated ? EventBusPresentation.Timestamp(activated) : L["Inspector:NoTimestamp"].Value)</time></dd></div>
+                        <div><dt>@L["SubscriptionDetail:Timeline:Deactivated"]</dt><dd><time>@(row.DeactivatedAt is { } deactivated ? EventBusPresentation.Timestamp(deactivated) : L["Inspector:NoTimestamp"].Value)</time></dd></div>
+                    </dl>
+                </section>
+            </MudTabPanel>
+            <MudTabPanel Text="@L["SubscriptionDetail:Sections:Runtime"]">
+                <section class="subscription-inspector-section">
+                    @if (row.TopicStatus != null)
+                    {
+                        <EventBusTopicEvidence Status="row.TopicStatus" />
+                    }
+                    else
+                    {
+                        <div class="subscription-inspector-empty"><MudIcon Icon="@Icons.Material.Outlined.SensorsOff" /><h3>@L[row.Scope == EventSubscriptionScope.Local ? "Registry:LocalRuntime" : "Registry:NotReported"]</h3><p>@L[row.Scope == EventSubscriptionScope.Local ? "Inspector:LocalHelp" : "SubscriptionDetail:Runtime:NoData"]</p></div>
+                    }
+                </section>
+            </MudTabPanel>
+            <MudTabPanel Text="@L["SubscriptionDetail:Sections:Metadata"]">
+                <section class="subscription-inspector-section">
+                    @if (row.Metadata.Count > 0)
+                    {
+                        <dl class="subscription-inspector-metadata">@foreach (var metadata in row.Metadata.OrderBy(pair => pair.Key, StringComparer.Ordinal)) { <div><dt><code>@metadata.Key</code></dt><dd><code>@metadata.Value</code></dd></div> }</dl>
+                    }
+                    else
+                    {
+                        <div class="subscription-inspector-empty"><MudIcon Icon="@Icons.Material.Outlined.DataObject" /><p>@L["Inspector:NoMetadata"]</p></div>
+                    }
+                </section>
+            </MudTabPanel>
+        </MudTabs>
     </div>
 }
 
 @code {
-    [Parameter]
-    public SubscriptionViewModel? Subscription { get; set; }
+    [Parameter] public SubscriptionViewModel? Subscription { get; set; }
+    [Parameter] public DateTimeOffset CapturedAt { get; set; } = DateTimeOffset.UtcNow;
 }

@@ -50,6 +50,7 @@ Indicators:
 - Responsive cell CSS assumes an enum name is a media-query threshold, so a MudBlazor table stacks earlier than the page's local spacing rules
 - A fixed/minimum height leaves unexplained blank space instead of using content-driven height with a viewport-aware cap
 - Text, controls, table cells or empty-state messages touch an ordinary panel edge because the wrapper supplies a background but no content inset; a dialog's padded outer shell is mistaken for an inset within each nested painted tab body
+- Native stacked table `DataLabel` pseudo-labels touch the phone surface edge although value wrappers are inset; ineffective row padding is mistaken for actual cell padding, or the empty row inherits a two-column label layout
 - A full-width table's header, last row, hover/selected paint or pager covers its owner's rounded corners; only the outer border is rounded while descendant backgrounds remain square
 - A flush table has competing outer/inner radii, does not declare whether its owner clips painted corners or the table is inset, or broad overflow clipping hides focus indicators, required local scrolling or overlay content
 - Distinct tools with independent tasks and lifetimes remain hidden in one local tab route, preventing direct links, browser history and meaningful shell search entries without a deliberate navigation reason
@@ -86,6 +87,7 @@ Indicators:
 - Interface, hierarchy, and diagnostic text have no deliberate font-role separation, or monospace is used broadly as decoration
 - A font declared by the prototype/source is missing from local WOFF2 assets, lacks `@font-face`, fails offline, has no explicit fallback stack/CJK coverage, or is silently replaced by a fallback
 - Component CSS repainting global MudBlazor behavior that should be consistent across modules
+- Each new operational page family introduces another contextual route-tab perimeter, category palette, underline, or phone-tile layout instead of reusing the shared workbench navigation language
 - Component CSS painting route `.active`, `:hover`, or `:focus` states for menu items, nav links, or list items that are themed globally
 - Dark-mode overrides inside component CSS (`[data-theme*="dark"]` in `.razor.css`)
 

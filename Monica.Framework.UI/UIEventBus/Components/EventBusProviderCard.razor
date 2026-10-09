@@ -1,120 +1,23 @@
-@using Monica.EventBus.Abstractions
 @using Monica.Framework.UI.UIEventBus.Models
+@using Monica.Framework.UI.UIEventBus.Support
 @inject IStringLocalizer<EventBusResource> L
 
-<div class="provider-card">
-<MudCard Elevation="2">
-    <MudCardHeader>
-        <CardHeaderAvatar>
-            <MudAvatar Color="@GetProviderColor()" Size="Size.Large">
-                <MudIcon Icon="@GetProviderIcon()" />
-            </MudAvatar>
-        </CardHeaderAvatar>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">@L.GetProviderDisplayName(Provider)</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@Provider.ImplementationType</MudText>
-        </CardHeaderContent>
-        <CardHeaderActions>
-            <MudStack Row="true" Spacing="1">
-                <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
-                    @L.GetProviderKindText(Provider.ProviderType)
-                </MudChip>
-                <MudChip T="string" Color="@(Provider.IsDistributed ? Color.Info : Color.Success)" Size="Size.Small">
-                    @L.GetProviderModeText(Provider.IsDistributed)
-                </MudChip>
-            </MudStack>
-        </CardHeaderActions>
-    </MudCardHeader>
-
-    <MudCardContent>
-        <MudStack Spacing="2">
-            @* Subscription statistics *@
-            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                <MudIcon Icon="@Icons.Material.Filled.Subscriptions" Size="Size.Small" Color="Color.Primary" />
-                <MudText Typo="Typo.body2">
-                    @L["Providers:Card:Subscriptions", Provider.SubscriptionCount]
-                    (<span class="provider-card__active-count">@L["Providers:Card:Active", Provider.ActiveSubscriptionCount]</span>)
-                </MudText>
-            </MudStack>
-
-            @if (Provider.UnhealthyTopicCount > 0)
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined"
-                         Icon="@Icons.Material.Filled.HeartBroken">
-                    @L["Providers:Card:UnhealthyTopics", Provider.UnhealthyTopicCount]
-                </MudChip>
-            }
-
-            @* Capability label *@
-            <div class="d-flex flex-wrap gap-1">
-                @if (Provider.SupportsBulkPublish)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                        <MudIcon Icon="@Icons.Material.Filled.DynamicFeed" Size="Size.Small" Class="mr-1" />
-                        @L["Providers:Capabilities:BulkPublish"]
-                    </MudChip>
-                }
-
-                @if (Provider.SupportsStreaming)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                        <MudIcon Icon="@Icons.Material.Filled.Stream" Size="Size.Small" Class="mr-1" />
-                        @L["Providers:Capabilities:Streaming"]
-                    </MudChip>
-                }
-
-                @if (Provider.SupportsDeadLetterQueue)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                        <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Class="mr-1" />
-                        @L["Providers:Capabilities:DeadLetterQueue"]
-                    </MudChip>
-                }
-
-                @if (Provider.HasOptionDiagnostics)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
-                        <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-1" />
-                        @L["Providers:Capabilities:HasOptions"]
-                    </MudChip>
-                }
-
-            </div>
-        </MudStack>
-    </MudCardContent>
-
-    <MudCardActions>
-        <MudButton Variant="Variant.Text"
-                   Color="Color.Primary"
-                   EndIcon="@Icons.Material.Filled.OpenInNew"
-                   OnClick="OnViewDetails">
-            @L["Providers:Card:ViewDetails"]
-        </MudButton>
-    </MudCardActions>
-</MudCard>
-</div>
+<article class="provider-card">
+    <header><EventBusStatusBadge Tone="@(Provider.IsDistributed ? Color.Secondary : Color.Info)">@L.GetProviderModeText(Provider.IsDistributed)</EventBusStatusBadge><h3>@L.GetProviderKindText(Provider.ProviderType)</h3><code>@EventBusPresentation.KeyText(Provider.ServiceKey, L)</code><p>@Provider.ImplementationType</p></header>
+    <dl><div><dt>@L["ProviderDirectory:Registrations"]</dt><dd>@Provider.SubscriptionCount</dd></div><div><dt>@L["ProviderDirectory:Active"]</dt><dd>@Provider.ActiveSubscriptionCount</dd></div><div><dt>@L["ProviderDirectory:ReportedProblems"]</dt><dd>@Provider.UnhealthyTopicCount</dd></div></dl>
+    <div class="provider-card-capabilities">
+        @if (Provider.SupportsBulkPublish) { <span>@L["Providers:Capabilities:BulkPublish"]</span> }
+        @if (Provider.SupportsStreaming) { <span>@L["Providers:Capabilities:Streaming"]</span> }
+        @if (Provider.SupportsDeadLetterQueue) { <span>@L["Providers:Capabilities:DeadLetterQueue"]</span> }
+        @if (Provider.HasOptionDiagnostics) { <span>@L["Providers:Capabilities:HasOptions"]</span> }
+    </div>
+    <p class="provider-card-note">@L["ProviderDirectory:CountsHelp"]</p>
+    <MudButton Color="Color.Primary" EndIcon="@Icons.Material.Outlined.ArrowForward" OnClick="() => OnViewDetailsClicked.InvokeAsync(Provider)">@L["Providers:Card:ViewDetails"]</MudButton>
+</article>
 
 @code {
-    [Parameter] public EventBusProviderInfo Provider { get; set; } = null!;
-
+    /// <summary>Gets or sets the read-only captured provider registration and declared capabilities.</summary>
+    [Parameter, EditorRequired] public EventBusProviderInfo Provider { get; set; } = null!;
+    /// <summary>Gets or sets the owning caller's inspection action; the caller owns any resulting dialog lifetime.</summary>
     [Parameter] public EventCallback<EventBusProviderInfo> OnViewDetailsClicked { get; set; }
-
-    private string GetProviderIcon() => Provider.ProviderType switch
-    {
-        EventBusProviderKind.Local => Icons.Material.Filled.Memory,
-        EventBusProviderKind.Dapr => Icons.Material.Filled.Cloud,
-        _ => Icons.Material.Filled.Help
-    };
-
-    private Color GetProviderColor() => Provider.ProviderType switch
-    {
-        EventBusProviderKind.Local => Color.Success,
-        EventBusProviderKind.Dapr => Color.Info,
-        _ => Color.Default
-    };
-
-    private async Task OnViewDetails()
-    {
-        await OnViewDetailsClicked.InvokeAsync(Provider);
-    }
 }

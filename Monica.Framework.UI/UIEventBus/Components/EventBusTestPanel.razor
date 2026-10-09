@@ -1,514 +1,333 @@
+@using Monica.Core.Results
 @using Monica.Framework.UI.UIEventBus.Models
-@using Monica.Core.Results;
 @using Monica.Framework.UI.UIEventBus.State
+@using Microsoft.Extensions.Logging
 @implements IAsyncDisposable
 @inject EventBusTestService TestService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<EventBusResource> L
+@inject ILogger<EventBusTestPanel> Logger
 
-<div class="test-panel-wrapper">
-    <MudStack Spacing="4">
-        <!-- Publish test message -->
-        <div class="publish-section-wrapper">
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudStack Spacing="3">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudIcon Icon="@Icons.Material.Filled.Send" Color="Color.Primary" />
-                        <MudText Typo="Typo.h6">@L["TestPanel:Publish:Title"]</MudText>
-                    </MudStack>
-
-                    <MudDivider />
-
-                    <MudGrid>
-                        <MudItem xs="12" md="6">
-                            <MudTextField @bind-Value="_publishTopicName"
-                                          T="string"
-                                          Label="@L["TestPanel:Publish:TopicName"]"
-                                          Variant="Variant.Outlined"
-                                          HelperText="@L["TestPanel:Publish:TopicHelper"]"
-                                          Immediate="true" />
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudTextField @bind-Value="_publishMessage"
-                                          T="string"
-                                          Label="@L["TestPanel:Publish:MessageContent"]"
-                                          Variant="Variant.Outlined"
-                                          Lines="3"
-                                          Placeholder="@L["TestPanel:Publish:MessagePlaceholder"]"
-                                          Immediate="true" />
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudButton Color="Color.Primary"
-                                       Variant="Variant.Filled"
-                                       StartIcon="@Icons.Material.Filled.Send"
-                                       OnClick="PublishMessageAsync"
-                                       Disabled="@_isPublishing">
-                                @if (_isPublishing)
-                                {
-                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                    <text>@L["TestPanel:Publish:Sending"]</text>
-                                }
-                                else
-                                {
-                                    <text>@L["TestPanel:Publish:Send"]</text>
-                                }
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
-                </MudStack>
-            </MudPaper>
-        </div>
-
-        <!-- Subscribe to test messages -->
-        <div class="subscribe-section-wrapper">
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudStack Spacing="3">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudIcon Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" />
-                        <MudText Typo="Typo.h6">@L["TestPanel:Subscribe:Title"]</MudText>
-                    </MudStack>
-
-                    <MudDivider />
-
-                    <MudGrid>
-                        <MudItem xs="12" md="6">
-                            <MudTextField @bind-Value="_subscribeTopicName"
-                                          T="string"
-                                          Label="@L["TestPanel:Subscribe:TopicName"]"
-                                          Variant="Variant.Outlined"
-                                          HelperText="@L["TestPanel:Subscribe:TopicHelper"]"
-                                          Immediate="true"
-                                          Disabled="@_isListening" />
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudStack Row="true" Spacing="2">
-                                @if (!_isListening)
-                                {
-                                    <MudButton Color="Color.Info"
-                                               Variant="Variant.Filled"
-                                               StartIcon="@Icons.Material.Filled.PlayArrow"
-                                               OnClick="StartListeningAsync">
-                                        @L["TestPanel:Subscribe:Start"]
-                                    </MudButton>
-                                }
-                                else
-                                {
-                                    <MudButton Color="Color.Error"
-                                               Variant="Variant.Filled"
-                                               StartIcon="@Icons.Material.Filled.Stop"
-                                               OnClick="StopListeningAsync">
-                                        @L["TestPanel:Subscribe:Stop"]
-                                    </MudButton>
-                                    <MudButton Color="Color.Primary"
-                                               Variant="Variant.Outlined"
-                                               StartIcon="@Icons.Material.Filled.Clear"
-                                               OnClick="ClearMessages"
-                                               Disabled="@(_messages.Count == 0)">
-                                        @L["TestPanel:Subscribe:Clear"]
-                                    </MudButton>
-                                }
-                            </MudStack>
-                        </MudItem>
-                    </MudGrid>
-
-                    <!-- Subscription status indicator -->
-                    <div class="status-indicator-wrapper">
-                        <MudPaper Class="@(_isListening ? "subscribed" : "unsubscribed")" Elevation="0">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                @if (_isListening)
-                                {
-                                    <MudProgressCircular Color="Color.Success" Size="Size.Small" Indeterminate="true" />
-                                    <MudText Typo="Typo.body2" Color="Color.Success">
-                                        <strong>@L["TestPanel:Subscribe:ListeningStatus", TestService.CurrentTopicName ?? string.Empty, _messages.Count]</strong>
-                                    </MudText>
-                                }
-                                else
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Default" Size="Size.Small" />
-                                    <MudText Typo="Typo.body2" Color="Color.Default">
-                                        @L["TestPanel:Subscribe:NotListening"]
-                                    </MudText>
-                                }
-                            </MudStack>
-                        </MudPaper>
-                    </div>
-
-                    <!-- Message list -->
-                    @if (_isListening)
+<section class="event-test-bench">
+    <header class="test-bench-scope">
+        <div class="test-bench-scope-icon"><MudIcon Icon="@Icons.Material.Outlined.CloudQueue" /></div>
+        <div><span class="test-bench-kicker">@L["TestBench:Eyebrow"]</span><h2>@L["TestBench:Title"]</h2><p>@L["TestBench:Scope"]</p></div>
+        <div class="test-bench-contract"><span>@L["TestBench:EventContract"]</span><code>@nameof(TestEventMessage)</code></div>
+    </header>
+    <div class="test-bench-workspace">
+        <section class="test-bench-publish">
+            <header class="test-bench-section-heading"><span class="test-bench-step">01</span><div><h3>@L["TestPanel:Publish:Title"]</h3><p>@L["TestBench:PublishHelp"]</p></div></header>
+            <div class="test-bench-form">
+                <MudTextField T="string" @bind-Value="_publishTopicName" Label="@L["TestPanel:Publish:TopicName"]" Variant="Variant.Outlined" Immediate="true" Disabled="@(_retired || _commandBusy)" />
+                <MudTextField T="string" @bind-Value="_publishMessage" Label="@L["TestPanel:Publish:MessageContent"]" Placeholder="@L["TestPanel:Publish:MessagePlaceholder"]" Variant="Variant.Outlined" Immediate="true" Lines="6" Disabled="@(_retired || _commandBusy)" />
+                <p class="test-bench-help">@L["TestBench:AcceptanceHelp"]</p>
+                <div class="test-bench-publish-actions"><MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Send" OnClick="PublishMessageAsync" Disabled="@_retired" aria-disabled="@BusyAttribute" aria-busy="@(_publishing ? "true" : "false")">@(_publishing ? L["TestPanel:Publish:Sending"] : L["TestPanel:Publish:Send"])</MudButton></div>
+                @if (_accepted) { <p class="test-bench-accepted" role="status"><MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" />@L["TestBench:Accepted"]</p> }
+            </div>
+        </section>
+        <section class="test-bench-receive">
+            <header class="test-bench-section-heading"><span class="test-bench-step">02</span><div><h3>@L["TestBench:ReceiveTitle"]</h3><p>@L["TestBench:ReceiveHelp"]</p></div><span class="test-bench-listener-state" data-listening="@(_ownsSubscription ? "true" : "false")" role="status">@ListenerStateText</span></header>
+            <div class="test-bench-listener">
+                <MudTextField T="string" @bind-Value="_subscribeTopicName" Label="@L["TestPanel:Subscribe:TopicName"]" Variant="Variant.Outlined" Immediate="true" Disabled="@(_retired || _commandBusy || _ownsSubscription || !_listenerReady)" />
+                <div class="test-bench-listener-actions">
+                    <MudButton Color="@(_ownsSubscription ? Color.Warning : Color.Primary)" Variant="Variant.Outlined" StartIcon="@(_ownsSubscription ? Icons.Material.Outlined.StopCircle : Icons.Material.Outlined.PlayArrow)" OnClick="ToggleListeningAsync" Disabled="@_retired" aria-disabled="@ListenerBusyAttribute" aria-busy="@(_listenerBusy ? "true" : "false")">@(_ownsSubscription ? L["TestPanel:Subscribe:Stop"] : L["TestPanel:Subscribe:Start"])</MudButton>
+                    <MudButton Color="Color.Default" OnClick="ClearMessages" Disabled="@_retired" aria-disabled="@(_commandBusy || !_listenerReady || _messages.Count == 0 ? "true" : "false")">@L["TestPanel:Subscribe:Clear"]</MudButton>
+                </div>
+            </div>
+            <div class="test-bench-receipt-heading"><span>@L["TestBench:Retained", _messages.Count]</span><span>@L["TestBench:Retention"]</span></div>
+            @if (_messages.Count == 0)
+            {
+                <div class="test-bench-empty"><MudIcon Icon="@Icons.Material.Outlined.Inbox" /><h4>@L["TestPanel:Subscribe:NoMessages"]</h4><p>@L["TestBench:EmptyHelp"]</p></div>
+            }
+            else
+            {
+                <ol class="test-bench-receipts">
+                    @foreach (var message in _messages.AsEnumerable().Reverse())
                     {
-                        <MudDivider />
-
-                        @if (_messages.Count == 0)
-                        {
-                            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="pa-6">
-                                <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Default" />
-                                <MudText Typo="Typo.body1" Color="Color.Default">
-                                    @L["TestPanel:Subscribe:NoMessages"]
-                                </MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                    @L["TestPanel:Subscribe:NoMessagesHint"]
-                                </MudText>
-                            </MudStack>
-                        }
-                        else
-                        {
-                            <div class="message-list-wrapper">
-                                <MudStack Spacing="2" Class="message-list">
-                                    @foreach (var msg in _messages.OrderByDescending(m => m.ReceivedAt))
-                                    {
-                                        <div class="message-card-wrapper">
-                                            <MudCard Elevation="2">
-                                                <MudCardContent>
-                                                    <MudStack Spacing="2">
-                                                        <!-- Message header -->
-                                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                                <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Info" Size="Size.Small" />
-                                                                <MudText Typo="Typo.subtitle2">
-                                                                    @L["TestPanel:Messages:MessageId", msg.EventData.MessageId]
-                                                                </MudText>
-                                                            </MudStack>
-                                                            <MudChip T="string" Size="Size.Small" Color="Color.Success">
-                                                                @msg.ReceivedAt.ToString("HH:mm:ss.fff")
-                                                            </MudChip>
-                                                        </MudStack>
-
-                                                        <MudDivider />
-
-                                                        <!-- Message content -->
-                                                        <MudStack Spacing="1">
-                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                @L["TestPanel:Messages:MessageContent"]
-                                                            </MudText>
-                                                            <div class="message-card__payload">
-                                                                <MudText Typo="Typo.body2">
-                                                                    @msg.EventData.Message
-                                                                </MudText>
-                                                            </div>
-                                                        </MudStack>
-
-                                                        <!-- message metadata -->
-                                                        <MudStack Row="true" Spacing="3">
-                                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                                <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" Color="Color.Secondary" />
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                    @L["TestPanel:Messages:CreatedAt", msg.EventData.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")]
-                                                                </MudText>
-                                                            </MudStack>
-                                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                                <MudIcon Icon="@Icons.Material.Filled.Download" Size="Size.Small" Color="Color.Secondary" />
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                    @L["TestPanel:Messages:ReceivedAt", msg.ReceivedAt.ToString("yyyy-MM-dd HH:mm:ss")]
-                                                                </MudText>
-                                                            </MudStack>
-                                                        </MudStack>
-                                                    </MudStack>
-                                                </MudCardContent>
-                                            </MudCard>
-                                        </div>
-                                    }
-                                </MudStack>
-                            </div>
-                        }
+                        <li @key="message">
+                            <header><span class="test-bench-received-mark"><MudIcon Icon="@Icons.Material.Outlined.CallReceived" Size="Size.Small" />@L["TestBench:Received"]</span><time>@message.ReceivedAt.ToString("HH:mm:ss.fff")</time></header>
+                            <p class="test-bench-message">@message.EventData.Message</p>
+                            <dl><div><dt>@L["TestPanel:Publish:TopicName"]</dt><dd><code>@message.TopicName</code></dd></div><div><dt>@L["TestBench:MessageId"]</dt><dd><code>@message.EventData.MessageId</code></dd></div><div><dt>@L["TestBench:CreatedUtc"]</dt><dd><time>@message.EventData.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss.fff")</time></dd></div></dl>
+                        </li>
                     }
-                </MudStack>
-            </MudPaper>
-        </div>
-
-        <!-- Instructions for use -->
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-            <MudText Typo="Typo.body2">
-                <strong>@L["TestPanel:Instructions:Title"]</strong>
-            </MudText>
-            <MudList T="string" Dense="true">
-                <MudListItem T="string">
-                    <MudText Typo="Typo.body2">@L["TestPanel:Instructions:Publish"]</MudText>
-                </MudListItem>
-                <MudListItem T="string">
-                    <MudText Typo="Typo.body2">@L["TestPanel:Instructions:Subscribe"]</MudText>
-                </MudListItem>
-                <MudListItem T="string">
-                    <MudText Typo="Typo.body2">@((MarkupString)L["TestPanel:Instructions:DefaultTopic", $"<code>{_defaultTopicName}</code>"].Value)</MudText>
-                </MudListItem>
-                <MudListItem T="string">
-                    <MudText Typo="Typo.body2">@L["TestPanel:Instructions:MultiTab"]</MudText>
-                </MudListItem>
-            </MudList>
-        </MudAlert>
-    </MudStack>
-</div>
+                </ol>
+            }
+            <footer class="test-bench-listener-help"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" /><p>@L["TestBench:ListenerLifetime"]</p></footer>
+        </section>
+    </div>
+</section>
 
 @code {
-    private readonly string _defaultTopicName = typeof(TestEventMessage).FullName!;
-
-    private string _publishTopicName = string.Empty;
-    private string _publishMessage = string.Empty;
-    private string _subscribeTopicName = string.Empty;
-
-    private bool _isPublishing;
-    private bool _isListening;
-
     private readonly CancellationTokenSource _lifetimeCancellation = new();
-    private readonly SemaphoreSlim _listenerGate = new(1, 1);
     private readonly object _disposeSync = new();
+    private CancellationToken _lifetimeToken;
     private CancellationTokenSource? _refreshCancellation;
     private PeriodicTimer? _refreshTimer;
     private Task? _refreshTask;
+    private Task? _acquireTask;
+    private Task? _commandTask;
     private Task? _disposeTask;
-    private List<ReceivedTestMessage> _messages = new();
+    private List<ReceivedTestMessage> _messages = [];
+    private EventBusStandaloneListenerLease? _listenerLease;
+    private string _publishTopicName = string.Empty;
+    private string _publishMessage = string.Empty;
+    private string _subscribeTopicName = string.Empty;
+    private bool _commandBusy;
+    private bool _publishing;
+    private bool _listenerBusy;
     private bool _ownsSubscription;
-    private bool _disposed;
+    private bool _listenerReady;
+    private bool _listenerFailed;
+    private bool _accepted;
+    private bool _retired;
+    private string BusyAttribute => _commandBusy ? "true" : "false";
+    private string ListenerBusyAttribute => _commandBusy || !_listenerReady ? "true" : "false";
+    private string ListenerStateText => _listenerReady ? L[_ownsSubscription ? "TestBench:Listening" : "TestBench:Stopped"].Value
+        : L[_listenerFailed ? "TestBench:ListenerUnavailable" : "TestBench:PreparingListener"].Value;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _publishTopicName = _defaultTopicName;
-        _subscribeTopicName = _defaultTopicName;
+        _lifetimeToken = _lifetimeCancellation.Token;
+        _publishTopicName = typeof(TestEventMessage).FullName!;
+        _subscribeTopicName = _publishTopicName;
+        RefreshMessages();
+        await (_acquireTask = AcquireListenerAsync());
     }
 
-    private async Task PublishMessageAsync()
+    private async Task AcquireListenerAsync()
     {
-        if (_disposed)
+        try
         {
-            return;
+            _listenerLease = await TestService.AcquireStandaloneListenerLeaseAsync(_lifetimeToken);
+            if (_retired) return;
+            _listenerReady = true;
+            AdoptListenerSnapshot();
+            if (_ownsSubscription) StartRefreshLoop();
         }
+        catch (OperationCanceledException) when (_lifetimeToken.IsCancellationRequested)
+        {
+            // Retirement cancels an ownership wait and still drains its actual acquisition task.
+        }
+        catch (Exception error)
+        {
+            Logger.LogError(error, "Acquiring the standalone EventBus test listener failed");
+            if (!_retired) _listenerFailed = true;
+        }
+    }
 
+    private void AdoptListenerSnapshot()
+    {
+        var snapshot = _listenerLease?.Snapshot;
+        _ownsSubscription = snapshot is not null;
+        if (snapshot is not null) _subscribeTopicName = snapshot.TopicName;
+    }
+
+    private Task PublishMessageAsync()
+    {
+        if (_retired || _commandBusy) return Task.CompletedTask;
         if (string.IsNullOrWhiteSpace(_publishMessage))
         {
             Snackbar.Add(L["TestPanel:Validation:MessageRequired"], Severity.Warning);
-            return;
+            return Task.CompletedTask;
         }
-
-        _isPublishing = true;
-        StateHasChanged();
-
-        try
+        var message = _publishMessage;
+        var topic = _publishTopicName;
+        _publishing = true;
+        _accepted = false;
+        return AdmitCommandAsync(async () =>
         {
-            var result = await TestService.PublishTestMessageAsync(
-                _publishMessage,
-                _publishTopicName,
-                _lifetimeCancellation.Token);
-
-            if (_disposed)
-            {
-                return;
-            }
-
+            var result = await TestService.PublishTestMessageAsync(message, topic, _lifetimeToken);
+            if (_retired) return;
             if (result.IsFailed(out var error))
             {
                 Snackbar.Add(L["TestPanel:Snackbars:PublishFailed", error.Message ?? string.Empty], Severity.Error);
+                return;
             }
-            else
-            {
-                Snackbar.Add(L["TestPanel:Snackbars:PublishSucceeded"], Severity.Success);
-                _publishMessage = string.Empty;
-            }
-        }
-        finally
-        {
-            _isPublishing = false;
-            RenderIfActive();
-        }
+            _accepted = true;
+            _publishMessage = string.Empty;
+            Snackbar.Add(L["TestBench:Accepted"], Severity.Success);
+        });
     }
 
-    private async Task StartListeningAsync()
-    {
-        if (_disposed)
-        {
-            return;
-        }
+    private Task ToggleListeningAsync() => _ownsSubscription ? StopListeningAsync() : StartListeningAsync();
 
+    private Task StartListeningAsync()
+    {
+        if (_retired || _commandBusy || !_listenerReady || _ownsSubscription || _listenerLease is not { } lease) return Task.CompletedTask;
         if (string.IsNullOrWhiteSpace(_subscribeTopicName))
         {
             Snackbar.Add(L["TestPanel:Validation:TopicRequired"], Severity.Warning);
-            return;
+            return Task.CompletedTask;
         }
-
-        await _listenerGate.WaitAsync();
-        try
+        var topic = _subscribeTopicName;
+        _listenerBusy = true;
+        return AdmitCommandAsync(async () =>
         {
-            if (_disposed || _ownsSubscription)
+            var result = await lease.SubscribeAsync(topic);
+            if (_retired) return;
+            AdoptListenerSnapshot();
+            if (result.IsFailed(out var error, out _))
             {
+                if (!_retired) Snackbar.Add(L["TestPanel:Snackbars:SubscribeFailed", error.Message ?? string.Empty], Severity.Error);
                 return;
             }
-
-            var subscribeResult = await TestService.SubscribeToTestTopicAsync(_subscribeTopicName);
-            if (subscribeResult.IsFailed(out var error, out _))
-            {
-                if (!_disposed)
-                {
-                    Snackbar.Add(L["TestPanel:Snackbars:SubscribeFailed", error.Message ?? string.Empty], Severity.Error);
-                }
-
-                return;
-            }
-
-            _ownsSubscription = true;
-            if (_disposed)
-            {
-                return;
-            }
-
-            _isListening = true;
-            Snackbar.Add(L["TestPanel:Snackbars:SubscribeSucceeded"], Severity.Success);
             StartRefreshLoop();
-            StateHasChanged();
-        }
-        finally
-        {
-            _listenerGate.Release();
-        }
+            RefreshMessages();
+            Snackbar.Add(L["TestPanel:Snackbars:SubscribeSucceeded"], Severity.Success);
+        });
     }
 
-    private async Task StopListeningAsync()
+    private Task StopListeningAsync()
     {
-        if (_disposed)
+        if (_retired || _commandBusy || !_listenerReady || !_ownsSubscription || _listenerLease is not { } lease) return Task.CompletedTask;
+        _listenerBusy = true;
+        return AdmitCommandAsync(async () =>
         {
-            return;
-        }
-
-        await _listenerGate.WaitAsync();
-        try
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            await StopRefreshLoopAsync();
-            var result = _ownsSubscription
-                ? await TestService.UnsubscribeFromTestTopicAsync()
-                : Res.Ok();
-            _ownsSubscription = false;
-
-            if (_disposed)
-            {
-                return;
-            }
-
+            var result = await lease.UnsubscribeAsync();
+            if (_retired) return;
+            AdoptListenerSnapshot();
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add(L["TestPanel:Snackbars:UnsubscribeFailed", error.Message ?? string.Empty], Severity.Warning);
+                if (!_retired) Snackbar.Add(L["TestPanel:Snackbars:UnsubscribeFailed", error.Message ?? string.Empty], Severity.Warning);
+                return;
             }
-            else
-            {
-                Snackbar.Add(L["TestPanel:Snackbars:UnsubscribeSucceeded"], Severity.Info);
-            }
+            await StopRefreshLoopAsync();
+            if (_retired) return;
+            RefreshMessages();
+            Snackbar.Add(L["TestPanel:Snackbars:UnsubscribeSucceeded"], Severity.Info);
+        });
+    }
 
-            _isListening = false;
-            StateHasChanged();
-        }
+    private Task AdmitCommandAsync(Func<Task> command)
+    {
+        if (_retired || _commandBusy) return Task.CompletedTask;
+        _commandBusy = true;
+        return _commandTask = ExecuteCommandAsync(command);
+    }
+
+    private async Task ExecuteCommandAsync(Func<Task> command)
+    {
+        try { await command(); }
         finally
         {
-            _listenerGate.Release();
+            _commandBusy = false;
+            _publishing = false;
+            _listenerBusy = false;
+            if (!_retired) StateHasChanged();
         }
     }
 
     private void StartRefreshLoop()
     {
-        _refreshCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
+        if (_retired || _refreshTask is not null) return;
+        _refreshCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeToken);
         _refreshTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
         _refreshTask = RefreshLoopAsync(_refreshTimer, _refreshCancellation.Token);
     }
 
-    private async Task RefreshLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
+    private async Task RefreshLoopAsync(PeriodicTimer timer, CancellationToken token)
     {
         try
         {
-            while (await timer.WaitForNextTickAsync(cancellationToken))
+            while (await timer.WaitForNextTickAsync(token))
             {
                 await InvokeAsync(() =>
                 {
-                    if (_disposed || cancellationToken.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
+                    if (_retired || token.IsCancellationRequested) return;
                     RefreshMessages();
                     StateHasChanged();
                 });
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-            // The component owns the refresh loop and cancels it during stop or disposal.
+            // The component owns this loop and cancels it on stop or retirement.
         }
     }
 
     private async Task StopRefreshLoopAsync()
     {
-        var refreshCancellation = _refreshCancellation;
-        var refreshTimer = _refreshTimer;
-        var refreshTask = _refreshTask;
-
+        var cancellation = _refreshCancellation;
+        var timer = _refreshTimer;
+        var task = _refreshTask;
         _refreshCancellation = null;
         _refreshTimer = null;
         _refreshTask = null;
-
-        refreshCancellation?.Cancel();
-        refreshTimer?.Dispose();
-
-        if (refreshTask is not null)
+        var failures = new List<Exception>();
+        try
         {
-            await refreshTask;
+            try { cancellation?.Cancel(); }
+            catch (Exception error) { failures.Add(error); }
+            try { timer?.Dispose(); }
+            catch (Exception error) { failures.Add(error); }
+            if (task is not null)
+            {
+                try { await task; }
+                catch (Exception error) { failures.Add(error); }
+            }
         }
-
-        refreshCancellation?.Dispose();
+        finally { cancellation?.Dispose(); }
+        if (failures.Count > 0) throw new AggregateException(failures);
     }
 
-    private void RefreshMessages()
-    {
-        _messages = TestService.GetReceivedMessages();
-    }
+    private void RefreshMessages() => _messages = TestService.GetReceivedMessages();
 
     private void ClearMessages()
     {
-        if (_disposed)
-        {
-            return;
-        }
-
+        if (_retired || _commandBusy || !_listenerReady || _messages.Count == 0) return;
         TestService.ClearReceivedMessages();
-        _messages.Clear();
+        RefreshMessages();
         Snackbar.Add(L["TestPanel:Snackbars:ClearSucceeded"], Severity.Info);
-        StateHasChanged();
-    }
-
-    private void RenderIfActive()
-    {
-        if (!_disposed)
-        {
-            StateHasChanged();
-        }
     }
 
     public ValueTask DisposeAsync()
     {
-        lock (_disposeSync)
-        {
-            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
-        }
+        lock (_disposeSync) return new(_disposeTask ??= RetireAsync());
     }
 
-    private async Task DisposeCoreAsync()
+    private async Task RetireAsync()
     {
-        _disposed = true;
-        _lifetimeCancellation.Cancel();
-
-        await _listenerGate.WaitAsync();
+        _retired = true;
+        var failures = new List<Exception>();
         try
         {
-            await StopRefreshLoopAsync();
-            if (_ownsSubscription)
+            try { _lifetimeCancellation.Cancel(); }
+            catch (Exception error) { failures.Add(error); }
+            if (_acquireTask is not null)
             {
-                await TestService.UnsubscribeFromTestTopicAsync();
-                _ownsSubscription = false;
+                try { await _acquireTask; }
+                catch (Exception error) { failures.Add(error); }
+            }
+            // Drain the actual command even when a provider ignores cancellation.
+            if (_commandTask is not null)
+            {
+                try { await _commandTask; }
+                catch (OperationCanceledException) when (_lifetimeToken.IsCancellationRequested) { }
+                catch (Exception error) { failures.Add(error); }
+            }
+            try { await StopRefreshLoopAsync(); }
+            catch (Exception error) { failures.Add(error); }
+            if (_listenerLease?.Snapshot is not null)
+            {
+                try
+                {
+                    var result = await _listenerLease.UnsubscribeAsync();
+                    if (result.IsFailed(out var error))
+                        Logger.LogWarning("Retiring the standalone EventBus test listener failed; its exact subscription remains available for a later owner to retry: {Error}", error.Message);
+                    else _ownsSubscription = false;
+                }
+                catch (Exception error) { failures.Add(error); }
             }
         }
         finally
         {
-            _listenerGate.Release();
-            _lifetimeCancellation.Dispose();
-            _listenerGate.Dispose();
+            try
+            {
+                if (_listenerLease is { } lease) await lease.DisposeAsync();
+            }
+            catch (Exception error) { failures.Add(error); }
+            finally { _lifetimeCancellation.Dispose(); }
         }
+        if (failures.Count > 0) throw new AggregateException(failures);
     }
 }

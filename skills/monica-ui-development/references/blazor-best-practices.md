@@ -131,6 +131,8 @@ An async dialog open or JS import produces a resource. Observe the actual task a
 
 Do not leave a disposed module published in a field, and do not assign a module whose import completed after component disposal. Avoid canceling resource-producing imports when cancellation can abandon their late result. Atomically detaching a field prevents new acquisitions but does not protect callers that already captured the reference; serialize with or drain those callers before disposal. Stop JavaScript callback producers before disposing any retained `DotNetObjectReference`. Use a client-side `MutationObserver` for DOM cleanup instead of invoking DOM-cleanup JavaScript from `DisposeAsync`. Do not catch `ObjectDisposedException` from a locally owned interop reference; it identifies an ownership or teardown-order race.
 
+A browser reload can cancel an admitted JS import, observer factory, or final reference release with `OperationCanceledException` rather than `JSDisconnectedException`. Classify that cancellation as expected only after the owning session has retired; a cancellation or timeout while the session is live must still reach its caller. Disposal must observe a canceled initialization without replaying it as a second circuit failure, then drain admitted operations, stop the observer and its callbacks, and release the callback and module references. Continue observing the actual resource-producing task so a successful late result is still released. Exercise both late success and retirement cancellation with controlled non-rendering interleaving tests, including a live cancellation and an unexpected failure that remain visible.
+
 ## 3. Performance Optimization
 
 ### 3.1 Use @key for List Rendering

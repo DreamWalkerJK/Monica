@@ -1,0 +1,12 @@
+@page "/event-bus-monitor/subscriptions"
+@using Monica.Framework.UI.UIEventBus.Models
+
+<EventBusWorkbench View="EventBusWorkbenchView.Subscriptions" EventType="@EventType" Topic="@Topic" ProviderId="@ProviderId" />
+
+@code {
+    /// <summary>The canonical URL for this EventBus workflow.</summary>
+    public const string PAGE_URL = "/event-bus-monitor/subscriptions";
+    [SupplyParameterFromQuery(Name = "event")] public string? EventType { get; set; }
+    [SupplyParameterFromQuery(Name = "topic")] public string? Topic { get; set; }
+    [SupplyParameterFromQuery(Name = "provider")] public string? ProviderId { get; set; }
+}

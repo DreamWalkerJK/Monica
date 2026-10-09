@@ -1,0 +1,40 @@
+.provider-directory { --provider-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); display: grid; gap: 20px; min-width: 0; width: 100%; }
+.provider-directory-heading { display: flex; justify-content: space-between; align-items: start; gap: 20px; }
+.provider-directory-heading > div { min-width: 0; }
+.provider-directory-kicker { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-text-primary)); }
+.provider-directory-heading h2 { margin: 8px 0; font-size: 20px; font-weight: 500; line-height: 1.4; }
+.provider-directory-heading p, .provider-directory-note { color: var(--provider-muted); font-size: 13px; line-height: 1.7; margin: 0; }
+.provider-directory-heading ::deep .mud-button-root { flex: 0 0 auto; }
+.provider-directory-search { display: flex; align-items: center; gap: 20px; min-width: 0; }
+.provider-directory ::deep input::placeholder { color: color-mix(in srgb, var(--mud-palette-text-secondary) 75%, var(--mud-palette-text-primary)); opacity: 1; }
+.provider-directory ::deep .mud-input-control:focus-within .mud-input-label { color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)); }
+.provider-directory-search ::deep .mud-input-control { flex: 1; min-width: 0; }
+.provider-directory-search > span { flex: 0 0 auto; font-size: 11px; color: var(--provider-muted); }
+.provider-directory-surface { min-width: 0; border: 1px solid var(--mud-palette-lines-default); border-radius: 10px; overflow: clip; background: var(--mud-palette-surface); }
+.provider-directory-group { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 16px 24px; background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface)); border-bottom: 1px solid var(--mud-palette-lines-default); }
+.provider-directory-group h3 { font-size: 13px; font-weight: 500; margin: 0; }
+.provider-directory-group > span { font-size: 11px; color: var(--provider-muted); }
+.provider-directory-record { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr) auto; gap: 18px 24px; align-items: center; padding: 24px; border-bottom: 1px solid var(--mud-palette-lines-default); }
+.provider-directory-record:last-child { border-bottom: 0; }
+.provider-directory-identity { display: flex; align-items: start; gap: 14px; min-width: 0; }
+.provider-directory-identity > div { min-width: 0; }
+.provider-directory-icon { color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-text-primary)); border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-lines-default)); background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface)); display: inline-flex; padding: 10px; border-radius: 8px; flex: 0 0 auto; }
+.provider-directory-icon[data-mode="distributed"] { color: color-mix(in srgb, var(--mud-palette-info) 40%, var(--mud-palette-text-primary)); border-color: color-mix(in srgb, var(--mud-palette-info) 25%, var(--mud-palette-lines-default)); background: color-mix(in srgb, var(--mud-palette-info) 8%, var(--mud-palette-surface)); }
+.provider-directory-identity h4 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0 0 8px; font-size: 15px; font-weight: 500; }
+.provider-mode { font-size: 11px; font-weight: 400; color: var(--provider-muted); }
+.provider-directory-identity code { display: block; font: 12px/1.7 var(--mo-font-family-mono); overflow-wrap: anywhere; white-space: pre-wrap; }
+.provider-directory-identity p { margin: 5px 0 0; color: var(--provider-muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.provider-directory-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; min-width: 0; }
+.provider-directory-counts > div { min-width: 0; }
+.provider-directory-counts dt { font-size: 10px; color: var(--provider-muted); line-height: 1.6; margin-bottom: 8px; }
+.provider-directory-counts dd { font: 24px/1.2 var(--mo-font-family-mono); margin: 0; }
+.provider-directory-counts dd[data-attention="true"] { color: color-mix(in srgb, var(--mud-palette-warning) 35%, var(--mud-palette-text-primary)); }
+.provider-directory-actions { min-width: 0; }
+.provider-directory-actions ::deep .mud-button-root { color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-text-primary)); }
+.provider-directory-capabilities { display: flex; flex-wrap: wrap; gap: 7px; grid-column: 1 / -1; padding-inline-start: 58px; min-width: 0; }
+.provider-directory-capabilities span { font-size: 10px; color: var(--provider-muted); border: 1px solid var(--mud-palette-lines-default); border-radius: 4px; padding: 4px 7px; }
+.provider-directory-empty { padding: 36px 24px; display: grid; justify-items: center; gap: 12px; text-align: center; border: 1px solid var(--mud-palette-lines-default); border-radius: 10px; background: var(--mud-palette-surface); }
+.provider-directory-empty h3 { font-size: 16px; font-weight: 500; margin: 0; }
+.provider-directory-empty p { color: var(--provider-muted); font-size: 13px; margin: 0; line-height: 1.7; }
+@media (max-width: 1100px) { .provider-directory-record { grid-template-columns: minmax(0, 1fr) auto; } .provider-directory-counts { grid-column: 1; } .provider-directory-actions { grid-column: 2; grid-row: 1 / span 2; } .provider-directory-capabilities { padding-inline-start: 0; } }
+@media (max-width: 600px) { .provider-directory-heading { flex-direction: column; gap: 14px; } .provider-directory-search { align-items: stretch; flex-direction: column; gap: 8px; } .provider-directory-record { padding: 20px 16px; grid-template-columns: minmax(0, 1fr); gap: 18px; } .provider-directory-group { padding: 16px; } .provider-directory-actions, .provider-directory-counts { grid-column: 1; grid-row: auto; } .provider-directory-counts { gap: 12px; } .provider-directory-identity { gap: 10px; } .provider-directory-icon { padding: 8px; } .provider-directory-heading p, .provider-directory-note { font-size: 12px; } }

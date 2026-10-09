@@ -1,0 +1,21 @@
+.subscription-filters { min-width: 0; padding: 24px; background: var(--mud-palette-surface); border: 1px solid var(--mud-palette-divider); border-radius: var(--mud-default-borderradius); }
+.subscription-filter-search { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: center; }
+.subscription-filter-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr); gap: 16px; margin-top: 14px; align-items: start; }
+.subscription-exact-key { min-width: 0; }
+.subscription-filters ::deep .mud-input-label { font-size: .78rem; }
+.subscription-filters ::deep .mud-input { font-size: .82rem; }
+.subscription-filters ::deep input::placeholder { color: color-mix(in srgb, var(--mud-palette-text-secondary) 75%, var(--mud-palette-text-primary)); opacity: 1; }
+.subscription-filters ::deep .mud-input-control:focus-within .mud-input-label { color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)); }
+.subscription-filters ::deep .mud-select-input { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subscription-filter-footer { display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--mud-palette-divider); }
+.subscription-state-filters { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.subscription-state-filter { --state-color: var(--mud-palette-text-secondary); }
+.subscription-state-filter[data-tone="Primary"] { --state-color: var(--mud-palette-primary); }
+.subscription-state-filter[data-tone="Success"] { --state-color: var(--mud-palette-success); }
+.subscription-state-filter[data-tone="Warning"] { --state-color: var(--mud-palette-warning); }
+.subscription-state-filter[data-tone="Error"] { --state-color: var(--mud-palette-error); }
+.subscription-state-filter ::deep .mud-button { padding: 6px 10px; font-size: .75rem; line-height: 1.5; font-weight: 500; border: 1px solid color-mix(in srgb, var(--state-color) 20%, var(--mud-palette-divider)); color: color-mix(in srgb, var(--state-color) 45%, var(--mud-palette-text-primary)); background: color-mix(in srgb, var(--state-color) 4%, var(--mud-palette-surface)); text-transform: none; }
+.subscription-state-filter[data-selected="true"] ::deep .mud-button { border-color: color-mix(in srgb, var(--state-color) 45%, var(--mud-palette-text-primary)); background: color-mix(in srgb, var(--state-color) 12%, var(--mud-palette-surface)); }
+.state-count { margin-left: 9px; font-family: var(--mo-font-family-mono); font-size: .7rem; }
+@media (max-width: 1000px) { .subscription-filter-details { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .subscription-filters { padding: 16px; } .subscription-filter-search, .subscription-filter-details { grid-template-columns: minmax(0, 1fr); gap: 12px; } .subscription-filter-footer { align-items: start; flex-direction: column; } }
