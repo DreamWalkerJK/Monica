@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +28,59 @@ public sealed class EventBusTestServiceTests
     private const string TEST_TOPIC = "runtime-test-topic";
     private const string EVENT_NAME = "test.eventbus-ui.durable.v1";
     private const string JSON_PAYLOAD = """{"value":"diagnostic payload"}""";
+
+    [Theory]
+    [InlineData(false, "1970-01-01", "00:00:00")]
+    [InlineData(true, "19700101", "000000")]
+    public async Task CreateRuntimeJsonSample_WhenNestedContractContainsDateAndTimeValues_ShouldValidateAndPublish(
+        bool useCustomDateTimeConverters, string expectedDate, string expectedTime)
+    {
+        var factory = new EventBusUITestApplicationFactory(
+            useCustomDateTimeConverters: useCustomDateTimeConverters);
+        await using var app = await factory.CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var subscription = await services.GetRequiredService<IEventSubscriptionRegistry>().SubscribeAsync(
+            new EventSubscriptionDescriptor
+            {
+                EventType = typeof(RuntimeEntityChange<RuntimeFlightPlan>),
+                TopicName = TEST_TOPIC,
+                Scope = EventSubscriptionScope.Distributed,
+                HandlerFactory = new IocEventHandlerFactory(
+                    services.GetRequiredService<IServiceScopeFactory>(), typeof(RuntimeFlightPlanHandler))
+            }, TestContext.Current.CancellationToken);
+        var service = services.GetRequiredService<EventBusTestService>();
+
+        var sample = service.CreateRuntimeJsonSample(subscription.Id);
+
+        sample.Status.Should().Be(ResStatus.Ok);
+        sample.Message.Should().BeNull();
+        sample.Data.Should().NotBeNullOrWhiteSpace();
+        using var document = JsonDocument.Parse(sample.Data!);
+        var entity = document.RootElement.GetProperty("entity");
+        entity.GetProperty("planDate").GetString().Should().Be(expectedDate);
+        entity.GetProperty("requiredDate").GetString().Should().Be(expectedDate);
+        entity.GetProperty("optionalTime").GetString().Should().Be(expectedTime);
+        entity.GetProperty("requiredTime").GetString().Should().Be(expectedTime);
+
+        var validation = service.ValidateRuntimePayload(subscription.Id, sample.Data!);
+
+        validation.Status.Should().Be(ResStatus.Ok);
+        validation.Message.Should().BeEmpty();
+
+        var publication = await service.PublishRuntimePayloadAsync(
+            subscription.Id, sample.Data!, TestContext.Current.CancellationToken);
+
+        publication.Status.Should().Be(ResStatus.Ok);
+        publication.Message.Should().BeEmpty();
+        var message = factory.DefaultTransport.Messages.Should().ContainSingle().Which;
+        var options = services.GetRequiredService<IJsonSerializerOptionsProvider>().SerializerOptions;
+        JsonSerializer.Deserialize<RuntimeEntityChange<RuntimeFlightPlan>>(message.Body.Span, options)
+            .Should().Be(new RuntimeEntityChange<RuntimeFlightPlan>(RuntimeChangeKind.Created,
+                new RuntimeFlightPlan(new DateOnly(1970, 1, 1), new DateOnly(1970, 1, 1),
+                    TimeOnly.MinValue, TimeOnly.MinValue), 0));
+        factory.KeyedTransport.Messages.Should().BeEmpty();
+    }
 
     [Theory]
     [InlineData(null)]
@@ -208,7 +263,20 @@ public sealed class EventBusTestServiceTests
     [EventName(EVENT_NAME)]
     public sealed record RuntimePayload(string Value);
 
-    private sealed class EventBusUITestApplicationFactory(bool registerKeyedTransport = true)
+    public enum RuntimeChangeKind
+    {
+        Created,
+        Updated,
+        Deleted
+    }
+
+    public sealed record RuntimeEntityChange<T>(RuntimeChangeKind Kind, T Entity, long Revision);
+
+    public sealed record RuntimeFlightPlan(
+        DateOnly? PlanDate, DateOnly RequiredDate, TimeOnly? OptionalTime, TimeOnly RequiredTime);
+
+    private sealed class EventBusUITestApplicationFactory(
+        bool registerKeyedTransport = true, bool useCustomDateTimeConverters = false)
         : MonicaTestApplicationFactory<EventBusTestService>
     {
         public TransportProbe DefaultTransport { get; } = new();
@@ -227,6 +295,14 @@ public sealed class EventBusTestServiceTests
                 options.EnableMinimalApiByDefault = false;
                 options.AutoAddMonicaHttpListener = false;
             });
+            if (useCustomDateTimeConverters)
+            {
+                builder.AddJsonSerialization(options => options.ConfigureSerializer(serializerOptions =>
+                {
+                    serializerOptions.Converters.Add(new CompactDateOnlyConverter());
+                    serializerOptions.Converters.Add(new CompactTimeOnlyConverter());
+                }));
+            }
             builder.AddEventBus(options => options.DisableAutoDiscovery = true)
                 .UseNoOpDistributedEventBus()
                 .AddKeyedLocalEventBus(TEST_BUS);
@@ -243,6 +319,7 @@ public sealed class EventBusTestServiceTests
                     provider.GetRequiredService<IEventMessageFactory>(), provider, TEST_BUS));
             services.AddSingleton(HandlerState);
             services.AddTransient<RuntimePayloadHandler>();
+            services.AddTransient<RuntimeFlightPlanHandler>();
         }
     }
 
@@ -266,6 +343,30 @@ public sealed class EventBusTestServiceTests
     {
         public List<(RuntimePayload Payload, EventDeliveryMetadata Metadata)> Deliveries { get; } = [];
         public Exception? Failure { get; set; }
+    }
+
+    private sealed class CompactDateOnlyConverter : JsonConverter<DateOnly>
+    {
+        public override DateOnly Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            => DateOnly.ParseExact(reader.GetString()!, "yyyyMMdd", CultureInfo.InvariantCulture);
+
+        public override void Write(Utf8JsonWriter writer, DateOnly value, JsonSerializerOptions options)
+            => writer.WriteStringValue(value.ToString("yyyyMMdd", CultureInfo.InvariantCulture));
+    }
+
+    private sealed class CompactTimeOnlyConverter : JsonConverter<TimeOnly>
+    {
+        public override TimeOnly Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            => TimeOnly.ParseExact(reader.GetString()!, "HHmmss", CultureInfo.InvariantCulture);
+
+        public override void Write(Utf8JsonWriter writer, TimeOnly value, JsonSerializerOptions options)
+            => writer.WriteStringValue(value.ToString("HHmmss", CultureInfo.InvariantCulture));
+    }
+
+    public sealed class RuntimeFlightPlanHandler : IDistributedEventHandler<RuntimeEntityChange<RuntimeFlightPlan>>
+    {
+        public Task HandleEventAsync(RuntimeEntityChange<RuntimeFlightPlan> eventData, CancellationToken cancellationToken)
+            => Task.CompletedTask;
     }
 
     public sealed class RuntimePayloadHandler(HandlerProbe probe, IEventDeliveryContext delivery)

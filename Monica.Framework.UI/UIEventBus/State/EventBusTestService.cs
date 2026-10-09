@@ -549,6 +549,16 @@ public sealed class EventBusTestService(
             return DateTimeOffset.UnixEpoch;
         }
 
+        if (type == typeof(DateOnly))
+        {
+            return DateOnly.FromDateTime(DateTime.UnixEpoch);
+        }
+
+        if (type == typeof(TimeOnly))
+        {
+            return TimeOnly.MinValue;
+        }
+
         if (type == typeof(TimeSpan))
         {
             return TimeSpan.Zero;

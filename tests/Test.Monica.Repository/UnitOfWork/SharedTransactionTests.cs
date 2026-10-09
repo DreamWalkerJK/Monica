@@ -212,17 +212,64 @@ public sealed class SharedTransactionTests
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
+    [Fact]
+    public async Task RunAsync_WhenNoUnitOfWorkParticipantIsRegistered_ShouldAllowReadsWithoutTransaction()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        using var host = CreateHost(connection, connection,
+            secondParticipation: DbContextProviderType.Default,
+            withOutbox: true,
+            firstParticipation: DbContextProviderType.Default);
+        await using (var setup = host.Services.CreateAsyncScope())
+            await setup.ServiceProvider.GetRequiredService<TestRepositoryDbContext>()
+                .Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+        await using (var operation = host.Services.CreateAsyncScope())
+        {
+            var manager = operation.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
+            var db = operation.ServiceProvider.GetRequiredService<TestRepositoryDbContext>();
+            await manager.RunAsync(() => db.HardDeleteRows.CountAsync(TestContext.Current.CancellationToken),
+                cancellationToken: TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenTransactionIsOpen_ShouldStillRejectNonParticipantRead()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        using var host = CreateHost(connection, connection,
+            secondParticipation: DbContextProviderType.Default,
+            withOutbox: true,
+            firstParticipation: DbContextProviderType.Default);
+        await using (var setup = host.Services.CreateAsyncScope())
+        {
+            await setup.ServiceProvider.GetRequiredService<TestRepositoryDbContext>()
+                .Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+            await setup.ServiceProvider.GetRequiredService<SecondDbContext>()
+                .Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+        }
+        await using var operation = host.Services.CreateAsyncScope();
+        var manager = operation.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
+        var nonParticipant = operation.ServiceProvider.GetRequiredService<SecondDbContext>();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => manager.RunAsync(
+            () => nonParticipant.HardDeleteRows.CountAsync(TestContext.Current.CancellationToken),
+            new UnitOfWorkScopeOptions([typeof(TestRepositoryDbContext)]),
+            TestContext.Current.CancellationToken));
+    }
+
     private static IHost CreateHost(SqliteConnection first, SqliteConnection second,
         DbContextProviderType secondParticipation = DbContextProviderType.UnitOfWork,
         bool withOutbox = false,
-        bool withInbox = false)
+        bool withInbox = false,
+        DbContextProviderType firstParticipation = DbContextProviderType.UnitOfWork)
     {
         var builder = Host.CreateApplicationBuilder();
         builder.AddMonica(monica =>
         {
             if (withInbox) monica.ConfigureTypeDiscovery(options => options.Add(typeof(SharedInboxHandler).Assembly));
             var repository = monica.AddRepository()
-                .AddRepositoryDbContext<TestRepositoryDbContext>((_, db) => db.UseSqlite(first))
+                .AddRepositoryDbContext<TestRepositoryDbContext>((_, db) => db.UseSqlite(first), firstParticipation)
                 .AddRepositoryDbContext<SecondDbContext>((_, db) => db.UseSqlite(second), secondParticipation);
             if (withOutbox)
             {
