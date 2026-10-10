@@ -111,8 +111,8 @@
 
     /// <summary>
     /// Gets or sets the optional presence deep-link filter. The catalog defaults to definitions their owners
-    /// currently publish; <c>?present=false</c> lists definitions whose owners no longer publish them, as linked
-    /// from the overview attention panel.
+    /// currently publish; <c>?present=false</c> initially lists all job types whose owners no longer publish them,
+    /// as linked from the overview attention panel.
     /// </summary>
     [SupplyParameterFromQuery(Name = "present")]
     public bool? Present { get; set; }
@@ -149,7 +149,7 @@
         await ReloadFromFirstPageAsync();
     }
 
-    private async Task SelectJobTypeAsync(JobType jobType)
+    private async Task SelectJobTypeAsync(JobType? jobType)
     {
         _state?.SelectJobType(jobType);
         await ReloadFromFirstPageAsync();

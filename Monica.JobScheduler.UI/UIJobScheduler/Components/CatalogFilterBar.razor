@@ -4,6 +4,15 @@
 
 <section class="catalog-filter" aria-label="@L["Catalog:Filters:AriaLabel"]">
     <nav class="catalog-filter__types" aria-label="@L["Catalog:Filters:Type"]">
+        <button type="button"
+                class="catalog-filter__type @(SelectedJobType is null ? "is-active" : null)"
+                aria-pressed="@((SelectedJobType is null).ToString().ToLowerInvariant())"
+                disabled="@IsLoading"
+                @onclick="@(() => JobTypeSelected.InvokeAsync((JobType?)null))">
+            <MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Small" />
+            <span>@L["Catalog:Filters:AnyType"]</span>
+            <strong>@JobTypeCounts.Values.Sum()</strong>
+        </button>
         @foreach (var type in Enum.GetValues<JobType>())
         {
             <button type="button"
@@ -97,6 +106,7 @@
     [Parameter]
     public EventCallback<string?> OwnerIdChanged { get; set; }
 
+    /// <summary>Gets or sets the selected job type. A null value displays all types.</summary>
     [Parameter]
     public JobType? SelectedJobType { get; set; }
 
@@ -107,8 +117,9 @@
     [Parameter, EditorRequired]
     public IReadOnlyList<KeyValuePair<string, int>> OwnerFacets { get; set; } = [];
 
+    /// <summary>Gets or sets the selection callback. A null value requests all job types.</summary>
     [Parameter]
-    public EventCallback<JobType> JobTypeSelected { get; set; }
+    public EventCallback<JobType?> JobTypeSelected { get; set; }
 
     [Parameter]
     public bool? SelectedDisabledState { get; set; }

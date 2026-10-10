@@ -21,20 +21,19 @@
   },
   "Workspace": {
     "Eyebrow": "MONICA / DURABLE SCHEDULING",
-    "ContractLabel": "Correctness boundary",
-    "ContractValue": "Catalog · queue · leases",
     "TimeZone": "Scheduler timezone · {0}",
     "Navigation": {
       "Overview": "Overview",
       "Catalog": "Catalog",
       "Executions": "Executions",
       "Statistics": "Analytics",
-      "Runtime": "Runtime"
+      "Runtime": "Runtime",
+      "AriaLabel": "Scheduler workspaces"
     },
     "Pages": {
       "Overview": {
         "Title": "Scheduler operations",
-        "Description": "Follow workload volume, execution outcomes, recent activity, and attention signals before drilling into deployment evidence."
+        "Description": "Review durable workload and recorded outcomes, then open the execution evidence that explains them."
       },
       "Catalog": {
         "Title": "Job catalog",
@@ -56,7 +55,8 @@
         "Title": "Scheduler runtime",
         "Description": "Inspect this host's effective configuration and storage, its local scheduling planes, and every owner's durable footprint in the shared scope."
       }
-    }
+    },
+    "Scope": "Configured scope · {0}"
   },
   "Access": {
     "Checking": "Checking scheduler access…",
@@ -105,34 +105,38 @@
     "PageTitle": "Job Scheduler · Overview",
     "Workload": {
       "AriaLabel": "Scheduler workload summary",
-      "TotalJobs": "Total jobs",
+      "TotalJobs": "Present definitions",
       "TypeBreakdown": "{0} recurring / {1} triggered",
-      "RunningJobs": "Running now",
+      "RunningJobs": "Running executions",
       "DisabledCount": "{0} disabled",
-      "SuccessRate": "Success rate",
-      "CompletedSample": "Across {0} successful or failed run(s)",
-      "Throughput": "Throughput",
-      "ThroughputDescription": "Executions per hour · last 24h"
+      "SuccessRate": "Success share",
+      "CompletedSample": "Among {0} succeeded or failed records",
+      "Throughput": "Ledger records per hour",
+      "ThroughputDescription": "Average over the last 24 hours, including skipped occurrences",
+      "Title": "Durable workload",
+      "LedgerScope": "Current durable ledger states",
+      "DefinitionScope": "In the loaded definition snapshot"
     },
     "Queue": {
       "Title": "Execution state",
-      "Description": "Current durable ledger distribution by lifecycle state.",
-      "Total": "Executions",
+      "Description": "Recorded executions by current state",
+      "Total": "Ledger records",
       "AriaLabel": "Durable execution state counts",
       "SegmentTooltip": "{0}: {1} execution(s), {2} of total",
-      "HoverHint": "Hover a ring segment or legend row to inspect its details"
+      "HoverHint": "Hover or focus a segment or state link to inspect its share"
     },
     "Attention": {
-      "Title": "Needs attention",
-      "Description": "Signals that may require an operator decision.",
-      "ClearTitle": "No immediate intervention",
-      "ClearDescription": "No failed or skipped executions and every source project is converged.",
+      "Title": "Review signals",
+      "Description": "Recorded executions and loaded definitions to review.",
+      "ClearTitle": "No listed signals",
+      "ClearDescription": "No failed or skipped ledger records, and no absent definitions in the loaded snapshot.",
       "Failed": "Failed executions",
       "FailedDescription": "Inspect errors and retry evidence.",
       "Skipped": "Skipped occurrences",
       "SkippedDescription": "Review overlap and schedule capacity.",
       "Absent": "Absent definitions",
-      "AbsentDescription": "Jobs missing from their owner's latest snapshot"
+      "AbsentDescription": "Jobs missing from their owner's latest snapshot",
+      "CategoryCount": "{0} signal categories"
     },
     "Analytics": {
       "Title": "Performance analytics",
@@ -140,11 +144,12 @@
       "Action": "Open analytics"
     },
     "Recent": {
-      "Title": "Recent queue activity",
-      "Description": "The newest durable execution admissions across all jobs.",
-      "Empty": "No executions have been admitted yet."
+      "Title": "Latest ledger entries",
+      "Description": "Newest durable records, including skipped occurrences.",
+      "Empty": "No ledger records were found in this snapshot.",
+      "AllRecords": "Browse execution ledger"
     },
-    "RefreshFailed": "The last refresh failed: {0}",
+    "RefreshFailed": "Showing the last accepted snapshot. The latest refresh failed: {0}",
     "LastRefreshed": "Last refreshed {0}"
   },
   "Catalog": {
@@ -163,6 +168,7 @@
       "Owner": "Source project",
       "AnyOwner": "All source projects",
       "Type": "Job type",
+      "AnyType": "All types",
       "Policy": "Operator policy",
       "AnyPolicy": "Any policy",
       "PageSize": "Rows per page"

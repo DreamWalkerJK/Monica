@@ -8,53 +8,81 @@
     var recurringCount = presentDefinitions.Count(static definition => definition.Declaration.JobType == JobType.Recurring);
     var triggeredCount = presentDefinitions.Length - recurringCount;
     var runningCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Running);
+    var queuedCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Queued);
     var disabledCount = presentDefinitions.Count(static definition => definition.IsDisabled);
     var succeededCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Succeeded);
     var failedCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Failed);
-    var completedCount = succeededCount + failedCount;
+    var completedCount = (long)succeededCount + failedCount;
 }
 
 <section class="workload-summary" aria-label="@L["Overview:Workload:AriaLabel"]">
-    <article class="workload-summary__metric" data-tone="primary">
-        <span class="workload-summary__icon" aria-hidden="true">
-            <MudIcon Icon="@Icons.Material.Filled.Workspaces" Size="Size.Small" />
-        </span>
-        <div>
-            <span>@L["Overview:Workload:TotalJobs"]</span>
-            <strong>@presentDefinitions.Length</strong>
-            <small>@L["Overview:Workload:TypeBreakdown", recurringCount, triggeredCount]</small>
-        </div>
-    </article>
-    <article class="workload-summary__metric" data-tone="info">
-        <span class="workload-summary__icon" aria-hidden="true">
-            <MudIcon Icon="@Icons.Material.Filled.PlayCircle" Size="Size.Small" />
-        </span>
-        <div>
-            <span>@L["Overview:Workload:RunningJobs"]</span>
-            <strong>@runningCount</strong>
-            <small>@L["Overview:Workload:DisabledCount", disabledCount]</small>
-        </div>
-    </article>
-    <article class="workload-summary__metric" data-tone="success">
-        <span class="workload-summary__icon" aria-hidden="true">
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
-        </span>
-        <div>
-            <span>@L["Overview:Workload:SuccessRate"]</span>
-            <strong>@FormatSuccessRate(succeededCount, completedCount)</strong>
-            <small>@L["Overview:Workload:CompletedSample", completedCount]</small>
-        </div>
-    </article>
-    <article class="workload-summary__metric" data-tone="warning">
-        <span class="workload-summary__icon" aria-hidden="true">
-            <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" />
-        </span>
-        <div>
-            <span>@L["Overview:Workload:Throughput"]</span>
-            <strong>@FormatThroughput(Overview.ExecutionsPerHourLast24h)</strong>
-            <small>@L["Overview:Workload:ThroughputDescription"]</small>
-        </div>
-    </article>
+    <div class="workload-summary__layout">
+        <article class="workload-summary__feature" aria-labelledby="workload-summary-title">
+            <header class="workload-summary__heading">
+                <span class="workload-summary__feature-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Workspaces" /></span>
+                <div>
+                    <h2 id="workload-summary-title">@L["Overview:Workload:Title"]</h2>
+                    <p>@L["Overview:Workload:LedgerScope"]</p>
+                </div>
+            </header>
+            <div class="workload-summary__executions">
+                <a class="workload-summary__execution" data-state="running" href="@GetExecutionHref(JobExecutionState.Running)">
+                    <span class="workload-summary__execution-label">
+                        <MudIcon Icon="@Icons.Material.Outlined.PlayCircle" Size="Size.Small" />
+                        <span>@L["Overview:Workload:RunningJobs"]</span>
+                    </span>
+                    <span class="workload-summary__execution-value">
+                        <strong>@runningCount</strong>
+                        <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" />
+                    </span>
+                </a>
+                <a class="workload-summary__execution" data-state="queued" href="@GetExecutionHref(JobExecutionState.Queued)">
+                    <span class="workload-summary__execution-label">
+                        <MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" Size="Size.Small" />
+                        <span>@L["ExecutionStates:Queued"]</span>
+                    </span>
+                    <span class="workload-summary__execution-value">
+                        <strong>@queuedCount</strong>
+                        <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" />
+                    </span>
+                </a>
+            </div>
+        </article>
+        <dl class="workload-summary__facts">
+            <div class="workload-summary__fact" data-tone="primary">
+                <dt>
+                    <span class="workload-summary__fact-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Small" /></span>
+                    @L["Overview:Workload:TotalJobs"]
+                </dt>
+                <dd>
+                    <strong>@presentDefinitions.Length</strong>
+                    <p class="workload-summary__scope">@L["Overview:Workload:DefinitionScope"]</p>
+                    <p>@L["Overview:Workload:TypeBreakdown", recurringCount, triggeredCount]</p>
+                    <p>@L["Overview:Workload:DisabledCount", disabledCount]</p>
+                </dd>
+            </div>
+            <div class="workload-summary__fact" data-tone="success">
+                <dt>
+                    <span class="workload-summary__fact-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" /></span>
+                    @L["Overview:Workload:SuccessRate"]
+                </dt>
+                <dd>
+                    <strong aria-label="@(completedCount == 0 ? L["Common:NotAvailable"].Value : null)">@FormatSuccessRate(succeededCount, completedCount)</strong>
+                    <p>@L["Overview:Workload:CompletedSample", completedCount]</p>
+                </dd>
+            </div>
+            <div class="workload-summary__fact" data-tone="info">
+                <dt>
+                    <span class="workload-summary__fact-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Speed" Size="Size.Small" /></span>
+                    @L["Overview:Workload:Throughput"]
+                </dt>
+                <dd>
+                    <strong>@FormatThroughput(Overview.ExecutionsPerHourLast24h)</strong>
+                    <p>@L["Overview:Workload:ThroughputDescription"]</p>
+                </dd>
+            </div>
+        </dl>
+    </div>
 </section>
 
 @code {
@@ -64,7 +92,10 @@
     [Parameter, EditorRequired]
     public JobSchedulerOverview Overview { get; set; } = null!;
 
-    private static string FormatSuccessRate(int succeededCount, int completedCount) => completedCount == 0
+    private static string GetExecutionHref(JobExecutionState state) =>
+        $"/job-scheduler/executions?states={Uri.EscapeDataString(state.ToString())}";
+
+    private static string FormatSuccessRate(int succeededCount, long completedCount) => completedCount == 0
         ? "—"
         : (succeededCount / (double)completedCount).ToString("P1", CultureInfo.CurrentCulture);
 

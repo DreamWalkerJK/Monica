@@ -7,108 +7,89 @@
 
 .scheduler-workspace__header {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+    align-items: end;
     gap: 24px;
     min-width: 0;
-    padding: clamp(12px, 1.6vw, 20px) clamp(16px, 2vw, 24px);
-    border-bottom: 1px solid var(--mud-palette-lines-default);
+    padding: 4px;
 }
 
 .scheduler-workspace__heading {
     min-width: 0;
 }
 
+.scheduler-workspace ::deep .scheduler-workspace__eyebrow {
+    color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary));
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    line-height: 1.5;
+}
+
 .scheduler-workspace ::deep .scheduler-workspace__title {
-    margin-top: 2px;
+    margin-top: 8px;
     color: var(--mud-palette-text-primary);
     font-family: var(--mo-font-family-display);
-    font-weight: 700;
+    font-size: clamp(1.875rem, 2.4vw, 2.125rem);
+    font-weight: 500;
     letter-spacing: -0.025em;
-    line-height: 1.12;
+    line-height: 1.18;
     overflow-wrap: anywhere;
 }
 
 .scheduler-workspace ::deep .scheduler-workspace__description {
     max-width: 78ch;
-    margin-top: 6px;
-    color: var(--mud-palette-text-secondary);
+    margin-top: 10px;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+    font-size: 0.875rem;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
 }
 
-.scheduler-workspace__contract {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 15rem;
-    padding: 10px 12px;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 8px;
-    background-color: var(--mud-palette-surface);
-}
-
-.scheduler-workspace__contract > div {
+.scheduler-workspace__metadata {
     display: grid;
-    gap: 1px;
+    gap: 10px;
     min-width: 0;
+    padding-left: 24px;
+    border-left: 1px solid var(--mud-palette-lines-default);
 }
 
-.scheduler-workspace__timezone {
-    overflow: hidden;
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.7rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.scheduler-workspace__nav-wrap {
+.scheduler-workspace__context {
+    display: flex;
+    align-items: start;
+    gap: 8px;
     min-width: 0;
-    overflow-x: auto;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+    font-size: 0.8125rem;
+    line-height: 1.6;
 }
 
-.scheduler-workspace__nav-wrap ::deep .mud-tabs {
-    min-width: 38rem;
-    border-radius: 8px;
-    background-color: var(--mud-palette-surface);
+.scheduler-workspace__context > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
-.scheduler-workspace__nav-wrap ::deep .mud-tabs-tabbar {
-    min-height: 44px;
-}
-
-.scheduler-workspace__nav-wrap ::deep .mud-tabs-panels,
-.scheduler-workspace__nav-wrap ::deep .scheduler-workspace__unused-panels {
-    display: none;
+.scheduler-workspace__context ::deep .mud-icon-root {
+    width: 17px;
+    height: 17px;
+    margin-top: 2px;
+    flex: 0 0 auto;
+    color: inherit;
 }
 
 .scheduler-workspace__content {
     min-width: 0;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
     .scheduler-workspace__header {
         grid-template-columns: minmax(0, 1fr);
         align-items: start;
-        gap: 12px;
+        gap: 16px;
     }
 
-    .scheduler-workspace__contract {
-        width: 100%;
-        min-width: 0;
-    }
-
-    .scheduler-workspace__nav-wrap ::deep .mud-tabs {
-        min-width: 0;
-    }
-
-    .scheduler-workspace__nav-wrap ::deep .mud-tab {
-        flex: 1 1 25%;
-        min-width: 0 !important;
-        padding-inline: 8px;
-    }
-}
-
-@media (max-width: 390px) {
-    .scheduler-workspace__header {
-        padding-inline: 12px;
+    .scheduler-workspace__metadata {
+        padding-left: 0;
+        border-left: 0;
     }
 }

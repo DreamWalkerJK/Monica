@@ -21,20 +21,19 @@
   },
   "Workspace": {
     "Eyebrow": "MONICA / 持久化调度",
-    "ContractLabel": "一致性边界",
-    "ContractValue": "目录 · 队列 · 租约",
     "TimeZone": "调度时区 · {0}",
     "Navigation": {
       "Overview": "总览",
       "Catalog": "目录",
       "Executions": "执行",
       "Statistics": "统计分析",
-      "Runtime": "运行时"
+      "Runtime": "运行时",
+      "AriaLabel": "调度器工作区"
     },
     "Pages": {
       "Overview": {
         "Title": "调度运行总览",
-        "Description": "优先掌握工作负载、执行结果、最近活动与关注信号，再深入查看部署证据。"
+        "Description": "查看持久化工作负载与执行结果，打开执行证据，了解记录背后的情况。"
       },
       "Catalog": {
         "Title": "作业目录",
@@ -56,7 +55,8 @@
         "Title": "调度运行时",
         "Description": "查看当前宿主的生效配置与存储、本机调度面健康状态，以及共享范围内每个所有者的持久化足迹。"
       }
-    }
+    },
+    "Scope": "配置的调度作用域 · {0}"
   },
   "Access": {
     "Checking": "正在检查调度权限…",
@@ -105,34 +105,38 @@
     "PageTitle": "任务调度 · 总览",
     "Workload": {
       "AriaLabel": "调度工作负载摘要",
-      "TotalJobs": "任务总数",
+      "TotalJobs": "当前在册定义",
       "TypeBreakdown": "{0} 周期 / {1} 触发",
-      "RunningJobs": "正在运行",
+      "RunningJobs": "运行中的执行记录",
       "DisabledCount": "{0} 个已禁用",
-      "SuccessRate": "成功率",
-      "CompletedSample": "基于 {0} 次成功或失败执行",
-      "Throughput": "吞吐量",
-      "ThroughputDescription": "近 24 小时 · 每小时执行"
+      "SuccessRate": "成功占比",
+      "CompletedSample": "基于 {0} 条成功或失败记录",
+      "Throughput": "每小时账本记录数",
+      "ThroughputDescription": "最近 24 小时的平均值，包含跳过的计划记录",
+      "Title": "持久化工作负载",
+      "LedgerScope": "当前持久化账本状态",
+      "DefinitionScope": "基于已加载的定义快照"
     },
     "Queue": {
       "Title": "执行状态",
-      "Description": "当前持久化执行账本的生命周期分布。",
-      "Total": "执行",
+      "Description": "按当前状态汇总的执行记录",
+      "Total": "账本记录",
       "AriaLabel": "持久化执行状态统计",
       "SegmentTooltip": "{0}：{1} 次执行，占比 {2}",
-      "HoverHint": "悬停环段或图例项查看详情"
+      "HoverHint": "将指针移入或聚焦环形分段、状态链接以查看占比"
     },
     "Attention": {
-      "Title": "需要关注",
-      "Description": "可能需要运维人员处理的信号。",
-      "ClearTitle": "暂无需立即干预",
-      "ClearDescription": "没有失败或跳过的执行，所有来源项目均已收敛。",
+      "Title": "待核查信号",
+      "Description": "需要核查的执行记录与已加载定义。",
+      "ClearTitle": "未发现所列信号",
+      "ClearDescription": "账本中没有失败或跳过记录，已加载的定义快照中没有缺失定义。",
       "Failed": "失败执行",
       "FailedDescription": "检查错误与重试证据。",
       "Skipped": "跳过的执行时点",
       "SkippedDescription": "检查重叠执行与调度容量。",
       "Absent": "缺席定义",
-      "AbsentDescription": "未出现在所有者最新快照中的作业"
+      "AbsentDescription": "未出现在所有者最新快照中的作业",
+      "CategoryCount": "{0} 类信号"
     },
     "Analytics": {
       "Title": "统计分析",
@@ -140,11 +144,12 @@
       "Action": "打开统计分析"
     },
     "Recent": {
-      "Title": "最近队列活动",
-      "Description": "所有作业中最新的持久化执行准入记录。",
-      "Empty": "尚未准入任何执行。"
+      "Title": "最新账本记录",
+      "Description": "最新持久化记录，包含跳过的计划记录。",
+      "Empty": "当前快照中没有账本记录。",
+      "AllRecords": "浏览执行账本"
     },
-    "RefreshFailed": "最近一次刷新失败：{0}",
+    "RefreshFailed": "正在显示最近一次成功获取的快照。最新刷新失败：{0}",
     "LastRefreshed": "最近刷新：{0}"
   },
   "Catalog": {
@@ -163,6 +168,7 @@
       "Owner": "来源项目",
       "AnyOwner": "全部来源项目",
       "Type": "作业类型",
+      "AnyType": "全部类型",
       "Policy": "运维策略",
       "AnyPolicy": "全部策略",
       "PageSize": "每页行数"

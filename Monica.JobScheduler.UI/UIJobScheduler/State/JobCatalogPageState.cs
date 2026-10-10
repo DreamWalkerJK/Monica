@@ -60,6 +60,8 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
 
     internal string? SearchText { get; set; }
     internal string? OwnerId { get; set; }
+
+    /// <summary>Gets or sets the selected job type. A null value includes all types; ordinary entry defaults to recurring jobs.</summary>
     internal JobType? SelectedJobType { get; set; } = JobType.Recurring;
     internal bool? SelectedDisabledState { get; set; }
 
@@ -86,14 +88,15 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     internal bool IsDisposed => Volatile.Read(ref _disposed) != 0;
 
     /// <summary>
-    /// Applies the page's deep-link filters before the first load. Omitted values keep the present-only default
-    /// and the unfiltered owner scope.
+    /// Applies the page's deep-link filters before the first load. Omitted values keep the present-only recurring
+    /// default and the unfiltered owner scope. An absent-only entry includes all job types.
     /// </summary>
     internal void ApplyInitialQuery(bool? present, string? owner)
     {
         if (present is { } value)
         {
             PresentFilter = value;
+            SelectedJobType = value ? JobType.Recurring : null;
         }
 
         if (!string.IsNullOrWhiteSpace(owner))
@@ -151,12 +154,13 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     {
         SearchText = null;
         OwnerId = null;
-        SelectedJobType = JobType.Recurring;
+        SelectedJobType = PresentFilter == false ? null : JobType.Recurring;
         SelectedDisabledState = null;
         _selectedJobIds.Clear();
     }
 
-    internal void SelectJobType(JobType jobType)
+    /// <summary>Selects one job type, or all types when <paramref name="jobType"/> is null.</summary>
+    internal void SelectJobType(JobType? jobType)
     {
         if (SelectedJobType == jobType)
         {
