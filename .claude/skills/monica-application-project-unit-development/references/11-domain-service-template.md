@@ -11,6 +11,7 @@ Use `$DomainNamespace$` for the domain project namespace selected by the archite
 ## Rules
 
 - Derive from `DomainService`.
+- Declare business collaborators in the constructor, preferably a primary constructor, and inject only dependencies the service uses. Current-user access and ID generation are explicit application dependencies; do not add them to a shared service base or resolve them through `IServiceProvider` / `CachedServiceProvider`.
 - Use the inherited `Logger` in service methods when logging is needed. Monica resolves it after activation from the
   host that owns the service instance; do not access it from a constructor.
 - Start the class name with `Domain`.
@@ -28,7 +29,6 @@ namespace $DomainNamespace$.DomainServices;
 
 [ProjectUnitMetadata(
     "$FeatureName$ Domain Rules",
-    Owner = "$Owner$",
     Description = "Enforces reusable domain rules for $FeatureName$.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]

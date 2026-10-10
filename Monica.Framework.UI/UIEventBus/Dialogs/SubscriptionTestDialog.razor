@@ -22,30 +22,32 @@
         else
         {
             <MudStack Spacing="3">
-                <MudPaper Class="pa-3" Elevation="0" Outlined="true">
-                    <MudGrid Spacing="2">
-                        <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:EventType"]</MudText>
-                            <MudText Typo="Typo.body2">@Subscription.EventType</MudText>
-                        </MudItem>
-                        <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:TopicName"]</MudText>
-                            <MudText Typo="Typo.body2">@Subscription.TopicName</MudText>
-                        </MudItem>
-                        <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Scope"]</MudText>
-                            <MudChip T="string" Color="@Subscription.ScopeColor" Size="Size.Small">@L.GetSubscriptionScopeText(Subscription.Scope)</MudChip>
-                        </MudItem>
-                        <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Provider"]</MudText>
-                            <MudText Typo="Typo.body2">@(Subscription.ServiceKey ?? L["Services:Common:DefaultProviderKey"].Value)</MudText>
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Handler"]</MudText>
-                            <MudText Typo="Typo.body2">@L.GetHandlerDisplayText(Subscription)</MudText>
-                        </MudItem>
-                    </MudGrid>
-                </MudPaper>
+                <div class="subscription-test-dialog__metadata">
+                    <MudPaper Class="pa-3" Elevation="0" Outlined="true">
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" md="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:EventType"]</MudText>
+                                <MudText Typo="Typo.body2">@Subscription.EventType</MudText>
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:TopicName"]</MudText>
+                                <MudText Typo="Typo.body2">@Subscription.TopicName</MudText>
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Scope"]</MudText>
+                                <MudChip T="string" Color="@Subscription.ScopeColor" Size="Size.Small">@L.GetSubscriptionScopeText(Subscription.Scope)</MudChip>
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Provider"]</MudText>
+                                <MudText Typo="Typo.body2">@(Subscription.ServiceKey ?? L["Services:Common:DefaultProviderKey"].Value)</MudText>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Handler"]</MudText>
+                                <MudText Typo="Typo.body2">@L.GetHandlerDisplayText(Subscription)</MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                </div>
 
                 <MudTextField @bind-Value="_jsonPayload"
                               T="string"

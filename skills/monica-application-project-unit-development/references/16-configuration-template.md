@@ -27,7 +27,6 @@ namespace $DomainNamespace$.Configurations;
 [Configuration]
 [ProjectUnitMetadata(
     "Order Processing Configuration",
-    Owner = "$Owner$",
     Description = "Controls host-specific order processing behavior.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -50,7 +49,6 @@ namespace $DomainNamespace$.DomainServices;
 
 [ProjectUnitMetadata(
     "Order Approval Rules",
-    Owner = "$Owner$",
     Description = "Evaluates configured order approval behavior.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]

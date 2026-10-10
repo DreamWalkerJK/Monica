@@ -6,13 +6,20 @@ Use this reference before creating or changing any discovered ProjectUnit. The a
 
 Resolve these facts from repository conventions and source requirements before writing code:
 
-- `$Owner$`: the team, role, or capability accountable for the unit.
 - `$RequirementId$`: a stable requirement identifier owned by the application or its workflow system.
 - `$SubdomainTag$`: the bounded context or subdomain tag.
 - `$FeatureTag$`: the capability or feature tag.
-- A concise title and one-sentence responsibility specific to this unit.
+- `$Title$` and `$Description$`: a concise title and one-sentence responsibility specific to this unit, in the catalog language below.
 
-If any fact cannot be discovered, ask one focused question. Do not invent ownership or requirement IDs.
+If any required fact cannot be discovered, ask one focused question. Do not invent requirement IDs.
+
+Leave `Owner` unset while the application does not use ownership mapping. If the project adopts ownership later, reference a project-defined `Const` entry that maps to a stable team or member ID. Do not use arbitrary service names, team labels, roles, or capabilities as owner values. Ownership is optional and does not block creating a unit.
+
+## Catalog Language
+
+Resolve the application's configured workspace language before writing human-readable metadata. It governs the title and `Description` even though the values are C# strings: `zh-CN` uses Chinese and `en-US` uses English. For Monica Workflow, read `language` in `.workflow/workspace.yml` or the resolved workspace context. If no workspace language is configured, follow the application's existing catalog convention. English requirements for conversation, code comments, XML documentation or framework guidance do not override the application catalog language.
+
+Keep `Owner`, tags, requirement IDs, namespaces and CLR type names stable. Localize the human title and responsibility without translating these identities.
 
 ## Annotation Pattern
 
@@ -20,9 +27,8 @@ If any fact cannot be discovered, ask one focused question. Do not invent owners
 using Monica.ProjectUnits.Annotations;
 
 [ProjectUnitMetadata(
-    "Approve Order",
-    Owner = "$Owner$",
-    Description = "Approves an eligible order.",
+    "$Title$",
+    Description = "$Description$",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
 public sealed class CommandHandlerApproveOrder : ApplicationService<CommandApproveOrder>

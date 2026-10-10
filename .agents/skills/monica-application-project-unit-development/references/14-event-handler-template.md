@@ -1,9 +1,11 @@
 # Event Handler Template
 
+Use `$ApplicationNamespace$`, `$DomainNamespace$`, and `$ContractNamespace$` for the application, domain, and published-language namespaces selected by the architecture skill.
+
 ## Use When
 
 - Another unit should react to an event without direct coupling to the sender.
-- The reaction is still synchronous enough to stay in an event handler rather than being moved into a job queue.
+- The reaction should complete as part of processing that event delivery.
 
 ## Rules
 
@@ -15,18 +17,21 @@
 - Make the event type stable before adding consumers.
 - Use `$ApplicationNamespace$` for the application-layer namespace chosen by the architecture skill.
 - Place handlers in `HandlersEvent/`.
+- Use the [naming and boundary rules](01-project-unit-naming-and-boundaries.md) for every application consumer, including consumers marked `[Inbox]`; delivery attributes do not replace its ProjectUnit base, prefix, or metadata.
+- Choose the execution boundary using [transactional events](../../monica-infra-persistence/references/transactional-events.md). Repository `IDomainEventHandler<TEvent>` handles before-commit effects in the publisher's scope; it is a different contract from these EventBus handler bases.
 
 ## Distributed Handler Example
 
 ```csharp
 using Monica.ProjectUnits.Annotations;
 using Monica.WebApi.Abstractions;
+using $ContractNamespace$.Events;
+using $DomainNamespace$.DomainServices;
 
 namespace $ApplicationNamespace$.HandlersEvent;
 
 [ProjectUnitMetadata(
     "Notify Warehouse After Order Approval",
-    Owner = "$Owner$",
     Description = "Coordinates the warehouse reaction to an approved order.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -47,12 +52,13 @@ public sealed class DomainEventHandlerOrderApproved(DomainNotifyWarehouse domain
 ```csharp
 using Monica.ProjectUnits.Annotations;
 using Monica.WebApi.Abstractions;
+using $ContractNamespace$.Events;
+using $DomainNamespace$.DomainServices;
 
 namespace $ApplicationNamespace$.HandlersEvent;
 
 [ProjectUnitMetadata(
     "Refresh Order Read Model",
-    Owner = "$Owner$",
     Description = "Refreshes the local read model after order approval.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -70,7 +76,7 @@ public sealed class LocalEventHandlerOrderApproved(DomainRefreshReadModel domain
 
 ## Notes
 
-- If the reaction is slow, retriable, or should survive process restarts, move the heavy work into a `TriggeredJob`.
+- Keep work in the handler when it belongs to processing that delivery. Choose a [TriggeredJob](15-job-template.md) when work needs an independent execution lifecycle, such as delayed scheduling, operator control, concurrency policy, or execution history. Use [transactional events](../../monica-infra-persistence/references/transactional-events.md) for durable delivery and deduplicated receives.
 - Pass the handler `CancellationToken` into every cancellable dependency. A distributed delivery timeout can return
   the message for retry, but it cannot forcibly terminate handler code that ignores cancellation.
 - Do not let handlers become alternate application services with large control flow and validation logic.

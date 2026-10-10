@@ -27,6 +27,8 @@ public sealed class RefreshOrdersJob(ILogger<RefreshOrdersJob> logger) : Recurri
 
 The six-field cron has second precision and uses `ModuleJobSchedulerOption.CronTimeZone` (local time zone by default); occurrences are persisted in UTC. Job instances are transient and resolved in a fresh DI scope per execution. Honor cancellation for timeout, operator cancellation, and shutdown. `[JobConfig]` can set name, cron, concurrency, retry count, and execution timeout. Without overrides, concurrency is one, retry count is zero, and per-attempt timeout is one hour. A failed attempt is durably requeued up to `RetryCount`. At capacity, triggered work waits durably, while a scheduled recurring occurrence is recorded as skipped to avoid an unbounded backlog.
 
+Jobs default to no automatic application UnitOfWork. Use the persistence [transaction contract](../../monica-infra-persistence/references/transactions.md) when job work needs automatic saving, context selection, or independently committed child operations.
+
 Triggered jobs derive from `TriggeredJob<TArgs>` with JSON-serializable reference-type args and override `ExecuteAsync(TArgs, CancellationToken)`. Put this job in the host's type-discovery scope:
 
 ```csharp

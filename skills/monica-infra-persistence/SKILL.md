@@ -11,7 +11,7 @@ Repositories and UnitOfWork cover a local database operation; use transactional-
 | --- | --- |
 | Register a context, choose its provider mode, or use repositories | [Repositories](references/repositories.md) |
 | Set a write boundary, select participants, or understand save and rollback | [Transactions](references/transactions.md) |
-| Stage domain events or configure outbox, inbox, and projections | [Transactional events](references/transactional-events.md) |
+| Choose before-commit effects or committed delivery; configure outbox, inbox, and projections | [Transactional events](references/transactional-events.md) |
 | Diagnose a failed save, transaction, or delivery | [Troubleshooting](references/troubleshooting.md) |
 
 For key-value storage, use [state stores](../monica-infra-hosting/references/state-stores.md); for application placement, use [ProjectUnit development](../monica-application-project-unit-development/SKILL.md); for module implementation, use [development](../monica-development/SKILL.md).

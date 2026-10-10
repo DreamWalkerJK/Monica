@@ -11,7 +11,8 @@ namespace Monica.WebApi.AutoControllers.Services.Support;
 /// Generated GET endpoints dispatch through the mediator, whose boundary must not open an automatic write
 /// transaction. Attaching the rule to the request type also covers direct <c>IMediator.Send</c> calls from
 /// jobs, tests, or other handlers. DELETE uses query binding but performs writes, so only GET qualifies;
-/// requests needing a transaction despite a GET binding use <see cref="Monica.Core.Execution.ExecutionTransactionAttribute"/>.
+/// requests needing a transaction despite a GET binding declare
+/// <see cref="Monica.Core.Execution.ExecutionTransactionAttribute"/> on the handler's entry method.
 /// </remarks>
 public sealed class ApiEndpointReadOnlyConvention : IReadOnlyRequestConvention
 {
