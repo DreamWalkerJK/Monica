@@ -31,6 +31,18 @@ namespace Monica.DataChannel.Providers.TCP
             Type = CommunicationType.TCP;
             Direction = direction;
         }
+
+        /// <inheritdoc />
+        public override void EnrichOrValidate()
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(ServerAddress.Key);
+            if (ServerAddress.Value?.Address is not { } address || !System.Net.IPAddress.TryParse(address.Item1, out _))
+                throw new ArgumentException("TCP server bind address must be an IP address.", nameof(ServerAddress));
+            if (address.Item2 is < 0 or > 65535) throw new ArgumentOutOfRangeException(nameof(ServerAddress));
+            if (SendTime is { } interval && interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(SendTime));
+            if (Direction is not (ConnectionDirection.Input or ConnectionDirection.Output or ConnectionDirection.InputAndOutput))
+                throw new ArgumentOutOfRangeException(nameof(Direction));
+        }
     }
 
 
