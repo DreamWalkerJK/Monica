@@ -49,7 +49,7 @@
       },
       "Statistics": {
         "Title": "Scheduler analytics",
-        "Description": "Measure reliability, schedule fulfillment, throughput, duration percentiles, and workload concentration over bounded scheduler-time windows."
+        "Description": "Compare recorded completions in a bounded window, understand their elapsed duration, and inspect the jobs and records behind them."
       },
       "Runtime": {
         "Title": "Scheduler runtime",
@@ -607,10 +607,9 @@
   "Analytics": {
     "PageTitle": "Job Scheduler · Analytics",
     "RefreshFailed": "The latest analytics refresh failed: {0}",
-    "ObservedAt": "Analytics observed {0}",
     "Range": {
       "Title": "Analysis window",
-      "Description": "Calendar presets use scheduler timezone {0}; database aggregation remains bounded.",
+      "Description": "Today uses scheduler midnight in {0}; other presets are rolling UTC windows.",
       "Today": "Today",
       "Last24Hours": "Last 24 hours",
       "Last7Days": "Last 7 days",
@@ -618,63 +617,89 @@
     },
     "Metrics": {
       "AriaLabel": "Scheduler analytics summary",
-      "Reliability": "Reliability",
-      "Throughput": "Executed throughput",
-      "ScheduleFulfillment": "Schedule fulfillment",
-      "DecidedRuns": "{0} successful or failed run(s)",
-      "PerHour": "Terminal attempts per hour",
-      "ScheduledDispositions": "{0} completed schedule disposition(s)",
-      "DurationSample": "{0} measured terminal attempt(s)"
+      "Reliability": "Success share",
+      "Throughput": "Executed completions per hour",
+      "ScheduleFulfillment": "Recurring dispatch fulfillment",
+      "DecidedRuns": "Of {0} successful or failed completions",
+      "PerHour": "Completions retaining a start / exact window hours",
+      "ScheduledDispositions": "Of {0} completed recurring dispositions; skipped occurrences were not dispatched",
+      "ExecutionSample": "{0} executed completions across {1} hours"
     },
     "Trend": {
-      "Eyebrow": "COMPLETION PULSE",
-      "Title": "Outcome trend",
-      "Description": "Completed outcomes across the selected range, presented in scheduler time.",
+      "Title": "Completions by interval",
+      "Description": "Compare recorded outcome counts in consecutive intervals. Lines connect counts; they do not represent a continuous rate.",
       "LegendAriaLabel": "Outcome chart legend",
-      "ChartAriaLabel": "Scheduler completion outcome trend",
       "ViewAriaLabel": "Outcome chart display",
       "Bars": "Bars",
       "Lines": "Lines",
-      "TotalsAriaLabel": "Completed outcome totals",
-      "Total": "Total executions",
-      "BucketTooltip": "{0}: {1} succeeded, {2} failed, {3} skipped, {4} cancelled"
+      "Unit": "Completions per bucket",
+      "HourBuckets": "Fixed one-hour UTC buckets",
+      "DayBuckets": "Fixed 24-hour UTC buckets",
+      "NoCompletions": "No completed outcomes in this window. The returned intervals remain available below.",
+      "ViewData": "View interval data",
+      "DataAriaLabel": "Completion counts for every returned interval",
+      "Interval": "Interval · start included, end excluded",
+      "PartialBucket": "Partial final bucket",
+      "UtcInterval": "UTC: {0} → {1}",
+      "ChartWindowLabel": "{0}; {1} → {2}; {3}"
     },
     "Duration": {
-      "Eyebrow": "LATENCY DOSSIER",
-      "Title": "Terminal-attempt duration",
-      "Description": "Measured from the latest attempt start to terminal completion; skips never enter this distribution.",
-      "Samples": "{0} samples",
+      "Title": "Recorded elapsed duration",
+      "Description": "From retained start to completion; retry waiting may be included. This is not CPU time or summed attempt time.",
+      "Samples": "{0} measured completions",
       "PercentilesAriaLabel": "Execution duration percentiles",
       "Minimum": "Minimum",
       "Average": "Average",
       "P50": "P50",
-      "P50Description": "Half completed at or below",
+      "P50Description": "50% of measured completions at or below",
       "P90": "P90",
-      "P90Description": "Nine in ten completed at or below",
+      "P90Description": "90% of measured completions at or below",
       "P95": "P95",
-      "P95Description": "Tail-latency threshold",
+      "P95Description": "95% of measured completions at or below",
       "P99": "P99",
-      "P99Description": "Extreme-tail threshold",
+      "P99Description": "99% of measured completions at or below",
       "Maximum": "Maximum"
     },
     "Rankings": {
-      "Eyebrow": "WORKLOAD CONCENTRATION",
-      "Volume": "Execution count ranking",
-      "VolumeDescription": "Jobs with the most terminal completions in this window.",
-      "Failures": "Failure count ranking",
-      "FailuresDescription": "Jobs producing the most failed completions in this window.",
+      "Volume": "Completion concentration",
+      "VolumeDescription": "Share of all completed outcomes in this window, including skipped and cancelled records.",
+      "Failures": "Failure concentration",
+      "FailuresDescription": "Share of all failed completions in this window. Jobs without failures are omitted.",
       "TopTen": "Top 10",
       "OpenJobWithMetric": "Rank {0}: open {1}; {2}: {3} ({4})",
       "VolumeEmpty": "No terminal job activity completed in this window.",
-      "FailuresEmpty": "No failed executions completed in this window."
+      "FailuresEmpty": "No failed executions completed in this window.",
+      "VolumePopulation": "{0} completed outcomes in this window",
+      "FailurePopulation": "{0} failed completions in this window"
     },
     "Slowest": {
-      "Top": "Slowest executions · Top 10",
-      "Description": "The slowest measured terminal attempt for each job, linked back to its durable evidence.",
-      "Empty": "No measured terminal attempts completed in this window.",
-      "OpenDetails": "Rank {0}: inspect {1}, instance {2}; {3}; completed {4}; duration {5}"
+      "Top": "Longest recorded elapsed per job · Top 10",
+      "Description": "One longest measured completion for each exact owner and job. Open its retained execution evidence.",
+      "Empty": "No qualifying measured completions in this window.",
+      "OpenDetails": "Rank {0}: inspect {1}, instance {2}; {3}; completed {4}; recorded elapsed {5}",
+      "Inspect": "Inspect record"
     },
-    "CohortNote": "State totals describe executions created in the window. Outcomes, throughput, trends, rankings, and durations describe executions completed in the window."
+    "Window": {
+      "Completed": "Completed outcomes",
+      "CompletedDescription": "Recorded terminal outcomes in this interval",
+      "Accepted": "Accepted analysis window",
+      "Requested": "Requested analysis window",
+      "Bounds": "Start included · End excluded · {0}",
+      "Resolved": "Succeeded + failed",
+      "Measured": "Measured completions",
+      "Observed": "Observed",
+      "Unavailable": "Analysis is unavailable",
+      "UnavailableDescription": "This window has no accepted result yet. Retry the actual store read.",
+      "Retained": "Showing the last accepted window: {0}. Its bounds and observation remain unchanged."
+    },
+    "Summary": {
+      "Title": "Completion summary"
+    },
+    "Cohort": {
+      "Title": "Created in this window",
+      "Description": "Current states of records created in the accepted window; this is a separate population from completions.",
+      "Total": "{0} created records"
+    }
   },
   "Executions": {
     "PageTitle": "Job Scheduler · Executions",

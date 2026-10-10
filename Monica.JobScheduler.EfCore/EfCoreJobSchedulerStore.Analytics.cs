@@ -133,8 +133,8 @@ public sealed partial class EfCoreJobSchedulerStore
                 execution.StartedAtUtcTicks != null
                 && execution.CompletedAtUtcTicks >= execution.StartedAtUtcTicks);
         // Slowest execution per job in two phases: a plain GROUP BY + MAX reduces each job to its peak duration,
-        // then an exact-equality fetch loads the winning rows, which are ranked and limited client-side over the
-        // per-job winners. Correlated argmax subqueries are not translated reliably by every EF provider.
+        // then an exact-equality fetch loads all maximum-duration ties. Choose one ordinal instance winner per job
+        // before global ranking and limiting. Correlated argmax subqueries are not translated reliably by every provider.
         var slowestBoundaries = await measurableCompletions
             .GroupBy(static execution => new { execution.OwnerKey, execution.JobKey })
             .Select(static group => new
@@ -162,10 +162,12 @@ public sealed partial class EfCoreJobSchedulerStore
                     DurationTicks = execution.CompletedAtUtcTicks.Value - execution.StartedAtUtcTicks.Value
                 })
                 .ToArrayAsync(cancellationToken))
+            .GroupBy(static execution => new JobId(execution.OwnerKey, execution.JobKey))
+            .Select(static group => group.OrderBy(static execution => execution.InstanceId, StringComparer.Ordinal).First())
             .OrderByDescending(static execution => execution.DurationTicks)
-            .ThenBy(static execution => execution.OwnerKey)
-            .ThenBy(static execution => execution.JobKey)
-            .ThenBy(static execution => execution.InstanceId)
+            .ThenBy(static execution => execution.OwnerKey, StringComparer.Ordinal)
+            .ThenBy(static execution => execution.JobKey, StringComparer.Ordinal)
+            .ThenBy(static execution => execution.InstanceId, StringComparer.Ordinal)
             .Take(query.SlowestExecutionLimit)
             .ToArray();
 

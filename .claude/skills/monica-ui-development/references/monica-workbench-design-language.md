@@ -24,6 +24,8 @@ Distinguish summary scope from filtered results. A whole-host state, all-registr
 
 Keep missing coverage, loading, stale evidence, query failure, access denial, no records, and no filter matches distinct. Zero records do not prove success. A live snapshot does not establish history, availability, a trend, or a percentage. Do not add simulated metrics, fabricated comparison periods, or decorative charts that the facade cannot support. Keep bounded, sanitized facade evidence encoded as text.
 
+For count charts, provide a readable numerical axis starting at zero, its unit and the actual interval/population. Preserve label size at narrow widths by reducing tick density rather than shrinking SVG text. Supply inspectable interval data with the same counts, exact inclusive/exclusive boundaries and relevant timezone offsets; identify partial intervals. A line joining bucket counts does not imply continuous sampling or a rate. Ranking bar lengths and adjacent percentages must use the same stated denominator, including records outside a displayed Top N. Keep unavailable ratios and absent duration samples distinct from a genuine measured zero.
+
 ## Make hierarchy through composition, type, and spacing
 
 Give page identity appropriate prominence: a category label when useful, a clear title, task context, and host or scope metadata. An identity or feature region can carry stronger color, larger display type, an asymmetric composition, or a deliberate graphic treatment when it makes the page more legible and distinctive. Group actions and last-update information where they can be found. Keep the amount of introductory space proportionate to the task rather than forbidding or requiring a prominent hero.

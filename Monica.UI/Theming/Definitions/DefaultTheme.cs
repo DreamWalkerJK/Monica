@@ -117,7 +117,7 @@ public sealed class DefaultTheme : ThemeDefinitionBase
         Primary = "#6366f1", // Indigo 500
         PrimaryLighten = "#818cf8", // Indigo 400
         PrimaryDarken = "#4f46e5", // Indigo 600
-        PrimaryContrastText = "#ffffff",
+        PrimaryContrastText = "#000000",
 
         Secondary = "#a1a1aa", // Zinc 400
         SecondaryLighten = "#d4d4d8", // Zinc 300

@@ -70,6 +70,16 @@ internal sealed class SchedulerTimePresentation(
         ? ToSchedulerWallTime(instant).ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.CurrentCulture)
         : "—";
 
+    /// <summary>Formats a scheduler-zone instant with its actual UTC offset, distinguishing repeated wall times.</summary>
+    internal string FormatTimestampWithOffset(DateTimeOffset? value) => value is { } instant
+        ? TimeZoneInfo.ConvertTime(instant, _timeZone).ToString("yyyy-MM-dd HH:mm:ss.fff zzz", CultureInfo.CurrentCulture)
+        : "—";
+
+    /// <summary>Formats the complete normalized UTC instant used by an inclusive or exclusive analytics boundary.</summary>
+    internal string FormatUtcTimestamp(DateTimeOffset? value) => value is { } instant
+        ? instant.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)
+        : "—";
+
     /// <summary>
     /// Projects an absolute instant into the configured scheduler-zone wall clock.
     /// </summary>

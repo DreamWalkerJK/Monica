@@ -46,6 +46,22 @@ public sealed class SchedulerTimePresentationTests
     }
 
     [Fact]
+    public void OffsetTimestamp_WhenWallHourRepeats_ShouldRetainDistinctAbsoluteBoundaries()
+    {
+        var presentation = CreatePresentation(CreateDaylightSavingTimeZone());
+        var earlier = new DateTimeOffset(2026, 11, 1, 5, 30, 0, TimeSpan.Zero);
+        var later = earlier.AddHours(1);
+
+        presentation.FormatTimestamp(earlier).Should().Be(presentation.FormatTimestamp(later));
+        presentation.FormatTimestampWithOffset(earlier).Should().Be("2026-11-01 01:30:00.000 -04:00");
+        presentation.FormatTimestampWithOffset(later).Should().Be("2026-11-01 01:30:00.000 -05:00");
+        presentation.FormatUtcTimestamp(earlier).Should().Be("2026-11-01T05:30:00.0000000+00:00");
+        presentation.FormatUtcTimestamp(later.ToOffset(TimeSpan.FromHours(8))).Should().Be("2026-11-01T06:30:00.0000000+00:00");
+        presentation.FormatTimestampWithOffset(null).Should().Be("—");
+        presentation.FormatUtcTimestamp(null).Should().Be("—");
+    }
+
+    [Fact]
     public void ExecutionDuration_WhenQueuedRetryRetainsPriorStart_ShouldRemainUnavailable()
     {
         var presentation = CreatePresentation(TimeZoneInfo.Utc);

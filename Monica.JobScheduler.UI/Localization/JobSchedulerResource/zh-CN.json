@@ -49,7 +49,7 @@
       },
       "Statistics": {
         "Title": "调度统计分析",
-        "Description": "在有界调度时区范围内度量可靠率、调度达成率、吞吐量、耗时分位数与工作负载集中度。"
+        "Description": "比较时间范围内的完成结果与记录耗时，查看相关作业及其执行证据。"
       },
       "Runtime": {
         "Title": "调度运行时",
@@ -607,10 +607,9 @@
   "Analytics": {
     "PageTitle": "任务调度 · 统计分析",
     "RefreshFailed": "最近一次分析刷新失败：{0}",
-    "ObservedAt": "分析观测时间：{0}",
     "Range": {
       "Title": "分析时间范围",
-      "Description": "日历范围采用调度时区 {0}，并由数据库执行有界聚合。",
+      "Description": "今天从调度时区 {0} 的午夜开始；其他选项使用滚动 UTC 时间范围。",
       "Today": "今天",
       "Last24Hours": "最近 24 小时",
       "Last7Days": "最近 7 天",
@@ -618,63 +617,89 @@
     },
     "Metrics": {
       "AriaLabel": "调度统计摘要",
-      "Reliability": "执行可靠率",
-      "Throughput": "执行吞吐量",
-      "ScheduleFulfillment": "调度达成率",
-      "DecidedRuns": "基于 {0} 次成功或失败执行",
-      "PerHour": "每小时终态执行数",
-      "ScheduledDispositions": "基于 {0} 个已完成调度结果",
-      "DurationSample": "基于 {0} 次有耗时记录的终态执行"
+      "Reliability": "成功占比",
+      "Throughput": "每小时已执行完成数",
+      "ScheduleFulfillment": "周期调度派发达成率",
+      "DecidedRuns": "基于 {0} 次成功或失败完成",
+      "PerHour": "保留开始时间的完成数 / 精确时间范围小时数",
+      "ScheduledDispositions": "基于 {0} 个已完成周期调度结果；跳过的计划未派发",
+      "ExecutionSample": "{1} 小时内有 {0} 次已执行完成"
     },
     "Trend": {
-      "Eyebrow": "完成脉搏",
-      "Title": "执行结果趋势",
-      "Description": "按所选时间范围展示完成结果，并统一呈现为调度时区时间。",
+      "Title": "分段完成结果",
+      "Description": "比较连续分段中的完成结果计数。折线连接计数，不表示连续速率。",
       "LegendAriaLabel": "结果趋势图例",
-      "ChartAriaLabel": "调度完成结果趋势图",
       "ViewAriaLabel": "结果趋势图展示方式",
       "Bars": "柱状图",
       "Lines": "折线图",
-      "TotalsAriaLabel": "完成结果汇总",
-      "Total": "总执行",
-      "BucketTooltip": "{0}：成功 {1}，失败 {2}，跳过 {3}，取消 {4}"
+      "Unit": "每个分段的完成数",
+      "HourBuckets": "固定一小时 UTC 分段",
+      "DayBuckets": "固定 24 小时 UTC 分段",
+      "NoCompletions": "此时间范围内没有完成结果。仍可在下方查看返回的分段数据。",
+      "ViewData": "查看分段数据",
+      "DataAriaLabel": "每个返回分段的完成计数",
+      "Interval": "分段 · 含开始时间，不含结束时间",
+      "PartialBucket": "最后一个分段未满",
+      "UtcInterval": "UTC：{0} → {1}",
+      "ChartWindowLabel": "{0}；{1} → {2}；{3}"
     },
     "Duration": {
-      "Eyebrow": "耗时档案",
-      "Title": "终态执行耗时",
-      "Description": "从最近一次执行开始到终态完成；未占用工作节点的跳过记录不进入分布。",
-      "Samples": "{0} 个样本",
+      "Title": "记录耗时",
+      "Description": "从保留的开始时间到完成时间，可能包含重试等待；不代表 CPU 时间或各次尝试耗时之和。",
+      "Samples": "{0} 次可度量完成",
       "PercentilesAriaLabel": "执行耗时分位数",
       "Minimum": "最短",
       "Average": "平均",
       "P50": "P50",
-      "P50Description": "半数执行不超过此耗时",
+      "P50Description": "50% 的可度量完成不超过此耗时",
       "P90": "P90",
-      "P90Description": "九成执行不超过此耗时",
+      "P90Description": "90% 的可度量完成不超过此耗时",
       "P95": "P95",
-      "P95Description": "尾部耗时阈值",
+      "P95Description": "95% 的可度量完成不超过此耗时",
       "P99": "P99",
-      "P99Description": "极端尾部耗时阈值",
+      "P99Description": "99% 的可度量完成不超过此耗时",
       "Maximum": "最长"
     },
     "Rankings": {
-      "Eyebrow": "工作负载集中度",
-      "Volume": "执行次数排行",
-      "VolumeDescription": "该时间范围内终态完成次数最多的作业。",
-      "Failures": "失败次数排行",
-      "FailuresDescription": "该时间范围内产生失败完成最多的作业。",
+      "Volume": "完成结果集中度",
+      "VolumeDescription": "占此时间范围内全部完成结果的比例，包括跳过与取消记录。",
+      "Failures": "失败完成集中度",
+      "FailuresDescription": "占此时间范围内全部失败完成的比例；不显示没有失败的作业。",
       "TopTen": "TOP 10",
       "OpenJobWithMetric": "第 {0} 名：打开 {1}；{2}：{3}（{4}）",
       "VolumeEmpty": "该时间范围内没有完成的作业活动。",
-      "FailuresEmpty": "该时间范围内没有失败执行。"
+      "FailuresEmpty": "该时间范围内没有失败执行。",
+      "VolumePopulation": "此时间范围内有 {0} 个完成结果",
+      "FailurePopulation": "此时间范围内有 {0} 个失败完成结果"
     },
     "Slowest": {
-      "Top": "最慢执行 · TOP 10",
-      "Description": "每个作业耗时最长的一条终态执行，可直接打开其持久化证据。",
-      "Empty": "该时间范围内没有可度量耗时的终态执行。",
-      "OpenDetails": "第 {0} 名：检查 {1} 的执行实例 {2}；{3}；完成于 {4}；耗时 {5}"
+      "Top": "每个作业的最长记录耗时 · TOP 10",
+      "Description": "为每个精确的所有者与作业组合选取最长的可度量完成记录，可查看其保留的执行证据。",
+      "Empty": "此时间范围内没有符合条件的可度量完成。",
+      "OpenDetails": "第 {0} 名：查看 {1} 的执行实例 {2}；{3}；完成于 {4}；记录耗时 {5}",
+      "Inspect": "查看记录"
     },
-    "CohortNote": "状态总数统计时间窗内创建的执行；结果、吞吐量、趋势、排名与耗时统计时间窗内完成的执行。"
+    "Window": {
+      "Completed": "已完成结果",
+      "CompletedDescription": "此时间范围内记录的终态结果",
+      "Accepted": "已接受的分析时间范围",
+      "Requested": "请求的分析时间范围",
+      "Bounds": "含开始时间 · 不含结束时间 · {0}",
+      "Resolved": "成功 + 失败",
+      "Measured": "可度量完成",
+      "Observed": "观测时间",
+      "Unavailable": "分析结果不可用",
+      "UnavailableDescription": "此时间范围尚未成功加载结果，请重试读取。",
+      "Retained": "显示最近一次成功加载的时间范围：{0}。其时间边界与观测时间保持不变。"
+    },
+    "Summary": {
+      "Title": "完成结果摘要"
+    },
+    "Cohort": {
+      "Title": "此时间范围内创建的执行",
+      "Description": "已接受时间范围内创建记录的当前状态；其统计对象与完成结果不同。",
+      "Total": "{0} 条创建记录"
+    }
   },
   "Executions": {
     "PageTitle": "任务调度 · 执行账本",

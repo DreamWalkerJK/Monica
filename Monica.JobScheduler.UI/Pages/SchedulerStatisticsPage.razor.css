@@ -1,75 +1,69 @@
-.statistics-page {
-    display: grid;
-    gap: var(--mo-page-section-gap);
-    width: 100%;
-    min-width: 0;
-}
+.statistics-page { display: grid; gap: var(--mo-page-section-gap); width: 100%; min-width: 0; }
 
-.statistics-page ::deep .statistics-page__toolbar {
+.statistics-window {
+    min-width: 0;
+    overflow: clip;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}
+.statistics-window__summary {
     display: grid;
-    grid-template-columns: minmax(12rem, 1fr) auto auto;
+    grid-template-columns: minmax(200px, .8fr) minmax(0, 1.8fr);
     align-items: center;
-    gap: 16px;
-    min-width: 0;
+    gap: 36px;
+    padding: 28px;
 }
-
-.statistics-page ::deep .statistics-page__toolbar > div {
-    min-width: 0;
+.statistics-window__completion, .statistics-window__evidence { display: grid; min-width: 0; gap: 10px; }
+.statistics-window__eyebrow { font-size: .8rem; font-weight: 500; letter-spacing: .035em; }
+.statistics-window__completion > strong {
+    font-family: var(--mo-font-family-mono);
+    font-size: clamp(2.75rem, 4vw, 4rem);
+    line-height: 1.05;
+    font-weight: 400;
+    overflow-wrap: anywhere;
 }
-
-.statistics-page ::deep .statistics-page__toolbar > .mud-chipset {
-    min-width: 0;
-}
-
-.statistics-page ::deep .statistics-page__toolbar .mud-chipset > .mud-chipset-items {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
-.statistics-page__loading {
-    display: grid;
-    min-height: 22rem;
-    place-items: center;
-    align-content: center;
-    gap: 12px;
-}
-
-.statistics-page__freshness {
-    display: flex;
+.statistics-window__completion > span:last-child, .statistics-window__evidence > span:last-of-type { font-size: .8125rem; line-height: 1.6; }
+.statistics-window__interval { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 12px; font-family: var(--mo-font-family-mono); font-size: .9375rem; line-height: 1.65; }
+.statistics-window__interval time { overflow-wrap: anywhere; }
+.statistics-window__facts { display: flex; flex-wrap: wrap; gap: 12px 28px; padding-top: 12px; margin: 4px 0 0; border-top: 1px solid color-mix(in srgb, var(--mud-palette-primary-text) 28%, transparent); }
+.statistics-window__facts > div { min-width: 0; }
+.statistics-window__facts dt { margin-bottom: 5px; font-size: .75rem; }
+.statistics-window__facts dd { margin: 0; font-family: var(--mo-font-family-mono); font-size: .875rem; overflow-wrap: anywhere; }
+.statistics-window__controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 28px; border-top: 1px solid color-mix(in srgb, var(--mud-palette-primary-text) 28%, transparent); }
+.statistics-window__basis { flex-basis: 100%; margin: 0; font-size: .8125rem; line-height: 1.6; }
+.statistics-window__presets { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.statistics-window__controls button {
+    display: inline-flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.72rem;
+    justify-content: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary-text) 40%, transparent);
+    border-radius: var(--mud-default-borderradius);
+    background: transparent;
+    color: var(--mud-palette-primary-text);
+    font: inherit;
+    font-size: .8125rem;
+    cursor: pointer;
 }
+.statistics-window__presets button.is-selected { border-color: var(--mud-palette-primary-text); background: var(--mud-palette-primary-text); color: var(--mud-palette-primary); font-weight: 500; }
+.statistics-window__controls button:hover:not(:disabled):not(.is-selected) { border-color: var(--mud-palette-primary-text); text-decoration: underline; text-underline-offset: .2em; }
+.statistics-window__controls button:focus-visible { outline: 2px solid var(--mud-palette-primary-text); outline-offset: 3px; }
+.statistics-window__controls button:disabled { background: var(--mud-palette-action-disabled-background); border-color: var(--mud-palette-action-disabled); color: var(--mud-palette-action-disabled); cursor: default; }
+.statistics-page__loading, .statistics-page__unavailable { display: grid; min-height: 14rem; padding: 28px; place-items: center; align-content: center; gap: 12px; border: 1px solid var(--mud-palette-lines-default); border-radius: var(--mud-default-borderradius); background: var(--mud-palette-surface); text-align: center; }
+.statistics-page__unavailable h2 { margin: 0; font-size: 1.125rem; font-weight: 500; }
+.statistics-page__unavailable p { margin: 0; color: var(--mud-palette-text-secondary); line-height: 1.65; }
+.statistics-page__retained { margin: 0; font-size: .8125rem; color: var(--mud-palette-text-primary); }
 
-@media (max-width: 700px) {
-    .statistics-page ::deep .statistics-page__toolbar {
-        grid-template-columns: minmax(0, 1fr) auto;
-    }
-
-    .statistics-page ::deep .statistics-page__toolbar > .mud-chipset {
-        grid-column: 1 / -1;
-        grid-row: 2;
-    }
-
-    .statistics-page ::deep .statistics-page__toolbar .mud-chipset > .mud-chipset-items {
-        justify-content: flex-start;
-    }
-
-    .statistics-page ::deep .statistics-page__toolbar > .mud-tooltip-root {
-        grid-column: 2;
-        grid-row: 1;
-    }
+@media (max-width: 900px) {
+    .statistics-window__summary { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 20px; }
+    .statistics-window__controls { padding: 16px 20px; }
 }
-
-@media (max-width: 390px) {
-    .statistics-page ::deep .statistics-page__toolbar {
-        gap: 10px;
-        padding-inline: 10px !important;
-    }
-
-    .statistics-page__freshness {
-        justify-content: flex-start;
-    }
+@media (max-width: 600px) {
+    .statistics-window__summary { padding: 20px 16px; }
+    .statistics-window__controls { padding: 16px; }
+    .statistics-window__interval { font-size: .8125rem; }
+    .statistics-page__loading, .statistics-page__unavailable { padding: 24px 16px; }
 }

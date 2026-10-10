@@ -69,6 +69,8 @@ MudBlazor `Color.Secondary` selects the Secondary accent. Use text roles for sup
 
 `ActionDefault` owns enabled native icon paint, including menu and icon-button controls. Inspect the installed component selectors and measure normal, hover and keyboard-focus states against their actual surfaces; meaningful enabled icons need at least 3:1 contrast. Preserve `ActionDisabled` for inactive controls. When a shared palette role causes the failure, correct its C# owner instead of repeating page-specific color overrides, then verify the affected native controls and theme modes.
 
+Pair a solid accent with its actual `PrimaryContrastText` or corresponding semantic contrast role. White is not automatically readable on a bright accent, including in dark mode. Verify small text at 4.5:1 in both directions when selected controls invert the pair; adjust the owning contrast foreground while retaining the theme's accent color when that is sufficient. Translucent hover fills require their own measurement because they can weaken an otherwise readable pair.
+
 Use the C# `MudTheme` definition for:
 
 - palette colors

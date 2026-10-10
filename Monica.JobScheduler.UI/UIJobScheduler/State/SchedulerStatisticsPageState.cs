@@ -50,15 +50,21 @@ internal sealed class SchedulerStatisticsPageStateFactory(
 /// <summary>
 /// Owns authorization, range selection, bounded analytics loading, and async lifetime for the statistics route.
 /// </summary>
+/// <remarks>
+/// Each read freezes its preset and UTC bounds before asynchronous authorization or serialization. Only the newest
+/// request can replace accepted evidence. A failed refresh of the same preset retains its actual prior bounds and
+/// observation, while a changed preset or lost access clears unrelated evidence. The component owns this session.
+/// </remarks>
 public sealed class SchedulerStatisticsPageState : IAsyncDisposable
 {
     private readonly JobSchedulerFacade _facade;
     private readonly IJobSchedulerUiAccess _access;
     private readonly TimeProvider _timeProvider;
     private readonly SchedulerTimePresentation _timePresentation;
-    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SchedulerOperationLifetime _lifetime = new();
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
-    private int _disposed;
+    private int _loadVersion;
+    private int _accessVersion;
 
     internal SchedulerStatisticsPageState(
         JobSchedulerFacade facade,
@@ -78,14 +84,33 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
     public event Func<Task>? Changed;
 
     /// <summary>
-    /// Gets the selected bounded time range.
+    /// Gets the newest requested preset, initially the rolling previous 24 hours.
     /// </summary>
+    /// <remarks>Selection changes immediately; <see cref="LoadedTimeRange"/> identifies accepted evidence.</remarks>
     public SchedulerAnalyticsTimeRange TimeRange { get; private set; } = SchedulerAnalyticsTimeRange.Last24Hours;
 
     /// <summary>
     /// Gets the latest analytics snapshot.
     /// </summary>
     public JobExecutionAnalyticsSnapshot? Snapshot { get; private set; }
+
+    /// <summary>Gets whether a successful snapshot, including an empty one, has been accepted.</summary>
+    public bool HasLoadedSnapshot { get; private set; }
+
+    /// <summary>Gets whether the newest read or authorization provider failed.</summary>
+    /// <remarks>A failure remains explicit even when its result supplies no diagnostic message.</remarks>
+    public bool IsQueryFailed { get; private set; }
+
+    /// <summary>Gets the newest immutable query, with UTC bounds captured at admission.</summary>
+    /// <remarks>The facade pins the configured scheduler scope; this query cannot select another scope.</remarks>
+    public JobExecutionAnalyticsQuery? RequestedQuery { get; private set; }
+
+    /// <summary>Gets the immutable query that produced the accepted snapshot.</summary>
+    /// <remarks>A failed same-preset refresh does not relabel these bounds with its newer window.</remarks>
+    public JobExecutionAnalyticsQuery? LoadedQuery { get; private set; }
+
+    /// <summary>Gets the preset that produced accepted evidence, or null when evidence is unavailable.</summary>
+    public SchedulerAnalyticsTimeRange? LoadedTimeRange { get; private set; }
 
     /// <summary>
     /// Gets whether authorization has completed.
@@ -103,8 +128,9 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
     public bool IsLoading { get; private set; }
 
     /// <summary>
-    /// Gets the most recent load failure while preserving a prior snapshot.
+    /// Gets the most recent failure, retaining prior evidence only for an authorized refresh of the same preset.
     /// </summary>
+    /// <remarks><see cref="IsQueryFailed"/> remains true when a failed result has no diagnostic message.</remarks>
     public string? Error { get; private set; }
 
     /// <summary>
@@ -112,80 +138,181 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
     /// </summary>
     public DateTimeOffset? ObservedAtUtc { get; private set; }
 
+    /// <summary>Gets whether retirement has begun and new asynchronous admissions are canceled.</summary>
+    public bool IsDisposed => _lifetime.IsRetired;
+
     /// <summary>
     /// Performs the first access-checked analytics load.
     /// </summary>
+    /// <exception cref="OperationCanceledException">The session has retired or its read is canceled.</exception>
     public Task InitializeAsync() => RefreshAsync();
 
     /// <summary>
-    /// Selects a preset and immediately reloads its bounded analytics.
+    /// Selects a preset immediately and reloads its frozen bounded query unless it is already requested.
     /// </summary>
-    public async Task SetTimeRangeAsync(SchedulerAnalyticsTimeRange value)
+    /// <exception cref="ArgumentOutOfRangeException">The preset is not defined.</exception>
+    /// <exception cref="OperationCanceledException">The session has retired or its read is canceled.</exception>
+    public Task SetTimeRangeAsync(SchedulerAnalyticsTimeRange value)
     {
-        if (value == TimeRange)
-        {
-            return;
-        }
-
-        await RefreshAsync(value);
+        if (!Enum.IsDefined(value)) throw new ArgumentOutOfRangeException(nameof(value), value, "Analytics time range is not supported.");
+        return _lifetime.RunAsync(token => AdmitRefresh(value, token, skipRequestedPreset: true));
     }
 
     /// <summary>
     /// Reauthorizes and replaces the selected analytics snapshot.
     /// </summary>
-    public Task RefreshAsync() => RefreshAsync(TimeRange);
+    /// <exception cref="OperationCanceledException">The session has retired or its read is canceled.</exception>
+    public Task RefreshAsync() => _lifetime.RunAsync(token => AdmitRefresh(TimeRange, token));
 
-    private async Task RefreshAsync(SchedulerAnalyticsTimeRange requestedRange)
+    /// <summary>Checks current access before opening native inspection without loading analytics.</summary>
+    /// <remarks>Denial or provider failure invalidates earlier authorized reads and clears inaccessible evidence.</remarks>
+    /// <exception cref="OperationCanceledException">The session has retired or its check is canceled.</exception>
+    public Task<bool> ReauthorizeAsync() => _lifetime.RunAsync(async token =>
     {
-        var cancellationToken = _lifetimeCancellation.Token;
-        await _refreshGate.WaitAsync(cancellationToken);
+        var authorization = await EnsureAuthorizedAsync(token);
+        await NotifyChangedAsync();
+        return authorization.IsAuthorized;
+    });
+
+    private Task AdmitRefresh(SchedulerAnalyticsTimeRange range, CancellationToken token, bool skipRequestedPreset = false)
+    {
+        var version = 0;
+        if (!_lifetime.TryApply(() =>
+            {
+                if (skipRequestedPreset && range == TimeRange) return;
+                version = ++_loadVersion;
+                TimeRange = range;
+                RequestedQuery = null;
+                if (LoadedTimeRange != range) ClearSnapshot();
+                IsLoading = true;
+                IsQueryFailed = false;
+                Error = null;
+            })) throw new OperationCanceledException(token);
+        if (version == 0) return Task.CompletedTask;
+        JobExecutionAnalyticsQuery query;
+        try { query = CreateQuery(range, _timeProvider.GetUtcNow(), _timePresentation); }
+        catch (Exception exception)
+        {
+            if (!_lifetime.TryApply(() =>
+                {
+                    if (version != _loadVersion) return;
+                    IsLoading = false;
+                    IsQueryFailed = true;
+                    Error = exception.Message;
+                })) throw new OperationCanceledException(token);
+            return NotifyChangedAsync();
+        }
+        if (!_lifetime.TryApply(() => { if (version == _loadVersion) RequestedQuery = query; }))
+            throw new OperationCanceledException(token);
+        return LoadAsync(range, query, version, token);
+    }
+
+    private async Task LoadAsync(
+        SchedulerAnalyticsTimeRange range, JobExecutionAnalyticsQuery query, int version, CancellationToken token)
+    {
+        var entered = false;
         try
         {
-            ThrowIfDisposed();
-            IsLoading = true;
             await NotifyChangedAsync();
+            await _refreshGate.WaitAsync(token);
+            entered = true;
+            var authorization = await EnsureAuthorizedAsync(token);
+            if (!authorization.IsAuthorized) return;
 
-            IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            AccessChecked = true;
-            if (!IsAuthorized)
-            {
-                Snapshot = null;
-                Error = null;
-                ObservedAtUtc = null;
-                return;
-            }
-
-            var now = _timeProvider.GetUtcNow();
-            var result = await _facade.GetExecutionAnalyticsAsync(
-                CreateQuery(requestedRange, now, _timePresentation),
-                cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
+            var result = await _facade.GetExecutionAnalyticsAsync(query, token);
+            token.ThrowIfCancellationRequested();
             if (result.IsFailed(out var error, out var snapshot))
             {
-                Error = error.Message;
+                FailQuery(version, authorization.Version, error.Message);
                 return;
             }
-
-            Snapshot = snapshot;
-            TimeRange = requestedRange;
-            Error = null;
-            ObservedAtUtc = now;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            // Expected during navigation or host shutdown.
+            if (snapshot is null)
+            {
+                FailQuery(version, authorization.Version, null);
+                return;
+            }
+            var observedAt = _timeProvider.GetUtcNow();
+            if (!_lifetime.TryApply(() =>
+                {
+                    if (version != _loadVersion || !CanAcceptAccess(authorization.Version)) return;
+                    Snapshot = snapshot;
+                    LoadedQuery = query;
+                    LoadedTimeRange = range;
+                    HasLoadedSnapshot = true;
+                    IsQueryFailed = false;
+                    Error = null;
+                    ObservedAtUtc = observedAt;
+                })) throw new OperationCanceledException(token);
         }
         finally
         {
-            if (!IsDisposed)
-            {
-                IsLoading = false;
+            if (entered) _refreshGate.Release();
+            if (_lifetime.TryApply(() => { if (version == _loadVersion) IsLoading = false; }))
                 await NotifyChangedAsync();
-            }
-
-            _refreshGate.Release();
         }
+    }
+
+    private async Task<(bool IsAuthorized, int Version)> EnsureAuthorizedAsync(CancellationToken token)
+    {
+        var version = 0;
+        if (!_lifetime.TryApply(() => version = _accessVersion)) throw new OperationCanceledException(token);
+        try
+        {
+            var authorized = await _access.IsAuthorizedAsync(token);
+            token.ThrowIfCancellationRequested();
+            var accepted = false;
+            if (!_lifetime.TryApply(() =>
+                {
+                    if (!authorized)
+                    {
+                        _accessVersion++;
+                        IsAuthorized = false;
+                        AccessChecked = true;
+                        ClearSnapshot();
+                        IsQueryFailed = false;
+                        Error = null;
+                        return;
+                    }
+                    if (version != _accessVersion) return;
+                    IsAuthorized = true;
+                    AccessChecked = true;
+                    accepted = true;
+                })) throw new OperationCanceledException(token);
+            return (accepted, version);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!_lifetime.TryApply(() =>
+                {
+                    _accessVersion++;
+                    IsAuthorized = false;
+                    AccessChecked = true;
+                    ClearSnapshot();
+                    IsQueryFailed = true;
+                    Error = exception.Message;
+                })) throw new OperationCanceledException(token);
+            return (false, version);
+        }
+    }
+
+    private bool CanAcceptAccess(int version) => IsAuthorized && version == _accessVersion;
+
+    private void FailQuery(int version, int accessVersion, string? error) => _lifetime.TryApply(() =>
+    {
+        if (version != _loadVersion || !CanAcceptAccess(accessVersion)) return;
+        IsQueryFailed = true;
+        Error = error;
+    });
+
+    private void ClearSnapshot()
+    {
+        Snapshot = null;
+        HasLoadedSnapshot = false;
+        LoadedQuery = null;
+        LoadedTimeRange = null;
+        ObservedAtUtc = null;
     }
 
     /// <summary>
@@ -230,32 +357,17 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
         };
     }
 
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    /// <summary>Cancels and drains actual admitted work before releasing read serialization.</summary>
+    /// <remarks>Repeated calls share the same completion, including unexpected failures.</remarks>
+    /// <exception cref="AggregateException">Cancellation, admitted work, or cleanup failed unexpectedly.</exception>
+    public ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
-        {
-            return;
-        }
-
         Changed = null;
-        await _lifetimeCancellation.CancelAsync();
-        await _refreshGate.WaitAsync();
-        _refreshGate.Release();
-        _refreshGate.Dispose();
-        _lifetimeCancellation.Dispose();
+        return _lifetime.RetireAsync(() => _refreshGate.Dispose());
     }
-
-    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
 
     private async Task NotifyChangedAsync()
     {
-        var handlers = Changed?.GetInvocationList().Cast<Func<Task>>().ToArray() ?? [];
-        foreach (var handler in handlers)
-        {
-            await handler();
-        }
+        foreach (var handler in _lifetime.SnapshotHandlers(Changed)) await handler();
     }
-
-    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(IsDisposed, this);
 }
