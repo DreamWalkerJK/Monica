@@ -1,95 +1,163 @@
 @using Monica.SignalR.UISignalR.Models
 @inject IStringLocalizer<SignalRResource> L
 
-<MudPaper Class="signalr-message-log" Elevation="0">
-    <div class="signalr-component-header">
-    <div class="signalr-component-heading"><MudIcon Icon="@Icons.Material.Outlined.ReceiptLong" Color="Color.Info" /><MudText Typo="Typo.h6">@L["UISignalR:MessageLog:Title"]</MudText></div>
-    <MudButton Variant="Variant.Outlined"
-             Color="Color.Warning" 
-             OnClick="ClearMessagesAsync"
-             Size="Size.Small">
-        <MudIcon Icon="@Icons.Material.Filled.Clear" />
-        <MudText Class="ms-2">@L["UISignalR:MessageLog:Clear"]</MudText>
-    </MudButton>
-    </div>
-    
-    <div class="signalr-message-stream">
-    <MudVirtualize Items="Messages" Context="msg" ItemSize="60">
-        <div class="d-flex align-center pa-2 @(msg.IsError ? "mud-error-text" : "")">
-            <MudIcon Icon="@GetMessageIcon(msg.Type)" 
-                    Color="@GetMessageColor(msg.Type)" 
-                    Class="mr-3" />
-            <div class="flex-grow-1">
-                <MudText Typo="Typo.body2">
-                    <strong>[@msg.Timestamp.ToString("HH:mm:ss")]</strong> @msg.Content
-                </MudText>
-                @if (!string.IsNullOrEmpty(msg.Details))
-                {
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                        @msg.Details
-                    </MudText>
-                }
-            </div>
+<section class="signalr-message-log" aria-label="@L["UISignalR:MessageLog:Title"]">
+    <header class="signalr-trace-heading">
+        <div>
+            <span class="signalr-trace-scope">@L["UISignalR:MessageLog:Scope"]</span>
+            <h2>@L["UISignalR:MessageLog:Title"]</h2>
         </div>
-        <MudDivider />
-    </MudVirtualize>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.DeleteSweep" OnClick="ClearMessagesAsync"
+                   Disabled="@(Messages.Count == 0)">
+            @L["UISignalR:MessageLog:Clear"]
+        </MudButton>
+    </header>
+
+    <p class="signalr-trace-help">@L["UISignalR:MessageLog:Help"]</p>
+
+    <div class="signalr-trace-filters">
+        <div class="signalr-trace-search">
+            <MudTextField T="string" Value="@_searchText" ValueChanged="ChangeSearch"
+                          Immediate="true" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Label="@L["UISignalR:MessageLog:SearchLabel"]"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+        </div>
+        <div class="signalr-trace-type">
+            <MudSelect T="MessageType?" Value="@_typeFilter" ValueChanged="ChangeTypeFilter"
+                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                       Label="@L["UISignalR:MessageLog:TypeLabel"]">
+                <MudSelectItem T="MessageType?" Value="@(null)">@L["UISignalR:MessageLog:AllTypes"]</MudSelectItem>
+                @foreach (var type in Enum.GetValues<MessageType>())
+                {
+                    <MudSelectItem T="MessageType?" Value="@type">@GetMessageTypeLabel(type)</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
     </div>
-</MudPaper>
+
+    @if (Messages.Count == 0)
+    {
+        <div class="signalr-trace-empty">@L["UISignalR:MessageLog:Empty"]</div>
+    }
+    else if (FilteredMessages.Count == 0)
+    {
+        <div class="signalr-trace-empty">@L["UISignalR:MessageLog:NoMatches"]</div>
+    }
+    else
+    {
+        <ol class="signalr-trace-events">
+            @foreach (var message in VisibleMessages)
+            {
+                <li @key="message" class="signalr-trace-event @(IsError(message) ? "signalr-trace-event--error" : string.Empty)">
+                    <header class="signalr-trace-event-heading">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                 Color="@GetMessageColor(message)" Icon="@GetMessageIcon(message.Type)">
+                            @GetMessageTypeLabel(message.Type)
+                        </MudChip>
+                        <time datetime="@message.Timestamp.ToString("O")" title="@message.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff")">
+                            @message.Timestamp.ToString("HH:mm:ss.fff")
+                        </time>
+                        @if (!string.IsNullOrWhiteSpace(message.Source))
+                        {
+                            <span class="signalr-trace-source"><span>@L["UISignalR:MessageLog:Source"]</span> @message.Source</span>
+                        }
+                    </header>
+                    <p class="signalr-trace-content">@message.Content</p>
+                    @if (!string.IsNullOrEmpty(message.Details))
+                    {
+                        <div class="signalr-trace-details">
+                            <span>@L["UISignalR:MessageLog:Details"]</span>
+                            <pre>@message.Details</pre>
+                        </div>
+                    }
+                </li>
+            }
+        </ol>
+        <footer class="signalr-trace-footer">
+            <span>@L["UISignalR:MessageLog:Showing", (_page - 1) * PageSize + 1, Math.Min(_page * PageSize, FilteredMessages.Count), FilteredMessages.Count]</span>
+            @if (PageCount > 1)
+            {
+                <MudPagination Count="PageCount" Selected="_page" SelectedChanged="ChangePage"
+                               ShowFirstButton="true" ShowLastButton="true" BoundaryCount="0" MiddleCount="1"
+                               Size="Size.Small" Color="Color.Default" aria-label="@L["UISignalR:MessageLog:Pagination"]" />
+            }
+        </footer>
+    }
+</section>
 
 @code {
-    /// <summary>
-    /// Message list
-    /// </summary>
+    /// <summary>Gets or sets the retained browser trace, ordered newest first by its state owner.</summary>
     [Parameter] public List<SignalRMessage> Messages { get; set; } = [];
 
-    /// <summary>
-    /// Clear message callback
-    /// </summary>
+    /// <summary>Requests that the state owner clear the trace and its received-message counter.</summary>
     [Parameter] public EventCallback OnClearMessages { get; set; }
 
-    /// <summary>
-    /// Clear messages
-    /// </summary>
-    private async Task ClearMessagesAsync()
+    private const int PageSize = 20;
+    private string _searchText = string.Empty;
+    private MessageType? _typeFilter;
+    private int _page = 1;
+
+    private IReadOnlyList<SignalRMessage> FilteredMessages => Messages
+        .Where(message => (!_typeFilter.HasValue
+                           || message.Type == _typeFilter.Value
+                           || _typeFilter == MessageType.Error && IsError(message))
+                          && (string.IsNullOrWhiteSpace(_searchText)
+                              || message.Source.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+                              || message.Content.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+                              || message.Details.Contains(_searchText, StringComparison.OrdinalIgnoreCase)))
+        .ToList();
+
+    private int PageCount => Math.Max(1, (FilteredMessages.Count + PageSize - 1) / PageSize);
+    private IEnumerable<SignalRMessage> VisibleMessages => FilteredMessages.Skip((_page - 1) * PageSize).Take(PageSize);
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() => _page = Math.Min(_page, PageCount);
+
+    private Task ClearMessagesAsync() => OnClearMessages.InvokeAsync();
+
+    private void ChangeSearch(string value)
     {
-        await OnClearMessages.InvokeAsync();
+        _searchText = value ?? string.Empty;
+        _page = 1;
     }
 
-    /// <summary>
-    /// Get message icon
-    /// </summary>
-    /// <param name="type">Message type</param>
-    /// <returns>icon</returns>
-    private string GetMessageIcon(MessageType type)
+    private void ChangeTypeFilter(MessageType? value)
     {
-        return type switch
-        {
-            MessageType.Sent => Icons.Material.Filled.Send,
-            MessageType.Received => Icons.Material.Filled.Inbox,
-            MessageType.System => Icons.Material.Filled.Info,
-            MessageType.Success => Icons.Material.Filled.CheckCircle,
-            MessageType.Error => Icons.Material.Filled.Error,
-            MessageType.Info => Icons.Material.Filled.Info,
-            _ => Icons.Material.Filled.Message
-        };
+        _typeFilter = value;
+        _page = 1;
     }
 
-    /// <summary>
-    /// Get message color
-    /// </summary>
-    /// <param name="type">Message type</param>
-    /// <returns>Color</returns>
-    private Color GetMessageColor(MessageType type)
+    private void ChangePage(int page) => _page = Math.Clamp(page, 1, PageCount);
+    private static bool IsError(SignalRMessage message) => message.IsError || message.Type == MessageType.Error;
+
+    private string GetMessageTypeLabel(MessageType type) => type switch
     {
-        return type switch
+        MessageType.Sent => L["UISignalR:MessageLog:Types:Sent"].Value,
+        MessageType.Received => L["UISignalR:MessageLog:Types:Received"].Value,
+        MessageType.System => L["UISignalR:MessageLog:Types:System"].Value,
+        MessageType.Success => L["UISignalR:MessageLog:Types:Success"].Value,
+        MessageType.Error => L["UISignalR:MessageLog:Types:Error"].Value,
+        _ => L["UISignalR:MessageLog:Types:Info"].Value
+    };
+
+    private static string GetMessageIcon(MessageType type) => type switch
+    {
+        MessageType.Sent => Icons.Material.Outlined.Send,
+        MessageType.Received => Icons.Material.Outlined.MoveToInbox,
+        MessageType.Success => Icons.Material.Outlined.CheckCircle,
+        MessageType.Error => Icons.Material.Outlined.ErrorOutline,
+        _ => Icons.Material.Outlined.Info
+    };
+
+    private static Color GetMessageColor(SignalRMessage message) => IsError(message)
+        ? Color.Error
+        : message.Type switch
         {
             MessageType.Sent => Color.Primary,
-            MessageType.Received => Color.Secondary,
-            MessageType.System => Color.Info,
+            MessageType.Received => Color.Info,
             MessageType.Success => Color.Success,
-            MessageType.Error => Color.Error,
-            MessageType.Info => Color.Info,
+            MessageType.System or MessageType.Info => Color.Default,
             _ => Color.Default
         };
-    }
-} 
+}

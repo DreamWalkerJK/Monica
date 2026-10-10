@@ -1,72 +1,81 @@
 @inject IStringLocalizer<SignalRResource> L
 
-<MudPaper Class="signalr-message-sender" Elevation="0">
-    <div class="signalr-component-heading"><MudIcon Icon="@Icons.Material.Outlined.Send" Color="Color.Success" /><MudText Typo="Typo.h6">@L["UISignalR:MessageSender:Title"]</MudText></div>
-    <MudGrid>
-        <MudItem xs="12" sm="6">
-            <MudTextField Value="@UserName"
-                        ValueChanged="@((string value) => OnUserNameChangedInternal(value))"
-                        Label="@L["UISignalR:MessageSender:UserNameLabel"]" 
-                        Variant="Variant.Outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="6">
-            <MudTextField Value="@Message"
-                        ValueChanged="@((string value) => OnMessageChangedInternal(value))"
-                        Label="@L["UISignalR:MessageSender:MessageLabel"]" 
-                        Variant="Variant.Outlined"
-                        OnKeyDown="OnMessageKeyDown" />
-        </MudItem>
-        <MudItem xs="12">
-            <MudStack Row Spacing="2">
-                <MudButton Variant="Variant.Filled" 
-                         Color="Color.Success" 
-                         OnClick="SendMessageAsync"
-                         Disabled="!IsConnected || string.IsNullOrWhiteSpace(Message)">
-                    <MudIcon Icon="@Icons.Material.Filled.Send" />
-                    <MudText Class="ms-2">@L["UISignalR:MessageSender:Send"]</MudText>
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" 
-                         Color="Color.Secondary" 
-                         OnClick="ClearMessageAsync"
-                         Disabled="string.IsNullOrWhiteSpace(Message)">
-                    <MudIcon Icon="@Icons.Material.Filled.Clear" />
-                    <MudText Class="ms-2">@L["UISignalR:MessageSender:Clear"]</MudText>
-                </MudButton>
-            </MudStack>
-        </MudItem>
-    </MudGrid>
-</MudPaper>
+<section class="signalr-message-sender" aria-label="@L["UISignalR:MessageSender:Title"]" aria-busy="@(_isSending ? "true" : "false")">
+    <header class="signalr-sender-heading">
+        <MudIcon Icon="@Icons.Material.Outlined.Send" Color="Color.Primary" />
+        <h2>@L["UISignalR:MessageSender:Title"]</h2>
+    </header>
+
+    <div class="signalr-sender-contract">
+        <code>ReceiveTestMessage(userName, message)</code>
+        <p>@L["UISignalR:MessageSender:Contract"]</p>
+    </div>
+
+    <div class="signalr-sender-fields">
+        <div class="signalr-sender-field">
+            <MudTextField T="string" Value="@UserName" ValueChanged="OnUserNameChangedInternal"
+                          Immediate="true" Disabled="@_isSending" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Label="@L["UISignalR:MessageSender:UserNameLabel"]" />
+        </div>
+        <div class="signalr-sender-field">
+            <MudTextField T="string" Value="@Message" ValueChanged="OnMessageChangedInternal"
+                          Immediate="true" Disabled="@_isSending" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="1"
+                          Label="@L["UISignalR:MessageSender:MessageLabel"]" OnKeyDown="OnMessageKeyDown" />
+        </div>
+    </div>
+
+    <div class="signalr-sender-footer">
+        <div class="signalr-sender-actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Send"
+                       OnClick="SendMessageAsync" Disabled="@(!CanSend)">
+                @L[_isSending ? "UISignalR:MessageSender:Sending" : "UISignalR:MessageSender:Send"]
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.Clear"
+                       OnClick="ClearMessageAsync" Disabled="@(_isSending || string.IsNullOrWhiteSpace(Message))">
+                @L["UISignalR:MessageSender:Clear"]
+            </MudButton>
+        </div>
+        <p class="signalr-sender-help" role="status">
+            @L[IsConnected ? "UISignalR:MessageSender:DraftHelp" : "UISignalR:MessageSender:ConnectHelp"]
+        </p>
+    </div>
+</section>
 
 @code {
     /// <summary>
-    /// username
+    /// User name passed as the first argument to the quick sender's hub method.
     /// </summary>
     [Parameter] public string UserName { get; set; } = "";
 
     /// <summary>
-    /// Username change callback
+    /// Invoked when the user name changes.
     /// </summary>
     [Parameter] public EventCallback<string> UserNameChanged { get; set; }
 
     /// <summary>
-    /// Message content
+    /// Message draft passed as the second argument to the quick sender's hub method.
     /// </summary>
     [Parameter] public string Message { get; set; } = "";
 
     /// <summary>
-    /// Message content change callback
+    /// Invoked when the draft changes, including an explicit clear action.
     /// </summary>
     [Parameter] public EventCallback<string> MessageChanged { get; set; }
 
     /// <summary>
-    /// Is it connected?
+    /// Whether the browser connection is available for sending.
     /// </summary>
     [Parameter] public bool IsConnected { get; set; }
 
     /// <summary>
-    /// Send message callback
+    /// Sends the current arguments through ReceiveTestMessage(userName, message).
+    /// The draft is retained after this callback completes.
     /// </summary>
     [Parameter] public EventCallback<(string userName, string message)> OnSendMessage { get; set; }
+
+    private bool _isSending;
+
+    private bool CanSend => !_isSending && IsConnected && !string.IsNullOrWhiteSpace(Message);
 
     /// <summary>
     /// Message input box keyboard event
@@ -85,13 +94,18 @@
     /// </summary>
     private async Task SendMessageAsync()
     {
-        if (!IsConnected || string.IsNullOrWhiteSpace(Message))
+        if (!CanSend)
             return;
 
-        await OnSendMessage.InvokeAsync((UserName, Message));
-        
-        // After successful sending, the input box will not be cleared and the content entered by the user will be retained.
-        // If the user needs to clear it, they can click the "Clear" button
+        _isSending = true;
+        try
+        {
+            await OnSendMessage.InvokeAsync((UserName, Message));
+        }
+        finally
+        {
+            _isSending = false;
+        }
     }
 
     /// <summary>
@@ -99,20 +113,28 @@
     /// </summary>
     private async Task ClearMessageAsync()
     {
+        if (_isSending)
+            return;
+
         Message = "";
         await MessageChanged.InvokeAsync(Message);
-        StateHasChanged();
     }
 
-    private void OnUserNameChangedInternal(string value)
+    private async Task OnUserNameChangedInternal(string value)
     {
+        if (_isSending)
+            return;
+
         UserName = value;
-        UserNameChanged.InvokeAsync(value);
+        await UserNameChanged.InvokeAsync(value);
     }
 
-    private void OnMessageChangedInternal(string value)
+    private async Task OnMessageChangedInternal(string value)
     {
+        if (_isSending)
+            return;
+
         Message = value;
-        MessageChanged.InvokeAsync(value);
+        await MessageChanged.InvokeAsync(value);
     }
 }

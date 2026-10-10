@@ -171,6 +171,12 @@ The outer card owns the rounded outline and clipping. `components/mo-table.css`,
 
 Verify the root and scroll container both compute to zero radius in light and dark modes, while the enclosing card retains its radius. Include a rounded theme, a standalone table, and a narrow viewport with horizontal overflow in browser smoke checks.
 
+### Resolved foreground and background pairs
+
+Contrast preflight against C# palette values is only an initial check. Verify both the actual resolved foreground and its effective background in the rendered component after the complete CSS cascade. Inspect winning theme and isolated selectors, inherited color, opacity and transparent ancestor surfaces; a theme can override either side independently. For example, Comic Burst dark can override a native button's text color, so a palette pair that passes preflight does not prove that the rendered action passes.
+
+Choose foreground and background together when deriving an action or tinted surface from theme tokens. Verify the final pair in normal, hover, focus and selected states, and preserve semantic and disabled behavior. Check both text and icons in light and dark modes rather than treating a correct background token or `Color.Primary` parameter as proof of readable content.
+
 ### Snackbars and overlays
 
 If you replace the default surface/background treatment, also verify:

@@ -1,4 +1,9 @@
 /* Shared working-surface contract. Theme identity comes from palette, type, and deliberate accents. */
+/* Closed native tooltips retain their last position; override MudBlazor's d-flex utility until reopened. */
+:root[data-theme] .mud-popover.mud-tooltip:not(.mud-popover-open) {
+    display: none !important;
+}
+
 :root[data-theme],
 [class*="mo-theme-"] {
     --mo-appbar-background: var(--mud-palette-appbar-background);

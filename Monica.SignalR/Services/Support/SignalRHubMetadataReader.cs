@@ -1,6 +1,7 @@
 using System.Reflection;
 using Monica.Modules;
 using Monica.SignalR.Models;
+using Monica.Tool.Extensions;
 using SignalRSwaggerGen.Attributes;
 
 namespace Monica.SignalR.Services.Support;
@@ -30,7 +31,7 @@ internal sealed class SignalRHubMetadataReader
                             .Select(parameterInfo => new SignalRHubParameterInfo
                             {
                                 Name = parameterInfo.Name ?? string.Empty,
-                                TypeName = parameterInfo.ParameterType.Name
+                                TypeName = parameterInfo.ParameterType.GetCleanFullName()
                             })
                             .ToList()
                     })
