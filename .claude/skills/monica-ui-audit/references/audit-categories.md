@@ -79,6 +79,7 @@ Indicators:
 - Readable descriptions and record names shrink into 10–11px metadata, or excessive bold text makes all hierarchy levels compete
 - A filtered list silently changes the meaning of a whole-scope summary, or empty/missing coverage is presented as success without evidence
 - Light or dark mode is excessively dark, low-contrast, or monotone, so canvas, structural surfaces, borders, text hierarchy, or semantic states collapse together
+- Supporting prose or captions select MudBlazor's Secondary accent, whose native important color utility overrides the intended text role; inspect the actual computed cascade using the owning [theme guidance](../../monica-ui-development/references/theme-css-guide.md#2-keep-palette-ownership-in-c)
 - Success, warning, error, information, selection, and runtime states are not meaningfully differentiated when the task requires rapid scanning
 - Every selected status filter is repainted Primary, losing the distinct semantic meanings visible before selection
 - A row status, badge, or filter derives paint from record presence, registration count, or another state axis instead of the actual displayed status

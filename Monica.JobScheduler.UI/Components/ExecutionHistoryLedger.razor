@@ -10,19 +10,19 @@
             <MudText Typo="Typo.subtitle1" HtmlTag="h3" id="execution-history-heading">
                 @L["ExecutionDetail:History"]
             </MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
+            <MudText Typo="Typo.caption">
                 @L["ExecutionDetail:HistoryDescription"]
             </MudText>
         </div>
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+        <span class="execution-history__count">
             @L["ExecutionDetail:HistoryCount", Entries.Count]
-        </MudChip>
+        </span>
     </div>
     @if (Entries.Count == 0)
     {
         <div class="execution-history__empty">
-            <MudIcon Icon="@Icons.Material.Filled.HistoryToggleOff" Color="Color.Secondary" />
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ExecutionDetail:EmptyHistory"]</MudText>
+            <MudIcon Icon="@Icons.Material.Filled.HistoryToggleOff" />
+            <MudText Typo="Typo.body2">@L["ExecutionDetail:EmptyHistory"]</MudText>
         </div>
     }
     else
@@ -30,7 +30,7 @@
         <ol class="execution-history__timeline">
             @foreach (var entry in Entries.OrderBy(entry => entry.TimestampUtc))
             {
-                <li class="execution-history__entry">
+                <li class="execution-history__entry" data-state="@entry.NewState?.ToString().ToLowerInvariant()">
                     <span class="execution-history__rail" aria-hidden="true">
                         <span class="execution-history__node">
                             <MudIcon Icon="@GetEntryIcon(entry)"
@@ -44,10 +44,9 @@
                                 <strong>@L[$"ExecutionHistoryKinds:{entry.Kind}"]</strong>
                                 <time datetime="@entry.TimestampUtc.ToString("O")">@TimePresentation.FormatTimestamp(entry.TimestampUtc)</time>
                             </div>
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                     Color="@ExecutionUiPresentation.GetLogLevelColor(entry.LogLevel)">
+                            <span class="execution-history__level" data-level="@entry.LogLevel.ToString().ToLowerInvariant()">
                                 @L[$"LogLevels:{entry.LogLevel}"]
-                            </MudChip>
+                            </span>
                         </header>
 
                         <p class="execution-history__message">@entry.Message</p>

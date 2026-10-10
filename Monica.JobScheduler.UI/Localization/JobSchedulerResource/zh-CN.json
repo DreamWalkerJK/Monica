@@ -45,7 +45,7 @@
       },
       "Executions": {
         "Title": "持久化执行账本",
-        "Description": "检索排队与已完成工作、检查带栅栏的租约历史，并在不依赖消息投递的情况下请求取消。"
+        "Description": "查找持久记录，检查已捕获设置与保留历史，并请求协作式取消。"
       },
       "Statistics": {
         "Title": "调度统计分析",
@@ -679,7 +679,7 @@
   "Executions": {
     "PageTitle": "任务调度 · 执行账本",
     "Title": "执行账本",
-    "Count": "共 {0} 个执行",
+    "Count": "{0} 条匹配记录",
     "LastRefreshed": "观测时间：{0}",
     "Empty": "没有符合当前筛选条件的持久化执行。",
     "Filters": {
@@ -688,7 +688,7 @@
       "SearchPlaceholder": "实例 ID 或作业键",
       "AnyState": "全部状态",
       "States": "状态",
-      "TimeRange": "入队时间范围",
+      "TimeRange": "记录时间范围",
       "StartDate": "开始日期",
       "EndDate": "结束日期",
       "PageSize": "每页行数",
@@ -705,21 +705,23 @@
     "Columns": {
       "Definition": "定义",
       "Instance": "实例",
-      "State": "状态",
-      "Created": "入队时间",
+      "Created": "记录时间",
       "Started": "开始时间",
       "Completed": "完成时间",
       "Duration": "耗时",
       "Attempts": "执行 / 重试次数",
       "Worker": "租约所有者",
-      "Actions": "操作"
+      "Actions": "操作",
+      "StateAndRecorded": "状态与记录时间",
+      "AttemptEvidence": "尝试与租约证据"
     },
     "Actions": {
       "Details": "检查执行",
-      "OpenDetailsFor": "检查 {0} 的执行实例 {1}",
+      "OpenDetailsFor": "检查 {0} · {1}",
       "Cancel": "请求取消",
       "Apply": "应用筛选",
-      "Reset": "重置"
+      "Reset": "重置",
+      "CancelFor": "请求取消 · {0}"
     },
     "Cancel": {
       "Title": "取消执行？",
@@ -729,16 +731,36 @@
       "Cancelled": "排队中的执行已取消。",
       "AlreadyTerminal": "该执行已经结束。",
       "NotFound": "该执行已不存在。"
-    }
+    },
+    "LedgerEyebrow": "持久执行记录",
+    "SnapshotUnavailable": "执行记录暂不可用，请刷新后重试。",
+    "SnapshotPending": "正在加载执行记录…",
+    "Sort": {
+      "Field": "记录排序依据",
+      "Direction": "排序方向",
+      "CreatedAtUtc": "记录时间",
+      "AvailableAtUtc": "可领取时间",
+      "StartedAtUtc": "最近尝试开始时间",
+      "CompletedAtUtc": "终态完成时间",
+      "Ascending": "从早到晚",
+      "Descending": "从晚到早"
+    },
+    "Evidence": {
+      "Claims": "工作节点领取次数",
+      "ConsumedFailures": "已消耗重试的失败次数",
+      "NoCurrentWorker": "当前无工作节点租约"
+    },
+    "RecordedTimeNotice": "按所有记录的创建时间筛选，包括已跳过的发生项 · {0}",
+    "AcceptedQuery": "保留快照的筛选条件：{0}",
+    "QueryDescription": "{0} · {1} · {2} 至 {3} · 第 {4} 页",
+    "AnyIdentifier": "所有标识",
+    "RefreshFailed": "仍显示最近一次成功读取的快照，本次读取失败：{0}"
   },
   "ExecutionDetail": {
     "Title": "执行证据",
-    "Eyebrow": "持久化执行 / 证据",
     "NotFound": "该执行已不存在。",
-    "State": "状态",
     "Job": "作业键",
     "Owner": "所有者",
-    "Attempts": "执行 / 重试次数",
     "Origin": "准入方式",
     "Available": "可执行时间",
     "Worker": "执行节点",
@@ -755,27 +777,35 @@
     "RetryCount": "允许重试次数",
     "Timeout": "执行超时",
     "Timing": "时间证据",
-    "Created": "入队时间",
+    "Created": "记录时间",
     "Started": "开始时间",
     "Completed": "完成时间",
-    "Duration": "耗时",
+    "Duration": "最近尝试耗时",
     "ScheduledOccurrence": "计划执行时点",
     "CancellationRequested": "请求取消时间",
-    "Runtime": "租约与恢复",
+    "Runtime": "领取与租约",
     "LeaseLosses": "已恢复租约丢失次数",
     "LeaseExpires": "租约到期时间",
     "NoArguments": "没有捕获序列化参数。",
     "SkipReason": "跳过原因",
     "HistoryCount": "保留 {0} 条记录",
-    "HistoryDescription": "持久化状态变更、工作节点日志与运维取消证据。",
+    "HistoryDescription": "按时间顺序展示此执行仍保留的状态变更、取消与日志。",
     "EmptyHistory": "没有可用的保留历史记录。",
     "CancellationPending": "协作取消请求自 {0} 起等待处理。",
     "Copied": "诊断信息已复制到剪贴板。",
     "CopyFailed": "无法复制诊断信息。",
     "Actions": {
       "ViewCatalog": "打开作业详情",
-      "CopyDiagnostics": "复制诊断信息"
-    }
+      "CopySnapshot": "复制快照",
+      "More": "更多执行操作"
+    },
+    "Tabs": {
+      "Evidence": "记录证据",
+      "History": "保留历史 · {0}"
+    },
+    "RefreshFailed": "仍显示最近一次成功检查的快照，刷新失败：{0}",
+    "EvidenceScope": "时间按 {0} 显示。工作节点领取、已消耗重试的失败与租约恢复是不同的记录事实。",
+    "CapturedPolicyNotice": "这些设置在准入时捕获，后续定义或策略修改不会改变此执行。"
   },
   "ExecutionHistoryKinds": {
     "StateTransition": "状态变更",

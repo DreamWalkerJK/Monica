@@ -65,6 +65,10 @@ This keeps the theme usable for:
 
 ### 2. Keep palette ownership in C#
 
+MudBlazor `Color.Secondary` selects the Secondary accent. Use text roles for supporting prose, timestamps, and captions. Native `mud-*-text` utilities use `!important`, so selecting an accent can override a component's intended muted ink even when its isolated selector matches. Remove an unnecessary accent parameter and let the owning text-role style apply; verify the computed foreground on the actual surface, including selected and hovered content. Keep deliberate semantic accents and native disabled roles intact.
+
+`ActionDefault` owns enabled native icon paint, including menu and icon-button controls. Inspect the installed component selectors and measure normal, hover and keyboard-focus states against their actual surfaces; meaningful enabled icons need at least 3:1 contrast. Preserve `ActionDisabled` for inactive controls. When a shared palette role causes the failure, correct its C# owner instead of repeating page-specific color overrides, then verify the affected native controls and theme modes.
+
 Use the C# `MudTheme` definition for:
 
 - palette colors

@@ -4,84 +4,58 @@
 @inject IStringLocalizer<JobSchedulerResource> L
 @inject SchedulerTimePresentation TimePresentation
 
-<section class="execution-detail-hero"
-         data-state="@Execution.State.ToString().ToLowerInvariant()"
+<section class="execution-detail-hero" data-state="@Execution.State.ToString().ToLowerInvariant()"
          aria-label="@L["ExecutionDetail:Identity"]">
     <header class="execution-detail-hero__header">
-        <span class="execution-detail-hero__state-mark" aria-hidden="true">
-            <MudIcon Icon="@ExecutionUiPresentation.GetStateIcon(Execution.State)" Size="Size.Large" />
-        </span>
-
-        <div class="execution-detail-hero__identity">
-            <MudText Typo="Typo.overline" Color="Color.Primary">@L["ExecutionDetail:Eyebrow"]</MudText>
-            <MudText Typo="Typo.h4" HtmlTag="h2">
-                @JobSchedulerUiPresentation.GetJobDisplayName(Execution.Template)
-            </MudText>
-            <dl class="execution-detail-hero__identifiers">
-                <div>
-                    <dt>@L["ExecutionDetail:Job"]</dt>
-                    <dd><code title="@Execution.Template.JobKey">@Execution.Template.JobKey</code></dd>
-                </div>
-                <div>
-                    <dt>@L["ExecutionDetail:Instance"]</dt>
-                    <dd><code title="@Execution.InstanceId">@Execution.InstanceId</code></dd>
-                </div>
-            </dl>
-        </div>
-
         <div class="execution-detail-hero__state">
-            <span>@L["ExecutionDetail:State"]</span>
-            <MudChip T="string"
-                     Size="Size.Small"
-                     Variant="Variant.Outlined"
-                     Icon="@ExecutionUiPresentation.GetStateIcon(Execution.State)"
-                     Color="@JobSchedulerUiPresentation.GetStateColor(Execution.State)">
-                @L[$"ExecutionStates:{Execution.State}"]
-            </MudChip>
+            <MudIcon Icon="@ExecutionUiPresentation.GetStateIcon(Execution.State)" Size="Size.Small" />
+            <span>@L[$"ExecutionStates:{Execution.State}"]</span>
         </div>
+        <h2>@JobSchedulerUiPresentation.GetJobDisplayName(Execution.Template)</h2>
+        <dl class="execution-detail-hero__identifiers">
+            <div>
+                <dt>@L["ExecutionDetail:Instance"]</dt>
+                <dd><code>@Execution.InstanceId</code></dd>
+            </div>
+            <div>
+                <dt>@L["ExecutionDetail:Job"]</dt>
+                <dd><code>@Execution.Template.JobKey</code></dd>
+            </div>
+        </dl>
     </header>
-
     <dl class="execution-detail-hero__metrics">
         <div>
             <dt>@L["ExecutionDetail:Duration"]</dt>
             <dd>@TimePresentation.FormatExecutionDuration(Execution, ObservedAtUtc)</dd>
         </div>
         <div>
+            <dt>@L["Executions:Evidence:Claims"]</dt>
+            <dd>@Execution.ExecutionAttempt</dd>
+        </div>
+        <div>
+            <dt>@L["Executions:Evidence:ConsumedFailures"]</dt>
+            <dd>@Execution.RetryAttempt</dd>
+        </div>
+        <div>
             <dt>@L["ExecutionDetail:Origin"]</dt>
-            <dd>@L[$"ExecutionOrigins:{Execution.Origin}"]</dd>
-        </div>
-        <div>
-            <dt>@L["ExecutionDetail:Attempts"]</dt>
-            <dd>@Execution.ExecutionAttempt / @Execution.RetryAttempt</dd>
-        </div>
-        <div>
-            <dt>@L["ExecutionDetail:Worker"]</dt>
-            <dd><code title="@Execution.RunningWorkerInstanceId">@(Execution.RunningWorkerInstanceId ?? "—")</code></dd>
+            <dd class="execution-detail-hero__origin">@L[$"ExecutionOrigins:{Execution.Origin}"]</dd>
         </div>
     </dl>
-
     @if (Execution.SkipReason is { } skipReason)
     {
         <div class="execution-detail-hero__notice">
-            <MudIcon Icon="@Icons.Material.Filled.SkipNext" Size="Size.Small" />
-            <div>
-                <strong>@L["ExecutionDetail:SkipReason"]</strong>
-                <span>@L[$"ExecutionSkipReasons:{skipReason}"]</span>
-            </div>
+            <MudIcon Icon="@Icons.Material.Outlined.SkipNext" Size="Size.Small" />
+            <div><strong>@L["ExecutionDetail:SkipReason"]</strong><span>@L[$"ExecutionSkipReasons:{skipReason}"]</span></div>
         </div>
     }
 </section>
 
 @code {
-    /// <summary>
-    /// Gets the durable execution summarized by the hero.
-    /// </summary>
+    /// <summary>Gets or sets the durable execution summarized by the hero.</summary>
     [Parameter, EditorRequired]
     public JobExecutionInstance Execution { get; set; } = null!;
 
-    /// <summary>
-    /// Gets the observation instant used to calculate active elapsed duration.
-    /// </summary>
+    /// <summary>Gets or sets the observation instant used only for a running, noncompleted attempt's duration.</summary>
     [Parameter]
     public DateTimeOffset ObservedAtUtc { get; set; }
 }

@@ -23,7 +23,7 @@ public class FreshTheme : ThemeDefinitionBase
             PaletteLight = new PaletteLight()
             {
                 // Main color: Mint Green (Fresh & Natural)
-                Primary = "#2f8064",
+                Primary = "#2d7b60",
                 PrimaryLighten = "#4e9b7f",
                 PrimaryDarken = "#22634c",
                 PrimaryContrastText = "#FFFFFF",
@@ -90,7 +90,7 @@ public class FreshTheme : ThemeDefinitionBase
                 TextDisabled = "#9CA3AF",
 
                 // Operation color
-                ActionDefault = "#8FABC9",
+                ActionDefault = "#6484A8",
                 ActionDisabled = "#E5E7EB",
                 ActionDisabledBackground = "#F3F4F6",
 

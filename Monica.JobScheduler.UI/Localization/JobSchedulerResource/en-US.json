@@ -45,7 +45,7 @@
       },
       "Executions": {
         "Title": "Durable execution ledger",
-        "Description": "Search queued and completed work, inspect fenced lease history, and request cancellation without relying on broker delivery."
+        "Description": "Find durable records, inspect captured settings and retained history, and request cooperative cancellation."
       },
       "Statistics": {
         "Title": "Scheduler analytics",
@@ -679,7 +679,7 @@
   "Executions": {
     "PageTitle": "Job Scheduler · Executions",
     "Title": "Execution ledger",
-    "Count": "{0} executions",
+    "Count": "{0} matching records",
     "LastRefreshed": "Observed {0}",
     "Empty": "No durable executions match the current filters.",
     "Filters": {
@@ -688,7 +688,7 @@
       "SearchPlaceholder": "Instance ID or job key",
       "AnyState": "Any state",
       "States": "States",
-      "TimeRange": "Enqueued within",
+      "TimeRange": "Recorded-time window",
       "StartDate": "Start date",
       "EndDate": "End date",
       "PageSize": "Rows per page",
@@ -705,21 +705,23 @@
     "Columns": {
       "Definition": "Definition",
       "Instance": "Instance",
-      "State": "State",
-      "Created": "Enqueued",
+      "Created": "Recorded time",
       "Started": "Started",
       "Completed": "Completed",
       "Duration": "Duration",
       "Attempts": "Attempts / retries",
       "Worker": "Lease owner",
-      "Actions": "Actions"
+      "Actions": "Actions",
+      "StateAndRecorded": "State and recorded time",
+      "AttemptEvidence": "Attempt and lease evidence"
     },
     "Actions": {
       "Details": "Inspect execution",
-      "OpenDetailsFor": "Inspect execution for {0}, instance {1}",
+      "OpenDetailsFor": "Inspect {0} · {1}",
       "Cancel": "Request cancellation",
       "Apply": "Apply filters",
-      "Reset": "Reset"
+      "Reset": "Reset",
+      "CancelFor": "Request cancellation · {0}"
     },
     "Cancel": {
       "Title": "Cancel execution?",
@@ -729,16 +731,36 @@
       "Cancelled": "The queued execution was cancelled.",
       "AlreadyTerminal": "The execution was already terminal.",
       "NotFound": "The execution no longer exists."
-    }
+    },
+    "LedgerEyebrow": "DURABLE EXECUTION RECORDS",
+    "SnapshotUnavailable": "Execution records are unavailable. Refresh to try again.",
+    "SnapshotPending": "Loading execution records…",
+    "Sort": {
+      "Field": "Sort records by",
+      "Direction": "Order",
+      "CreatedAtUtc": "Recorded time",
+      "AvailableAtUtc": "Available time",
+      "StartedAtUtc": "Latest attempt started",
+      "CompletedAtUtc": "Terminal completion time",
+      "Ascending": "Oldest first",
+      "Descending": "Newest first"
+    },
+    "Evidence": {
+      "Claims": "Worker claims",
+      "ConsumedFailures": "Consumed retry failures",
+      "NoCurrentWorker": "No current worker lease"
+    },
+    "RecordedTimeNotice": "Windows include all record creation, including skipped occurrences · {0}",
+    "AcceptedQuery": "Retained snapshot filters: {0}",
+    "QueryDescription": "{0} · {1} · {2} to {3} · page {4}",
+    "AnyIdentifier": "all identifiers",
+    "RefreshFailed": "Showing the last accepted snapshot. The latest read failed: {0}"
   },
   "ExecutionDetail": {
     "Title": "Execution evidence",
-    "Eyebrow": "DURABLE EXECUTION / EVIDENCE",
     "NotFound": "The execution no longer exists.",
-    "State": "State",
     "Job": "Job key",
     "Owner": "Owner",
-    "Attempts": "Attempts / retries",
     "Origin": "Admission",
     "Available": "Available at",
     "Worker": "Running worker",
@@ -755,27 +777,35 @@
     "RetryCount": "Allowed retries",
     "Timeout": "Execution timeout",
     "Timing": "Timing evidence",
-    "Created": "Enqueued at",
+    "Created": "Recorded time",
     "Started": "Started at",
     "Completed": "Completed at",
-    "Duration": "Duration",
+    "Duration": "Latest attempt duration",
     "ScheduledOccurrence": "Scheduled occurrence",
     "CancellationRequested": "Cancellation requested",
-    "Runtime": "Lease and recovery",
+    "Runtime": "Claims and lease",
     "LeaseLosses": "Recovered lease losses",
     "LeaseExpires": "Lease expires",
     "NoArguments": "No serialized arguments were captured.",
     "SkipReason": "Skip reason",
     "HistoryCount": "{0} retained entries",
-    "HistoryDescription": "Durable state transitions, worker logs, and operator cancellation evidence.",
+    "HistoryDescription": "Chronological state changes, cancellation, and logs still retained for this execution.",
     "EmptyHistory": "No retained history entries are available.",
     "CancellationPending": "A cooperative cancellation request has been pending since {0}.",
     "Copied": "Diagnostics copied to the clipboard.",
     "CopyFailed": "Diagnostics could not be copied.",
     "Actions": {
       "ViewCatalog": "Open job details",
-      "CopyDiagnostics": "Copy diagnostics"
-    }
+      "CopySnapshot": "Copy snapshot",
+      "More": "More execution actions"
+    },
+    "Tabs": {
+      "Evidence": "Recorded evidence",
+      "History": "Retained history · {0}"
+    },
+    "RefreshFailed": "Showing the last accepted inspection. Refresh failed: {0}",
+    "EvidenceScope": "Timestamps use {0}. Claims, consumed retry failures, and recovered leases are separate recorded facts.",
+    "CapturedPolicyNotice": "These settings were captured at admission. Later definition or policy edits do not change this execution."
   },
   "ExecutionHistoryKinds": {
     "StateTransition": "State transition",
