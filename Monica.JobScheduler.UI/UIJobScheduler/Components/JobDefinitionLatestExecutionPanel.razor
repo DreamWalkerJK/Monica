@@ -10,26 +10,24 @@
             <MudText Typo="Typo.h6" HtmlTag="h2" id="job-latest-heading">
                 @L["JobDetail:LatestExecution:Title"]
             </MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
+            <MudText Typo="Typo.body2">
                 @L["JobDetail:LatestExecution:Description"]
             </MudText>
         </div>
         @if (Execution is { } headingExecution)
         {
-            <MudChip T="string"
-                     Size="Size.Small"
-                     Variant="Variant.Outlined"
-                     Color="@JobSchedulerUiPresentation.GetStateColor(headingExecution.State)">
-                @L[$"ExecutionStates:{headingExecution.State}"]
-            </MudChip>
+            <span class="job-latest-panel__status" data-state="@headingExecution.State.ToString().ToLowerInvariant()"
+                  data-tone="@JobSchedulerUiPresentation.GetStateColor(headingExecution.State).ToString().ToLowerInvariant()">
+                <span aria-hidden="true"></span>@L[$"ExecutionStates:{headingExecution.State}"]
+            </span>
         }
     </header>
 
     @if (Execution is null)
     {
         <div class="job-latest-panel__empty">
-            <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Color="Color.Secondary" Size="Size.Large" />
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
+            <MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" Size="Size.Large" />
+            <MudText Typo="Typo.body2">
                 @L["JobDetail:LatestExecution:Empty"]
             </MudText>
         </div>
@@ -38,14 +36,13 @@
     {
         <div class="job-latest-panel__instance">
             <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                <MudText Typo="Typo.caption">
                     @L["Executions:Columns:Instance"]
                 </MudText>
                 <code title="@execution.InstanceId">@execution.InstanceId</code>
             </div>
             <MudButton Variant="Variant.Text"
-                       Color="Color.Primary"
-                       EndIcon="@Icons.Material.Filled.OpenInFull"
+                       EndIcon="@Icons.Material.Outlined.OpenInFull"
                        OnClick="() => OpenAsync(execution.InstanceId)">
                 @L["Executions:Actions:Details"]
             </MudButton>
@@ -82,7 +79,7 @@
 
 @code {
     /// <summary>
-    /// Gets the newest execution for the logical job, or <see langword="null"/> when the job has never run.
+    /// Gets the newest durable record, including skipped occurrences, or <see langword="null"/> when none has been recorded.
     /// </summary>
     [Parameter]
     public JobExecutionInstance? Execution { get; set; }
@@ -101,5 +98,5 @@
 
     private Task OpenAsync(string instanceId) => ExecutionSelected.InvokeAsync(instanceId);
 
-    private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    private string Display(string? value) => string.IsNullOrWhiteSpace(value) ? L["Common:NotAvailable"] : value;
 }

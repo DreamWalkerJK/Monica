@@ -48,12 +48,14 @@ Indicators:
 - The page or dialog becomes the horizontal scroll owner when only a table, diff, or code surface should scroll
 - Document or body scroll dimensions diverge from the intended owner after resize or native tooltip/popover open-close, although the page root itself remains contained
 - An unconditional table `min-width` or column-width sum forces a scrollbar on empty/sparse results or on content that could fit with adaptive columns or native responsive rows
+- An empty table has no overflow but a visible header collapses, clips its label or leaves the declared columns short of the table's available width
 - A wrapper and native table container duplicate the same scroll ownership, or a table adds an unnecessary vertical bar inside an already scrolling dialog
 - Scrollbar paint or `overflow: hidden` masks a sizing defect by making required records, native controls or keyboard focus inaccessible
 - An ostensibly horizontal filter/tab strip has incidental vertical overflow from a negative child margin, clipped focus styling, or mismatched child/container height
 - Responsive cell CSS assumes an enum name is a media-query threshold, so a MudBlazor table stacks earlier than the page's local spacing rules
 - A fixed/minimum height leaves unexplained blank space instead of using content-driven height with a viewport-aware cap
 - Nested form columns fit the viewport rule but clip floating labels or entered values inside a narrow desktop card; inspect the actual owner width in both shell layouts
+- A compact provenance caption becomes an implicit grid item beside its field, squeezing the value column or moving a native reset action onto another row
 - Text, controls, table cells or empty-state messages touch an ordinary panel edge because the wrapper supplies a background but no content inset; a dialog's padded outer shell is mistaken for an inset within each nested painted tab body
 - Native stacked table `DataLabel` pseudo-labels touch the phone surface edge although value wrappers are inset; ineffective row padding is mistaken for actual cell padding, or the empty row inherits a two-column label layout
 - A full-width table's header, last row, hover/selected paint or pager covers its owner's rounded corners; only the outer border is rounded while descendant backgrounds remain square

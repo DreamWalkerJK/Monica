@@ -8,7 +8,8 @@ namespace Monica.JobScheduler.UI.UIJobScheduler.Support;
 /// </summary>
 /// <remarks>
 /// Imports are always observed to completion. If disposal wins while an import is pending, the late module
-/// reference is released instead of being published to the component.
+/// reference is released instead of being published to the component. Disposal reserves shared completion
+/// before invoking module teardown; reentrant or concurrent disposal joins that actual completion.
 /// </remarks>
 internal sealed class CronDescriptionSession(IJSRuntime jsRuntime) : IAsyncDisposable
 {
@@ -59,10 +60,27 @@ internal sealed class CronDescriptionSession(IJSRuntime jsRuntime) : IAsyncDispo
     /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
+        TaskCompletionSource completion;
         lock (_disposeSync)
         {
-            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+            if (_disposeTask is not null) return new(_disposeTask);
+            _disposed = true;
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _disposeTask = completion.Task;
         }
+
+        _ = CompleteDisposalAsync(completion);
+        return new(completion.Task);
+    }
+
+    private async Task CompleteDisposalAsync(TaskCompletionSource completion)
+    {
+        try
+        {
+            await DisposeCoreAsync();
+            completion.TrySetResult();
+        }
+        catch (Exception exception) { completion.TrySetException(exception); }
     }
 
     private async ValueTask<IJSObjectReference> GetOrImportModuleAsync(CancellationToken cancellationToken)
@@ -108,7 +126,6 @@ internal sealed class CronDescriptionSession(IJSRuntime jsRuntime) : IAsyncDispo
 
     private async Task DisposeCoreAsync()
     {
-        _disposed = true;
         await _gate.WaitAsync();
         IJSObjectReference? module;
         Task<IJSObjectReference>? importTask;

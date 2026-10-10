@@ -7,6 +7,7 @@ using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
 using MudBlazor;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.State;
@@ -27,11 +28,11 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     private readonly JobSchedulerFacade _facade;
     private readonly IJobSchedulerUiAccess _access;
     private readonly IStringLocalizer<JobSchedulerResource> _localizer;
-    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SchedulerOperationLifetime _lifetime = new();
     private readonly SemaphoreSlim _loadGate = new(1, 1);
     private readonly SemaphoreSlim _mutationGate = new(1, 1);
     private readonly HashSet<JobId> _selectedJobIds = [];
-    private int _disposed;
+    private int _loadVersion;
 
     internal JobCatalogPageState(
         JobSchedulerFacade facade,
@@ -76,6 +77,12 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     internal bool IsLoading { get; private set; }
     internal bool IsMutating { get; private set; }
     internal string? Error { get; private set; }
+
+    /// <summary>Gets whether owner and type facets have a successful bounded source snapshot.</summary>
+    internal bool HasLoadedFacets { get; private set; }
+
+    /// <summary>Gets a facet-specific load failure, retaining any earlier accepted facet evidence.</summary>
+    internal string? FacetsError { get; private set; }
     internal int PageNumber { get; private set; } = 1;
     internal int PageSize { get; private set; }
     internal int[] PageSizeOptions { get; }
@@ -85,7 +92,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     internal bool HasSelection => _selectedJobIds.Count > 0;
     internal bool HasDebugOnlySuppressedSelection =>
         SelectedRecurringSummaries.Any(JobSchedulerUiPresentation.IsDebugOnlySuppressed);
-    internal bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+    internal bool IsDisposed => _lifetime.IsRetired;
 
     /// <summary>
     /// Applies the page's deep-link filters before the first load. Omitted values keep the present-only recurring
@@ -101,47 +108,45 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
 
         if (!string.IsNullOrWhiteSpace(owner))
         {
-            OwnerId = owner.Trim();
+            OwnerId = owner;
         }
     }
 
-    internal async Task InitializeAsync()
+    internal Task InitializeAsync() => _lifetime.RunAsync(InitializeCoreAsync);
+
+    private async Task InitializeCoreAsync(CancellationToken cancellationToken)
     {
-        var cancellationToken = _lifetimeCancellation.Token;
+        await _loadGate.WaitAsync(cancellationToken);
         try
         {
-            IsLoading = true;
+            if (!_lifetime.TryApply(() => IsLoading = true)) return;
             await NotifyChangedAsync();
-            if (!await EnsureAuthorizedAsync(cancellationToken))
-            {
-                ClearResults();
-                return;
-            }
+            if (!(await EnsureAuthorizedAsync(cancellationToken)).IsAuthorized) return;
 
             await LoadFacetsAsync(cancellationToken);
-            Error = null;
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         catch (Exception exception)
         {
-            if (!AccessChecked)
+            _lifetime.TryApply(() =>
             {
-                ClearResults();
-                AccessChecked = true;
-                IsAuthorized = false;
-            }
-
-            Error = exception.Message;
+                if (!AccessChecked)
+                {
+                    ClearResults();
+                    AccessChecked = true;
+                    IsAuthorized = false;
+                }
+                FacetsError = exception.Message;
+                Error = exception.Message;
+            });
         }
         finally
         {
-            if (!IsDisposed)
+            try
             {
-                IsLoading = false;
-                await NotifyChangedAsync();
+                if (_lifetime.TryApply(() => IsLoading = false)) await NotifyChangedAsync();
             }
+            finally { _loadGate.Release(); }
         }
     }
 
@@ -182,28 +187,42 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         _selectedJobIds.Clear();
     }
 
-    internal async Task<TableData<JobOperationalSummary>> LoadTableAsync(
+    /// <summary>Loads the exact table request captured at admission; each caller receives its own page.</summary>
+    internal Task<TableData<JobOperationalSummary>> LoadTableAsync(
         TableState tableState,
         CancellationToken requestCancellation)
     {
-        ObjectDisposedException.ThrowIf(IsDisposed, this);
         ArgumentNullException.ThrowIfNull(tableState);
-
-        PageNumber = tableState.Page + 1;
-        PageSize = Math.Clamp(tableState.PageSize, 1, 200);
-        SortField = ResolveSortField(tableState.SortLabel);
-        SortDescending = tableState.SortDirection == SortDirection.Descending;
-
-        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
-            _lifetimeCancellation.Token,
-            requestCancellation);
-        await LoadAsync(linkedCancellation.Token);
-        linkedCancellation.Token.ThrowIfCancellationRequested();
-        return new TableData<JobOperationalSummary>
+        JobDefinitionQuery? query = null;
+        var version = 0;
+        _lifetime.TryApply(() =>
         {
-            Items = Summaries,
-            TotalItems = TotalCount
-        };
+            PageNumber = tableState.Page + 1;
+            PageSize = Math.Clamp(tableState.PageSize, 1, 200);
+            SortField = ResolveSortField(tableState.SortLabel);
+            SortDescending = tableState.SortDirection == SortDirection.Descending;
+            version = ++_loadVersion;
+            query = new JobDefinitionQuery
+            {
+                SearchText = SearchText,
+                OwnerKey = OwnerId,
+                IsPresent = PresentFilter,
+                JobType = SelectedJobType,
+                IsDisabled = SelectedDisabledState,
+                SortField = SortField,
+                SortDescending = SortDescending,
+                PageNumber = PageNumber,
+                PageSize = PageSize
+            };
+        });
+        return _lifetime.RunAsync(async lifetimeToken =>
+        {
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                lifetimeToken, requestCancellation);
+            var result = await LoadAsync(query!, version, linkedCancellation.Token);
+            linkedCancellation.Token.ThrowIfCancellationRequested();
+            return result;
+        });
     }
 
     internal void ToggleSelection(JobOperationalSummary summary)
@@ -264,24 +283,23 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         Summaries = items;
     }
 
-    internal async Task<Res<JobPolicy>> SetDisabledAsync(JobOperationalSummary summary, bool disabled)
+    internal Task<Res<JobPolicy>> SetDisabledAsync(JobOperationalSummary summary, bool disabled) =>
+        _lifetime.RunAsync(token => SetDisabledCoreAsync(summary, disabled, token));
+
+    private async Task<Res<JobPolicy>> SetDisabledCoreAsync(
+        JobOperationalSummary summary, bool disabled, CancellationToken cancellationToken)
     {
-        var cancellationToken = _lifetimeCancellation.Token;
         await _mutationGate.WaitAsync(cancellationToken);
         try
         {
-            ObjectDisposedException.ThrowIf(IsDisposed, this);
-            IsMutating = true;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_lifetime.TryApply(() => IsMutating = true)) throw new OperationCanceledException(cancellationToken);
             await NotifyChangedAsync();
-            if (!await EnsureAuthorizedAsync(cancellationToken))
-            {
-                return Res.Fail(_localizer["Access:DeniedDescription"]);
-            }
-
+            var access = await EnsureAuthorizedAsync(cancellationToken);
+            if (!access.IsAuthorized)
+                return Res.Fail(access.Error ?? _localizer["Access:DeniedDescription"].Value);
             if (disabled && JobSchedulerUiPresentation.IsDebugOnlySuppressed(summary))
-            {
                 return Res.Fail(_localizer["Catalog:Messages:PauseUnavailableDebug"]);
-            }
 
             var definition = summary.Definition;
             var result = await _facade.UpdatePolicyAsync(
@@ -291,210 +309,192 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
                 {
                     Overrides = definition.Policy.Overrides with { DisabledOverride = disabled },
                     ExpectedConcurrencyStamp = definition.Policy.ConcurrencyStamp
-                },
-                cancellationToken);
+                }, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (!result.IsFailed(out _, out var policy))
-            {
-                ApplyPolicy(definition.Id, policy);
-            }
-
+                _lifetime.TryApply(() => ApplyPolicy(definition.Id, policy));
             return result;
         }
         finally
         {
-            if (!IsDisposed)
+            try
             {
-                IsMutating = false;
-                await NotifyChangedAsync();
+                if (_lifetime.TryApply(() => IsMutating = false)) await NotifyChangedAsync();
             }
-
-            _mutationGate.Release();
+            finally { _mutationGate.Release(); }
         }
     }
 
-    internal async Task<Res<JobExecutionInstance>> RunRecurringNowAsync(JobOperationalSummary summary)
+    internal Task<Res<JobExecutionInstance>> RunRecurringNowAsync(JobOperationalSummary summary) =>
+        _lifetime.RunAsync(token => RunRecurringNowCoreAsync(summary, token));
+
+    private async Task<Res<JobExecutionInstance>> RunRecurringNowCoreAsync(
+        JobOperationalSummary summary, CancellationToken cancellationToken)
     {
-        var cancellationToken = _lifetimeCancellation.Token;
         await _mutationGate.WaitAsync(cancellationToken);
         try
         {
-            ObjectDisposedException.ThrowIf(IsDisposed, this);
-            IsMutating = true;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_lifetime.TryApply(() => IsMutating = true)) throw new OperationCanceledException(cancellationToken);
             await NotifyChangedAsync();
-            if (!await EnsureAuthorizedAsync(cancellationToken))
-            {
-                return Res.Fail(_localizer["Access:DeniedDescription"]);
-            }
-
+            var access = await EnsureAuthorizedAsync(cancellationToken);
+            if (!access.IsAuthorized)
+                return Res.Fail(access.Error ?? _localizer["Access:DeniedDescription"].Value);
             var definition = summary.Definition;
-            return await _facade.RunRecurringNowAsync(
-                new JobRecurringRunNowRequest
-                {
-                    OwnerKey = definition.OwnerKey,
-                    JobKey = definition.Declaration.JobKey
-                },
-                cancellationToken);
+            var result = await _facade.RunRecurringNowAsync(new JobRecurringRunNowRequest
+            {
+                OwnerKey = definition.OwnerKey,
+                JobKey = definition.Declaration.JobKey
+            }, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            return result;
         }
         finally
         {
-            if (!IsDisposed)
+            try
             {
-                IsMutating = false;
-                await NotifyChangedAsync();
+                if (_lifetime.TryApply(() => IsMutating = false)) await NotifyChangedAsync();
             }
-
-            _mutationGate.Release();
+            finally { _mutationGate.Release(); }
         }
     }
 
-    internal async Task<Res<JobPolicyBatchUpdateResult>> SetSelectedDisabledAsync(bool disabled)
+    internal Task<Res<JobPolicyBatchUpdateResult>> SetSelectedDisabledAsync(bool disabled) =>
+        SetSelectedDisabledAsync(disabled, SelectedRecurringSummaries);
+
+    /// <summary>Mutates only the exact identities and policy revisions accepted by the confirmation dialog.</summary>
+    /// <remarks>Selection changes after confirmation or during authorization cannot retarget the admitted batch.</remarks>
+    internal Task<Res<JobPolicyBatchUpdateResult>> SetSelectedDisabledAsync(
+        bool disabled, IReadOnlyList<JobOperationalSummary> confirmedSelection)
     {
-        var cancellationToken = _lifetimeCancellation.Token;
+        ArgumentNullException.ThrowIfNull(confirmedSelection);
+        var selected = confirmedSelection.ToArray();
+        return _lifetime.RunAsync(token => SetSelectedDisabledCoreAsync(disabled, selected, token));
+    }
+
+    private async Task<Res<JobPolicyBatchUpdateResult>> SetSelectedDisabledCoreAsync(
+        bool disabled, IReadOnlyList<JobOperationalSummary> selected, CancellationToken cancellationToken)
+    {
         await _mutationGate.WaitAsync(cancellationToken);
         try
         {
-            ObjectDisposedException.ThrowIf(IsDisposed, this);
-            IsMutating = true;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_lifetime.TryApply(() => IsMutating = true)) throw new OperationCanceledException(cancellationToken);
             await NotifyChangedAsync();
-            if (!await EnsureAuthorizedAsync(cancellationToken))
-            {
-                return Res.Fail(_localizer["Access:DeniedDescription"]);
-            }
-
-            var selected = SelectedRecurringSummaries;
-            if (selected.Count == 0)
-            {
-                return _localizer["Catalog:Batch:Empty"].Value;
-            }
-
+            var access = await EnsureAuthorizedAsync(cancellationToken);
+            if (!access.IsAuthorized)
+                return Res.Fail(access.Error ?? _localizer["Access:DeniedDescription"].Value);
+            if (selected.Count == 0) return _localizer["Catalog:Batch:Empty"].Value;
+            if (selected.Any(static summary => summary.Definition.Declaration.JobType != JobType.Recurring))
+                throw new ArgumentException("A catalog policy batch accepts only confirmed recurring definitions.", nameof(selected));
             if (disabled && selected.Any(JobSchedulerUiPresentation.IsDebugOnlySuppressed))
-            {
                 return _localizer["Catalog:Batch:PauseUnavailableDebug"].Value;
-            }
 
-            var result = await _facade.UpdatePoliciesAsync(
-                new JobPolicyBatchUpdateRequest
+            var result = await _facade.UpdatePoliciesAsync(new JobPolicyBatchUpdateRequest
+            {
+                Items = selected.Select(summary => new JobPolicyBatchUpdateItem
                 {
-                    Items = selected.Select(summary => new JobPolicyBatchUpdateItem
-                    {
-                        OwnerKey = summary.Definition.OwnerKey,
-                        JobKey = summary.Definition.Declaration.JobKey,
-                        Overrides = summary.Definition.Policy.Overrides with { DisabledOverride = disabled },
-                        ExpectedConcurrencyStamp = summary.Definition.Policy.ConcurrencyStamp
-                    }).ToArray()
-                },
-                cancellationToken);
+                    OwnerKey = summary.Definition.OwnerKey,
+                    JobKey = summary.Definition.Declaration.JobKey,
+                    Overrides = summary.Definition.Policy.Overrides with { DisabledOverride = disabled },
+                    ExpectedConcurrencyStamp = summary.Definition.Policy.ConcurrencyStamp
+                }).ToArray()
+            }, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (!result.IsFailed(out _, out var batch))
             {
-                foreach (var item in batch.Items.Where(static item => item.IsSucceeded))
+                _lifetime.TryApply(() =>
                 {
-                    var jobId = new JobId(item.OwnerKey, item.JobKey);
-                    ApplyPolicy(jobId, item.Policy!);
-                    _selectedJobIds.Remove(jobId);
-                }
+                    foreach (var item in batch.Items.Where(static item => item.IsSucceeded))
+                    {
+                        var jobId = new JobId(item.OwnerKey, item.JobKey);
+                        ApplyPolicy(jobId, item.Policy!);
+                        _selectedJobIds.Remove(jobId);
+                    }
+                });
             }
-
             return result;
         }
         finally
         {
-            if (!IsDisposed)
+            try
             {
-                IsMutating = false;
-                await NotifyChangedAsync();
+                if (_lifetime.TryApply(() => IsMutating = false)) await NotifyChangedAsync();
             }
-
-            _mutationGate.Release();
+            finally { _mutationGate.Release(); }
         }
     }
 
-    internal async Task<bool> ReauthorizeAsync()
-    {
-        var cancellationToken = _lifetimeCancellation.Token;
-        return await EnsureAuthorizedAsync(cancellationToken);
-    }
+    internal Task<bool> ReauthorizeAsync() => _lifetime.RunAsync(async token =>
+        (await EnsureAuthorizedAsync(token)).IsAuthorized);
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
-        {
-            return;
-        }
-
         Changed = null;
-        await _lifetimeCancellation.CancelAsync();
-        await _loadGate.WaitAsync();
-        _loadGate.Release();
-        await _mutationGate.WaitAsync();
-        _mutationGate.Release();
-        _loadGate.Dispose();
-        _mutationGate.Dispose();
-        _lifetimeCancellation.Dispose();
+        return _lifetime.RetireAsync(() =>
+        {
+            _loadGate.Dispose();
+            _mutationGate.Dispose();
+        });
     }
 
-    private async Task LoadAsync(CancellationToken cancellationToken)
+    private async Task<TableData<JobOperationalSummary>> LoadAsync(
+        JobDefinitionQuery query, int version, CancellationToken cancellationToken)
     {
         await _loadGate.WaitAsync(cancellationToken);
         try
         {
-            ObjectDisposedException.ThrowIf(IsDisposed, this);
-            IsLoading = true;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_lifetime.TryApply(() => IsLoading = true)) throw new OperationCanceledException(cancellationToken);
             await NotifyChangedAsync();
-
-            if (!await EnsureAuthorizedAsync(cancellationToken))
+            if (!(await EnsureAuthorizedAsync(cancellationToken)).IsAuthorized)
             {
-                ClearResults();
-                return;
+                return new() { Items = [], TotalItems = 0 };
             }
-
-            var result = await _facade.QueryOperationalSummariesAsync(new JobDefinitionQuery
-            {
-                SearchText = SearchText,
-                OwnerKey = OwnerId,
-                IsPresent = PresentFilter,
-                JobType = SelectedJobType,
-                IsDisabled = SelectedDisabledState,
-                SortField = SortField,
-                SortDescending = SortDescending,
-                PageNumber = PageNumber,
-                PageSize = PageSize
-            }, cancellationToken);
+            var result = await _facade.QueryOperationalSummariesAsync(query, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (result.IsFailed(out var error, out var page))
             {
+                _lifetime.TryApply(() =>
+                {
+                    if (version != _loadVersion) return;
+                    Summaries = [];
+                    TotalCount = 0;
+                    _selectedJobIds.Clear();
+                    Error = error.Message;
+                });
+                return new() { Items = [], TotalItems = 0 };
+            }
+            _lifetime.TryApply(() =>
+            {
+                if (version != _loadVersion) return;
+                Summaries = page.Items;
+                TotalCount = page.TotalCount;
+                Error = null;
+                RetainVisibleSelection();
+            });
+            return new() { Items = page.Items, TotalItems = page.TotalCount };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception exception)
+        {
+            _lifetime.TryApply(() =>
+            {
+                if (version != _loadVersion) return;
                 Summaries = [];
                 TotalCount = 0;
                 _selectedJobIds.Clear();
-                Error = error.Message;
-                return;
-            }
-
-            Summaries = page.Items;
-            TotalCount = page.TotalCount;
-            Error = null;
-            RetainVisibleSelection();
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            Summaries = [];
-            TotalCount = 0;
-            _selectedJobIds.Clear();
-            Error = exception.Message;
+                Error = exception.Message;
+            });
+            return new() { Items = [], TotalItems = 0 };
         }
         finally
         {
-            if (!IsDisposed)
+            try
             {
-                IsLoading = false;
-                await NotifyChangedAsync();
+                if (_lifetime.TryApply(() => IsLoading = false)) await NotifyChangedAsync();
             }
-
-            _loadGate.Release();
+            finally { _loadGate.Release(); }
         }
     }
 
@@ -502,24 +502,30 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     {
         var result = await _facade.GetOverviewAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        if (result.IsFailed(out _, out var overview))
+        if (result.IsFailed(out var error, out var overview))
         {
+            _lifetime.TryApply(() => FacetsError = error.Message);
             return;
         }
 
-        // Scope the facets to the same presence view the table queries so an absent-only audit view does not show
-        // owner and job-type counts taken from the present catalog.
         var scopedDefinitions = overview.Definitions
-            .Where(definition => definition.IsPresent == PresentFilter)
+            .Where(definition => PresentFilter is null || definition.IsPresent == PresentFilter)
             .ToArray();
-        OwnerFacets = scopedDefinitions
+        var ownerFacets = scopedDefinitions
             .GroupBy(static definition => definition.OwnerKey, StringComparer.Ordinal)
             .OrderBy(static group => group.Key, StringComparer.Ordinal)
             .Select(static group => KeyValuePair.Create(group.Key, group.Count()))
             .ToArray();
-        JobTypeCounts = scopedDefinitions
+        var jobTypeCounts = scopedDefinitions
             .GroupBy(static definition => definition.Declaration.JobType)
             .ToDictionary(static group => group.Key, static group => group.Count());
+        _lifetime.TryApply(() =>
+        {
+            OwnerFacets = ownerFacets;
+            JobTypeCounts = jobTypeCounts;
+            HasLoadedFacets = true;
+            FacetsError = null;
+        });
     }
 
     private void ClearResults()
@@ -529,6 +535,10 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         PageNumber = 1;
         Error = null;
         _selectedJobIds.Clear();
+        OwnerFacets = [];
+        JobTypeCounts = new Dictionary<JobType, int>();
+        HasLoadedFacets = false;
+        FacetsError = null;
     }
 
     private void RetainVisibleSelection()
@@ -545,17 +555,40 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
             ? field
             : JobDefinitionSortField.JobName;
 
-    private async Task<bool> EnsureAuthorizedAsync(CancellationToken cancellationToken)
+    private async Task<(bool IsAuthorized, string? Error)> EnsureAuthorizedAsync(CancellationToken cancellationToken)
     {
-        IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        AccessChecked = true;
-        return IsAuthorized;
+        try
+        {
+            var authorized = await _access.IsAuthorizedAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            var accepted = _lifetime.TryApply(() =>
+            {
+                IsAuthorized = authorized;
+                AccessChecked = true;
+                if (!authorized) ClearResults();
+            });
+            return (accepted && authorized, null);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var error = string.IsNullOrWhiteSpace(exception.Message)
+                ? _localizer["Access:DeniedDescription"].Value : exception.Message;
+            _lifetime.TryApply(() =>
+            {
+                ClearResults();
+                IsAuthorized = false;
+                AccessChecked = true;
+                Error = error;
+            });
+            return (false, error);
+        }
     }
 
     private async Task NotifyChangedAsync()
     {
-        var handlers = Changed?.GetInvocationList().Cast<Func<Task>>().ToArray() ?? [];
+        var handlers = _lifetime.SnapshotHandlers(Changed);
         foreach (var handler in handlers)
         {
             await handler();

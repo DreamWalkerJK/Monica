@@ -37,7 +37,7 @@
       },
       "Catalog": {
         "Title": "Job catalog",
-        "Description": "Browse recurring and triggered work separately, read schedule health, and open a job's complete operational dossier."
+        "Description": "Find owner-scoped definitions, inspect their effective cadence and execution evidence, and control future admission."
       },
       "JobDetail": {
         "Title": "Job operational dossier",
@@ -155,28 +155,29 @@
   "Catalog": {
     "PageTitle": "Job Scheduler · Catalog",
     "Title": "Job definitions",
-    "Count": "{0} definitions",
+    "Count": "{0} matching definitions",
     "Enabled": "Enabled",
     "Disabled": "Disabled",
     "OnDemand": "On demand",
-    "Empty": "No active definitions match the current filters.",
+    "Empty": "No definitions match these filters.",
     "AbsentViewNotice": "Showing definitions their owners no longer publish. Execution history stays available for audit.",
     "Filters": {
       "AriaLabel": "Catalog search and filters",
       "Search": "Definition",
       "SearchPlaceholder": "Job name or key",
-      "Owner": "Source project",
-      "AnyOwner": "All source projects",
+      "Owner": "Owner",
+      "AnyOwner": "All owners",
       "Type": "Job type",
       "AnyType": "All types",
-      "Policy": "Operator policy",
+      "Policy": "Effective policy",
       "AnyPolicy": "Any policy",
-      "PageSize": "Rows per page"
+      "PageSize": "Rows per page",
+      "FacetScope": "Counts in the loaded presence snapshot",
+      "FacetUnavailable": "Facet snapshot unavailable"
     },
     "Columns": {
       "Definition": "Definition",
       "Owner": "Owner",
-      "Lifecycle": "Scheduling mode",
       "Schedule": "Schedule",
       "NextRun": "Next run",
       "LastRun": "Last run",
@@ -194,9 +195,12 @@
       "PauseSelected": "Pause selected",
       "ResumeSelected": "Resume selected",
       "Reset": "Reset filters",
-      "CopyKey": "Copy full job key",
       "CopiedKey": "Job key copied",
-      "CopyKeyFailed": "Failed to copy job key"
+      "CopyKeyFailed": "Failed to copy job key",
+      "CopyKeyFor": "Copy full job key: {0}",
+      "RunFor": "Run {0} now · {1}",
+      "DetailsFor": "Inspect {0} · {1}",
+      "PolicyFor": "{0}: {1} · {2}"
     },
     "ScheduleStatus": {
       "Awaiting": "Awaiting synchronization",
@@ -229,7 +233,6 @@
       "Parsing": "Reading schedule…"
     },
     "Triggered": {
-      "Ready": "Ready for operator admission",
       "NoArguments": "No argument contract"
     },
     "History": {
@@ -263,24 +266,30 @@
       "PauseUnavailableDebug": "Quick Pause is unavailable because one or more selected jobs are already suppressed by debug mode without an operator pause.",
       "Result": "{0} policy update(s) succeeded; {1} failed.",
       "ResultDebugRemains": "{0} operator pause update(s) succeeded; {1} failed. Debug mode still suppresses automatic materialization where configured."
+    },
+    "RegistryEyebrow": "DEFINITION REGISTRY",
+    "NoDefinitions": "No definitions were found in the loaded presence snapshot.",
+    "QueryUnavailable": "Definition results are unavailable. Review the query error and refresh.",
+    "AbsentDefinition": "No longer published",
+    "FacetLoadFailed": "Type and owner facets could not be refreshed: {0}",
+    "SortLabel": "Sort definitions",
+    "Pagination": {
+      "Range": "{first_item}–{last_item} of {all_items}"
     }
   },
   "Policy": {
     "Title": "Operational policy workbench",
     "ImmutableNotice": "Job key, job type, argument contract, owner, and configured timezone remain code-owned. Policy changes affect future admission; queued and running executions preserve their captured configuration.",
-    "DisabledOverride": "Execution state override",
-    "InheritDefault": "Inherit code default",
+    "InheritDefault": "Inherit default",
     "ForceEnabled": "Force enabled",
     "ForceDisabled": "Force disabled",
-    "MaxRecords": "Maximum retained executions",
     "MaxRecordsHelp": "Leave empty to inherit 100. Set zero to disable count-based retention.",
-    "MaxDays": "Maximum retention age (days)",
     "MaxDaysHelp": "Leave empty to inherit no age limit.",
     "Saved": "Operational policy saved.",
     "UnsavedChanges": "Unsaved operator changes",
     "NoChanges": "No policy changes",
     "Provenance": {
-      "Declared": "Declared default",
+      "Declared": "Declared / scheduler default",
       "Override": "Operator override",
       "Effective": "Effective value",
       "Help": "Each row separates the immutable declaration default from operator intent and the behavior the scheduler will apply."
@@ -327,7 +336,7 @@
       "Value": "Use operator boundary"
     },
     "Actions": {
-      "ResetField": "Reset this field to its declared default",
+      "ResetField": "Remove this override and inherit its default",
       "ResetAll": "Reset all overrides",
       "Override": "Add override"
     },
@@ -335,12 +344,14 @@
       "Enabled": "Enabled",
       "Disabled": "Disabled",
       "NoLimit": "No limit",
-      "Days": "{0} days"
+      "Days": "{0} days",
+      "Cleared": "Cleared"
     },
     "Validation": {
       "DisplayNameRequired": "Enter a display name within the supported length, or reset the field to inherit its declared value.",
       "DescriptionRequired": "Enter a description within the supported length, choose Clear, or inherit the declared value.",
-      "Timeout": "Enter a positive timeout within the supported duration range."
+      "Timeout": "Enter a positive timeout within the supported duration range.",
+      "NumericMinimum": "{0} must be at least {1}, or reset it to inherit the default."
     },
     "Conflict": {
       "DraftsPreserved": "Another operator changed the policy baseline ({0} → {1}). Your unsaved edits are preserved while untouched fields adopt the latest policy; review before retrying.",
@@ -424,7 +435,9 @@
         "AriaLabel": "Next five prospective schedule occurrences",
         "Sequence": "#",
         "ConfiguredTime": "Configured-timezone time",
-        "Utc": "UTC timestamp"
+        "Utc": "UTC timestamp",
+        "Empty": "No future occurrence matches the current draft.",
+        "Invalid": "Enter a valid cadence and boundary range to preview occurrences."
       },
       "Syntax": {
         "Title": "Cronos syntax guide",
@@ -464,16 +477,18 @@
     "ObservedAt": "Operational evidence observed {0}",
     "Actions": {
       "BackToCatalog": "Back to catalog",
-      "InspectSchedule": "Edit schedule policy"
+      "InspectSchedule": "Review schedule / policy"
     },
     "Header": {
       "EvidenceAriaLabel": "Current job operational evidence",
       "ActiveExecutions": "Active executions",
       "QueuedExecutions": "Queued executions",
       "RunningExecutions": "Running executions",
-      "OwnerAbsent": "Owner absent",
-      "OwnerPresence": "Owner presence",
-      "OwnerPresent": "Present"
+      "OwnerAbsent": "Absent",
+      "OwnerPresence": "Declaration presence",
+      "OwnerPresent": "Present",
+      "Eyebrow": "OWNER-SCOPED DEFINITION",
+      "LedgerScope": "Recorded queued and running executions for this owner and job."
     },
     "Activity": {
       "Eyebrow": "LIVE EXECUTION EVIDENCE",
@@ -492,7 +507,7 @@
     },
     "Schedule": {
       "Title": "Recurring schedule",
-      "Description": "The durable cursor uses this immutable schedule and the active policy to materialize occurrences.",
+      "Description": "The stored cursor follows the effective cadence and boundaries; the configured timezone remains code-owned.",
       "NextOccurrence": "Next occurrence",
       "CronExpression": "Cron expression",
       "TimeZone": "Schedule timezone",
@@ -512,39 +527,32 @@
         "OperatorPolicy": "Operator policy has paused automatic recurring occurrence materialization.",
         "DebugMode": "Debug mode suppresses automatic occurrence materialization while preserving explicit Run job now admission.",
         "OperatorAndDebug": "Operator policy and debug mode both suppress automatic occurrence materialization. Clearing the operator pause leaves debug suppression active."
-      }
+      },
+      "NoNextOccurrence": "No next occurrence recorded"
     },
     "Contract": {
       "Title": "Declaration and policy contract",
       "Description": "Code-owned declaration fields remain immutable; operator policy is stored independently and updated with optimistic concurrency.",
       "Immutable": "Immutable declaration",
-      "DeclarationTitle": "Execution declaration",
       "Owner": "Job owner",
       "ArgumentsKey": "Arguments contract",
-      "MaxConcurrency": "Maximum concurrency",
       "MaxConcurrencyHelp": "Caps concurrent worker leases; recurring materialization also uses it as the queued-and-running overlap limit.",
-      "RetryCount": "Allowed retries",
       "RetryCountHelp": "Additional failed attempts allowed after the first attempt.",
-      "ExecutionTimeout": "Execution timeout",
       "ExecutionTimeoutHelp": "Maximum duration allowed for one execution attempt.",
-      "DeclarationDefault": "Code default state",
       "PolicyTitle": "Operator policy",
-      "EffectiveState": "Effective state",
       "PolicyUpdated": "Policy updated",
       "PolicyStamp": "Concurrency stamp",
-      "PolicyStampHelp": "Optimistic-concurrency token; policy updates must match it and receive a new stamp.",
       "IdentityTitle": "Scheduler identity",
       "SchedulerScope": "Scheduler scope",
-      "OverrideEffective": "Override: {0} · Effective: {1}",
       "Absent": "Absent",
       "JobKey": "Job key",
       "OwnerObserved": "Owner last observed",
-      "Presence": "Presence",
+      "Presence": "Declaration presence",
       "Present": "Present"
     },
     "LatestExecution": {
       "Title": "Latest execution",
-      "Description": "Newest durable execution evidence for this owner-scoped logical job.",
+      "Description": "Newest durable record for this owner and job, including skipped occurrences.",
       "Empty": "This job has not produced any durable execution yet."
     },
     "Health": {

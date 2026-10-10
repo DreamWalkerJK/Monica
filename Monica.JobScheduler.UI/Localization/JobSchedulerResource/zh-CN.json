@@ -37,7 +37,7 @@
       },
       "Catalog": {
         "Title": "作业目录",
-        "Description": "分别浏览周期作业与触发作业，掌握调度状态，并进入完整的作业运行档案。"
+        "Description": "查找所有者作用域内的作业定义，查看生效的触发规则与执行证据，并管理后续调度。"
       },
       "JobDetail": {
         "Title": "作业运行档案",
@@ -155,28 +155,29 @@
   "Catalog": {
     "PageTitle": "任务调度 · 作业目录",
     "Title": "作业定义",
-    "Count": "共 {0} 个定义",
+    "Count": "{0} 项匹配的作业定义",
     "Enabled": "已启用",
     "Disabled": "已禁用",
     "OnDemand": "按需触发",
-    "Empty": "没有符合当前筛选条件的活动定义。",
+    "Empty": "没有匹配当前筛选条件的作业定义。",
     "AbsentViewNotice": "正在显示所有者已不再发布的作业定义，执行历史仍可用于审计。",
     "Filters": {
       "AriaLabel": "作业目录搜索与筛选",
       "Search": "定义",
       "SearchPlaceholder": "作业名称或键",
-      "Owner": "来源项目",
-      "AnyOwner": "全部来源项目",
+      "Owner": "所有者",
+      "AnyOwner": "全部所有者",
       "Type": "作业类型",
       "AnyType": "全部类型",
-      "Policy": "运维策略",
+      "Policy": "生效策略",
       "AnyPolicy": "全部策略",
-      "PageSize": "每页行数"
+      "PageSize": "每页行数",
+      "FacetScope": "计数来自已加载的发布快照",
+      "FacetUnavailable": "分类快照尚不可用"
     },
     "Columns": {
       "Definition": "定义",
       "Owner": "所有者",
-      "Lifecycle": "调度状态",
       "Schedule": "调度",
       "NextRun": "下次执行",
       "LastRun": "上次执行",
@@ -194,9 +195,12 @@
       "PauseSelected": "暂停所选",
       "ResumeSelected": "继续所选",
       "Reset": "重置筛选",
-      "CopyKey": "复制完整作业键",
       "CopiedKey": "已复制作业键",
-      "CopyKeyFailed": "复制作业键失败"
+      "CopyKeyFailed": "复制作业键失败",
+      "CopyKeyFor": "复制完整作业标识：{0}",
+      "RunFor": "立即执行 {0} · {1}",
+      "DetailsFor": "查看 {0} · {1}",
+      "PolicyFor": "{0}：{1} · {2}"
     },
     "ScheduleStatus": {
       "Awaiting": "等待同步",
@@ -229,7 +233,6 @@
       "Parsing": "正在解析调度…"
     },
     "Triggered": {
-      "Ready": "可由运维人员触发",
       "NoArguments": "无需参数契约"
     },
     "History": {
@@ -263,24 +266,30 @@
       "PauseUnavailableDebug": "所选作业中至少有一个仅由调试模式抑制且没有运维暂停，因此不能快速暂停。",
       "Result": "{0} 项策略更新成功，{1} 项失败。",
       "ResultDebugRemains": "{0} 项运维暂停更新成功，{1} 项失败；已配置调试模式的作业仍会抑制自动物化。"
+    },
+    "RegistryEyebrow": "作业定义目录",
+    "NoDefinitions": "已加载的发布快照中没有作业定义。",
+    "QueryUnavailable": "暂时无法获取作业定义结果，请查看查询错误并刷新。",
+    "AbsentDefinition": "已停止发布",
+    "FacetLoadFailed": "类型与所有者筛选项未能刷新：{0}",
+    "SortLabel": "作业排序",
+    "Pagination": {
+      "Range": "第 {first_item}–{last_item} 项，共 {all_items} 项"
     }
   },
   "Policy": {
     "Title": "运维策略工作台",
     "ImmutableNotice": "作业键、作业类型、参数契约、所有者和已配置时区始终由代码声明管理。策略变更影响后续准入；已排队和运行中的执行保留其已捕获配置。",
-    "DisabledOverride": "执行状态覆盖",
-    "InheritDefault": "继承代码默认值",
+    "InheritDefault": "继承默认值",
     "ForceEnabled": "强制启用",
     "ForceDisabled": "强制禁用",
-    "MaxRecords": "最大保留执行数",
     "MaxRecordsHelp": "留空继承 100；设为 0 可禁用按数量保留。",
-    "MaxDays": "最大保留天数",
     "MaxDaysHelp": "留空继承不限制保留时长。",
     "Saved": "运维策略已保存。",
     "UnsavedChanges": "存在未保存的运维变更",
     "NoChanges": "没有策略变更",
     "Provenance": {
-      "Declared": "声明默认值",
+      "Declared": "声明或调度器默认值",
       "Override": "运维覆盖值",
       "Effective": "生效值",
       "Help": "每一行都分别展示不可变声明默认值、运维意图以及调度器将采用的实际行为。"
@@ -327,7 +336,7 @@
       "Value": "使用运维边界"
     },
     "Actions": {
-      "ResetField": "将此字段重置为声明默认值",
+      "ResetField": "移除此覆盖值并继承默认值",
       "ResetAll": "重置全部覆盖值",
       "Override": "添加覆盖值"
     },
@@ -335,12 +344,14 @@
       "Enabled": "已启用",
       "Disabled": "已禁用",
       "NoLimit": "不限制",
-      "Days": "{0} 天"
+      "Days": "{0} 天",
+      "Cleared": "已清空"
     },
     "Validation": {
       "DisplayNameRequired": "请输入长度符合限制的显示名称，或重置该字段以继承声明值。",
       "DescriptionRequired": "请输入长度符合限制的说明、选择清空，或继承声明值。",
-      "Timeout": "请输入大于 0 且在支持范围内的执行超时。"
+      "Timeout": "请输入大于 0 且在支持范围内的执行超时。",
+      "NumericMinimum": "{0}不得小于{1}，或重置以继承默认值。"
     },
     "Conflict": {
       "DraftsPreserved": "另一位运维人员更改了策略基线（{0} → {1}）。未保存的编辑会保留，未触及字段会采用最新策略；请检查后再重试。",
@@ -424,7 +435,9 @@
         "AriaLabel": "后续五个拟议调度时点",
         "Sequence": "序号",
         "ConfiguredTime": "已配置时区时间",
-        "Utc": "UTC 时间戳"
+        "Utc": "UTC 时间戳",
+        "Empty": "当前草稿没有可匹配的未来计划触发。",
+        "Invalid": "请输入有效的触发规则及边界范围后预览计划触发。"
       },
       "Syntax": {
         "Title": "Cronos 语法说明",
@@ -464,16 +477,18 @@
     "ObservedAt": "运行证据观测时间：{0}",
     "Actions": {
       "BackToCatalog": "返回作业目录",
-      "InspectSchedule": "编辑调度策略"
+      "InspectSchedule": "查看计划与策略"
     },
     "Header": {
       "EvidenceAriaLabel": "当前作业运行证据",
       "ActiveExecutions": "活动执行",
       "QueuedExecutions": "排队中",
       "RunningExecutions": "执行中",
-      "OwnerAbsent": "所有者缺席",
-      "OwnerPresence": "所有者状态",
-      "OwnerPresent": "在线"
+      "OwnerAbsent": "缺失",
+      "OwnerPresence": "声明存在状态",
+      "OwnerPresent": "存在",
+      "Eyebrow": "所有者作用域内的作业定义",
+      "LedgerScope": "此所有者与作业的已记录排队及运行中执行。"
     },
     "Activity": {
       "Eyebrow": "实时执行证据",
@@ -492,7 +507,7 @@
     },
     "Schedule": {
       "Title": "周期调度",
-      "Description": "持久化游标依据此不可变调度和活动策略物化执行时点。",
+      "Description": "持久化游标依据当前生效的触发规则及边界推进；配置时区仍由代码定义。",
       "NextOccurrence": "下次执行时点",
       "CronExpression": "Cron 表达式",
       "TimeZone": "调度时区",
@@ -512,39 +527,32 @@
         "OperatorPolicy": "运维策略已暂停周期实例自动物化。",
         "DebugMode": "调试模式抑制周期实例自动物化，同时保留显式立即执行能力。",
         "OperatorAndDebug": "运维策略与调试模式都在抑制自动物化；解除运维暂停后，调试抑制仍会生效。"
-      }
+      },
+      "NoNextOccurrence": "尚未记录下次计划触发"
     },
     "Contract": {
       "Title": "声明与策略契约",
       "Description": "代码声明字段保持不可变；运维策略独立存储，并通过乐观并发更新。",
       "Immutable": "不可变声明",
-      "DeclarationTitle": "执行声明",
       "Owner": "作业所有者",
       "ArgumentsKey": "参数契约",
-      "MaxConcurrency": "最大并发数",
       "MaxConcurrencyHelp": "限制并发工作节点租约；周期实例物化也将其作为排队与运行实例的重叠上限。",
-      "RetryCount": "允许重试次数",
       "RetryCountHelp": "首次尝试失败后允许的额外重试次数。",
-      "ExecutionTimeout": "执行超时",
       "ExecutionTimeoutHelp": "单次执行尝试允许的最长持续时间。",
-      "DeclarationDefault": "代码默认状态",
       "PolicyTitle": "运维策略",
-      "EffectiveState": "生效状态",
       "PolicyUpdated": "策略更新时间",
       "PolicyStamp": "并发标识",
-      "PolicyStampHelp": "乐观并发令牌；策略更新必须匹配当前值，并在成功后获得新值。",
       "IdentityTitle": "调度身份",
       "SchedulerScope": "调度范围",
-      "OverrideEffective": "覆盖值：{0} · 生效值：{1}",
-      "Absent": "已移除",
+      "Absent": "缺失",
       "JobKey": "作业键",
       "OwnerObserved": "所有者最近上报",
-      "Presence": "在位状态",
-      "Present": "在位"
+      "Presence": "声明存在状态",
+      "Present": "存在"
     },
     "LatestExecution": {
       "Title": "最近执行",
-      "Description": "该 owner 作用域逻辑作业的最新持久化执行证据。",
+      "Description": "此所有者与作业最新的持久化记录，包含跳过的计划触发。",
       "Empty": "该作业尚未生成持久化执行。"
     },
     "Health": {

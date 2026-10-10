@@ -1,0 +1,385 @@
+@using Monica.JobScheduler.UI.Localization
+
+@inject JobCatalogPageStateFactory PageStateFactory
+@inject IOptions<ModuleJobSchedulerUIOption> UiOptions
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<JobSchedulerResource> L
+
+@implements IAsyncDisposable
+
+    @if (_state is not null)
+    {
+        <SchedulerAccessBoundary AccessChecked="@_state.AccessChecked" IsAuthorized="@_state.IsAuthorized">
+            <div class="catalog-page">
+                @if (_state.Error is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_state.Error</MudAlert>
+                }
+                @if (_state.FacetsError is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Catalog:FacetLoadFailed", _state.FacetsError]</MudAlert>
+                }
+                @if (_state.PresentFilter == false)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Catalog:AbsentViewNotice"]</MudAlert>
+                }
+                <JobCatalogOperationalTable @ref="_catalogTable"
+                                            ServerData="@_state.LoadTableAsync"
+                                            SelectedJobIds="@_state.SelectedJobIds"
+                                            TotalCount="@_state.TotalCount"
+                                            PageSize="@_state.PageSize"
+                                            PageSizeOptions="@_state.PageSizeOptions"
+                                            IsMutating="@_state.IsMutating"
+                                            IsQueryFailed="@(_state.Error is not null)"
+                                            EmptyText="@(_state.HasLoadedFacets && _state.JobTypeCounts.Values.Sum() == 0 ? L["Catalog:NoDefinitions"].Value : null)"
+                                            SelectionContent="@(_state.HasSelection ? RenderSelectionToolbar(_state) : null)"
+                                            AllRecurringSelectionChanged="SetAllRecurringSelection"
+                                            SelectionToggled="ToggleSelection"
+                                            DisabledStateToggled="ToggleDisabledAsync"
+                                            RunRequested="RunJobAsync">
+                    <FilterContent>
+                        <CatalogFilterBar SearchText="@_state.SearchText"
+                                          SearchTextChanged="@(value => _state.SearchText = value)"
+                                          OwnerId="@_state.OwnerId"
+                                          OwnerIdChanged="@(value => _state.OwnerId = value)"
+                                          OwnerFacets="@_state.OwnerFacets"
+                                          SelectedJobType="@_state.SelectedJobType"
+                                          JobTypeCounts="@_state.JobTypeCounts"
+                                          HasFacetEvidence="@_state.HasLoadedFacets"
+                                          JobTypeSelected="SelectJobTypeAsync"
+                                          SelectedDisabledState="@_state.SelectedDisabledState"
+                                          DisabledStateSelected="SelectDisabledStateAsync"
+                                          IsLoading="@(_state.IsLoading || _state.IsMutating)"
+                                          SearchRequested="SearchAsync"
+                                          ResetRequested="ResetAsync" />
+                    </FilterContent>
+                </JobCatalogOperationalTable>
+            </div>
+        </SchedulerAccessBoundary>
+    }
+@code {
+    /// <summary>
+    /// Gets or sets the optional presence deep-link filter. The catalog defaults to definitions their owners
+    /// currently publish; <c>?present=false</c> initially lists all job types whose owners no longer publish them,
+    /// as linked from the overview attention panel.
+    /// </summary>
+    [Parameter]
+    public bool? Present { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional owner deep-link filter, as linked from the runtime owner table.
+    /// </summary>
+    [Parameter]
+    public string? Owner { get; set; }
+
+    private JobCatalogPageState? _state;
+    private JobCatalogOperationalTable? _catalogTable;
+    private readonly object _lifetimeGate = new();
+    private TaskCompletionSource? _retirement;
+    private volatile bool _disposed;
+    private SchedulerDialogSession<CatalogBatchRequest>? _batchDialogs;
+    private SchedulerDialogSession<CatalogTriggerRequest>? _triggerDialogs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _batchDialogs = new(OpenBatchConfirmationAsync, CompleteBatchAsync);
+        _triggerDialogs = new(OpenTriggerDialogAsync, CompleteTriggerAsync);
+        _state = PageStateFactory.Create(UiOptions.Value.DefaultPageSize);
+        _state.Changed += OnStateChangedAsync;
+        _state.ApplyInitialQuery(Present, Owner);
+        await _state.InitializeAsync();
+    }
+
+    private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(() =>
+    {
+        if (!_disposed) StateHasChanged();
+    });
+
+    private RenderFragment RenderSelectionToolbar(JobCatalogPageState state) => @<section class="catalog-selection" role="region" aria-label="@L["Catalog:Selection:ToolbarLabel"]">
+        <div class="catalog-selection__copy">
+            <MudIcon Icon="@Icons.Material.Outlined.Checklist" />
+            <div>
+                <p class="catalog-selection__title">@L["Catalog:Selection:Count", state.SelectedRecurringSummaries.Count]</p>
+                <p>@L["Catalog:Selection:Description"]</p>
+                @if (state.HasDebugOnlySuppressedSelection)
+                {
+                    <p class="catalog-selection__notice">@L["Catalog:Selection:DebugPauseUnavailable"]</p>
+                }
+            </div>
+        </div>
+        <div class="catalog-selection__actions">
+            <MudButton Variant="Variant.Text" Disabled="@state.IsMutating" OnClick="@(() => SetAllRecurringSelection(false))">@L["Catalog:Selection:Clear"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@Icons.Material.Outlined.PauseCircleOutline"
+                       Disabled="@state.IsMutating" OnClick="@(() => ApplyBatchDisabledAsync(true))">@L["Catalog:Actions:PauseSelected"]</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Outlined.PlayCircleOutline"
+                       Disabled="@state.IsMutating" OnClick="@(() => ApplyBatchDisabledAsync(false))">@L["Catalog:Actions:ResumeSelected"]</MudButton>
+        </div>
+    </section>;
+
+    private async Task SearchAsync()
+    {
+        _state?.Search();
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task ResetAsync()
+    {
+        _state?.Reset();
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task SelectJobTypeAsync(JobType? jobType)
+    {
+        _state?.SelectJobType(jobType);
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task SelectDisabledStateAsync(bool? disabled)
+    {
+        _state?.SelectDisabledState(disabled);
+        await ReloadFromFirstPageAsync();
+    }
+
+    private Task ReloadFromFirstPageAsync() =>
+        _catalogTable is null || _disposed
+            ? Task.CompletedTask
+            : _catalogTable.ReloadFromFirstPageAsync();
+
+    private Task ReloadTableAsync() =>
+        _catalogTable is null || _disposed
+            ? Task.CompletedTask
+            : _catalogTable.ReloadAsync();
+
+    private void ToggleSelection(JobOperationalSummary summary)
+    {
+        _state?.ToggleSelection(summary);
+    }
+
+    private void SetAllRecurringSelection(bool selected)
+    {
+        _state?.SelectAllRecurring(selected);
+    }
+
+    private async Task ToggleDisabledAsync(JobOperationalSummary summary)
+    {
+        var state = _state;
+        if (state is null || _disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            var operatorPaused = JobSchedulerUiPresentation.IsOperatorPaused(summary);
+            var debugSuppressed = JobSchedulerUiPresentation.IsDebugSuppressed(summary);
+            if (!operatorPaused && debugSuppressed)
+            {
+                Snackbar.Add(L["Catalog:Messages:PauseUnavailableDebug"], Severity.Info);
+                return;
+            }
+
+            var disabled = !operatorPaused;
+            var result = await state.SetDisabledAsync(summary, disabled);
+            if (_disposed || _state != state)
+            {
+                return;
+            }
+
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add(error.Message ?? L["Catalog:Messages:UpdateFailed"], Severity.Error);
+                return;
+            }
+
+            var message = !disabled && debugSuppressed
+                ? L["Catalog:Messages:ResumedDebugRemains"]
+                : disabled
+                    ? L["Catalog:Messages:Paused"]
+                    : L["Catalog:Messages:Resumed"];
+            Snackbar.Add(message, !disabled && debugSuppressed ? Severity.Info : Severity.Success);
+            await ReloadTableAsync();
+        }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed)
+        {
+        }
+    }
+
+    private async Task ApplyBatchDisabledAsync(bool disabled)
+    {
+        var state = _state;
+        if (state is null || _disposed || _batchDialogs is null) return;
+        var selected = state.SelectedRecurringSummaries.ToArray();
+        if (selected.Length == 0) return;
+        if (disabled && selected.Any(JobSchedulerUiPresentation.IsDebugOnlySuppressed))
+        {
+            Snackbar.Add(L["Catalog:Batch:PauseUnavailableDebug"], Severity.Info);
+            return;
+        }
+        try { await _batchDialogs.OpenAsync(new(state, selected, disabled)); }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed) { }
+    }
+
+    private Task<IDialogReference> OpenBatchConfirmationAsync(CatalogBatchRequest request)
+    {
+        var parameters = new DialogParameters<MudMessageBox>
+        {
+            { box => box.Title, request.Disabled ? L["Catalog:Batch:PauseTitle"].Value : L["Catalog:Batch:ResumeTitle"].Value },
+            { box => box.Message, request.Disabled ? L["Catalog:Batch:PauseMessage", request.Summaries.Count].Value : L["Catalog:Batch:ResumeMessage", request.Summaries.Count].Value },
+            { box => box.YesText, request.Disabled ? L["Catalog:Actions:PauseSelected"].Value : L["Catalog:Actions:ResumeSelected"].Value },
+            { box => box.CancelText, L["Common:Cancel"].Value }
+        };
+        return DialogService.ShowAsync<MudMessageBox>(null, parameters, SmallDialogOptions);
+    }
+
+    private async Task CompleteBatchAsync(CatalogBatchRequest request, DialogResult? confirmation)
+    {
+        var state = request.State;
+        if (_disposed || _state != state || confirmation is not { Canceled: false, Data: true }) return;
+        try
+        {
+            // Apply exactly the targets that were named in the native confirmation, not a later selection.
+            var result = await state.SetSelectedDisabledAsync(request.Disabled, request.Summaries);
+            if (_disposed || _state != state) return;
+            if (result.IsFailed(out var error, out var batch))
+            {
+                Snackbar.Add(error.Message ?? L["Catalog:Messages:UpdateFailed"], Severity.Error);
+                return;
+            }
+            var debugRemains = !request.Disabled && request.Summaries.Any(JobSchedulerUiPresentation.IsDebugSuppressed);
+            var severity = batch.FailedCount > 0 ? Severity.Warning : debugRemains ? Severity.Info : Severity.Success;
+            var message = debugRemains
+                ? L["Catalog:Batch:ResultDebugRemains", batch.SucceededCount, batch.FailedCount]
+                : L["Catalog:Batch:Result", batch.SucceededCount, batch.FailedCount];
+            Snackbar.Add(message, severity);
+            await ReloadTableAsync();
+        }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed) { }
+    }
+
+    private async Task RunJobAsync(JobOperationalSummary summary)
+    {
+        var state = _state;
+        if (state is null || _disposed)
+        {
+            return;
+        }
+
+        if (summary.Definition.Declaration.JobType == JobType.Triggered)
+        {
+            await OpenTriggerAsync(summary);
+            return;
+        }
+
+        try
+        {
+            var result = await state.RunRecurringNowAsync(summary);
+            if (_disposed || _state != state)
+            {
+                return;
+            }
+
+            if (result.IsFailed(out var error, out var execution))
+            {
+                Snackbar.Add(error.Message ?? L["Catalog:Messages:RunFailed"], Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(L["Catalog:Messages:Queued", execution.InstanceId], Severity.Success);
+            await ReloadTableAsync();
+        }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed)
+        {
+        }
+    }
+
+    private async Task OpenTriggerAsync(JobOperationalSummary summary)
+    {
+        var state = _state;
+        if (state is null || _triggerDialogs is null || !await CanMutateAsync(state)) return;
+        try { await _triggerDialogs.OpenAsync(new(state, summary.Definition)); }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed) { }
+    }
+
+    private Task<IDialogReference> OpenTriggerDialogAsync(CatalogTriggerRequest request)
+    {
+        var parameters = new DialogParameters<JobTriggerDialog>
+        {
+            { dialog => dialog.Definition, request.Definition }
+        };
+        return DialogService.ShowAsync<JobTriggerDialog>(L["Trigger:Title"], parameters, SmallDialogOptions);
+    }
+
+    private async Task CompleteTriggerAsync(CatalogTriggerRequest request, DialogResult? result)
+    {
+        if (_disposed || _state != request.State) return;
+        if (result is { Canceled: false, Data: JobExecutionInstance execution })
+        {
+            Snackbar.Add(L["Trigger:Queued", execution.InstanceId], Severity.Success);
+            await ReloadTableAsync();
+        }
+    }
+
+    private async Task<bool> CanMutateAsync(JobCatalogPageState state)
+    {
+        if (_disposed || _state != state)
+        {
+            return false;
+        }
+
+        try
+        {
+            return await state.ReauthorizeAsync() && !_disposed && _state == state;
+        }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed)
+        {
+            return false;
+        }
+    }
+
+    /// <inheritdoc />
+    public ValueTask DisposeAsync()
+    {
+        TaskCompletionSource completion;
+        JobCatalogPageState? state;
+        lock (_lifetimeGate)
+        {
+            if (_retirement is not null) return new(_retirement.Task);
+            _disposed = true;
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _retirement = completion;
+            state = _state;
+            _state = null;
+        }
+        var batchRetirement = _batchDialogs?.DisposeAsync() ?? ValueTask.CompletedTask;
+        var triggerRetirement = _triggerDialogs?.DisposeAsync() ?? ValueTask.CompletedTask;
+        _ = CompleteRetirementAsync(state, batchRetirement, triggerRetirement, completion);
+        return new(completion.Task);
+    }
+
+    private async Task CompleteRetirementAsync(JobCatalogPageState? state, ValueTask batches,
+        ValueTask triggers, TaskCompletionSource completion)
+    {
+        var failures = new List<Exception>();
+        // Start state retirement before joining native results so admitted authorization and mutation can cancel.
+        if (state is not null) state.Changed -= OnStateChangedAsync;
+        var stateRetirement = state?.DisposeAsync() ?? ValueTask.CompletedTask;
+        try { await batches; } catch (Exception exception) { failures.Add(exception); }
+        try { await triggers; } catch (Exception exception) { failures.Add(exception); }
+        try { await stateRetirement; } catch (Exception exception) { failures.Add(exception); }
+        if (failures.Count == 0) completion.TrySetResult();
+        else completion.TrySetException(new AggregateException("Catalog page retirement failed.", failures));
+    }
+
+    private sealed record CatalogBatchRequest(JobCatalogPageState State,
+        IReadOnlyList<JobOperationalSummary> Summaries, bool Disabled);
+    private sealed record CatalogTriggerRequest(JobCatalogPageState State, JobDefinition Definition);
+
+    private static DialogOptions SmallDialogOptions { get; } = new()
+    {
+        CloseButton = true,
+        CloseOnEscapeKey = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Small
+    };
+}

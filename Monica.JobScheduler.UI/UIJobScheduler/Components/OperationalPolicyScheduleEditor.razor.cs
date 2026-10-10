@@ -35,7 +35,7 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
         new("MonthlyFirst", "0 0 0 1 * *")
     ];
 
-    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SchedulerOperationLifetime _lifetime = new();
     private readonly CronSimpleScheduleSettings _simpleSettings = new();
     private readonly SemaphoreSlim _previewRefreshSignal = new(0, 1);
     private CronDescriptionSession? _descriptionSession;
@@ -47,7 +47,6 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
     private bool _descriptionPending;
     private bool _descriptionRunning;
     private int _descriptionVersion;
-    private int _disposed;
 
     [Inject]
     private IJSRuntime JsRuntime { get; set; } = null!;
@@ -82,7 +81,7 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
     [Parameter]
     public EventCallback Changed { get; set; }
 
-    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+    private bool IsDisposed => _lifetime.IsRetired;
 
     private bool IsDraftValid => Draft.Evaluation.IsValid
                                  && Draft.OverrideExpression is not
@@ -119,11 +118,20 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
         _descriptionSession = new CronDescriptionSession(JsRuntime);
     }
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        RefreshPreview();
-        _previewTask ??= RunPreviewLoopAsync();
-        QueueDescription();
+        if (IsDisposed) return;
+        try
+        {
+            await _lifetime.RunAsync(_ =>
+            {
+                RefreshPreview();
+                _previewTask ??= _lifetime.RunAsync(RunPreviewLoopAsync);
+                QueueDescription();
+                return Task.CompletedTask;
+            });
+        }
+        catch (OperationCanceledException) when (IsDisposed) { }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -134,12 +142,13 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
         }
 
         _descriptionRunning = true;
-        var task = DrainDescriptionsAsync();
+        var task = _lifetime.RunAsync(DrainDescriptionsAsync);
         _descriptionTask = task;
         try
         {
             await task;
         }
+        catch (OperationCanceledException) when (IsDisposed) { }
         finally
         {
             _descriptionRunning = false;
@@ -150,58 +159,57 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
         }
     }
 
-    private async Task SetExpressionAsync(string? value)
+    private Task SetExpressionAsync(string? value) => RunDraftChangeAsync(() =>
     {
         Draft.SetExpression(value);
         RefreshPreview();
         _conversionFailure = null;
         QueueDescription();
-        await Changed.InvokeAsync();
-    }
+        return true;
+    });
 
-    private async Task ResetExpressionAsync()
+    private Task ResetExpressionAsync() => RunDraftChangeAsync(() =>
     {
         Draft.ResetExpression();
         RefreshPreview();
         _conversionFailure = null;
         QueueDescription();
-        await Changed.InvokeAsync();
-    }
+        return true;
+    });
 
-    private async Task ChangeModeAsync(CronExpressionMode mode)
+    private Task ChangeModeAsync(CronExpressionMode mode) => RunDraftChangeAsync(() =>
     {
         var conversion = Draft.SetMode(mode);
         _conversionFailure = conversion.Failure switch
         {
             CronExpressionConversionFailure.None => null,
-            CronExpressionConversionFailure.NonZeroSeconds =>
-                L["Policy:Schedule:NonZeroSecondsConversion"].Value,
+            CronExpressionConversionFailure.NonZeroSeconds => L["Policy:Schedule:NonZeroSecondsConversion"].Value,
             _ => L["Policy:Schedule:InvalidConversion"].Value
         };
-        if (conversion.IsSuccess)
+        if (!conversion.IsSuccess) return false;
+        RefreshPreview();
+        QueueDescription();
+        return true;
+    });
+
+    private Task ApplySimpleSettingsAsync() => SetExpressionAsync(CronPolicyEditor.BuildSimpleExpression(_simpleSettings, Draft.Mode));
+    private Task StartBoundaryChangedAsync() => RefreshBoundaryAsync();
+    private Task EndBoundaryChangedAsync() => RefreshBoundaryAsync();
+    private Task RefreshBoundaryAsync() => RunDraftChangeAsync(() => { RefreshPreview(); return true; });
+
+    private async Task RunDraftChangeAsync(Func<bool> change)
+    {
+        if (IsDisposed || Disabled) return;
+        try
         {
-            RefreshPreview();
-            QueueDescription();
-            await Changed.InvokeAsync();
+            await _lifetime.RunAsync(async token =>
+            {
+                if (Disabled || !change()) return;
+                token.ThrowIfCancellationRequested();
+                await Changed.InvokeAsync();
+            });
         }
-    }
-
-    private async Task ApplySimpleSettingsAsync()
-    {
-        var expression = CronPolicyEditor.BuildSimpleExpression(_simpleSettings, Draft.Mode);
-        await SetExpressionAsync(expression);
-    }
-
-    private Task StartBoundaryChangedAsync()
-    {
-        RefreshPreview();
-        return Changed.InvokeAsync();
-    }
-
-    private Task EndBoundaryChangedAsync()
-    {
-        RefreshPreview();
-        return Changed.InvokeAsync();
+        catch (OperationCanceledException) when (IsDisposed) { }
     }
 
     private void QueueDescription()
@@ -218,16 +226,16 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
         _descriptionPending = IsDraftValid;
     }
 
-    private async Task DrainDescriptionsAsync()
+    private async Task DrainDescriptionsAsync(CancellationToken cancellationToken)
     {
         while (_descriptionPending && !IsDisposed)
         {
             _descriptionPending = false;
-            await ResolveDescriptionAsync(_descriptionVersion);
+            await ResolveDescriptionAsync(_descriptionVersion, cancellationToken);
         }
     }
 
-    private async Task ResolveDescriptionAsync(int version)
+    private async Task ResolveDescriptionAsync(int version, CancellationToken cancellationToken)
     {
         var session = _descriptionSession;
         if (session is null)
@@ -241,9 +249,9 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
             results = await session.DescribeAsync(
                 [new CronDescriptionRequest(DESCRIPTION_KEY, Draft.EffectiveExpression)],
                 CronDescriptionSession.ResolveCultureName(),
-                _lifetimeCancellation.Token);
+                cancellationToken);
         }
-        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return;
         }
@@ -257,10 +265,9 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
             return;
         }
 
-        _description = results
-            .FirstOrDefault(result => string.Equals(result.Key, DESCRIPTION_KEY, StringComparison.Ordinal))
-            ?.Description;
-        await InvokeAsync(StateHasChanged);
+        var description = results.FirstOrDefault(result => string.Equals(result.Key, DESCRIPTION_KEY, StringComparison.Ordinal))?.Description;
+        _lifetime.TryApply(() => { if (version == _descriptionVersion) _description = description; });
+        await InvokeAsync(() => { if (!IsDisposed && version == _descriptionVersion) StateHasChanged(); });
     }
 
     private void RefreshPreview(bool signalLoop = true)
@@ -289,10 +296,9 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
         }
     }
 
-    private async Task RunPreviewLoopAsync()
+    private async Task RunPreviewLoopAsync(CancellationToken cancellationToken)
     {
         // A one-shot deadline avoids polling; draft and pause changes interrupt it through the coalesced signal.
-        var cancellationToken = _lifetimeCancellation.Token;
         try
         {
             while (!IsDisposed)
@@ -301,7 +307,7 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
                 DateTimeOffset? proposedNextUtc = null;
                 await InvokeAsync(() =>
                 {
-                    proposedNextUtc = IsPaused ? null : Draft.ProposedNextOccurrenceUtc;
+                    if (!IsDisposed) proposedNextUtc = IsPaused ? null : Draft.ProposedNextOccurrenceUtc;
                 });
                 if (proposedNextUtc is null)
                 {
@@ -380,39 +386,22 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
         ? "—"
         : value.Value.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
 
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    /// <summary>Cancels and drains actual preview, description and draft callback work before releasing owned resources.</summary>
+    /// <remarks>Concurrent disposal shares completion. Each resource cleanup is observed independently after actual work drains.</remarks>
+    public ValueTask DisposeAsync() => _lifetime.RetireAsync(CleanupAsync);
+
+    private async ValueTask CleanupAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        var failures = new List<Exception>();
+        if (_descriptionSession is { } session)
         {
-            return;
-        }
-
-        await _lifetimeCancellation.CancelAsync();
-        if (_descriptionTask is { } descriptionTask)
-        {
-            try
-            {
-                await descriptionTask;
-            }
-            catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
-            {
-            }
-        }
-
-        if (_previewTask is { } previewTask)
-        {
-            await previewTask;
-        }
-
-        if (_descriptionSession is not null)
-        {
-            await _descriptionSession.DisposeAsync();
+            try { await session.DisposeAsync(); }
+            catch (Exception exception) { failures.Add(exception); }
             _descriptionSession = null;
         }
-
-        _previewRefreshSignal.Dispose();
-        _lifetimeCancellation.Dispose();
+        try { _previewRefreshSignal.Dispose(); }
+        catch (Exception exception) { failures.Add(exception); }
+        if (failures.Count != 0) throw new AggregateException("Schedule editor resource cleanup failed.", failures);
     }
 
     private sealed record CronSyntaxField(CronPolicyFieldKind Kind, string Range, string Characters);
