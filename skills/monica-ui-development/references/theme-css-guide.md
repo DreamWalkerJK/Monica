@@ -98,6 +98,8 @@ Theme CSS should target stable shared structures such as:
 
 Do not rely on page-only classes when the intent is a reusable theme behavior. If a temporary page-specific hook is added during diagnosis, remove it after the shared selector is in place.
 
+Native dialog title actions are rendered by the dialog provider outside the feature's isolated content wrapper. Style a shared title action through its stable native selector in shared theme CSS; keep feature content and layout in isolated CSS. An absolutely positioned native Close must anchor to the actual title or dialog rather than rely on an animation transform to establish its containing block. Verify its bounds in ordinary and reduced-motion settings, including themes that remove animation. Do not assume `ActionDefault` provides readable contrast for an enabled icon on every surface. Check the actual icon color against its normal, hovered and selected backgrounds across themes; preserve explicit semantic colors and disabled states.
+
 ### 5. Keep theme CSS component-oriented
 
 A good theme file usually looks like:
@@ -139,6 +141,10 @@ If the theme needs a visible tab shell, inspect and style:
 - `.mud-tabs-panels`
 
 Do not assume styling only the tabbar is enough.
+
+Native tab scrolling measures each tab's bounding rectangle. In MudBlazor v9, `GetAllTabsSize` and `GetLengthOfPanelItems` sum those widths for horizontal tabs or heights for vertical tabs; they do not include margins or the wrapper's gaps. Do not add inline margins or horizontal gaps between horizontal tabs, or block margins or vertical gaps between vertical tabs. Otherwise, the scroll arrow can disable before the final caption is visible, and selecting that tab still leaves its text clipped. Use padding inside the measured tab for spacing along its scroll axis; cross-axis spacing must also fit its containing surface.
+
+Verify the first, middle and last tabs through native clicks and scroll arrows at narrow widths, in both orientations when supported. Check the actual arrow state, the complete selected caption and the native strip's scroll position after layout settles. A partially exposed tab can remain a valid click target and center after selection; prove the complete selected caption rather than rejecting that native interaction or weakening final visibility checks. Keep `MinimumTabWidth` within the available strip when possible, and repair theme geometry instead of hiding arrows or scrollbars.
 
 ### `MudDataGrid` header controls
 

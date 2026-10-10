@@ -1,8 +1,15 @@
 @using System.Text.Json
-@using System.Text.Json.Serialization
+@using Monica.DataChannel.Models
 @inject IStringLocalizer<DataChannelResource> L
 
-@if (_items.Count > 0)
+@if (!string.IsNullOrEmpty(Metadata?.CaptureError))
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+        <strong>@L["Metadata:CaptureFailed"]</strong>
+        <p>@Metadata.CaptureError</p>
+    </MudAlert>
+}
+else if (_items.Count > 0)
 {
     <dl class="metadata-list">
         @foreach (var item in _items)
@@ -10,12 +17,11 @@
             <div class="metadata-row">
                 <dt>@item.Key</dt>
                 <dd>
-                    @if (item.IsComplexValue)
+                    @if (item.Structured)
                     {
-                        <div class="metadata-complex">
+                        <div class="metadata-structured">
                             <MudExpansionPanels Elevation="0" Dense="true">
-                                <MudExpansionPanel Text="@L["Metadata:ComplexValue"]"
-                                                   Icon="@Icons.Material.Filled.DataObject">
+                                <MudExpansionPanel Text="@L["Metadata:ComplexValue"]" Icon="@Icons.Material.Outlined.DataObject">
                                     <pre class="metadata-code">@item.Value</pre>
                                 </MudExpansionPanel>
                             </MudExpansionPanels>
@@ -32,154 +38,30 @@
 }
 else
 {
-    <div class="metadata-empty">
-        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
-        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Metadata:Empty"]</MudText>
-    </div>
+    <p class="metadata-empty">@L["Metadata:Empty"]</p>
 }
 
 @code {
+    /// <summary>Gets or sets detached serialized evidence; rendering never reads the original live value.</summary>
     [Parameter]
-    public object? Metadata { get; set; }
+    public DataChannelValueSnapshot? Metadata { get; set; }
 
-    private IReadOnlyList<MetadataItem> _items = [];
-
+    private IReadOnlyList<MetadataEntry> _items = [];
     protected override void OnParametersSet()
     {
-        _items = ProcessMetadata();
-    }
-
-    private IReadOnlyList<MetadataItem> ProcessMetadata()
-    {
-        if (Metadata is null)
-        {
-            return [];
-        }
-
+        if (Metadata?.Json is not { } json) { _items = []; return; }
         try
         {
-            var json = JsonSerializer.Serialize(PreprocessEnums(Metadata), new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            });
-
-            return ExtractMetadataItems(JsonSerializer.Deserialize<JsonElement>(json));
+            using var document = JsonDocument.Parse(json);
+            var value = document.RootElement;
+            _items = value.ValueKind == JsonValueKind.Object
+                ? value.EnumerateObject().Select(property => Entry(property.Name, property.Value)).ToList()
+                : [Entry(L["Metadata:Value"], value)];
         }
-        catch (Exception)
-        {
-            return
-            [
-                new MetadataItem(
-                    L["Metadata:RawData"],
-                    Metadata.ToString() ?? L["Common:Values:Empty"],
-                    false)
-            ];
-        }
+        catch (JsonException) { _items = [new MetadataEntry(L["Metadata:RawData"], json, true)]; }
     }
-
-    private object? PreprocessEnums(object? value)
-    {
-        if (value is null)
-        {
-            return null;
-        }
-
-        var type = value.GetType();
-        if (type.IsEnum || Nullable.GetUnderlyingType(type)?.IsEnum == true)
-        {
-            return value.ToString();
-        }
-
-        if (type.IsPrimitive || value is string or DateTime or decimal or Guid)
-        {
-            return value;
-        }
-
-        if (value is System.Collections.IEnumerable enumerable && value is not string)
-        {
-            return enumerable.Cast<object?>().Select(PreprocessEnums).ToList();
-        }
-
-        if (!type.IsClass && !type.IsValueType)
-        {
-            return value;
-        }
-
-        var result = new Dictionary<string, object?>();
-        foreach (var property in type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
-        {
-            if (!property.CanRead)
-            {
-                continue;
-            }
-
-            try
-            {
-                result[property.Name] = PreprocessEnums(property.GetValue(value));
-            }
-            catch
-            {
-                result[property.Name] = L["Metadata:Unreadable"];
-            }
-        }
-
-        return result;
-    }
-
-    private IReadOnlyList<MetadataItem> ExtractMetadataItems(JsonElement element, string keyPrefix = "")
-    {
-        var items = new List<MetadataItem>();
-        if (element.ValueKind == JsonValueKind.Object)
-        {
-            foreach (var property in element.EnumerateObject())
-            {
-                var key = string.IsNullOrEmpty(keyPrefix) ? property.Name : $"{keyPrefix}.{property.Name}";
-                if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
-                {
-                    items.Add(new MetadataItem(key, SerializeElement(property.Value), true));
-                }
-                else
-                {
-                    items.Add(new MetadataItem(key, FormatPrimitive(property.Value), false));
-                }
-            }
-
-            return items;
-        }
-
-        if (element.ValueKind == JsonValueKind.Array)
-        {
-            items.Add(new MetadataItem(
-                string.IsNullOrEmpty(keyPrefix) ? L["Metadata:ArrayData"] : keyPrefix,
-                SerializeElement(element),
-                true));
-            return items;
-        }
-
-        items.Add(new MetadataItem(
-            string.IsNullOrEmpty(keyPrefix) ? L["Metadata:Value"] : keyPrefix,
-            FormatPrimitive(element),
-            false));
-        return items;
-    }
-
-    private static string SerializeElement(JsonElement element) => JsonSerializer.Serialize(element, new JsonSerializerOptions
-    {
-        WriteIndented = true,
-        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    });
-
-    private static string FormatPrimitive(JsonElement element) => element.ValueKind switch
-    {
-        JsonValueKind.String => element.GetString() ?? string.Empty,
-        JsonValueKind.Number => element.GetRawText(),
-        JsonValueKind.True => "true",
-        JsonValueKind.False => "false",
-        JsonValueKind.Null => "null",
-        _ => element.ToString()
-    };
-
-    private sealed record MetadataItem(string Key, string Value, bool IsComplexValue);
+    private static MetadataEntry Entry(string key, JsonElement value) => new(key,
+        value.ValueKind == JsonValueKind.String ? value.GetString() ?? string.Empty : value.GetRawText(),
+        value.ValueKind is JsonValueKind.Object or JsonValueKind.Array);
+    private sealed record MetadataEntry(string Key, string Value, bool Structured);
 }

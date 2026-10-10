@@ -68,6 +68,8 @@ A circuit-scoped state injected from DI is borrowed by its routed consumers. It 
 
 An async dialog open or JS import produces a resource. Observe the actual task and close/dispose a result arriving after retirement, instead of canceling the await and losing the result. Dialog results, native focus ownership, and interop teardown have their own mechanics; see the dialog heading contract above and the interop section below.
 
+A child inspector belongs to both its routed owner and its originating dialog. Link those lifetimes, reject a late native dialog reference after either retires, and close/dismiss an acquired child before draining its parent's callback. Keep renderer-bound cancellation callbacks on the renderer: `CancellationTokenSource.CancelAsync()` schedules callbacks without preserving that dispatcher, so a registration that directly closes a native dialog cannot assume it runs on the UI context. Cancel synchronously from renderer-owned retirement, or explicitly dispatch the callback and observe its actual task.
+
 ### 2.3 Keep Single Ownership of JS Interop References
 
 ```csharp
@@ -390,11 +392,13 @@ For a MudBlazor v9 `MudMenu` icon activator, set its `AriaLabel` parameter. A ra
 
 ### 8.5 Keep Focus in a Parent Dialog After Confirmation
 
-A nested confirmation cannot restore focus to an opening control that was disabled or removed by its action. Verify both Cancel and successful completion, then Tab and Escape in the still-open parent dialog. When native restoration has no usable destination, request focus on a stable parent heading or control after the parent renders. Use a native element's `FocusAsync` rather than another focus manager; retain and drain the admitted focus operation during retirement, and skip restoration when a newer confirmation owns focus.
+A nested confirmation or inspector cannot restore focus to an opening control that was disabled or removed by its action. Keep a temporarily busy child opener focusable with explicit `aria-disabled` and reject duplicate admission in its handler, as described below. Verify Cancel, successful completion and child Escape, then Tab and Escape in the still-open parent dialog. When native restoration has no usable destination, request focus on a stable parent heading or control after the parent renders. Use a native element's `FocusAsync` rather than another focus manager; retain and drain the admitted focus operation during retirement, and skip restoration when a newer confirmation owns focus.
+
+Keep the opener's rendered identity stable across evidence refreshes. Native tables and grids can key rows by their item object, so replacing detached DTOs can remove an otherwise enabled opener. Inspect the installed primitive's key behavior; retain a private presentation row by exact source identity and replace its current capture without changing public DTO equality. Sorting, filtering and actions must read the newest capture. Verify focus after a refresh and after closing an inspector, including confirmations that change the row's evidence.
 
 ### 8.6 Preserve Focus While a Dialog Action Is Busy
 
-Setting native `Disabled` on a focused action during an incomplete await can move focus to the document body, outside the dialog's keyboard handling. For a temporary busy state such as clipboard copying, keep the action focusable, expose explicit `aria-disabled="true"`, and reject repeat admission in the handler before starting asynchronous work. ARIA alone does not prevent activation. Retain native disabling for unavailable actions or retirement. Preserve the existing cancellation and task-drain ownership; no additional JavaScript focus manager is needed. Verify that keyboard activation keeps focus inside the dialog and that subsequent Tab and Escape still work while the operation is busy and after it completes.
+Setting native `Disabled` on a focused action can move focus to the document body, outside the dialog's keyboard handling. This includes an action that becomes unavailable after completion, such as clearing the last retained message. For these controls, keep the action focusable, expose explicit `aria-disabled="true"`, and reject unavailable or duplicate admission in its handler. ARIA alone does not prevent activation. Other unavailable actions can use native disabling. Preserve the existing cancellation and task-drain ownership; no additional JavaScript focus manager is needed. Verify that keyboard activation keeps focus inside the dialog and that subsequent Tab and Escape still work while the operation is busy and after it completes.
 
 ## 9. Component Reuse Patterns
 

@@ -27,11 +27,21 @@ Prefer a smaller fix for ordinary card/content overflow. For example, a System I
 
 For a full page redesign, use the shared [working-interface language](monica-workbench-design-language.md) to choose between a compact column table and readable multi-line evidence rows before applying this CSS-grid technique. This reference addresses adaptive column sizing rather than prescribing a single registry composition.
 
+## Scroll only when the content requires it
+
+Do not give every table an unconditional `min-width` or fixed-width column contract. First fit the actual headers, values and native sort/filter/action controls with natural or fractional columns, wrapping, shrinkable value owners, or the component's responsive rows. Enable local `overflow: auto` only when useful content still cannot fit after that adaptation; a width chosen for a dense example does not justify a scrollbar for empty or sparse results.
+
+Render a padded, dedicated empty or no-match state at the available width instead of inheriting a populated table's wide column contract. If retaining native `NoRecordsContent`, reset populated-only minimum widths for that state and preserve its full-width message and usable native controls. Keep one owner per scrollable region: do not put independently scrolling wrappers around a native table container that already owns the same overflow. A dialog can own vertical scrolling while a genuinely wide table owns horizontal scrolling, but its table wrapper must not create a second unnecessary vertical scroll area.
+
+Measure `clientWidth`/`scrollWidth` and `clientHeight`/`scrollHeight` on the native container, its wrapper and the containing page or dialog; also inspect the actual scrollbar in screenshots. Check empty, sparse and populated data at phone, intermediate and desktop widths, including every dialog tab, the final row and pager, and after native sorting, filtering or focusing the last action. Titles, Close actions and keyboard focus must stay accessible. Repair the column or owner geometry rather than using `overflow: hidden`, hidden scrollbar paint or clipped content to make the check pass. Rounded-corner paint containment must preserve necessary scrolling and focus visibility.
+
 ## Verify the actual responsive threshold
 
 Read `MudTableBase.cs`, `Styles/components/_table.scss`, and `Styles/abstracts/_variables.scss` in the installed MudBlazor source before aligning local cell CSS with `Breakpoint`. In v9.0.0, `Breakpoint.Xs` emits `mud-xs-table`, which stacks at `max-width: 600px`; `Breakpoint.Sm` emits `mud-sm-table`, which stacks at `960px`. Match stacked spacing, `DataLabel` behavior, and first-cell treatment to that actual threshold, and verify immediately above and below it. Selecting `Sm` does not mean the table will remain a column table until 600px.
 
 When converting column rows to a stacked grid, reset the wide cell-width contract with matching selector specificity. A class-specific `width: 37%` can beat a generic narrow `tbody td { width: auto; }`, leaving the identity inside a thin strip even when its grid cell spans the full row. Inspect computed cell widths and the actual text-to-row insets after reflow; a page with no overflow can still waste most of its usable width. Retain visible measurement-group labels when hiding the wide header, especially when several groups reuse captions such as Mean/Latest or contain unavailable values.
+
+Native XS cells are flex rows: a reserved `DataLabel` width, cell padding and the value's or action group's minimum content width can still widen the table inside a narrow dialog. When that combination cannot fit, stack the native label and value locally at the affected width, allow values and action groups to shrink or wrap, and retain the real `DataLabel` and native controls. Check the container's width and scroll position both before and after focusing or clicking the last action. Browser scrolling to reveal that action can clip previously inset labels; an initial padding check alone misses the defect.
 
 Bound opaque machine-key previews with CSS when their provenance would dominate working rows; preserve the full searchable value and expose exact identity in the inspector. Do not cap meaningful descriptions or replace identities with shortened string data. Inspect populated host records rather than assuming friendly fixture keys represent real metadata density.
 
@@ -143,6 +153,8 @@ MudTable empty rows can become left-aligned or span only one grid column after c
 
 Verify this visually for every tab/filter that can be empty.
 
+Spanning the empty row fixes its alignment, not the width of its scroll owner. Apply the [content-driven scrolling contract](#scroll-only-when-the-content-requires-it) before accepting an empty table with a horizontal scrollbar.
+
 ## Alignment for Badges, Icons, and Plain Text
 
 - Keep cells as flex containers with `align-items: center` so badges, icon buttons, and plain text share a consistent vertical line.
@@ -155,8 +167,8 @@ Verify this visually for every tab/filter that can be empty.
 Before acceptance or PR:
 
 1. Build affected projects with zero warnings.
-2. Open the page at normal width and inspect both scroll dimensions at the intended owner; confirm there is no unwanted horizontal or vertical scrollbar.
-3. Resize narrower, including immediately above and below the actual table breakpoint, and confirm true overflow scroll appears only in its designated region when necessary.
+2. Inspect the native container and its wrapper at desktop, intermediate and phone widths. Check both scroll dimensions and the actual visible bars with empty, sparse and populated results; confirm overflow exists only when useful content needs it.
+3. Resize immediately above and below the actual table breakpoint, open every relevant dialog tab, and confirm each needed scroll direction has one designated owner. Check title/Close availability and keyboard focus after sorting, filtering and the last action.
 4. Confirm long key/name/ID values show ellipsis, not overlap.
 5. Confirm clipped values have full-value access through `MudTooltip` or the named keyboard-accessible inspector; verify actual technical identities, not only short fixture values.
 6. Confirm operational columns remain readable: cron, next/last time, status, duration, actions. Inspect native filter/order controls too: the actual selected value must retain its meaning and direction at the narrowest owner in each theme, rather than merely fitting the outer control. A theme's larger input type can require a scoped compact font or a shorter localized label.

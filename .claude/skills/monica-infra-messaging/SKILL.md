@@ -13,7 +13,7 @@ Choose the communication boundary before the transport; database-coupled deliver
 | Inspect EventBus subscriptions, transport status, providers, or diagnostic listeners | [EventBus diagnostics](references/event-bus-diagnostics.md) |
 | Call another application's published request contract and await a result | [RPC client](references/rpc.md) |
 | Recover structured remote failures from Dapr actor calls | [Dapr diagnostics](references/dapr-diagnostics.md) |
-| Send through a named bidirectional pipeline owned by one host | [DataChannel](references/data-channels.md) |
+| Send through or inspect a named bidirectional pipeline owned by one host | [DataChannel](references/data-channels.md) |
 | Invoke typed methods on connected Web clients | [SignalR](references/signalr.md) |
 
 For application contract placement, use [ProjectUnit development](../monica-application-project-unit-development/SKILL.md); for transport/module implementation, use [development](../monica-development/SKILL.md).

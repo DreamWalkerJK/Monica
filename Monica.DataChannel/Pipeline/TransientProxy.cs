@@ -119,6 +119,7 @@ internal abstract class TransientComponentProxyBase(
     Type componentType,
     object? metadata)
 {
+    internal Type DeclaredComponentType => ComponentType;
     protected readonly IServiceScopeFactory ServiceScopeFactory = serviceScopeFactory;
     protected readonly Type ComponentType = componentType;
     protected readonly object? Metadata = metadata;
@@ -182,6 +183,8 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var instance = CreateInstance<IPipelineEndpoint>(scope.ServiceProvider);
+        instance.Pipe = Pipe;
+        instance.EntranceType = EntranceType;
         return instance.GetMetadata();
     }
 
@@ -196,8 +199,6 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
             if (_isInit)
                 return;
 
-            _isInit = true;
-
             using var scope = ServiceScopeFactory.CreateScope();
             var instance = CreateInstance<IPipelineEndpoint>(scope.ServiceProvider);
             instance.Pipe = Pipe;
@@ -207,6 +208,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
             {
                 await communicationCore.InitAsync(cancellationToken);
             }
+            _isInit = true;
         }
         finally
         {
@@ -295,6 +297,8 @@ internal class TransientPipeTransformMiddlewareProxy(
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var instance = CreateInstance<IPipelineTransformMiddleware>(scope.ServiceProvider);
+        if (instance is IPipelineAware pipelineAware && Pipeline is not null)
+            pipelineAware.Pipe = Pipeline;
         return instance.GetMetadata();
     }
 
@@ -314,6 +318,7 @@ internal class TransientPipeEndpointMiddlewareProxy(
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var instance = CreateInstance<IPipelineEndpointMiddleware>(scope.ServiceProvider);
+        instance.Pipe = Pipe;
         return instance.GetMetadata();
     }
 

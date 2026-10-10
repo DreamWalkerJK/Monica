@@ -114,6 +114,16 @@
     box-shadow: var(--mud-elevation-24) !important;
 }
 
+/* Title actions need a containing block even when a theme removes dialog animation. */
+[class*="mo-theme-"] .mud-dialog-title {
+    position: relative;
+}
+
+/* Native title actions remain readable when ActionDefault is a low-contrast accent. */
+[class*="mo-theme-"] .mud-dialog-title .mud-button-close:not(:disabled) {
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+}
+
 /* Overlay depth is separate from panel paint; the shell owns its navigation popovers. */
 :root[data-theme] .mud-popover:not(.mo-navbar-menu-popover):not(.mud-tooltip) {
     box-shadow: var(--mud-elevation-8) !important;
