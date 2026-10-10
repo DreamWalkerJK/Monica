@@ -107,17 +107,28 @@
       "Refresh": "Refresh",
       "Save": "Save",
       "Select": "Select",
-      "Details": "Details"
+      "Details": "Details",
+      "ResetFilters": "Reset filters"
     },
     "Columns": {
       "Actions": "Actions"
+    },
+    "Values": {
+      "Unavailable": "Unavailable"
+    },
+    "Filters": {
+      "All": "All"
+    },
+    "Labels": {
+      "ClusterId": "Cluster ID",
+      "Topic": "Topic"
+    },
+    "Pagination": {
+      "RowsPerPage": "Rows per page",
+      "InfoFormat": "{first_item}–{last_item} of {all_items}"
     }
   },
   "Page": {
-    "PageTitle": "Kafka EventBus",
-    "Eyebrow": "EventBus integration",
-    "Title": "Kafka EventBus Console",
-    "Subtitle": "Inspect Kafka-backed EventBus integrations, clusters, topics, consumer groups, and performance snapshots.",
     "States": {
       "Loading": "Loading Kafka console",
       "LoadingDescription": "Resolving EventBus provider state and configured Kafka clusters."
@@ -127,36 +138,28 @@
       "RefreshSucceeded": "Kafka console refreshed."
     }
   },
-  "Tabs": {
-    "Dashboard": "Dashboard",
-    "Clusters": "Clusters",
-    "Topics": "Topics",
-    "ConsumerGroups": "Consumer Groups",
-    "Performance": "Performance"
-  },
+  "Tabs": {},
   "Dashboard": {
     "Sections": {
-      "ContextEyebrow": "Identity context",
-      "ContextTitle": "Provider and active cluster",
-      "ContextDescription": "Confirm which EventBus provider and Kafka cluster own the current console context.",
-      "SummaryEyebrow": "Runtime summary",
       "SummaryTitle": "Operational signals",
-      "SummaryDescription": "Read the latest broker, inventory, retention, and throughput evidence at a glance.",
-      "EvidenceEyebrow": "Evidence and next steps",
-      "EvidenceTitle": "Access and sampling readiness",
-      "EvidenceDescription": "Review the capabilities available for this cluster and move directly to the next useful workspace."
+      "EvidenceTitle": "Access and sampling readiness"
     },
     "Evidence": {
       "AdminAccess": "Broker administration",
       "AdminAccessReady": "Direct Kafka access is available for inventory and administration.",
       "AdminAccessLimited": "Direct Kafka access is unavailable; broker administration is limited.",
-      "LiveSampling": "Performance sampling"
+      "LiveSampling": "Performance sampling",
+      "JmxConfiguration": "JMX configuration",
+      "JmxConfigured": "Endpoint configured; JMX collection is not available",
+      "JmxNotConfigured": "No JMX endpoint configured"
     },
     "NextActions": {
       "Title": "Continue investigation",
       "Description": "Inspect cluster configuration or open performance evidence without repeating global actions.",
       "Clusters": "Open clusters",
-      "Performance": "Open performance"
+      "Performance": "Open performance",
+      "Topics": "Browse topics",
+      "ConsumerGroups": "Inspect consumer groups"
     },
     "Cards": {
       "Provider": "Active provider",
@@ -186,8 +189,7 @@
     "SelectedCluster": {
       "Label": "Active cluster",
       "None": "No cluster selected",
-      "NoneDescription": "Create or configure a Kafka cluster to enable console views.",
-      "ExternalCredentials": "Kafka credentials are managed outside Monica."
+      "NoneDescription": "Create or configure a Kafka cluster to enable console views."
     }
   },
   "Clusters": {
@@ -201,7 +203,6 @@
     "Columns": {
       "Name": "Name",
       "Bootstrap": "Bootstrap",
-      "Mode": "Mode",
       "Status": "Status",
       "Actions": "Actions"
     },
@@ -215,7 +216,8 @@
     "Status": {
       "Reachable": "Reachable",
       "Unknown": "Not tested",
-      "Limited": "Limited"
+      "Limited": "Limited",
+      "ConnectionFailed": "Connection failed"
     },
     "Dialog": {
       "CreateTitle": "New Kafka cluster",
@@ -262,11 +264,17 @@
       "SslCaLocation": "SSL CA location",
       "IsDaprBacked": "Backs Dapr pub/sub",
       "CredentialsManagedExternally": "Credentials managed externally",
-      "DaprPubSubName": "Dapr pub/sub name"
+      "DaprPubSubName": "Dapr pub/sub name",
+      "JmxHint": "Configuration only; this console does not collect JMX metrics."
     },
     "Validation": {
       "DisplayNameRequired": "Display name is required.",
       "BootstrapRequired": "Bootstrap servers are required when credentials are managed by Monica."
+    },
+    "Search": {
+      "Label": "Search clusters",
+      "Placeholder": "Name, ID, or bootstrap servers",
+      "NoMatches": "No clusters match these filters"
     }
   },
   "Topics": {
@@ -316,7 +324,8 @@
       "PartitionsTitle": "Increase partitions",
       "RetentionTitle": "Set retention",
       "PartitionsMessage": "Topic {0} currently has {1} partitions. Kafka only allows increasing this value.",
-      "RetentionMessage": "Set retention.ms for topic {0}."
+      "RetentionMessage": "Set retention.ms for topic {0}.",
+      "CreateHint": "Create the topic in the cluster shown below. A blank retention uses the broker default."
     },
     "BacklogDialog": {
       "Summary": "{0} retained messages sampled at {1}. This count is based on each partition's latest offset minus earliest offset and does not require a consumer group.",
@@ -332,7 +341,8 @@
       "Title": "Consumer groups for {0}",
       "Summary": "{0} consumer groups have assignments or committed offsets for this topic.",
       "Loading": "Loading consumer groups for this topic...",
-      "Empty": "No consumer group has an assignment or committed offset for this topic."
+      "Empty": "No consumer group has an assignment or committed offset for this topic.",
+      "Unavailable": "Consumer-group lookup failed. Refresh to retry."
     },
     "MessagesDialog": {
       "ReadHint": "Showing up to {0} recent messages sampled at {1}. This preview does not commit consumer offsets.",
@@ -342,7 +352,8 @@
       "Encoding": "Encoding",
       "Size": "Size",
       "SizeBytes": "{0} bytes",
-      "Truncated": "The payload was truncated for display."
+      "Truncated": "The payload was truncated for display.",
+      "Payload": "Message payload"
     },
     "Confirm": {
       "DeleteTitle": "Delete Kafka topic",
@@ -368,11 +379,16 @@
       "NameRequired": "Topic name is required.",
       "PartitionIncreaseRequired": "The new partition count must be greater than the current partition count.",
       "RetentionRequired": "Retention must be greater than zero."
-    }
+    },
+    "Filters": {
+      "Application": "Application",
+      "Internal": "Internal",
+      "MetadataUnavailable": "Metadata unavailable"
+    },
+    "Loading": "Loading topic inventory"
   },
   "ConsumerGroups": {
     "Title": "Consumer groups",
-    "Summary": "{0} visible consumer groups",
     "Unavailable": "Consumer group inspection requires direct Kafka broker access.",
     "Empty": "No consumer groups were returned for the selected cluster.",
     "Actions": {
@@ -417,13 +433,22 @@
       "Values": {
         "OffsetUnknown": "Unknown",
         "Unassigned": "Unassigned"
-      }
-    }
+      },
+      "Unavailable": "No consumer-group capture is available. Refresh to retry."
+    },
+    "Loading": "Loading consumer groups",
+    "Search": {
+      "Label": "Search consumer groups",
+      "Placeholder": "Enter a group ID",
+      "NoMatches": "No consumer groups match these filters"
+    },
+    "FilteredSummary": "Showing {0} of {1} consumer groups"
   },
   "Performance": {
     "Title": "Performance snapshots",
     "Unavailable": "Performance sampling requires direct Kafka broker access.",
     "Empty": "No performance snapshot has been captured.",
+    "CaptureUnavailable": "No valid performance snapshot is available. Capture again to retry.",
     "NoConsumerGroupMetrics": "The latest performance snapshot has no topic and consumer-group metrics to display.",
     "MetricsFilter": {
       "Label": "Filter topic or group",
@@ -461,6 +486,32 @@
     },
     "Messages": {
       "Captured": "Kafka performance snapshot captured."
+    },
+    "Evidence": {
+      "OffsetBased": "Rates use comparable Kafka offset samples. JMX metrics are not collected.",
+      "Diagnostic": "Sampling diagnostic"
+    }
+  },
+  "Workbench": {
+    "Eyebrow": "MONICA / KAFKA",
+    "NavigationLabel": "Kafka workspaces",
+    "ClusterContext": "Broker context",
+    "NoCluster": "No configured cluster",
+    "UnavailableCluster": "This exact cluster is not in the current configuration.",
+    "CategoryDescription": "Configure broker access, inspect topics and consumer groups, and compare offset-based performance evidence.",
+    "Titles": {
+      "Overview": "Kafka integration",
+      "Clusters": "Broker clusters",
+      "Topics": "Topics",
+      "ConsumerGroups": "Consumer groups",
+      "Performance": "Performance"
+    },
+    "Descriptions": {
+      "Overview": "Understand the active EventBus integration and the broker evidence available to this host.",
+      "Clusters": "Configure access and verify connectivity before inspecting broker data.",
+      "Topics": "Inspect topic topology, retention, and retained records in the selected cluster.",
+      "ConsumerGroups": "Inspect group state, members, assignments, and committed-offset evidence.",
+      "Performance": "Compare real Kafka offset samples and keep capture diagnostics alongside retained evidence."
     }
   }
 }

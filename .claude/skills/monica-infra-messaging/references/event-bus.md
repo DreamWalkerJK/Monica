@@ -36,3 +36,5 @@ For a database write that must publish only after commit, mark the event `[Outbo
 Source and checks: `Monica.EventBus/Abstractions/IEventBus.cs`, `Abstractions/Handlers/ILocalEventHandler.cs` and `IDistributedEventHandler.cs`, `Monica.EventBus/Modules/ModuleEventBus.cs`, `Monica.EventBus.Kafka/Modules/ModuleEventBusKafka.cs`, `tests/Test.Monica.EventBus/Services/EventBusAutoDiscoveryLifecycleTests.cs`, `tests/Test.Monica.EventBus/Modules/ModuleEventBusCompositionTests.cs`, and `OutboxGatewayTests.cs`.
 
 For registered-handler inspection, independent transport health, live change-feed ownership, and diagnostic publishing, use [EventBus diagnostics](event-bus-diagnostics.md).
+
+For Kafka broker configuration, routed topic and consumer inspection, sampled evidence, and persisted-snapshot upgrades, use [Kafka console diagnostics](kafka-console.md).

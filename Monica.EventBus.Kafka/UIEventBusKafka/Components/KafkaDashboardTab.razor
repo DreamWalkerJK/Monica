@@ -1,293 +1,97 @@
 @using Monica.EventBus.Kafka.UIEventBusKafka.State
 @inject IStringLocalizer<EventBusKafkaResource> L
 
-<div class="kafka-dashboard">
-    <section class="dashboard-layer" aria-labelledby="kafka-context-heading">
-        <header class="dashboard-layer__header">
-            <span class="dashboard-layer__number" aria-hidden="true">01</span>
-            <div class="dashboard-layer__copy">
-                <MudText Typo="Typo.overline" Color="Color.Primary">@L["Dashboard:Sections:ContextEyebrow"]</MudText>
-                <MudText Typo="Typo.h6" id="kafka-context-heading">@L["Dashboard:Sections:ContextTitle"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:Sections:ContextDescription"]</MudText>
+<div class="kafka-overview">
+    <section class="overview-context">
+        <div class="overview-provider">
+            <MudIcon Icon="@Icons.Material.Outlined.Hub" Size="Size.Large" />
+            <span class="overview-label">@L["Dashboard:Cards:Provider"]</span>
+            <h2>@(State.HasLoadedConfiguration ? State.Integration.ActiveProviderName : L["Common:Values:Unavailable"].Value)</h2>
+            <span class="overview-mode">@ModeLabel</span>
+        </div>
+        <div class="overview-cluster">
+            <div class="overview-cluster-heading"><span class="overview-label">@L["Dashboard:SelectedCluster:Label"]</span>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@ClusterStatusColor">@ClusterStatusText</MudChip>
             </div>
-        </header>
-
-        <div class="dashboard-context-grid">
-            <div class="dashboard-context-card dashboard-context-card--provider">
-                <MudPaper Class="mo-self-painted" Outlined="true">
-                    <div class="dashboard-context-card__header">
-                        <span class="dashboard-context-card__icon" aria-hidden="true">
-                            <MudIcon Icon="@Icons.Material.Filled.Hub" />
-                        </span>
-                        <div class="dashboard-context-card__identity">
-                            <MudText Typo="Typo.overline" Color="Color.Primary">@L["Dashboard:Cards:Provider"]</MudText>
-                            <MudText Typo="Typo.h5" Class="dashboard-context-card__name">
-                                @State.Integration.ActiveProviderName
-                            </MudText>
-                        </div>
-                    </div>
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Color="@ModeColor"
-                             Variant="Variant.Outlined"
-                             Icon="@Icons.Material.Filled.Route">
-                        @ModeLabel
-                    </MudChip>
-                </MudPaper>
-            </div>
-
-            <div class="dashboard-context-card dashboard-context-card--cluster">
-                <MudPaper Class="mo-self-painted" Outlined="true">
-                    <div class="dashboard-context-card__header">
-                        <span class="dashboard-context-card__icon" aria-hidden="true">
-                            <MudIcon Icon="@Icons.Material.Filled.Storage" />
-                        </span>
-                        <div class="dashboard-context-card__identity">
-                            <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Dashboard:SelectedCluster:Label"]</MudText>
-                            <MudText Typo="Typo.h6" Class="dashboard-context-card__name">@SelectedClusterName</MudText>
-                        </div>
-                        <MudChip T="string"
-                                 Size="Size.Small"
-                                 Color="@SelectedClusterStatusColor"
-                                 Variant="Variant.Outlined">
-                            @SelectedClusterStatusText
-                        </MudChip>
-                    </div>
-                    <MudText Typo="Typo.body2"
-                             Color="Color.Secondary"
-                             Class="dashboard-context-card__description">
-                        @SelectedClusterSubtitle
-                    </MudText>
-                </MudPaper>
-            </div>
+            <h2>@(State.SelectedCluster?.Config.DisplayName ?? (string.IsNullOrWhiteSpace(State.RequestedClusterId) ? L["Dashboard:SelectedCluster:None"].Value : State.RequestedClusterId))</h2>
+            @if (State.SelectedCluster is { } cluster)
+            {
+                <dl class="overview-identities">
+                    <div><dt>@L["Common:Labels:ClusterId"]</dt><dd>@cluster.Config.ClusterId</dd></div>
+                    <div><dt>@L["Clusters:Fields:BootstrapServers"]</dt><dd>@(string.IsNullOrWhiteSpace(cluster.Config.BootstrapServers) ? L["Clusters:Values:ExternalBootstrap"].Value : cluster.Config.BootstrapServers)</dd></div>
+                </dl>
+                @if (!string.IsNullOrWhiteSpace(cluster.ErrorMessage)) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@cluster.ErrorMessage</MudAlert> }
+            }
+            else if (!string.IsNullOrWhiteSpace(State.RequestedClusterId)) { <KafkaDialogContext ClusterId="@State.RequestedClusterId" /><p>@L["Common:Values:Unavailable"]</p> }
+            else { <p>@L["Dashboard:SelectedCluster:NoneDescription"]</p> }
         </div>
     </section>
 
-    <section class="dashboard-layer" aria-labelledby="kafka-summary-heading">
-        <header class="dashboard-layer__header">
-            <span class="dashboard-layer__number" aria-hidden="true">02</span>
-            <div class="dashboard-layer__copy">
-                <MudText Typo="Typo.overline" Color="Color.Primary">@L["Dashboard:Sections:SummaryEyebrow"]</MudText>
-                <MudText Typo="Typo.h6" id="kafka-summary-heading">@L["Dashboard:Sections:SummaryTitle"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:Sections:SummaryDescription"]</MudText>
-            </div>
-        </header>
-
-        <div class="dashboard-signals">
-            <KafkaMetricCard Icon="@Icons.Material.Filled.Dns"
-                             Label="@L["Dashboard:Cards:Brokers"]"
-                             Value="@State.CurrentBrokerCount.ToString()"
-                             Hint="@L["Dashboard:Cards:BrokersHint"]"
-                             AccentColor="@BrokerAccentColor" />
-            <KafkaMetricCard Icon="@Icons.Material.Filled.Topic"
-                             Label="@L["Dashboard:Cards:Topics"]"
-                             Value="@State.CurrentTopicCount.ToString()"
-                             Hint="@L["Dashboard:Cards:TopicsHint"]"
-                             AccentColor="Color.Info" />
-            <KafkaMetricCard Icon="@Icons.Material.Filled.MarkEmailUnread"
-                             Label="@L["Dashboard:Cards:RetainedMessages"]"
-                             Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(State.TotalRetainedMessageCount, L["Dashboard:Values:RetainedMessagesUnknown"])"
-                             Hint="@L["Dashboard:Cards:RetainedMessagesHint"]"
-                             AccentColor="@RetainedMessagesAccentColor" />
-            <KafkaMetricCard Icon="@Icons.Material.Filled.Groups"
-                             Label="@L["Dashboard:Cards:ConsumerGroups"]"
-                             Value="@State.CurrentConsumerGroupCount.ToString()"
-                             Hint="@L["Dashboard:Cards:ConsumerGroupsHint"]"
-                             AccentColor="Color.Secondary" />
-            <KafkaMetricCard Icon="@Icons.Material.Filled.NorthEast"
-                             Label="@L["Dashboard:Cards:WriteRate"]"
-                             Value="@KafkaMetricDisplayFormatter.FormatRate(State.LatestPerformance?.MessageWriteRatePerSecond, L)"
-                             Hint="@L["Dashboard:Cards:WriteRateHint"]"
-                             AccentColor="@WriteRateAccentColor" />
-            <KafkaMetricCard Icon="@Icons.Material.Filled.SouthWest"
-                             Label="@L["Dashboard:Cards:ConsumeRate"]"
-                             Value="@KafkaMetricDisplayFormatter.FormatRate(State.LatestPerformance?.MessageConsumeRatePerSecond, L)"
-                             Hint="@L["Dashboard:Cards:ConsumeRateHint"]"
-                             AccentColor="@ConsumeRateAccentColor" />
-        </div>
+    <section class="overview-inventory" aria-label="@L["Dashboard:Sections:SummaryTitle"]">
+        <div><span>@L["Dashboard:Cards:Brokers"]</span><strong>@CountText(State.CurrentBrokerCount, State.SelectedCluster?.IsReachable == true)</strong><small>@L["Dashboard:Cards:BrokersHint"]</small></div>
+        <div><span>@L["Dashboard:Cards:Topics"]</span><strong>@CountText(State.CurrentTopicCount, State.HasLoadedTopics || State.SelectedCluster?.HasTopicInventory == true)</strong><small>@L["Dashboard:Cards:TopicsHint"]</small></div>
+        <div><span>@L["Dashboard:Cards:ConsumerGroups"]</span><strong>@CountText(State.CurrentConsumerGroupCount, State.HasLoadedConsumerGroups || State.SelectedCluster?.HasConsumerGroupInventory == true)</strong><small>@L["Dashboard:Cards:ConsumerGroupsHint"]</small></div>
+        <div><span>@L["Dashboard:Cards:RetainedMessages"]</span><strong>@KafkaMetricDisplayFormatter.FormatOptionalInt64(State.TotalRetainedMessageCount, L["Dashboard:Values:RetainedMessagesUnknown"])</strong><small>@L["Dashboard:Cards:RetainedMessagesHint"]</small></div>
     </section>
 
-    <section class="dashboard-layer" aria-labelledby="kafka-evidence-heading">
-        <header class="dashboard-layer__header">
-            <span class="dashboard-layer__number" aria-hidden="true">03</span>
-            <div class="dashboard-layer__copy">
-                <MudText Typo="Typo.overline" Color="Color.Primary">@L["Dashboard:Sections:EvidenceEyebrow"]</MudText>
-                <MudText Typo="Typo.h6" id="kafka-evidence-heading">@L["Dashboard:Sections:EvidenceTitle"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:Sections:EvidenceDescription"]</MudText>
+    <div class="overview-evidence-grid">
+        <section class="overview-capabilities">
+            <h3>@L["Dashboard:Sections:EvidenceTitle"]</h3>
+            <dl>
+                <div><dt>@L["Dashboard:Evidence:AdminAccess"]</dt><dd>@(State.CanAdminSelectedCluster ? L["Dashboard:Evidence:AdminAccessReady"] : L["Dashboard:Evidence:AdminAccessLimited"])</dd></div>
+                <div><dt>@L["Dashboard:Evidence:LiveSampling"]</dt><dd>@SamplingStatus</dd></div>
+                <div><dt>@L["Dashboard:Evidence:JmxConfiguration"]</dt><dd>@(string.IsNullOrWhiteSpace(State.SelectedCluster?.Config.JmxEndpoint) ? L["Dashboard:Evidence:JmxNotConfigured"] : L["Dashboard:Evidence:JmxConfigured"])</dd></div>
+            </dl>
+            <div class="overview-rates">
+                <div><span>@L["Dashboard:Cards:WriteRate"]</span><strong>@KafkaMetricDisplayFormatter.FormatRate(State.LatestPerformance?.MessageWriteRatePerSecond, L)</strong><small>@L["Dashboard:Cards:WriteRateHint"]</small></div>
+                <div><span>@L["Dashboard:Cards:ConsumeRate"]</span><strong>@KafkaMetricDisplayFormatter.FormatRate(State.LatestPerformance?.MessageConsumeRatePerSecond, L)</strong><small>@L["Dashboard:Cards:ConsumeRateHint"]</small></div>
             </div>
-        </header>
-
-        <div class="dashboard-evidence-grid">
-            <div class="dashboard-evidence-card">
-                <MudPaper Class="mo-self-painted" Outlined="true">
-                    <div class="dashboard-evidence-row">
-                        <span class="@($"dashboard-evidence-row__icon dashboard-evidence-row__icon--{GetColorName(AdminAccessColor)}")" aria-hidden="true">
-                            <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" />
-                        </span>
-                        <div class="dashboard-evidence-row__copy">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Evidence:AdminAccess"]</MudText>
-                            <MudText Typo="Typo.body2">@AdminAccessText</MudText>
-                        </div>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@AdminAccessColor">
-                            @SelectedClusterStatusText
-                        </MudChip>
-                    </div>
-
-                    <MudDivider />
-
-                    <div class="dashboard-evidence-row">
-                        <span class="@($"dashboard-evidence-row__icon dashboard-evidence-row__icon--{GetColorName(SamplingStatusColor)}")" aria-hidden="true">
-                            <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Size="Size.Small" />
-                        </span>
-                        <div class="dashboard-evidence-row__copy">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Evidence:LiveSampling"]</MudText>
-                            <MudText Typo="Typo.body2">@SamplingStatusText</MudText>
-                        </div>
-                    </div>
-                </MudPaper>
+        </section>
+        <section class="overview-actions">
+            <h3>@L["Dashboard:NextActions:Title"]</h3><p>@L["Dashboard:NextActions:Description"]</p>
+            <div class="overview-route-actions">
+                <MudButton Href="@ClustersUrl" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Storage">@L["Dashboard:NextActions:Clusters"]</MudButton>
+                <MudButton Href="@TopicsUrl" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Topic">@L["Dashboard:NextActions:Topics"]</MudButton>
+                <MudButton Href="@ConsumerGroupsUrl" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Groups">@L["Dashboard:NextActions:ConsumerGroups"]</MudButton>
+                <KafkaPrimaryButton Href="@PerformanceUrl" StartIcon="@Icons.Material.Outlined.MonitorHeart">@L["Dashboard:NextActions:Performance"]</KafkaPrimaryButton>
             </div>
-
-            <div class="dashboard-next-actions">
-                <MudPaper Outlined="true">
-                    <MudText Typo="Typo.subtitle1">@L["Dashboard:NextActions:Title"]</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:NextActions:Description"]</MudText>
-                    <div class="dashboard-next-actions__buttons">
-                        <MudButton Variant="Variant.Outlined"
-                                   StartIcon="@Icons.Material.Filled.Storage"
-                                   aria-label="@L["Dashboard:NextActions:Clusters"]"
-                                   OnClick="OnOpenClusters">
-                            @L["Dashboard:NextActions:Clusters"]
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.MonitorHeart"
-                                   aria-label="@L["Dashboard:NextActions:Performance"]"
-                                   OnClick="OnOpenPerformance">
-                            @L["Dashboard:NextActions:Performance"]
-                        </MudButton>
-                    </div>
-                </MudPaper>
-            </div>
-        </div>
-
-        @if (State.Integration.Messages.Count > 0)
-        {
-            <MudAlert Severity="@IntegrationMessageSeverity" Variant="Variant.Outlined">
-                <MudStack Spacing="1">
-                    @foreach (var message in State.Integration.Messages)
-                    {
-                        <MudText Typo="Typo.body2">@message</MudText>
-                    }
-                </MudStack>
-            </MudAlert>
-        }
-    </section>
+        </section>
+    </div>
+    @if (State.Integration.Messages.Count > 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            @foreach (var message in State.Integration.Messages) { <MudText Typo="Typo.body2">@message</MudText> }
+        </MudAlert>
+    }
 </div>
-
 @code {
-    [Parameter, EditorRequired]
-    public EventBusKafkaPageState State { get; set; } = default!;
-
-    [Parameter]
-    public EventCallback OnRefresh { get; set; }
-
-    [Parameter]
-    public EventCallback OnOpenClusters { get; set; }
-
-    [Parameter]
-    public EventCallback OnOpenPerformance { get; set; }
-
-    private string ModeLabel => State.Integration.Mode switch
-    {
-        KafkaIntegrationMode.DirectKafka => L["Dashboard:Modes:DirectKafka"],
-        KafkaIntegrationMode.DaprKafka => L["Dashboard:Modes:DaprKafka"],
-        KafkaIntegrationMode.DaprNonKafka => L["Dashboard:Modes:DaprNonKafka"],
-        KafkaIntegrationMode.NotConfigured => L["Dashboard:Modes:NotConfigured"],
-        _ => L["Dashboard:Modes:Unknown"]
-    };
-
-    private Color ModeColor => State.Integration.Mode switch
-    {
-        KafkaIntegrationMode.DirectKafka or KafkaIntegrationMode.DaprKafka => Color.Success,
-        KafkaIntegrationMode.DaprNonKafka => Color.Warning,
-        KafkaIntegrationMode.NotConfigured => Color.Secondary,
-        _ => Color.Default
-    };
-
-    private Severity IntegrationMessageSeverity => State.Integration.Mode switch
-    {
-        KafkaIntegrationMode.DirectKafka or KafkaIntegrationMode.DaprKafka => Severity.Info,
-        _ => Severity.Warning
-    };
-
-    private Color BrokerAccentColor => State.CurrentBrokerCount > 0 ? Color.Success : Color.Warning;
-
-    private Color RetainedMessagesAccentColor => State.TotalRetainedMessageCount.HasValue ? Color.Info : Color.Warning;
-
-    private Color WriteRateAccentColor => State.LatestPerformance?.MessageWriteRatePerSecond is not null
-        ? Color.Success
-        : Color.Warning;
-
-    private Color ConsumeRateAccentColor => State.LatestPerformance?.MessageConsumeRatePerSecond is not null
-        ? Color.Success
-        : Color.Warning;
-
-    private string SelectedClusterName =>
-        State.SelectedCluster?.Config.DisplayName ?? L["Dashboard:SelectedCluster:None"];
-
-    private string SelectedClusterSubtitle =>
-        State.SelectedCluster is null
-            ? L["Dashboard:SelectedCluster:NoneDescription"]
-            : State.SelectedCluster.Config.HasDirectKafkaAccess
-                ? State.SelectedCluster.Config.BootstrapServers
-                : L["Dashboard:SelectedCluster:ExternalCredentials"];
-
-    private string SelectedClusterStatusText => State.SelectedCluster switch
-    {
+    [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
+    /// <summary>Gets or sets the optional owner-supplied disable state; null uses the page state's busy state.</summary>
+    [Parameter] public bool? InteractionBusy { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    /// <summary>Gets or sets the native cluster workspace URL, including the exact selected cluster query.</summary>
+    [Parameter] public string ClustersUrl { get; set; } = "/eventbus-kafka/workspaces/clusters";
+    /// <summary>Gets or sets the native topic workspace URL, including the exact selected cluster query.</summary>
+    [Parameter] public string TopicsUrl { get; set; } = "/eventbus-kafka/workspaces/topics";
+    /// <summary>Gets or sets the native consumer-group workspace URL, including the exact selected cluster query.</summary>
+    [Parameter] public string ConsumerGroupsUrl { get; set; } = "/eventbus-kafka/workspaces/consumer-groups";
+    /// <summary>Gets or sets the native performance workspace URL, including the exact selected cluster query.</summary>
+    [Parameter] public string PerformanceUrl { get; set; } = "/eventbus-kafka/workspaces/performance";
+    private string CountText(int count, bool hasEvidence) => State.CanAdminSelectedCluster && (State.LatestPerformance is not null || hasEvidence) ? count.ToString() : L["Common:Values:Unavailable"];
+    private string ModeLabel => !State.HasLoadedConfiguration ? L["Common:Values:Unavailable"] : State.Integration.Mode switch {
+        KafkaIntegrationMode.DirectKafka => L["Dashboard:Modes:DirectKafka"], KafkaIntegrationMode.DaprKafka => L["Dashboard:Modes:DaprKafka"],
+        KafkaIntegrationMode.DaprNonKafka => L["Dashboard:Modes:DaprNonKafka"], KafkaIntegrationMode.NotConfigured => L["Dashboard:Modes:NotConfigured"], _ => L["Dashboard:Modes:Unknown"] };
+    private string ClusterStatusText => State.SelectedCluster switch {
         { IsReachable: true } => L["Clusters:Status:Reachable"],
+        { Config.HasDirectKafkaAccess: false } => L["Clusters:Status:Limited"],
+        { ErrorMessage: not null } => L["Clusters:Status:ConnectionFailed"],
         { Config.HasDirectKafkaAccess: true } => L["Clusters:Status:Unknown"],
-        not null => L["Clusters:Status:Limited"],
-        _ => L["Dashboard:SelectedCluster:None"]
-    };
-
-    private Color SelectedClusterStatusColor => State.SelectedCluster switch
-    {
-        { IsReachable: true } => Color.Success,
-        { Config.HasDirectKafkaAccess: true } => Color.Secondary,
-        not null => Color.Warning,
-        _ => Color.Default
-    };
-
-    private Color AdminAccessColor => State.CanAdminSelectedCluster ? Color.Success : Color.Warning;
-
-    private string AdminAccessText => State.CanAdminSelectedCluster
-        ? L["Dashboard:Evidence:AdminAccessReady"]
-        : L["Dashboard:Evidence:AdminAccessLimited"];
-
-    private Color SamplingStatusColor => !State.CanAdminSelectedCluster
-        ? Color.Warning
-        : State.IsPerformanceSampling
-            ? Color.Info
-            : State.IsPerformanceAutoRefreshEnabled
-                ? Color.Success
-                : Color.Secondary;
-
-    private string SamplingStatusText => !State.CanAdminSelectedCluster
-        ? L["Performance:Unavailable"]
-        : State.IsPerformanceSampling
-            ? L["Performance:Live:Sampling"]
-            : State.LastPerformanceCapturedAt is { } capturedAt
-                ? L["Performance:Live:LastCapturedAt", capturedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")]
-                : State.IsPerformanceAutoRefreshEnabled
-                    ? L["Performance:Live:WaitingForFirstSample"]
-                    : L["Performance:Live:Paused"];
-
-    private static string GetColorName(Color color) => color switch
-    {
-        Color.Success => "success",
-        Color.Warning => "warning",
-        Color.Info => "info",
-        Color.Secondary => "secondary",
-        _ => "primary"
-    };
+        not null => L["Clusters:Status:Limited"], _ => string.IsNullOrWhiteSpace(State.RequestedClusterId) ? L["Dashboard:SelectedCluster:None"] : L["Common:Values:Unavailable"] };
+    private Color ClusterStatusColor => State.SelectedCluster switch {
+        { IsReachable: true } => Color.Success, { Config.HasDirectKafkaAccess: false } => Color.Warning, { ErrorMessage: not null } => Color.Error,
+        { Config.HasDirectKafkaAccess: true } => Color.Default, not null => Color.Warning, _ => Color.Default };
+    private string SamplingStatus => !State.CanAdminSelectedCluster ? L["Performance:Unavailable"] :
+        State.IsPerformanceSampling ? L["Performance:Live:Sampling"] :
+        State.LastPerformanceCapturedAt is { } capturedAt ? L["Performance:Live:LastCapturedAt", capturedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")] :
+        State.IsPerformanceAutoRefreshEnabled ? L["Performance:Live:WaitingForFirstSample"] : L["Performance:Live:Paused"];
 }

@@ -1,198 +1,111 @@
 @using Monica.EventBus.Kafka.UIEventBusKafka.State
 @inject IStringLocalizer<EventBusKafkaResource> L
 
-@{
-    var filteredTopicCount = State.Topics.Count(FilterTopic);
-}
-
-<MudStack Spacing="3">
-    <KafkaWorkspaceHeader Icon="@Icons.Material.Filled.Topic"
-                          Title="@L["Topics:Title"]"
-                          Subtitle="@L["Topics:Summary", filteredTopicCount, State.Topics.Count]">
+@{ var topics = FilteredTopics; }
+<div class="topic-workspace">
+    <KafkaWorkspaceHeader Icon="@Icons.Material.Outlined.Topic" Title="@L["Topics:Title"]"
+                          Subtitle="@(State.HasLoadedTopics ? L["Topics:Summary", topics.Count, State.Topics.Count] : L["Common:Values:Unavailable"])">
         <Actions>
-            <div class="topics-actions">
-                <MudTextField T="string"
-                              @bind-Value="_searchText"
-                              Immediate="true"
-                              DebounceInterval="250"
-                              Label="@L["Topics:Search:Label"]"
-                              Placeholder="@L["Topics:Search:Placeholder"]"
-                              Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Search"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Clearable="true" />
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Add"
-                           Disabled="@(State.IsBusy || !State.CanAdminSelectedCluster)"
-                           aria-label="@L["Topics:Actions:Create"]"
-                           OnClick="OnCreate">
-                    @L["Topics:Actions:Create"]
-                </MudButton>
-            </div>
+            <KafkaPrimaryButton StartIcon="@Icons.Material.Filled.Add" Disabled="@(IsBusy || !State.CanAdminSelectedCluster)" OnClick="OnCreate">@L["Topics:Actions:Create"]</KafkaPrimaryButton>
         </Actions>
     </KafkaWorkspaceHeader>
-
+    <div class="topic-tools">
+        <div class="topic-search"><MudTextField T="string" @bind-Value="_searchText" Immediate="true" DebounceInterval="200" Label="@L["Topics:Search:Label"]" Placeholder="@L["Topics:Search:Placeholder"]"
+                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" /></div>
+        @if (State.HasLoadedTopics)
+        {
+        <div class="topic-filters" aria-label="@L["Topics:Search:Label"]">
+            <KafkaStatusFilter Text="@L["Common:Filters:All"]" Count="@State.Topics.Count" Color="Color.Primary" Selected="@(_filters.Count == 0)" OnClick="ClearFilters" />
+            <KafkaStatusFilter Text="@L["Topics:Filters:Application"]" Count="@State.Topics.Count(t => !t.IsInternal)" Color="Color.Info" Selected="@_filters.Contains("application")" OnClick="@(() => ToggleFilter("application"))" />
+            <KafkaStatusFilter Text="@L["Topics:Filters:Internal"]" Count="@State.Topics.Count(t => t.IsInternal)" Color="Color.Default" Selected="@_filters.Contains("internal")" OnClick="@(() => ToggleFilter("internal"))" />
+            <KafkaStatusFilter Text="@L["Topics:Filters:MetadataUnavailable"]" Count="@State.Topics.Count(t => !t.IsMetadataAvailable)" Color="Color.Warning" Selected="@_filters.Contains("unavailable")" OnClick="@(() => ToggleFilter("unavailable"))" />
+        </div>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(State.TopicsError))
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@State.TopicsError</MudAlert>
+    }
     @if (!State.CanAdminSelectedCluster)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Filled.Lock"
-                             Title="@L["Topics:Title"]"
-                             Description="@L["Topics:Unavailable"]"
-                             AccentColor="Color.Warning" />
+        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Lock" Title="@L["Topics:Title"]" Description="@L["Topics:Unavailable"]" AccentColor="Color.Warning" />
+    }
+    else if (!State.HasLoadedTopics)
+    {
+        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Topic" Title="@L["Topics:Title"]" Description="@(State.IsBusy || State.IsLoading ? L["Topics:Loading"] : L["Common:Values:Unavailable"])" />
     }
     else if (State.Topics.Count == 0)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Filled.Topic"
-                             Title="@L["Topics:Title"]"
-                             Description="@L["Topics:Empty"]"
-                             AccentColor="Color.Info"
-                             ActionLabel="@L["Topics:Actions:Create"]"
-                             ActionIcon="@Icons.Material.Filled.Add"
-                             ActionDisabled="@State.IsBusy"
-                             OnAction="OnCreate" />
+        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Topic" Title="@L["Topics:Title"]" Description="@L["Topics:Empty"]" ActionLabel="@L["Topics:Actions:Create"]" ActionIcon="@Icons.Material.Filled.Add" ActionDisabled="@IsBusy" OnAction="OnCreate" />
     }
-    else if (filteredTopicCount == 0)
+    else if (topics.Count == 0)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Filled.SearchOff"
-                             Title="@L["Topics:Search:NoMatches"]"
-                             Description="@L["Topics:Search:Placeholder"]"
-                             AccentColor="Color.Info" />
+        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.SearchOff" Title="@L["Topics:Search:NoMatches"]" Description="@L["Topics:Search:Placeholder"]" ActionLabel="@L["Common:Actions:ResetFilters"]" OnAction="ResetFilters" />
     }
     else
     {
-        <KafkaTableSurface AriaLabel="@L["Topics:Title"]"
-                           AccentColor="Color.Info"
-                           Size="KafkaTableSurfaceSize.Standard">
-            <MudTable T="KafkaTopicSummary"
-                      Items="@State.Topics"
-                      Filter="FilterTopic"
-                      @bind-RowsPerPage="_rowsPerPage"
-                      Dense="true"
-                      Hover="true"
-                      Striped="true"
-                      Breakpoint="Breakpoint.None">
-                <HeaderContent>
-                    <MudTh>@L["Topics:Columns:Name"]</MudTh>
-                    <MudTh>@L["Topics:Columns:Partitions"]</MudTh>
-                    <MudTh>@L["Topics:Columns:Replication"]</MudTh>
-                    <MudTh>@L["Topics:Columns:RetainedMessages"]</MudTh>
-                    <MudTh>@L["Topics:Columns:Retention"]</MudTh>
-                    <MudTh>@L["Topics:Columns:Actions"]</MudTh>
-                </HeaderContent>
+        <KafkaTableSurface AriaLabel="@L["Topics:Title"]" AccentColor="Color.Info">
+            <MudTable T="KafkaTopicSummary" Items="@topics" @bind-RowsPerPage="_rowsPerPage" Dense="true" Hover="true" Square="true" Elevation="0" Breakpoint="Breakpoint.Xs">
+                <HeaderContent><MudTh>@L["Topics:Columns:Name"]</MudTh><MudTh>@L["Topics:Columns:Partitions"] / @L["Topics:Columns:Replication"]</MudTh><MudTh>@L["Topics:Columns:RetainedMessages"]</MudTh><MudTh>@L["Topics:Columns:Retention"]</MudTh><MudTh>@L["Topics:Columns:Actions"]</MudTh></HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="@L["Topics:Columns:Name"]">
                         <div class="topic-identity">
-                            <div class="topic-name">
-                                <MudText Typo="Typo.body2">@context.TopicName</MudText>
-                                @if (!context.IsMetadataAvailable)
-                                {
-                                    <MudTooltip Text="@L["Topics:Values:MetadataUnavailable", context.MetadataError ?? string.Empty]">
-                                        <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" Size="Size.Small" />
-                                    </MudTooltip>
-                                }
-                            </div>
-                            @if (context.IsInternal)
-                            {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Topics:Values:Internal"]</MudText>
+                            <span class="topic-name">@context.TopicName</span>
+                            @if (context.IsInternal) { <span class="topic-description">@L["Topics:Values:Internal"]</span> }
+                            @if (!context.IsMetadataAvailable) {
+                                <span class="topic-metadata-warning"><MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />@L["Topics:Values:MetadataUnavailable", context.MetadataError ?? string.Empty]</span>
                             }
                         </div>
                     </MudTd>
-                    <MudTd DataLabel="@L["Topics:Columns:Partitions"]">@context.Partitions</MudTd>
-                    <MudTd DataLabel="@L["Topics:Columns:Replication"]">@context.ReplicationFactor</MudTd>
-                    <MudTd DataLabel="@L["Topics:Columns:RetainedMessages"]">
-                        @KafkaMetricDisplayFormatter.FormatOptionalInt64(context.RetainedMessageCount, L["Topics:Values:RetainedMessagesUnknown"])
+                    <MudTd DataLabel="@($"{L["Topics:Columns:Partitions"]} / {L["Topics:Columns:Replication"]}")">
+                        <div class="topic-topology">
+                            <span>@L["Topics:Columns:Partitions"]: @(context.IsMetadataAvailable ? context.Partitions.ToString() : L["Common:Values:Unavailable"].Value)</span>
+                            <span>@L["Topics:Columns:Replication"]: @(context.IsMetadataAvailable ? context.ReplicationFactor.ToString() : L["Common:Values:Unavailable"].Value)</span>
+                        </div>
                     </MudTd>
+                    <MudTd DataLabel="@L["Topics:Columns:RetainedMessages"]">@KafkaMetricDisplayFormatter.FormatOptionalInt64(context.RetainedMessageCount, L["Topics:Values:RetainedMessagesUnknown"])</MudTd>
                     <MudTd DataLabel="@L["Topics:Columns:Retention"]">@FormatRetention(context.RetentionMs)</MudTd>
                     <MudTd DataLabel="@L["Topics:Columns:Actions"]">
-                        <MudMenu Icon="@Icons.Material.Filled.MoreVert"
-                                 Size="Size.Small"
-                                 Dense="true"
-                                 Disabled="@State.IsBusy"
-                                 AriaLabel="@L["Topics:Actions:OpenMenu", context.TopicName]">
-                            <MudMenuItem Icon="@Icons.Material.Filled.Visibility" OnClick="@(() => OnViewMessages.InvokeAsync(context))">
-                                @L["Topics:Actions:Messages"]
-                            </MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Filled.Storage" OnClick="@(() => OnViewBacklog.InvokeAsync(context))">
-                                @L["Topics:Actions:Backlog"]
-                            </MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Filled.Groups" OnClick="@(() => OnViewConsumerGroups.InvokeAsync(context))">
-                                @L["Topics:Actions:ConsumerGroups"]
-                            </MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Filled.CallSplit" OnClick="@(() => OnIncreasePartitions.InvokeAsync(context))">
-                                @L["Topics:Actions:Partitions"]
-                            </MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Filled.Schedule" OnClick="@(() => OnUpdateRetention.InvokeAsync(context))">
-                                @L["Topics:Actions:Retention"]
-                            </MudMenuItem>
+                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Disabled="@IsBusy" AriaLabel="@L["Topics:Actions:OpenMenu", context.TopicName]">
+                            <MudMenuItem Icon="@Icons.Material.Outlined.Visibility" OnClick="@(() => OnViewMessages.InvokeAsync(context))">@L["Topics:Actions:Messages"]</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.Storage" OnClick="@(() => OnViewBacklog.InvokeAsync(context))">@L["Topics:Actions:Backlog"]</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.Groups" OnClick="@(() => OnViewConsumerGroups.InvokeAsync(context))">@L["Topics:Actions:ConsumerGroups"]</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.CallSplit" Disabled="@(!context.IsMetadataAvailable)" OnClick="@(() => OnIncreasePartitions.InvokeAsync(context))">@L["Topics:Actions:Partitions"]</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.Schedule" Disabled="@(!context.IsMetadataAvailable)" OnClick="@(() => OnUpdateRetention.InvokeAsync(context))">@L["Topics:Actions:Retention"]</MudMenuItem>
                             <MudDivider />
-                            <MudMenuItem Icon="@Icons.Material.Filled.DeleteSweep"
-                                         IconColor="Color.Error"
-                                         Disabled="@(!context.IsMetadataAvailable || context.IsInternal)"
-                                         OnClick="@(() => OnClearMessages.InvokeAsync(context))">
-                                @L["Topics:Actions:ClearMessages"]
-                            </MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Filled.Delete"
-                                         IconColor="Color.Error"
-                                         OnClick="@(() => OnDelete.InvokeAsync(context))">
-                                @L["Common:Actions:Delete"]
-                            </MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.DeleteSweep" IconColor="Color.Error" Disabled="@(!context.IsMetadataAvailable || context.IsInternal)" OnClick="@(() => OnClearMessages.InvokeAsync(context))">@L["Topics:Actions:ClearMessages"]</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.Delete" IconColor="Color.Error" OnClick="@(() => OnDelete.InvokeAsync(context))">@L["Common:Actions:Delete"]</MudMenuItem>
                         </MudMenu>
                     </MudTd>
                 </RowTemplate>
-                <PagerContent>
-                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" />
-                </PagerContent>
+                <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
             </MudTable>
         </KafkaTableSurface>
     }
-</MudStack>
-
+</div>
 @code {
     private string _searchText = string.Empty;
     private int _rowsPerPage = 25;
-
-    [Parameter, EditorRequired]
-    public EventBusKafkaPageState State { get; set; } = default!;
-
-    [Parameter]
-    public EventCallback OnCreate { get; set; }
-
-    [Parameter]
-    public EventCallback OnRefresh { get; set; }
-
-    [Parameter]
-    public EventCallback<KafkaTopicSummary> OnDelete { get; set; }
-
-    [Parameter]
-    public EventCallback<KafkaTopicSummary> OnViewMessages { get; set; }
-
-    [Parameter]
-    public EventCallback<KafkaTopicSummary> OnViewBacklog { get; set; }
-
-    [Parameter]
-    public EventCallback<KafkaTopicSummary> OnViewConsumerGroups { get; set; }
-
-    [Parameter]
-    public EventCallback<KafkaTopicSummary> OnIncreasePartitions { get; set; }
-
-    [Parameter]
-    public EventCallback<KafkaTopicSummary> OnUpdateRetention { get; set; }
-
-    [Parameter]
-    public EventCallback<KafkaTopicSummary> OnClearMessages { get; set; }
-
-    private bool FilterTopic(KafkaTopicSummary topic)
-    {
-        var searchText = _searchText.Trim();
-        return searchText.Length == 0 ||
-               topic.TopicName.Contains(searchText, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private string FormatRetention(long? retentionMs)
-    {
-        return retentionMs is null
-            ? L["Topics:Values:RetentionUnknown"]
-            : L["Topics:Values:RetentionMs", retentionMs.Value];
-    }
+    private readonly HashSet<string> _filters = [];
+    [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
+    /// <summary>Gets or sets the optional owner-supplied disable state; null uses the page state's busy state.</summary>
+    [Parameter] public bool? InteractionBusy { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback<KafkaTopicSummary> OnDelete { get; set; }
+    [Parameter] public EventCallback<KafkaTopicSummary> OnViewMessages { get; set; }
+    [Parameter] public EventCallback<KafkaTopicSummary> OnViewBacklog { get; set; }
+    [Parameter] public EventCallback<KafkaTopicSummary> OnViewConsumerGroups { get; set; }
+    [Parameter] public EventCallback<KafkaTopicSummary> OnIncreasePartitions { get; set; }
+    [Parameter] public EventCallback<KafkaTopicSummary> OnUpdateRetention { get; set; }
+    [Parameter] public EventCallback<KafkaTopicSummary> OnClearMessages { get; set; }
+    private bool IsBusy => InteractionBusy ?? State.IsBusy;
+    private List<KafkaTopicSummary> FilteredTopics => State.Topics.Where(topic =>
+        (string.IsNullOrWhiteSpace(_searchText) || topic.TopicName.Contains(_searchText.Trim(), StringComparison.OrdinalIgnoreCase)) &&
+        (_filters.Count == 0 || (_filters.Contains("application") && !topic.IsInternal) ||
+         (_filters.Contains("internal") && topic.IsInternal) || (_filters.Contains("unavailable") && !topic.IsMetadataAvailable))).ToList();
+    private string FormatRetention(long? value) => value is null ? L["Topics:Values:RetentionUnknown"] : L["Topics:Values:RetentionMs", value.Value];
+    private void ClearFilters() => _filters.Clear();
+    private void ToggleFilter(string filter) { if (!_filters.Add(filter)) _filters.Remove(filter); }
+    private void ResetFilters() { _searchText = string.Empty; _filters.Clear(); }
 }

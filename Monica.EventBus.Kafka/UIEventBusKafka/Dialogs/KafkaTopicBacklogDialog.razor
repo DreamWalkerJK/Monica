@@ -1,51 +1,57 @@
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<EventBusKafkaResource> L
 
-<MudDialog>
+<MudDialog Gutters="false">
+    <TitleContent><MoDialogHeading Text="@L["Topics:Dialog:BacklogTitle", Snapshot.TopicName]" /></TitleContent>
     <DialogContent>
-        <MudStack Spacing="3">
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                @L["Topics:BacklogDialog:Summary", Snapshot.TotalRetainedMessageCount, FormatCapturedAt()]
-            </MudAlert>
+        <div class="kafka-dialog-body">
+            <MudStack Spacing="3">
+                <KafkaDialogContext ClusterId="@(ClusterId ?? Snapshot.ClusterId)" TopicName="@Snapshot.TopicName" />
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @L["Topics:BacklogDialog:Summary", Snapshot.TotalRetainedMessageCount, FormatCapturedAt()]
+                </MudAlert>
 
-            @if (Snapshot.Partitions.Count == 0)
-            {
-                <KafkaWorkspaceState Icon="@Icons.Material.Filled.TableRows"
-                                     Title="@L["Topics:Actions:Backlog"]"
-                                     Description="@L["Topics:BacklogDialog:Empty"]"
-                                     AccentColor="Color.Warning" />
-            }
-            else
-            {
-                <KafkaTableSurface AriaLabel="@L["Topics:Actions:Backlog"]"
-                                   AccentColor="Color.Info"
-                                   Size="KafkaTableSurfaceSize.Compact">
-                    <MudTable T="KafkaTopicPartitionBacklog"
-                              Items="Snapshot.Partitions"
-                              Dense="true"
-                              Hover="true"
-                              Striped="true"
-                              Breakpoint="Breakpoint.None">
-                        <HeaderContent>
-                            <MudTh>@L["Topics:BacklogDialog:Columns:Partition"]</MudTh>
-                            <MudTh>@L["Topics:BacklogDialog:Columns:EarliestOffset"]</MudTh>
-                            <MudTh>@L["Topics:BacklogDialog:Columns:LatestOffset"]</MudTh>
-                            <MudTh>@L["Topics:BacklogDialog:Columns:RetainedMessages"]</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:Partition"]">@context.Partition</MudTd>
-                            <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:EarliestOffset"]">@context.EarliestOffset</MudTd>
-                            <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:LatestOffset"]">@context.LatestOffset</MudTd>
-                            <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:RetainedMessages"]">@context.RetainedMessageCount</MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                </KafkaTableSurface>
-            }
-        </MudStack>
+                @if (Snapshot.Partitions.Count == 0)
+                {
+                    <KafkaWorkspaceState Icon="@Icons.Material.Filled.TableRows"
+                                         Title="@L["Topics:Actions:Backlog"]"
+                                         Description="@L["Topics:BacklogDialog:Empty"]"
+                                         AccentColor="Color.Info" />
+                }
+                else
+                {
+                    <KafkaTableSurface AriaLabel="@L["Topics:Actions:Backlog"]"
+                                       AccentColor="Color.Info"
+                                       Size="KafkaTableSurfaceSize.Compact">
+                        <MudTable T="KafkaTopicPartitionBacklog"
+                                  Items="Snapshot.Partitions"
+                                  Dense="true"
+                                  Hover="true"
+                                  Striped="true"
+                                  Breakpoint="Breakpoint.Xs" Square="true" Elevation="0" RowsPerPage="25">
+                            <HeaderContent>
+                                <MudTh>@L["Topics:BacklogDialog:Columns:Partition"]</MudTh>
+                                <MudTh>@L["Topics:BacklogDialog:Columns:EarliestOffset"]</MudTh>
+                                <MudTh>@L["Topics:BacklogDialog:Columns:LatestOffset"]</MudTh>
+                                <MudTh>@L["Topics:BacklogDialog:Columns:RetainedMessages"]</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:Partition"]">@context.Partition</MudTd>
+                                <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:EarliestOffset"]">@context.EarliestOffset</MudTd>
+                                <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:LatestOffset"]">@context.LatestOffset</MudTd>
+                                <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:RetainedMessages"]">@context.RetainedMessageCount</MudTd>
+                            </RowTemplate>
+                            <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
+                        </MudTable>
+                    </KafkaTableSurface>
+                }
+            </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">
+        <KafkaPrimaryButton OnClick="Close">
             @L["Common:Actions:Close"]
-        </MudButton>
+        </KafkaPrimaryButton>
     </DialogActions>
 </MudDialog>
 
@@ -53,6 +59,9 @@
     [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
 
     [Parameter, EditorRequired] public KafkaTopicBacklogSnapshot Snapshot { get; set; } = new();
+
+    /// <summary>Gets or sets the exact frozen cluster identity, when supplied by the opener.</summary>
+    [Parameter] public string? ClusterId { get; set; }
 
     private string FormatCapturedAt()
     {

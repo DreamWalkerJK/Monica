@@ -118,6 +118,8 @@ Avoid scattering one-off page fixes throughout the theme file.
 
 Global `.mud-button` rules must not force pill radii, padding, or minimum height with `!important`. Appearance preview cards and compact shell triggers own their geometry; broad forced button paint can turn cards into pills and make real trigger widths differ from the navigation measurement rail. Set modest theme defaults without overriding component-owned shape or spacing. Inspect compiled isolation selectors and live computed styles when a local rule loses, and verify Appearance cards, ordinary actions, and Topbar overflow together.
 
+Pair filled action and identity-surface paint with the palette's corresponding contrast-text role. A theme's shared button rule can override that foreground even when the component selects the correct `Color`; inspect the actual computed pair. A darker palette shade can improve light foreground contrast but must also remain readable with themes that supply dark contrast text. Verify enabled actions at rest, hover and keyboard focus across light and dark modes, alongside the disabled native state. Keep a feature's deliberate paint override scoped to its owned component and preserve native activation, navigation, focus and geometry. Check muted identities and responsive field captions against selected-row backgrounds as well as plain surfaces; a secondary color that passes on the latter may fail on the former.
+
 ## High-Risk Component Areas
 
 ### Drawer positioning belongs to its layout owner

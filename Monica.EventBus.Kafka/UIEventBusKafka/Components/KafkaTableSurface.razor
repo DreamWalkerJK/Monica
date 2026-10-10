@@ -10,7 +10,7 @@
     public RenderFragment ChildContent { get; set; } = default!;
 
     /// <summary>
-    /// Gets or sets the accessible name used for the locally scrollable evidence region.
+    /// Gets or sets the accessible name used for the evidence region. The native table owns required horizontal scrolling.
     /// </summary>
     [Parameter, EditorRequired]
     public string AriaLabel { get; set; } = string.Empty;
@@ -22,7 +22,7 @@
     public Color AccentColor { get; set; } = Color.Primary;
 
     /// <summary>
-    /// Gets or sets the minimum table width required to preserve column alignment.
+    /// Gets or sets the density category. This does not force a minimum width or nested vertical scroll area.
     /// </summary>
     [Parameter]
     public KafkaTableSurfaceSize Size { get; set; } = KafkaTableSurfaceSize.Standard;

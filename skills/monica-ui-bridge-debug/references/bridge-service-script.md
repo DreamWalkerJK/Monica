@@ -79,6 +79,8 @@ Default probe behavior:
 
 If rule 2 succeeds before rule 1, the command returns success with `ready-with-warning` unless `--strict-marker` is provided.
 
+Service readiness does not prove that Blazor's interactive circuit or the target page's data is ready. Prerendered content can satisfy an initial DOM predicate and then be replaced by a loading view during interactive initialization. Before capturing populated evidence, exercise a native control and observe its real response, such as opening and closing the shell's Appearance dialog, then wait for the exact route context and the page's loaded state. Repeat the interactive check after a full document navigation or reload. Use synchronous predicates with `waitForFunction`; an async predicate can yield a truthy Promise before the requested state exists. Await asynchronous stability checks separately with `page.evaluate`, and reject a busy state without assuming a false boolean attribute is rendered as the literal string `false`. Preserve a capture taken during loading as loading evidence; do not publish it as a populated-page review or replace the handshake with a guessed delay.
+
 ### Stale CSS imports after dependent builds
 
 The consumer's generated `<App>.styles.css` imports fingerprinted CSS bundles from Razor class libraries. Rebuilding one of those libraries while the bridge keeps running can replace its bundle without regenerating the consumer's import and static-asset manifest. The affected page then renders markup with CSS isolation scope attributes but no matching styles; an obsolete bundle request may even respond with an empty body. A successful page or stylesheet entry-point status alone does not prove that the imported bundle loaded.

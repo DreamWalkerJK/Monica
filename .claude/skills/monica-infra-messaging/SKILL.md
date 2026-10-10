@@ -11,6 +11,7 @@ Choose the communication boundary before the transport; database-coupled deliver
 | --- | --- |
 | Notify typed handlers within one process or across processes | [EventBus](references/event-bus.md) |
 | Inspect EventBus subscriptions, transport status, providers, or diagnostic listeners | [EventBus diagnostics](references/event-bus-diagnostics.md) |
+| Configure the Kafka console or inspect broker clusters, topics, consumer groups, and offset samples | [Kafka console](references/kafka-console.md) |
 | Call another application's published request contract and await a result | [RPC client](references/rpc.md) |
 | Recover structured remote failures from Dapr actor calls | [Dapr diagnostics](references/dapr-diagnostics.md) |
 | Send through or inspect a named bidirectional pipeline owned by one host | [DataChannel](references/data-channels.md) |

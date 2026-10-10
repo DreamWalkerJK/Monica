@@ -1,17 +1,17 @@
 .message-dialog {
-    max-height: min(72vh, 760px);
-    overflow: auto;
-    padding-right: 4px;
+    min-width: 0;
+    padding: 20px;
 }
 
 .message-item {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 14px;
+    gap: 16px;
+    padding: 20px;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 8px;
+    border-radius: var(--mud-default-borderradius);
     background: var(--mud-palette-surface);
+    min-width: 0;
 }
 
 .message-item__header {
@@ -19,12 +19,13 @@
     justify-content: space-between;
     gap: 12px;
     align-items: flex-start;
+    min-width: 0;
 }
 
 .message-meta {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    gap: 16px;
     margin: 0;
 }
 
@@ -33,39 +34,41 @@
 }
 
 .message-meta dt {
-    margin: 0 0 3px;
+    margin: 0 0 5px;
     color: var(--mud-palette-text-secondary);
-    font-size: 0.75rem;
+    font-size: .75rem;
 }
 
 .message-meta dd {
     margin: 0;
     min-width: 0;
+    font-size: .8125rem;
+    line-height: 1.65;
     overflow-wrap: anywhere;
 }
 
 .message-body {
-    max-height: 260px;
     margin: 0;
-    overflow: auto;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    padding: 12px;
-    border-radius: 8px;
+    padding: 20px;
+    border-radius: var(--mud-default-borderradius);
     border: 1px solid var(--mud-palette-lines-default);
     background: var(--mud-palette-background-gray);
     color: var(--mud-palette-text-primary);
-    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
-    font-size: 0.8125rem;
-    line-height: 1.55;
+    font-family: var(--mo-font-family-mono);
+    font-size: .8125rem;
+    line-height: 1.65;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 600px) {
+    .message-dialog, .message-item, .message-body {
+        padding: 16px;
+    }
     .message-item__header {
         flex-direction: column;
     }
-
     .message-meta {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }

@@ -1,157 +1,117 @@
 @using Monica.EventBus.Kafka.UIEventBusKafka.State
 @inject IStringLocalizer<EventBusKafkaResource> L
 
-<MudStack Spacing="3">
-    <KafkaWorkspaceHeader Icon="@Icons.Material.Filled.Storage"
-                          Title="@L["Clusters:Title"]"
-                          Subtitle="@L["Clusters:Summary", State.Clusters.Count]" />
-
-    @if (State.Clusters.Count == 0)
+<div class="cluster-workspace">
+    <KafkaWorkspaceHeader Icon="@Icons.Material.Outlined.Storage" Title="@L["Clusters:Title"]" Subtitle="@(State.HasLoadedConfiguration ? L["Clusters:Summary", State.Clusters.Count] : L["Common:Values:Unavailable"])">
+        <Actions>
+            <KafkaPrimaryButton StartIcon="@Icons.Material.Filled.Add" Disabled="@IsBusy" OnClick="OnCreate">@L["Clusters:Actions:New"]</KafkaPrimaryButton>
+        </Actions>
+    </KafkaWorkspaceHeader>
+    <div class="cluster-tools">
+        <div class="cluster-search">
+            <MudTextField T="string" @bind-Value="_search" Immediate="true" DebounceInterval="200" Clearable="true"
+                          Label="@L["Clusters:Search:Label"]" Placeholder="@L["Clusters:Search:Placeholder"]"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </div>
+        @if (State.HasLoadedConfiguration)
+        {
+        <div class="cluster-filters" aria-label="@L["Clusters:Columns:Status"]">
+            <KafkaStatusFilter Text="@L["Common:Filters:All"]" Count="@State.Clusters.Count" Color="Color.Primary" Selected="@(_statuses.Count == 0)" OnClick="ClearStatuses" />
+            @foreach (var status in Statuses)
+            {
+                <KafkaStatusFilter Text="@GetStatusLabel(status)" Count="@State.Clusters.Count(cluster => GetStatus(cluster) == status)"
+                                   Color="@GetStatusColor(status)" Selected="@_statuses.Contains(status)" OnClick="@(() => ToggleStatus(status))" />
+            }
+        </div>
+        }
+    </div>
+    @if (!State.HasLoadedConfiguration)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Filled.Storage"
-                             Title="@L["Clusters:Title"]"
-                             Description="@L["Clusters:Empty"]"
-                             AccentColor="Color.Info"
-                             ActionLabel="@L["Clusters:Actions:New"]"
-                             ActionIcon="@Icons.Material.Filled.Add"
-                             ActionDisabled="@State.IsBusy"
-                             OnAction="OnCreate" />
+        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Storage" Title="@L["Clusters:Title"]" Description="@(State.IsLoading ? L["Page:States:LoadingDescription"] : L["Common:Values:Unavailable"])" />
+    }
+    else if (State.Clusters.Count == 0)
+    {
+        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Storage" Title="@L["Clusters:Title"]" Description="@L["Clusters:Empty"]" AccentColor="Color.Info"
+                             ActionLabel="@L["Clusters:Actions:New"]" ActionIcon="@Icons.Material.Filled.Add" ActionDisabled="@IsBusy" OnAction="OnCreate" />
+    }
+    else if (FilteredClusters.Count == 0)
+    {
+        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.SearchOff" Title="@L["Clusters:Search:NoMatches"]" Description="@L["Clusters:Search:Placeholder"]"
+                             ActionLabel="@L["Common:Actions:ResetFilters"]" OnAction="ResetFilters" />
     }
     else
     {
-        <KafkaTableSurface AriaLabel="@L["Clusters:Title"]"
-                           AccentColor="Color.Primary"
-                           Size="KafkaTableSurfaceSize.Standard">
-            <MudTable T="KafkaClusterSummary"
-                      Items="@State.Clusters"
-                      RowsPerPage="25"
-                      Dense="true"
-                      Hover="true"
-                      Striped="true"
-                      Breakpoint="Breakpoint.None"
-                      RowClassFunc="@GetRowClass"
-                      Bordered="false">
+        <KafkaTableSurface AriaLabel="@L["Clusters:Title"]">
+            <MudTable T="KafkaClusterSummary" Items="@FilteredClusters" RowsPerPage="25" Dense="true" Hover="true" Square="true" Elevation="0"
+                      Breakpoint="Breakpoint.Xs" RowClassFunc="@GetRowClass">
                 <HeaderContent>
-                    <MudTh>@L["Clusters:Columns:Name"]</MudTh>
-                    <MudTh>@L["Clusters:Columns:Bootstrap"]</MudTh>
-                    <MudTh>@L["Clusters:Columns:Mode"]</MudTh>
-                    <MudTh>@L["Clusters:Columns:Status"]</MudTh>
-                    <MudTh>@L["Clusters:Columns:Actions"]</MudTh>
+                    <MudTh>@L["Clusters:Columns:Name"]</MudTh><MudTh>@L["Clusters:Columns:Bootstrap"]</MudTh>
+                    <MudTh>@L["Clusters:Columns:Status"]</MudTh><MudTh>@L["Clusters:Columns:Actions"]</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="@L["Clusters:Columns:Name"]">
                         <div class="cluster-identity">
-                            <MudText Typo="Typo.body2" Class="cluster-display-name">@context.Config.DisplayName</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="cluster-id">@context.Config.ClusterId</MudText>
+                            <span class="cluster-display-name">@context.Config.DisplayName</span>
+                            <span class="cluster-id">@context.Config.ClusterId</span>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(context.Config.IsDaprBacked ? Color.Info : Color.Primary)">
+                                @(context.Config.IsDaprBacked ? L["Clusters:Modes:DaprBacked"] : L["Clusters:Modes:Direct"])
+                            </MudChip>
                         </div>
                     </MudTd>
-                    <MudTd DataLabel="@L["Clusters:Columns:Bootstrap"]">
-                        <span class="cluster-bootstrap">@GetBootstrapText(context)</span>
-                    </MudTd>
-                    <MudTd DataLabel="@L["Clusters:Columns:Mode"]">
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetClusterModeColor(context)">
-                            @GetClusterMode(context)
-                        </MudChip>
-                    </MudTd>
+                    <MudTd DataLabel="@L["Clusters:Columns:Bootstrap"]"><span class="cluster-bootstrap">@GetBootstrapText(context)</span></MudTd>
                     <MudTd DataLabel="@L["Clusters:Columns:Status"]">
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetStatusColor(context)">
-                            @GetStatusText(context)
-                        </MudChip>
+                        <div class="cluster-evidence">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetStatusColor(GetStatus(context))">@GetStatusLabel(GetStatus(context))</MudChip>
+                            @if (!string.IsNullOrWhiteSpace(context.ErrorMessage))
+                            {
+                                <span class="cluster-error">@context.ErrorMessage</span>
+                            }
+                        </div>
                     </MudTd>
                     <MudTd DataLabel="@L["Clusters:Columns:Actions"]">
                         <div class="cluster-row-actions">
-                            <MudTooltip Text="@L["Common:Actions:Select"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.CheckCircle"
-                                               Size="Size.Small"
-                                               Disabled="@(State.IsBusy || !context.IsReachable)"
-                                               OnClick="@(() => OnSelect.InvokeAsync(context))"
-                                               aria-label="@L["Common:Actions:Select"]" />
-                            </MudTooltip>
-                            <MudTooltip Text="@L["Common:Actions:Edit"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                               Size="Size.Small"
-                                               Disabled="@State.IsBusy"
-                                               OnClick="@(() => OnEdit.InvokeAsync(context))"
-                                               aria-label="@L["Common:Actions:Edit"]" />
-                            </MudTooltip>
-                            <MudTooltip Text="@L["Clusters:Actions:Test"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.Cable"
-                                               Size="Size.Small"
-                                               Disabled="@(State.IsBusy || !context.Config.HasDirectKafkaAccess)"
-                                               OnClick="@(() => OnTest.InvokeAsync(context))"
-                                               aria-label="@L["Clusters:Actions:Test"]" />
-                            </MudTooltip>
-                            <MudTooltip Text="@L["Common:Actions:Delete"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                               Size="Size.Small"
-                                               Color="Color.Error"
-                                               Disabled="@State.IsBusy"
-                                               OnClick="@(() => OnDelete.InvokeAsync(context))"
-                                               aria-label="@L["Common:Actions:Delete"]" />
-                            </MudTooltip>
+                            <MudTooltip Text="@L["Common:Actions:Select"]"><MudIconButton Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" Disabled="@(IsBusy || !context.IsReachable)" OnClick="@(() => OnSelect.InvokeAsync(context))" aria-label="@L["Common:Actions:Select"]" /></MudTooltip>
+                            <MudTooltip Text="@L["Common:Actions:Edit"]"><MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" Disabled="@IsBusy" OnClick="@(() => OnEdit.InvokeAsync(context))" aria-label="@L["Common:Actions:Edit"]" /></MudTooltip>
+                            <MudTooltip Text="@L["Clusters:Actions:Test"]"><MudIconButton Icon="@Icons.Material.Outlined.Cable" Size="Size.Small" Disabled="@(IsBusy || !context.Config.HasDirectKafkaAccess)" OnClick="@(() => OnTest.InvokeAsync(context))" aria-label="@L["Clusters:Actions:Test"]" /></MudTooltip>
+                            <MudTooltip Text="@L["Common:Actions:Delete"]"><MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error" Disabled="@IsBusy" OnClick="@(() => OnDelete.InvokeAsync(context))" aria-label="@L["Common:Actions:Delete"]" /></MudTooltip>
                         </div>
                     </MudTd>
                 </RowTemplate>
-                <PagerContent>
-                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" />
-                </PagerContent>
+                <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
             </MudTable>
         </KafkaTableSurface>
     }
-</MudStack>
+</div>
 
 @code {
+    private string _search = string.Empty;
+    private readonly HashSet<string> _statuses = [];
+    private static readonly string[] Statuses = ["reachable", "failed", "untested", "limited"];
     [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
-
+    /// <summary>Gets or sets the optional owner-supplied disable state; null uses the page state's busy state.</summary>
+    [Parameter] public bool? InteractionBusy { get; set; }
     [Parameter] public EventCallback OnCreate { get; set; }
-
     [Parameter] public EventCallback OnRefresh { get; set; }
-
     [Parameter] public EventCallback<KafkaClusterSummary> OnSelect { get; set; }
-
     [Parameter] public EventCallback<KafkaClusterSummary> OnEdit { get; set; }
-
     [Parameter] public EventCallback<KafkaClusterSummary> OnDelete { get; set; }
-
     [Parameter] public EventCallback<KafkaClusterSummary> OnTest { get; set; }
-
-    private string GetBootstrapText(KafkaClusterSummary cluster)
-    {
-        return string.IsNullOrWhiteSpace(cluster.Config.BootstrapServers)
-            ? L["Clusters:Values:ExternalBootstrap"]
-            : cluster.Config.BootstrapServers;
-    }
-
-    private string GetClusterMode(KafkaClusterSummary cluster)
-    {
-        return cluster.Config.IsDaprBacked ? L["Clusters:Modes:DaprBacked"] : L["Clusters:Modes:Direct"];
-    }
-
-    private static Color GetClusterModeColor(KafkaClusterSummary cluster)
-    {
-        return cluster.Config.IsDaprBacked ? Color.Info : Color.Primary;
-    }
-
-    private string GetStatusText(KafkaClusterSummary cluster)
-    {
-        if (cluster.IsReachable)
-        {
-            return L["Clusters:Status:Reachable"];
-        }
-
-        return cluster.Config.HasDirectKafkaAccess ? L["Clusters:Status:Unknown"] : L["Clusters:Status:Limited"];
-    }
-
-    private static Color GetStatusColor(KafkaClusterSummary cluster)
-    {
-        if (cluster.IsReachable)
-        {
-            return Color.Success;
-        }
-
-        return cluster.Config.HasDirectKafkaAccess ? Color.Secondary : Color.Warning;
-    }
-
-    private string GetRowClass(KafkaClusterSummary cluster, int _) =>
-        cluster.Config.ClusterId == State.SelectedClusterId ? "cluster-row--selected" : string.Empty;
+    private bool IsBusy => InteractionBusy ?? State.IsBusy;
+    private List<KafkaClusterSummary> FilteredClusters => State.Clusters.Where(cluster =>
+        (_statuses.Count == 0 || _statuses.Contains(GetStatus(cluster))) &&
+        (string.IsNullOrWhiteSpace(_search) || cluster.Config.DisplayName.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase) ||
+         cluster.Config.ClusterId.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase) ||
+         cluster.Config.BootstrapServers.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+    private static string GetStatus(KafkaClusterSummary cluster) => cluster.IsReachable ? "reachable" :
+        !cluster.Config.HasDirectKafkaAccess ? "limited" : !string.IsNullOrWhiteSpace(cluster.ErrorMessage) ? "failed" : "untested";
+    private string GetStatusLabel(string status) => status switch {
+        "reachable" => L["Clusters:Status:Reachable"], "failed" => L["Clusters:Status:ConnectionFailed"],
+        "limited" => L["Clusters:Status:Limited"], _ => L["Clusters:Status:Unknown"] };
+    private static Color GetStatusColor(string status) => status switch {
+        "reachable" => Color.Success, "failed" => Color.Error, "limited" => Color.Warning, _ => Color.Default };
+    private string GetBootstrapText(KafkaClusterSummary cluster) => string.IsNullOrWhiteSpace(cluster.Config.BootstrapServers) ? L["Clusters:Values:ExternalBootstrap"] : cluster.Config.BootstrapServers;
+    private string GetRowClass(KafkaClusterSummary cluster, int _) => cluster.Config.ClusterId == State.SelectedClusterId ? "cluster-row--selected" : string.Empty;
+    private void ClearStatuses() => _statuses.Clear();
+    private void ToggleStatus(string status) { if (!_statuses.Add(status)) _statuses.Remove(status); }
+    private void ResetFilters() { _search = string.Empty; _statuses.Clear(); }
 }

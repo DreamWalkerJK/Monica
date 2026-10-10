@@ -1,0 +1,11 @@
+@page "/eventbus-kafka/workspaces/consumer-groups"
+@using Monica.EventBus.Kafka.UIEventBusKafka.Workspaces
+
+<KafkaWorkbench @key="ClusterId" Workspace="KafkaWorkspace.ConsumerGroups" ClusterId="@ClusterId" />
+
+@code {
+    /// <summary>Provides the consumer-group inspection route.</summary>
+    public const string PAGE_URL = "/eventbus-kafka/workspaces/consumer-groups";
+    /// <summary>Gets or sets the exact selected broker identity.</summary>
+    [SupplyParameterFromQuery(Name = "cluster")] public string? ClusterId { get; set; }
+}
