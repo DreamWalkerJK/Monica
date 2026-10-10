@@ -223,18 +223,22 @@ public class ChannelPipeline : IObservableInstance
     /// <summary>
     /// Sends data through the pipeline.
     /// The data is processed by transform middleware and then dispatched to the opposite endpoint based on its source side.
+    /// The original cancellation token owns the entire delivery, even when middleware replaces the context.
     /// </summary>
     /// <param name="data">The data context to send.</param>
     /// <returns>A task that represents the asynchronous send operation.</returns>
     public async Task SendDataAsync(ChannelDataContext data)
     {
-        data.CancellationToken.ThrowIfCancellationRequested();
+        var cancellationToken = data.CancellationToken;
+        cancellationToken.ThrowIfCancellationRequested();
         // Run transform middleware.
         await TransformMiddlewares.DoAsync(async p =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 data = await p.PassAsync(data);
+                data.CancellationToken = cancellationToken;
             }
             catch (Exception ex)
             {
@@ -244,7 +248,7 @@ public class ChannelPipeline : IObservableInstance
         });
 
 
-        data.CancellationToken.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
         // Dispatch to the target endpoint.
         try
         {

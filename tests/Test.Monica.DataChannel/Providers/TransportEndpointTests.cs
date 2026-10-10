@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Modularity.Abstractions;
 using Monica.DataChannel.Abstractions;
 using Monica.DataChannel.Abstractions.Communication;
+using Monica.DataChannel.Middlewares;
 using Monica.DataChannel.Pipeline;
 using Monica.DataChannel.Providers.Default;
 using Monica.DataChannel.Providers.Serial;
@@ -192,6 +193,52 @@ public sealed class TransportEndpointTests
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Pipeline_WhenTransformReplacesContext_ShouldPreserveDeliveryCancellation(bool cancelDuringTransform)
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using var deliveryCancellation = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token);
+        var transformEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseTransform = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var receiverEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var middleware = new ContextReplacementMiddleware(async context =>
+        {
+            var replacement = new ChannelDataContext(context.Source, context.Data).CopyMetadata(context);
+            context.CancellationToken = CancellationToken.None;
+            transformEntered.SetResult();
+            await releaseTransform.Task.WaitAsync(deadline.Token);
+            return replacement;
+        });
+        var factory = new ChannelFactory(channels => channels.Add("test", pipe => pipe
+            .SetOuterEndpoint(new DefaultEndpointOptions())
+            .SetInnerEndpoint<RecordingEndpoint>()
+            .AddPipeMiddleware(middleware)));
+        factory.Probe.OnReceive = async data =>
+        {
+            Assert.Equal(deliveryCancellation.Token, data.CancellationToken);
+            receiverEntered.SetResult();
+            await Task.Delay(Timeout.Infinite, data.CancellationToken);
+        };
+        await using var application = await factory.CreateAsync(cancellationToken: deadline.Token);
+        var channel = application.Services.GetRequiredService<IDataChannelManager>().Fetch("test")!;
+
+        var delivery = channel.SendDataFromOuterAsync("input", deliveryCancellation.Token);
+        await transformEntered.Task.WaitAsync(deadline.Token);
+        if (cancelDuringTransform) deliveryCancellation.Cancel();
+        releaseTransform.SetResult();
+        if (!cancelDuringTransform)
+        {
+            await receiverEntered.Task.WaitAsync(deadline.Token);
+            deliveryCancellation.Cancel();
+        }
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => delivery.WaitAsync(deadline.Token));
+        Assert.Equal(!cancelDuringTransform, receiverEntered.Task.IsCompleted);
+        Assert.False(factory.Probe.Messages.Reader.TryRead(out _));
+    }
+
+    [Theory]
     [InlineData(0, 8, StopBits.One)]
     [InlineData(9600, 4, StopBits.One)]
     [InlineData(9600, 8, StopBits.None)]
@@ -285,6 +332,12 @@ public sealed class TransportEndpointTests
             if (probe.OnReceive is { } callback) await callback(data);
             await probe.Messages.Writer.WriteAsync(data, data.CancellationToken);
         }
+    }
+
+    private sealed class ContextReplacementMiddleware(Func<ChannelDataContext, Task<ChannelDataContext>> transform)
+        : PipelineTransformMiddlewareBase
+    {
+        public override Task<ChannelDataContext> PassAsync(ChannelDataContext context) => transform(context);
     }
 
     private sealed class ChannelFactory(Action<IDataChannelRegistrar> configure) : MonicaTestApplicationFactory<RecordingEndpoint>
