@@ -1,4 +1,5 @@
 @attribute [Route(PAGE_URL)]
+@implements IAsyncDisposable
 @inject ConfigurationFacade Facade
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
@@ -8,925 +9,144 @@
 <PageTitle>@L["Pages:ConfigurationHistory:Title"]</PageTitle>
 
 <div class="configuration-history-page">
-<MudContainer MaxWidth="MaxWidth.False">
-    <MudStack Spacing="3">
-        <ConfigurationPageHeader Title="@L["Pages:ConfigurationHistory:Title"]"
-                                 Subtitle="@L["History:Subtitle"]"
-                                 Icon="@Icons.Material.Filled.History">
-            <Actions>
-                <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                   Variant="Variant.Outlined"
-                                   OnClick="ReloadAsync"
-                                   aria-label="@L["Common:Actions:Refresh"]" />
-                </MudTooltip>
-            </Actions>
-        </ConfigurationPageHeader>
-
-        @if (_metadataStoreDiagnostic is not null)
-        {
-            <ConfigurationMetadataStoreDiagnosticAlert Diagnostic="@_metadataStoreDiagnostic" />
-        }
-
-        <div class="configuration-history-filters">
-            <MudPaper Outlined="true" Class="pa-3">
-                <MudGrid Spacing="2" Class="configuration-history-filter-grid">
-                    <MudItem xs="12" md="2" lg="2">
-                        <MudSelect T="string"
-                                   @bind-Value="_definitionKey"
-                                   Label="@L["State:Columns:Definition"]"
-                                   Variant="Variant.Outlined"
-                                   Margin="Margin.Dense"
-                                   Clearable="true">
-                            @foreach (var definition in _definitions)
-                            {
-                                <MudSelectItem T="string"
-                                               Value="@definition.DefinitionKey"
-                                               Disabled="@(!definition.CanManage)">
-                                    @DefinitionFilterLabel(definition)
-                                </MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="2" lg="3">
-                        <MudTextField T="string"
-                                      @bind-Value="_pathText"
-                                      Label="@L["Value:Path"]"
-                                      Variant="Variant.Outlined"
-                                      Margin="Margin.Dense" />
-                    </MudItem>
-                    <MudItem xs="12" md="2">
-                        <MudSelect T="string"
-                                   @bind-Value="_targetFilter"
-                                   ToStringFunc="TargetFilterText"
-                                   Label="@L["History:Filters:Target"]"
-                                   Variant="Variant.Outlined"
-                                   Margin="Margin.Dense">
-                            <MudSelectItem T="string" Value="@TARGET_FILTER_ALL">@L["History:Filters:TargetAll"]</MudSelectItem>
-                            <MudSelectItem T="string" Value="@TARGET_FILTER_MONICA">@L["History:Filters:TargetMonica"]</MudSelectItem>
-                            <MudSelectItem T="string" Value="@TARGET_FILTER_EXTERNAL">@L["History:Filters:TargetExternal"]</MudSelectItem>
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="2">
-                        <MudDatePicker @bind-Date="_fromDate"
-                                       Label="@L["History:Filters:From"]"
-                                       Variant="Variant.Outlined"
-                                       Margin="Margin.Dense"
-                                       Editable="true" />
-                    </MudItem>
-                    <MudItem xs="12" md="2">
-                        <MudDatePicker @bind-Date="_toDate"
-                                       Label="@L["History:Filters:To"]"
-                                       Variant="Variant.Outlined"
-                                       Margin="Margin.Dense"
-                                       Editable="true" />
-                    </MudItem>
-                    <MudItem xs="12" md="2" lg="1">
-                        <div class="configuration-history-filter-action">
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       StartIcon="@Icons.Material.Filled.Search"
-                                       FullWidth="true"
-                                       OnClick="LoadAsync">
-                                @L["Common:Actions:Search"]
-                            </MudButton>
-                        </div>
-                    </MudItem>
-                </MudGrid>
-            </MudPaper>
+    <header class="configuration-history-heading">
+        <div>
+            <span class="configuration-history-eyebrow">@L["Workbench:Eyebrow"]</span>
+            <h1>@L["Pages:ConfigurationHistory:Title"]</h1>
+            <p>@L["History:Subtitle"]</p>
         </div>
-
-        <MudTabs Rounded="true" ApplyEffectsToContainer="true">
-            <MudTabPanel Text="@L["History:Tabs:Mutations"]" Icon="@Icons.Material.Filled.List">
-                @if (_loading)
-                {
-                    <MudProgressLinear Indeterminate="true" />
-                }
-                else if (_displayHistory.Count == 0)
-                {
-                    <MudAlert Severity="Severity.Info">@L["History:States:Empty"]</MudAlert>
-                }
-                else
-                {
-                    <div class="configuration-history-table-scroll">
-                    <MudTable T="ConfigurationHistoryDisplayRow" Items="@_displayHistory" Dense="true" Hover="true" Elevation="0">
-                        <HeaderContent>
-                            <MudTh>@L["History:Columns:Time"]</MudTh>
-                            <MudTh>@L["State:Columns:Definition"]</MudTh>
-                            <MudTh>@L["State:Columns:Path"]</MudTh>
-                            <MudTh>@L["History:Columns:Target"]</MudTh>
-                            <MudTh>@L["History:Columns:Kind"]</MudTh>
-                            <MudTh>@L["Group:Label"]</MudTh>
-                            <MudTh />
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="@L["History:Columns:Time"]">@context.ModifiedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
-                            <MudTd DataLabel="@L["State:Columns:Definition"]">
-                                <MudTooltip>
-                                    <ChildContent>
-                                        <MudButton Variant="Variant.Text"
-                                                   Size="Size.Small"
-                                                   Color="Color.Primary"
-                                                   Class="configuration-history-definition-link"
-                                                   OnClick="() => NavigateToDefinition(context.Representative.DefinitionKey, context.DisplayPath)">
-                                            @DefinitionDisplay(context.Representative.DefinitionKey)
-                                        </MudButton>
-                                    </ChildContent>
-                                    <TooltipContent>
-                                        <div class="configuration-history-tooltip-lines">
-                                            @foreach (var line in DefinitionMetadataLines(context.Representative.DefinitionKey))
-                                            {
-                                                <div>@line</div>
-                                            }
-                                        </div>
-                                    </TooltipContent>
-                                </MudTooltip>
-                            </MudTd>
-                            <MudTd DataLabel="@L["State:Columns:Path"]">
-                                <MudTooltip>
-                                    <ChildContent>
-                                        <div class="configuration-history-path-cell">
-                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                <span>@context.DisplayPath.ToCanonicalString()</span>
-                                                @if (context.IsCollapsed)
-                                                {
-                                                    <MudChip T="int" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                                                        @L["History:CollapsedCount", context.Rows.Count]
-                                                    </MudChip>
-                                                }
-                                            </MudStack>
-                                        </div>
-                                    </ChildContent>
-                                    <TooltipContent>
-                                        <div class="configuration-history-tooltip-lines">
-                                            @foreach (var line in PathMetadataLines(context))
-                                            {
-                                                <div>@line</div>
-                                            }
-                                        </div>
-                                    </TooltipContent>
-                                </MudTooltip>
-                            </MudTd>
-                            <MudTd DataLabel="@L["History:Columns:Target"]">
-                                <MudTooltip Text="@HistoryTargetTooltip(context.Rows)">
-                                    <MudChip T="string"
-                                             Size="Size.Small"
-                                             Color="@HistoryTargetColor(context.Rows)"
-                                             Variant="Variant.Outlined"
-                                             Icon="@HistoryTargetIcon(context.Rows)">
-                                        @HistoryTargetLabel(context.Rows)
-                                    </MudChip>
-                                </MudTooltip>
-                            </MudTd>
-                            <MudTd DataLabel="@L["History:Columns:Kind"]">@context.Representative.MutationKind</MudTd>
-                            <MudTd DataLabel="@L["Group:Label"]">@GroupLabel(context.Representative.MutationGroupId)</MudTd>
-                            <MudTd>
-                                <MudStack Row="true" Spacing="1" Justify="Justify.FlexEnd">
-                                    <MudTooltip Text="@L["History:Actions:ViewChange"]">
-                                        <MudIconButton Icon="@Icons.Material.Filled.CompareArrows"
-                                                       Size="Size.Small"
-                                                       OnClick="() => ShowHistoryAsync(context)" />
-                                    </MudTooltip>
-                                    <MudTooltip Text="@RollbackTooltip(CanRollbackHistory(context))">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Restore"
-                                                       Size="Size.Small"
-                                                       Color="Color.Warning"
-                                                       Disabled="@(!CanRollbackHistory(context))"
-                                                       OnClick="() => RollbackHistoryAsync(context)" />
-                                    </MudTooltip>
-                                </MudStack>
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh"
+                   Disabled="@_loading" OnClick="ReloadAsync">@L["Common:Actions:Refresh"]</MudButton>
+    </header>
+    <ConfigurationWorkbenchNavigation ActiveRoute="@PAGE_URL" />
+    @if (_metadataStoreDiagnostic is not null)
+    {
+        <ConfigurationMetadataStoreDiagnosticAlert Diagnostic="@_metadataStoreDiagnostic" />
+    }
+    <section class="configuration-history-workspace" aria-label="@L["History:Workbench:Records"]">
+        <div class="configuration-history-introduction">
+            <div class="configuration-history-introduction-copy">
+                <span class="configuration-history-eyebrow">@L["History:Workbench:Evidence"]</span>
+                <h2>@L["History:Workbench:Records"]</h2>
+                <p>@L["History:Workbench:EvidenceHelp"]</p>
+            </div>
+            <div class="configuration-history-scope"><MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Small" /><span>@L["History:Workbench:Scope"]</span></div>
+        </div>
+        <div class="configuration-history-filters" role="search" aria-label="@L["History:Workbench:Filters"]">
+            <div class="configuration-history-filter-grid">
+                <div class="configuration-history-definition-filter">
+                    <MudSelect T="string" @bind-Value="_definitionKey" Label="@L["State:Columns:Definition"]" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Disabled="@_loading">
+                        @foreach (var definition in _definitions)
+                        {
+                            <MudSelectItem T="string" Value="@definition.DefinitionKey" Disabled="@(!definition.CanManage)">@DefinitionFilterLabel(definition)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </div>
+                <div class="configuration-history-path-filter"><MudTextField T="string" @bind-Value="_pathText" Label="@L["Value:Path"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@_loading" aria-label="@L["Value:Path"]" /></div>
+                <div><MudDatePicker @bind-Date="_fromDate" Label="@L["History:Filters:From"]" AdornmentAriaLabel="@L["History:Workbench:OpenFrom"]" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@_loading" /></div>
+                <div><MudDatePicker @bind-Date="_toDate" Label="@L["History:Filters:To"]" AdornmentAriaLabel="@L["History:Workbench:OpenTo"]" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@_loading" /></div>
+                <div class="configuration-history-search-action"><MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Search" Disabled="@_loading" OnClick="LoadAsync">@L["Common:Actions:Search"]</MudButton></div>
+            </div>
+            <div class="configuration-history-filter-bottom">
+                <div class="configuration-history-target-filters" role="group" aria-label="@L["History:Filters:Target"]">
+                    <MudButton Variant="Variant.Text" Class="@TargetButtonClass(TARGET_FILTER_ALL)" Disabled="@_loading" aria-pressed="@(_targetFilter == TARGET_FILTER_ALL ? "true" : "false")" OnClick="() => SelectTarget(TARGET_FILTER_ALL)">@L["History:Filters:TargetAll"]</MudButton>
+                    <MudButton Variant="Variant.Text" Class="@TargetButtonClass(TARGET_FILTER_MONICA)" Disabled="@_loading" StartIcon="@Icons.Material.Outlined.Storage" aria-pressed="@(_targetFilter == TARGET_FILTER_MONICA ? "true" : "false")" OnClick="() => SelectTarget(TARGET_FILTER_MONICA)">@L["History:Filters:TargetMonica"]</MudButton>
+                    <MudButton Variant="Variant.Text" Class="@TargetButtonClass(TARGET_FILTER_EXTERNAL)" Disabled="@_loading" StartIcon="@Icons.Material.Outlined.Description" aria-pressed="@(_targetFilter == TARGET_FILTER_EXTERNAL ? "true" : "false")" OnClick="() => SelectTarget(TARGET_FILTER_EXTERNAL)">@L["History:Filters:TargetExternal"]</MudButton>
+                </div>
+                <span>@L["History:Workbench:FilterHelp"]</span>
+            </div>
+        </div>
+        <div class="configuration-history-tabs">
+            <MudTabs @bind-ActivePanelIndex="_selectedTab" Elevation="0" Rounded="false" MinimumTabWidth="120px" KeepPanelsAlive="false">
+                <MudTabPanel Text="@L["History:Tabs:Mutations"]" Icon="@Icons.Material.Outlined.ListAlt">
+                    <div class="configuration-history-results" aria-busy="@(_loading ? "true" : "false")">
+                        <div class="configuration-history-result-heading"><div><h3>@L["History:Workbench:Changes"]</h3><p>@HistoryQuerySummary</p></div>@if (_hasLoadedHistory && !_loading) { <span>@L["History:Workbench:LoadedChanges", _history.Count, _displayHistory.Count]</span> }</div>
+                        @if (_hasLoadedHistory && !string.IsNullOrWhiteSpace(_historyLoadError)) { <div class="configuration-history-query-error"><MudAlert Severity="Severity.Error">@_historyLoadError</MudAlert></div> }
+                        @if (_loading)
+                        {
+                            <div class="configuration-history-empty"><MudProgressCircular Size="Size.Medium" Indeterminate="true" Color="Color.Primary" /><p>@L["Common:States:Loading"]</p></div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(_historyLoadError) && !_hasLoadedHistory)
+                        {
+                            <div class="configuration-history-empty"><MudAlert Severity="Severity.Error">@_historyLoadError</MudAlert></div>
+                        }
+                        else if (_displayHistory.Count == 0)
+                        {
+                            <div class="configuration-history-empty"><MudIcon Icon="@Icons.Material.Outlined.History" /><h3>@L["History:States:Empty"]</h3><p>@L["History:Workbench:EmptyHelp"]</p></div>
+                        }
+                        else
+                        {
+                            <div class="configuration-history-table">
+                                <MudTable T="ConfigurationHistoryDisplayRow" Items="@_displayHistory" Hover="true" Elevation="0" Square="true" Breakpoint="Breakpoint.Sm">
+                                    <ColGroup><col class="configuration-history-column-identity" /><col class="configuration-history-column-source" /><col class="configuration-history-column-audit" /><col class="configuration-history-column-actions" /></ColGroup>
+                                    <HeaderContent><MudTh>@L["History:Workbench:Configuration"]</MudTh><MudTh>@L["History:Columns:Target"]</MudTh><MudTh>@L["History:Workbench:Audit"]</MudTh><MudTh>@L["History:Workbench:Actions"]</MudTh></HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="@L["History:Workbench:Configuration"]">
+                                            <div class="configuration-history-identity">
+                                                <MudTooltip Text="@string.Join(Environment.NewLine, DefinitionMetadataLines(context.Representative.DefinitionKey))"><MudButton Variant="Variant.Text" Color="Color.Primary" Class="configuration-history-definition-link" OnClick="() => NavigateToDefinition(context.Representative.DefinitionKey, context.DisplayPath)">@DefinitionDisplay(context.Representative.DefinitionKey)</MudButton></MudTooltip>
+                                                <code>@context.Representative.DefinitionKey</code>
+                                                <MudTooltip Text="@string.Join(Environment.NewLine, PathMetadataLines(context))"><code class="configuration-history-path">@DisplayPath(context.DisplayPath)</code></MudTooltip>
+                                                <div class="configuration-history-row-meta"><span class="@MutationClass(context.Representative.MutationKind)">@L[$"Mutation:Kinds:{context.Representative.MutationKind}"]</span><span>@L["History:Dialog:Version", context.Version]</span>@if (context.IsCollapsed) { <span>@L["History:CollapsedCount", context.Rows.Count]</span> }</div>
+                                            </div>
+                                        </MudTd>
+                                        <MudTd DataLabel="@L["History:Columns:Target"]">
+                                            <div class="configuration-history-source">
+                                                <MudTooltip Text="@HistoryTargetTooltip(context.Rows)"><span class="@HistoryTargetClass(context.Rows)"><MudIcon Icon="@HistoryTargetIcon(context.Rows)" Size="Size.Small" />@HistoryTargetLabel(context.Rows)</span></MudTooltip>
+                                                @if (!string.IsNullOrWhiteSpace(context.Representative.SourceDisplayName)) { <span>@context.Representative.SourceDisplayName</span> }
+                                                @if (!string.IsNullOrWhiteSpace(context.Representative.SourceConfigurationPath)) { <code>@context.Representative.SourceConfigurationPath</code> }
+                                            </div>
+                                        </MudTd>
+                                        <MudTd DataLabel="@L["History:Workbench:Audit"]">
+                                            <div class="configuration-history-audit">
+                                                <time datetime="@context.ModifiedTime.ToString("O")">@context.ModifiedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</time>
+                                                <span>@AuditOperator(context.Representative.ModifierName, context.Representative.ModifierId)</span>
+                                                @if (!string.IsNullOrWhiteSpace(context.Representative.MutationGroupId)) { <strong>@GroupLabel(context.Representative.MutationGroupId)</strong> }
+                                                @if (!string.IsNullOrWhiteSpace(context.Representative.Reason)) { <p>@context.Representative.Reason</p> }
+                                            </div>
+                                        </MudTd>
+                                        <MudTd DataLabel="@L["History:Workbench:Actions"]"><div class="configuration-history-row-actions"><MudTooltip Text="@L["History:Actions:ViewChange"]"><MudIconButton Icon="@Icons.Material.Outlined.CompareArrows" Size="Size.Small" OnClick="() => ShowHistoryAsync(context)" aria-label="@L["History:Actions:ViewChange"]" /></MudTooltip><MudTooltip Text="@RollbackTooltip(CanRollbackHistory(context))"><MudIconButton Icon="@Icons.Material.Outlined.Restore" Size="Size.Small" Color="Color.Warning" Disabled="@(!CanRollbackHistory(context))" OnClick="() => RollbackHistoryAsync(context)" aria-label="@L["Rollback:Confirm"]" /></MudTooltip></div></MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </div>
+                        }
+                        @if (_hasLoadedHistory && !_loading) { <footer class="configuration-history-results-footer"><span>@L["History:Workbench:LoadedChanges", _history.Count, _displayHistory.Count]</span>@if (_historyHasMore) { <MudButton Variant="Variant.Outlined" Disabled="@_loadingMoreHistory" OnClick="LoadMoreHistoryAsync">@L["History:Actions:LoadMore"]</MudButton> }</footer> }
                     </div>
-                    @if (_historyHasMore)
-                    {
-                        <MudStack Row="true" Justify="Justify.Center" Class="mt-3">
-                            <MudButton Variant="Variant.Outlined"
-                                       Disabled="@_loadingMoreHistory"
-                                       OnClick="LoadMoreHistoryAsync">
-                                @L["History:Actions:LoadMore"]
-                            </MudButton>
-                        </MudStack>
-                    }
-                }
-            </MudTabPanel>
-
-            <MudTabPanel Text="@L["History:Tabs:Groups"]" Icon="@Icons.Material.Filled.Folder">
-                @if (_loading)
-                {
-                    <MudProgressLinear Indeterminate="true" />
-                }
-                else if (_groups.Count == 0)
-                {
-                    <MudAlert Severity="Severity.Info">@L["Group:Empty"]</MudAlert>
-                }
-                else
-                {
-                    <div class="configuration-history-table-scroll">
-                    <MudTable T="ConfigurationMutationGroup" Items="@_groups" Dense="true" Hover="true" Elevation="0">
-                        <HeaderContent>
-                            <MudTh>@L["Group:Label"]</MudTh>
-                            <MudTh>@L["History:Columns:Time"]</MudTh>
-                            <MudTh>@L["Group:MutationCount"]</MudTh>
-                            <MudTh>@L["Group:Definitions"]</MudTh>
-                            <MudTh>@L["Group:Status"]</MudTh>
-                            <MudTh />
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="@L["Group:Label"]">@context.Label</MudTd>
-                            <MudTd DataLabel="@L["History:Columns:Time"]">@context.CreatedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
-                            <MudTd DataLabel="@L["Group:MutationCount"]">@context.MutationCount</MudTd>
-                            <MudTd DataLabel="@L["Group:Definitions"]">
-                                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
-                                    @foreach (var definitionKey in context.DefinitionKeys)
-                                    {
-                                        <MudTooltip>
-                                            <ChildContent>
-                                                <MudButton Variant="Variant.Outlined"
-                                                           Size="Size.Small"
-                                                           Class="configuration-history-definition-chip"
-                                                           OnClick="() => NavigateToDefinition(definitionKey, null)">
-                                                    @DefinitionDisplay(definitionKey)
-                                                </MudButton>
-                                            </ChildContent>
-                                            <TooltipContent>
-                                                <div class="configuration-history-tooltip-lines">
-                                                    @foreach (var line in DefinitionMetadataLines(definitionKey))
-                                                    {
-                                                        <div>@line</div>
-                                                    }
-                                                </div>
-                                            </TooltipContent>
-                                        </MudTooltip>
-                                    }
-                                </MudStack>
-                            </MudTd>
-                            <MudTd DataLabel="@L["Group:Status"]">@StatusText(context.Status)</MudTd>
-                            <MudTd>
-                                <MudStack Row="true" Spacing="1">
-                                    <MudTooltip Text="@L["Group:ViewHistory"]">
-                                        <MudIconButton Icon="@Icons.Material.Filled.List"
-                                                       Size="Size.Small"
-                                                       OnClick="() => ShowGroupHistoryAsync(context)" />
-                                    </MudTooltip>
-                                    <MudTooltip Text="@RollbackTooltip(CanRollbackGroup(context))">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Restore"
-                                                       Size="Size.Small"
-                                                       Color="Color.Warning"
-                                                       Disabled="@(!CanRollbackGroup(context))"
-                                                       OnClick="() => RollbackGroupAsync(context)" />
-                                    </MudTooltip>
-                                </MudStack>
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
+                </MudTabPanel>
+                <MudTabPanel Text="@L["History:Tabs:Groups"]" Icon="@Icons.Material.Outlined.FolderOpen">
+                    <div class="configuration-history-results" aria-busy="@(_loading ? "true" : "false")">
+                        <div class="configuration-history-result-heading"><div><h3>@L["History:Workbench:Groups"]</h3><p>@GroupQuerySummary</p></div>@if (_hasLoadedGroups && !_loading) { <span>@L["History:Workbench:LoadedGroups", _groups.Count]</span> }</div>
+                        @if (_hasLoadedGroups && !string.IsNullOrWhiteSpace(_groupLoadError)) { <div class="configuration-history-query-error"><MudAlert Severity="Severity.Error">@_groupLoadError</MudAlert></div> }
+                        @if (_loading)
+                        {
+                            <div class="configuration-history-empty"><MudProgressCircular Size="Size.Medium" Indeterminate="true" Color="Color.Primary" /><p>@L["Common:States:Loading"]</p></div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(_groupLoadError) && !_hasLoadedGroups)
+                        {
+                            <div class="configuration-history-empty"><MudAlert Severity="Severity.Error">@_groupLoadError</MudAlert></div>
+                        }
+                        else if (_groups.Count == 0)
+                        {
+                            <div class="configuration-history-empty"><MudIcon Icon="@Icons.Material.Outlined.FolderOpen" /><h3>@L["Group:Empty"]</h3><p>@L["History:Workbench:EmptyHelp"]</p></div>
+                        }
+                        else
+                        {
+                            <div class="configuration-history-table">
+                                <MudTable T="ConfigurationMutationGroup" Items="@_groups" Hover="true" Elevation="0" Square="true" Breakpoint="Breakpoint.Sm">
+                                    <ColGroup><col class="configuration-history-column-identity" /><col class="configuration-history-column-source" /><col class="configuration-history-column-audit" /><col class="configuration-history-column-actions" /></ColGroup>
+                                    <HeaderContent><MudTh>@L["Group:Label"]</MudTh><MudTh>@L["Group:Definitions"]</MudTh><MudTh>@L["Group:Status"]</MudTh><MudTh>@L["History:Workbench:Actions"]</MudTh></HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="@L["Group:Label"]"><div class="configuration-history-audit"><strong>@context.Label</strong><code>@context.GroupId</code>@if (!string.IsNullOrWhiteSpace(context.Reason)) { <p>@context.Reason</p> }<time datetime="@context.CreatedTime.ToString("O")">@context.CreatedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</time><span>@AuditOperator(context.ModifierName, context.ModifierId)</span></div></MudTd>
+                                        <MudTd DataLabel="@L["Group:Definitions"]"><div class="configuration-history-group-definitions">@foreach (var definitionKey in context.DefinitionKeys) { <div><MudTooltip Text="@string.Join(Environment.NewLine, DefinitionMetadataLines(definitionKey))"><MudButton Variant="Variant.Text" Color="Color.Primary" Class="configuration-history-definition-link" OnClick="() => NavigateToDefinition(definitionKey, null)">@DefinitionDisplay(definitionKey)</MudButton></MudTooltip><code>@definitionKey</code></div> }</div></MudTd>
+                                        <MudTd DataLabel="@L["Group:Status"]"><div class="configuration-history-source"><span class="@GroupStatusClass(context.Status)"><span class="configuration-history-status-dot"></span>@StatusText(context.Status)</span><span aria-label="@L["Group:MutationCount"]">@L["History:Workbench:MutationCount", context.MutationCount]</span>@if (context.RolledBackTime is not null) { <time datetime="@context.RolledBackTime.Value.ToString("O")">@context.RolledBackTime.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</time> }</div></MudTd>
+                                        <MudTd DataLabel="@L["History:Workbench:Actions"]"><div class="configuration-history-row-actions"><MudTooltip Text="@L["Group:ViewHistory"]"><MudIconButton Icon="@Icons.Material.Outlined.ListAlt" Size="Size.Small" OnClick="() => ShowGroupHistoryAsync(context)" aria-label="@L["Group:ViewHistory"]" /></MudTooltip><MudTooltip Text="@RollbackTooltip(CanRollbackGroup(context))"><MudIconButton Icon="@Icons.Material.Outlined.Restore" Size="Size.Small" Color="Color.Warning" Disabled="@(!CanRollbackGroup(context))" OnClick="() => RollbackGroupAsync(context)" aria-label="@L["Rollback:Confirm"]" /></MudTooltip></div></MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </div>
+                        }
+                        @if (_hasLoadedGroups && !_loading) { <footer class="configuration-history-results-footer"><span>@L["History:Workbench:LoadedGroups", _groups.Count]</span>@if (_groupsHaveMore) { <MudButton Variant="Variant.Outlined" Disabled="@_loadingMoreGroups" OnClick="LoadMoreGroupsAsync">@L["History:Actions:LoadMore"]</MudButton> }</footer> }
                     </div>
-                    @if (_groupsHaveMore)
-                    {
-                        <MudStack Row="true" Justify="Justify.Center" Class="mt-3">
-                            <MudButton Variant="Variant.Outlined"
-                                       Disabled="@_loadingMoreGroups"
-                                       OnClick="LoadMoreGroupsAsync">
-                                @L["History:Actions:LoadMore"]
-                            </MudButton>
-                        </MudStack>
-                    }
-                }
-            </MudTabPanel>
-        </MudTabs>
-    </MudStack>
-</MudContainer>
+                </MudTabPanel>
+            </MudTabs>
+        </div>
+    </section>
 </div>
-
-@code {
-    public const string PAGE_URL = ConfigurationUiRoutes.HISTORY_ROUTE;
-    private const string TARGET_FILTER_ALL = "all";
-    private const string TARGET_FILTER_MONICA = "monica";
-    private const string TARGET_FILTER_EXTERNAL = "external";
-    private const int PAGE_SIZE = 50;
-
-    private readonly List<ConfigurationDefinitionSummary> _definitions = [];
-    private readonly Dictionary<string, ConfigurationDefinition> _definitionDetails = new(StringComparer.OrdinalIgnoreCase);
-    private readonly List<ConfigurationValueHistory> _history = [];
-    private readonly List<ConfigurationMutationGroup> _groups = [];
-    private IReadOnlyList<ConfigurationHistoryDisplayRow> _displayHistory = [];
-    private ConfigurationHistoryPageRequest? _activeHistoryRequest;
-    private ConfigurationMutationGroupPageRequest? _activeGroupRequest;
-    private string? _definitionKey;
-    private string _pathText = string.Empty;
-    private string _targetFilter = TARGET_FILTER_ALL;
-    private DateTime? _fromDate;
-    private DateTime? _toDate;
-    private bool _loading = true;
-    private bool _loadingMoreHistory;
-    private bool _loadingMoreGroups;
-    private bool _historyHasMore;
-    private bool _groupsHaveMore;
-    private ConfigurationHistoryCursor? _historyNextCursor;
-    private ConfigurationMutationGroupCursor? _groupsNextCursor;
-    private ConfigurationMetadataStoreDiagnostic? _metadataStoreDiagnostic;
-
-    protected override async Task OnInitializedAsync()
-    {
-        _definitionKey = ConfigurationUiRoutes.ReadDefinitionKey(NavigationManager.Uri);
-
-        try
-        {
-            var path = ConfigurationUiRoutes.ReadPath(NavigationManager.Uri);
-            _pathText = path.Depth == 0 ? string.Empty : path.ToCanonicalString();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"{L["Common:Errors:InvalidPath"]}: {ex.Message}", Severity.Error);
-        }
-
-        await LoadDefinitionsAsync();
-        await LoadAsync();
-    }
-
-    private async Task LoadDefinitionsAsync()
-    {
-        var result = await Facade.GetDefinitionCatalogAsync();
-        if (result.IsFailed(out var error, out var catalog))
-        {
-            _definitions.Clear();
-            _definitionDetails.Clear();
-            _metadataStoreDiagnostic = null;
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            return;
-        }
-
-        _definitions.Clear();
-        _definitions.AddRange(catalog.Definitions);
-        _definitionDetails.Clear();
-        _metadataStoreDiagnostic = catalog.StoreDiagnostic;
-    }
-
-    private async Task ReloadAsync()
-    {
-        await LoadDefinitionsAsync();
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        _loading = true;
-        try
-        {
-            LogicalPath? logicalPath = null;
-            if (!string.IsNullOrWhiteSpace(_pathText))
-            {
-                try
-                {
-                    logicalPath = LogicalPath.Parse(_pathText);
-                    _pathText = logicalPath.ToCanonicalString();
-                }
-                catch (Exception ex)
-                {
-                    Snackbar.Add($"{L["Common:Errors:InvalidPath"]}: {ex.Message}", Severity.Error);
-                }
-            }
-
-            DateTimeOffset? from = _fromDate is null ? null : new DateTimeOffset(_fromDate.Value);
-            DateTimeOffset? to = _toDate is null ? null : new DateTimeOffset(_toDate.Value.Date.AddDays(1).AddTicks(-1));
-            _activeHistoryRequest = new ConfigurationHistoryPageRequest
-            {
-                From = from,
-                To = to,
-                DefinitionKey = _definitionKey,
-                LogicalPath = logicalPath,
-                TargetKind = SelectedTargetKind(),
-                PageSize = PAGE_SIZE
-            };
-            _activeGroupRequest = new ConfigurationMutationGroupPageRequest
-            {
-                From = from,
-                To = to,
-                DefinitionKey = _definitionKey,
-                PageSize = PAGE_SIZE
-            };
-
-            await LoadHistoryPageAsync(_activeHistoryRequest, append: false);
-            await LoadGroupPageAsync(_activeGroupRequest, append: false);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task LoadHistoryPageAsync(ConfigurationHistoryPageRequest request, bool append)
-    {
-        var result = await Facade.QueryHistoryPageAsync(request);
-        if (result.IsFailed(out var error, out var page))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            if (!append)
-            {
-                _history.Clear();
-                _displayHistory = [];
-                _historyHasMore = false;
-                _historyNextCursor = null;
-            }
-
-            return;
-        }
-
-        if (!append)
-        {
-            _history.Clear();
-        }
-
-        var loadedIds = _history.Select(static history => history.HistoryId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _history.AddRange(page.Items.Where(history => loadedIds.Add(history.HistoryId)));
-        _displayHistory = ConfigurationHistoryDisplayGrouper.Collapse(_history);
-        _historyHasMore = page.HasMore;
-        _historyNextCursor = page.NextCursor;
-        await EnsureDefinitionDetailsAsync(page.Items.Select(static row => row.DefinitionKey));
-    }
-
-    private async Task LoadGroupPageAsync(ConfigurationMutationGroupPageRequest request, bool append)
-    {
-        var result = await Facade.QueryMutationGroupsPageAsync(request);
-        if (result.IsFailed(out var error, out var page))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            if (!append)
-            {
-                _groups.Clear();
-                _groupsHaveMore = false;
-                _groupsNextCursor = null;
-            }
-
-            return;
-        }
-
-        if (!append)
-        {
-            _groups.Clear();
-        }
-
-        var loadedIds = _groups.Select(static group => group.GroupId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _groups.AddRange(page.Items.Where(group => loadedIds.Add(group.GroupId)));
-        _groupsHaveMore = page.HasMore;
-        _groupsNextCursor = page.NextCursor;
-        await EnsureDefinitionDetailsAsync(page.Items.SelectMany(static group => group.DefinitionKeys));
-    }
-
-    private async Task LoadMoreHistoryAsync()
-    {
-        if (_loadingMoreHistory || !_historyHasMore || _activeHistoryRequest is null || _historyNextCursor is null)
-        {
-            return;
-        }
-
-        _loadingMoreHistory = true;
-        try
-        {
-            await LoadHistoryPageAsync(_activeHistoryRequest with { Cursor = _historyNextCursor }, append: true);
-        }
-        finally
-        {
-            _loadingMoreHistory = false;
-        }
-    }
-
-    private async Task LoadMoreGroupsAsync()
-    {
-        if (_loadingMoreGroups || !_groupsHaveMore || _activeGroupRequest is null || _groupsNextCursor is null)
-        {
-            return;
-        }
-
-        _loadingMoreGroups = true;
-        try
-        {
-            await LoadGroupPageAsync(_activeGroupRequest with { Cursor = _groupsNextCursor }, append: true);
-        }
-        finally
-        {
-            _loadingMoreGroups = false;
-        }
-    }
-
-    private async Task RollbackHistoryAsync(ConfigurationHistoryDisplayRow history)
-    {
-        if (!CanRollbackHistory(history))
-        {
-            Snackbar.Add(L["History:Actions:RollbackBlockedMetadata"], Severity.Warning);
-            return;
-        }
-
-        var parameters = new DialogParameters<RollbackConfirmationDialog>();
-        if (history.Rows.Count == 1)
-        {
-            parameters.Add(dialog => dialog.HistoryRow, history.Representative);
-        }
-
-        parameters.Add(dialog => dialog.GroupRows, history.Rows);
-        var title = history.Rows.Count == 1 ? L["Rollback:SingleTitle"] : L["Rollback:SelectionTitle"];
-        var dialog = await DialogService.ShowAsync<RollbackConfirmationDialog>(title, parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true
-        });
-        await HandleRollbackDialogAsync(dialog);
-    }
-
-    private async Task RollbackGroupAsync(ConfigurationMutationGroup group)
-    {
-        if (!CanRollbackGroup(group))
-        {
-            Snackbar.Add(L["History:Actions:RollbackBlockedMetadata"], Severity.Warning);
-            return;
-        }
-
-        var rows = await GetGroupRowsAsync(group);
-        if (rows is null)
-        {
-            return;
-        }
-
-        if (!rows.All(CanRollbackRow))
-        {
-            Snackbar.Add(L["History:Actions:RollbackBlockedMetadata"], Severity.Warning);
-            return;
-        }
-
-        var parameters = new DialogParameters<RollbackConfirmationDialog>();
-        parameters.Add(dialog => dialog.Group, group);
-        parameters.Add(dialog => dialog.GroupRows, rows);
-        var dialog = await DialogService.ShowAsync<RollbackConfirmationDialog>(L["Rollback:GroupTitle"], parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true
-        });
-        await HandleRollbackDialogAsync(dialog);
-    }
-
-    private async Task ShowHistoryAsync(ConfigurationHistoryDisplayRow history)
-    {
-        var parameters = new DialogParameters<ConfigurationHistoryDiffDialog>();
-        parameters.Add(dialog => dialog.Rows, history.Rows);
-        parameters.Add(dialog => dialog.Definitions, _definitions);
-        parameters.Add(dialog => dialog.FocusPath, history.DisplayPath);
-        parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", DefinitionDisplay(history.Representative.DefinitionKey)]);
-        var dialog = await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:Title"], parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true
-        });
-        await HandleRollbackDialogAsync(dialog);
-    }
-
-    private async Task ShowGroupHistoryAsync(ConfigurationMutationGroup group)
-    {
-        var rows = await GetGroupRowsAsync(group);
-        if (rows is null)
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters<ConfigurationHistoryDiffDialog>();
-        parameters.Add(dialog => dialog.Group, group);
-        parameters.Add(dialog => dialog.Rows, rows);
-        parameters.Add(dialog => dialog.Definitions, _definitions);
-        parameters.Add(dialog => dialog.Title, L["History:Dialog:GroupTitle", group.Label]);
-        var dialog = await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:GroupTitle", group.Label], parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true
-        });
-        await HandleRollbackDialogAsync(dialog);
-    }
-
-    private async Task<IReadOnlyList<ConfigurationValueHistory>?> GetGroupRowsAsync(ConfigurationMutationGroup group)
-    {
-        var result = await Facade.GetGroupHistoryAsync(group.GroupId);
-        if (result.IsFailed(out var error, out var rows))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            return null;
-        }
-
-        if (rows.Count == 0)
-        {
-            Snackbar.Add(L["History:Dialog:NoPreview"], Severity.Info);
-            return null;
-        }
-
-        return rows;
-    }
-
-    private async Task HandleRollbackDialogAsync(IDialogReference dialog)
-    {
-        var result = await dialog.Result;
-        if (result is not { Canceled: false, Data: ConfigurationHistoryRollbackDialogResult rollback })
-        {
-            return;
-        }
-
-        await ConfigurationRollbackCompletionPresenter.ShowAsync(rollback, DialogService, Snackbar, L);
-        await LoadAsync();
-    }
-
-    private string DefinitionDisplay(string definitionKey)
-    {
-        return _definitions.FirstOrDefault(definition =>
-            string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? definitionKey;
-    }
-
-    private void NavigateToDefinition(string definitionKey, LogicalPath? path)
-    {
-        NavigationManager.NavigateTo(ConfigurationUiRoutes.State(definitionKey, path));
-    }
-
-    private async Task EnsureDefinitionDetailsAsync(IEnumerable<string> definitionKeys)
-    {
-        foreach (var definitionKey in definitionKeys
-                     .Where(static key => !string.IsNullOrWhiteSpace(key))
-                     .Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            if (_definitionDetails.ContainsKey(definitionKey))
-            {
-                continue;
-            }
-
-            if (!CanManageDefinition(definitionKey))
-            {
-                continue;
-            }
-
-            var result = await Facade.GetDefinitionAsync(definitionKey);
-            if (!result.IsFailed(out _, out var detail))
-            {
-                _definitionDetails[definitionKey] = detail.Definition;
-            }
-        }
-    }
-
-    private IReadOnlyList<string> DefinitionMetadataLines(string definitionKey)
-    {
-        var lines = new List<string>();
-        var definition = ResolveDefinition(definitionKey);
-        var summary = ResolveDefinitionSummary(definitionKey);
-        lines.Add(L["History:DefinitionTooltip:DisplayName", definition?.DisplayName ?? summary?.DisplayName ?? definitionKey]);
-        lines.Add(L["History:DefinitionTooltip:DefinitionKey", definitionKey]);
-
-        var description = definition?.Description ?? summary?.Description;
-        if (!string.IsNullOrWhiteSpace(description))
-        {
-            lines.Add(L["History:DefinitionTooltip:Description", description]);
-        }
-
-        var sectionPath = definition?.SectionPath ?? summary?.SectionPath;
-        if (!string.IsNullOrWhiteSpace(sectionPath))
-        {
-            lines.Add(L["History:DefinitionTooltip:SectionPath", sectionPath]);
-        }
-
-        var clrTypeName = definition?.ClrTypeName ?? summary?.ClrTypeName;
-        if (!string.IsNullOrWhiteSpace(clrTypeName))
-        {
-            lines.Add(L["History:DefinitionTooltip:ClrType", clrTypeName]);
-        }
-
-        var project = definition?.FromProject ?? summary?.FromProject;
-        if (!string.IsNullOrWhiteSpace(project))
-        {
-            lines.Add(L["History:DefinitionTooltip:Project", project]);
-        }
-
-        return lines;
-    }
-
-    private IReadOnlyList<string> PathMetadataLines(ConfigurationHistoryDisplayRow row)
-    {
-        var representative = row.Representative;
-        var definition = ResolveDefinition(representative.DefinitionKey);
-        var node = definition is null ? null : ResolveNodeByPath(definition.Root, row.DisplayPath);
-        var configurationPath = node?.ConfigurationPath
-                                ?? representative.SourceConfigurationPath
-                                ?? representative.ConfigurationPath;
-
-        var lines = new List<string>
-        {
-            L["History:PathTooltip:LogicalPath", row.DisplayPath.ToCanonicalString()]
-        };
-
-        if (!string.IsNullOrWhiteSpace(configurationPath))
-        {
-            lines.Add(L["History:PathTooltip:ConfigurationPath", configurationPath]);
-        }
-
-        if (node is not null)
-        {
-            lines.Add(L["History:PathTooltip:Node", NodeDisplay(node)]);
-            lines.Add(L["History:PathTooltip:ClrType", node.ClrTypeName]);
-            lines.Add(L["History:PathTooltip:NodeKind", node.NodeKind]);
-            if (definition is not null)
-            {
-                lines.Add(L[
-                    "History:PathTooltip:ReloadBehavior",
-                    ConfigurationReloadBehaviorFormatter.Label(EffectiveReloadBehavior(definition, node), L)]);
-            }
-
-            if (!string.IsNullOrWhiteSpace(node.Description))
-            {
-                lines.Add(L["History:PathTooltip:Description", node.Description]);
-            }
-        }
-        else if (definition is not null)
-        {
-            lines.Add(L["History:PathTooltip:DefinitionKey", definition.DefinitionKey]);
-            lines.Add(L["History:PathTooltip:ClrType", definition.ClrTypeName]);
-        }
-
-        if (row.IsCollapsed)
-        {
-            lines.Add(L["History:PathTooltip:CollapsedRows", row.Rows.Count]);
-        }
-
-        return lines;
-    }
-
-    private ConfigurationDefinition? ResolveDefinition(string definitionKey)
-    {
-        return _definitionDetails.GetValueOrDefault(definitionKey);
-    }
-
-    private ConfigurationDefinitionSummary? ResolveDefinitionSummary(string definitionKey)
-    {
-        return _definitions.FirstOrDefault(definition =>
-            string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private bool CanManageDefinition(string definitionKey)
-    {
-        return ResolveDefinitionSummary(definitionKey)?.CanManage is true;
-    }
-
-    private bool CanMutateDefinition(string definitionKey)
-    {
-        return ResolveDefinitionSummary(definitionKey)?.CanMutate is true;
-    }
-
-    private bool CanRollbackHistory(ConfigurationHistoryDisplayRow history)
-    {
-        return history.Rows.All(CanRollbackRow);
-    }
-
-    private bool CanRollbackGroup(ConfigurationMutationGroup group)
-    {
-        return group.Status != ConfigurationMutationGroupStatus.RolledBack
-               && group.DefinitionKeys.All(CanMutateDefinition);
-    }
-
-    private bool CanRollbackRow(ConfigurationValueHistory row)
-    {
-        var definition = ResolveDefinitionSummary(row.DefinitionKey);
-        return definition is { CanMutate: true }
-               && definition.SchemaVersion == row.SchemaVersion
-               && !string.IsNullOrWhiteSpace(row.SchemaHash)
-               && string.Equals(definition.SchemaHash, row.SchemaHash, StringComparison.Ordinal);
-    }
-
-    private string RollbackTooltip(bool canRollback)
-    {
-        return canRollback
-            ? L["Rollback:Confirm"].Value
-            : L["History:Actions:RollbackBlockedMetadata"].Value;
-    }
-
-    private string DefinitionFilterLabel(ConfigurationDefinitionSummary definition)
-    {
-        if (!definition.CanManage)
-        {
-            return L["History:Filters:UnavailableDefinition", definition.DisplayName];
-        }
-
-        return definition.LifecycleState == ConfigurationDefinitionLifecycleState.Retired
-            ? L["History:Filters:RetiredDefinition", definition.DisplayName]
-            : definition.DisplayName;
-    }
-
-    private static ConfigurationNodeDefinition? ResolveNodeByPath(ConfigurationNodeDefinition root, LogicalPath path)
-    {
-        ConfigurationNodeDefinition? current = root;
-        foreach (var segment in path.Segments)
-        {
-            current = ResolveChildNode(current, segment);
-            if (current is null)
-            {
-                return null;
-            }
-        }
-
-        return current;
-    }
-
-    private static ConfigurationNodeDefinition? ResolveChildNode(ConfigurationNodeDefinition current, ConfigurationPathSegment segment)
-    {
-        return segment switch
-        {
-            PropertySegment property => current.Children.FirstOrDefault(child =>
-                string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
-            DictionaryKeySegment => current.DictionaryTemplate?.ValueTemplate,
-            ListItemKeySegment or ListIndexSegment => current.ListTemplate?.ItemTemplate,
-            _ => null
-        };
-    }
-
-    private string NodeDisplay(ConfigurationNodeDefinition node)
-    {
-        return string.IsNullOrWhiteSpace(node.DisplayName) ? node.Name : node.DisplayName!;
-    }
-
-    private static ConfigurationReloadBehavior EffectiveReloadBehavior(
-        ConfigurationDefinition definition,
-        ConfigurationNodeDefinition node)
-    {
-        return node.ResolveEffectiveReloadBehavior(definition);
-    }
-
-    private string GroupLabel(string? groupId)
-    {
-        if (string.IsNullOrWhiteSpace(groupId))
-        {
-            return string.Empty;
-        }
-
-        return _groups.FirstOrDefault(group => group.GroupId == groupId)?.Label ?? groupId;
-    }
-
-    private string StatusText(ConfigurationMutationGroupStatus status)
-    {
-        return L[$"Group:StatusValues:{status}"];
-    }
-
-    private string TargetFilterText(string? value)
-    {
-        return value switch
-        {
-            TARGET_FILTER_MONICA => L["History:Filters:TargetMonica"],
-            TARGET_FILTER_EXTERNAL => L["History:Filters:TargetExternal"],
-            _ => L["History:Filters:TargetAll"]
-        };
-    }
-
-    private ConfigurationMutationTargetKind? SelectedTargetKind()
-    {
-        return _targetFilter switch
-        {
-            TARGET_FILTER_MONICA => ConfigurationMutationTargetKind.MonicaEffectiveStore,
-            TARGET_FILTER_EXTERNAL => ConfigurationMutationTargetKind.ExternalConfigurationSource,
-            _ => null
-        };
-    }
-
-    private string HistoryTargetLabel(IReadOnlyList<ConfigurationValueHistory> rows)
-    {
-        if (rows.All(row => row.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore))
-        {
-            return L["History:Targets:MonicaShort"];
-        }
-
-        return rows.All(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
-            ? L["History:Targets:ExternalShort"]
-            : L["History:Targets:Mixed"];
-    }
-
-    private string HistoryTargetTooltip(IReadOnlyList<ConfigurationValueHistory> rows)
-    {
-        if (rows.Count != 1)
-        {
-            return HistoryTargetLabel(rows);
-        }
-
-        var history = rows[0];
-        if (history.TargetKind != ConfigurationMutationTargetKind.ExternalConfigurationSource)
-        {
-            return L["History:Targets:Monica"];
-        }
-
-        var sourceName = history.SourceDisplayName ?? L["History:Targets:External"];
-        var sourcePath = history.SourcePhysicalPath ?? L["Common:States:Empty"];
-        var configurationPath = history.SourceConfigurationPath ?? history.ConfigurationPath ?? L["Common:States:Empty"];
-        return L["History:Targets:ExternalTooltip", sourceName, configurationPath, sourcePath];
-    }
-
-    private static Color HistoryTargetColor(IReadOnlyList<ConfigurationValueHistory> rows)
-    {
-        return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
-            ? Color.Warning
-            : Color.Primary;
-    }
-
-    private static string HistoryTargetIcon(IReadOnlyList<ConfigurationValueHistory> rows)
-    {
-        return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
-            ? Icons.Material.Filled.Description
-            : Icons.Material.Filled.Storage;
-    }
-}
