@@ -1,979 +1,262 @@
 @attribute [Route(PAGE_URL)]
-@using Microsoft.Extensions.Localization
-@using Microsoft.JSInterop
-@using System.Text.Json
-@using Monica.AI.AgentCapabilities.Models
-@using Monica.AI.Facades
 @using Monica.AI.Mcp.Models
-@using Monica.AI.Mcp.Facades
-@using Monica.AI.UI.Localization
-@using Monica.Core.Results
+@using Monica.AI.UI.Shared.Components
 @rendermode InteractiveServer
-@inject AgentCapabilityFacade CapabilityFacade
-@inject McpFacade McpFacade
-@inject IDialogService DialogService
-@inject ISnackbar Snackbar
-@inject IStringLocalizer<AIResource> L
-@inject IJSRuntime JSRuntime
-@inject NavigationManager NavigationManager
 
-<PageTitle>@L["Capabilities:Title"]</PageTitle>
+<PageTitle>@PageTitleText</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="capability-page pa-4">
-    <div class="page-header">
-        <div>
-            <MudText Typo="Typo.h4">@L["Capabilities:Title"]</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Capabilities:Subtitle"]</MudText>
-        </div>
-        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync">
-                @L["Capabilities:Refresh"]
-            </MudButton>
-        </MudStack>
-    </div>
-
-    @if (_isLoading)
+<div class="capability-page">
+    <AIAdministrationHeader Title="@PageTitleText" Description="@PageSubtitleText" IsProviderPage="false" IsMcpPage="@(CatalogKind == AgentCapabilityKind.Mcp)">
+        <Actions>
+            @if (CatalogKind == AgentCapabilityKind.Mcp)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" aria-disabled="@BusyAttribute" OnClick="ShowAddMcpProfileDialogAsync">@L["Capabilities:Mcp:Add"]</MudButton>
+            }
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" aria-disabled="@BusyAttribute" OnClick="RefreshAsync">@L["Capabilities:Refresh"]</MudButton>
+        </Actions>
+    </AIAdministrationHeader>
+    @if (_state?.Error is { } error)
     {
-        <div class="loading-area">
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        <div class="page-feedback" role="alert">
+            <MudAlert Severity="Severity.Error" Dense="true">@error</MudAlert>
+            @if (_state.Management is not null) { <MudText Typo="Typo.body2">@L["Capabilities:Administration:PreviousData"]</MudText> }
+            <MudButton Variant="Variant.Text" aria-disabled="@BusyAttribute" OnClick="RefreshAsync">@L["Capabilities:Administration:Retry"]</MudButton>
         </div>
     }
-    else if (_management is null)
+    @if (Busy) { <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="page-progress" aria-label="@L["Capabilities:Administration:Loading"]" /> }
+    @if (_state?.Management is not null)
     {
-        <MudAlert Severity="Severity.Info">@L["Capabilities:Empty"]</MudAlert>
+        @RenderCatalog()
     }
-    else
-    {
-        <MudTabs ActivePanelIndex="@_activeTabIndex"
-                 ActivePanelIndexChanged="SetActiveTab"
-                 Rounded="true"
-                 Border="true"
-                 Elevation="0"
-                 Class="capability-tabs">
-            <MudTabPanel Text="@L["Capabilities:Tabs:Skills"]" Icon="@Icons.Material.Filled.AutoAwesome">
-                @RenderFileSkillSourceStatus()
-                @RenderCapabilityCatalog(
-                    AgentCapabilityKind.Skill,
-                    _management.Skills,
-                    _management.AreSkillsEnabled,
-                    L["Capabilities:Global:Skills"])
-            </MudTabPanel>
-            <MudTabPanel Text="@L["Capabilities:Tabs:Mcp"]" Icon="@Icons.Material.Filled.AccountTree">
-                @RenderCapabilityCatalog(
-                    AgentCapabilityKind.Mcp,
-                    _management.McpEntries,
-                    _management.AreMcpToolsEnabled,
-                    L["Capabilities:Global:Mcp"])
-            </MudTabPanel>
-        </MudTabs>
-    }
-</MudContainer>
+    else if (_state?.Error is null) { <div class="initial-loading" role="status">@L["Capabilities:Administration:Loading"]</div> }
+</div>
 
 @code {
-    public const string PAGE_URL = "/ai/capabilities";
-
-    private AgentCapabilityManagementInfo? _management;
-    private AgentCapabilityEntryInfo? _selectedEntry;
-    private McpConnectivityTestResult? _lastConnectivityResult;
-    private string? _query;
-    private bool _isLoading;
-    private bool _isTestingMcp;
-    private int _activeTabIndex;
-
-    private IReadOnlyList<AgentCapabilityEntryInfo> CurrentEntries => _activeTabIndex == 0
-        ? _management?.Skills ?? []
-        : _management?.McpEntries ?? [];
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await LoadAsync();
-        }
-    }
-
-    private async Task LoadAsync()
-    {
-        _isLoading = true;
-        StateHasChanged();
-
-        var result = await CapabilityFacade.GetManagementInfoAsync();
-        if (result.IsFailed(out var error, out var management))
-        {
-            AddErrorSnackbar(error.Message);
-            _management = null;
-        }
-        else
-        {
-            _management = management;
-            EnsureSelectedEntry();
-        }
-
-        _isLoading = false;
-        StateHasChanged();
-    }
-
-    private RenderFragment RenderCapabilityCatalog(
-        AgentCapabilityKind kind,
-        IReadOnlyList<AgentCapabilityEntryInfo> entries,
-        bool catalogEnabled,
-        string catalogLabel)
-    {
-        return @<div class="catalog-layout">
-            <div class="catalog-toolbar">
-                <MudTextField T="string"
-                              Value="@_query"
-                              ValueChanged="SetQuery"
-                              Placeholder="@L["Capabilities:Search"]"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Search"
-                              Immediate="true"
-                              Class="search-box" />
-                @if (kind == AgentCapabilityKind.Mcp)
-                {
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Add"
-                               OnClick="ShowAddMcpProfileDialogAsync">
-                        @L["Capabilities:Mcp:Add"]
-                    </MudButton>
-                }
-                <MudSwitch T="bool"
-                           Value="@catalogEnabled"
-                           ValueChanged="@((bool enabled) => SetCatalogEnabledAsync(kind, enabled))"
-                           Color="Color.Primary"
-                           Label="@catalogLabel" />
-            </div>
-
-            <div class="catalog-content">
-                <div class="entry-list">
-                    @foreach (var entry in FilterEntries(entries))
-                    {
-                        <button type="button"
-                                class="@GetEntryButtonClass(entry)"
-                                @onclick="@(() => SelectEntry(entry))">
-                            <span class="entry-main">
-                                <MudIcon Icon="@GetEntryIcon(entry)" Size="Size.Small" />
-                                <span class="entry-text">
-                                    <span class="entry-name">@entry.Name</span>
-                                    <span class="entry-description">@entry.Description</span>
-                                </span>
-                            </span>
-                            <span class="entry-meta">
-                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(entry)" Variant="Variant.Outlined">
-                                    @GetStatusText(entry)
-                                </MudChip>
-                                @if (entry.SourceKind == AgentCapabilitySourceKind.ExternalFile)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                                        @L["Capabilities:Skill:External"]
-                                    </MudChip>
-                                }
-                                @if (entry.CanExposeAsMcpServer)
-                                {
-                                    <MudChip T="string"
-                                             Size="Size.Small"
-                                             Color="@(entry.IsMcpServerExposureEnabled ? Color.Secondary : Color.Default)"
-                                             Variant="Variant.Outlined">
-                                        @(entry.IsMcpServerExposureEnabled
-                                            ? L["Capabilities:Skill:McpServerEnabled"]
-                                            : L["Capabilities:Skill:McpServerAvailable"])
-                                    </MudChip>
-                                }
-                                @if (entry.McpSourceKind == McpCatalogSourceKind.SkillServer)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
-                                        @L["Capabilities:Mcp:Source:SkillServer"]
-                                    </MudChip>
-                                }
-                                <span>@entry.Tools.Count @L["Capabilities:Tools"]</span>
-                            </span>
-                        </button>
-                    }
-                </div>
-
-                <div class="entry-detail">
-                    @if (_selectedEntry is null || _selectedEntry.Kind != kind)
-                    {
-                        <MudAlert Severity="Severity.Info">@L["Capabilities:SelectPrompt"]</MudAlert>
-                    }
-                    else
-                    {
-                        @RenderEntryDetail(_selectedEntry)
-                    }
-                </div>
-            </div>
-        </div>;
-    }
-
-    private RenderFragment RenderFileSkillSourceStatus()
-    {
-        if (_management?.FileSkillSources.Count is not > 0)
-        {
-            return @<text></text>;
-        }
-
-        return @<div class="skill-source-status">
-            <div class="skill-source-header">
-                <div>
-                    <MudText Typo="Typo.subtitle1">@L["Capabilities:Skill:Sources:Title"]</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @L["Capabilities:Skill:Sources:Summary", GetLoadedFileSkillCount(), _management.FileSkillSources.Count]
-                    </MudText>
-                </div>
-                <MudChip T="string"
-                         Size="Size.Small"
-                         Color="@(_management.FileSkillSources.Any(static source => source.HasIssues) ? Color.Warning : Color.Success)"
-                         Variant="Variant.Outlined">
-                    @(_management.FileSkillSources.Any(static source => source.HasIssues)
-                        ? L["Capabilities:Skill:Sources:HasIssues"]
-                        : L["Capabilities:Skill:Sources:Healthy"])
-                </MudChip>
-            </div>
-
-            <MudExpansionPanels Elevation="0" Dense="true" Class="skill-source-panels">
-                @foreach (var source in _management.FileSkillSources)
-                {
-                    var sourceTitle = GetFileSkillSourceTitle(source);
-                    <MudExpansionPanel Icon="@Icons.Material.Filled.FolderOpen">
-                        <TitleContent>
-                            <span class="skill-source-panel-title" title="@sourceTitle">@sourceTitle</span>
-                        </TitleContent>
-                        <ChildContent>
-                            <div class="skill-source-body">
-                                <div class="skill-source-chips">
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                                        @L["Capabilities:Skill:Sources:Loaded", source.LoadedSkillCount]
-                                    </MudChip>
-                                    <MudChip T="string"
-                                             Size="Size.Small"
-                                             Color="@(source.HasScriptRunner ? Color.Success : Color.Warning)"
-                                             Variant="Variant.Outlined">
-                                        @(source.UsesSubprocessRunner
-                                            ? L["Capabilities:Skill:Sources:SubprocessRunner"]
-                                            : source.HasScriptRunner
-                                                ? L["Capabilities:Skill:Sources:CustomRunner"]
-                                                : L["Capabilities:Skill:Sources:NoRunner"])
-                                    </MudChip>
-                                </div>
-
-                                @if (source.Issues.Count > 0)
-                                {
-                                    @RenderIssueList(source.Issues)
-                                }
-
-                                <div class="skill-path-list">
-                                    @foreach (var path in source.Paths)
-                                    {
-                                        <div class="skill-path-row">
-                                            <div class="skill-path-main">
-                                                <MudIcon Icon="@(path.Exists ? Icons.Material.Filled.Folder : Icons.Material.Filled.FolderOff)"
-                                                         Size="Size.Small"
-                                                         Color="@(path.Exists ? Color.Primary : Color.Warning)" />
-                                                <div class="skill-path-text">
-                                                    <MudText Typo="Typo.body2"
-                                                             Class="skill-path-value"
-                                                             title="@path.Path">@path.Path</MudText>
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                        @L["Capabilities:Skill:Sources:PathLoaded", path.LoadedSkillCount]
-                                                    </MudText>
-                                                </div>
-                                            </div>
-                                            <MudChip T="string"
-                                                     Size="Size.Small"
-                                                     Color="@(path.Issues.Count == 0 ? Color.Success : Color.Warning)"
-                                                     Variant="Variant.Outlined">
-                                                @(path.Issues.Count == 0
-                                                    ? L["Capabilities:Skill:Sources:PathOk"]
-                                                    : L["Capabilities:Skill:Sources:IssueCount", path.Issues.Count])
-                                            </MudChip>
-                                        </div>
-
-                                        @if (path.LoadedSkillNames.Count > 0)
-                                        {
-                                            <div class="skill-name-list">
-                                                @foreach (var skillName in path.LoadedSkillNames)
-                                                {
-                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@skillName</MudChip>
-                                                }
-                                            </div>
-                                        }
-
-                                        @if (path.Issues.Count > 0)
-                                        {
-                                            @RenderIssueList(path.Issues)
-                                        }
-                                    }
-                                </div>
-                            </div>
-                        </ChildContent>
-                    </MudExpansionPanel>
-                }
-            </MudExpansionPanels>
-        </div>;
-    }
-
-    private RenderFragment RenderEntryDetail(AgentCapabilityEntryInfo entry)
-    {
-        return @<div class="detail-panel">
-            <div class="detail-header">
-                <div class="detail-heading">
-                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="detail-title-row">
-                        <MudIcon Icon="@GetEntryIcon(entry)" Color="@GetKindColor(entry.Kind)" />
-                        <MudText Typo="Typo.h5">@entry.Title</MudText>
-                    </MudStack>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@entry.Description</MudText>
-                </div>
-                <MudSwitch T="bool"
-                           Value="@entry.IsEntryEnabled"
-                           ValueChanged="@((bool enabled) => SetEntryEnabledAsync(entry, enabled))"
-                           Color="Color.Primary"
-                           Label="@L["Capabilities:Enabled"]" />
-            </div>
-
-            @if (!entry.IsEnabled && !string.IsNullOrWhiteSpace(entry.DisabledReason))
-            {
-                <MudAlert Severity="Severity.Warning" Dense="true">@FormatDisabledReason(entry.DisabledReason)</MudAlert>
-            }
-
-            <MudStack Row="true" Spacing="1" Class="detail-chips">
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@entry.Kind</MudChip>
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@entry.Tools.Count @L["Capabilities:Tools"]</MudChip>
-                @if (entry.Resources.Count > 0)
-                {
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@entry.Resources.Count @L["Capabilities:Resources"]</MudChip>
-                }
-                @if (entry.SourceKind == AgentCapabilitySourceKind.ExternalFile)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                        @L["Capabilities:Skill:External"]
-                    </MudChip>
-                }
-                @if (entry.CanExposeAsMcpServer)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
-                        @L["Capabilities:Skill:McpCapable"]
-                    </MudChip>
-                }
-                @if (entry.McpSourceKind is not null)
-                {
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Color="@(entry.McpSourceKind == McpCatalogSourceKind.SkillServer ? Color.Secondary : Color.Default)"
-                             Variant="Variant.Outlined">
-                        @GetMcpSourceKindText(entry.McpSourceKind.Value)
-                    </MudChip>
-                }
-                @if (entry.McpTransportKind is not null)
-                {
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@entry.McpTransportKind</MudChip>
-                }
-                @if (entry.McpExternalProfile is not null)
-                {
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@entry.McpExternalProfile.TransportMode</MudChip>
-                }
-                @if (entry.IsUserManaged)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                        @L["Capabilities:Mcp:UserManaged"]
-                    </MudChip>
-                }
-            </MudStack>
-
-            @if (entry.SourceKind == AgentCapabilitySourceKind.ExternalFile
-                 && !string.IsNullOrWhiteSpace(entry.SourcePath))
-            {
-                <div class="capability-source-summary">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Capabilities:Skill:SourcePath"]</MudText>
-                    <MudText Typo="Typo.body2">@entry.SourcePath</MudText>
-                </div>
-            }
-
-            @if (entry.CanExposeAsMcpServer)
-            {
-                <div class="skill-mcp-summary">
-                    <div class="skill-mcp-main">
-                        <MudIcon Icon="@Icons.Material.Filled.SettingsEthernet" Color="Color.Secondary" Size="Size.Small" />
-                        <div>
-                            <MudText Typo="Typo.subtitle2">@L["Capabilities:Skill:McpServerTitle"]</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @L["Capabilities:Skill:McpServerDescription", entry.SkillMcpServerName ?? entry.Name]
-                            </MudText>
-                        </div>
-                    </div>
-                    <MudSwitch T="bool"
-                               Value="@entry.IsMcpServerExposureEnabled"
-                               ValueChanged="@((bool enabled) => SetSkillMcpServerEnabledAsync(entry, enabled))"
-                               Color="Color.Secondary"
-                               Label="@L["Capabilities:Skill:McpServerToggle"]" />
-                    @if (entry.McpServerExposureRequiresRestart)
-                    {
-                        <MudAlert Severity="Severity.Info" Dense="true" Class="restart-hint">
-                            @L["Capabilities:Skill:McpServerRestartHint"]
-                        </MudAlert>
-                    }
-                </div>
-            }
-
-            @if (entry.McpExternalProfile is not null)
-            {
-                <div class="capability-source-summary">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Capabilities:Mcp:Endpoint"]</MudText>
-                    <MudText Typo="Typo.body2">@entry.McpExternalProfile.Endpoint</MudText>
-                    @if (entry.McpExternalProfile.Headers.Count > 0)
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @L["Capabilities:Mcp:Headers", entry.McpExternalProfile.Headers.Count]
-                        </MudText>
-                    }
-                </div>
-            }
-            else if (entry.Kind == AgentCapabilityKind.Mcp
-                     && !string.IsNullOrWhiteSpace(entry.McpEndpointPath))
-            {
-                <div class="capability-source-summary">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Capabilities:Mcp:Endpoint"]</MudText>
-                    <MudText Typo="Typo.body2">@(entry.McpDisplayUrl ?? entry.McpEndpointPath)</MudText>
-                </div>
-            }
-
-            @if (entry.Kind == AgentCapabilityKind.Mcp)
-            {
-                <div class="mcp-probe-row">
-                    <MudButton Variant="Variant.Outlined"
-                               Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.NetworkPing"
-                               Disabled="@_isTestingMcp"
-                               OnClick="@(() => TestMcpAsync(entry))">
-                        @if (_isTestingMcp)
-                        {
-                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
-                        }
-                        @L["Capabilities:Mcp:Test"]
-                    </MudButton>
-                    <MudTooltip Text="@GetCopyMcpConfigTooltip(entry)">
-                        <MudButton Variant="Variant.Outlined"
-                                   Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.ContentCopy"
-                                   Disabled="@(!CanCopyMcpConfig(entry))"
-                                   OnClick="@(() => CopyMcpConfigAsync(entry))">
-                            @L["Capabilities:Mcp:CopyConfig"]
-                        </MudButton>
-                    </MudTooltip>
-                    @if (CanExportSkillPack(entry))
-                    {
-                        <MudTooltip Text="@L["Capabilities:Mcp:ExportSkill:Tooltip"]">
-                            <MudButton Variant="Variant.Outlined"
-                                       Size="Size.Small"
-                                       StartIcon="@Icons.Material.Filled.Download"
-                                       OnClick="@(() => ShowSkillPackExportDialogAsync(entry))">
-                                @L["Capabilities:Mcp:ExportSkill:Action"]
-                            </MudButton>
-                        </MudTooltip>
-                    }
-                    @if (entry.IsUserManaged)
-                    {
-                        <MudButton Variant="Variant.Outlined"
-                                   Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.Edit"
-                                   OnClick="@(() => ShowEditMcpProfileDialogAsync(entry))">
-                            @L["Common:Edit"]
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined"
-                                   Size="Size.Small"
-                                   Color="Color.Error"
-                                   StartIcon="@Icons.Material.Filled.Delete"
-                                   OnClick="@(() => DeleteMcpProfileAsync(entry))">
-                            @L["Common:Delete"]
-                        </MudButton>
-                    }
-                    @if (_lastConnectivityResult?.Name == entry.Name)
-                    {
-                        <MudChip T="string"
-                                 Size="Size.Small"
-                                 Color="@(_lastConnectivityResult.Success ? Color.Success : Color.Error)"
-                                 Variant="Variant.Outlined">
-                            @FormatConnectivityMessage(_lastConnectivityResult)
-                        </MudChip>
-                    }
-                </div>
-            }
-
-            @if (!string.IsNullOrWhiteSpace(entry.Content))
-            {
-                <MudExpansionPanels Elevation="0" Dense="true">
-                    <MudExpansionPanel Text="@L["Capabilities:Content"]" Icon="@Icons.Material.Filled.Article">
-                        <pre class="content-block">@entry.Content</pre>
-                    </MudExpansionPanel>
-                </MudExpansionPanels>
-            }
-
-            <MudText Typo="Typo.h6" Class="section-title">@L["Capabilities:Sections:Tools"]</MudText>
-            @if (entry.Tools.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info">@L["Capabilities:NoTools"]</MudAlert>
-            }
-            else
-            {
-                <MudTable T="AgentCapabilityToolInfo" Items="@entry.Tools" Dense="true" Hover="true" Elevation="0" Class="tool-table">
-                    <HeaderContent>
-                        <MudTh>@L["Capabilities:Tool:Name"]</MudTh>
-                        <MudTh>@L["Capabilities:Tool:Description"]</MudTh>
-                        <MudTh>@L["Capabilities:Tool:Parameters"]</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="@L["Capabilities:Tool:Name"]">
-                            <MudText Typo="Typo.body2">@context.Name</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="@L["Capabilities:Tool:Description"]">
-                            <MudText Typo="Typo.body2">@context.Description</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="@L["Capabilities:Tool:Parameters"]">
-                            @if (context.Parameters.Count == 0)
+    private RenderFragment RenderCatalog() => @<div class="catalog-panel">
+        <section class="catalog-gate" aria-label="@L["Capabilities:Administration:CatalogGate"]">
+            <div><h2>@(_state!.ActiveKind == AgentCapabilityKind.Skill ? L["Capabilities:Administration:SkillsGateTitle"] : L["Capabilities:Administration:McpGateTitle"])</h2>
+                <p>@(_state.ActiveKind == AgentCapabilityKind.Skill ? L["Capabilities:Administration:SkillsScope"] : L["Capabilities:Administration:McpScope"])</p></div>
+            <MudSwitch T="bool" Value="@_state.IsCatalogEnabled" ValueChanged="SetCatalogEnabledAsync" ReadOnly="@Busy" aria-disabled="@BusyAttribute" Color="Color.Primary" Label="@L["Capabilities:Administration:CatalogEnabled"]" />
+        </section>
+        @if (_state.ActiveKind == AgentCapabilityKind.Skill) { @RenderFileSources() }
+        <div class="catalog-workspace">
+            <aside class="@($"catalog-index {(_catalogOpen ? "catalog-open" : "catalog-closed")}")" aria-label="@L["Capabilities:Administration:Catalog"]">
+                <button type="button" class="compact-catalog-toggle" aria-expanded="@(_catalogOpen ? "true" : "false")" aria-controls="capability-catalog-body" @onclick="ToggleCatalog">
+                    <span><strong>@(_state.SelectedEntry?.Title ?? L["Capabilities:Administration:Catalog"])</strong><small>@ResultCount</small></span>
+                    <span>@L["Capabilities:Administration:ChangeEntry"] <MudIcon Icon="@(_catalogOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" /></span>
+                </button>
+                <div class="catalog-body" id="capability-catalog-body">
+                    <div class="catalog-heading"><h2>@L["Capabilities:Administration:Catalog"]</h2><span>@ResultCount</span></div>
+                    <MudTextField T="string" Value="@_state.Query" ValueChanged="_state.SetQuery" Label="@L["Capabilities:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" />
+                    <div class="catalog-filters">
+                        <MudSelect T="string" Value="@EffectiveFilter" ValueChanged="SetEffectiveFilter" Label="@L["Capabilities:Administration:EffectiveFilter"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem T="string" Value='@("all")'>@L["Capabilities:Administration:AllEntries"]</MudSelectItem>
+                            <MudSelectItem T="string" Value='@("available")'>@L["Capabilities:Administration:Available"]</MudSelectItem>
+                            <MudSelectItem T="string" Value='@("unavailable")'>@L["Capabilities:Administration:Unavailable"]</MudSelectItem>
+                        </MudSelect>
+                        <MudSelect T="string" Value="@SourceFilter" ValueChanged="SetSourceFilter" Label="@L["Capabilities:Administration:SourceFilter"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem T="string" Value='@("all")'>@L["Capabilities:Administration:AllSources"]</MudSelectItem>
+                            @if (_state.ActiveKind == AgentCapabilityKind.Skill)
                             {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Capabilities:Tool:NoParameters"]</MudText>
+                                <MudSelectItem T="string" Value="@nameof(AgentCapabilitySourceKind.CodeDefined)">@L["Capabilities:Administration:CodeDefined"]</MudSelectItem>
+                                <MudSelectItem T="string" Value="@nameof(AgentCapabilitySourceKind.ExternalFile)">@L["Capabilities:Skill:External"]</MudSelectItem>
                             }
                             else
                             {
-                                <div class="parameter-list">
-                                    @foreach (var parameter in context.Parameters)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                                            @parameter.Name: @parameter.Type@(parameter.IsRequired ? " *" : "")
-                                        </MudChip>
-                                    }
-                                </div>
+                                @foreach (var source in Enum.GetValues<McpCatalogSourceKind>()) { <MudSelectItem T="string" Value="@source.ToString()">@GetMcpSourceKindText(source)</MudSelectItem> }
                             }
-                            @if (!string.IsNullOrWhiteSpace(context.ParametersSchemaJson))
-                            {
-                                <MudExpansionPanels Elevation="0" Dense="true" Class="schema-panel">
-                                    <MudExpansionPanel Text="@L["Capabilities:Tool:Schema"]" Icon="@Icons.Material.Filled.DataObject">
-                                        <pre class="schema-block">@context.ParametersSchemaJson</pre>
-                                    </MudExpansionPanel>
-                                </MudExpansionPanels>
-                            }
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            }
+                        </MudSelect>
+                    </div>
+                    @if (HasFilters) { <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="_state.ClearFilters">@L["Capabilities:Administration:ClearFilters"]</MudButton> }
+                    <div class="entry-list" role="group" aria-label="@L["Capabilities:Administration:Catalog"]" tabindex="0">
+                        @foreach (var catalogEntry in _state.VisibleEntries)
+                        {
+                            <button type="button" class="@(catalogEntry.Key == _state.SelectedEntry?.Key ? "entry-button selected" : "entry-button")" aria-pressed="@(catalogEntry.Key == _state.SelectedEntry?.Key ? "true" : "false")" @onclick="@(() => SelectEntry(catalogEntry))" @key="catalogEntry.Key">
+                                <span class="entry-identity"><MudIcon Icon="@GetEntryIcon(catalogEntry)" Size="Size.Small" /><strong>@catalogEntry.Title</strong></span>
+                                @if (catalogEntry.Title != catalogEntry.Name) { <span class="technical entry-name">@catalogEntry.Name</span> }
+                                <span class="entry-description">@catalogEntry.Description</span>
+                                <span class="entry-meta"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(catalogEntry)" Variant="Variant.Outlined">@GetStatusText(catalogEntry)</MudChip><span>@catalogEntry.Tools.Count @L["Capabilities:Tools"]</span></span>
+                                <span class="entry-source">@GetSourceText(catalogEntry)</span>
+                            </button>
+                        }
+                        @if (_state.VisibleEntries.Count == 0) { <MudText Typo="Typo.body2" Class="catalog-empty">@L[_state.CurrentEntries.Count == 0 ? "Capabilities:Administration:CatalogEmpty" : "Capabilities:Administration:NoMatches"]</MudText> }
+                    </div>
+                </div>
+            </aside>
+            <div class="entry-dossier">
+                @if (_state.SelectedEntry is { } entry)
+                {
+                    @if (!_state.VisibleEntries.Any(item => item.Key == entry.Key)) { <MudAlert Severity="Severity.Info" Dense="true">@L["Capabilities:Administration:FilteredSelection"]</MudAlert> }
+                    @RenderDetail(entry)
+                }
+                else { <MudAlert Severity="Severity.Info">@L["Capabilities:SelectPrompt"]</MudAlert> }
+            </div>
+        </div>
+    </div>;
 
-            @if (entry.Resources.Count > 0)
-            {
-                <MudText Typo="Typo.h6" Class="section-title">@L["Capabilities:Sections:Resources"]</MudText>
-                <div class="resource-list">
-                    @foreach (var resource in entry.Resources)
+    private RenderFragment RenderDetail(AgentCapabilityEntryInfo entry) => @<article class="detail-panel" @key="entry.Key">
+        <header class="detail-header">
+            <span class="identity-emblem"><MudIcon Icon="@GetEntryIcon(entry)" /></span>
+            <div class="detail-heading"><h2 tabindex="-1" @ref="_detailHeading">@entry.Title</h2><span class="technical">@entry.Name</span><p>@entry.Description</p></div>
+            <MudSwitch T="bool" Value="@entry.IsEntryEnabled" ValueChanged="@((bool value) => SetEntryEnabledAsync(entry, value))" ReadOnly="@Busy" aria-disabled="@BusyAttribute" Color="Color.Primary" Label="@L["Capabilities:Administration:EntryEnabled"]" />
+        </header>
+        <section class="detail-section access-section">
+            <h3>@L["Capabilities:Administration:AgentAccess"]</h3>
+            <dl class="evidence-grid">
+                <div><dt>@L["Capabilities:Administration:CatalogGate"]</dt><dd>@BooleanText(entry.IsCatalogEnabled)</dd></div>
+                <div><dt>@L["Capabilities:Administration:EntrySetting"]</dt><dd>@BooleanText(entry.IsEntryEnabled)</dd></div>
+                <div><dt>@L["Capabilities:Administration:ImplementationGate"]</dt><dd>@BooleanText(entry.IsBuiltInEnabled)</dd></div>
+                <div><dt>@L["Capabilities:Administration:EffectiveAvailability"]</dt><dd><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(entry)" Variant="Variant.Outlined">@GetStatusText(entry)</MudChip></dd></div>
+            </dl>
+            @if (!string.IsNullOrWhiteSpace(entry.DisabledReason)) { <MudAlert Severity="@(GetStatusColor(entry) == Color.Default ? Severity.Info : Severity.Warning)" Dense="true">@FormatDisabledReason(entry.DisabledReason)</MudAlert> }
+        </section>
+        <section class="detail-section">
+            <h3>@L["Capabilities:Administration:Registration"]</h3>
+            <dl class="evidence-grid">
+                <div><dt>@L["Capabilities:Administration:SourceFilter"]</dt><dd>@GetSourceText(entry)</dd></div>
+                @if (!string.IsNullOrWhiteSpace(entry.ImplementationType)) { <div><dt>@L["Capabilities:Administration:ImplementationType"]</dt><dd class="technical">@entry.ImplementationType</dd></div> }
+                <div><dt>@L["Capabilities:Administration:RequiredModules"]</dt><dd class="@(entry.RequiredModules.Count > 0 ? "technical" : null)">@(entry.RequiredModules.Count == 0 ? L["Capabilities:Administration:NoRequiredModules"].Value : string.Join(", ", entry.RequiredModules))</dd></div>
+                @if (!string.IsNullOrWhiteSpace(entry.SourcePath)) { <div class="full-evidence"><dt>@L["Capabilities:Skill:SourcePath"]</dt><dd class="technical">@entry.SourcePath</dd></div> }
+            </dl>
+        </section>
+        @if (entry.CanExposeAsMcpServer)
+        {
+            <section class="detail-section exposure-section">
+                <h3>@L["Capabilities:Skill:McpServerTitle"]</h3><p>@L["Capabilities:Skill:McpServerDescription", entry.SkillMcpServerName ?? entry.Name]</p>
+                <MudSwitch T="bool" Value="@entry.IsMcpServerExposureEnabled" ValueChanged="@((bool value) => SetSkillMcpServerEnabledAsync(entry, value))" ReadOnly="@Busy" aria-disabled="@BusyAttribute" Color="Color.Primary" Label="@L["Capabilities:Skill:McpServerToggle"]" />
+                @if (entry.McpServerExposureRequiresRestart) { <MudAlert Severity="Severity.Info" Dense="true">@L["Capabilities:Skill:McpServerRestartHint"]</MudAlert> }
+            </section>
+        }
+        @if (entry.Kind == AgentCapabilityKind.Mcp)
+        {
+            <section class="detail-section connection-section">
+                <h3>@L["Capabilities:Administration:Connection"]</h3>
+                <dl class="evidence-grid">
+                    <div><dt>@L["Capabilities:Administration:Transport"]</dt><dd>@(entry.McpExternalProfile?.TransportMode.ToString() ?? entry.McpTransportKind?.ToString())</dd></div>
+                    <div><dt>@L["Capabilities:Administration:ProfileOwnership"]</dt><dd>@L[entry.IsUserManaged ? "Capabilities:Mcp:UserManaged" : "Capabilities:Administration:CodeManaged"]</dd></div>
+                    @if (entry.McpExternalProfile is { } profile)
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                            @resource.Name
-                        </MudChip>
+                        <div class="full-evidence"><dt>@L["Capabilities:Mcp:Endpoint"]</dt><dd class="technical">@profile.Endpoint</dd></div>
+                        <div><dt>@L["Capabilities:Mcp:Dialog:Headers"]</dt><dd>@L["Capabilities:Mcp:Headers", profile.Headers.Count]</dd></div>
+                        <div><dt>@L["Capabilities:Administration:AgentToolExposure"]</dt><dd>@BooleanText(profile.IsAgentToolEnabled)</dd></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(entry.McpEndpointPath)) { <div class="full-evidence"><dt>@L["Capabilities:Administration:RegisteredPath"]</dt><dd class="technical">@entry.McpEndpointPath</dd></div> }
+                    @if (!string.IsNullOrWhiteSpace(entry.McpDisplayUrl)) { <div class="full-evidence"><dt>@L["Capabilities:Administration:DisplayUrl"]</dt><dd class="technical">@entry.McpDisplayUrl</dd></div> }
+                </dl>
+                <div class="connection-actions">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.NetworkPing" aria-disabled="@BusyAttribute" OnClick="@(() => TestMcpAsync(entry))">@L["Capabilities:Mcp:Test"]</MudButton>
+                    <MudTooltip Text="@L[CanCopyMcpConfig(entry) ? "Capabilities:Mcp:CopyConfigTooltip" : "Capabilities:Mcp:CopyConfigUnavailable"]">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.ContentCopy" Disabled="@(!CanCopyMcpConfig(entry))" aria-disabled="@((Busy || _clipboardBusy || !CanCopyMcpConfig(entry)) ? "true" : "false")" OnClick="@(() => CopyMcpConfigAsync(entry))">@L[entry.McpExternalProfile?.Headers.Count > 0 ? "Capabilities:Administration:CopyIncludingHeaders" : "Capabilities:Mcp:CopyConfig"]</MudButton>
+                    </MudTooltip>
+                    @if (CanExportSkillPack(entry)) { <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Download" aria-disabled="@BusyAttribute" OnClick="@(() => ShowSkillPackExportDialogAsync(entry))">@L["Capabilities:Mcp:ExportSkill:Action"]</MudButton> }
+                    @if (entry.IsUserManaged)
+                    {
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit" aria-disabled="@BusyAttribute" OnClick="@(() => ShowEditMcpProfileDialogAsync(entry))">@L["Common:Edit"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" StartIcon="@Icons.Material.Filled.Delete" aria-disabled="@BusyAttribute" OnClick="@(() => DeleteMcpProfileAsync(entry))">@L["Common:Delete"]</MudButton>
                     }
                 </div>
-            }
-        </div>;
-    }
-
-    private RenderFragment RenderIssueList(IReadOnlyList<string> issues)
-    {
-        return @<MudAlert Severity="Severity.Warning" Dense="true" Class="skill-source-issues">
-            <ul>
-                @foreach (var issue in issues)
-                {
-                    <li>@issue</li>
-                }
-            </ul>
-        </MudAlert>;
-    }
-
-    private int GetLoadedFileSkillCount()
-    {
-        return _management?.FileSkillSources.Sum(static source => source.LoadedSkillCount) ?? 0;
-    }
-
-    private string GetFileSkillSourceTitle(AgentCapabilityFileSkillSourceStatusInfo source)
-    {
-        var firstPath = source.ConfiguredPaths.FirstOrDefault() ?? L["Capabilities:Skill:Sources:UnknownPath"];
-        return source.ConfiguredPaths.Count <= 1
-            ? firstPath
-            : L["Capabilities:Skill:Sources:PathGroup", firstPath, source.ConfiguredPaths.Count - 1];
-    }
-
-    private void SetActiveTab(int index)
-    {
-        _activeTabIndex = index;
-        _lastConnectivityResult = null;
-        EnsureSelectedEntry();
-    }
-
-    private void SetQuery(string value)
-    {
-        _query = value;
-    }
-
-    private IReadOnlyList<AgentCapabilityEntryInfo> FilterEntries(IReadOnlyList<AgentCapabilityEntryInfo> entries)
-    {
-        if (string.IsNullOrWhiteSpace(_query))
-        {
-            return entries;
+                <div class="probe-evidence" role="status" aria-live="polite">
+                    <h4>@L["Capabilities:Administration:CheckTitle"]</h4>
+                    @if (_state!.LastProbe is { } probe && probe.EntryKey == entry.Key)
+                    {
+                        @if (probe.Result is { } result)
+                        {
+                            <MudAlert Severity="@(result.Success ? Severity.Success : Severity.Error)" Dense="true">@FormatConnectivityMessage(result)</MudAlert>
+                            <dl class="probe-facts">
+                                <div><dt>@L["Capabilities:Administration:TestedAt"]</dt><dd title="@result.TestedAt.ToLocalTime().ToString("O")">@result.TestedAt.ToLocalTime().ToString("g")</dd></div>
+                                <div><dt>@L["Capabilities:Administration:Duration", result.Duration.TotalMilliseconds.ToString("0")]</dt><dd>@L["Capabilities:Administration:ToolCount", result.ToolCount]</dd></div>
+                            </dl>
+                            @if (result.ToolNames is { Count: > 0 } toolNames) { <p class="technical">@string.Join(", ", toolNames)</p> }
+                        }
+                        else { <MudAlert Severity="Severity.Error" Dense="true">@probe.Error</MudAlert> }
+                    }
+                    else { <p>@L["Capabilities:Administration:NoCheck"]</p> }
+                </div>
+            </section>
         }
-
-        var query = _query.Trim();
-        return entries
-            .Where(entry =>
-                entry.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
-                || entry.Description.Contains(query, StringComparison.OrdinalIgnoreCase)
-                || entry.Tools.Any(tool => tool.Name.Contains(query, StringComparison.OrdinalIgnoreCase)))
-            .ToList();
-    }
-
-    private void SelectEntry(AgentCapabilityEntryInfo entry)
-    {
-        _selectedEntry = entry;
-        _lastConnectivityResult = null;
-    }
-
-    private void EnsureSelectedEntry()
-    {
-        var entries = CurrentEntries;
-        if (entries.Count == 0)
+        @if (!string.IsNullOrWhiteSpace(entry.Content))
         {
-            _selectedEntry = null;
-            return;
+            <MudExpansionPanels Elevation="0" Dense="true" Class="content-panels"><MudExpansionPanel Text="@L["Capabilities:Content"]" Icon="@Icons.Material.Filled.Article"><pre class="diagnostic-block">@entry.Content</pre></MudExpansionPanel></MudExpansionPanels>
         }
-
-        if (_selectedEntry is not null
-            && entries.Any(entry => entry.Key == _selectedEntry.Key))
-        {
-            _selectedEntry = entries.First(entry => entry.Key == _selectedEntry.Key);
-            return;
-        }
-
-        _selectedEntry = entries[0];
-    }
-
-    private async Task SetCatalogEnabledAsync(AgentCapabilityKind kind, bool enabled)
-    {
-        var result = await CapabilityFacade.SetCatalogEnabledAsync(kind, enabled);
-        await ApplyManagementResultAsync(result);
-    }
-
-    private async Task SetEntryEnabledAsync(AgentCapabilityEntryInfo entry, bool enabled)
-    {
-        var result = await CapabilityFacade.SetEntryEnabledAsync(entry.Kind, entry.Name, enabled);
-        await ApplyManagementResultAsync(result);
-    }
-
-    private async Task SetSkillMcpServerEnabledAsync(AgentCapabilityEntryInfo entry, bool enabled)
-    {
-        var result = await CapabilityFacade.SetSkillMcpServerEnabledAsync(entry.Name, enabled);
-        await ApplyManagementResultAsync(result);
-    }
-
-    private async Task ShowAddMcpProfileDialogAsync()
-    {
-        var dialog = await DialogService.ShowAsync<ExternalMcpProfileDialog>(
-            L["Capabilities:Mcp:Dialog:AddTitle"],
-            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
-
-        var dialogResult = await dialog.Result;
-        if (dialogResult is not { Canceled: false, Data: ExternalMcpClientProfile profile })
-        {
-            return;
-        }
-
-        var result = await McpFacade.SaveExternalProfileAsync(profile);
-        if (result.IsFailed(out var error, out var management))
-        {
-            AddErrorSnackbar(error.Message);
-            return;
-        }
-
-        _management = management;
-        SelectEntryByName(profile.Name);
-        Snackbar.Add(L["Common:Success"], Severity.Success);
-    }
-
-    private async Task ShowEditMcpProfileDialogAsync(AgentCapabilityEntryInfo entry)
-    {
-        if (entry.McpExternalProfile is null)
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters
-        {
-            { nameof(ExternalMcpProfileDialog.Profile), entry.McpExternalProfile },
-            { nameof(ExternalMcpProfileDialog.IsEdit), true },
-            { nameof(ExternalMcpProfileDialog.SubmitText), L["Common:Actions:Save"].Value }
-        };
-
-        var dialog = await DialogService.ShowAsync<ExternalMcpProfileDialog>(
-            L["Capabilities:Mcp:Dialog:EditTitle"],
-            parameters,
-            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
-
-        var dialogResult = await dialog.Result;
-        if (dialogResult is not { Canceled: false, Data: ExternalMcpClientProfile profile })
-        {
-            return;
-        }
-
-        var result = await McpFacade.SaveExternalProfileAsync(profile);
-        if (result.IsFailed(out var error, out var management))
-        {
-            AddErrorSnackbar(error.Message);
-            return;
-        }
-
-        _management = management;
-        SelectEntryByName(profile.Name);
-        Snackbar.Add(L["Common:Success"], Severity.Success);
-    }
-
-    private async Task DeleteMcpProfileAsync(AgentCapabilityEntryInfo entry)
-    {
-        if (!entry.IsUserManaged)
-        {
-            return;
-        }
-
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            L["Common:Confirm"],
-            L["Capabilities:Mcp:DeleteConfirm", entry.Name],
-            yesText: L["Common:Delete"],
-            cancelText: L["Common:Cancel"]);
-
-        if (confirmed != true)
-        {
-            return;
-        }
-
-        var result = await McpFacade.DeleteExternalProfileAsync(entry.Name);
-        if (result.IsFailed(out var error, out var management))
-        {
-            AddErrorSnackbar(error.Message);
-            return;
-        }
-
-        _management = management;
-        EnsureSelectedEntry();
-        Snackbar.Add(L["Common:Success"], Severity.Success);
-    }
-
-    private async Task ApplyManagementResultAsync(Core.Results.Res<AgentCapabilityManagementInfo> result)
-    {
-        if (result.IsFailed(out var error, out var management))
-        {
-            AddErrorSnackbar(error.Message);
-            return;
-        }
-
-        _management = management;
-        EnsureSelectedEntry();
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private void SelectEntryByName(string name)
-    {
-        _selectedEntry = CurrentEntries.FirstOrDefault(entry =>
-            string.Equals(entry.Name, name, StringComparison.OrdinalIgnoreCase));
-        EnsureSelectedEntry();
-    }
-
-    private async Task TestMcpAsync(AgentCapabilityEntryInfo entry)
-    {
-        if (_isTestingMcp)
-        {
-            return;
-        }
-
-        _isTestingMcp = true;
-        _lastConnectivityResult = null;
-        StateHasChanged();
-
-        var result = await McpFacade.TestConnectivityAsync(entry.Name);
-        if (result.IsFailed(out var error, out var connectivity))
-        {
-            AddErrorSnackbar(error.Message);
-        }
-        else
-        {
-            _lastConnectivityResult = connectivity;
-            Snackbar.Add(FormatConnectivityMessage(connectivity), connectivity.Success ? Severity.Success : Severity.Error);
-        }
-
-        _isTestingMcp = false;
-        StateHasChanged();
-    }
-
-    private string GetEntryButtonClass(AgentCapabilityEntryInfo entry)
-    {
-        var selected = entry.Key == _selectedEntry?.Key ? " selected" : "";
-        var disabled = entry.IsEnabled ? "" : " disabled";
-        return $"entry-button{selected}{disabled}";
-    }
-
-    private static string GetEntryIcon(AgentCapabilityEntryInfo entry)
-    {
-        return entry.Kind == AgentCapabilityKind.Skill
-            ? Icons.Material.Filled.AutoAwesome
-            : Icons.Material.Filled.AccountTree;
-    }
-
-    private static Color GetKindColor(AgentCapabilityKind kind)
-    {
-        return kind == AgentCapabilityKind.Skill ? Color.Primary : Color.Secondary;
-    }
-
-    private static Color GetStatusColor(AgentCapabilityEntryInfo entry)
-    {
-        return entry.IsEnabled ? Color.Success : Color.Warning;
-    }
-
-    private string GetStatusText(AgentCapabilityEntryInfo entry)
-    {
-        return entry.IsEnabled ? L["Capabilities:Status:Enabled"] : L["Capabilities:Status:Disabled"];
-    }
-
-    private string FormatDisabledReason(string disabledReason)
-    {
-        if (SkillCapabilityMessageCode.DisabledReason.TryParseRequiredModulesMissing(disabledReason, out var missingModules))
-        {
-            return L["Capabilities:Skill:DisabledReason:RequiredModulesMissing", missingModules];
-        }
-
-        return disabledReason switch
-        {
-            SkillCapabilityMessageCode.DisabledReason.ImplementationDisabled => L["Capabilities:Skill:DisabledReason:ImplementationDisabled"],
-            SkillCapabilityMessageCode.DisabledReason.ReadOnlyFileAccessNoRoots => L["Capabilities:Skill:DisabledReason:ReadOnlyFileAccessNoRoots"],
-            SkillCapabilityMessageCode.DisabledReason.CatalogDisabled => L["Capabilities:Skill:DisabledReason:CatalogDisabled"],
-            SkillCapabilityMessageCode.DisabledReason.EntryDisabled => L["Capabilities:Skill:DisabledReason:EntryDisabled"],
-            McpCapabilityMessageCode.DisabledReason.SkillMcpExposureDisabled => L["Capabilities:Mcp:DisabledReason:SkillMcpExposureDisabled"],
-            McpCapabilityMessageCode.DisabledReason.SkillServerNotAgentTool => L["Capabilities:Mcp:DisabledReason:SkillServerNotAgentTool"],
-            McpCapabilityMessageCode.DisabledReason.NotAgentTool => L["Capabilities:Mcp:DisabledReason:NotAgentTool"],
-            McpCapabilityMessageCode.DisabledReason.CatalogDisabled => L["Capabilities:Mcp:DisabledReason:CatalogDisabled"],
-            McpCapabilityMessageCode.DisabledReason.EntryDisabled => L["Capabilities:Mcp:DisabledReason:EntryDisabled"],
-            _ => disabledReason
-        };
-    }
-
-    private string FormatConnectivityMessage(McpConnectivityTestResult result)
-    {
-        return result.Message switch
-        {
-            McpCapabilityMessageCode.Connectivity.ConnectedToEndpoint => L["Capabilities:Mcp:Connectivity:ConnectedToEndpoint", result.ToolCount],
-            McpCapabilityMessageCode.Connectivity.ConnectedAndListedTools => L["Capabilities:Mcp:Connectivity:ConnectedAndListedTools", result.ToolCount],
-            McpCapabilityMessageCode.Connectivity.LocalHttpDisplayUrlMissing => L["Capabilities:Mcp:Connectivity:LocalHttpDisplayUrlMissing", result.ToolCount],
-            McpCapabilityMessageCode.Connectivity.LocalStdioInProcessReady => L["Capabilities:Mcp:Connectivity:LocalStdioInProcessReady", result.ToolCount],
-            _ => result.Message
-        };
-    }
-
-    private string GetMcpSourceKindText(McpCatalogSourceKind sourceKind)
-    {
-        return sourceKind switch
-        {
-            McpCatalogSourceKind.LocalServer => L["Capabilities:Mcp:Source:LocalServer"],
-            McpCatalogSourceKind.SkillServer => L["Capabilities:Mcp:Source:SkillServer"],
-            McpCatalogSourceKind.ExternalClient => L["Capabilities:Mcp:Source:ExternalClient"],
-            _ => sourceKind.ToString()
-        };
-    }
-
-    private bool CanCopyMcpConfig(AgentCapabilityEntryInfo entry)
-    {
-        return entry.McpExternalProfile is not null
-               || !string.IsNullOrWhiteSpace(entry.McpDisplayUrl)
-               || !string.IsNullOrWhiteSpace(entry.McpEndpointPath);
-    }
-
-    private static bool CanExportSkillPack(AgentCapabilityEntryInfo entry)
-    {
-        return entry.Kind == AgentCapabilityKind.Mcp
-               && entry.McpExternalProfile is null
-               && entry.McpTransportKind == McpServerTransportKind.Http
-               && !string.IsNullOrWhiteSpace(entry.McpEndpointPath);
-    }
-
-    private async Task ShowSkillPackExportDialogAsync(AgentCapabilityEntryInfo entry)
-    {
-        if (!CanExportSkillPack(entry))
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters
-        {
-            { nameof(SkillPackExportDialog.ServerName), entry.Name },
-            { nameof(SkillPackExportDialog.DefaultEndpoint), ResolveMcpEndpointUrl(entry) },
-            { nameof(SkillPackExportDialog.ToolCount), entry.Tools.Count }
-        };
-
-        await DialogService.ShowAsync<SkillPackExportDialog>(
-            L["Capabilities:Mcp:ExportSkill:Title"],
-            parameters,
-            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
-    }
-
-    private string ResolveMcpEndpointUrl(AgentCapabilityEntryInfo entry)
-    {
-        if (!string.IsNullOrWhiteSpace(entry.McpDisplayUrl))
-        {
-            return entry.McpDisplayUrl;
-        }
-
-        var baseUri = new Uri(NavigationManager.BaseUri);
-        var authority = baseUri.GetLeftPart(UriPartial.Authority);
-        return authority.TrimEnd('/') + "/" + entry.McpEndpointPath!.TrimStart('/');
-    }
-
-    private string GetCopyMcpConfigTooltip(AgentCapabilityEntryInfo entry)
-    {
-        return CanCopyMcpConfig(entry)
-            ? L["Capabilities:Mcp:CopyConfigTooltip"]
-            : L["Capabilities:Mcp:CopyConfigUnavailable"];
-    }
-
-    private async Task CopyMcpConfigAsync(AgentCapabilityEntryInfo entry)
-    {
-        if (!CanCopyMcpConfig(entry))
-        {
-            return;
-        }
-
-        var endpoint = entry.McpExternalProfile?.Endpoint
-                       ?? entry.McpDisplayUrl
-                       ?? entry.McpEndpointPath
-                       ?? string.Empty;
-        var server = new Dictionary<string, object?>
-        {
-            ["type"] = "http",
-            ["url"] = endpoint
-        };
-
-        if (entry.McpExternalProfile?.Headers.Count > 0)
-        {
-            server["headers"] = entry.McpExternalProfile.Headers;
-        }
-
-        var payload = new Dictionary<string, object?>
-        {
-            ["mcpServers"] = new Dictionary<string, object?>
+        <section class="detail-section tools-section">
+            <h3>@L["Capabilities:Sections:Tools"] <span class="section-count">@entry.Tools.Count</span></h3>
+            @if (!string.IsNullOrWhiteSpace(entry.DiscoveryError)) { <MudAlert Severity="Severity.Error" Dense="true"><strong>@L["Capabilities:Administration:DiscoveryFailed"]</strong><div>@SanitizeDiagnostic(entry, entry.DiscoveryError)</div></MudAlert> }
+            @if (entry.Tools.Count == 0)
             {
-                [entry.Name] = server
+                @if (string.IsNullOrWhiteSpace(entry.DiscoveryError)) { <MudText Typo="Typo.body2">@L["Capabilities:NoTools"]</MudText> }
             }
-        };
+            else
+            {
+                <div class="tool-table-owner">
+                    <MudTable T="AgentCapabilityToolInfo" Items="@entry.Tools" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.Xs" Class="tool-table">
+                        <HeaderContent><MudTh>@L["Capabilities:Tool:Name"]</MudTh><MudTh>@L["Capabilities:Tool:Parameters"]</MudTh></HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="@L["Capabilities:Tool:Name"]"><strong class="technical tool-name">@context.Name</strong><p class="tool-description">@context.Description</p>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(context.IsEnabled ? Color.Success : Color.Default)">@L[context.IsEnabled ? "Capabilities:Administration:ToolAvailable" : "Capabilities:Administration:ToolUnavailable"]</MudChip>
+                            </MudTd>
+                            <MudTd DataLabel="@L["Capabilities:Tool:Parameters"]">
+                                @if (context.Parameters.Count == 0) { <span>@L["Capabilities:Tool:NoParameters"]</span> }
+                                else
+                                {
+                                    <dl class="parameter-list">
+                                        @foreach (var parameter in context.Parameters)
+                                        {
+                                            <div><dt><span class="technical">@parameter.Name <span class="parameter-type">@parameter.Type</span></span><small>@L[parameter.IsRequired ? "Capabilities:Administration:ParameterRequired" : "Capabilities:Administration:ParameterOptional"]</small></dt>
+                                                <dd>@parameter.Description @if (parameter.DefaultValue is not null) { <span class="technical parameter-default">@L["Capabilities:Administration:ParameterDefault"]: @parameter.DefaultValue</span> }</dd></div>
+                                        }
+                                    </dl>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(context.ParametersSchemaJson))
+                                {
+                                    <MudExpansionPanels Elevation="0" Dense="true" Class="schema-panels"><MudExpansionPanel Text="@L["Capabilities:Tool:Schema"]" Icon="@Icons.Material.Filled.DataObject"><pre class="diagnostic-block">@context.ParametersSchemaJson</pre></MudExpansionPanel></MudExpansionPanels>
+                                }
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+            }
+        </section>
+        @if (entry.Resources.Count > 0)
+        {
+            <section class="detail-section"><h3>@L["Capabilities:Sections:Resources"] <span class="section-count">@entry.Resources.Count</span></h3><dl class="resource-list">
+                @foreach (var resource in entry.Resources) { <div><dt class="technical">@resource.Name</dt><dd>@resource.Description</dd></div> }
+            </dl></section>
+        }
+    </article>;
 
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
-        var copied = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", json);
-        Snackbar.Add(
-            copied ? L["Capabilities:Mcp:CopyConfigSuccess"] : L["Capabilities:Mcp:CopyConfigFailed"],
-            copied ? Severity.Success : Severity.Error);
-    }
-
-    private void AddErrorSnackbar(string? message)
+    private RenderFragment RenderFileSources()
     {
-        Snackbar.Add(string.IsNullOrWhiteSpace(message) ? L["Error:Generic"] : message, Severity.Error);
+        var management = _state.Management!;
+        return @<details class="file-source-disclosure">
+        <summary><span><strong>@L["Capabilities:Skill:Sources:Title"]</strong><small>@L["Capabilities:Skill:Sources:Summary", management.FileSkillSources.Sum(source => source.LoadedSkillCount), management.FileSkillSources.Count]</small></span>
+            @if (management.FileSkillSources.Any(source => source.HasIssues)) { <span class="source-issue-label" role="status">@L["Capabilities:Skill:Sources:HasIssues"]</span> }
+        </summary>
+        <div class="file-source-body">
+            @if (management.FileSkillSources.Count == 0) { <p>@L["Capabilities:Administration:NoSources"]</p> }
+            @foreach (var source in management.FileSkillSources)
+            {
+                <section class="source-group">
+                    <dl class="evidence-grid">
+                        <div class="full-evidence"><dt>@L["Capabilities:Administration:ConfiguredRoots"]</dt><dd class="technical">@foreach (var root in source.ConfiguredPaths) { <div>@root</div> }</dd></div>
+                        <div><dt>@L["Capabilities:Administration:RunnerType"]</dt><dd>@L[source.UsesSubprocessRunner ? "Capabilities:Skill:Sources:SubprocessRunner" : source.HasScriptRunner ? "Capabilities:Skill:Sources:CustomRunner" : "Capabilities:Skill:Sources:NoRunner"]</dd></div>
+                        <div><dt>@L["Capabilities:Skill:Sources:Loaded", source.LoadedSkillCount]</dt><dd class="technical">@string.Join(", ", source.LoadedSkillNames)</dd></div>
+                    </dl>
+                    @if (!source.HasIssues) { <p>@L["Capabilities:Administration:NoReportedIssues"]</p> }
+                    @if (source.Issues.Count > 0) { @RenderIssues(source.Issues) }
+                    @foreach (var path in source.Paths)
+                    {
+                        <div class="source-path-group">
+                            <div class="source-path-heading"><strong class="technical">@path.Path</strong><MudChip T="string" Size="Size.Small" Color="@(path.Exists ? Color.Default : Color.Warning)" Variant="Variant.Outlined">@L[path.Exists ? "Capabilities:Administration:PathExists" : "Capabilities:Administration:PathMissing"]</MudChip></div>
+                            <p>@L["Capabilities:Skill:Sources:PathLoaded", path.LoadedSkillCount]</p>
+                            @if (path.LoadedSkillNames.Count > 0) { <p class="technical">@string.Join(", ", path.LoadedSkillNames)</p> }
+                            @if (path.Issues.Count > 0) { @RenderIssues(path.Issues) }
+                        </div>
+                    }
+                </section>
+            }
+        </div>
+    </details>;
     }
+
+    private RenderFragment RenderIssues(IReadOnlyList<string> issues) => @<MudAlert Severity="Severity.Warning" Dense="true"><ul class="issue-list">@foreach (var issue in issues) { <li>@issue</li> }</ul></MudAlert>;
 }

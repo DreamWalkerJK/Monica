@@ -5,7 +5,7 @@
 <div class="reasoning-picker">
     <MudMenu Label="@Summary" Variant="Variant.Outlined" EndIcon="@Icons.Material.Outlined.UnfoldMore"
              AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" AriaLabel="@L["Settings:ReasoningLevels"]"
-             Disabled="@Disabled" FullWidth="true">
+             Disabled="@Disabled" ListClass="pa-0" PopoverClass="mo-reasoning-popover">
         <ChildContent>
             <div class="reasoning-menu" @onclick:stopPropagation="true">
                 <MudTextField T="string" @bind-Value="_search" Immediate="true" Placeholder="@L["Settings:SearchReasoning"]"

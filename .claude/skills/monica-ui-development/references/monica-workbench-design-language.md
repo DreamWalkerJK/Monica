@@ -107,6 +107,8 @@ Measure both `scrollWidth/clientWidth` and `scrollHeight/clientHeight` at the na
 
 When a compact form adds a role caption with `::before`, account for that caption as a real grid item. Give it the intended full row so the native field and reset action retain their own tracks. Inspect caption placement, floating labels, helper text and entered values together at the actual nested owner width; fitting the outer dialog does not establish a usable field layout.
 
+For master/detail catalogs, the inventory must not turn the whole page into a long selector followed by inaccessible details. At a wide owner, keep search and filters outside one content-sized, viewport-capped entry-list scroller; keep the dossier in the shell's ordinary flow. Sticky positioning is appropriate only while the catalog controls and clearance fit the actual scrollport. At compact widths or short heights, use a selected-entry disclosure that closes on selection, focuses the selected heading and reveals it through the shell scroll owner. Preserve the inventory's internal scroll position on desktop and verify selection of the last record without requiring a manual trip back up the page. Empty and sparse inventories retain natural height and have no unnecessary bars. Choose the breakpoint from usable owner width in both shell layouts, rather than from the browser width alone.
+
 ## Preserve interaction and runtime state
 
 Use native buttons and links for simple actions and disclosures; retain MudBlazor primitives for menus, popovers, dialogs, and drawers. Provide visible hover, selected, pressed, and keyboard-focus states without making informational surfaces look clickable. Keep motion purposeful and honor reduced motion; an immediately appearing context panel may be appropriate for frequent navigation.
@@ -128,6 +130,8 @@ Related operational pages share one navigation language. Reuse `Monica.UI.Shared
 Verify the rail at intermediate and phone widths: links wrap at their natural content width, selected text and counts remain readable, focus outlines stay visible, and neither scroll direction acquires an incidental scrollbar. Preserve native link behavior, direct URLs, and browser history; visual consistency must not replace routed workflows with a local tab state machine.
 
 Related routes also share page-header typography, top padding, identity-row spacing and header-to-rail separation. Keep equivalent header content on the same baseline when switching routes at one viewport and language. Handle responsive wrapping deliberately; do not compensate for inconsistent structure with page-specific fixed heights or large arbitrary minimum heights.
+
+Keep related destinations on one contextual navigation level when they are peer tasks. Do not put a family route rail above a second full-width tab rail merely to divide independent catalogs. Prefer sibling routes in the existing workbench rail, preserving the original entry destination and verifying direct load, reload, history and exact selected-link state. Local tabs remain appropriate for subordinate views of one task. When a tab frame is justified, its bar and body must have deliberate, coherent paint in every theme; a translucent hover token does not establish a structural surface. Inspect the actual composed background and use the theme's opaque Surface role, or a palette-derived opaque tonal mix, where a distinct panel is intended.
 
 ## Accept each page on real evidence
 

@@ -1,205 +1,86 @@
 @attribute [Route(PAGE_URL)]
-@rendermode InteractiveServer
 @using Microsoft.Extensions.Localization
 @using Monica.AI.Configuration.Facades
 @using Monica.AI.Configuration.Models
 @using Monica.AI.Chat.Models
+@using Monica.AI.Models
 @using Monica.AI.UI.Localization
-@using Monica.Core.Results
-@implements IDisposable
+@using Monica.AI.UI.Shared.Components
 @inject AIConfigurationFacade Configuration
 @inject IDialogService DialogService
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<AIResource> L
+@implements IAsyncDisposable
 
-<PageTitle>@L["ProviderManage:Title"]</PageTitle>
-<div class="provider-settings-page">
-    <header class="settings-header">
-        <div><MudText Typo="Typo.h5">@L["Settings:Title"]</MudText><MudText Typo="Typo.body2" Class="settings-description">@L["Settings:SharedSettings"]</MudText></div>
-        <div class="header-actions"><MudButton StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync" Disabled="@_busy">@L["ProviderManage:Refresh"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => EditProviderAsync(null))" Disabled="@_busy">@L["Settings:AddProvider"]</MudButton></div>
-    </header>
-    @if (_error is not null) { <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert> }
-    @if (_busy) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
-    <div class="settings-workspace">
-        <nav class="provider-list" aria-label="@L["Provider:Label"]">
-            @foreach (var provider in _snapshot.Providers)
-            {
-                <button type="button" class="provider-row @(provider.Configuration.ProviderId == _selectedId ? "selected" : null)" @onclick="@(() => Select(provider.Configuration.ProviderId))">
-                    <span class="provider-row-title">@(provider.Configuration.DisplayName ?? provider.Configuration.ProviderId)</span>
-                    <span class="provider-row-meta">@provider.Configuration.ProviderType · @L["Settings:ModelCount", provider.Configuration.Models.Count]</span>
-                    <span class="provider-row-source">@Source(provider)</span>
-                    @if (!provider.Configuration.Enabled) { <span class="disabled-label">@L["Settings:Disabled"]</span> }
+<PageTitle>@L["Settings:Title"]</PageTitle>
+<div class="provider-administration">
+    <AIAdministrationHeader Title="@L["Administration:Providers"]" Description="@L["Administration:ProviderScope"]" IsProviderPage="true">
+        <Actions>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh" aria-disabled="@(State.IsBusy ? "true" : "false")" OnClick="RefreshAsync">@L["Common:Actions:Refresh"]</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add" aria-disabled="@(State.IsBusy ? "true" : "false")" OnClick="@(() => EditProviderAsync(null))">@L["Settings:AddProvider"]</MudButton>
+        </Actions>
+    </AIAdministrationHeader>
+    @if (State.Error is not null) { <div class="provider-error"><MudAlert Severity="Severity.Error">@State.Error @if (State.HasLoaded) { <span>@L["Administration:RetainedSnapshot"]</span> }</MudAlert></div> }
+    @if (State.IsBusy) { <div class="provider-progress"><MudProgressLinear Indeterminate="true" Color="Color.Primary" /></div> }
+    @if (!State.HasLoaded) { <div class="provider-empty"><MudIcon Icon="@Icons.Material.Outlined.Hub" /><h2>@L[State.IsBusy ? "Administration:Loading" : "Administration:Unavailable"]</h2></div> }
+    else if (State.Snapshot.Providers.Count == 0) { <section class="provider-empty"><MudIcon Icon="@Icons.Material.Outlined.Hub" /><h2>@L["Administration:NoProviders"]</h2><p>@L["Settings:EmptyProviders"]</p><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => EditProviderAsync(null))">@L["Settings:AddProvider"]</MudButton></section> }
+    else
+    {
+        <div class="provider-workspace">
+            <aside class="provider-index mo-self-painted @(_catalogExpanded ? "catalog-open" : "catalog-closed")">
+                <div class="provider-index-heading"><h2>@L["Administration:ProviderCatalog"]</h2><span class="provider-count">@State.Snapshot.Providers.Count</span></div>
+                <button type="button" class="provider-compact-toggle" aria-expanded="@_catalogExpanded.ToString().ToLowerInvariant()" aria-controls="ai-provider-catalog" @onclick="ToggleCatalog">
+                    <span><strong>@(State.SelectedProvider is { } current ? DisplayName(current.Configuration) : L["Administration:ProviderCatalog"])</strong><small>@L["Administration:ProviderCount", State.VisibleProviders.Count, State.Snapshot.Providers.Count]</small></span>
+                    <span>@L["Administration:ChangeProvider"] <MudIcon Icon="@(_catalogExpanded ? Icons.Material.Outlined.ExpandLess : Icons.Material.Outlined.ExpandMore)" /></span>
                 </button>
-            }
-            @if (_snapshot.Providers.Count == 0) { <div class="settings-empty">@L["Settings:NoProviders"]</div> }
-        </nav>
-        <main class="provider-detail">
-            @if (Selected is { } selected)
-            {
-                var provider = selected.Configuration;
-                <div class="provider-detail-heading">
-                    <div><MudText Typo="Typo.h6">@(provider.DisplayName ?? provider.ProviderId)</MudText><span class="endpoint">@(provider.BaseUrl ?? L["Settings:OfficialEndpoint"])</span></div>
-                    <div class="provider-actions">
-                        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => EditProviderAsync(selected))" Disabled="@_busy">@L["Settings:EditProvider"]</MudButton>
-                        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.NetworkCheck" OnClick="@(() => TestProviderAsync(provider.ProviderId))" Disabled="@_busy">@L["Settings:TestConnection"]</MudButton>
-                        <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Dense="true" AriaLabel="@L["Settings:ProviderActions"]" Disabled="@_busy">
-                            <MudMenuItem OnClick="@(() => SaveAsync(provider with { Enabled = !provider.Enabled }))">@(provider.Enabled ? L["Settings:Disable"] : L["Settings:Enable"])</MudMenuItem>
-                            @if (selected.IsCodeDefined && selected.HasOverride) { <MudMenuItem OnClick="@(() => ResetAsync(provider.ProviderId))">@L["Settings:ResetOverride"]</MudMenuItem> }
-                            @if (!selected.IsCodeDefined) { <MudMenuItem OnClick="@(() => RemoveAsync(provider.ProviderId))">@L["Settings:DeleteProvider"]</MudMenuItem> }
-                        </MudMenu>
+                    <div id="ai-provider-catalog" class="provider-index-body">
+                        <MudTextField T="string" Value="@State.ProviderQuery" ValueChanged="State.SetProviderQuery" Label="@L["Administration:SearchProviders"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Clearable="true" />
+                        <nav class="provider-index-list" aria-label="@L["Settings:Provider"]">
+                            @foreach (var item in State.VisibleProviders)
+                            {
+                                var configuration = item.Configuration;
+                                <button class="provider-index-row @(Same(configuration.ProviderId, State.SelectedProviderId) ? "selected" : null)" aria-pressed="@Same(configuration.ProviderId, State.SelectedProviderId).ToString().ToLowerInvariant()" @onclick="@(() => SelectProvider(configuration.ProviderId))">
+                                    <span class="provider-index-name">@DisplayName(configuration)</span><span class="provider-index-meta">@configuration.ProviderType · @L["Administration:ModelCount", configuration.Models.Count]</span><span class="provider-index-source">@Source(item)</span><span class="provider-config-state @(item.ValidationErrors.Count > 0 ? "invalid" : configuration.Enabled ? "on" : "off")"><span class="status-dot"></span>@L[item.ValidationErrors.Count > 0 ? "Administration:InvalidConfiguration" : configuration.Enabled ? "Administration:ConfigOn" : "Administration:ConfigOff"]</span>
+                                </button>
+                            }
+                        </nav>
+                        @if (State.VisibleProviders.Count == 0) { <div class="provider-no-match"><p>@L["Administration:NoProviderMatches"]</p><MudButton OnClick="State.ClearFilters">@L["Administration:ClearFilters"]</MudButton></div> }
+                        <p class="provider-filter-count">@L["Administration:ProviderCount", State.VisibleProviders.Count, State.Snapshot.Providers.Count]</p>
                     </div>
-                </div>
-                <div class="provider-facts"><span>@Source(selected)</span><span>@(selected.HasApiKey ? L["Settings:CredentialConfigured"] : L["Settings:CredentialMissing"])</span><span>@L["Settings:AppliesNextRequest"]</span></div>
-                @if (selected.ValidationErrors is { Count: > 0 })
+            </aside>
+            <div class="provider-detail">
+                @if (State.SelectedProvider is { } selected)
                 {
-                    <div class="validation-errors" role="alert">
-                        <span>@L["Settings:ValidationErrors"]</span>
-                        @foreach (var error in selected.ValidationErrors) { <div>@error</div> }
-                    </div>
-                }
-                <div class="models-heading"><MudText Typo="Typo.subtitle1">@L["Settings:Models"]</MudText><div class="provider-actions"><MudButton Size="Size.Small" OnClick="DiscoverAsync" Disabled="@(_busy || !provider.Enabled)" StartIcon="@Icons.Material.Outlined.Search">@L["Settings:Discover"]</MudButton><MudButton Size="Size.Small" OnClick="@(() => EditModelAsync(null))" Disabled="@_busy" StartIcon="@Icons.Material.Filled.Add">@L["Settings:AddModel"]</MudButton></div></div>
-                <div class="configured-models">
-                    @foreach (var model in provider.Models)
-                    {
-                        <article class="configured-model" @key="model.ModelName">
-                            <div class="model-overview">
-                                <div class="model-symbol"><MudIcon Icon="@(model.Kind == AIModelKind.Embedding ? Icons.Material.Outlined.DataArray : Icons.Material.Outlined.Memory)" /></div>
-                                <div class="model-identity">
-                                    <div class="model-title"><strong>@(model.DisplayName ?? model.ModelName)</strong>@if(provider.DefaultModel == model.ModelName){<span class="default-model"><MudIcon Icon="@Icons.Material.Outlined.Star" />@L["Provider:Default"]</span>}</div>
-                                    @if (!string.IsNullOrWhiteSpace(model.DisplayName) && model.DisplayName != model.ModelName) { <span>@model.ModelName</span> }
-                                </div>
-                                <div class="model-actions"><MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" OnClick="@(() => EditModelAsync(model))" aria-label="@L["Settings:EditModel"]" Disabled="@_busy" /><MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Dense="true" AriaLabel="@L["Settings:ModelActions"]" Disabled="@_busy"><MudMenuItem OnClick="@(() => SaveAsync(provider with { DefaultModel = model.ModelName }))" Disabled="@(model.Kind != AIModelKind.Chat)">@L["Settings:SetDefault"]</MudMenuItem><MudMenuItem OnClick="@(() => TestModelAsync(provider.ProviderId, model.ModelName))" Disabled="@(model.Kind != AIModelKind.Chat)">@L["Settings:TestModel"]</MudMenuItem><MudMenuItem OnClick="@(() => DeleteModelAsync(model))">@L["Settings:DeleteModel"]</MudMenuItem></MudMenu></div>
-                            </div>
-                            <div class="model-details">
-                                <ModelCapabilityBadges Model="@model" />
-                                <div class="model-limits">
-                                    <span title="@(model.ContextWindow is { } exact ? L["Settings:ExactTokens", exact] : L["Settings:ContextLimitHelp"])">@L["Settings:ContextShort"] <strong>@(TokenQuantity.Format(model.ContextWindow ?? (model.Kind == AIModelKind.Chat ? ChatContextCapacity.DefaultTokens : null)))</strong>@if(model.ContextWindow is null){<small>@L[model.Kind == AIModelKind.Chat ? "Settings:Fallback" : "Settings:Unknown"]</small>}</span>
-                                    @if(model.MaxOutputTokens is { } output){<span title="@L["Settings:ExactTokens", output]">@L["Settings:OutputShort"] <strong>@TokenQuantity.Format(output)</strong></span>}
-                                    @if(model.ReasoningLevels.Count > 0){<span title="@string.Join(", ", model.ReasoningLevels.Select(level => level.Id))">@L["Settings:EffortCount", model.ReasoningLevels.Count]</span>}
-                                </div>
-                            </div>
-                        </article>
-                    }
-                    @if(provider.Models.Count == 0){<div class="settings-empty"><MudIcon Icon="@Icons.Material.Outlined.Memory" /><p>@L["Settings:NoModels"]</p></div>}
-                </div>
-                @if (_discovered.Count > 0)
-                {
-                    <section class="discovery-results"><MudText Typo="Typo.subtitle2">@L["Settings:DiscoveryResults"]</MudText><MudText Typo="Typo.caption">@L["Settings:DiscoveryHelp"]</MudText>
-                        <MudTextField T="string" @bind-Value="_discoveryQuery" Immediate="true" Placeholder="@L["Settings:SearchModels"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Margin="Margin.Dense" />
-                        <div class="discovery-list">
-                            <Virtualize Items="@FilteredDiscovery" Context="model" ItemSize="42">
-                                <div class="discovery-row"><span>@model.ModelName</span><MudButton Size="Size.Small" Disabled="@(_busy || provider.Models.Any(item => item.ModelName == model.ModelName))" OnClick="@(() => ImportModelAsync(model))">@L["Settings:AddModel"]</MudButton></div>
-                            </Virtualize>
+                    var provider = selected.Configuration;
+                    @if (!State.VisibleProviders.Any(item => Same(item.Configuration.ProviderId, provider.ProviderId))) { <p class="selection-context">@L["Administration:SelectionOutsideFilter"]</p> }
+                    <section class="provider-connection-sheet mo-self-painted" aria-label="@L["Administration:Connection"]">
+                        <div class="provider-identity"><span class="provider-kicker">@L["Settings:Provider"]</span><h2 tabindex="-1" @ref="_detailHeading">@DisplayName(provider)</h2><code>@provider.ProviderId</code><div class="provider-identity-facts"><span>@provider.ProviderType</span>@if (provider.IsDefault) { <span class="provider-default"><MudIcon Icon="@Icons.Material.Outlined.StarBorder" />@L["Settings:DefaultProvider"]</span> }</div></div>
+                        <div class="provider-connection-facts"><span class="provider-kicker">@L["Administration:Connection"]</span><p class="provider-endpoint">@(string.IsNullOrWhiteSpace(provider.BaseUrl) ? L["Administration:OfficialEndpoint"].Value : provider.BaseUrl)</p>
+                            <dl class="connection-definition"><div><dt>@L["Administration:Origin"]</dt><dd>@Source(selected)</dd></div><div><dt>@L["Administration:Credentials"]</dt><dd>@L[selected.HasApiKey ? "Settings:CredentialConfigured" : "Settings:CredentialMissing"]</dd></div><div><dt>@L["Administration:Configuration"]</dt><dd class="@(provider.Enabled ? "configuration-on" : null)">@L[provider.Enabled ? "Administration:ConfigOn" : "Administration:ConfigOff"]</dd></div></dl>
+                            <div class="provider-actions"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Edit" aria-disabled="@(State.IsBusy ? "true" : "false")" OnClick="@(() => EditProviderAsync(selected))">@L["Settings:EditProvider"]</MudButton><MudTooltip Text="@L["Administration:ConnectionTestHelp"]"><MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.NetworkPing" aria-disabled="@(State.IsBusy ? "true" : "false")" OnClick="TestProviderAsync">@L["Settings:TestConnection"]</MudButton></MudTooltip><MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" AriaLabel="@L["Administration:ProviderActions"]" aria-disabled="@(State.IsBusy ? "true" : "false")"><MudMenuItem OnClick="ToggleProviderAsync">@L[provider.Enabled ? "Settings:Disable" : "Settings:Enable"]</MudMenuItem>@if (selected.IsCodeDefined && selected.HasOverride) { <MudMenuItem OnClick="ResetProviderAsync">@L["Settings:ResetOverride"]</MudMenuItem> }@if (!selected.IsCodeDefined) { <MudMenuItem OnClick="RemoveProviderAsync">@L["Settings:DeleteProvider"]</MudMenuItem> }</MudMenu></div>
                         </div>
                     </section>
+                    <p class="provider-scope-note">@L["Administration:NextRequests"] <span>@L["Administration:Revision", State.Snapshot.Revision]</span></p>
+                    @if (selected.ValidationErrors.Count > 0) { <div class="provider-validation"><MudAlert Severity="Severity.Error"><strong>@L["Administration:InvalidConfiguration"]</strong><ul>@foreach (var diagnostic in selected.ValidationErrors) { <li>@diagnostic</li> }</ul></MudAlert></div> }
+                    @if (State.LastProbe is { } probe) { <div class="provider-probe"><MudAlert Severity="@(probe.Success ? Severity.Success : Severity.Error)" Dense="true"><strong>@L[probe.IsInference ? "Administration:ModelTest" : "Administration:ListingTest"]</strong> @if (probe.ModelName is not null) { <code>@probe.ModelName</code> } <span>@(probe.Error ?? L["Settings:TestSucceeded"].Value)</span></MudAlert></div> }
+                    <section class="provider-models" aria-label="@L["Settings:Models"]">
+                        <div class="provider-section-heading"><div><h3 tabindex="-1" @ref="_modelsHeading">@L["Settings:Models"]</h3><p>@L["Administration:ModelInventoryScope"]</p></div><div class="provider-actions"><MudButton StartIcon="@Icons.Material.Outlined.Search" Disabled="@(!provider.Enabled)" aria-disabled="@(State.IsBusy || !provider.Enabled ? "true" : "false")" OnClick="DiscoverAsync">@L["Settings:Discover"]</MudButton><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Add" aria-disabled="@(State.IsBusy ? "true" : "false")" OnClick="@(() => EditModelAsync(null))">@L["Settings:AddModel"]</MudButton></div></div>
+                        <div class="provider-model-filter"><MudTextField T="string" Value="@State.ModelQuery" ValueChanged="State.SetModelQuery" Label="@L["Administration:SearchModels"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Clearable="true" Immediate="true" /><div class="model-kind-filters" role="group" aria-label="@L["Settings:ModelKind"]">@foreach (var kind in new AIModelKind?[] { null, AIModelKind.Chat, AIModelKind.Embedding }) { <button class="kind-filter @(State.ModelKindFilter == kind ? "selected" : null)" aria-pressed="@((State.ModelKindFilter == kind).ToString().ToLowerInvariant())" @onclick="@(() => State.SetModelKindFilter(kind))">@L[kind is null ? "Administration:AllModels" : kind == AIModelKind.Chat ? "Settings:Chat" : "Settings:Embedding"]</button> }</div></div>
+                        <p class="model-count">@L["Administration:VisibleModels", State.VisibleModels.Count, provider.Models.Count]</p>
+                        <div class="provider-model-inventory mo-self-painted">
+                            @foreach (var model in State.VisibleModels)
+                            {
+                                <article class="provider-model-row"><div class="model-purpose"><MudIcon Icon="@(model.Kind == AIModelKind.Chat ? Icons.Material.Outlined.SmartToy : Icons.Material.Outlined.DataArray)" /></div><div class="model-identity"><div class="model-title"><h4>@(model.DisplayName ?? model.ModelName)</h4>@if (Same(provider.DefaultModel, model.ModelName)) { <span class="model-default">@L["Settings:DefaultModel"]</span> }</div><code>@model.ModelName</code>@if (!string.IsNullOrWhiteSpace(model.Description)) { <p>@model.Description</p> }<ModelCapabilityBadges Model="@model" /></div><dl class="model-capacity"><div><dt>@L["Settings:ContextWindow"]</dt><dd title="@(model.ContextWindow?.ToString(System.Globalization.CultureInfo.InvariantCulture))">@(model.ContextWindow is { } context ? TokenQuantity.Format(context) : model.Kind == AIModelKind.Chat ? TokenQuantity.Format(ChatContextCapacity.DefaultTokens) : L["Common:Unknown"].Value)@if (model.ContextWindow is null && model.Kind == AIModelKind.Chat) { <small>@L["Administration:PlanningFallback"]</small> }</dd></div>@if (model.Kind == AIModelKind.Chat) { <div><dt>@L["Settings:MaxOutputTokens"]</dt><dd title="@(model.MaxOutputTokens?.ToString(System.Globalization.CultureInfo.InvariantCulture))">@(model.MaxOutputTokens is { } output ? TokenQuantity.Format(output) : L["Common:Unknown"].Value)</dd></div> }else { <div><dt>@L["Settings:EmbeddingDimensions"]</dt><dd>@(model.EmbeddingDimensions?.ToString() ?? L["Common:Unknown"].Value)</dd></div> }</dl><div class="model-actions"><MudIconButton Icon="@Icons.Material.Outlined.Edit" aria-label="@L["Administration:EditModelNamed", model.ModelName]" aria-disabled="@(State.IsBusy ? "true" : "false")" OnClick="@(() => EditModelAsync(model))" /><MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" AriaLabel="@L["Administration:ModelActionsNamed", model.ModelName]" aria-disabled="@(State.IsBusy ? "true" : "false")">@if (model.Kind == AIModelKind.Chat) { <MudMenuItem OnClick="@(() => SetDefaultModelAsync(model))">@L["Settings:SetDefault"]</MudMenuItem><MudMenuItem OnClick="@(() => TestModelAsync(model))">@L["Administration:TestModelUsage"]</MudMenuItem> }<MudMenuItem OnClick="@(() => DeleteModelAsync(model))">@L["Common:Delete"]</MudMenuItem></MudMenu></div></article>
+                            }
+                            @if (State.VisibleModels.Count == 0) { <div class="provider-no-match"><h4>@L[provider.Models.Count == 0 ? "Settings:NoModels" : "Settings:NoModelMatches"]</h4></div> }
+                        </div>
+                        @if (provider.DefaultModel is null && provider.Models.Any(model => model.Kind == AIModelKind.Chat)) { <p class="provider-scope-note">@L["Administration:ImplicitDefault"]</p> }
+                    </section>
+                    @if (State.HasDiscovered || State.DiscoveryError is not null)
+                    {
+                        <section class="provider-discovery mo-self-painted"><div class="provider-section-heading"><div><h3>@L["Administration:DiscoveredModels"]</h3><p>@L["Administration:DiscoveryScope"]</p></div></div>@if (State.DiscoveryError is not null) { <MudAlert Severity="Severity.Error">@State.DiscoveryError</MudAlert> }@if (State.HasDiscovered) { <MudTextField T="string" Value="@State.DiscoveryQuery" ValueChanged="State.SetDiscoveryQuery" Label="@L["Administration:SearchCandidates"]" Immediate="true" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" /><div class="discovery-list">@foreach (var model in State.VisibleDiscoveredModels) { var configured = provider.Models.Any(item => Same(item.ModelName, model.ModelName)); <div class="discovery-row"><code>@model.ModelName</code><MudButton Variant="Variant.Text" aria-disabled="@(State.IsBusy || configured ? "true" : "false")" OnClick="@(() => ImportModelAsync(model))">@L[configured ? "Administration:Configured" : "Common:Add"]</MudButton></div> }@if (State.VisibleDiscoveredModels.Count == 0) { <p>@L[State.DiscoveredModels.Count == 0 ? "Administration:NoDiscoveryResults" : "Settings:NoModelMatches"]</p> }</div> }</section>
+                    }
                 }
-            }
-            else
-            {
-                <div class="settings-empty"><MudIcon Icon="@Icons.Material.Outlined.Tune" /><p>@L["Settings:SelectProvider"]</p></div>
-            }
-        </main>
-    </div>
+            </div>
+        </div>
+    }
 </div>
-
-@code {
-    public const string PAGE_URL = "/ai-providers";
-    private readonly CancellationTokenSource _lifetime = new();
-    private AIConfigurationSnapshot _snapshot = new();
-    private string? _selectedId, _error;
-    private bool _busy, _disposed;
-    private IReadOnlyList<AIModelConfiguration> _discovered = [];
-    private string _discoveryQuery = string.Empty;
-    private AIProviderSettings? Selected => _snapshot.Providers.FirstOrDefault(item => item.Configuration.ProviderId == _selectedId);
-    private ICollection<AIModelConfiguration> FilteredDiscovery => _discovered.Where(item => item.ModelName.Contains(_discoveryQuery, StringComparison.OrdinalIgnoreCase)).ToArray();
-    protected override Task OnInitializedAsync() => LoadAsync();
-    private void Select(string id) { _selectedId = id; _discovered = []; _discoveryQuery = string.Empty; }
-    private async Task LoadAsync() => await ExecuteAsync(async () => Apply(await Configuration.GetAsync(_lifetime.Token)));
-    private void Apply(Res<AIConfigurationSnapshot> result)
-    {
-        if (_disposed) return;
-        if (result.IsFailed(out var error, out var snapshot)) { _error = error.Message; return; }
-        _snapshot = snapshot;
-        if (_snapshot.Providers.All(item => item.Configuration.ProviderId != _selectedId)) _selectedId = _snapshot.Providers.FirstOrDefault()?.Configuration.ProviderId;
-    }
-    private async Task ExecuteAsync(Func<Task> action)
-    {
-        if (_busy || _disposed) return;
-        _busy = true; _error = null;
-        try { await action(); }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
-        catch (Exception exception) { if (!_disposed) _error = exception.Message; }
-        finally { if (!_disposed) _busy = false; }
-    }
-    private async Task EditProviderAsync(AIProviderSettings? provider)
-    {
-        _error = null;
-        await DialogService.ShowAsync<ProviderConfigurationDialog>(provider is null ? L["Settings:AddProvider"] : L["Settings:EditProvider"],
-            new DialogParameters
-            {
-                [nameof(ProviderConfigurationDialog.Provider)] = provider,
-                [nameof(ProviderConfigurationDialog.OnSave)] = (Func<ProviderConfigurationEdit, CancellationToken, Task<string?>>)SaveDialogAsync,
-                [nameof(ProviderConfigurationDialog.OnDiscover)] = (Func<ProviderConfigurationEdit, CancellationToken, Task<Res<IReadOnlyList<AIModelConfiguration>>>>)((draft, ct) =>
-                    Configuration.DiscoverDraftModelsAsync(draft.Configuration, draft.ApiKey, provider?.HasApiKey == true && !draft.ClearApiKey, ct))
-            }, new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseButton = true });
-    }
-    private async Task<string?> SaveDialogAsync(ProviderConfigurationEdit edit, CancellationToken cancellationToken = default)
-    {
-        if (_disposed) return L["Error:Generic"];
-        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, cancellationToken);
-        var result = await Configuration.UpsertProviderAsync(edit.Configuration, edit.ApiKey, edit.ClearApiKey, _snapshot.Revision, cancellation.Token);
-        if (_disposed) return L["Error:Generic"];
-        if (result.IsFailed(out var error)) return error.Message ?? L["Error:Generic"];
-        Apply(result);
-        _selectedId = edit.Configuration.ProviderId;
-        await InvokeAsync(StateHasChanged);
-        return null;
-    }
-    private Task SaveAsync(AIProviderConfiguration provider) => ExecuteAsync(async () => Apply(await Configuration.UpsertProviderAsync(provider, null, false, _snapshot.Revision, _lifetime.Token)));
-    private Task ResetAsync(string id) => ExecuteAsync(async () => Apply(await Configuration.ResetProviderAsync(id, _snapshot.Revision, _lifetime.Token)));
-    private async Task RemoveAsync(string id)
-    {
-        var yes = await DialogService.ShowMessageBoxAsync(L["Settings:DeleteProvider"], L["Settings:DeleteProviderConfirm"], yesText: L["Common:Delete"], noText: L["Common:Actions:Cancel"]);
-        if (!_disposed && yes == true) await ExecuteAsync(async () => Apply(await Configuration.RemoveProviderAsync(id, _snapshot.Revision, _lifetime.Token)));
-    }
-    private async Task EditModelAsync(AIModelConfiguration? model)
-    {
-        var provider = Selected?.Configuration;
-        if (provider is null) return;
-        _error = null;
-        await DialogService.ShowAsync<ModelConfigurationDialog>(model is null ? L["Settings:AddModel"] : L["Settings:EditModel"],
-            new DialogParameters
-            {
-                [nameof(ModelConfigurationDialog.Model)] = model,
-                [nameof(ModelConfigurationDialog.ProviderType)] = provider.ProviderType,
-                [nameof(ModelConfigurationDialog.OnDiscover)] = (Func<CancellationToken, Task<Res<IReadOnlyList<AIModelConfiguration>>>>)(ct => Configuration.DiscoverModelsAsync(provider.ProviderId, ct)),
-                [nameof(ModelConfigurationDialog.OnSave)] = (Func<AIModelConfiguration, Task<string?>>)(saved => SaveDialogAsync(new ProviderConfigurationEdit(provider with
-                {
-                    Models = provider.Models.Where(item => item.ModelName != model?.ModelName && item.ModelName != saved.ModelName).Append(saved).ToArray(),
-                    DefaultModel = provider.DefaultModel == model?.ModelName ? saved.ModelName : provider.DefaultModel
-                }, null, false)))
-            }, new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseButton = true });
-    }
-    private Task DeleteModelAsync(AIModelConfiguration model)
-    {
-        var provider = Selected!.Configuration;
-        return SaveAsync(provider with { Models = provider.Models.Where(item => item.ModelName != model.ModelName).ToArray(), DefaultModel = provider.DefaultModel == model.ModelName ? null : provider.DefaultModel });
-    }
-    private Task ImportModelAsync(AIModelConfiguration model) => SaveAsync(Selected!.Configuration with { Models = Selected.Configuration.Models.Append(model).ToArray() });
-    private Task DiscoverAsync() => ExecuteAsync(async () =>
-    {
-        var result = await Configuration.DiscoverModelsAsync(_selectedId!, _lifetime.Token);
-        if (_disposed) return;
-        if (result.IsFailed(out var error, out var models)) _error = error.Message; else _discovered = models;
-    });
-    private Task TestProviderAsync(string id) => ExecuteAsync(async () => ShowTest(await Configuration.TestProviderAsync(id, _lifetime.Token)));
-    private Task TestModelAsync(string providerId, string model) => ExecuteAsync(async () => ShowTest(await Configuration.TestModelAsync(providerId, model, _lifetime.Token)));
-    private void ShowTest(Res result)
-    {
-        if (_disposed) return;
-        if (result.IsFailed(out var error)) _error = error.Message;
-        else Snackbar.Add(L["Settings:TestSucceeded"], Severity.Success);
-    }
-    private string Source(AIProviderSettings provider) => provider.IsCodeDefined ? provider.HasOverride ? L["Settings:CodeOverride"] : L["Settings:CodeDefaults"] : L["Settings:Persisted"];
-    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
-}

@@ -34,7 +34,7 @@
                     <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" AriaLabel="@L["Workbench:ConversationSettings"]" Dense="true">
                         <MudMenuItem OnClick="@PageState.OpenPromptSettingsAsync" Disabled="@PageState.IsSending">@L["Provider:Settings:SystemPrompt"]</MudMenuItem>
                         <MudMenuItem Href="/ai-providers">@L["Workbench:ProviderSettings"]</MudMenuItem>
-                        <MudMenuItem Href="/ai-capabilities">@L["Pages:AICapabilities:Title"]</MudMenuItem>
+                        <MudMenuItem Href="@AgentCapabilityManagePage.PAGE_URL">@L["Pages:AICapabilities:Title"]</MudMenuItem>
                     </MudMenu>
                 </div>
             </header>
