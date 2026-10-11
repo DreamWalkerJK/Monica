@@ -53,7 +53,7 @@
       },
       "Runtime": {
         "Title": "调度运行时",
-        "Description": "查看当前宿主的生效配置与存储、本机调度面健康状态，以及共享范围内每个所有者的持久化足迹。"
+        "Description": "查看当前宿主的本地循环与生效配置、共享范围内有定义记录的所有者，以及可选的服务注册中心观测。"
       }
     },
     "Scope": "配置的调度作用域 · {0}"
@@ -848,8 +848,6 @@
   },
   "Runtime": {
     "PageTitle": "调度运行时",
-    "CapturedAt": "快照采集于 {0}",
-    "LastRefreshed": "运行时刷新于 {0}",
     "RefreshFailed": "最近一次运行时刷新失败：{0}",
     "Format": {
       "Days": "{0} 天",
@@ -859,13 +857,14 @@
       "Milliseconds": "{0} 毫秒"
     },
     "Identity": {
-      "Title": "调度身份与存储",
-      "Description": "当前服务页面宿主与调度器背后的持久化存储。",
+      "Title": "当前服务宿主",
+      "Description": "采集此运行时快照的宿主所报告的确切身份与存储。",
       "DebugMode": "周期调试模式",
       "Scope": "调度范围",
-      "Owner": "宿主所有者",
+      "Owner": "宿主所有者标识",
       "WorkerInstanceId": "Worker 实例",
-      "CronTimeZone": "Cron 时区"
+      "CronTimeZone": "Cron 时区",
+      "DebugModeHelp": "此宿主已停止自动物化周期执行记录。"
     },
     "Store": {
       "Title": "存储",
@@ -873,12 +872,12 @@
       "NoProvider": "无"
     },
     "Config": {
-      "Title": "生效配置",
-      "Description": "决定当前宿主调度与执行行为的标量配置项。",
-      "Group:Cadence": "运行节奏",
-      "Group:Lease": "租约与宽限期",
-      "Group:Capacity": "容量与预算",
-      "Group:History": "执行历史",
+      "Title": "宿主生效配置",
+      "Description": "此快照宿主的只读配置。配置预算不能说明实测吞吐量或可用容量。",
+      "Group:Cadence": "轮询与发布",
+      "Group:Lease": "租约、重试与退出预算",
+      "Group:Capacity": "执行与循环上限",
+      "Group:History": "历史清理与保留",
       "SchedulingPollInterval": "调度轮询",
       "WorkerPollInterval": "Worker 轮询",
       "SnapshotSyncInterval": "快照同步",
@@ -898,53 +897,72 @@
       "MaxExecutionHistoryMessageLength": "消息长度上限",
       "MaxRetainedOrphanedExecutions": "孤立执行保留数",
       "Enabled": "已启用",
-      "Disabled": "已停用"
+      "Disabled": "已停用",
+      "ExactInterval": "精确间隔"
     },
     "Plane": {
-      "Title": "本机调度面",
-      "Description": "当前宿主调度与执行循环的就绪状态。",
-      "Scheduling": "调度面",
-      "Worker": "执行 Worker",
-      "Ready": "就绪",
+      "Title": "本地循环",
+      "Description": "最近的本地循环证据。未就绪可能表示尚在初始化或最近一轮失败。",
+      "Scheduling": "调度循环",
+      "Worker": "执行循环",
+      "Ready": "最近一轮就绪",
       "NotReady": "未就绪",
-      "NoMessage": "尚未完成任何一轮循环。",
-      "InFlight": "执行中数量",
-      "LocalOnly": "本机视角：仅当前宿主的调度面可见，其他副本各自独立上报。"
+      "NoMessage": "未报告循环消息。",
+      "InFlight": "本机执行中数量 / 配置上限",
+      "LocalOnly": "本地循环证据不能说明其他副本是否就绪，也不能说明单个作业的执行结果。"
     },
     "Owners": {
-      "Title": "范围内所有者",
-      "Description": "每个所有者的持久化足迹；最新快照观测时间超过 {0} 即判定为离线。",
+      "Title": "持久化所有者观测",
+      "Description": "当前范围内有定义记录的所有者。最近定义观测超过 {0} 即视为陈旧；此观测并非进程心跳。",
       "Owner": "所有者",
-      "Liveness": "在线状态",
-      "Online": "在线",
-      "Offline": "离线",
-      "Jobs": "纳管作业",
+      "Liveness": "快照观测",
+      "Jobs": "定义",
       "JobsHelp": "当前发布的定义数量与已保留但不再发布的定义数量。",
-      "JobsCounts": "在册 {0} · 退场 {1}",
-      "Active": "队列",
+      "JobsCounts": "在册 {0} · 缺席 {1}",
+      "Active": "执行记录",
       "ActiveCounts": "排队 {0} · 执行 {1}",
       "LastObserved": "最近观测",
-      "Actions": "操作",
       "OpenCatalog": "在目录中打开 {0}",
-      "Empty": "该范围内尚无所有者发布过快照。"
+      "Empty": "当前范围内没有记录任何有定义记录的所有者。",
+      "RecentObservation": "较新观测",
+      "StaleObservation": "陈旧观测",
+      "AheadOfCapture": "晚于采集时间"
     },
     "Workers": {
-      "Title": "Worker 实例",
-      "Description": "由集成的服务注册中心上报的存活实例及其心跳。",
-      "Hint": "当前未注册 Worker 实例观测提供程序。全面使用 Monica 框架的宿主可注册 JobScheduler 的 ServiceDiscovery 观测集成模块，启用基于心跳的 Worker 可观测能力。",
-      "LoadFailed": "Worker 实例观测加载失败：{0}",
-      "Status": "状态",
-      "Status:Online": "在线",
-      "Status:Unhealthy": "心跳异常",
-      "Status:Offline": "离线",
-      "Instance": "实例",
-      "Owner": "所有者",
-      "Leader": "主节点",
+      "Title": "服务注册中心观测",
+      "Description": "已注册观测提供程序返回的全部实例。注册中心项目名称与服务主节点身份不能说明调度范围、角色或容量。",
+      "Hint": "当前宿主未注册服务注册中心观测提供程序。",
+      "LoadFailed": "最近一次服务注册中心观测失败：{0}",
+      "Status": "心跳观测",
+      "Status:Online": "心跳较新",
+      "Status:Unhealthy": "心跳延迟",
+      "Status:Offline": "心跳已过期",
+      "Instance": "服务与实例",
+      "Owner": "注册中心项目",
+      "Leader": "服务选举",
       "IsLeader": "服务主节点",
-      "Heartbeat": "心跳",
+      "Heartbeat": "最近心跳",
       "Registered": "注册时间",
       "Addresses": "监听地址",
-      "Empty": "尚无 Worker 实例注册。"
+      "Empty": "提供程序未返回任何已注册服务实例。",
+      "AppId": "服务标识",
+      "InstanceId": "实例标识",
+      "ObservationAccepted": "注册中心观测接收于 {0}",
+      "Pending": "尚未接收服务注册中心观测。",
+      "Unavailable": "服务注册中心观测不可用。",
+      "Retained": "正在显示上一次接收的注册中心观测。",
+      "NoAddresses": "未报告监听地址。",
+      "NotLeader": "非服务主节点"
+    },
+    "Observation": {
+      "Title": "运行时观测",
+      "Captured": "运行时采集时间",
+      "Accepted": "读取接受时间",
+      "Cadence": "页面刷新节奏",
+      "Manual": "手动刷新",
+      "Unavailable": "运行时证据暂不可用",
+      "UnavailableDescription": "尚未接受有效的运行时快照。请重新读取以查看当前宿主；快照不可用不能说明调度器为空或健康。",
+      "NoDiagnostic": "未提供诊断消息。"
     }
   }
 }

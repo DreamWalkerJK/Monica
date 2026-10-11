@@ -333,6 +333,11 @@ python scripts/validate_localization.py --json
 
 ### Validation Checks
 
+Discovery excludes exact generated or archive directory names below the requested root, including `.evidence`.
+Immutable evidence copies of projects, source files, and resources cannot define live resource identities or
+satisfy current key usages. Live `.ui-design` bridge projects remain in scope; similarly named directories such
+as `.evidence-copy` are not excluded. Exclusions do not apply to parent directories of an explicit `--root`.
+
 1. **Missing keys** (ERROR): Keys used in Razor or C# but not defined in JSON
 2. **Unused keys** (WARNING): Keys defined in JSON but never used
 3. **Language sync** (ERROR): Keys in one language but not another

@@ -53,7 +53,7 @@
       },
       "Runtime": {
         "Title": "Scheduler runtime",
-        "Description": "Inspect this host's effective configuration and storage, its local scheduling planes, and every owner's durable footprint in the shared scope."
+        "Description": "Inspect this host's local cycles and effective options, definition-backed owners in the shared scope, and optional service-registry observations."
       }
     },
     "Scope": "Configured scope · {0}"
@@ -848,8 +848,6 @@
   },
   "Runtime": {
     "PageTitle": "Scheduler runtime",
-    "CapturedAt": "Snapshot captured {0}",
-    "LastRefreshed": "Runtime refreshed {0}",
     "RefreshFailed": "The latest runtime refresh failed: {0}",
     "Format": {
       "Days": "{0} d",
@@ -859,13 +857,14 @@
       "Milliseconds": "{0} ms"
     },
     "Identity": {
-      "Title": "Scheduler identity and storage",
-      "Description": "The host serving this page and the durable storage behind the scheduler.",
+      "Title": "Serving host",
+      "Description": "Exact identities and storage reported by the host that captured this runtime snapshot.",
       "DebugMode": "Recurring debug mode",
       "Scope": "Scheduler scope",
-      "Owner": "Host owner",
+      "Owner": "Host owner key",
       "WorkerInstanceId": "Worker instance",
-      "CronTimeZone": "Cron timezone"
+      "CronTimeZone": "Cron timezone",
+      "DebugModeHelp": "Automatic recurring materialization is suppressed on this host."
     },
     "Store": {
       "Title": "Storage",
@@ -873,12 +872,12 @@
       "NoProvider": "none"
     },
     "Config": {
-      "Title": "Effective configuration",
-      "Description": "Scalar options that shape this host's scheduling and execution behavior.",
-      "Group:Cadence": "Cadence",
-      "Group:Lease": "Leases and grace periods",
-      "Group:Capacity": "Capacity and budgets",
-      "Group:History": "Execution history",
+      "Title": "Effective host options",
+      "Description": "Read-only options from this captured host. Configured budgets do not establish observed throughput or available capacity.",
+      "Group:Cadence": "Polling and publication",
+      "Group:Lease": "Lease, retry and exit budgets",
+      "Group:Capacity": "Worker and cycle limits",
+      "Group:History": "History cleanup and retention",
       "SchedulingPollInterval": "Scheduling poll",
       "WorkerPollInterval": "Worker poll",
       "SnapshotSyncInterval": "Snapshot sync",
@@ -898,53 +897,72 @@
       "MaxExecutionHistoryMessageLength": "Message length",
       "MaxRetainedOrphanedExecutions": "Retained orphans",
       "Enabled": "Enabled",
-      "Disabled": "Disabled"
+      "Disabled": "Disabled",
+      "ExactInterval": "Exact interval"
     },
     "Plane": {
-      "Title": "Local scheduling planes",
-      "Description": "Readiness of this host's scheduling and worker loops.",
-      "Scheduling": "Scheduling plane",
-      "Worker": "Execution worker",
-      "Ready": "Ready",
+      "Title": "Local cycles",
+      "Description": "Latest local cycle evidence. Not ready can mean initialization or a failed cycle.",
+      "Scheduling": "Scheduling cycle",
+      "Worker": "Worker cycle",
+      "Ready": "Last cycle ready",
       "NotReady": "Not ready",
-      "NoMessage": "No cycle has completed yet.",
-      "InFlight": "In-flight executions",
-      "LocalOnly": "Local view: only this host's planes are visible; other replicas report their own."
+      "NoMessage": "No cycle message was reported.",
+      "InFlight": "Local in-flight / configured limit",
+      "LocalOnly": "Local cycle evidence does not establish the readiness of other replicas or the outcome of individual jobs."
     },
     "Owners": {
-      "Title": "Owners in this scope",
-      "Description": "Durable footprint per owner; an owner is offline when its freshest snapshot observation is older than {0}.",
+      "Title": "Durable owner observations",
+      "Description": "Definition-backed owners in this scope. A latest definition observation older than {0} is stale; this is not a process heartbeat.",
       "Owner": "Owner",
-      "Liveness": "Liveness",
-      "Online": "Online",
-      "Offline": "Offline",
-      "Jobs": "Managed jobs",
+      "Liveness": "Snapshot observation",
+      "Jobs": "Definitions",
       "JobsHelp": "Definitions currently published versus retained but no longer published.",
       "JobsCounts": "{0} present · {1} absent",
-      "Active": "Queue",
+      "Active": "Execution records",
       "ActiveCounts": "{0} queued · {1} running",
       "LastObserved": "Last observed",
-      "Actions": "Actions",
       "OpenCatalog": "Open {0} in the catalog",
-      "Empty": "No owner has published a snapshot in this scope yet."
+      "Empty": "No definition-backed owner is recorded in this scope.",
+      "RecentObservation": "Recent observation",
+      "StaleObservation": "Stale observation",
+      "AheadOfCapture": "Ahead of capture"
     },
     "Workers": {
-      "Title": "Worker instances",
-      "Description": "Live instances reported by the integrated service registry with heartbeats.",
-      "Hint": "No worker-instance insight provider is registered. Hosts that fully adopt the Monica stack can enable ServiceDiscovery-backed worker observability by registering the JobScheduler ServiceDiscovery insight module.",
-      "LoadFailed": "Worker-instance insight failed to load: {0}",
-      "Status": "Status",
-      "Status:Online": "Online",
-      "Status:Unhealthy": "Unhealthy",
-      "Status:Offline": "Offline",
-      "Instance": "Instance",
-      "Owner": "Owner",
-      "Leader": "Leader",
+      "Title": "Service-registry observations",
+      "Description": "All instances returned by the registered insight provider. Registry project names and service leadership do not establish scheduler scope, role or capacity.",
+      "Hint": "No service-registry insight provider is registered for this host.",
+      "LoadFailed": "The latest service-registry observation failed: {0}",
+      "Status": "Heartbeat observation",
+      "Status:Online": "Recent heartbeat",
+      "Status:Unhealthy": "Delayed heartbeat",
+      "Status:Offline": "Expired heartbeat",
+      "Instance": "Service and instance",
+      "Owner": "Registry project",
+      "Leader": "Service election",
       "IsLeader": "Service leader",
-      "Heartbeat": "Heartbeat",
+      "Heartbeat": "Last heartbeat",
       "Registered": "Registered",
       "Addresses": "Listening addresses",
-      "Empty": "No worker instance has registered yet."
+      "Empty": "The provider returned no registered service instance.",
+      "AppId": "Service ID",
+      "InstanceId": "Instance ID",
+      "ObservationAccepted": "Registry observation accepted {0}",
+      "Pending": "No service-registry observation has been accepted yet.",
+      "Unavailable": "Service-registry observations are unavailable.",
+      "Retained": "Showing the previous accepted registry observation.",
+      "NoAddresses": "No listening address was reported.",
+      "NotLeader": "Not service leader"
+    },
+    "Observation": {
+      "Title": "Runtime observation",
+      "Captured": "Runtime captured",
+      "Accepted": "Read accepted",
+      "Cadence": "Page refresh cadence",
+      "Manual": "Manual refresh",
+      "Unavailable": "Runtime evidence unavailable",
+      "UnavailableDescription": "No valid runtime snapshot has been accepted. Retry the read to inspect this host; an unavailable snapshot does not establish an empty or healthy scheduler.",
+      "NoDiagnostic": "No diagnostic message was supplied."
     }
   }
 }

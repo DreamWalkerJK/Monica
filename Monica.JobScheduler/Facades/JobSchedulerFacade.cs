@@ -35,7 +35,7 @@ public sealed class JobSchedulerFacade(
 
     /// <summary>
     /// Multiplier applied to <see cref="ModuleJobSchedulerOption.SnapshotSyncInterval"/> to derive the owner
-    /// liveness threshold; an owner whose freshest observation is older is reported as offline.
+    /// definition-observation freshness threshold. Stale publication evidence does not prove process failure.
     /// </summary>
     private const int OWNER_ONLINE_THRESHOLD_SNAPSHOT_MULTIPLIER = 3;
 

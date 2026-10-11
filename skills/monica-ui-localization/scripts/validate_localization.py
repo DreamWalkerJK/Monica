@@ -29,6 +29,7 @@ ResourceKey = Tuple[str, str]
 RegistrationLocation = Tuple[str, int, str]
 
 EXCLUDED_RELATIVE_DIRECTORIES = {
+    '.evidence',
     '.git',
     '.tmp',
     '.vs',

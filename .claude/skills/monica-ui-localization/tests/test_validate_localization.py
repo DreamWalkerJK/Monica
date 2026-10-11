@@ -405,6 +405,101 @@ class LocalizationValidatorTests(unittest.TestCase):
         self.assertEqual(1, report['summary']['discovery_errors_count'])
         self.assertEqual(1, report['summary']['discovery_warnings_count'])
 
+    def test_evidence_input_copies_do_not_shadow_resources_or_hide_live_design_bridge_errors(self) -> None:
+        self._add_project(
+            'Shell',
+            resources={
+                'SharedResource': {
+                    'en-US': {'Navigation': {'Title': 'Navigation'}},
+                    'zh-CN': {'Navigation': {'Title': '导航'}},
+                },
+            },
+            sources={'Page.razor': '@inject IStringLocalizer<SharedResource> L\n@L["Navigation:Title"]\n'},
+        )
+        bridge = self._add_project(
+            '.ui-design/review/bridge/ReviewHost',
+            resources={
+                'BridgeResource': {
+                    'en-US': {'Page': {'Title': 'Review'}},
+                    'zh-CN': {'Page': {'Title': '预览'}},
+                },
+            },
+            sources={
+                'Page.razor': (
+                    '@inject IStringLocalizer<BridgeResource> B\n'
+                    '@inject IStringLocalizer<SharedResource> L\n'
+                    '@B["Page:Title"]\n'
+                    '@L["Navigation:Title"]\n'
+                    '@L["Navigation:Missing"]\n'
+                ),
+            },
+        )
+        archive = self._add_project(
+            '.ui-design/review/.evidence/before/inputs/Shell',
+            resources={
+                'SharedResource': {
+                    'en-US': {'Navigation': {'Title': 'Old title', 'Missing': 'Archived only'}},
+                    'zh-CN': {'Navigation': {'Title': '旧标题', 'Missing': '仅归档'}},
+                },
+            },
+            sources={'Page.razor': '@inject IStringLocalizer<SharedResource> L\n@L["Old:Missing"]\n'},
+        )
+
+        validator, report = self._validate()
+        shared = self._resource_path('Shell', 'SharedResource')
+
+        self.assertIn(bridge.resolve(), validator.ui_projects)
+        self.assertNotIn(archive.resolve(), validator.ui_projects)
+        self.assertEqual([shared], validator.resources_by_name['SharedResource'])
+        self.assertEqual([], report['resource_resolution_errors'])
+        self.assertEqual(0, report['summary']['unused_count'])
+        self.assertEqual(1, report['summary']['missing_count'])
+        self.assertEqual('FAILED', report['summary']['status'])
+        self.assertEqual(
+            [(str((bridge / 'Page.razor').relative_to(self.root)), 5)],
+            validator.missing_keys[(shared, 'Navigation:Missing')],
+        )
+
+    def test_only_exact_evidence_directory_is_excluded_and_live_duplicate_resource_remains_unresolved(self) -> None:
+        resources = {
+            'SharedResource': {
+                'en-US': {'Page': {'Title': 'Title'}},
+                'zh-CN': {'Page': {'Title': '标题'}},
+            },
+        }
+        self._add_project(
+            'Shell', resources=resources,
+            sources={'Page.razor': '@inject IStringLocalizer<SharedResource> L\n@L["Page:Title"]\n'},
+        )
+        similarly_named = self._add_project(
+            '.ui-design/review/.evidence-copy/OtherLiveOwner', resources=resources,
+            sources={'Page.razor': '@inject IStringLocalizer<SharedResource> L\n@L["Page:Title"]\n'},
+        )
+        self._add_project(
+            '.ui-design/review/bridge/ReviewHost',
+            resources={
+                'BridgeResource': {
+                    'en-US': {'Page': {'Title': 'Review'}},
+                    'zh-CN': {'Page': {'Title': '预览'}},
+                },
+            },
+            sources={
+                'Page.razor': (
+                    '@inject IStringLocalizer<BridgeResource> B\n'
+                    '@inject IStringLocalizer<SharedResource> L\n'
+                    '@B["Page:Title"]\n@L["Page:Title"]\n'
+                ),
+            },
+        )
+
+        validator, report = self._validate()
+
+        self.assertIn(similarly_named.resolve(), validator.ui_projects)
+        self.assertEqual(2, len(validator.resources_by_name['SharedResource']))
+        self.assertIn(('<unresolved:SharedResource>', 'Page:Title'), validator.unresolved_used_keys)
+        self.assertTrue(report['resource_resolution_errors'])
+        self.assertEqual('FAILED', report['summary']['status'])
+
     def _validate(self):
         validator = LocalizationValidator(self.root, ['zh-CN', 'en-US'])
         report = run_validation(validator)

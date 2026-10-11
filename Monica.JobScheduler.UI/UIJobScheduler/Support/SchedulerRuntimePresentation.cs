@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Localization;
 using Monica.JobScheduler.UI.Localization;
+using System.Globalization;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.Support;
 
 /// <summary>
-/// Formats scheduler runtime values — configuration intervals and heartbeat ages — with localized unit
-/// abbreviations instead of raw <see cref="TimeSpan"/> strings.
+/// Formats captured runtime values and classifies owner observations against their actual capture.
 /// </summary>
 internal static class SchedulerRuntimePresentation
 {
@@ -38,19 +38,45 @@ internal static class SchedulerRuntimePresentation
     }
 
     /// <summary>
-    /// Formats the heartbeat age of one worker instance relative to the capture instant.
+    /// Preserves every tick of an interval in invariant constant format alongside its readable unit value.
     /// </summary>
-    internal static string FormatAge(
+    internal static string FormatExactInterval(TimeSpan value) => value.ToString("c", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Classifies a definition observation without consulting a live clock or interpreting it as process health.
+    /// </summary>
+    /// <remarks>
+    /// An observation after the capture is explicitly ahead of capture. Otherwise the threshold is inclusive:
+    /// an observation exactly as old as <paramref name="staleAfter"/> is recent, and an older observation is stale.
+    /// </remarks>
+    internal static SchedulerOwnerObservationFreshness ClassifyOwnerObservation(
         DateTimeOffset capturedAtUtc,
-        DateTimeOffset observedAtUtc,
-        IStringLocalizer<JobSchedulerResource> localizer)
+        DateTimeOffset lastObservedAtUtc,
+        TimeSpan staleAfter)
     {
-        var age = capturedAtUtc - observedAtUtc;
-        return age < TimeSpan.Zero
-            ? FormatInterval(TimeSpan.Zero, localizer)
-            : FormatInterval(age, localizer);
+        if (lastObservedAtUtc > capturedAtUtc)
+        {
+            return SchedulerOwnerObservationFreshness.AheadOfCapture;
+        }
+
+        return capturedAtUtc - lastObservedAtUtc > staleAfter
+            ? SchedulerOwnerObservationFreshness.Stale
+            : SchedulerOwnerObservationFreshness.Recent;
     }
 
     private static string Format(string pattern, double value) =>
-        string.Format(pattern, value.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture));
+        string.Format(pattern, value.ToString("0.##", CultureInfo.CurrentCulture));
+}
+
+/// <summary>Describes one definition observation relative to the accepted runtime capture.</summary>
+internal enum SchedulerOwnerObservationFreshness
+{
+    /// <summary>The observation is at or within the supplied staleness threshold.</summary>
+    Recent,
+
+    /// <summary>The observation is older than the supplied threshold.</summary>
+    Stale,
+
+    /// <summary>The observation is later than the capture and must not be presented as healthy recency.</summary>
+    AheadOfCapture
 }

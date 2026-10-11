@@ -75,6 +75,8 @@
 @code {
     private readonly string _popupId = $"mo-navigation-{Guid.NewGuid():N}";
     private readonly ComponentRenderTracker _renderTracker = new();
+    private readonly object _retirementGate = new();
+    private TaskCompletionSource? _retirement;
     private ElementReference _activatorRef;
     private NavigationPopoverInteropSession? _hoverInterop;
     private bool _open;
@@ -261,16 +263,37 @@
         }));
     }
 
-    /// <summary>Stops route and pointer callbacks and observes renderer work before releasing the menu's browser references.</summary>
-    public async ValueTask DisposeAsync()
+    /// <summary>Stops route and pointer callbacks and drains renderer work, including when interop cleanup fails.</summary>
+    /// <remarks>Repeated callers share actual retirement completion and its unexpected cleanup failures.</remarks>
+    public ValueTask DisposeAsync()
     {
-        _disposed = true;
-        Navigation.LocationChanged -= HandleLocationChanged;
-        if (_hoverInterop is { } hoverInterop)
+        TaskCompletionSource completion;
+        lock (_retirementGate)
         {
-            _hoverInterop = null;
-            await hoverInterop.DisposeAsync();
+            if (_retirement is not null) return new(_retirement.Task);
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _retirement = completion;
+            _disposed = true;
         }
-        await _renderTracker.CompleteAsync();
+        Navigation.LocationChanged -= HandleLocationChanged;
+        var hoverInterop = _hoverInterop;
+        _hoverInterop = null;
+        _ = CompleteRetirementAsync(hoverInterop, completion);
+        return new(completion.Task);
+    }
+
+    private async Task CompleteRetirementAsync(NavigationPopoverInteropSession? hoverInterop, TaskCompletionSource completion)
+    {
+        var failures = new List<Exception>();
+        if (hoverInterop is not null)
+        {
+            try { await hoverInterop.DisposeAsync(); }
+            catch (Exception exception) { failures.Add(exception); }
+        }
+        try { await _renderTracker.CompleteAsync(); }
+        catch (Exception exception) { failures.Add(exception); }
+        if (failures.Count == 0) completion.TrySetResult();
+        else if (failures.Count == 1) completion.TrySetException(failures[0]);
+        else completion.TrySetException(new AggregateException("Navigation popover retirement failed.", failures));
     }
 }
