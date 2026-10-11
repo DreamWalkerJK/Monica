@@ -14,6 +14,7 @@ The shell hosts pages; feature UI modules add operational views, while Markdown 
 | Inspect registered DbContexts, provider sessions, or migration outcomes | [Repository diagnostics](../monica-infra-persistence/references/repository-diagnostics.md) |
 | Publish searchable documents, use the viewer, or serve local images | [Markdown](references/markdown.md) |
 | Probe connectivity from a host or transform escaped text and JSON | [Utilities workspaces](references/utilities.md) |
+| Inspect registered object-mapping pairs and generated expressions | [Mapper workspace](references/mapper.md) |
 | Set theme/language defaults or integrate custom page localization | [Theme and localization](references/theme-and-localization.md) |
 
 For building components, use [UI development](../monica-ui-development/SKILL.md); for authoring translation resources, use [UI localization](../monica-ui-localization/SKILL.md); configure each feature's underlying service through its owning infrastructure skill.
