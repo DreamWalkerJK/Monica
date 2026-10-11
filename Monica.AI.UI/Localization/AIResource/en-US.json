@@ -175,8 +175,7 @@
   },
   "RAG": {
     "Navigation": {
-      "Manage": "RAG Indexing",
-      "Chunkers": "Chunker Management"
+      "Manage": "RAG Indexing"
     },
     "EmbeddingModel": {
       "Label": "Embedding Model",
@@ -197,8 +196,6 @@
       }
     },
     "RagSupport": {
-      "Title": "RAG Support",
-      "EnabledStatus": "RAG indexing is enabled for this knowledge base.",
       "DisabledStatus": "RAG indexing is not enabled for this knowledge base.",
       "Enable": "Enable RAG",
       "Remove": "Remove RAG",
@@ -276,8 +273,6 @@
     },
     "KnowledgeBase": {
       "Title": "Knowledge Bases",
-      "DocumentCount": "Documents",
-      "ChunkCount": "Chunks",
       "SelectPrompt": "Select a knowledge base to view details",
       "EmptyHint": "No knowledge bases yet. Create one above.",
       "DocsCount": "{0} docs",
@@ -302,9 +297,7 @@
     },
     "VectorValidation": {
       "MissingVectors": {
-        "Title": "Vector data is missing",
-        "Message": "Persisted index metadata still lists {0} document(s) and {1} chunk(s), but the active vector store is missing the expected vectors. Re-index all documents for this knowledge base to restore search.",
-        "Action": "Re-index All Documents"
+        "Message": "Persisted index metadata still lists {0} document(s) and {1} chunk(s), but the active vector store is missing the expected vectors. Re-index all documents for this knowledge base to restore search."
       },
       "Messages": {
         "ReindexQueued": "Queued {0} document(s) for re-indexing."
@@ -330,13 +323,12 @@
         "StartIndex": "Start Index",
         "Reindex": "Re-index",
         "Delete": "Delete",
-        "ClearQueue": "Clear Queue",
+        "ClearQueue": "Remove unfinished documents",
         "ClearDocuments": "Clear Documents",
-        "SelectAllIndexable": "Select Indexable",
         "ClearSelection": "Clear Selection"
       },
       "DeleteConfirm": "Are you sure you want to delete '{0}'?",
-      "ClearQueueConfirm": "Clear all queued documents from knowledge base '{0}'?",
+      "ClearQueueConfirm": "Remove every unfinished document from knowledge base '{0}'? This deletes its inventory entry and stored source content. Completed documents remain.",
       "ClearDocumentsConfirm": "Remove every document and indexed chunk from knowledge base '{0}'?",
       "Messages": {
         "QueueCleared": "Cleared {0} queued document(s).",
@@ -345,7 +337,6 @@
     },
     "ParallelIndexing": {
       "Label": "Parallel",
-      "Start": "Start",
       "NoPendingDocuments": "No pending documents to index"
     },
     "DocumentSelection": {
@@ -355,7 +346,6 @@
     },
     "ChunkViewer": {
       "Title": "Document Chunks",
-      "Info": "{0} chunks · {1}",
       "Indexed": "Indexed {0}",
       "SourceKnowledgeBase": "From knowledge base {0}",
       "PendingIndexing": "Pending indexing",
@@ -376,7 +366,6 @@
     "Indexing": {
       "MarkdownGroup": "Markdown Group",
       "UploadFile": "Upload Document",
-      "ClickToUpload": "Click to upload",
       "FileTooLarge": "File is too large (max 10MB)"
     },
     "Search": {
@@ -385,15 +374,9 @@
       "TopK": "Top-K",
       "Go": "Search",
       "Searching": "Searching...",
-      "NoResults": "No results found",
-      "ResultsCount": "{0} results",
       "Score": {
         "SimilarityLabel": "Similarity",
-        "SimilarityTooltip": "Vector similarity score from the active vector search path.",
-        "SimilarityFromHybridTooltip": "Displayed as a vector-only similarity percentage. Raw hybrid rank score: {0:F4}.",
-        "HybridRankLabel": "Hybrid rank",
-        "HybridRankTooltip": "Hybrid search combines vector and keyword ranking, so the raw score can appear in coarse steps instead of a smooth similarity percentage.",
-        "HybridRankValue": "Hybrid rank {0:F4}"
+        "HybridRankLabel": "Hybrid rank"
       },
       "Result": {
         "UnknownSource": "Unknown",
@@ -403,30 +386,21 @@
       }
     },
     "Chunker": {
-      "Title": "Chunker Management",
       "Registered": "Registered Chunkers",
       "Name": "Name",
-      "Id": "Chunker ID",
       "Extensions": "Extensions",
       "Description": "Description",
-      "Routing": "Extension Routing",
-      "Extension": "Extension",
       "Current": "Current",
       "Target": "Target",
-      "Affected": "Affected",
-      "Actions": "Actions",
-      "AffectedCount": "{0} docs",
       "Apply": "Apply",
       "ConfirmTitle": "Apply Routing Change",
       "ConfirmMessage": "This change will mark {0} indexed documents as pending reindex. Continue?",
-      "ApplySuccess": "Chunker routing updated.",
       "TestTitle": "Chunker Test",
       "TestChunker": "Chunker",
       "TestDocument": "Document Name",
       "TestContent": "Sample Content",
       "RunTest": "Run Test",
       "TestChunkCount": "{0} chunks",
-      "ViewPreview": "View Preview",
       "PreviewTitle": "Chunk Preview",
       "PreviewStatus": "Preview by {0}"
     }
@@ -459,7 +433,6 @@
       }
     },
     "DocumentImport": {
-      "MarkdownTitle": "Markdown documents",
       "Title": "Import Markdown Documents",
       "Add": "Add Documents",
       "AlreadyAdded": "Already added",
@@ -952,5 +925,138 @@
     "DeleteModel": "Remove model",
     "DeleteModelConfirm": "Remove {0} from this provider? If it is the default, the explicit default will be cleared.",
     "ChangeProvider": "Choose a provider"
+  },
+  "KnowledgeWorkbench": {
+    "Title": "KNOWLEDGE & RETRIEVAL",
+    "Navigation": "Knowledge workspace",
+    "Knowledge": "Knowledge bases",
+    "Indexing": "Indexing",
+    "KnowledgeDescription": "Organize source documents and inspect their recorded indexing state.",
+    "IndexingDescription": "Bind embedding models, index source documents, and inspect vector evidence.",
+    "Collections": "Collections",
+    "SearchCollections": "Find a knowledge base",
+    "Collection": "COLLECTION",
+    "CollectionActions": "Collection actions",
+    "DocumentCount": "{0} source documents",
+    "RecordedChunks": "{0} recorded chunks",
+    "ModelBound": "Embedding model bound",
+    "NoCollectionsMatch": "No knowledge bases match this filter.",
+    "ChooseCollection": "Your source library",
+    "ChooseCollectionHint": "Choose a knowledge base to manage its source documents.",
+    "ChooseIndexCollection": "Choose what to index",
+    "ChooseIndexCollectionHint": "Choose a knowledge base to inspect its embedding binding and document queue.",
+    "DocumentActions": "Document actions",
+    "SearchDocuments": "Find a source document",
+    "AllDocuments": "All documents",
+    "VisibleDocuments": "{0} of {1} documents",
+    "NoDocuments": "No source documents yet. Add a Markdown source or upload a document above.",
+    "NoDocumentsMatch": "No documents match these filters.",
+    "ClearFilters": "Clear filters",
+    "Retry": "Retry",
+    "AddSources": "Add source documents",
+    "ImportHint": "New documents enter the pending inventory. Start indexing from the indexing workspace.",
+    "UploadHint": "One document · up to 10 MiB · content is read as text",
+    "ManageSources": "Manage sources",
+    "EmbeddingBinding": "Embedding binding",
+    "ChangingModelHint": "Changing the binding removes the existing index and marks documents pending. Indexing must be started again.",
+    "BindingActions": "Binding actions",
+    "VectorEvidence": "Vector evidence",
+    "Vectors": {
+      "Checking": "Checking representative stored vectors…",
+      "NoIndex": "No persisted index metadata",
+      "Unavailable": "Vector validation unavailable",
+      "Present": "Representative vectors present",
+      "Missing": "Representative vectors missing",
+      "Scope": "{0} indexed documents · {1} recorded chunks",
+      "SampleNote": "Validation checks the first and last recorded chunk of each indexed document. It is not a full vector census."
+    },
+    "QueueAllReindex": "Mark all documents pending",
+    "RemovePendingSources": "Remove unfinished source documents",
+    "SelectedDocuments": "{0} selected",
+    "SelectEligible": "Select all pending and failed",
+    "HiddenSelection": "{0} selected outside the filter",
+    "IndexSelected": "Index selected",
+    "CancelBatch": "Cancel batch",
+    "SelectDocument": "Select {0}",
+    "NoQueueDocuments": "No source documents in this knowledge base. Add sources from the knowledge-base workspace.",
+    "Retrieval": {
+      "Title": "Retrieval lab",
+      "Description": "Run a query across requested knowledge bases and inspect the returned passages.",
+      "Ask": "Ask the collection",
+      "SourcesSelected": "Sources · {0} selected",
+      "SelectedCount": "{0} knowledge bases selected",
+      "FilterSources": "Find sources",
+      "Unbound": "No embedding binding",
+      "NoScopeMatch": "No sources match this filter.",
+      "Done": "Done",
+      "QueryOverride": "Query embedding override",
+      "UseOwnModel": "Use each knowledge base’s model",
+      "UnknownDimensions": "Unknown",
+      "OverrideHint": "This choice applies to this query only; it does not change knowledge-base bindings.",
+      "CoverageHint": "Unavailable or unindexed sources may be absent from returned results. Requested scope is not a coverage report.",
+      "Loading": "Loading sources and embedding choices…",
+      "LoadFailed": "Could not load knowledge bases.",
+      "ModelsFailed": "Could not load embedding choices.",
+      "SearchFailed": "Search failed.",
+      "Retry": "Retry",
+      "NoSources": "No knowledge bases yet",
+      "NoSourcesHint": "Create a knowledge base, add source documents, and index them before exploring retrieval.",
+      "OpenSources": "Open knowledge bases",
+      "SubmittedRequest": "Submitted request",
+      "RequestedScope": "Requested {0} knowledge bases: {1}",
+      "RequestSettings": "Top K: {0} · Embedding: {1}",
+      "InputsChanged": "Inputs changed — run again to update these results.",
+      "ReturnedCount": "{0} chunks returned",
+      "NoChunks": "No chunks returned",
+      "NoChunksHint": "Check the requested scope and indexing, or try a different query. An empty result does not prove that every selected source was searched.",
+      "InitialTitle": "Explore returned evidence",
+      "InitialHint": "Choose sources, enter a query, then inspect returned passages in their source documents.",
+      "Rank": "Result {0}",
+      "ScoreMissing": "Not supplied",
+      "ViewSource": "View {0} in document"
+    },
+    "Chunking": {
+      "Title": "Chunking",
+      "Description": "Choose extension routes and test chunk boundaries before indexing.",
+      "RoutingTitle": "Extension routing",
+      "RoutingHint": "Changing a route removes affected indexed vectors across knowledge bases and marks those documents pending. It does not reindex them automatically.",
+      "Loading": "Loading chunkers and routes…",
+      "LoadFailed": "Could not load chunker configuration.",
+      "Applying": "Applying…",
+      "ApplyFailed": "Could not apply this route.",
+      "ApplyOutcome": "Route applied. {0} documents marked pending; indexing has not started.",
+      "CheckingImpact": "Checking affected indexed documents…",
+      "ImpactCount": "{0} indexed documents will be marked pending.",
+      "AffectedBases": "Affected knowledge-base IDs",
+      "ZeroImpact": "No indexed documents affected.",
+      "ImpactNotChecked": "Impact has not been checked for this target.",
+      "PreviewFailed": "Could not check the route impact.",
+      "PreviewChanged": "The preview does not match this route target. Check again.",
+      "RetryPreview": "Check impact again",
+      "NoRoutes": "No extension routes are registered.",
+      "TestHint": "Test supplied text without saving content or changing routes. Empty text may return zero chunks.",
+      "Testing": "Running test…",
+      "TestFailed": "Chunker test failed.",
+      "TestChanged": "Test inputs changed — run again. This preview still shows the submitted text and settings.",
+      "InspectBoundaries": "Inspect chunk boundaries",
+      "NoChunkers": "No chunkers are registered."
+    },
+    "FirstCollection": "Create your first knowledge base",
+    "FirstCollectionHint": "Collect source documents first. Embedding models and indexing can be configured when you need retrieval.",
+    "FirstIndexSources": "Start with source documents",
+    "FirstIndexSourcesHint": "Create a knowledge base and add source documents before configuring an embedding model or indexing.",
+    "IndexNeedsBinding": "Bind an embedding model before starting indexing.",
+    "IndexNoEligible": "No pending or failed documents to index.",
+    "IndexNeedsSelection": "Select pending or failed documents to start a batch."
+  },
+  "KnowledgeDialogs": {
+    "SourceGroup": "Source group: {0}",
+    "FilterSources": "Filter by title or path",
+    "NoMatchingSources": "No source documents match this filter.",
+    "AddSelected": "Add selected ({0})",
+    "ChunkTitle": "{0} · Chunk boundaries",
+    "ChunkCount": "{0} chunk boundaries",
+    "ModelUnavailable": "The selected model is not currently listed: {0}",
+    "UnknownDimensions": "Unknown"
   }
 }

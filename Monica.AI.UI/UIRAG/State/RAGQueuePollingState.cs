@@ -1,169 +1,154 @@
 using Monica.AI.KnowledgeBase.Facades;
 using Monica.AI.KnowledgeBase.Models;
+using Monica.AI.UI.Shared.Support;
 using Monica.Core.Results;
 
 namespace Monica.AI.UI.UIRAG.State;
 
-/// <summary>
-/// Owns document-queue polling and throttled progress refresh for the RAG manage page.
-/// </summary>
-public sealed class RAGQueuePollingState(KnowledgeDocumentFacade knowledgeDocumentFacade) : IDisposable
+/// <summary>Page-owned queue polling. Stop cancels a generation; retirement drains actual reads.</summary>
+/// <remarks>The document facade is borrowed. A stopped or replaced poll cannot publish a late inventory,
+/// including a later visit to the same base. The cancellation source is released only after its worker drains.</remarks>
+public sealed class RAGQueuePollingState(KnowledgeDocumentFacade knowledgeDocumentFacade) : IAsyncDisposable
 {
-    private const int QueueRefreshIntervalMs = 700;
-    private static readonly TimeSpan ProgressQueueRefreshInterval = TimeSpan.FromSeconds(1);
-
-    private CancellationTokenSource? _pollingCancellationTokenSource;
-    private Task? _pollingTask;
-    private string? _activeKnowledgeBaseId;
+    private readonly AIAdministrationOperationLifetime _lifetime = new();
+    private readonly List<Task> _owned = [];
+    private readonly List<PollRun> _runs = [];
+    private PollRun? _run;
+    private long _generation;
     private DateTimeOffset _lastProgressRefreshAtUtc = DateTimeOffset.MinValue;
     private int _progressRefreshInFlight;
 
-    /// <summary>
-    /// Raised when the queue was refreshed successfully.
-    /// </summary>
-    public event Action<IReadOnlyList<DocumentQueueItem>>? QueueRefreshed;
+    /// <summary>Awaited publication of a successful receipt for its originating knowledge base.</summary>
+    public event Func<string, long, IReadOnlyList<DocumentQueueItem>, Task>? QueueRefreshed;
+    /// <summary>Awaited publication of a failed receipt for its originating knowledge base.</summary>
+    public event Func<string, long, string, Task>? QueueRefreshFailed;
+    /// <summary>Raised once after a successful final inventory read when this poll's active work has settled.</summary>
+    /// <remarks>The receipt retains its generation so consumers can reject late validation or renderer work.</remarks>
+    public event Func<string, long, Task>? QueueSettled;
 
-    /// <summary>
-    /// Raised when queue refresh failed.
-    /// </summary>
-    public event Action<string>? QueueRefreshFailed;
+    /// <summary>Whether a queued renderer receipt still belongs to the active polling generation.</summary>
+    public bool IsCurrentGeneration(long generation) => !_lifetime.IsRetired && generation == _generation;
 
-    private bool IsPolling => _pollingTask is { IsCompleted: false };
-
-    /// <summary>
-    /// Start polling for one knowledge base while active queue work exists.
-    /// </summary>
+    /// <summary>Starts one generation while work exists; replacing it cancels the previous owner.</summary>
     public void EnsurePolling(string knowledgeBaseId, Func<bool> hasActiveWork)
     {
-        if (string.IsNullOrWhiteSpace(knowledgeBaseId))
+        if (_lifetime.IsRetired) return;
+        if (string.IsNullOrWhiteSpace(knowledgeBaseId) || !hasActiveWork()) { Stop(); return; }
+        if (_run is { } active && active.Id == knowledgeBaseId && active.Task is { IsCompleted: false }) return;
+        Stop();
+        var run = new PollRun(knowledgeBaseId, _generation);
+        _runs.Add(run);
+        _run = run;
+        run.Task = _lifetime.RunAsync(async token =>
         {
-            Stop();
-            return;
-        }
-
-        if (!hasActiveWork())
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, run.Token);
+            try
+            {
+                while (!linked.IsCancellationRequested && IsCurrent(run))
+                {
+                    await RefreshQueueAsync(run.Id, run.Generation, linked.Token);
+                    if (!IsCurrent(run)) break;
+                    if (!hasActiveWork())
+                    {
+                        // Completion can race the preceding read. Capture persisted final rows before validation.
+                        var finalReadSucceeded = await RefreshQueueAsync(run.Id, run.Generation, linked.Token);
+                        if (!IsCurrent(run)) break;
+                        // A new operation may have begun during the final read; retain the same loop for it.
+                        if (hasActiveWork()) continue;
+                        if (finalReadSucceeded && QueueSettled is { } settled)
+                            foreach (Func<string, long, Task> callback in settled.GetInvocationList())
+                                await callback(run.Id, run.Generation);
+                        break;
+                    }
+                    await Task.Delay(700, linked.Token);
+                }
+            }
+            catch (OperationCanceledException) when (linked.IsCancellationRequested) { }
+            finally
+            {
+                if (ReferenceEquals(_run, run)) _run = null;
+            }
+        });
+        lock (_owned)
         {
-            Stop();
-            return;
+            _owned.RemoveAll(completed => completed.IsCompletedSuccessfully);
+            _owned.Add(run.Task);
         }
-
-        if (!string.Equals(_activeKnowledgeBaseId, knowledgeBaseId, StringComparison.OrdinalIgnoreCase))
-        {
-            Stop();
-        }
-
-        if (IsPolling)
-        {
-            return;
-        }
-
-        _activeKnowledgeBaseId = knowledgeBaseId;
-        _pollingCancellationTokenSource = new CancellationTokenSource();
-        _pollingTask = RunPollingLoopAsync(knowledgeBaseId, hasActiveWork, _pollingCancellationTokenSource.Token);
     }
 
-    /// <summary>
-    /// Trigger one throttled refresh from progress callbacks without starting a second polling loop.
-    /// </summary>
+    /// <summary>Performs a throttled owned refresh for the current poll generation.</summary>
     public async Task RefreshFromProgressAsync(string knowledgeBaseId)
     {
-        var now = DateTimeOffset.UtcNow;
-        if (now - _lastProgressRefreshAtUtc < ProgressQueueRefreshInterval)
-        {
-            return;
-        }
-
-        if (Interlocked.Exchange(ref _progressRefreshInFlight, 1) == 1)
-        {
-            return;
-        }
-
+        if (_lifetime.IsRetired || DateTimeOffset.UtcNow - _lastProgressRefreshAtUtc < TimeSpan.FromSeconds(1)
+            || Interlocked.Exchange(ref _progressRefreshInFlight, 1) != 0) return;
+        var generation = _generation;
         try
         {
-            _lastProgressRefreshAtUtc = now;
-            await RefreshQueueAsync(knowledgeBaseId);
+            _lastProgressRefreshAtUtc = DateTimeOffset.UtcNow;
+            await _lifetime.RunAsync(async token => { await RefreshQueueAsync(knowledgeBaseId, generation, token); });
         }
-        finally
-        {
-            Interlocked.Exchange(ref _progressRefreshInFlight, 0);
-        }
+        catch (OperationCanceledException) when (_lifetime.IsRetired) { }
+        finally { Interlocked.Exchange(ref _progressRefreshInFlight, 0); }
     }
 
-    /// <summary>
-    /// Stop the current polling loop.
-    /// </summary>
+    /// <summary>Cancels this generation without abandoning the actual producer or releasing its source early.</summary>
     public void Stop()
     {
-        var cancellationTokenSource = _pollingCancellationTokenSource;
-        if (cancellationTokenSource is null)
-        {
-            _activeKnowledgeBaseId = null;
-            _pollingTask = null;
-            return;
-        }
-
-        _pollingCancellationTokenSource = null;
-        _pollingTask = null;
-        _activeKnowledgeBaseId = null;
-
-        if (!cancellationTokenSource.IsCancellationRequested)
-        {
-            cancellationTokenSource.Cancel();
-        }
-
-        cancellationTokenSource.Dispose();
+        _generation++;
+        var run = _run;
+        _run = null;
+        run?.Cancellation.Cancel();
     }
 
-    private async Task RunPollingLoopAsync(
-        string knowledgeBaseId,
-        Func<bool> hasActiveWork,
-        CancellationToken cancellationToken)
+    private bool IsCurrent(PollRun run) => !_lifetime.IsRetired && run.Generation == _generation && ReferenceEquals(_run, run);
+
+    private async Task<bool> RefreshQueueAsync(string id, long generation, CancellationToken token)
     {
-        try
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                await RefreshQueueAsync(knowledgeBaseId);
-
-                if (!hasActiveWork())
-                {
-                    break;
-                }
-
-                await Task.Delay(QueueRefreshIntervalMs, cancellationToken);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore cancellation when the page is disposed or polling target switches.
-        }
-        finally
-        {
-            if (_pollingCancellationTokenSource?.Token == cancellationToken)
-            {
-                _pollingCancellationTokenSource.Dispose();
-                _pollingCancellationTokenSource = null;
-                _pollingTask = null;
-                _activeKnowledgeBaseId = null;
-            }
-        }
-    }
-
-    private async Task RefreshQueueAsync(string knowledgeBaseId)
-    {
-        var result = await knowledgeDocumentFacade.GetDocumentInventoryAsync(knowledgeBaseId);
+        // The facade has no token overload. Retirement retains and drains the actual read.
+        var result = await knowledgeDocumentFacade.GetDocumentInventoryAsync(id);
+        if (token.IsCancellationRequested || _lifetime.IsRetired || generation != _generation) return false;
         if (result.IsFailed(out var error, out var queue))
         {
-            QueueRefreshFailed?.Invoke(error.Message ?? "Failed to load document queue.");
-            return;
+            if (QueueRefreshFailed is { } failed)
+                foreach (Func<string, long, string, Task> callback in failed.GetInvocationList())
+                    await callback(id, generation, error.Message ?? "Failed to load document queue.");
+            return false;
         }
-
-        QueueRefreshed?.Invoke(queue);
+        else if (QueueRefreshed is { } refreshed)
+            foreach (Func<string, long, IReadOnlyList<DocumentQueueItem>, Task> callback in refreshed.GetInvocationList())
+                await callback(id, generation, queue);
+        return !token.IsCancellationRequested && IsCurrentGeneration(generation);
     }
 
-    /// <inheritdoc />
-    public void Dispose()
+    /// <summary>Cancels and drains admitted polling and progress reads before resource release.</summary>
+    public async ValueTask DisposeAsync()
     {
+        var retirement = _lifetime.RetireAsync().AsTask();
         Stop();
+        var failures = new List<Exception>();
+        try { await retirement; } catch (Exception exception) { failures.Add(exception); }
+        Task[] owned;
+        lock (_owned) owned = _owned.ToArray();
+        foreach (var task in owned)
+        {
+            try { await task; } catch (Exception exception) { failures.Add(exception); }
+        }
+        foreach (var run in _runs) run.Cancellation.Dispose();
+        if (failures.Count > 0) throw new AggregateException("RAG polling retirement failed.", failures);
+    }
+
+    private sealed class PollRun
+    {
+        internal PollRun(string id, long generation)
+        {
+            Id = id;
+            Generation = generation;
+            Token = Cancellation.Token;
+        }
+        internal string Id { get; }
+        internal long Generation { get; }
+        internal CancellationTokenSource Cancellation { get; } = new();
+        internal CancellationToken Token { get; }
+        internal Task? Task { get; set; }
     }
 }

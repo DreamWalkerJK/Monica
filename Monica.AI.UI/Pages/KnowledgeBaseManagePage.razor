@@ -1,133 +1,70 @@
 @attribute [Route(PAGE_URL)]
-@implements IDisposable
+@implements IAsyncDisposable
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
-@using Monica.AI.UI.UIKnowledgeBase.Components
+@using Monica.AI.UI.Shared.Components
 @using Monica.AI.UI.UIKnowledgeBase.State
-@using Monica.UI.Localization
 @inject IStringLocalizer<AIResource> L
-@inject IStringLocalizer<SharedResource> Shared
 
 <PageTitle>@L["KnowledgeBase:Navigation:Manage"]</PageTitle>
-
 <div class="knowledge-base-manage-page">
-    <KnowledgeBaseListPanel PageState="PageState" />
-
-    <div class="kb-detail-panel">
-        @if (PageState.IsInitialLoading)
+    <KnowledgeRagHeader Title="@L["KnowledgeWorkbench:Knowledge"]" Description="@L["KnowledgeWorkbench:KnowledgeDescription"]" CurrentRoute="@PAGE_URL">
+        <Actions><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add" OnClick="PageState.ShowCreateKnowledgeBaseDialogAsync">@L["Common:Create"]</MudButton></Actions>
+    </KnowledgeRagHeader>
+    <div class="knowledge-workspace">
+        @if (!PageState.IsInitialLoading && string.IsNullOrWhiteSpace(PageState.CatalogErrorMessage) && PageState.KnowledgeBases.Count == 0)
         {
-            <div class="detail-loading-state">
-                <MudChip T="string"
-                         Size="Size.Small"
-                         Variant="Variant.Outlined"
-                         Color="Color.Primary"
-                         Class="loading-phase-chip">
-                    @Shared["Common:Initializing"]
-                </MudChip>
-                <MudText Typo="Typo.h6" Class="loading-title">@L["KnowledgeBase:Navigation:Manage"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
-                    @PageState.LoadingPhaseText
-                </MudText>
-                <MudProgressLinear Value="@PageState.LoadingProgressValue"
-                                   Color="Color.Primary"
-                                   Rounded="true"
-                                   Class="loading-progress" />
-            </div>
-        }
-        else if (PageState.SelectedKnowledgeBase is { } selectedKnowledgeBase)
-        {
-            @if (PageState.IsSelectionLoading)
-            {
-                <div class="detail-loading-state">
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Variant="Variant.Outlined"
-                             Color="Color.Primary"
-                             Class="loading-phase-chip">
-                        @Shared["Common:Initializing"]
-                    </MudChip>
-                    <MudText Typo="Typo.h6" Class="loading-title">@selectedKnowledgeBase.Name</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
-                        @PageState.LoadingPhaseText
-                    </MudText>
-                    <MudProgressLinear Value="@PageState.LoadingProgressValue"
-                                       Color="Color.Primary"
-                                       Rounded="true"
-                                       Class="loading-progress" />
-                </div>
-            }
-            else
-            {
-                <div class="detail-content">
-                    <div class="kb-header">
-                        <div class="kb-header-info">
-                            <MudText Typo="Typo.h5">@selectedKnowledgeBase.Name</MudText>
-                            @if (!string.IsNullOrEmpty(selectedKnowledgeBase.Description))
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@selectedKnowledgeBase.Description</MudText>
-                            }
-                        </div>
-                        <div class="kb-badges">
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Variant="Variant.Outlined"
-                                     Color="Color.Default"
-                                     Icon="@Icons.Material.Filled.Description">
-                                @selectedKnowledgeBase.DocumentCount @L["RAG:KnowledgeBase:DocumentCount"]
-                            </MudChip>
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Variant="Variant.Outlined"
-                                     Color="Color.Default"
-                                     Icon="@Icons.Material.Filled.GridView">
-                                @selectedKnowledgeBase.ChunkCount @L["RAG:KnowledgeBase:ChunkCount"]
-                            </MudChip>
-                            @if (KnowledgeBaseManagePageState.IsRagEnabled(selectedKnowledgeBase))
-                            {
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="Color.Info"
-                                         Variant="Variant.Outlined"
-                                         Icon="@Icons.Material.Filled.Memory"
-                                         Class="kb-header-model-chip">
-                                    @selectedKnowledgeBase.EmbeddingModelName
-                                </MudChip>
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="Color.Secondary"
-                                         Variant="Variant.Outlined"
-                                         Icon="@Icons.Material.Filled.Hub"
-                                         Class="kb-header-provider-chip">
-                                    @PageState.GetProviderDisplayLabel(
-                                        selectedKnowledgeBase.EmbeddingProviderId,
-                                        selectedKnowledgeBase.EmbeddingModelName)
-                                </MudChip>
-                            }
-                            else
-                            {
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="Color.Default"
-                                         Variant="Variant.Outlined"
-                                         Icon="@Icons.Material.Filled.Storage">
-                                    @L["KnowledgeBase:RagStatus:LookupOnly"]
-                                </MudChip>
-                            }
-                        </div>
-                    </div>
-
-                    <KnowledgeBaseImportActions PageState="PageState" />
-                    <KnowledgeBaseDocumentInventorySection PageState="PageState" />
-                </div>
-            }
+            <section class="knowledge-empty"><MudIcon Icon="@Icons.Material.Outlined.LibraryBooks" /><h2>@L["KnowledgeWorkbench:FirstCollection"]</h2><p>@L["KnowledgeWorkbench:FirstCollectionHint"]</p><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add" OnClick="PageState.ShowCreateKnowledgeBaseDialogAsync">@L["Common:Create"]</MudButton></section>
         }
         else
         {
-            <div class="empty-state">
-                <MudText Typo="Typo.h6" Color="Color.Secondary">
-                    @L["RAG:KnowledgeBase:SelectPrompt"]
-                </MudText>
-            </div>
+        <div class="knowledge-workspace-grid">
+            <KnowledgeBaseCatalog Items="PageState.KnowledgeBases" Selected="PageState.SelectedKnowledgeBase" IsLoading="PageState.IsInitialLoading" LoadingText="@PageState.LoadingPhaseText" ErrorMessage="@PageState.CatalogErrorMessage" SelectionChanged="PageState.SelectKnowledgeBaseAsync" Retry="PageState.InitializeAsync" FocusRequested="FocusDossierAsync" />
+            <section class="knowledge-dossier" aria-busy="@((PageState.IsInitialLoading || PageState.IsSelectionLoading).ToString().ToLowerInvariant())">
+                @if (PageState.IsInitialLoading || PageState.IsSelectionLoading)
+                {
+                    <div class="knowledge-loading" role="status"><p>@PageState.LoadingPhaseText</p><MudProgressLinear Value="PageState.LoadingProgressValue" Color="Color.Primary" /></div>
+                }
+                else if (PageState.SelectedKnowledgeBase is { } kb)
+                {
+                    <header class="collection-identity">
+                        <div class="collection-identity-top">
+                            <div class="collection-copy"><span class="collection-label">@L["KnowledgeWorkbench:Collection"]</span><h2 @ref="_dossierHeading" tabindex="-1">@kb.Name</h2><code>@kb.Id</code></div>
+                            <div class="collection-actions"><MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="PageState.ShowEditKnowledgeBaseDialogAsync">@L["Common:Edit"]</MudButton><MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" AriaLabel="@L["KnowledgeWorkbench:CollectionActions"]"><MudMenuItem Icon="@Icons.Material.Outlined.Delete" IconColor="Color.Error" OnClick="PageState.DeleteSelectedKnowledgeBaseAsync">@L["Common:Delete"]</MudMenuItem></MudMenu></div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(kb.Description)) { <p class="collection-description">@kb.Description</p> }
+                        <div class="collection-facts"><span>@L["KnowledgeWorkbench:DocumentCount", kb.DocumentCount]</span><span>@L["KnowledgeWorkbench:RecordedChunks", kb.ChunkCount]</span><span class="binding-state">@(KnowledgeBaseManagePageState.IsRagEnabled(kb) ? L["KnowledgeWorkbench:ModelBound"] : L["KnowledgeBase:RagStatus:LookupOnly"])</span></div>
+                        @if (KnowledgeBaseManagePageState.IsRagEnabled(kb)) { <div class="collection-binding"><MudIcon Icon="@Icons.Material.Outlined.Memory" /><span>@kb.EmbeddingModelName <small>@PageState.GetProviderDisplayLabel(kb.EmbeddingProviderId, kb.EmbeddingModelName)</small></span></div> }
+                    </header>
+                    <KnowledgeBaseImportActions PageState="PageState" />
+                    <KnowledgeBaseDocumentInventorySection PageState="PageState" />
+                }
+                else
+                {
+                    <div class="knowledge-empty"><MudIcon Icon="@Icons.Material.Outlined.LibraryBooks" /><h2>@L["KnowledgeWorkbench:ChooseCollection"]</h2><p>@L["KnowledgeWorkbench:ChooseCollectionHint"]</p></div>
+                }
+            </section>
+        </div>
         }
     </div>
 </div>
+@code {
+    private ElementReference _dossierHeading;
+    private readonly Monica.AI.UI.Shared.Support.KnowledgeDossierFocus _dossierFocus = new();
+    private async Task FocusDossierAsync(Monica.AI.KnowledgeBase.Models.KnowledgeBase selected)
+    {
+        if (_retired || PageState.IsRetired || PageState.SelectedKnowledgeBase?.Id != selected.Id) return;
+        var generation = PageState.SelectionGeneration;
+        await InvokeAsync(() =>
+        {
+            if (_retired || PageState.IsRetired || PageState.SelectionGeneration != generation
+                || PageState.SelectedKnowledgeBase?.Id != selected.Id) return;
+            _dossierFocus.Request(selected.Id, generation);
+            StateHasChanged();
+        });
+    }
+    protected override Task OnAfterRenderAsync(bool firstRender) => _dossierFocus.AfterRenderAsync(
+        (id, generation) => !_retired && !PageState.IsRetired && !PageState.IsSelectionLoading
+            && PageState.SelectionGeneration == generation && PageState.SelectedKnowledgeBase?.Id == id,
+        () => _dossierHeading.FocusAsync().AsTask());
+}

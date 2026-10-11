@@ -23,6 +23,8 @@ Indicators:
 
 Fix: give the component/state owner one explicit lifetime. Mark it disposed and cancel ordinary lifetime-bound work before teardown; stop scheduling work and detach callbacks/render delegates; recheck lifetime after incomplete awaits; prevent new resource acquisitions; serialize with or drain existing users; then atomically detach shared references for teardown. Always observe resource-producing operations and dispose late-created references instead of publishing them. Stop JS callback producers before disposing their `DotNetObjectReference`, and dispose every resource once. Do not register component-consumed disposable transients. Prefer a non-disposable factory that creates a component-owned resource. Use an explicit component-owned DI scope only after inspecting the full dependency graph and proving it does not require services bound to the existing Blazor circuit scope. Keep JS session state per component/root and cancel all queued work during session cleanup. Use client-side `MutationObserver` for DOM cleanup. Catch `JSDisconnectedException` where server-circuit loss is expected. Do not catch `ObjectDisposedException` from a locally owned interop reference; repair the ownership and teardown ordering.
 
+For Knowledge/RAG management, verify page creation through the public state factories and asynchronous retirement of the returned state, private poller, awaited renderer notifications, and owned dialogs. Facades remain borrowed from the circuit container. Probe retirement during a tokenless inventory read and delayed renderer dispatch, and stale selection A → B → A. Commands must retain the originating base/document across confirmation. A compact catalog's native focus continuation must check retirement and the intended selection after the awaited command; inspect actual `document.activeElement`. Use the owning [lifecycle contract](../../monica-ui-development/references/blazor-best-practices.md#5-state-management), without adding a second state owner or poll loop for the visual refactor.
+
 ### P1 — Custom overlays replacing MudBlazor primitives or missing keyboard behavior
 
 Indicators:
@@ -36,6 +38,10 @@ Fix: use MudBlazor overlay primitives and inspect their exact source and runtime
 For a controlled native input with a separate reset action, verify both displayed text and the filtered model. Clear must empty the actual input, restore the results, and allow that same query to be entered again. Check pending debounce as well as settled input; row counts alone do not prove correct native control ownership. See [component communication](../../monica-ui-development/references/blazor-best-practices.md#13-component-communication) for the native reset path.
 
 Inspect rendered native ARIA state values as well as the visual result. A direct C# boolean binding can minimize a true attribute to an empty value and omit false, leaving controls without a valid pressed/expanded/selected state and breaking their selected CSS. Emit explicit lowercase string values and verify keyboard activation and exactly the intended selected control; see [ARIA state serialization](../../monica-ui-development/references/blazor-best-practices.md#84-serialize-aria-states-as-strings).
+
+Inspect string-valued component parameters in the rendered interface. A Razor attribute such as `SelectedModelKey="PageState.CurrentEmbeddingModelKey"` is a literal string; use `SelectedModelKey="@PageState.CurrentEmbeddingModelKey"` for the intended expression. Verify the actual model, loading stage, and error text rather than accepting a successful build as proof of binding. In browser checks, wait for a native selection's resulting state before the next dependent action; a click returning does not mean the Blazor server has applied it.
+
+For an icon-only `MudMenu`, use its `AriaLabel` parameter to name the native activator. A lower-case `aria-label` user attribute labels the menu's outer wrapper instead. Inspect the actual button's accessible name and the live menu item semantics rather than assuming that every native item has a `menuitem` role.
 
 ### P2 — Broken layout containment, sizing, or scroll ownership
 
@@ -81,6 +87,8 @@ Indicators:
 - The page has no task-specific information hierarchy, or copies an accepted page's regions without a corresponding decision, evidence, or action
 - Readable descriptions and record names shrink into 10–11px metadata, or excessive bold text makes all hierarchy levels compete
 - A filtered list silently changes the meaning of a whole-scope summary, or empty/missing coverage is presented as success without evidence
+- Knowledge/RAG source preview, indexing, or chunk inspection uses a global document-path match instead of the recorded source kind/group; duplicate Markdown paths or an uploaded ID collision can silently borrow another source
+- Retrieval results show the edited controls as their submitted scope, hybrid ranking as similarity percentage, or representative vector validation as exhaustive coverage; stale selected-base aggregates disagree with the latest persisted metadata after queue finalization
 - Light or dark mode is excessively dark, low-contrast, or monotone, so canvas, structural surfaces, borders, text hierarchy, or semantic states collapse together
 - Supporting prose or captions select MudBlazor's Secondary accent, whose native important color utility overrides the intended text role; inspect the actual computed cascade using the owning [theme guidance](../../monica-ui-development/references/theme-css-guide.md#2-keep-palette-ownership-in-c)
 - Success, warning, error, information, selection, and runtime states are not meaningfully differentiated when the task requires rapid scanning

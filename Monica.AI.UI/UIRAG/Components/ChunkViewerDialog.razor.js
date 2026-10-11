@@ -3,8 +3,8 @@ export function scrollToMatchedChunk(root) {
         return false;
     }
 
-    const scrollRoot = root.querySelector("[data-chunk-scroll-root='true']");
-    const target = root.querySelector("[data-rag-chunk-target='true']");
+    const scrollRoot = root.querySelector(".chunk-viewer-dialog-body");
+    const target = scrollRoot?.querySelector("[data-rag-chunk-target='true']");
     if (!scrollRoot || !target) {
         return false;
     }
@@ -32,8 +32,17 @@ function focusElement(element) {
 function scrollElementIntoView(scrollRoot, element) {
     const scrollRootRect = scrollRoot.getBoundingClientRect();
     const elementRect = element.getBoundingClientRect();
+    const visibleTop = scrollRootRect.top + scrollRoot.clientTop;
+    const visibleBottom = visibleTop + scrollRoot.clientHeight;
+
+    // Keep source context in place when any of the matched chunk is already visible.
+    // A chunk may be taller than the body, so requiring full visibility would move the first match unnecessarily.
+    if (elementRect.bottom > visibleTop && elementRect.top < visibleBottom) {
+        return;
+    }
+
     const targetTop =
-        scrollRoot.scrollTop + (elementRect.top - scrollRootRect.top) - Math.max(48, scrollRootRect.height * 0.18);
+        scrollRoot.scrollTop + (elementRect.top - visibleTop) - Math.max(48, scrollRoot.clientHeight * 0.18);
 
     scrollRoot.scrollTo({
         top: Math.max(targetTop, 0),

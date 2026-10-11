@@ -232,16 +232,19 @@ internal sealed class BatchIndexCoordinator(
     {
         try
         {
-            var markdownDocument = await markdownDocumentResolver.FindByPathAsync(queueItem.Id, cancellationToken);
             string content;
             string documentTitle;
-            string sourceKind;
 
-            if (markdownDocument is not null)
+            if (string.Equals(queueItem.SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase))
             {
+                var markdownDocument = await markdownDocumentResolver.FindByPathAsync(
+                    queueItem.Id,
+                    queueItem.SourceGroupKey,
+                    cancellationToken)
+                    ?? throw new FileNotFoundException(
+                        $"Markdown document '{queueItem.Id}' was not found in its recorded source group '{queueItem.SourceGroupKey}'.");
                 content = await markdownService.GetDocumentContentAsync(markdownDocument);
                 documentTitle = markdownDocument.Title;
-                sourceKind = KnowledgeDocumentSourceKinds.Markdown;
             }
             else
             {
@@ -249,7 +252,6 @@ internal sealed class BatchIndexCoordinator(
                           ?? throw new FileNotFoundException(
                               $"Document '{queueItem.Id}' source content was not found.");
                 documentTitle = queueItem.Name;
-                sourceKind = KnowledgeDocumentSourceKinds.Uploaded;
             }
 
             var lastPersistedProgress = queueItem.Progress;
@@ -299,7 +301,8 @@ internal sealed class BatchIndexCoordinator(
                 content,
                 HandleProgressAsync,
                 cancellationToken,
-                sourceKind: sourceKind);
+                sourceKind: queueItem.SourceKind,
+                sourceGroupKey: queueItem.SourceGroupKey);
 
             logger.LogInformation("Successfully indexed document '{DocId}' in KB '{KbId}'", queueItem.Id, kbId);
         }

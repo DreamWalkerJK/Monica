@@ -1,0 +1,64 @@
+@implements IAsyncDisposable
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.Pages
+@using Monica.AI.UI.Shared.Support
+@using Monica.UI.Shared.Components.Navigation
+@using Monica.UI.Shell.Support
+@inject IStringLocalizer<AIResource> L
+@inject PageAccessEvaluator PageAccess
+
+<div class="knowledge-family-header">
+    <header>
+        <div class="knowledge-family-heading">
+            <span class="eyebrow">@L["KnowledgeWorkbench:Title"]</span>
+            <h1>@Title</h1><p>@Description</p>
+        </div>
+        @if (Actions is not null) { <div class="knowledge-family-actions">@Actions</div> }
+    </header>
+    <MoWorkbenchNavigation Label="@L["KnowledgeWorkbench:Navigation"]">
+        @foreach (var route in Routes.Where(route => _allowed.Contains(route.Url)))
+        {
+            <a href="@route.Url" aria-current="@(string.Equals(CurrentRoute, route.Url, StringComparison.OrdinalIgnoreCase) ? "page" : null)"><MudIcon Icon="@route.Icon" />@L[route.Label]</a>
+        }
+    </MoWorkbenchNavigation>
+</div>
+@code {
+    /// <summary>Gets or sets the localized title of the current task.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    /// <summary>Gets or sets the localized description of the current task.</summary>
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    /// <summary>Gets or sets the existing registered route identifying the active task.</summary>
+    [Parameter, EditorRequired] public string CurrentRoute { get; set; } = string.Empty;
+    /// <summary>Gets or sets native page actions; task-specific state remains owned by the caller.</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+    private readonly AIAdministrationOperationLifetime _lifetime = new();
+    private HashSet<string> _allowed = [];
+    private long _generation;
+    private static readonly (string Url, string Label, string Icon)[] Routes =
+    [
+        (KnowledgeBaseManagePage.PAGE_URL, "KnowledgeWorkbench:Knowledge", Icons.Material.Outlined.LibraryBooks),
+        (RAGManagePage.PAGE_URL, "KnowledgeWorkbench:Indexing", Icons.Material.Outlined.PlaylistPlay),
+        (RAGDebugPage.PAGE_URL, "KnowledgeWorkbench:Retrieval:Title", Icons.Material.Outlined.ManageSearch),
+        (RAGChunkersPage.PAGE_URL, "KnowledgeWorkbench:Chunking:Title", Icons.Material.Outlined.AccountTree)
+    ];
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            await _lifetime.RunAsync(async token =>
+            {
+                var generation = ++_generation;
+                var allowed = new HashSet<string>();
+                foreach (var route in Routes)
+                {
+                    if (await PageAccess.IsAuthorizedAsync(route.Url, token)) allowed.Add(route.Url);
+                }
+                _lifetime.TryApply(() => { if (generation == _generation) _allowed = allowed; });
+            });
+        }
+        catch (OperationCanceledException) when (_lifetime.IsRetired) { }
+    }
+    /// <summary>Drains access evaluation without disposing the borrowed circuit policy evaluator.</summary>
+    public ValueTask DisposeAsync() => _lifetime.RetireAsync();
+}

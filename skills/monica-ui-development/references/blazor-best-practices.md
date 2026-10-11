@@ -264,6 +264,8 @@ public class AppStateContainer
 
 Draft review and undo must capture the originating route and the exact draft and validation-issue objects being reviewed. Reject undo after that route retires, and remove an item only if the current state still matches its captured object. Reconcile a save by its actual applied request IDs with the same comparison. A newer draft or issue at the same path must survive an older review's undo or persistence completion.
 
+Knowledge/RAG management state has a visit lifetime, not a circuit lifetime. Inject `KnowledgeBaseManagePageStateFactory` or `RAGManagePageStateFactory`, create state with `action => InvokeAsync(action)`, await its `Func<Task>` notifications, unsubscribe, and await `DisposeAsync` from the page's `IAsyncDisposable` implementation. Returned state and its private poller belong to the page; facade and UI-service dependencies remain container-owned. Do not retain former scoped disposable-state registrations. `KnowledgePageSession` reuses `AIAdministrationOperationLifetime` to admit and drain producers, renderer dispatch, and dialogs. Verify retirement during an actual incomplete read and renderer publication, plus A → B → A selection changes; cancellation must not abandon a tokenless facade read. Every destructive/source command captures its base and document before awaiting confirmation. See the owning [Knowledge/RAG contract](../../monica-infra-ai/references/knowledge-and-rag.md#page-owned-management-state) for migration and error/refresh APIs.
+
 ## 6. Error Handling
 
 ### 6.1 Use ErrorBoundary

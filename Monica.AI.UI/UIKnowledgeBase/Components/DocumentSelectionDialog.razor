@@ -1,11 +1,20 @@
+@using Monica.UI.Shared.Components.Dialogs
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
 @using Monica.Markdown.Models
 @inject IStringLocalizer<AIResource> L
 
-<MudDialog>
+<div class="knowledge-dialog-owner">
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" ContentClass="pa-0 knowledge-dialog-content" ActionsClass="pa-0" Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px;overflow:hidden">
+    <TitleContent><MoDialogHeading Text="@L["KnowledgeBase:DocumentImport:Title"]" /></TitleContent>
     <DialogContent>
         <div class="document-selection-content">
+            @if (AvailableDocuments.FirstOrDefault() is { } source)
+            {
+                <p class="source-group">@L["KnowledgeDialogs:SourceGroup", source.GroupKey]</p>
+            }
+            <MudTextField T="string" @bind-Value="_filter" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Label="@L["KnowledgeDialogs:FilterSources"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
             <div class="selection-header">
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     @L["RAG:DocumentSelection:Selected", SelectedDocuments.Count]
@@ -27,10 +36,11 @@
             <MudDivider Class="my-3" />
 
             <div class="document-list">
-                @foreach (var doc in AvailableDocuments)
+                @foreach (var doc in FilteredDocuments)
                 {
                     <div class="document-item">
                         <MudCheckBox T="bool"
+                                     aria-label="@doc.Title"
                                      Value="@SelectedDocuments.Contains(doc.RelativePath)"
                                      ValueChanged="@((bool value) => ToggleDocument(doc.RelativePath, value))"
                                      Color="Color.Primary"
@@ -49,19 +59,26 @@
                         }
                     </div>
                 }
+                @if (!FilteredDocuments.Any())
+                {
+                    <p class="filter-empty" role="status">@L["KnowledgeDialogs:NoMatchingSources"]</p>
+                }
             </div>
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
-        <MudButton Color="Color.Primary"
-                   Variant="Variant.Filled"
-                   OnClick="Submit"
-                   Disabled="@(SelectedDocuments.Count == 0)">
-            @L["KnowledgeBase:DocumentImport:Add"]
-        </MudButton>
+        <div class="dialog-actions">
+            <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       OnClick="Submit"
+                       Disabled="@(SelectedDocuments.Count == 0)">
+                @L["KnowledgeDialogs:AddSelected", SelectedDocuments.Count]
+            </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
+</div>
 
 @code {
     [CascadingParameter]
@@ -74,8 +91,12 @@
     public HashSet<string> ExistingDocumentIds { get; set; } = new();
 
     private HashSet<string> SelectedDocuments { get; set; } = new();
+    private string _filter = string.Empty;
+    private IEnumerable<MarkdownDocument> FilteredDocuments => AvailableDocuments.Where(document =>
+        string.IsNullOrWhiteSpace(_filter) || document.Title.Contains(_filter.Trim(), StringComparison.OrdinalIgnoreCase)
+        || document.RelativePath.Contains(_filter.Trim(), StringComparison.OrdinalIgnoreCase));
 
-    private async Task ToggleDocument(string documentId, bool isChecked)
+    private void ToggleDocument(string documentId, bool isChecked)
     {
         if (isChecked)
         {
@@ -87,19 +108,16 @@
             SelectedDocuments.Remove(documentId);
         }
 
-        await InvokeAsync(StateHasChanged);
     }
 
-    private async Task SelectAll()
+    private void SelectAll()
     {
         SelectedDocuments = AvailableDocuments.Select(d => d.RelativePath).ToHashSet();
-        await InvokeAsync(StateHasChanged);
     }
 
-    private async Task DeselectAll()
+    private void DeselectAll()
     {
         SelectedDocuments.Clear();
-        await InvokeAsync(StateHasChanged);
     }
 
     private void Cancel()
@@ -109,6 +127,7 @@
 
     private void Submit()
     {
+        if (SelectedDocuments.Count == 0) return;
         MudDialog.Close(DialogResult.Ok(SelectedDocuments.ToList()));
     }
 }
