@@ -20,7 +20,7 @@ public sealed class MessageDebuggerMiddlewareTests
         var channel = scope.Resolve<IDataChannelManager>().Fetch(scenario.Primary.Id)!;
         var payload = new MutablePayload();
         var nested = new MutablePayload();
-        var context = new ChannelDataContext(ChannelSide.Inner, payload);
+        var context = new ChannelDataContext(ChannelSide.Inner, payload) { CancellationToken = TestContext.Current.CancellationToken };
         var metadata = (IDictionary<string, object?>)context.Metadata;
         metadata["nested"] = nested;
         metadata["null"] = null;
@@ -36,8 +36,8 @@ public sealed class MessageDebuggerMiddlewareTests
         nested.Content = "Mutated metadata";
         nested.Children.Clear();
         debugger.GetDebugMessages().Single().FormattedContent = "Mutated legacy view";
-        await channel.SendDataFromOuterAsync("outer message");
-        await channel.SendDataFromInnerAsync("third message");
+        await channel.SendDataFromOuterAsync("outer message", TestContext.Current.CancellationToken);
+        await channel.SendDataFromInnerAsync("third message", TestContext.Current.CancellationToken);
         debugger.GetDebugMessageSnapshots().Select(message => message.Sequence).Should().Equal(2, 3);
         debugger.MaxQueueSize = 1;
         debugger.GetDebugMessageSnapshots().Single().Sequence.Should().Be(3);
@@ -49,7 +49,7 @@ public sealed class MessageDebuggerMiddlewareTests
         selected.FormattedContent.Should().NotContain("Mutated legacy view");
         selected.Metadata["nested"].Json.Should().Contain("nested");
         selected.Metadata["nested"].Json.Should().NotContain("Mutated");
-        await channel.SendDataFromOuterAsync("after clear");
+        await channel.SendDataFromOuterAsync("after clear", TestContext.Current.CancellationToken);
         debugger.GetDebugMessageSnapshots().Single().Sequence.Should().Be(4);
         debugger.GetDebugMessageSnapshots().Single().Source.Should().Be(ChannelSide.Outer);
     }
@@ -63,18 +63,18 @@ public sealed class MessageDebuggerMiddlewareTests
         await using var application = await new DataChannelTestApplicationFactory(scenario).CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
         await using var scope = application.CreateScope(TestContext.Current.CancellationToken);
         var channel = scope.Resolve<IDataChannelManager>().Fetch(scenario.Primary.Id)!;
-        await channel.SendDataFromInnerAsync("MATCH inner");
-        await channel.SendDataFromOuterAsync("match outer");
-        await channel.SendDataFromInnerAsync("excluded");
+        await channel.SendDataFromInnerAsync("MATCH inner", TestContext.Current.CancellationToken);
+        await channel.SendDataFromOuterAsync("match outer", TestContext.Current.CancellationToken);
+        await channel.SendDataFromInnerAsync("excluded", TestContext.Current.CancellationToken);
         debugger.IsActive = false;
-        await channel.SendDataFromOuterAsync("match while stopped");
+        await channel.SendDataFromOuterAsync("match while stopped", TestContext.Current.CancellationToken);
         debugger.GetDebugMessageSnapshots().Select(message => message.Source).Should().Equal(ChannelSide.Inner, ChannelSide.Outer);
         scenario.Primary.Outer.Receipts.Should().HaveCount(2);
         scenario.Primary.Inner.Receipts.Should().HaveCount(2);
 
         debugger.IsActive = true;
         scenario.Primary.Outer.FailReceive = true;
-        var failingSend = () => channel.SendDataFromInnerAsync("match but no receipt");
+        var failingSend = () => channel.SendDataFromInnerAsync("match but no receipt", TestContext.Current.CancellationToken);
         await failingSend.Should().ThrowAsync<InvalidOperationException>();
         debugger.GetDebugMessageSnapshots().Should().HaveCount(3, "debugger capture precedes endpoint dispatch");
         scenario.Primary.Outer.Receipts.Should().HaveCount(2);

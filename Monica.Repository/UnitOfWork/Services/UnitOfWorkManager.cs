@@ -151,7 +151,7 @@ public sealed class UnitOfWorkManager(
         EnsureUsable();
         if (_rollbackOnly) throw new InvalidOperationException("The operation is rollback-only. Dispose the scope before retrying.");
         var owner = context is IRepositoryContextAdapter { TransactionOwner: { } transactionOwner } ? transactionOwner : context;
-        if (_active && !_contexts.Contains(owner))
+        if (_transaction is not null && !_contexts.Contains(owner))
             throw new InvalidOperationException("This DbContext is not a participant in the active transaction.");
     }
 

@@ -19,10 +19,11 @@
 ## Rules
 
 - Derive from `ApplicationService<TRequest, TResponse>` or `ApplicationService<TRequest>`.
+- Declare business collaborators in the constructor, preferably a primary constructor, and inject only dependencies the handler uses. Current-user access and ID generation are explicit application dependencies; do not add them to a shared service base or resolve them through `IServiceProvider` / `CachedServiceProvider`.
 - Use the inherited `Logger` in handler methods when logging is needed. Monica resolves it after activation from the
   host that owns the service instance; do not access it from a constructor.
 - Make the request implement `IResultRequest<TResponse>` or `IResultRequest`.
-- Query requests bound to a GET endpoint are read-only by convention and open no write transaction. Add Core [ReadOnlyOperation] only to read requests without a GET binding.
+- GET-bound queries use the Web API read convention and open no automatic write transaction. For a read without a GET binding, put `[ExecutionTransaction(ExecutionTransactionMode.None)]` on its concrete `Handle` method. Ordinary writes need no attribute; use the same method declaration for any transaction override or context selection, following the persistence [transaction contract](../../monica-infra-persistence/references/transactions.md).
 - Keep the handler thin. Push reusable rules into `DomainService` or the entity itself.
 - Catch exceptions only when you are adding boundary-specific context. Do not smother useful failures.
 - Put `[ApiEndpoint]` on the request type. It owns the HTTP method, request-specific route, binding source, and optional generated operation name.
@@ -71,7 +72,6 @@ namespace $ApplicationNamespace$.HandlersQuery;
     OperationName = "$OperationName$")]
 [ProjectUnitMetadata(
     "$FeatureName$ Query",
-    Owner = "$Owner$",
     Description = "Requests the $FeatureName$ use case.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -79,7 +79,6 @@ public sealed record Query$FeatureName$(long Id) : IResultRequest<$ResponseName$
 
 [ProjectUnitMetadata(
     "$FeatureName$",
-    Owner = "$Owner$",
     Description = "Coordinates the $FeatureName$ query boundary.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -121,7 +120,6 @@ namespace $ApplicationNamespace$.HandlersCommand;
     OperationName = "$OperationName$")]
 [ProjectUnitMetadata(
     "$FeatureName$ Command",
-    Owner = "$Owner$",
     Description = "Requests the $FeatureName$ use case.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -129,7 +127,6 @@ public sealed record Command$FeatureName$(long Id) : IResultRequest;
 
 [ProjectUnitMetadata(
     "$FeatureName$",
-    Owner = "$Owner$",
     Description = "Coordinates the $FeatureName$ command boundary.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]

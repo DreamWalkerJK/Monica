@@ -35,7 +35,7 @@ powershell -File scripts/run-tests.ps1 -NoBuild
 ```
 
 - Use `pwsh` in place of `powershell` where appropriate. Do not run `dotnet test Monica.slnx`; use the runner or the affected test project.
-- Builds must have zero warnings. Resolve warnings rather than suppressing them with `NoWarn` or other suppressions unless explicitly required by the user.
+- Monica builds must have zero warnings. This requirement applies only to this Monica repository; sibling and consumer repositories own their verification rules. Resolve warnings rather than suppressing them with `NoWarn` or other suppressions unless explicitly required by the user. The advisory-specific `NuGetAuditSuppress` entries in [Monica.Office.csproj](Monica.Office/Monica.Office.csproj) are approved exceptions.
 - Avoid concurrent build/test processes that share dependencies or output paths. Use MSBuild parallelism inside one build with `-m`.
 - Run or add UI rendering tests only on explicit user request. Use browser smoke checks for UI changes. Requested UI tests protect behavior contracts, not layout, CSS classes, localized-key presence, or visual composition; details are in `monica-unit-testing`.
 - For skill or documentation changes, run their validators described in `CONTRIBUTING.md`; do not run unrelated UI tests.

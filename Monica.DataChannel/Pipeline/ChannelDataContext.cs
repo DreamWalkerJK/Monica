@@ -39,6 +39,9 @@ public class ChannelDataContext
     /// </summary>
     public object? Data { get; set; }
 
+    /// <summary>Gets or sets cancellation for this delivery. Receivers should pass it to asynchronous work.</summary>
+    public CancellationToken CancellationToken { get; set; }
+
     /// <summary>
     /// Gets the CLR type of the current payload.
     /// </summary>

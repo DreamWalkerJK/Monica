@@ -19,9 +19,12 @@ public class ChannelPipeline : IObservableInstance
     private readonly object _initializationGate = new();
     private readonly object _registrationGate = new();
     private readonly Dictionary<string, PipelineComponentRegistration> _componentRegistrations = new(StringComparer.Ordinal);
+    private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
     private bool _isInitialized;
     private bool _isInitializing;
     private bool _isNotAvailable;
+    private bool _isDisposed;
+    private Task? _disposalTask;
     /// <summary>
     /// Gets or sets the inner endpoint.
     /// Handles data flowing from the outer side into the inner side.
@@ -297,17 +300,22 @@ public class ChannelPipeline : IObservableInstance
     /// <summary>
     /// Sends data through the pipeline.
     /// The data is processed by transform middleware and then dispatched to the opposite endpoint based on its source side.
+    /// The original cancellation token owns the entire delivery, even when middleware replaces the context.
     /// </summary>
     /// <param name="data">The data context to send.</param>
     /// <returns>A task that represents the asynchronous send operation.</returns>
     public async Task SendDataAsync(ChannelDataContext data)
     {
+        var cancellationToken = data.CancellationToken;
+        cancellationToken.ThrowIfCancellationRequested();
         // Run transform middleware.
         await TransformMiddlewares.DoAsync(async p =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 data = await p.PassAsync(data);
+                data.CancellationToken = cancellationToken;
             }
             catch (Exception ex)
             {
@@ -317,6 +325,7 @@ public class ChannelPipeline : IObservableInstance
         });
 
 
+        cancellationToken.ThrowIfCancellationRequested();
         // Dispatch to the target endpoint.
         try
         {
@@ -339,40 +348,63 @@ public class ChannelPipeline : IObservableInstance
 
     /// <summary>
     /// Initializes the pipeline and its components.
-    /// Assigns pipeline references and initializes all communication cores.
+    /// Rejects concurrent initialization and serializes the admitted attempt with host shutdown.
+    /// Failed or cancelled attempts release endpoint resources before retiring their initialization state.
     /// </summary>
+    /// <param name="cancellationToken">Cancels initialization; endpoint rollback does not use the cancelled token.</param>
     /// <returns>A task that represents the initialization operation.</returns>
     internal async Task InitAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         lock (_initializationGate)
         {
+            ObjectDisposedException.ThrowIf(_isDisposed, this);
             if (_isInitializing)
                 throw new InvalidOperationException($"Data channel '{Id}' is already initializing.");
             _isInitializing = true;
             _isInitialized = false;
         }
         var completed = false;
+        var lifecycleEntered = false;
         try
         {
+            await _lifecycleLock.WaitAsync(cancellationToken);
+            lifecycleEntered = true;
+            lock (_initializationGate)
+                ObjectDisposedException.ThrowIf(_isDisposed, this);
+
+            var endpoints = GetEndpoints().OfType<ICommunicationEndpoint>().ToArray();
             InnerEndpoint.Pipe = this;
             OuterEndpoint.Pipe = this;
             GetMiddlewares().OfType<IPipelineAware>().Do(p => p.Pipe = this);
             foreach (var proxy in GetMiddlewares().OfType<TransientPipeTransformMiddlewareProxy>())
                 proxy.Pipeline = this;
 
-            foreach (var communicationCore in GetEndpoints().OfType<ICommunicationEndpoint>())
+            try
             {
-                try { await communicationCore.InitAsync(cancellationToken); }
-                catch (Exception exception)
+                foreach (var endpoint in endpoints)
                 {
-                    CollectException(exception, communicationCore,
-                        $"Data channel '{Id}' failed to initialize communication endpoint {communicationCore.GetType().Name}.");
-                    throw;
+                    try { await endpoint.InitAsync(cancellationToken); }
+                    catch (Exception exception)
+                    {
+                        CollectException(exception, endpoint,
+                            $"Data channel '{Id}' failed to initialize communication endpoint {endpoint.GetType().Name}.");
+                        throw;
+                    }
                 }
+                cancellationToken.ThrowIfCancellationRequested();
+                completed = true;
             }
-            cancellationToken.ThrowIfCancellationRequested();
-            completed = true;
+            catch
+            {
+                // Release partial and previous resources, stopping ingress before the inner receiver.
+                foreach (var endpoint in endpoints.Reverse())
+                {
+                    try { await endpoint.DisposeAsync(); }
+                    catch (Exception cleanupException) { CollectException(cleanupException, endpoint); }
+                }
+                throw;
+            }
         }
         finally
         {
@@ -382,17 +414,43 @@ public class ChannelPipeline : IObservableInstance
                 _isNotAvailable = !completed;
                 _isInitializing = false;
             }
+            if (lifecycleEntered) _lifecycleLock.Release();
         }
     }
 
     /// <summary>
-    /// Releases pipeline resources and disposes its components.
+    /// Retires the host-owned pipeline after any admitted initialization completes.
+    /// Releases every endpoint in reverse order, even when another endpoint fails to stop.
+    /// Repeated calls observe the same cleanup completion, including its original failure.
     /// </summary>
-    /// <returns>A task that represents the asynchronous dispose operation.</returns>
-    internal async Task DisposeAsync()
+    internal Task DisposeAsync()
     {
-        await GetEndpoints().OfType<ICommunicationEndpoint>().DoAsync(async p => await p.DisposeAsync());
-        ObservableTracker?.Dispose();
-        lock (_initializationGate) _isInitialized = false;
+        lock (_initializationGate)
+            return _disposalTask ??= DisposeCoreAsync();
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        await _lifecycleLock.WaitAsync();
+        try
+        {
+            lock (_initializationGate)
+            {
+                _isDisposed = true;
+                _isInitialized = false;
+                _isNotAvailable = true;
+            }
+
+            List<Exception>? failures = null;
+            // Stop ingress first: inner endpoints may be awaiting work with the outer receiver's token.
+            foreach (var endpoint in GetEndpoints().Reverse().OfType<ICommunicationEndpoint>())
+            {
+                try { await endpoint.DisposeAsync(); }
+                catch (Exception exception) { (failures ??= []).Add(exception); }
+            }
+            ObservableTracker?.Dispose();
+            if (failures is not null) throw new AggregateException(failures);
+        }
+        finally { _lifecycleLock.Release(); }
     }
 }

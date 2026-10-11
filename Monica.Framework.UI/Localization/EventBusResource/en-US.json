@@ -514,10 +514,10 @@
   },
   "RuntimeTest": {
     "Target": "Captured test target",
-    "Fanout": "This publishes a real event to the selected row's exact topic, service key, and bus scope. Every matching handler can receive it; it does not invoke only this handler.",
+    "Fanout": "This diagnostic sends immediately to the selected row's exact topic, service key, and bus scope, without Outbox staging. Every matching handler can receive it; it does not invoke only this handler.",
     "Compose": "Compose a typed event",
     "ValidationHelp": "Validation checks JSON deserialization against the registered event type.",
-    "AcceptanceHelp": "Publish acceptance and listener receipt are different evidence. A successful publish does not confirm any handler completed.",
+    "AcceptanceHelp": "Local success means dispatch completed. Distributed success means the transport accepted the event, without confirming consumer completion. Receipts below show only what this listener actually captured.",
     "Receive": "Capture matching events",
     "ReceiveHelp": "An additional test listener receives events for this exact target.",
     "Started": "Started at {0} (local)",

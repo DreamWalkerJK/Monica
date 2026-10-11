@@ -209,6 +209,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
                 await communicationCore.InitAsync(cancellationToken);
             }
             _isInit = true;
+            _isDisposed = false;
         }
         finally
         {

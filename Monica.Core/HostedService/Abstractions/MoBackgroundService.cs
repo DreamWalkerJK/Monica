@@ -168,17 +168,18 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService,
             return;
 
         _heartbeatCts = new CancellationTokenSource();
-        // Let queued work observe cancellation inside the loop so StopAsync can await it
-        // normally and continue with background cleanup and the stopped hook.
+        var heartbeatToken = _heartbeatCts.Token;
+        // Let the loop observe cancellation even when shutdown precedes its scheduled execution.
+        // Capture the token so queued execution does not access the source after disposal.
         _heartbeatTask = Task.Run(async () =>
         {
-            while (!_heartbeatCts.Token.IsCancellationRequested)
+            while (!heartbeatToken.IsCancellationRequested)
             {
                 try
                 {
-                    await Task.Delay(HeartbeatInterval.Value, _heartbeatCts.Token);
+                    await Task.Delay(HeartbeatInterval.Value, heartbeatToken);
                     RuntimeInfo.LastHeartbeat = DateTime.UtcNow;
-                    await OnHeartbeatAsync(_heartbeatCts.Token);
+                    await OnHeartbeatAsync(heartbeatToken);
                 }
                 catch (OperationCanceledException)
                 {

@@ -20,6 +20,13 @@ These conventions mirror the current `Monica.ProjectUnits` default discovery rul
 | `TriggeredJob` | Class name starts with `Job` | `Job*` |
 | `RequestDto` | Implements `IResultRequest<T>` or `IResultRequest` | Prefer `Command*`, `Query*`, or `Request*` |
 
+## Source File Names
+
+- Name a standalone ProjectUnit source file exactly after its primary CLR type, followed by `.cs`. Retain the complete prefix: `CommandApproveOrder` belongs in `CommandApproveOrder.cs`, and `CommandHandlerApproveOrder` belongs in `CommandHandlerApproveOrder.cs`.
+- Give independent command and query contracts separate files named after their respective types. Do not drop `Command`, `Query`, or `Request` from published request filenames.
+- Local HTTP-only request and response types may share their handler's file; name that file after the handler. A closely coupled response DTO may share a published request's file; name that file after the primary request type.
+- When adding a unit, follow this rule even if nearby legacy files omit their type prefixes.
+
 ## Additional Support-Type Conventions
 
 These are not part of `Monica.ProjectUnits` discovery, but they are part of the recommended business-project layout.
@@ -47,6 +54,10 @@ Use the same leaf folder semantics across solution styles. Keep folders flat and
 | `DbContext` / EF mapping | `{Subdomain}Service.Domain/Repository/` | `Domains/{Subdomain}/Repository/` |
 | `Configuration` | `{Subdomain}Service.Domain/Configurations/` | `Domains/{Subdomain}/Configurations/` |
 | `Utility` helper | `{Subdomain}Service.Domain/Utilities/` | `Domains/{Subdomain}/Utilities/` |
+
+Application EventBus contracts, including shared technical envelopes, use `Event*` names and inherit `Monica.EventBus.Events.DomainEvent`. Place them in the owning published language's `Events/` folder, separate from domain implementation and persistence entities. Generic synchronization envelopes belong to the solution's shared system published language; business-specific facts belong to their business subdomain. Open generic contract types are excluded from ProjectUnit discovery.
+
+Use an unversioned CLR name for the initial event contract. Add a version suffix only when introducing an incompatible contract revision; delivery configuration or relocation alone does not require one.
 
 ## Folder Scanability Rules
 

@@ -31,7 +31,7 @@ public sealed class ExecutionDescriptor
     /// <param name="inputType">The pipeline input type.</param>
     /// <param name="resultType">The pipeline result type.</param>
     /// <param name="isBusinessOperation">Whether the execution represents application business work.</param>
-    /// <param name="transactionMode">The automatic transaction policy for the boundary.</param>
+    /// <param name="transactionMode">The adapter's default transaction policy, overridden by the entry method's declaration.</param>
     private ExecutionDescriptor(
         ExecutionPoint point,
         string operationKey,
@@ -74,7 +74,32 @@ public sealed class ExecutionDescriptor
         InputType = inputType;
         ResultType = resultType;
         IsBusinessOperation = isBusinessOperation;
-        TransactionMode = transactionMode;
+        var transaction = entryMethod?.GetCustomAttribute<ExecutionTransactionAttribute>(inherit: true);
+        TransactionMode = transaction?.Mode ?? transactionMode;
+        if (!Enum.IsDefined(TransactionMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(transactionMode), TransactionMode, "The transaction mode must be defined.");
+        }
+
+        if (transaction is not null)
+        {
+            ArgumentNullException.ThrowIfNull(transaction.DbContextTypes);
+            if (transaction.DbContextTypes.Length > 0)
+            {
+                if (TransactionMode != ExecutionTransactionMode.Automatic)
+                {
+                    throw new InvalidOperationException("Database context selection requires an automatic transaction.");
+                }
+
+                if (transaction.DbContextTypes.Any(type => type is null)
+                    || transaction.DbContextTypes.Distinct().Count() != transaction.DbContextTypes.Length)
+                {
+                    throw new ArgumentException("Transaction context types must be non-null and distinct.", nameof(transaction.DbContextTypes));
+                }
+
+                TransactionDbContextTypes = Array.AsReadOnly(transaction.DbContextTypes.ToArray());
+            }
+        }
     }
 
     /// <summary>
@@ -86,7 +111,7 @@ public sealed class ExecutionDescriptor
     /// <param name="componentType">The concrete or contractual component type being invoked.</param>
     /// <param name="entryMethod">The concrete entry method when one is available.</param>
     /// <param name="isBusinessOperation">Whether the execution represents application business work.</param>
-    /// <param name="transactionMode">The automatic transaction policy for the boundary.</param>
+    /// <param name="transactionMode">The adapter's default transaction policy, overridden by the entry method's declaration.</param>
     /// <returns>The stable descriptor shared by equivalent method boundaries.</returns>
     public static ExecutionDescriptor ForMethod<TInput, TResult>(
         ExecutionPoint point,
@@ -118,7 +143,7 @@ public sealed class ExecutionDescriptor
     /// <param name="componentType">The concrete component type being invoked.</param>
     /// <param name="contractType">The single-method interface implemented by the component.</param>
     /// <param name="isBusinessOperation">Whether the execution represents application business work.</param>
-    /// <param name="transactionMode">The automatic transaction policy for the boundary.</param>
+    /// <param name="transactionMode">The adapter's default transaction policy, overridden by the mapped entry method's declaration.</param>
     /// <returns>The stable descriptor shared by equivalent interface boundaries.</returns>
     /// <exception cref="ArgumentException">
     /// Thrown when the contract is not an interface or does not expose exactly one mapped method.
@@ -200,17 +225,27 @@ public sealed class ExecutionDescriptor
     public bool IsBusinessOperation { get; }
 
     /// <summary>
-    /// Gets the automatic transaction policy for this execution boundary.
+    /// Gets the effective automatic transaction policy after applying the entry method's declaration to the adapter default.
     /// </summary>
     public ExecutionTransactionMode TransactionMode { get; }
+
+    /// <summary>
+    /// Gets the immutable ordered context selection declared on the entry method, or null to use the registered
+    /// default selection. The persistence module validates these types and owns their transaction participation.
+    /// </summary>
+    public IReadOnlyList<Type>? TransactionDbContextTypes { get; }
 
     private static ExecutionDescriptor GetOrAdd(Type componentType, DescriptorKey key)
     {
         var cache = DESCRIPTOR_CACHES.GetValue(componentType, static _ => new DescriptorCache());
-        return cache.Descriptors.GetOrAdd(
-            key,
-            static (descriptorKey, ownerType) => descriptorKey.CreateDescriptor(ownerType),
-            componentType);
+        return cache.Descriptors.GetOrAdd(key, descriptorKey =>
+        {
+            var descriptor = descriptorKey.CreateDescriptor(componentType);
+            // Different adapter defaults can resolve to the same method declaration and must share one plan.
+            return descriptor.TransactionMode == descriptorKey.TransactionMode
+                ? descriptor
+                : cache.Descriptors.GetOrAdd(descriptorKey with { TransactionMode = descriptor.TransactionMode }, descriptor);
+        });
     }
 
     private readonly record struct DescriptorKey(

@@ -4,7 +4,7 @@
 
 - Work should run on a schedule.
 - Work should be triggered asynchronously with typed parameters.
-- The business logic is long-running or retriable enough that it should not stay inside an event handler or request handler.
+- Work needs its own execution policy, operator control, or execution history.
 
 ## Rules
 
@@ -29,7 +29,6 @@ namespace $ApplicationNamespace$.BackgroundWorkers;
 [JobConfig(CronSchedule = "0 */5 * * * *", RetryCount = 3)]
 [ProjectUnitMetadata(
     "Refresh Order Snapshot Worker",
-    Owner = "$Owner$",
     Description = "Refreshes order snapshots on a fixed schedule.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -61,7 +60,6 @@ public sealed class RefreshOrderSnapshotArgs
 
 [ProjectUnitMetadata(
     "Refresh Order Snapshot Job",
-    Owner = "$Owner$",
     Description = "Refreshes one order snapshot asynchronously.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]

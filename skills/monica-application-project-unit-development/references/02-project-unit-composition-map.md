@@ -54,7 +54,7 @@ Create:
 - `DomainEvent`
 - `DomainEventHandler` or `LocalEventHandler`
 - Optional `DomainService` if the reaction contains reusable business logic
-- Optional `TriggeredJob` if the work should be asynchronous and decoupled
+- Optional `TriggeredJob` if the work needs the [independent execution lifecycle](15-job-template.md) of a job
 
 Load:
 

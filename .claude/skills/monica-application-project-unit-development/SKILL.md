@@ -13,15 +13,17 @@ Use this skill for unit-level application development in Monica-based DDD projec
 
 Choose the owning subdomain and project with `$monica-application-microservice` or `$monica-application-modular-monolith`. Use [unit overview](references/00-project-unit-overview.md) and [composition map](references/02-project-unit-composition-map.md) when the feature's units are unclear; load only the matching unit example below. Keep rich entity behavior in the domain and orchestration in handlers.
 
+When adding or refactoring application EventBus events and consumers, including outbox or inbox adoption, load the [event contract](references/12-entity-request-event-template.md) and [handler](references/14-event-handler-template.md) templates before changing their delivery configuration.
+
 ## Ground Rules
 
-- Use Monica-native base classes and interfaces only. Do not introduce `Our*` wrappers or FIPS-specific conventions.
-- Follow the naming, placement, and boundary rules in [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md). These rules are aligned with the current `Monica.ProjectUnits` discovery behavior.
+- Prefer Monica-native base classes and interfaces. A project-local extension should own meaningful reusable behavior and document its purpose, dependencies, and lifecycle; do not introduce a base class solely as a naming alias. Keep application-specific conventions in that application's guidance.
+- Follow the [type naming, source filename, placement, and boundary rules](references/01-project-unit-naming-and-boundaries.md). Type conventions align with `Monica.ProjectUnits` discovery; file conventions keep source navigation consistent.
 - Keep persistence concerns in repositories and persistence classes, not in request handlers. Use `$monica-infra-persistence` for the current operation, transaction, and provider contracts.
 - Keep repository implementations in the owning subdomain or service infrastructure boundary. Do not move a repository or adapter to `Platform` just because it uses an external library; only project-common reusable infrastructure belongs in `Platform`.
 - Keep contracts stable: requests, DTOs, and events are not persistence entities.
-- Add explicit `[ProjectUnitMetadata]` and one or more `[ProjectUnitRequirement]` annotations to every discovered unit. Do not rely on metadata inherited from a base class.
-- Treat missing metadata, description, ownership, and requirement references as four independent catalog debts. Do not collapse them into one readiness score.
+- Add explicit `[ProjectUnitMetadata]` and one or more `[ProjectUnitRequirement]` annotations to every discovered unit, following the [metadata, ownership and catalog language rules](references/03-project-unit-context-metadata.md). Do not rely on metadata inherited from a base class.
+- Keep metadata, description, and requirement traceability explicit. Resolve optional ownership through the [metadata rules](references/03-project-unit-context-metadata.md).
 - If a handler returns `Res<string>`, use `Res.Ok<string>(value)` instead of `Res.Ok(value)` to avoid the non-generic string overload.
 - Make HTTP contracts request-owned. Put `[ApiEndpoint]` on the request type and keep route, verb, binding, and optional operation name off the `ApplicationService` handler.
 - A request is published for generated RPC clients only when it is attributed source in the exact namespace `*.PublishedLanguages.Domain{DomainName}.Requests`. Attributed requests outside that boundary remain local HTTP endpoints.

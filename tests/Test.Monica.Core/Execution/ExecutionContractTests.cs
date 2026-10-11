@@ -218,6 +218,177 @@ public sealed class ExecutionContractTests
         first.OperationKey.Should().NotBe(second.OperationKey);
     }
 
+    [Theory]
+    [InlineData(nameof(NonTransactionalOperation), ExecutionTransactionMode.Automatic, ExecutionTransactionMode.None)]
+    [InlineData(nameof(AutomaticOperation), ExecutionTransactionMode.None, ExecutionTransactionMode.Automatic)]
+    public void ExecutionDescriptor_WhenEntryMethodDeclaresTransactionMode_ShouldOverrideAdapterDefault(
+        string methodName, ExecutionTransactionMode adapterDefault, ExecutionTransactionMode expected)
+    {
+        var descriptor = ExecutionDescriptor.ForMethod<string, ExecutionUnit>(
+            new ExecutionPoint("test.method-transaction-policy"),
+            typeof(ExecutionContractTests),
+            typeof(ExecutionContractTests).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static),
+            isBusinessOperation: true,
+            transactionMode: adapterDefault);
+
+        descriptor.TransactionMode.Should().Be(expected);
+        descriptor.TransactionDbContextTypes.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(nameof(NonTransactionalOperation))]
+    [InlineData(nameof(AutomaticOperation))]
+    public void ExecutionDescriptor_WhenMethodOverridesDifferentAdapterDefaults_ShouldReturnMemoizedInstance(string methodName)
+    {
+        var entryMethod = typeof(ExecutionContractTests).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static);
+        var point = new ExecutionPoint("test.effective-method-transaction-policy");
+        var automaticDefault = ExecutionDescriptor.ForMethod<string, ExecutionUnit>(
+            point,
+            typeof(ExecutionContractTests),
+            entryMethod,
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+        var noneDefault = ExecutionDescriptor.ForMethod<string, ExecutionUnit>(
+            point,
+            typeof(ExecutionContractTests),
+            entryMethod,
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.None);
+
+        noneDefault.Should().BeSameAs(automaticDefault);
+    }
+
+    [Fact]
+    public void ExecutionDescriptor_WhenConcreteInterfaceMethodSelectsContexts_ShouldCarryOrderedSelection()
+    {
+        var descriptor = ExecutionDescriptor.ForInterface<string, ExecutionUnit>(
+            new ExecutionPoint("test.interface-transaction-contexts"),
+            typeof(TransactionalExplicitComponent),
+            typeof(IExplicitContract),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.None);
+
+        descriptor.TransactionMode.Should().Be(ExecutionTransactionMode.Automatic);
+        descriptor.TransactionDbContextTypes.Should().Equal(typeof(FirstTransactionContext), typeof(SecondTransactionContext));
+        descriptor.EntryMethod!.DeclaringType.Should().Be(typeof(TransactionalExplicitComponent));
+
+        var automaticDefault = ExecutionDescriptor.ForInterface<string, ExecutionUnit>(
+            new ExecutionPoint("test.interface-transaction-contexts"),
+            typeof(TransactionalExplicitComponent),
+            typeof(IExplicitContract),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+        automaticDefault.Should().BeSameAs(descriptor);
+
+        Action mutateSelection = () => ((IList<Type>)descriptor.TransactionDbContextTypes!)[0] = typeof(SecondTransactionContext);
+        mutateSelection.Should().Throw<NotSupportedException>();
+    }
+
+    [Fact]
+    public void ExecutionDescriptor_WhenNoneDeclaresContextSelection_ShouldRejectContradictoryPolicy()
+    {
+        Action create = () => _ = ExecutionDescriptor.ForMethod<string, ExecutionUnit>(
+            new ExecutionPoint("test.invalid-transaction-policy"),
+            typeof(ExecutionContractTests),
+            typeof(ExecutionContractTests).GetMethod(nameof(InvalidTransactionOperation), BindingFlags.NonPublic | BindingFlags.Static),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+
+        create.Should().Throw<InvalidOperationException>();
+    }
+
+    [Theory]
+    [InlineData(nameof(NullArrayTransactionOperation), typeof(ArgumentNullException))]
+    [InlineData(nameof(NullEntryTransactionOperation), typeof(ArgumentException))]
+    [InlineData(nameof(DuplicateContextsTransactionOperation), typeof(ArgumentException))]
+    [InlineData(nameof(UndefinedModeTransactionOperation), typeof(ArgumentOutOfRangeException))]
+    public void ExecutionDescriptor_WhenMethodTransactionDeclarationIsInvalid_ShouldFailBeforeExecution(
+        string methodName, Type exceptionType)
+    {
+        Action create = () => _ = ExecutionDescriptor.ForMethod<string, ExecutionUnit>(
+            new ExecutionPoint("test.invalid-method-transaction-declaration"),
+            typeof(ExecutionContractTests),
+            typeof(ExecutionContractTests).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+
+        Assert.Throws(exceptionType, create);
+    }
+
+    [Fact]
+    public void ExecutionDescriptor_WhenAdapterDefaultIsUndefined_ShouldRejectIt()
+    {
+        Action create = () => _ = ExecutionDescriptor.ForMethod<string, ExecutionUnit>(
+            new ExecutionPoint("test.invalid-adapter-transaction-default"),
+            typeof(ExecutionContractTests),
+            entryMethod: null,
+            isBusinessOperation: true,
+            transactionMode: (ExecutionTransactionMode)999);
+
+        create.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Theory]
+    [InlineData(typeof(InheritedTransactionComponent), ExecutionTransactionMode.Automatic)]
+    [InlineData(typeof(OverrideTransactionComponent), ExecutionTransactionMode.None)]
+    public void ExecutionDescriptor_WhenEntryMethodOverridesAnnotatedBase_ShouldInheritOrReplaceItsDeclaration(
+        Type componentType, ExecutionTransactionMode expected)
+    {
+        var descriptor = ExecutionDescriptor.ForInterface<string, ExecutionUnit>(
+            new ExecutionPoint("test.inherited-method-transaction-declaration"),
+            componentType,
+            typeof(IExplicitContract),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.None);
+
+        descriptor.TransactionMode.Should().Be(expected);
+        descriptor.EntryMethod!.DeclaringType.Should().Be(componentType);
+        if (expected == ExecutionTransactionMode.Automatic)
+        {
+            descriptor.TransactionDbContextTypes.Should().Equal(typeof(FirstTransactionContext));
+        }
+        else
+        {
+            descriptor.TransactionDbContextTypes.Should().BeNull();
+        }
+    }
+
+    [ExecutionTransaction(ExecutionTransactionMode.None)]
+    private static void NonTransactionalOperation(string value)
+    {
+    }
+
+    [ExecutionTransaction(ExecutionTransactionMode.Automatic)]
+    private static void AutomaticOperation(string value)
+    {
+    }
+
+    [ExecutionTransaction(ExecutionTransactionMode.None, DbContextTypes = new[] { typeof(FirstTransactionContext) })]
+    private static void InvalidTransactionOperation(string value)
+    {
+    }
+
+    [ExecutionTransaction(ExecutionTransactionMode.Automatic, DbContextTypes = null!)]
+    private static void NullArrayTransactionOperation(string value)
+    {
+    }
+
+    [ExecutionTransaction(ExecutionTransactionMode.Automatic, DbContextTypes = new[] { typeof(FirstTransactionContext), null! })]
+    private static void NullEntryTransactionOperation(string value)
+    {
+    }
+
+    [ExecutionTransaction(ExecutionTransactionMode.Automatic,
+        DbContextTypes = new[] { typeof(FirstTransactionContext), typeof(FirstTransactionContext) })]
+    private static void DuplicateContextsTransactionOperation(string value)
+    {
+    }
+
+    [ExecutionTransaction((ExecutionTransactionMode)999)]
+    private static void UndefinedModeTransactionOperation(string value)
+    {
+    }
+
     private static MethodInfo GetOverload(Type parameterType)
     {
         return typeof(ExecutionContractTests)
@@ -259,6 +430,37 @@ public sealed class ExecutionContractTests
         {
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class TransactionalExplicitComponent : IExplicitContract
+    {
+        [ExecutionTransaction(ExecutionTransactionMode.Automatic,
+            DbContextTypes = new[] { typeof(FirstTransactionContext), typeof(SecondTransactionContext) })]
+        Task IExplicitContract.ExecuteAsync(string input)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FirstTransactionContext;
+
+    private sealed class SecondTransactionContext;
+
+    private abstract class BaseTransactionComponent : IExplicitContract
+    {
+        [ExecutionTransaction(ExecutionTransactionMode.Automatic, DbContextTypes = new[] { typeof(FirstTransactionContext) })]
+        public virtual Task ExecuteAsync(string input) => Task.CompletedTask;
+    }
+
+    private sealed class InheritedTransactionComponent : BaseTransactionComponent
+    {
+        public override Task ExecuteAsync(string input) => Task.CompletedTask;
+    }
+
+    private sealed class OverrideTransactionComponent : BaseTransactionComponent
+    {
+        [ExecutionTransaction(ExecutionTransactionMode.None)]
+        public override Task ExecuteAsync(string input) => Task.CompletedTask;
     }
 
     private sealed class DualContractComponent : IFirstContract, ISecondContract

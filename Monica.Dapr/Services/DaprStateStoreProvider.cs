@@ -1,4 +1,5 @@
 using Dapr.Client;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
@@ -99,6 +100,10 @@ internal sealed class DaprStateStoreProvider(
         {
             return await dapr.GetStateAsync<T>(StateStoreName, key, cancellationToken: cancellationToken);
         }
+        catch (Exception e) when (IsMissingRedisState(e, key))
+        {
+            return default;
+        }
         catch (Exception e)
         {
             throw e.CreateException(Logger, "ERROR Getting state from {0} with key: {1}", StateStoreName, key);
@@ -111,6 +116,10 @@ internal sealed class DaprStateStoreProvider(
         {
             var data = await dapr.GetByteStateAsync(StateStoreName, key, cancellationToken: cancellationToken);
             return data.IsEmpty ? null : System.Text.Encoding.UTF8.GetString(data.Span);
+        }
+        catch (Exception e) when (IsMissingRedisState(e, key))
+        {
+            return null;
         }
         catch (Exception e)
         {
@@ -172,6 +181,10 @@ internal sealed class DaprStateStoreProvider(
                 key,
                 cancellationToken: cancellationToken);
         }
+        catch (Exception e) when (IsMissingRedisState(e, key))
+        {
+            return (default, string.Empty);
+        }
         catch (Exception e)
         {
             throw e.CreateException(Logger, "ERROR Getting state and ETag from {0} with key: {1}", StateStoreName, key);
@@ -196,8 +209,7 @@ internal sealed class DaprStateStoreProvider(
             if (success)
             {
                 // Save succeeded, get new ETag
-                var (_, newETag) = await dapr.GetByteStateAndETagAsync(StateStoreName, key,
-                    cancellationToken: cancellationToken);
+                var (_, newETag) = await GetByteStateAndETagAsync(key, cancellationToken);
                 return (true, newETag);
             }
 
@@ -243,8 +255,7 @@ internal sealed class DaprStateStoreProvider(
         try
         {
             // Check if key exists first
-            var (_, existingETag) = await dapr.GetByteStateAndETagAsync(StateStoreName, key,
-                cancellationToken: cancellationToken);
+            var (_, existingETag) = await GetByteStateAndETagAsync(key, cancellationToken);
 
             // If ETag is not empty, key already exists
             if (!string.IsNullOrEmpty(existingETag))
@@ -331,6 +342,38 @@ internal sealed class DaprStateStoreProvider(
         {
             throw e.CreateException(Logger, "ERROR TryDeleteStateWithETag from {0} with key: {1}", StateStoreName, key);
         }
+    }
+
+    private async Task<(ReadOnlyMemory<byte> Value, string ETag)> GetByteStateAndETagAsync(
+        string key,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await dapr.GetByteStateAndETagAsync(StateStoreName, key,
+                cancellationToken: cancellationToken);
+        }
+        catch (Exception e) when (IsMissingRedisState(e, key))
+        {
+            return (ReadOnlyMemory<byte>.Empty, string.Empty);
+        }
+    }
+
+    private bool IsMissingRedisState(Exception exception, string key)
+    {
+        // Some Dapr Redis components report an absent value as an Internal gRPC error.
+        // Match the exact read failure so outages and unrelated Redis errors remain failures.
+        var missingStateDetail = $"fail to get {key} from state store {StateStoreName}: redis: nil";
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is RpcException { StatusCode: StatusCode.Internal } rpc
+                && string.Equals(rpc.Status.Detail, missingStateDetail, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static Dictionary<string, string>? BuildTtlMetadata(TimeSpan? ttl)

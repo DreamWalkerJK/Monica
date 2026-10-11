@@ -19,10 +19,20 @@ internal sealed class EventBusAutoDiscovery
         _registrations.AddRange(EventHandlerRegistration.CreateFromHandlerType(type));
     }
 
-    public IReadOnlyList<EventSubscriptionDescriptor> BuildDescriptors(IServiceScopeFactory serviceScopeFactory)
+    public IReadOnlyList<EventSubscriptionDescriptor> BuildDescriptors(
+        IServiceScopeFactory serviceScopeFactory,
+        IServiceProviderIsService? registeredServices)
     {
         return _registrations
-            .Where(registration => registration.IsAutoRegistered)
+            .Where(static registration => registration.IsAutoRegistered)
+            // Type discovery sees handler classes inside shared assemblies that this host references but
+            // does not own. Only subscribe handler types this host registered; subscribing a foreign host's
+            // handler fails on every delivery and wedges the topic subscription in endless retry.
+            // Inspect registration metadata without constructing handlers or their scoped dependencies.
+            // Activation failures and asynchronous disposal belong to the delivery-owned scope.
+            .Where(registration => registeredServices?.IsService(registration.HandlerType)
+                ?? throw new InvalidOperationException(
+                    "EventBus automatic discovery requires IServiceProviderIsService registration metadata from the host container."))
             .Select(registration => new EventSubscriptionDescriptor
             {
                 ServiceKey = null,
