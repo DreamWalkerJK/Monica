@@ -12,185 +12,175 @@
 <PageTitle>@L["Pages:ConfigurationState:Title"]</PageTitle>
 
 <div class="configuration-state-page">
-            <div class="configuration-state-header-shell">
-                <header class="configuration-workbench-heading">
-                    <div class="configuration-workbench-heading-copy">
-                        <span class="configuration-workbench-eyebrow">@L["Workbench:Eyebrow"]</span>
-                        <h1>@L["Pages:ConfigurationState:Title"]</h1>
-                        <p>@L["State:Subtitle"]</p>
-                    </div>
-                    <div class="configuration-workbench-controls">
-<div class="configuration-state-actions">
-                            <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Import")">
-                                <MudButton Variant="Variant.Outlined"
-                                           StartIcon="@Icons.Material.Filled.UploadFile"
-                                           Disabled="@(!CanUseCatalogOperations)"
-                                           OnClick="OpenImportDialog">
-                                    @L["Common:Actions:Import"]
-                                </MudButton>
-                            </MudTooltip>
-                            <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Export")">
-                                <MudButton Variant="Variant.Outlined"
-                                           StartIcon="@Icons.Material.Filled.Download"
-                                           Disabled="@(!CanUseCatalogOperations)"
-                                           OnClick="() => OpenExportDialog(null, null)">
-                                    @L["Common:Actions:Export"]
-                                </MudButton>
-                            </MudTooltip>
-                            <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                               Variant="Variant.Outlined"
-                                               OnClick="LoadDefinitionsAsync"
-                                               aria-label="@L["Common:Actions:Refresh"]" />
-                            </MudTooltip>
-                        </div>
-<div class="configuration-state-title-row">
-                            @if (!_loadingDefinitions)
-                            {
-                                <span class="configuration-runtime-validation-anchor">
-                                    <ConfigurationStatusIconButton Icon="@RuntimeValidationStatusIcon"
-                                                                   Color="@RuntimeValidationStatusColor"
-                                                                   Count="@RuntimeValidationIssueCount"
-                                                                   ShowCount="@(RuntimeValidationIssueCount > 0)"
-                                                                   Tooltip="@RuntimeValidationStatusTooltip"
-                                                                   AriaLabel="@L["State:RuntimeValidation:OpenDetails"].Value"
-                                                                   OnClick="() => ToggleRuntimeValidationPopover(SOURCE_VALIDATION_PANEL)" />
-                                    <ConfigurationStatusIconButton Icon="@OptionsValidationStatusIcon"
-                                                                   Color="@OptionsValidationStatusColor"
-                                                                   Count="@OptionsValidationIssueCount"
-                                                                   ShowCount="@(OptionsValidationIssueCount > 0)"
-                                                                   Tooltip="@OptionsValidationTooltip"
-                                                                   AriaLabel="@L["Validation:OptionsTitle"].Value"
-                                                                   OnClick="() => ToggleRuntimeValidationPopover(OPTIONS_VALIDATION_PANEL)" />
-                                </span>
-                            }
-                            <ConfigurationReloadStatusButton @ref="_reloadStatusButton"
-                                                             Reloaded="OnRuntimeConfigurationReloadedAsync" />
-                        </div>
-                    </div>
-                </header>
-                @if (!_loadingDefinitions)
+    <ConfigurationPageHeader Title="@L["Pages:ConfigurationState:Title"]" Subtitle="@L["State:Subtitle"]">
+        <TitleAccessory>
+            @if (!_loadingDefinitions)
+            {
+                @foreach (var panelIndex in new[] { SOURCE_VALIDATION_PANEL, OPTIONS_VALIDATION_PANEL })
                 {
-                    <div class="configuration-runtime-validation-popover-anchor">
-                        <MudPopover Open="@_runtimeValidationPopoverOpen"
-                                    AnchorOrigin="Origin.BottomLeft"
-                                    TransformOrigin="Origin.TopLeft"
-                                    Class="configuration-runtime-validation-popover"
-                                    Paper="false">
-                            <div class="configuration-runtime-validation-popover-surface">
-                                <MudPaper Elevation="0" Outlined="true" Class="pa-3">
-                                    <MudStack Spacing="2">
-                                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                <MudIcon Icon="@ValidationPopoverStatusIcon"
-                                                         Color="@ValidationPopoverStatusColor" />
-                                                <MudStack Spacing="0">
-                                                    <MudText Typo="Typo.subtitle1">@ValidationPopoverTitle</MudText>
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@ValidationPopoverSummary</MudText>
+                    var isOptions = panelIndex == OPTIONS_VALIDATION_PANEL;
+                    <span class="configuration-runtime-validation-anchor">
+                        <ConfigurationStatusIconButton Icon="@(isOptions ? OptionsValidationStatusIcon : RuntimeValidationStatusIcon)"
+                                                       Color="@(isOptions ? OptionsValidationStatusColor : RuntimeValidationStatusColor)"
+                                                       Count="@(isOptions ? OptionsValidationIssueCount : RuntimeValidationIssueCount)"
+                                                       ShowCount="@((isOptions ? OptionsValidationIssueCount : RuntimeValidationIssueCount) > 0)"
+                                                       Tooltip="@(isOptions ? OptionsValidationTooltip : RuntimeValidationStatusTooltip)"
+                                                       AriaLabel="@(isOptions ? L["Validation:OptionsTitle"].Value : L["State:RuntimeValidation:OpenDetails"].Value)"
+                                                       OnClick="() => ToggleRuntimeValidationPopover(panelIndex)" />
+                        @if (_validationPanelIndex == panelIndex)
+                        {
+                            <MudPopover Open="@_runtimeValidationPopoverOpen"
+                                        AnchorOrigin="Origin.BottomCenter"
+                                        TransformOrigin="Origin.TopCenter"
+                                        OverflowBehavior="OverflowBehavior.FlipAlways"
+                                        Class="configuration-runtime-validation-popover"
+                                        Style="width: min(44rem, calc(100vw - 48px)); box-sizing: border-box;"
+                                        Paper="false">
+                                <div class="configuration-runtime-validation-popover-surface">
+                                    <MudPaper Elevation="0" Outlined="true" Class="pa-3">
+                                        <MudStack Spacing="2">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudIcon Icon="@ValidationPopoverStatusIcon"
+                                                             Color="@ValidationPopoverStatusColor" />
+                                                    <MudStack Spacing="0">
+                                                        <MudText Typo="Typo.subtitle1">@ValidationPopoverTitle</MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@ValidationPopoverSummary</MudText>
+                                                    </MudStack>
+                                                </MudStack>
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudChip T="int"
+                                                             Size="Size.Small"
+                                                             Color="@ValidationPopoverStatusColor"
+                                                             Variant="Variant.Outlined">
+                                                        @ValidationPopoverIssueCount
+                                                    </MudChip>
+                                                    <MudTooltip Text="@L["Common:Actions:Close"]">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                                       Size="Size.Small"
+                                                                       OnClick="CloseRuntimeValidationPopover"
+                                                                       aria-label="@L["Common:Actions:Close"]" />
+                                                    </MudTooltip>
                                                 </MudStack>
                                             </MudStack>
-                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                <MudChip T="int"
-                                                         Size="Size.Small"
-                                                         Color="@ValidationPopoverStatusColor"
-                                                         Variant="Variant.Outlined">
-                                                    @ValidationPopoverIssueCount
-                                                </MudChip>
-                                                <MudTooltip Text="@L["Common:Actions:Close"]">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Close"
-                                                                   Size="Size.Small"
-                                                                   OnClick="CloseRuntimeValidationPopover"
-                                                                   aria-label="@L["Common:Actions:Close"]" />
-                                                </MudTooltip>
-                                            </MudStack>
-                                        </MudStack>
 
-                                        @if (_validationLoading)
-                                        {
-                                            <MudProgressLinear Indeterminate="true" />
-                                        }
-                                        else
-                                        {
-                                            <MudTabs @bind-ActivePanelIndex="_validationPanelIndex">
-                                                <MudTabPanel Text="@L["Validation:SourceTitle"].Value">
-                                                    @if (_runtimeValidationReport is null)
-                                                    {
-                                                        <MudAlert Severity="Severity.Warning">@(_runtimeValidationError ?? L["State:RuntimeValidation:Unavailable"].Value)</MudAlert>
-                                                    }
-                                                    else if (_runtimeValidationReport.DefinitionReports.Count > 0)
-                                                    {
-                                                        <MudExpansionPanels MultiExpansion="true">
-                                                            @foreach (var definition in _runtimeValidationReport.DefinitionReports)
-                                                            {
-                                                                <MudExpansionPanel Text="@ValidationDefinitionName(definition.DefinitionKey)">
-                                                                    <ConfigurationValidationReportView Title="@definition.DefinitionKey"
-                                                                       Coverage="@definition.Coverage" Scope="@definition.Scope"
-                                                                       ValidationRevision="@definition.ValidationRevision"
-                                                                       IsValid="@definition.IsValid" IsSchemaValid="@definition.IsSchemaValid"
-                                                                       Issues="@RuntimeValidationIssues.Where(issue => string.Equals(issue.DefinitionKey, definition.DefinitionKey, StringComparison.OrdinalIgnoreCase)).ToArray()"
-                                                                       ShowRuntimeMetadata="true" ShowSourceChain="true"
-                                                                       JumpRequested="JumpToRuntimeValidationIssueAsync"
-                                                                       SourceChainRequested="OpenRuntimeIssueSourceChainAsync" />
-                                                                </MudExpansionPanel>
-                                                            }
-                                                        </MudExpansionPanels>
-                                                    }
-                                                    else
-                                                    {
-                                                        <ConfigurationValidationReportView Coverage="@_runtimeValidationReport.Coverage"
-                                                           Scope="@_runtimeValidationReport.Scope" ValidationRevision="@_runtimeValidationReport.ValidationRevision"
-                                                           IsValid="@_runtimeValidationReport.IsValid" IsSchemaValid="@_runtimeValidationReport.IsSchemaValid"
-                                                           Issues="@RuntimeValidationIssues" ShowRuntimeMetadata="true" ShowSourceChain="true"
-                                                           JumpRequested="JumpToRuntimeValidationIssueAsync" SourceChainRequested="OpenRuntimeIssueSourceChainAsync" />
-                                                    }
-                                                </MudTabPanel>
-                                                <MudTabPanel Text="@L["Validation:OptionsTitle"].Value">
-                                                    <MudStack Spacing="2" Class="pt-2">
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Validation:OptionsNotice"]</MudText>
-                                                        @if (_optionsValidationError is not null)
+                                            @if (_validationLoading)
+                                            {
+                                                <MudProgressLinear Indeterminate="true" />
+                                            }
+                                            else
+                                            {
+                                                <MudTabs @bind-ActivePanelIndex="_validationPanelIndex">
+                                                    <MudTabPanel Text="@L["Validation:SourceTitle"].Value">
+                                                        @if (_runtimeValidationReport is null)
                                                         {
-                                                            <MudAlert Severity="Severity.Error">@_optionsValidationError</MudAlert>
+                                                            <MudAlert Severity="Severity.Warning">@(_runtimeValidationError ?? L["State:RuntimeValidation:Unavailable"].Value)</MudAlert>
+                                                        }
+                                                        else if (_runtimeValidationReport.DefinitionReports.Count > 0)
+                                                        {
+                                                            <MudExpansionPanels MultiExpansion="true">
+                                                                @foreach (var definition in _runtimeValidationReport.DefinitionReports)
+                                                                {
+                                                                    <MudExpansionPanel Text="@ValidationDefinitionName(definition.DefinitionKey)">
+                                                                        <ConfigurationValidationReportView Title="@definition.DefinitionKey"
+                                                                           Coverage="@definition.Coverage" Scope="@definition.Scope"
+                                                                           ValidationRevision="@definition.ValidationRevision"
+                                                                           IsValid="@definition.IsValid" IsSchemaValid="@definition.IsSchemaValid"
+                                                                           Issues="@RuntimeValidationIssues.Where(issue => string.Equals(issue.DefinitionKey, definition.DefinitionKey, StringComparison.OrdinalIgnoreCase)).ToArray()"
+                                                                           ShowRuntimeMetadata="true" ShowSourceChain="true"
+                                                                           JumpRequested="JumpToRuntimeValidationIssueAsync"
+                                                                           SourceChainRequested="OpenRuntimeIssueSourceChainAsync" />
+                                                                    </MudExpansionPanel>
+                                                                }
+                                                            </MudExpansionPanels>
                                                         }
                                                         else
                                                         {
-                                                            @foreach (var definitionKey in UnobservedDefinitionKeys)
-                                                            {
-                                                                <MudAlert Severity="Severity.Info" Dense="true">@ValidationDefinitionName(definitionKey): @L["Validation:NoObserved"]</MudAlert>
-                                                            }
-                                                            @if (_optionsValidationReports.Count == 0 && !UnobservedDefinitionKeys.Any())
-                                                            {
-                                                                <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:NoObserved"]</MudAlert>
-                                                            }
-                                                            @foreach (var attempt in _optionsValidationReports)
-                                                            {
-                                                                <ConfigurationValidationReportView Title="@ValidationDefinitionName(attempt.DefinitionKey)"
-                                                                   Coverage="@attempt.Coverage" Scope="@attempt.Scope"
-                                                                   ValidationRevision="@attempt.ValidationRevision" IsValid="@attempt.IsValid"
-                                                                   IsSchemaValid="@attempt.IsSchemaValid"
-                                                                   Issues="@attempt.Issues.Select(issue => ConfigurationValidationPresentation.FromRuntime(issue, actualOptions: true)).ToArray()"
-                                                                   JumpRequested="JumpToRuntimeValidationIssueAsync">
-                                                                    <MudText Typo="Typo.caption">@L["Validation:ObservedAt", attempt.AttemptedAt.LocalDateTime]</MudText>
-                                                                    <MudText Typo="Typo.caption">@L["Validation:Attempt", attempt.AttemptId]</MudText>
-                                                                    <MudText Typo="Typo.caption">@(string.IsNullOrEmpty(attempt.OptionsName) ? L["Validation:DefaultName"].Value : attempt.OptionsName)</MudText>
-                                                                </ConfigurationValidationReportView>
-                                                            }
+                                                            <ConfigurationValidationReportView Coverage="@_runtimeValidationReport.Coverage"
+                                                               Scope="@_runtimeValidationReport.Scope" ValidationRevision="@_runtimeValidationReport.ValidationRevision"
+                                                               IsValid="@_runtimeValidationReport.IsValid" IsSchemaValid="@_runtimeValidationReport.IsSchemaValid"
+                                                               Issues="@RuntimeValidationIssues" ShowRuntimeMetadata="true" ShowSourceChain="true"
+                                                               JumpRequested="JumpToRuntimeValidationIssueAsync" SourceChainRequested="OpenRuntimeIssueSourceChainAsync" />
                                                         }
-                                                    </MudStack>
-                                                </MudTabPanel>
-                                            </MudTabs>
-                                        }
-                                    </MudStack>
-                                </MudPaper>
-                            </div>
-                        </MudPopover>
-                        <MudOverlay Visible="@_runtimeValidationPopoverOpen"
-                                    AutoClose="true"
-                                    OnClosed="CloseRuntimeValidationPopover"
-                                    LockScroll="false"
-                                    Modal="false" />
-                    </div>
+                                                    </MudTabPanel>
+                                                    <MudTabPanel Text="@L["Validation:OptionsTitle"].Value">
+                                                        <MudStack Spacing="2" Class="pt-2">
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Validation:OptionsNotice"]</MudText>
+                                                            @if (_optionsValidationError is not null)
+                                                            {
+                                                                <MudAlert Severity="Severity.Error">@_optionsValidationError</MudAlert>
+                                                            }
+                                                            else
+                                                            {
+                                                                @foreach (var definitionKey in UnobservedDefinitionKeys)
+                                                                {
+                                                                    <MudAlert Severity="Severity.Info" Dense="true">@ValidationDefinitionName(definitionKey): @L["Validation:NoObserved"]</MudAlert>
+                                                                }
+                                                                @if (_optionsValidationReports.Count == 0 && !UnobservedDefinitionKeys.Any())
+                                                                {
+                                                                    <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:NoObserved"]</MudAlert>
+                                                                }
+                                                                @foreach (var attempt in _optionsValidationReports)
+                                                                {
+                                                                    <ConfigurationValidationReportView Title="@ValidationDefinitionName(attempt.DefinitionKey)"
+                                                                       Coverage="@attempt.Coverage" Scope="@attempt.Scope"
+                                                                       ValidationRevision="@attempt.ValidationRevision" IsValid="@attempt.IsValid"
+                                                                       IsSchemaValid="@attempt.IsSchemaValid"
+                                                                       Issues="@attempt.Issues.Select(issue => ConfigurationValidationPresentation.FromRuntime(issue, actualOptions: true)).ToArray()"
+                                                                       JumpRequested="JumpToRuntimeValidationIssueAsync">
+                                                                        <MudText Typo="Typo.caption">@L["Validation:ObservedAt", attempt.AttemptedAt.LocalDateTime]</MudText>
+                                                                        <MudText Typo="Typo.caption">@L["Validation:Attempt", attempt.AttemptId]</MudText>
+                                                                        <MudText Typo="Typo.caption">@(string.IsNullOrEmpty(attempt.OptionsName) ? L["Validation:DefaultName"].Value : attempt.OptionsName)</MudText>
+                                                                    </ConfigurationValidationReportView>
+                                                                }
+                                                            }
+                                                        </MudStack>
+                                                    </MudTabPanel>
+                                                </MudTabs>
+                                            }
+                                        </MudStack>
+                                    </MudPaper>
+                                </div>
+                            </MudPopover>
+                        }
+                    </span>
                 }
+                <MudOverlay Visible="@_runtimeValidationPopoverOpen"
+                            AutoClose="true"
+                            OnClosed="CloseRuntimeValidationPopover"
+                            LockScroll="false"
+                            Modal="false" />
+            }
+            <ConfigurationReloadStatusButton @ref="_reloadStatusButton"
+                                             Reloaded="OnRuntimeConfigurationReloadedAsync" />
+        </TitleAccessory>
+        <Actions>
+            <div class="configuration-state-actions">
+                <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Import")">
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.UploadFile"
+                               Disabled="@(!CanUseCatalogOperations)"
+                               OnClick="OpenImportDialog">
+                        @L["Common:Actions:Import"]
+                    </MudButton>
+                </MudTooltip>
+                <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Export")">
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Download"
+                               Disabled="@(!CanUseCatalogOperations)"
+                               OnClick="() => OpenExportDialog(null, null)">
+                        @L["Common:Actions:Export"]
+                    </MudButton>
+                </MudTooltip>
+                <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Variant="Variant.Outlined"
+                                   OnClick="LoadDefinitionsAsync"
+                                   aria-label="@L["Common:Actions:Refresh"]" />
+                </MudTooltip>
             </div>
+        </Actions>
+    </ConfigurationPageHeader>
 
             <ConfigurationWorkbenchNavigation ActiveRoute="@ConfigurationUiRoutes.STATE_ROUTE" />
 

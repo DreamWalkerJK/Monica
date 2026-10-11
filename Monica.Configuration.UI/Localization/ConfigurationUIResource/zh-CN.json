@@ -663,10 +663,20 @@
     "RevealSensitive": "显示敏感值",
     "HideSensitive": "隐藏敏感值",
     "RevealSensitiveAria": "显示 {0} 的敏感配置值",
-    "HideSensitiveAria": "隐藏 {0} 的敏感配置值"
+    "HideSensitiveAria": "隐藏 {0} 的敏感配置值",
+    "Workbench": {
+      "Scope": "主机原始配置及提供程序来源。凭据特征隐藏不能覆盖所有敏感值。",
+      "LoadedLines": "已加载行",
+      "SensitiveLines": "疑似凭据行",
+      "MatchingLines": "匹配行",
+      "AcceptedAt": "接收时间",
+      "SearchLabel": "搜索安全调试文本",
+      "SearchHelp": "隐藏的凭据值不参与搜索。显示某行不会改变搜索范围。",
+      "NoMatches": "没有调试行匹配此搜索。"
+    }
   },
   "Storage": {
-    "Subtitle": "查看当前配置存储组合及其运行状态。",
+    "Subtitle": "查看运行时来源贡献、已注册存储能力和已记录的操作。",
     "Empty": "未注册配置存储。",
     "Roles": {
       "EffectiveValues": "有效值",
@@ -679,15 +689,42 @@
       "Metadata": "元数据"
     },
     "State": {
-      "Succeeded": "正常",
-      "Failed": "失败",
+      "Succeeded": "最近操作成功",
+      "Failed": "最近操作失败",
       "Unknown": "尚无存储操作记录。"
     },
     "Notifications": {
       "Title": "变更通知",
-      "Subtitle": "跨服务热重载需要注册通知实现。",
+      "Subtitle": "通知器注册信息描述当前组成，不代表消息已送达或消费者已经应用。",
       "Registered": "已注册",
       "NotRegistered": "未注册"
+    },
+    "Workbench": {
+      "SourcesTab": "运行时来源",
+      "StoresTab": "存储实现",
+      "AcceptedAt": "接收时间",
+      "SourceCount": "{0} 个运行时来源",
+      "OverviewHelp": "注册信息描述能力；操作记录描述最近报告的结果。",
+      "Supported": "支持",
+      "NotSupported": "不支持",
+      "StoreKey": "存储标识",
+      "Kind": "技术类型",
+      "WriteAccess": "写入能力",
+      "LatestOperation": "最近记录的操作",
+      "OperationTime": "记录时间",
+      "OperationError": "记录的失败信息",
+      "NotAvailable": "不可用",
+      "SourceOptional": "文件要求",
+      "Reload": "重载行为",
+      "ReadOnlyReason": "只读原因",
+      "Description": "注册描述",
+      "RowsPerPage": "每页值数量",
+      "Optional": "可选",
+      "Required": "必需",
+      "SearchSources": "搜索来源",
+      "SourcesShowing": "显示 {0} / {1} 个已加载来源",
+      "NoSourcesMatch": "没有来源匹配此搜索。",
+      "OperationEvidenceHelp": "操作结果独立于存储注册详情显示。"
     }
   },
   "Sources": {
@@ -699,7 +736,7 @@
     "Effective": "生效中",
     "Runtime": {
       "Title": "运行时配置来源",
-      "Subtitle": "配置来源按优先级从高到低显示。最后一个提供 Key 的 Provider 生效。"
+      "Subtitle": "提供程序按优先级排列。即使更高优先级来源或容器屏障使值不再生效，仍可查看其提供的值。"
     },
     "Inventory": {
       "SuppliedCount": "提供 {0}",
@@ -714,9 +751,9 @@
       "FieldColumn": "字段",
       "ValueColumn": "值",
       "StateColumn": "状态",
-      "Overridden": "被覆盖",
+      "Overridden": "未生效",
       "OverriddenTooltip": "被 {0}（优先级 {1}）覆盖。来源：{2}",
-      "OverriddenUnknownTooltip": "被更高优先级 Provider 覆盖。"
+      "OverriddenUnknownTooltip": "无法确认此来源生效。更高优先级值、容器屏障或未检查的别名可能决定运行时值。"
     },
     "Definition": {
       "Title": "配置来源",
@@ -748,7 +785,13 @@
     },
     "File": {
       "Title": "配置文件 - {0}",
-      "Redacted": "敏感值已脱敏"
+      "Redacted": "敏感值已脱敏",
+      "SourceKey": "来源标识",
+      "PhysicalPath": "物理路径",
+      "DeclaredPath": "声明的来源路径",
+      "ProviderType": "提供程序类型",
+      "Content": "规范化 JSON",
+      "RedactionHelp": "已注册定义中的已知敏感路径已隐藏，其他文件内容仍会显示。"
     },
     "Edit": {
       "Title": "编辑来源值",

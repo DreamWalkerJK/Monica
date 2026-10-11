@@ -1,10 +1,6 @@
 .configuration-versions-page { --configuration-versions-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary)); display: grid; gap: 24px; width: 100%; min-width: 0; padding: clamp(20px, 3vw, 36px); color: var(--mud-palette-text-primary); }
-.configuration-versions-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 4px 0 24px; border-bottom: 1px solid var(--mud-palette-lines-default); }
-.configuration-versions-heading > div { min-width: 0; }
 .configuration-versions-eyebrow { display: block; margin-bottom: 10px; color: color-mix(in srgb, var(--mud-palette-primary) 60%, var(--mud-palette-text-primary)); font-size: 11px; font-weight: 600; letter-spacing: .09em; }
-.configuration-versions-heading h1 { margin: 0; font-size: clamp(25px, 2.3vw, 34px); font-weight: 600; line-height: 1.25; letter-spacing: -.025em; }
-.configuration-versions-heading p, .configuration-versions-comparison header p { margin: 12px 0 0; color: var(--configuration-versions-muted); line-height: 1.6; }
-.configuration-versions-heading ::deep .mud-button-outlined-primary { color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-text-primary)); }
+.configuration-versions-comparison header p { margin: 12px 0 0; color: var(--configuration-versions-muted); line-height: 1.6; }
 .configuration-versions-tabs, .configuration-versions-comparison { min-width: 0; }
 .configuration-versions-tabs ::deep .mud-tabs-toolbar { margin-bottom: 20px; background: transparent; border-bottom: 1px solid var(--mud-palette-lines-default); }
 .configuration-versions-tabs ::deep .mud-tab { text-transform: none; color: var(--configuration-versions-muted); }
@@ -19,5 +15,4 @@
 .configuration-versions-empty { display: grid; justify-items: center; gap: 16px; padding: 56px 24px; border: 1px solid var(--mud-palette-lines-default); border-radius: var(--mud-default-borderradius); background: var(--mud-palette-surface); text-align: center; }
 .configuration-versions-empty h2, .configuration-versions-empty p { margin: 0; }
 .configuration-versions-empty p { color: var(--configuration-versions-muted); line-height: 1.7; }
-@media (max-width: 800px) { .configuration-versions-heading { align-items: flex-start; } .configuration-versions-pair { grid-template-columns: minmax(0, 1fr); padding: 20px; } .configuration-versions-pair ::deep .mud-button-root { justify-self: start; } .configuration-versions-comparison header { padding: 20px 20px 0; } }
-@media (max-width: 600px) { .configuration-versions-page { padding: 20px; gap: 20px; } .configuration-versions-heading { flex-wrap: wrap; } }
+@media (max-width: 800px) { .configuration-versions-page { padding: 20px; gap: 20px; } .configuration-versions-pair { grid-template-columns: minmax(0, 1fr); padding: 20px; } .configuration-versions-pair ::deep .mud-button-root { justify-self: start; } .configuration-versions-comparison header { padding: 20px 20px 0; } }

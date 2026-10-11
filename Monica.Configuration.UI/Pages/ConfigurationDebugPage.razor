@@ -1,132 +1,45 @@
 @attribute [Route(PAGE_URL)]
+@implements IAsyncDisposable
 @inject ConfigurationFacade Facade
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <PageTitle>@L["Pages:ConfigurationDebug:Title"]</PageTitle>
-
-<div class="configuration-debug-page">
-<MudContainer MaxWidth="MaxWidth.False">
-    <MudStack Spacing="3">
-        <ConfigurationPageHeader Title="@L["Pages:ConfigurationDebug:Title"]"
-                                 Subtitle="@L["Debug:Subtitle"]"
-                                 Icon="@Icons.Material.Filled.BugReport">
-            <Actions>
-                <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                   Variant="Variant.Outlined"
-                                   OnClick="LoadAsync"
-                                   aria-label="@L["Common:Actions:Refresh"]" />
-                </MudTooltip>
-            </Actions>
-        </ConfigurationPageHeader>
-
-        <MudPaper Outlined="true" Class="pa-3">
-            <MudTextField T="string"
-                          @bind-Value="_searchText"
-                          Placeholder="@L["Debug:SearchPlaceholder"]"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Immediate="true"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search" />
-        </MudPaper>
-
-        @if (SensitiveLineCount > 0)
+<div class="configuration-debug-page" aria-busy="@(_loading ? "true" : "false")">
+    <ConfigurationPageHeader Title="@L["Pages:ConfigurationDebug:Title"]" Subtitle="@L["Debug:Subtitle"]">
+        <Actions><MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@_loading" OnClick="LoadAsync">@L["Common:Actions:Refresh"]</MudButton></Actions>
+    </ConfigurationPageHeader>
+    <ConfigurationWorkbenchNavigation ActiveRoute="@PAGE_URL" />
+    <section class="configuration-debug-feature">
+        <div class="configuration-debug-feature-context"><MudIcon Icon="@Icons.Material.Outlined.DataObject" /><p>@L["Debug:Workbench:Scope"]</p>@if (_debugObservedAtUtc is { } observed) { <div class="configuration-debug-observation"><span>@L["Debug:Workbench:AcceptedAt"]</span><time datetime="@observed.ToString("O")">@observed.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time></div> }</div>
+        @if (_hasLoadedDebugView)
         {
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                @L["Debug:SensitiveNotice", SensitiveLineCount]
-            </MudAlert>
+            <dl class="configuration-debug-summary"><div><dt>@L["Debug:Workbench:LoadedLines"]</dt><dd>@_lines.Count</dd></div><div><dt>@L["Debug:Workbench:SensitiveLines"]</dt><dd>@SensitiveLineCount</dd></div><div><dt>@L["Debug:Workbench:MatchingLines"]</dt><dd>@FilteredLines.Count()</dd></div></dl>
         }
-
-        @if (_loading)
+    </section>
+    <section class="configuration-debug-ledger">
+        <header class="configuration-debug-filter"><MudTextField T="string" @bind-Value="_searchText" Label="@L["Debug:Workbench:SearchLabel"]" Placeholder="@L["Debug:SearchPlaceholder"]" HelperText="@L["Debug:Workbench:SearchHelp"]" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" /></header>
+        @if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Info" /> }
+        @if (!string.IsNullOrWhiteSpace(_loadError)) { <div class="configuration-debug-feedback"><MudAlert Severity="Severity.Error">@_loadError</MudAlert></div> }
+        @if (_hasLoadedDebugView && SensitiveLineCount > 0) { <div class="configuration-debug-feedback"><MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">@L["Debug:SensitiveNotice", SensitiveLineCount]</MudAlert></div> }
+        @if (_loading && !_hasLoadedDebugView) { <div class="configuration-debug-empty"><MudProgressCircular Indeterminate="true" Size="Size.Small" /><p>@L["Common:States:Loading"]</p></div> }
+        else if (_hasLoadedDebugView && _lines.Count == 0) { <div class="configuration-debug-empty"><MudIcon Icon="@Icons.Material.Outlined.DataObject" /><p>@L["Debug:Empty"]</p></div> }
+        else if (_hasLoadedDebugView && !FilteredLines.Any()) { <div class="configuration-debug-empty"><MudIcon Icon="@Icons.Material.Outlined.SearchOff" /><p>@L["Debug:Workbench:NoMatches"]</p></div> }
+        else if (_lines.Count > 0)
         {
-            <MudPaper Outlined="true" Class="pa-6 configuration-debug-loading">
-                <MudProgressCircular Indeterminate="true" />
-                <MudText>@L["Common:States:Loading"]</MudText>
-            </MudPaper>
-        }
-        else if (_lines.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info">@L["Debug:Empty"]</MudAlert>
-        }
-        else
-        {
-            <MudPaper Outlined="true" Class="configuration-debug-view">
+            <div class="configuration-debug-lines">
                 @foreach (var line in FilteredLines)
                 {
                     var isRevealed = _revealedLines.Contains(line.Index);
-                    <div class="debug-line @(IsMatch(line) ? "debug-line-match" : null) @(line.IsSensitive ? "debug-line-sensitive" : null)">
-                        <code class="debug-line-content">@line.GetDisplayText(isRevealed)</code>
+                    <div class="debug-line @(IsMatch(line) && !string.IsNullOrWhiteSpace(_searchText) ? "debug-line-match" : null) @(line.IsSensitive ? "debug-line-sensitive" : null)" data-revealed="@(isRevealed ? "true" : "false")" @key="line.Index">
+                        <span class="debug-line-number" aria-hidden="true">@(line.Index + 1)</span><code class="debug-line-content">@line.GetDisplayText(isRevealed)</code>
                         @if (line.IsSensitive)
                         {
-                            <MudTooltip Text="@(isRevealed ? L["Debug:HideSensitive"] : L["Debug:RevealSensitive"])">
-                                <MudIconButton Icon="@(isRevealed ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
-                                               Size="Size.Small"
-                                               Color="Color.Warning"
-                                               aria-label="@(isRevealed
-                                                   ? L["Debug:HideSensitiveAria", line.Key]
-                                                   : L["Debug:RevealSensitiveAria", line.Key])"
-                                               OnClick="@(() => ToggleSensitiveLine(line.Index))" />
-                            </MudTooltip>
+                            <MudTooltip Text="@(isRevealed ? L["Debug:HideSensitive"] : L["Debug:RevealSensitive"])"><MudIconButton Icon="@(isRevealed ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)" Size="Size.Small" Color="Color.Default" Disabled="@_loading" aria-label="@(isRevealed ? L["Debug:HideSensitiveAria", line.Key] : L["Debug:RevealSensitiveAria", line.Key])" aria-pressed="@(isRevealed ? "true" : "false")" OnClick="() => ToggleSensitiveLine(line.Index)" /></MudTooltip>
                         }
                     </div>
                 }
-            </MudPaper>
+            </div>
         }
-    </MudStack>
-</MudContainer>
+    </section>
 </div>
-
-@code {
-    public const string PAGE_URL = ConfigurationUiRoutes.DEBUG_ROUTE;
-
-    private readonly List<ConfigurationDebugLine> _lines = [];
-    private readonly HashSet<int> _revealedLines = [];
-    private string _searchText = string.Empty;
-    private bool _loading = true;
-
-    private IEnumerable<ConfigurationDebugLine> FilteredLines =>
-        string.IsNullOrWhiteSpace(_searchText)
-            ? _lines
-            : _lines.Where(IsMatch);
-
-    private int SensitiveLineCount => _lines.Count(static line => line.IsSensitive);
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        _loading = true;
-        var result = await Facade.GetDebugViewAsync();
-        if (result.IsFailed(out var error, out var debugView))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            _lines.Clear();
-            _loading = false;
-            return;
-        }
-
-        _lines.Clear();
-        _revealedLines.Clear();
-        _lines.AddRange(ConfigurationDebugValueRedactor.Parse(debugView));
-        _loading = false;
-    }
-
-    private bool IsMatch(ConfigurationDebugLine line)
-    {
-        return string.IsNullOrWhiteSpace(_searchText)
-               || line.SearchText.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private void ToggleSensitiveLine(int lineIndex)
-    {
-        if (!_revealedLines.Add(lineIndex))
-        {
-            _revealedLines.Remove(lineIndex);
-        }
-    }
-}

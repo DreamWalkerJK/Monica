@@ -9,15 +9,12 @@
 <PageTitle>@L["Pages:ConfigurationHistory:Title"]</PageTitle>
 
 <div class="configuration-history-page">
-    <header class="configuration-history-heading">
-        <div>
-            <span class="configuration-history-eyebrow">@L["Workbench:Eyebrow"]</span>
-            <h1>@L["Pages:ConfigurationHistory:Title"]</h1>
-            <p>@L["History:Subtitle"]</p>
-        </div>
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh"
+    <ConfigurationPageHeader Title="@L["Pages:ConfigurationHistory:Title"]" Subtitle="@L["History:Subtitle"]">
+        <Actions>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh"
                    Disabled="@_loading" OnClick="ReloadAsync">@L["Common:Actions:Refresh"]</MudButton>
-    </header>
+        </Actions>
+    </ConfigurationPageHeader>
     <ConfigurationWorkbenchNavigation ActiveRoute="@PAGE_URL" />
     @if (_metadataStoreDiagnostic is not null)
     {

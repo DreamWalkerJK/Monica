@@ -663,10 +663,20 @@
     "RevealSensitive": "Reveal sensitive value",
     "HideSensitive": "Hide sensitive value",
     "RevealSensitiveAria": "Reveal sensitive configuration value for {0}",
-    "HideSensitiveAria": "Hide sensitive configuration value for {0}"
+    "HideSensitiveAria": "Hide sensitive configuration value for {0}",
+    "Workbench": {
+      "Scope": "Raw host configuration with provider provenance. Credential-like masking does not cover every sensitive value.",
+      "LoadedLines": "Loaded lines",
+      "SensitiveLines": "Credential-like lines",
+      "MatchingLines": "Matching lines",
+      "AcceptedAt": "Accepted at",
+      "SearchLabel": "Search safe debug text",
+      "SearchHelp": "Hidden credential values are excluded from search. Revealing a line does not change that search boundary.",
+      "NoMatches": "No debug lines match this search."
+    }
   },
   "Storage": {
-    "Subtitle": "Inspect the active configuration store bundle and its runtime state.",
+    "Subtitle": "Review runtime source contributions, registered store capabilities, and recorded operations.",
     "Empty": "No configuration storage is registered.",
     "Roles": {
       "EffectiveValues": "Effective values",
@@ -679,15 +689,42 @@
       "Metadata": "Metadata"
     },
     "State": {
-      "Succeeded": "Healthy",
-      "Failed": "Failed",
+      "Succeeded": "Latest operation succeeded",
+      "Failed": "Latest operation failed",
       "Unknown": "No store operation recorded."
     },
     "Notifications": {
       "Title": "Change notifications",
-      "Subtitle": "Cross-service hot reload requires a registered notifier implementation.",
+      "Subtitle": "Notifier registration describes composition; it does not prove delivery or consumer adoption.",
       "Registered": "Registered",
       "NotRegistered": "Not registered"
+    },
+    "Workbench": {
+      "SourcesTab": "Runtime sources",
+      "StoresTab": "Store implementations",
+      "AcceptedAt": "Accepted at",
+      "SourceCount": "{0} runtime sources",
+      "OverviewHelp": "Registration describes capabilities. Recorded operations describe their last reported outcome.",
+      "Supported": "Supported",
+      "NotSupported": "Not supported",
+      "StoreKey": "Store key",
+      "Kind": "Technology kind",
+      "WriteAccess": "Write access",
+      "LatestOperation": "Latest recorded operation",
+      "OperationTime": "Recorded at",
+      "OperationError": "Recorded failure detail",
+      "NotAvailable": "Not available",
+      "SourceOptional": "File requirement",
+      "Reload": "Reload behavior",
+      "ReadOnlyReason": "Read-only reason",
+      "Description": "Registration description",
+      "RowsPerPage": "Values per page",
+      "Optional": "Optional",
+      "Required": "Required",
+      "SearchSources": "Search sources",
+      "SourcesShowing": "Showing {0} / {1} loaded sources",
+      "NoSourcesMatch": "No sources match this search.",
+      "OperationEvidenceHelp": "Recorded outcomes are shown independently of store registration details."
     }
   },
   "Sources": {
@@ -699,7 +736,7 @@
     "Effective": "Effective",
     "Runtime": {
       "Title": "Runtime configuration sources",
-      "Subtitle": "Providers are shown from highest priority to lowest priority. The last provider that supplies a key wins."
+      "Subtitle": "Providers are ordered by priority. Supplied values remain inspectable even when a higher source or container barrier prevents them from being effective."
     },
     "Inventory": {
       "SuppliedCount": "Supplies {0}",
@@ -714,9 +751,9 @@
       "FieldColumn": "Field",
       "ValueColumn": "Value",
       "StateColumn": "State",
-      "Overridden": "Overridden",
+      "Overridden": "Not effective",
       "OverriddenTooltip": "Overridden by {0} (priority {1}). Source: {2}",
-      "OverriddenUnknownTooltip": "Overridden by a higher-priority provider."
+      "OverriddenUnknownTooltip": "This source is not proven effective. A higher value, container barrier, or uninspected alias may determine the runtime value."
     },
     "Definition": {
       "Title": "Configuration sources",
@@ -748,7 +785,13 @@
     },
     "File": {
       "Title": "Configuration file - {0}",
-      "Redacted": "Sensitive values redacted"
+      "Redacted": "Sensitive values redacted",
+      "SourceKey": "Source key",
+      "PhysicalPath": "Physical path",
+      "DeclaredPath": "Declared source path",
+      "ProviderType": "Provider type",
+      "Content": "Normalized JSON",
+      "RedactionHelp": "Known sensitive paths in registered definitions are hidden; other file content remains visible."
     },
     "Edit": {
       "Title": "Edit Source Value",

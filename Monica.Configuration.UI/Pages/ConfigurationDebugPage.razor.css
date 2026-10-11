@@ -1,66 +1,237 @@
 .configuration-debug-page {
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
+    --debug-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary));
+    display: grid;
+    gap: 24px;
     width: 100%;
     min-width: 0;
-    min-height: 100%;
-    padding-block: clamp(1rem, 2vw, 1.5rem);
+    padding: clamp(20px, 3vw, 36px);
+    color: var(--mud-palette-text-primary);
 }
 
-.configuration-debug-loading {
-    display: flex;
-    min-height: 14rem;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
+.configuration-debug-feature {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 28px;
+    min-width: 0;
+    padding: 24px 28px;
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-surface);
+    background: color-mix(in srgb, var(--mud-palette-info) 45%, var(--mud-palette-text-primary));
 }
 
-.configuration-debug-view {
-    max-height: 70vh;
-    overflow: auto;
-    padding: 1rem;
-    font-family: var(--mud-typography-default-family);
+.configuration-debug-feature-context {
+    min-width: 0;
+}
+
+.configuration-debug-feature-context ::deep .mud-icon-root {
+    width: 28px;
+    height: 28px;
+}
+
+.configuration-debug-feature p {
+    margin: 14px 0 0;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.configuration-debug-observation {
+    display: grid;
+    gap: 5px;
+    margin-top: 20px;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.configuration-debug-observation time {
+    font-family: var(--mo-font-family-mono);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.configuration-debug-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-content: center;
+    min-width: 0;
+    margin: 0;
+}
+
+.configuration-debug-summary > div {
+    min-width: 0;
+    padding-left: 16px;
+    border-left: 1px solid currentColor;
+}
+
+.configuration-debug-summary dt {
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.configuration-debug-summary dd {
+    margin: 8px 0 0;
+    font-size: 30px;
+    font-weight: 550;
+    line-height: 1.2;
+}
+
+.configuration-debug-ledger {
+    min-width: 0;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    overflow: clip;
+    background: var(--mud-palette-surface);
+}
+
+.configuration-debug-filter {
+    min-width: 0;
+    padding: 20px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.configuration-debug-filter ::deep .mud-input-control {
+    min-width: 0;
+    margin: 0;
+}
+
+.configuration-debug-filter ::deep .mud-input-control-helper-container {
+    color: var(--debug-muted);
+    line-height: 1.6;
+}
+
+.configuration-debug-filter ::deep .mud-input-control-helper-container p {
+    color: var(--debug-muted);
+}
+
+.configuration-debug-feedback {
+    min-width: 0;
+    padding: 16px 20px;
+}
+
+.configuration-debug-ledger ::deep .mud-alert-outlined-warning {
+    color: color-mix(in srgb, var(--mud-palette-warning) 40%, var(--mud-palette-text-primary));
+}
+
+.configuration-debug-ledger ::deep .mud-alert-text-error {
+    color: color-mix(in srgb, var(--mud-palette-error) 40%, var(--mud-palette-text-primary));
+}
+
+.configuration-debug-lines {
+    min-width: 0;
 }
 
 .debug-line {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 3ch minmax(0, 1fr) auto;
     align-items: start;
-    gap: 0.5rem;
-    min-height: 2rem;
-    padding: 0.25rem 0.375rem;
-    border-radius: 6px;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    font-family: monospace;
-    line-height: 1.45;
-    transition: background-color 160ms ease;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.debug-line:last-child {
+    border-bottom: 0;
 }
 
 .debug-line:hover {
-    background-color: var(--mud-palette-action-default-hover);
+    background: var(--mud-palette-table-hover);
+}
+
+.debug-line-number {
+    padding-top: 2px;
+    font-family: var(--mo-font-family-mono);
+    font-size: 11px;
+    text-align: right;
+    color: var(--debug-muted);
 }
 
 .debug-line-content {
+    display: block;
     min-width: 0;
+    font-family: var(--mo-font-family-mono);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+    font-size: 13px;
+    line-height: 1.7;
     color: inherit;
-    font: inherit;
 }
 
 .debug-line-sensitive {
-    color: var(--mud-palette-warning);
+    background: color-mix(in srgb, var(--mud-palette-warning) 5%, var(--mud-palette-surface));
+}
+
+.debug-line-sensitive .debug-line-content {
+    color: color-mix(in srgb, var(--mud-palette-warning) 25%, var(--mud-palette-text-primary));
+}
+
+.debug-line-sensitive ::deep .mud-icon-button {
+    color: color-mix(in srgb, var(--mud-palette-warning) 25%, var(--mud-palette-text-primary));
 }
 
 .debug-line-match {
-    background-color: var(--mo-color-highlight-background);
-    color: var(--mo-color-highlight-text);
+    background: color-mix(in srgb, var(--mud-palette-info) 7%, var(--mud-palette-surface));
 }
 
-@media (prefers-reduced-motion: reduce) {
+.debug-line-match:hover {
+    background: color-mix(in srgb, var(--mud-palette-info) 10%, var(--mud-palette-surface));
+}
+
+.configuration-debug-empty {
+    display: grid;
+    justify-items: center;
+    gap: 16px;
+    padding: 36px 20px;
+    text-align: center;
+    color: var(--debug-muted);
+}
+
+.configuration-debug-empty p {
+    margin: 0;
+    line-height: 1.65;
+}
+
+@media (max-width: 1100px) {
+    .configuration-debug-feature {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 800px) {
+    .configuration-debug-page {
+        gap: 20px;
+        padding: 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .configuration-debug-feature {
+        padding: 20px;
+        gap: 24px;
+    }
+    .configuration-debug-summary {
+        gap: 10px;
+    }
+    .configuration-debug-summary > div {
+        padding-left: 10px;
+    }
+    .configuration-debug-summary dd {
+        font-size: 24px;
+    }
+    .configuration-debug-filter {
+        padding: 16px;
+    }
+    .configuration-debug-feedback {
+        padding: 12px 16px;
+    }
     .debug-line {
-        transition: none;
+        grid-template-columns: 3ch minmax(0, 1fr) auto;
+        gap: 8px;
+        padding: 12px 16px;
+    }
+    .configuration-debug-empty {
+        padding: 32px 16px;
     }
 }
