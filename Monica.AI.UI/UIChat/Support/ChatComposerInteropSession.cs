@@ -30,7 +30,9 @@ internal sealed class ChatComposerInteropSession(
         ElementReference root,
         string value,
         string placeholder,
-        IReadOnlyDictionary<string, string> referenceIcons)
+        IReadOnlyDictionary<string, string> referenceIcons,
+        string? sessionId = null,
+        long sessionGeneration = 0)
     {
         if (_disposed || _controller is not null)
         {
@@ -63,7 +65,9 @@ internal sealed class ChatComposerInteropSession(
                 createdCallbackReference,
                 value,
                 placeholder,
-                referenceIcons);
+                referenceIcons,
+                sessionId,
+                sessionGeneration);
             if (_disposed)
             {
                 return;
@@ -96,22 +100,22 @@ internal sealed class ChatComposerInteropSession(
     }
 
     /// <summary>
-    /// Synchronizes the rendered editor when its controller is available.
+    /// Atomically restores the matching rendered editor. Returns false when that origin is no longer rendered.
     /// </summary>
-    internal Task SynchronizeAsync(
+    internal Task<bool> SynchronizeAsync(
         bool pickerOpen,
         bool disabled,
         string value,
         int caretIndex,
         bool focus,
-        bool force)
+        bool force,
+        string? sessionId = null,
+        long sessionGeneration = 0,
+        long synchronizationVersion = 0)
     {
-        return InvokeControllerAsync(async controller =>
-        {
-            await controller.InvokeVoidAsync("setPickerOpen", pickerOpen);
-            await controller.InvokeVoidAsync("setDisabled", disabled);
-            await controller.InvokeVoidAsync("setValue", value, caretIndex, focus, force);
-        });
+        return InvokeControllerAsync(controller => controller.InvokeAsync<bool>(
+            "synchronize", pickerOpen, disabled, value, caretIndex, focus, force,
+            sessionId, sessionGeneration, synchronizationVersion).AsTask());
     }
 
     /// <inheritdoc />
@@ -123,11 +127,11 @@ internal sealed class ChatComposerInteropSession(
         }
     }
 
-    private async Task InvokeControllerAsync(Func<IJSObjectReference, Task> operation)
+    private async Task<bool> InvokeControllerAsync(Func<IJSObjectReference, Task<bool>> operation)
     {
         if (_disposed)
         {
-            return;
+            return false;
         }
 
         var acquired = false;
@@ -137,10 +141,10 @@ internal sealed class ChatComposerInteropSession(
             acquired = true;
             if (_disposed || _controller is null)
             {
-                return;
+                return false;
             }
 
-            await operation(_controller);
+            return await operation(_controller);
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
         {
@@ -158,6 +162,8 @@ internal sealed class ChatComposerInteropSession(
                 _gate.Release();
             }
         }
+
+        return false;
     }
 
     private async Task DisposeCoreAsync()

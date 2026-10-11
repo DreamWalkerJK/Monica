@@ -1,8 +1,9 @@
-.session-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) 38px; align-items: center; min-height: 38px; margin: 2px 0; padding: 0 4px; border-radius: 8px; }
+.session-row { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr) 38px; align-items: center; min-height: 44px; margin: 3px 0; padding: 0 6px; border-radius: 8px; }
 .session-row:hover, .session-row:focus-within { background: var(--mud-palette-action-default-hover); }
-.session-row.selected { background: var(--mud-palette-action-default-hover); }
+.session-row.selected { background: color-mix(in srgb, var(--mud-palette-primary) 9%, var(--mud-palette-surface)); }
+.session-row.selected::before { content: ""; position: absolute; inset: 12px auto 12px 0; width: 2px; border-radius: 2px; background: var(--mud-palette-primary); }
 .session-row ::deep .session-select { justify-content: flex-start; min-width: 0; width: 100%; padding: 8px 4px; border-radius: 6px; text-transform: none; text-align: left; font-size: .8125rem; font-weight: 400; }
-.session-row.selected ::deep .session-select { font-weight: 600; }
+.session-row.selected ::deep .session-select { font-weight: 500; }
 .session-row ::deep .session-select .mud-button-label { display: block; min-width: 0; overflow: hidden; }
 .session-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pin-action, .archive-action { display: flex; align-items: center; justify-content: center; opacity: 0; }
@@ -10,7 +11,7 @@
 .session-row ::deep .mud-icon-button .mud-icon-root { font-size: 16px; }
 .session-tail { display: grid; place-items: center; min-width: 0; }
 .session-time, .archive-action { grid-area: 1 / 1; }
-.session-time { color: var(--mud-palette-text-disabled); font-size: .6875rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.session-time { color: var(--mud-palette-text-secondary); font-size: .6875rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .session-row:hover .pin-action, .session-row:focus-within .pin-action, .session-row.pinned .pin-action,
 .session-row:hover .archive-action, .session-row:focus-within .archive-action { opacity: 1; }
 .session-row:hover .session-time, .session-row:focus-within .session-time { opacity: 0; }

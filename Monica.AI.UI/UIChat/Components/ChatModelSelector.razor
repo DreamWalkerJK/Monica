@@ -1,19 +1,15 @@
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
+@implements IAsyncDisposable
 @inject IStringLocalizer<AIResource> L
 
-<div class="model-selector" title="@FullSelection">
-    <MudMenu @ref="_menu" Dense="true" Disabled="@Disabled" Label="@TriggerLabel" AriaLabel="@($"{L["Model:Label"]}: {FullSelection}")" Size="Size.Small" EndIcon="@Icons.Material.Filled.ExpandMore" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight">
+<div class="model-selector" title="@FullSelection" @onkeydown="HandleDismissalKeyAsync" @onkeydown:stopPropagation="true">
+    <MudMenu @ref="_menu" @bind-Open="_open" Dense="true" Disabled="@Disabled" Label="@TriggerLabel" AriaLabel="@($"{L["Model:Label"]}: {FullSelection}")" Size="Size.Small" EndIcon="@Icons.Material.Filled.ExpandMore" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight">
         <ChildContent>
-            <div class="selection-menu">
-                <MudMenu Dense="true" Disabled="@Disabled" AriaLabel="@L["Model:Label"]">
-                    <ActivatorContent>
-                        <span class="menu-branch"><span>@L["Model:Label"]</span><span class="branch-value">@ModelLabel</span><MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" /></span>
-                    </ActivatorContent>
-                    <ChildContent>
-                        <div class="model-picker">
-                            <div class="model-search" @onkeydown="HandleSearchKeyAsync" @onkeydown:stopPropagation="true">
-                                <MudTextField T="string" @bind-Value="_search" Immediate="true" Placeholder="@L["Workbench:SearchModels"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" />
+                        <div class="model-picker" @onkeydown="HandleDismissalKeyAsync" @onkeydown:stopPropagation="true">
+                            <div class="current-selection"><strong>@ModelLabel</strong><span>@FullSelection</span></div>
+                            <div class="model-search" @onkeydown="HandleDismissalKeyAsync" @onkeydown:stopPropagation="true">
+                                <MudTextField T="string" @bind-Value="_search" Immediate="true" Placeholder="@L["Workbench:SearchModels"]" aria-label="@L["Workbench:SearchModels"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" />
                             </div>
                             <div class="model-groups">
                                 @foreach (var group in MatchingGroups)
@@ -32,25 +28,20 @@
                                 }
                                 @if (!MatchingGroups.Any()) { <MudMenuItem Disabled="true">@L["Model:NoModelsAvailable"]</MudMenuItem> }
                             </div>
-                        </div>
-                    </ChildContent>
-                </MudMenu>
                 @if (ShowEffort)
                 {
-                    <MudMenu Dense="true" Disabled="@Disabled" AriaLabel="@L["Workbench:Effort"]">
-                        <ActivatorContent>
-                            <span class="menu-branch"><span>@L["Workbench:Effort"]</span><span class="branch-value">@EffortLabel</span><MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" /></span>
-                        </ActivatorContent>
-                        <ChildContent>
-                            <MudMenuItem Disabled="@Disabled" Icon="@(ReasoningLevel is null ? Icons.Material.Filled.Check : null)" OnClick="@(() => ReasoningLevelChanged.InvokeAsync((string?)null))">@L["Workbench:ReasoningDefault"]</MudMenuItem>
+                    <details class="effort-picker">
+                        <summary>@L["Workbench:Effort"] · @EffortLabel</summary>
+                        <div class="effort-choices">
+                            <MudButton Disabled="@Disabled" Variant="Variant.Text" aria-pressed="@(ReasoningLevel is null ? "true" : "false")" OnClick="@(() => ReasoningLevelChanged.InvokeAsync((string?)null))">@L["Workbench:ReasoningDefault"]</MudButton>
                             @foreach (var level in CurrentModel!.ReasoningLevels)
                             {
-                                <MudMenuItem Disabled="@Disabled" Icon="@(level.Id == ReasoningLevel ? Icons.Material.Filled.Check : null)" OnClick="@(() => ReasoningLevelChanged.InvokeAsync(level.Id))">@(level.DisplayName ?? level.Id)</MudMenuItem>
+                                <MudButton Disabled="@Disabled" Variant="Variant.Text" aria-pressed="@(level.Id == ReasoningLevel ? "true" : "false")" OnClick="@(() => ReasoningLevelChanged.InvokeAsync(level.Id))">@(level.DisplayName ?? level.Id)</MudButton>
                             }
-                        </ChildContent>
-                    </MudMenu>
+                        </div>
+                    </details>
                 }
-            </div>
+                        </div>
         </ChildContent>
     </MudMenu>
 </div>
@@ -67,7 +58,22 @@
     [Parameter] public EventCallback<string?> ReasoningLevelChanged { get; set; }
     private MudMenu? _menu;
     private string _search = string.Empty;
-    private Task HandleSearchKeyAsync(KeyboardEventArgs args) => args.Key == "Escape" && _menu is not null ? _menu.CloseMenuAsync() : Task.CompletedTask;
+    private bool _open, _closing, _disposed;
+    private Task? _closeTask, _retirement;
+    private Task HandleDismissalKeyAsync(KeyboardEventArgs args)
+    {
+        if (args.Key != "Escape" || !_open || _closing || _disposed || _menu is not { } menu) return Task.CompletedTask;
+        _closing = true;
+        return _closeTask = CloseAsync(menu);
+    }
+    private async Task CloseAsync(MudMenu menu)
+    {
+        try { await menu.CloseAllMenusAsync(); }
+        catch (JSDisconnectedException) { }
+        finally { _closing = false; }
+    }
+    public ValueTask DisposeAsync() => new(_retirement ??= RetireAsync());
+    private async Task RetireAsync() { _disposed = true; if (_closeTask is not null) await _closeTask; }
     private bool ShowEffort => CurrentModel is { SupportsReasoning: not false } && (CurrentModel.SupportsReasoning == true || CurrentModel.ReasoningLevels.Count > 0);
     private string ModelLabel => CurrentModel?.DisplayName ?? ModelName ?? L["Model:Label"];
     private string? EffectiveEffort => ReasoningLevel ?? CurrentModel?.DefaultReasoningLevel;

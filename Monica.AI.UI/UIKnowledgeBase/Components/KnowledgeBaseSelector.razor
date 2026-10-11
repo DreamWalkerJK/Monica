@@ -10,11 +10,12 @@
                   Visible="@(SelectedIds.Count > 0)" Overlap="true">
             <MudIconButton Icon="@Icons.Material.Filled.MenuBook"
                            Class="@($"kb-selector-button {(SelectedIds.Count > 0 ? "active" : "")}")"
+                           Disabled="@Disabled"
                            OnClick="@TogglePopover" />
         </MudBadge>
     </MudTooltip>
 
-    <MudPopover Open="@_popoverOpen"
+    <MudPopover Open="@(_popoverOpen && !Disabled)"
                 AnchorOrigin="Origin.TopLeft"
                 TransformOrigin="Origin.BottomLeft"
                 Class="mo-ai-kb-popover"
@@ -39,6 +40,7 @@
                     {
                         <MudButton Variant="Variant.Text"
                                    Size="Size.Small"
+                                   Disabled="@Disabled"
                                    OnClick="@ClearSelectionAsync"
                                    Class="kb-clear-button">
                             @L["Chat:KnowledgeBaseSelector:Clear"]
@@ -60,6 +62,7 @@
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Immediate="true"
+                          Disabled="@Disabled"
                           Class="kb-search" />
 
             <div class="kb-list">
@@ -81,6 +84,7 @@
                         var isSelected = SelectedIds.Contains(kb.Id);
                         <button type="button"
                                 class="kb-item @(isSelected ? "selected" : "")"
+                                disabled="@Disabled"
                                 @onclick="() => ToggleKbAsync(kb.Id)">
                             <span class="kb-item-leading">
                                 <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" />
@@ -122,7 +126,7 @@
         </MudPaper>
     </MudPopover>
 
-    <MudOverlay Visible="@_popoverOpen"
+    <MudOverlay Visible="@(_popoverOpen && !Disabled)"
                 AutoClose="true"
                 OnClosed="@ClosePopover"
                 LockScroll="false"
@@ -133,6 +137,8 @@
     [Parameter] public IReadOnlyList<KnowledgeBase> KnowledgeBases { get; set; } = [];
     [Parameter] public List<string> SelectedIds { get; set; } = [];
     [Parameter] public EventCallback<List<string>> SelectedIdsChanged { get; set; }
+    /// <summary>Prevents selection changes and closes the selector while true. Defaults to false.</summary>
+    [Parameter] public bool Disabled { get; set; }
 
     private bool _popoverOpen;
     private string? _searchText;
@@ -140,8 +146,14 @@
     private IReadOnlyList<KnowledgeBase> FilteredKnowledgeBases =>
         KnowledgeBases.Where(MatchesSearch).ToList();
 
+    protected override void OnParametersSet()
+    {
+        if (Disabled) ClosePopover();
+    }
+
     private void TogglePopover()
     {
+        if (Disabled) return;
         _popoverOpen = !_popoverOpen;
         if (!_popoverOpen)
         {
@@ -157,6 +169,7 @@
 
     private async Task ToggleKbAsync(string kbId)
     {
+        if (Disabled) return;
         var newList = new List<string>(SelectedIds);
         if (newList.Contains(kbId))
         {
@@ -173,6 +186,7 @@
 
     private async Task ClearSelectionAsync()
     {
+        if (Disabled) return;
         var newList = new List<string>();
         SelectedIds = newList;
         await SelectedIdsChanged.InvokeAsync(newList);

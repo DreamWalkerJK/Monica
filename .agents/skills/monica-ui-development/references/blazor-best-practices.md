@@ -30,6 +30,8 @@ When a page resets a debounced native input, reset the input owner as well as th
 
 Use `Monica.UI.Shared.Components.Dialogs.MoDialogHeading` inside a native `MudDialog`'s `TitleContent` when the modal needs a localized accessible name. Supply the caller's localized `Text`; optional `Class` adds presentation classes. The normal Monica shell supplies the native dialog provider. Keep dialog focus, Escape, backdrop and result handling with MudBlazor.
 
+Choose initial dialog focus through the native `DefaultFocus` contract. For an approval with Reject before Approve and no earlier focusable content, `DefaultFocus.FirstChild` focuses Reject. A child component's first-render `FocusAsync` can be overwritten by the enclosing trap's initialization; do not make two owners compete. Verify the actual initial target and Tab sequence after the whole dialog mounts.
+
 In MudBlazor 9, `MudDialog.UserAttributes` are applied to its content rather than the enclosing `role="dialog"` owner. Putting `aria-label` on that component does not name the modal. `MoDialogHeading` mounts a unique visible heading, then its local module assigns `aria-labelledby` and `aria-modal` to the nearest native dialog after render. It owns and drains its import/use/disposal, including a late import after retirement; it does not mutate DOM during disposal or create callbacks. Verify the outer dialog's localized accessible name and native focus restoration in the browser.
 
 ## 2. Lifecycle Best Practices
@@ -413,6 +415,16 @@ Keep the opener's rendered identity stable across evidence refreshes. Native tab
 ### 8.6 Preserve Focus While a Dialog Action Is Busy
 
 Setting native `Disabled` on a focused action can move focus to the document body, outside the dialog's keyboard handling. This includes an action that becomes unavailable after completion, such as clearing the last retained message. For these controls, keep the action focusable, expose explicit `aria-disabled="true"`, and reject unavailable or duplicate admission in its handler. ARIA alone does not prevent activation. Other unavailable actions can use native disabling. Preserve the existing cancellation and task-drain ownership; no additional JavaScript focus manager is needed. Verify that keyboard activation keeps focus inside the dialog and that subsequent Tab and Escape still work while the operation is busy and after it completes.
+
+### 8.7 Preserve Native Menu Activation for Form Popups
+
+A `MudMenu` containing a settings form can have no registered `MudMenuItem` children. In MudBlazor v9.0.0, `MudMenu.HandleDismissalKeyAsync` returns immediately when `_menuItems.Count == 0`, so the primitive's Tab/Escape dismissal path does not cover that form. Custom activator content uses the native wrapper's `HandleActivatorKeydown` for Enter and Space; `TrackKeyboardInteraction` handles arrows only when menu items exist. Inspect these members in the installed source before relying on menu keyboard behavior.
+
+Keep one semantic activator and one Tab stop. Bind the primitive's actual open state, preserve its native Enter/Space activation, and add only the missing Escape handling at the reachable activator owner and portaled form panel. Do not suppress unrelated keys or add a second focusable button inside a native activator wrapper. Close through the native menu API. `CloseAllMenusAsync` calls `FocusActivatorAsync`; verify that it restores the actual custom activator before assuming focus return is covered. If the native API cannot reach that wrapper, use a narrowly scoped, component-owned interop operation to focus the exact native activator. Own its import, admitted use, late results and teardown under the existing [lifecycle](#2-lifecycle-best-practices) rules.
+
+Verify native browser Enter, Space, a single activator Tab stop, forward/reverse Tab through form controls, and Escape from both the activator and the form. MudBlazor v9.0.0's `_menu.scss` sets `div.mud-menu-activator` to `display: contents`; a wrapper carrying `role="button"` and `tabindex="0"` can then have a zero rectangle and fail to acquire focus. Give that actual native wrapper a scoped box-generating display such as `inline-flex`, and verify its rendered rectangle and `document.activeElement` before sending keys; a focus request completing does not prove focus moved. Check dismissal and return focus after reopening, as well as close during component retirement. Handler invocation or rendered markup alone does not establish browser key propagation or native focus behavior.
+
+A reused contenteditable composer must restore its rendered session and draft generation atomically before accepting new input. Queued input retains its originating generation; an accepted send clears only that generation. Normalize Chromium's DIV/P line boundaries together with caret offsets after composition finishes. Render a usable native caret line for a terminal newline, excluding its filler BR from logical text. Verify Shift+Enter followed by typing, multiline restoration, and immediate conversation switching through actual browser controls.
 
 ## 9. Component Reuse Patterns
 

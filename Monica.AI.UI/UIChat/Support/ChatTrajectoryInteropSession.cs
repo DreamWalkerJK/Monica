@@ -43,9 +43,9 @@ internal sealed class ChatTrajectoryInteropSession(IJSRuntime jsRuntime) : IAsyn
         return null;
     });
 
-    internal Task RevealAsync(int rowIndex) => InvokeAsync<object?>(async () =>
+    internal Task RevealAsync(int rowIndex, string? focusRecordId = null) => InvokeAsync<object?>(async () =>
     {
-        if (_controller is not null) await _controller.InvokeVoidAsync("reveal", rowIndex);
+        if (_controller is not null) await _controller.InvokeVoidAsync("reveal", rowIndex, focusRecordId);
         return null;
     });
 

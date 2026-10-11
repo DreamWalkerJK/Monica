@@ -16,7 +16,14 @@
     {
         <MudAlert Severity="Severity.Warning" Dense="true">
             @L["Workbench:HistoryConflict"]
-            <MudButton Size="Size.Small" OnClick="@State.ReloadHistoryAsync" Disabled="@(State.IsSending || State.IsUploading)">@L["Workbench:ReloadHistory"]</MudButton>
+            <MudButton Size="Size.Small" OnClick="@State.ReloadHistoryAsync" Disabled="@State.IsHistoryBusy">@L["Workbench:ReloadHistory"]</MudButton>
+        </MudAlert>
+    }
+    else if (State.HasHistoryLoadFailure)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true">
+            @L["Chat:History:Warnings:StorageUnavailable"]
+            <MudButton Size="Size.Small" OnClick="@State.ReloadHistoryAsync" Disabled="@State.IsHistoryBusy">@L["Workbench:ReloadHistory"]</MudButton>
         </MudAlert>
     }
     <ChatErrorDisplay ErrorMessage="@State.ErrorMessage" OnDismissed="@State.DismissError" />
@@ -30,7 +37,7 @@
                          EnableAutoScroll="@State.EnableAutoScroll" IsSending="@State.IsSending"
                          OnEditMessage="@State.EditMessageAsync" OnRetryMessage="@State.RetryMessageAsync" OnInspect="@OnInspect" />
     }
-    <ChatInputArea Disabled="@(State.HasHistoryConflict || State.IsHistoryUpdating)" IsSending="@State.IsSending" IsUploading="@State.IsUploading"
+    <ChatInputArea Disabled="@State.IsInputBlocked" IsSending="@State.IsSending" IsUploading="@State.IsUploading"
                    ModelName="@State.CurrentModelName"
                    Providers="@State.Providers" ProviderId="@State.CurrentProviderId" ShowProviderInfo="@State.ShowProviderSelector"
                    CurrentModel="@State.CurrentModel" ReasoningLevel="@State.CurrentSession?.Settings.ReasoningLevel"

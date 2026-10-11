@@ -30,6 +30,8 @@ public sealed partial class ChatSessionWorkspace(ChatHistoryFacade historyFacade
 
     /// <summary>Whether a stale edit requires an explicit reload before further history writes.</summary>
     public bool IsConflicted { get; private set; }
+    /// <summary>Whether the latest catalog read failed. Writes stay blocked until an explicit successful reload.</summary>
+    public bool HasLoadFailure { get; private set; }
 
     /// <summary>Current catalog revision used for optimistic writes.</summary>
     public long Revision { get; private set; }
@@ -64,11 +66,13 @@ public sealed partial class ChatSessionWorkspace(ChatHistoryFacade historyFacade
         var catalogResult = await historyFacade.GetCatalogAsync(ct);
         if (catalogResult.IsFailed(out var error, out var catalog))
         {
+            HasLoadFailure = true;
             RaiseWarning(ChatHistoryWorkspaceWarningKind.LoadFailed, error.Message);
             CompleteInitialization();
             return;
         }
 
+        HasLoadFailure = false;
         Revision = catalog.Revision;
         ReplaceSummaries(catalog.Sessions);
         var selectedId = catalog.CurrentSessionId is not null
@@ -88,6 +92,7 @@ public sealed partial class ChatSessionWorkspace(ChatHistoryFacade historyFacade
     public async Task AddSessionAsync(ChatSession session, CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        if (HasLoadFailure) throw new InvalidOperationException("Reload the unreadable history catalog before adding a conversation.");
         ArgumentNullException.ThrowIfNull(session);
 
         _loadedSessions[session.SessionId] = session;
@@ -107,7 +112,7 @@ public sealed partial class ChatSessionWorkspace(ChatHistoryFacade historyFacade
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
-        if (Sessions.All(item => item.SessionId != sessionId))
+        if (HasLoadFailure || Sessions.All(item => item.SessionId != sessionId))
         {
             return null;
         }
@@ -129,7 +134,7 @@ public sealed partial class ChatSessionWorkspace(ChatHistoryFacade historyFacade
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(session);
-        if (IsConflicted) return false;
+        if (IsConflicted || HasLoadFailure) return false;
 
         var saveResult = await historyFacade.SaveSessionAsync(session, Revision, ct);
         if (saveResult.Data?.IsConflict == true)
@@ -169,7 +174,7 @@ public sealed partial class ChatSessionWorkspace(ChatHistoryFacade historyFacade
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
-        if (IsConflicted) return false;
+        if (IsConflicted || HasLoadFailure) return false;
 
         var result = await historyFacade.DeleteSessionAsync(sessionId, Revision, ct);
         if (!TryApplyWriteResult(result, out _))
@@ -200,7 +205,7 @@ public sealed partial class ChatSessionWorkspace(ChatHistoryFacade historyFacade
     public async Task<bool> ClearAsync(CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (IsConflicted) return false;
+        if (IsConflicted || HasLoadFailure) return false;
         var result = await historyFacade.ClearAsync(Revision, ct);
         if (!TryApplyWriteResult(result, out _))
         {
@@ -229,10 +234,13 @@ public sealed partial class ChatSessionWorkspace(ChatHistoryFacade historyFacade
         var catalogResult = await historyFacade.GetCatalogAsync(ct);
         if (catalogResult.IsFailed(out var error, out var catalog))
         {
+            HasLoadFailure = true;
             RaiseWarning(ChatHistoryWorkspaceWarningKind.LoadFailed, error.Message);
+            StateChanged?.Invoke();
             return;
         }
 
+        HasLoadFailure = false;
         foreach (var session in _loadedSessions.Values) await session.DisposeAsync();
         _loadedSessions.Clear();
         ReplaceSummaries(catalog.Sessions);
@@ -276,7 +284,7 @@ public sealed partial class ChatSessionWorkspace(ChatHistoryFacade historyFacade
 
     private async Task PersistCurrentSelectionAsync(CancellationToken ct)
     {
-        if (IsConflicted) return;
+        if (IsConflicted || HasLoadFailure) return;
         var result = await historyFacade.SetCurrentSessionAsync(CurrentSessionId, Revision, ct);
         _ = TryApplyWriteResult(result, out var writeResult);
         if (writeResult is not null)

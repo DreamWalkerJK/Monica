@@ -1,3 +1,4 @@
-.attachment-preview { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.attachment-preview img { max-width: 100%; max-height: 65vh; object-fit: contain; border-radius: 8px; }
-.attachment-preview pre { max-height: 60vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8rem; }
+.attachment-preview { display: flex; flex-direction: column; gap: 16px; min-width: 0; padding: 24px; background: var(--mud-palette-surface); color: var(--mud-palette-text-primary); overflow-wrap: anywhere; }
+.attachment-preview img { max-width: 100%; max-height: 65dvh; object-fit: contain; border-radius: var(--mud-default-borderradius); }
+.attachment-preview pre { margin: 0; padding: 16px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8125rem; line-height: 1.65; font-family: var(--mo-font-family-mono); background: var(--mud-palette-background-gray); }
+@media(max-width: 600px) { .attachment-preview { padding: 16px; } }

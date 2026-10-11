@@ -2,13 +2,11 @@ const SKILL_PREFIX = "[$skills:";
 const MCP_PREFIX = "[$mcp:";
 const TOKEN_END = "]";
 
-export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder, referenceIcons) {
+export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder, referenceIcons, initialSessionId, initialSessionGeneration = 0) {
     const editor = root?.querySelector("[data-composer-editor]");
     if (!editor) {
         return {
-            setPickerOpen: () => {},
-            setDisabled: () => {},
-            setValue: () => {},
+            synchronize: () => false,
             dispose: () => {},
             shutdown: () => Promise.resolve()
         };
@@ -18,6 +16,10 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
     let isComposing = false;
     let hasPendingLocalInput = false;
     let currentValue = initialValue ?? "";
+    let sessionId = initialSessionId ?? null;
+    let sessionGeneration = initialSessionGeneration;
+    let disabled = true;
+    let restoredVersion = -1;
     let disposed = false;
     let compositionTimeout = null;
     const pendingCallbacks = new Set();
@@ -56,18 +58,31 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
         removalObserver.observe(observerRoot, { childList: true, subtree: true });
     }
 
+    const matchesRenderedOrigin = (id, generation) => root.isConnected
+        && editor.dataset.sessionId === (id ?? "")
+        && editor.dataset.sessionGeneration === String(generation);
+    const canEdit = () => !disposed && !disabled
+        && editor.getAttribute("contenteditable") === "true"
+        && matchesRenderedOrigin(sessionId, sessionGeneration);
+
     editor.setAttribute("data-placeholder", placeholder ?? "");
-    renderEditor(editor, currentValue, currentValue.length, referenceIcons);
+    if (matchesRenderedOrigin(sessionId, sessionGeneration)) {
+        renderEditor(editor, currentValue, currentValue.length, referenceIcons);
+    }
 
     const notifyInput = () => {
-        if (disposed || !dotNetRef) {
+        if (!canEdit() || !dotNetRef) {
             return;
         }
 
         currentValue = readEditorText(editor);
         hasPendingLocalInput = true;
         const caretIndex = getCaretIndex(editor);
-        const callback = dotNetRef.invokeMethodAsync("HandleComposerInput", currentValue, caretIndex);
+        if (editor.querySelector("div, p, br")) {
+            // Chromium editing can introduce line blocks. Normalize only after composition has finished.
+            renderEditor(editor, currentValue, caretIndex, referenceIcons);
+        }
+        const callback = dotNetRef.invokeMethodAsync("HandleComposerInput", currentValue, caretIndex, sessionId, sessionGeneration);
         pendingCallbacks.add(callback);
         callback
             .catch(() => {
@@ -76,6 +91,7 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
     };
 
     const handleInput = event => {
+        if (!canEdit()) return;
         if (isComposing || event.isComposing) {
             currentValue = readEditorText(editor);
             return;
@@ -85,6 +101,11 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
     };
 
     const handleKeyDown = event => {
+        if (!canEdit()) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
         if (event.defaultPrevented) {
             return;
         }
@@ -112,10 +133,12 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
     };
 
     const handleCompositionStart = () => {
+        if (!canEdit()) return;
         isComposing = true;
     };
 
     const handleCompositionEnd = () => {
+        if (!canEdit()) return;
         isComposing = false;
         compositionTimeout = setTimeout(() => {
             compositionTimeout = null;
@@ -126,6 +149,10 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
     };
 
     const handlePaste = event => {
+        if (!canEdit()) {
+            event.preventDefault();
+            return;
+        }
         const text = event.clipboardData?.getData("text/plain");
         if (text === undefined) {
             return;
@@ -142,48 +169,41 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
     editor.addEventListener("paste", handlePaste);
 
     return {
-        setPickerOpen: value => {
-            if (disposed) {
-                return;
-            }
+        synchronize: (pickerOpen, nextDisabled, value, caretIndex, focus, force, nextSessionId, nextGeneration = 0, version = 0) => {
+            const nextSession = nextSessionId ?? null;
+            if (disposed || !matchesRenderedOrigin(nextSession, nextGeneration)) return false;
 
-            isPickerOpen = value === true;
-        },
-        setDisabled: value => {
-            if (disposed) {
-                return;
+            // Restore the origin and its value together before allowing another native edit.
+            const originChanged = nextSession !== sessionId || nextGeneration !== sessionGeneration;
+            const restore = originChanged || (force === true && version !== restoredVersion);
+            if (restore) editor.setAttribute("contenteditable", "false");
+            sessionId = nextSession;
+            sessionGeneration = nextGeneration;
+            if (originChanged) {
+                isComposing = false;
+                hasPendingLocalInput = false;
+                if (compositionTimeout !== null) {
+                    clearTimeout(compositionTimeout);
+                    compositionTimeout = null;
+                }
             }
-
-            editor.setAttribute("contenteditable", value === true ? "false" : "true");
-        },
-        setValue: (value, caretIndex, focus, force) => {
-            if (disposed) {
-                return;
-            }
-
             const nextValue = value ?? "";
-            if (isComposing && force !== true) {
-                return;
-            }
-
-            if (hasPendingLocalInput && nextValue !== currentValue && force !== true) {
-                return;
-            }
-
-            if (nextValue !== currentValue || (nextValue.length > 0 && editor.childNodes.length === 0)) {
-                currentValue = nextValue;
+            const preserveLocalInput = !restore && (isComposing || (hasPendingLocalInput && nextValue !== currentValue));
+            if (!preserveLocalInput) {
+                if (restore || nextValue !== currentValue || (nextValue.length > 0 && editor.childNodes.length === 0)) {
+                    currentValue = nextValue;
+                    renderEditor(editor, currentValue, normalizeCaret(caretIndex, currentValue), referenceIcons);
+                } else if (focus === true) {
+                    setCaretIndex(editor, normalizeCaret(caretIndex, currentValue));
+                }
                 hasPendingLocalInput = false;
-                renderEditor(editor, currentValue, normalizeCaret(caretIndex, currentValue), referenceIcons);
-            } else if (focus === true) {
-                hasPendingLocalInput = false;
-                setCaretIndex(editor, normalizeCaret(caretIndex, currentValue));
-            } else {
-                hasPendingLocalInput = false;
+                if (restore) restoredVersion = version;
             }
-
-            if (focus === true) {
-                editor.focus();
-            }
+            isPickerOpen = pickerOpen === true;
+            disabled = nextDisabled === true;
+            editor.setAttribute("contenteditable", disabled ? "false" : "true");
+            if (focus === true && !disabled) editor.focus();
+            return true;
         },
         dispose: shutdown,
         shutdown
@@ -220,6 +240,8 @@ function createEditorNodes(value, referenceIcons) {
         nodes.push(createReferenceTokenNode(segment, referenceIcons));
     }
 
+    // A terminal text newline needs a native empty-line box for Chromium's next insertion.
+    if (value.endsWith("\n")) nodes.push(document.createElement("br"));
     return nodes;
 }
 
@@ -332,38 +354,7 @@ function addTextSegment(segments, text) {
 }
 
 function readEditorText(editor) {
-    let value = "";
-
-    for (const node of editor.childNodes) {
-        value += readNodeText(node);
-    }
-
-    return value;
-}
-
-function readNodeText(node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-        return node.nodeValue ?? "";
-    }
-
-    if (node.nodeType !== Node.ELEMENT_NODE) {
-        return "";
-    }
-
-    if (node.dataset?.token) {
-        return node.dataset.token;
-    }
-
-    if (node.tagName === "BR") {
-        return "\n";
-    }
-
-    let value = "";
-    for (const child of node.childNodes) {
-        value += readNodeText(child);
-    }
-
-    return value;
+    return readEditorPosition(editor).value;
 }
 
 function getCaretIndex(editor) {
@@ -372,58 +363,51 @@ function getCaretIndex(editor) {
         return readEditorText(editor).length;
     }
 
-    return getNodePosition(editor, selection.anchorNode, selection.anchorOffset);
+    const result = readEditorPosition(editor, selection.anchorNode, selection.anchorOffset);
+    return result.caret ?? result.value.length;
 }
 
-function getNodePosition(editor, targetNode, targetOffset) {
-    if (targetNode === editor) {
-        return measureChildNodes(editor, targetOffset);
-    }
-
-    let total = 0;
-    const walker = document.createTreeWalker(
-        editor,
-        NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
-    );
-
-    let node = walker.nextNode();
-    while (node) {
-        if (node === targetNode) {
-            if (node.nodeType === Node.TEXT_NODE) {
-                return total + targetOffset;
-            }
-
-            return total;
-        }
-
-        if (node.nodeType === Node.ELEMENT_NODE && node.dataset?.token) {
-            if (node.contains(targetNode)) {
-                return total;
-            }
-
-            total += node.dataset.token.length;
-            node = walker.nextSibling();
-            continue;
-        }
-
+function readEditorPosition(editor, targetNode = null, targetOffset = 0) {
+    let value = "";
+    let caret = null;
+    const isLineBlock = node => node.nodeType === Node.ELEMENT_NODE
+        && (node.tagName === "DIV" || node.tagName === "P");
+    const visit = node => {
         if (node.nodeType === Node.TEXT_NODE) {
-            total += node.nodeValue?.length ?? 0;
+            if (node === targetNode) caret = value.length + Math.min(targetOffset, node.nodeValue?.length ?? 0);
+            value += node.nodeValue ?? "";
+        } else if (node.nodeType === Node.ELEMENT_NODE && node.dataset?.token) {
+            if (node === targetNode || node.contains(targetNode)) caret = value.length;
+            value += node.dataset.token;
+        } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName === "BR") {
+            if (node === targetNode) caret = value.length;
+            value += "\n";
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            visitChildren(node);
         }
-
-        node = walker.nextNode();
-    }
-
-    return total;
-}
-
-function measureChildNodes(editor, offset) {
-    let total = 0;
-    const max = Math.min(offset, editor.childNodes.length);
-    for (let i = 0; i < max; i++) {
-        total += readNodeText(editor.childNodes[i]).length;
-    }
-
-    return total;
+    };
+    const visitChildren = container => {
+        let previous = null;
+        const children = container.childNodes;
+        for (let index = 0; index < children.length; index++) {
+            if (container === targetNode && targetOffset === index) caret = value.length;
+            const child = children[index];
+            // A final BR in an editable line is Chromium's empty-line caret placeholder.
+            const filler = index === children.length - 1 && child.nodeName === "BR"
+                && (container === editor || isLineBlock(container));
+            if (filler) {
+                if (child === targetNode) caret = value.length;
+                continue;
+            }
+            if (child.nodeType !== Node.TEXT_NODE && child.nodeType !== Node.ELEMENT_NODE) continue;
+            if (previous !== null && (isLineBlock(previous) || isLineBlock(child))) value += "\n";
+            visit(child);
+            previous = child;
+        }
+        if (container === targetNode && targetOffset >= children.length) caret = value.length;
+    };
+    visitChildren(editor);
+    return { value, caret };
 }
 
 function setCaretIndex(editor, caretIndex) {
@@ -438,6 +422,9 @@ function setCaretIndex(editor, caretIndex) {
 }
 
 function findCaretPosition(editor, caretIndex) {
+    if (editor.lastChild?.nodeName === "BR" && caretIndex === readEditorText(editor).length) {
+        return { node: editor, offset: editor.childNodes.length - 1 };
+    }
     let remaining = caretIndex;
 
     for (const node of editor.childNodes) {

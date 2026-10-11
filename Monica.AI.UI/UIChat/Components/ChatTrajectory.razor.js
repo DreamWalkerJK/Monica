@@ -1,4 +1,6 @@
 export function initialize(root, ledger, timeline) {
+    const rowHeight = Number(root.dataset.rowHeight);
+    let focusRecordId = null;
     let disposed = false;
     let follow = false;
     let frame = null;
@@ -12,7 +14,12 @@ export function initialize(root, ledger, timeline) {
     const onScroll = () => {
         follow = ledger.scrollHeight - ledger.scrollTop - ledger.clientHeight <= 40;
     };
-    const changes = new MutationObserver(schedule);
+    const restoreFocus = () => {
+        if (!focusRecordId || disposed) return;
+        const row = Array.from(ledger.querySelectorAll('[data-record-id]')).find(element => element.dataset.recordId === focusRecordId);
+        if (row) { row.focus({ preventScroll: true }); focusRecordId = null; }
+    };
+    const changes = new MutationObserver(() => { schedule(); restoreFocus(); });
     const size = new ResizeObserver(schedule);
     changes.observe(ledger, { childList: true, subtree: true, characterData: true });
     size.observe(ledger);
@@ -29,15 +36,18 @@ export function initialize(root, ledger, timeline) {
     }
     return {
         follow() { if (!disposed) { follow = true; schedule(); } },
-        reveal(index) {
+        reveal(index, recordId) {
             if (disposed) return;
             follow = false;
-            // The virtualized ledger uses an intentionally constant 42px row height.
-            ledger.scrollTop = Math.max(0, index * 42 - ledger.clientHeight / 3);
+            focusRecordId = recordId;
+            ledger.scrollTop = Math.max(0, index * rowHeight - ledger.clientHeight / 3);
+            restoreFocus();
         },
         interval(from, to) {
             if (disposed) return null;
-            const bounds = timeline.getBoundingClientRect();
+            const plot = root.querySelector('.timeline-plot');
+            if (!plot) return null;
+            const bounds = plot.getBoundingClientRect();
             if (bounds.width <= 0) return null;
             const fraction = value => Math.max(0, Math.min(1, (value - bounds.left) / bounds.width));
             return [fraction(Math.min(from, to)), fraction(Math.max(from, to))];

@@ -40,30 +40,29 @@ public sealed class ChatComposerControlsTests : BunitContext
         var view = Render<ChatModelSelector>(parameters => parameters.Add(component => component.CurrentModel, model));
         view.Find(".mud-menu-button-activator").TextContent.Should().NotContain(" · ");
         view.Find(".mud-menu-button-activator").Click();
-        _popovers.FindAll(".menu-branch").Should().ContainSingle();
-        _popovers.Markup.Should().NotContain("Workbench:Effort");
+        _popovers.FindComponents<MudTextField<string>>().Should().ContainSingle();
+        _popovers.FindAll("button[aria-pressed]").Should().BeEmpty();
     }
 
     [Fact]
     public async Task Selector_ShouldSearchAcrossProvidersAndEmitOneCompleteSelection()
     {
-        (string ProviderId, string ModelName)? selected = null;
+        List<(string ProviderId, string ModelName)> selections = [];
         var models = new AIProviderInfo[]
         {
             new() { ProviderId = "first", DisplayName = "First provider", ProviderType = "OpenAI", SupportedModels = [new LLMModelInfo { ModelName = "alpha" }] },
             new() { ProviderId = "second", DisplayName = "Second provider", ProviderType = "OpenAI", SupportedModels = [new LLMModelInfo { ModelName = "beta", DisplayName = "Vision beta" }] }
         };
-        var view = Render<ChatModelSelector>(parameters => parameters.Add(component => component.Providers, models).Add(component => component.ProviderId, "first").Add(component => component.ModelName, "alpha").Add(component => component.OnModelChanged, value => selected = value));
+        var view = Render<ChatModelSelector>(parameters => parameters.Add(component => component.Providers, models).Add(component => component.ProviderId, "first").Add(component => component.ModelName, "alpha").Add(component => component.OnModelChanged, value => selections.Add(value)));
         view.Find(".mud-menu-button-activator").Click();
-        _popovers.Find(".mud-menu-sub-menu-activator").Click();
         var search = _popovers.FindComponent<MudTextField<string>>();
         await view.InvokeAsync(() => search.Instance.ValueChanged.InvokeAsync("Vision"));
+        _popovers.FindAll(".model-choice").Should().ContainSingle()
+            .Which.TextContent.Should().Contain("Vision beta").And.NotContain("alpha");
         var rows = _popovers.FindComponents<MudMenuItem>().Where(item => item.Instance.OnClick.HasDelegate && !item.Instance.Disabled).ToArray();
         var choice = rows.Single(item => item.Markup.Contains("Vision beta", StringComparison.Ordinal));
         await view.InvokeAsync(() => choice.Instance.OnClick.InvokeAsync());
 
-        selected.Should().Be(("second", "beta"));
-        _popovers.FindAll(".model-choice").Should().ContainSingle()
-            .Which.TextContent.Should().Contain("Vision beta").And.NotContain("alpha");
+        selections.Should().ContainSingle().Which.Should().Be(("second", "beta"));
     }
 }

@@ -4,35 +4,51 @@
 
 <PageTitle>@L["Pages:AIChat:Title"]</PageTitle>
 <HeadContent><link href="_content/Monica.AI.UI/css/ai-chat-page.css" rel="stylesheet" /></HeadContent>
-<div class="ai-chat-shell">
+@{
+    RenderFragment history = @<div class="history-panel" role="@(_compactHistory && _sessionDrawerOpen ? "dialog" : "complementary")"
+                                  aria-label="@L["Session:Conversations"]" aria-modal="@(_compactHistory && _sessionDrawerOpen ? "true" : null)">
+        <SessionList Sessions="@PageState.Sessions" CurrentSessionId="@PageState.CurrentSessionId"
+                     IsLoading="@PageState.IsHistoryLoading" OnNewSession="@CreateSessionAsync"
+                     Disabled="@(PageState.IsHistoryBusy || PageState.HasHistoryConflict || PageState.HasHistoryLoadFailure)" ArchivedCount="@PageState.ArchivedSessions.Count"
+                     OnSelectSession="@SelectSessionAsync" OnPinSession="@PageState.TogglePinAsync"
+                     OnArchiveSession="@PageState.ArchiveSessionAsync" OnOpenArchive="@(() => _archiveOpen = true)"
+                     ShowClose="@_compactHistory" OnClose="CloseSessionDrawer" />
+    </div>;
+}
+<div class="ai-chat-shell" @ref="_shellElement" @onkeydown="HandleHistoryKeyDown" data-short="@(_layout.IsObserved && _layout.Height <= 600 ? "true" : "false")">
     <MudDrawerContainer Class="ai-chat-layout">
         @if (PageState.ShowSessionList)
         {
-            <MudDrawer @bind-Open="_sessionDrawerOpen" Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Md" Fixed="false"
-                       Width="264px" Elevation="0" Class="ai-session-drawer">
-                <SessionList Sessions="@PageState.Sessions" CurrentSessionId="@PageState.CurrentSessionId"
-                             IsLoading="@PageState.IsHistoryLoading" OnNewSession="@PageState.CreateNewSessionAsync"
-                             Disabled="@(PageState.IsHistoryBusy || PageState.HasHistoryConflict)" ArchivedCount="@PageState.ArchivedSessions.Count"
-                             OnSelectSession="@PageState.SelectSessionAsync" OnPinSession="@PageState.TogglePinAsync"
-                             OnArchiveSession="@PageState.ArchiveSessionAsync" OnOpenArchive="@(() => _archiveOpen = true)" />
+            <MudDrawer @key="_compactHistory" Open="_sessionDrawerOpen" OpenChanged="SetSessionDrawerOpen" Variant="@(_compactHistory ? DrawerVariant.Temporary : DrawerVariant.Persistent)" Fixed="false"
+                       Width="@(_compactHistory ? "min(304px, calc(100% - 48px))" : "272px")" Elevation="0" Class="ai-session-drawer">
+                @if (_compactHistory && _sessionDrawerOpen)
+                {
+                    <MudFocusTrap>@history</MudFocusTrap>
+                }
+                else
+                {
+                    @history
+                }
             </MudDrawer>
         }
         <MudMainContent Class="ai-main">
+          <div class="ai-main-surface" @ref="_mainElement">
             <header class="ai-topbar">
                 <div class="topbar-left">
                     @if (PageState.ShowSessionList)
                     {
-                        <MudIconButton Icon="@Icons.Material.Outlined.Menu" Size="Size.Small" OnClick="ToggleSessionDrawer" aria-label="@L["Session:ToggleHistory"]" />
+                        <MudIconButton Icon="@Icons.Material.Outlined.Menu" Size="Size.Small" OnClick="ToggleSessionDrawer" aria-label="@L["Session:ToggleHistory"]"
+                                       aria-expanded="@(_sessionDrawerOpen ? "true" : "false")" />
                     }
-                    <span class="conversation-title">@(PageState.CurrentSession?.Title ?? L["Pages:AIChat:Title"])</span>
+                    <span class="conversation-title" title="@(PageState.CurrentSession?.Title ?? L["Pages:AIChat:Title"])">@(PageState.CurrentSession?.Title ?? L["Pages:AIChat:Title"])</span>
                 </div>
-                <div class="topbar-right">
-                    <div class="conversation-views" role="group">
-                        <MudButton Size="Size.Small" Variant="@(!_trajectory ? Variant.Filled : Variant.Text)" Color="@(!_trajectory ? Color.Primary : Color.Default)" aria-pressed="@(!_trajectory ? "true" : "false")" OnClick="@(() => _trajectory = false)">@L["Workbench:Chat"]</MudButton>
-                        <MudButton Size="Size.Small" Variant="@(_trajectory ? Variant.Filled : Variant.Text)" Color="@(_trajectory ? Color.Primary : Color.Default)" aria-pressed="@(_trajectory ? "true" : "false")" OnClick="@(() => _trajectory = true)">@L["Workbench:Trajectory"]</MudButton>
-                    </div>
+                <div class="conversation-views" role="group" aria-label="@L["Workbench:Views"]">
+                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default" aria-pressed="@(!_trajectory ? "true" : "false")" OnClick="@(() => _trajectory = false)">@L["Workbench:Chat"]</MudButton>
+                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default" aria-pressed="@(_trajectory ? "true" : "false")" OnClick="@(() => _trajectory = true)">@L["Workbench:Trajectory"]</MudButton>
+                </div>
+                <div class="conversation-options">
                     <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" AriaLabel="@L["Workbench:ConversationSettings"]" Dense="true">
-                        <MudMenuItem OnClick="@PageState.OpenPromptSettingsAsync" Disabled="@PageState.IsSending">@L["Provider:Settings:SystemPrompt"]</MudMenuItem>
+                        <MudMenuItem OnClick="@PageState.OpenPromptSettingsAsync" Disabled="@PageState.IsInputBlocked">@L["Provider:Settings:SystemPrompt"]</MudMenuItem>
                         <MudMenuItem Href="/ai-providers">@L["Workbench:ProviderSettings"]</MudMenuItem>
                         <MudMenuItem Href="@AgentCapabilityManagePage.PAGE_URL">@L["Pages:AICapabilities:Title"]</MudMenuItem>
                     </MudMenu>
@@ -44,11 +60,14 @@
             }
             else
             {
-                <ChatContainer State="@PageState" ShowTrajectory="@_trajectory" OnInspect="InspectStep" />
+                <CascadingValue Value="_layout">
+                    <ChatContainer State="@PageState" ShowTrajectory="@_trajectory" OnInspect="InspectStep" />
+                </CascadingValue>
             }
+          </div>
         </MudMainContent>
     </MudDrawerContainer>
 </div>
 <ChatArchiveDialog @bind-Open="_archiveOpen" Sessions="@PageState.ArchivedSessions"
-                   Disabled="@PageState.IsHistoryBusy" HasConflict="@PageState.HasHistoryConflict"
+                   Disabled="@(PageState.IsHistoryBusy || PageState.HasHistoryLoadFailure)" HasConflict="@PageState.HasHistoryConflict"
                    RestoreSessions="@PageState.RestoreArchivedSessionsAsync" DeleteSessions="@PageState.DeleteArchivedSessionsAsync" />
