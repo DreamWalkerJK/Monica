@@ -1,0 +1,95 @@
+.configuration-json-edit-dialog {
+    --configuration-json-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary));
+    min-width: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    color: var(--mud-palette-text-primary);
+}
+
+.configuration-json-edit-dialog ::deep .mud-stack, .configuration-json-edit-dialog ::deep .mud-alert-message {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.configuration-json-edit-dialog ::deep .configuration-json-identity {
+    padding: 20px;
+    border-inline-start: 3px solid var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface));
+}
+
+.configuration-json-edit-dialog ::deep .mud-typography-subtitle2 {
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.configuration-json-path {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--configuration-json-muted);
+}
+
+.configuration-json-edit-dialog ::deep .configuration-json-input textarea {
+    font-family: var(--mud-typography-default-family);
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.configuration-json-edit-dialog ::deep .mud-input-control {
+    min-width: 0;
+}
+
+.configuration-json-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+    padding: 14px 0;
+    border-block: 1px solid var(--mud-palette-lines-default);
+    font-size: 13px;
+    color: var(--configuration-json-muted);
+}
+
+.configuration-json-issues {
+    color: color-mix(in srgb, var(--mud-palette-error) 25%, var(--mud-palette-text-primary));
+}
+
+.configuration-json-edit-dialog ::deep .configuration-json-diagnostics {
+    padding: 20px;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+}
+
+.configuration-json-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 12px 20px 20px;
+    width: 100%;
+    min-width: 0;
+}
+
+.configuration-json-actions ::deep .mud-button-filled-primary:not(:disabled) {
+    background: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)) !important;
+    color: var(--mud-palette-surface) !important;
+}
+
+@media (max-width: 600px) {
+    .configuration-json-edit-dialog {
+        padding: 16px;
+    }
+
+    .configuration-json-edit-dialog ::deep .configuration-json-identity, .configuration-json-edit-dialog ::deep .configuration-json-diagnostics {
+        padding: 16px;
+    }
+
+    .configuration-json-actions {
+        padding: 8px 16px 16px;
+    }
+
+}

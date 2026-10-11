@@ -16,15 +16,24 @@ namespace Monica.Configuration.UI.Dialogs;
 /// <summary>
 /// Dialog backing logic for structured object, dictionary, and list configuration editing.
 /// </summary>
+/// <remarks>Inputs are captured when the native dialog opens. The result stages path mutations; it does not persist them
+/// or establish complete aggregate validity. The dialog owns and drains only its scrolling and local draft.</remarks>
 public partial class ComplexValueEditorDialog : IAsyncDisposable
 {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+    /// <summary>Gets the authoritative schema owner for this staged fragment.</summary>
     [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
+    /// <summary>Gets the exact collection scope; nested navigation never changes the persistence owner.</summary>
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
+    /// <summary>Gets the captured effective JSON and physical target/version evidence.</summary>
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
+    /// <summary>Gets captured staged changes to preserve when constructing the local collection draft.</summary>
     [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
 
+    private readonly ConfigurationOperationLifetime _operations = new();
+    private readonly object _retirementGate = new();
+    private TaskCompletionSource? _retirement;
     private readonly List<PendingChange> _changes = [];
     private readonly List<FocusFrame> _navigationStack = [];
     private readonly Dictionary<string, ScalarValidationError> _validationErrors = new(StringComparer.Ordinal);
@@ -82,7 +91,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     private string StageButtonText => L["Dialogs:ComplexEditor:Actions:StageCount", _changes.Count];
 
-    private bool CanStage => (_changes.Count > 0 || _startedWithScopedPendingChanges) && _validationErrors.Count == 0;
+    private bool CanStage => !_operations.IsRetired && (_changes.Count > 0 || _startedWithScopedPendingChanges) && _validationErrors.Count == 0;
 
     protected override void OnInitialized()
     {
@@ -105,29 +114,27 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_mode != EditorMode.Visual || string.IsNullOrWhiteSpace(_pendingScrollEntryKey))
-        {
-            return;
-        }
-
+        if (_operations.IsRetired || _mode != EditorMode.Visual || string.IsNullOrWhiteSpace(_pendingScrollEntryKey)) return;
         var entryKey = _pendingScrollEntryKey;
         _pendingScrollEntryKey = null;
-
         try
         {
-            _scrollInteropSession ??= new ConfigurationScrollInteropSession(JSRuntime);
-            await _scrollInteropSession.ScrollIntoViewAsync(EntryElementId(entryKey));
+            await _operations.RunAsync(async token =>
+            {
+                ConfigurationScrollInteropSession? session = null;
+                if (!_operations.TryApply(() => session = _scrollInteropSession ??= new ConfigurationScrollInteropSession(JSRuntime))) return;
+                token.ThrowIfCancellationRequested();
+                await session!.ScrollIntoViewAsync(EntryElementId(entryKey));
+            });
         }
-        catch (JSDisconnectedException)
-        {
-        }
-        catch (InvalidOperationException)
-        {
-        }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+        catch (JSDisconnectedException) { }
+        catch (InvalidOperationException) { }
     }
 
     private void SetMode(EditorMode mode)
     {
+        if (_operations.IsRetired) return;
         _mode = mode;
     }
 
@@ -303,6 +310,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     private void SelectEntry(string key)
     {
+        if (_operations.IsRetired) return;
         _selectedEntryKey = key;
         _pendingScrollEntryKey = key;
     }
@@ -318,6 +326,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     private void AddEntry()
     {
+        if (_operations.IsRetired) return;
         _newEntryError = null;
         var key = _newEntryKey.Trim();
         if (RequiresNewEntryKey && string.IsNullOrWhiteSpace(key))
@@ -409,6 +418,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     private void RemoveEntry(CollectionEntry entry)
     {
+        if (_operations.IsRetired) return;
         var oldValue = CloneNode(ReadNode(entry.Path));
         if (_focusNode.NodeKind == ConfigurationNodeKind.Dictionary && ReadNode(_focusPath) is JsonObject dictionary)
         {
@@ -433,6 +443,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     private void MoveListEntry(CollectionEntry entry, int direction)
     {
+        if (_operations.IsRetired) return;
         if (_focusNode.NodeKind != ConfigurationNodeKind.List || ReadNode(_focusPath) is not JsonArray list)
         {
             return;
@@ -457,6 +468,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     private void OpenNestedCollection(CollectionEntry entry, ConfigurationNodeDefinition child)
     {
+        if (_operations.IsRetired) return;
         _navigationStack.Add(new FocusFrame(_focusNode, _focusPath, _selectedEntryKey));
         _focusNode = child;
         _focusPath = entry.Path.Append(new PropertySegment(child.Name));
@@ -466,6 +478,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     private void GoBack()
     {
+        if (_operations.IsRetired) return;
         if (_navigationStack.Count == 0)
         {
             return;
@@ -495,6 +508,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
         ConfigurationNodeDefinition ownerSchema,
         ConfigurationScalarEditResult result)
     {
+        if (_operations.IsRetired) return Task.CompletedTask;
         var path = FieldPath(field, ownerPath, ownerSchema);
         var displayValue = result.DisplayValue ?? string.Empty;
         if (field.IsSensitive && string.IsNullOrWhiteSpace(displayValue))
@@ -521,6 +535,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
         LogicalPath path,
         ConfigurationScalarCollectionEditResult result)
     {
+        if (_operations.IsRetired) return Task.CompletedTask;
         if (!result.IsValid || result.StoredValue is null)
         {
             SetError(path, new ScalarValidationError(
@@ -690,6 +705,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     private void ResetVisualChanges()
     {
+        if (_operations.IsRetired) return;
         _documentNode = CloneNode(_originalDocumentNode);
         _changes.Clear();
         _validationErrors.Clear();
@@ -711,16 +727,39 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     private void Cancel()
     {
+        if (_operations.IsRetired) return;
         MudDialog.Cancel();
     }
 
-    public async ValueTask DisposeAsync()
+    /// <summary>Stops late scrolling and joins both admitted work and JavaScript-session retirement.</summary>
+    public ValueTask DisposeAsync()
     {
-        var scrollInteropSession = Interlocked.Exchange(ref _scrollInteropSession, null);
-        if (scrollInteropSession is not null)
+        TaskCompletionSource completion;
+        lock (_retirementGate)
         {
-            await scrollInteropSession.DisposeAsync();
+            if (_retirement is not null) return new(_retirement.Task);
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _retirement = completion;
         }
+        _ = RetireCoreAsync(completion);
+        return new(completion.Task);
+    }
+
+    private async Task RetireCoreAsync(TaskCompletionSource completion)
+    {
+        var failures = new List<Exception>();
+        var work = _operations.RetireAsync().AsTask();
+        var session = Interlocked.Exchange(ref _scrollInteropSession, null);
+        Task? interop = null;
+        // Mark the session retired before its pending import can proceed to DOM scrolling.
+        try { if (session is not null) interop = session.DisposeAsync().AsTask(); }
+        catch (Exception exception) { failures.Add(exception); }
+        try { await work; }
+        catch (Exception exception) { failures.Add(exception); }
+        try { if (interop is not null) await interop; }
+        catch (Exception exception) { failures.Add(exception); }
+        if (failures.Count == 0) completion.TrySetResult();
+        else completion.TrySetException(new AggregateException("Configuration collection editor retirement failed.", failures));
     }
 
     private ConfigurationValidationIssue? ValidationIssueFor(ConfigurationNodeDefinition field, LogicalPath path)

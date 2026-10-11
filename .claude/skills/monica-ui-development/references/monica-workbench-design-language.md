@@ -18,11 +18,15 @@ Different tasks need different compositions:
 
 These are starting points, not required regions. Do not add an attention panel to a page with no actionable attention state, or a headline statistic where the actual task is editing. A page should communicate its subject even when its title is hidden.
 
+For configuration editing, pair the searchable definition catalog with one continuous inset editor. Keep section selection within that editing task; it should lead to the relevant field group rather than creating a third narrow scroll pane. Give the selected definition, grouped fields, and draft actions enough width and consistent content insets in both shell layouts.
+
 ## Present honest decisions and evidence
 
 Distinguish summary scope from filtered results. A whole-host state, all-registration count, or aggregate snapshot must not silently change meaning when the user filters the visible registry. Label scopes when they differ. Put a clear path from a concerning summary to the exact record or details that explain it.
 
 Keep missing coverage, loading, stale evidence, query failure, access denial, no records, and no filter matches distinct. Zero records do not prove success. A live snapshot does not establish history, availability, a trend, or a percentage. Do not add simulated metrics, fabricated comparison periods, or decorative charts that the facade cannot support. Keep bounded, sanitized facade evidence encoded as text.
+
+Keep field editing, staged drafts, and authoritative complete-group validation visibly distinct. A fragment import can report no portable validation issues while sibling constraints still reject the complete save. Show what was checked and what remains pending; review related staged fields together before applying the group.
 
 For count charts, provide a readable numerical axis starting at zero, its unit and the actual interval/population. Preserve label size at narrow widths by reducing tick density rather than shrinking SVG text. Supply inspectable interval data with the same counts, exact inclusive/exclusive boundaries and relevant timezone offsets; identify partial intervals. A line joining bucket counts does not imply continuous sampling or a rate. Ranking bar lengths and adjacent percentages must use the same stated denominator, including records outside a displayed Top N. Keep unavailable ratios and absent duration samples distinct from a genuine measured zero.
 

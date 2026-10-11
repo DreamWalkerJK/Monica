@@ -1,344 +1,45 @@
-.configuration-state-page {
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
-    height: 100%;
-    max-height: 100%;
-    min-height: 0;
-    padding-block: clamp(1rem, 2vw, 1.5rem);
-    overflow: hidden;
-}
-
-.configuration-state-page ::deep .configuration-state-container {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    max-height: 100%;
-    overflow: hidden;
-}
-
-.configuration-state-page ::deep .configuration-state-layout {
-    flex: 1 1 auto;
-    height: 100%;
-    max-height: 100%;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.configuration-state-header-shell,
-.configuration-runtime-validation-popover-anchor {
-    width: 100%;
-    min-width: 0;
-}
-
-.configuration-state-header-shell {
-    flex: 0 0 auto;
-}
-
-.configuration-state-actions {
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.375rem;
-    min-width: 0;
-    max-width: 100%;
-    padding: 0.25rem;
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
-}
-
-.configuration-state-actions ::deep .mud-tooltip-root {
-    display: inline-flex;
-    align-items: center;
-}
-
-.configuration-state-actions ::deep .mud-button-root {
-    block-size: 2.5rem;
-    min-block-size: 2.5rem;
-}
-
-.configuration-state-actions ::deep .mud-icon-button {
-    inline-size: 2.5rem;
-    min-inline-size: 2.5rem;
-}
-
-.configuration-runtime-validation-popover-anchor {
-    height: 0;
-}
-
-.configuration-runtime-validation-banner {
-    flex: 0 0 auto;
-    width: 100%;
-    min-width: 0;
-}
-
-.configuration-runtime-validation-banner ::deep .configuration-runtime-validation-banner-alert {
-    width: 100%;
-    min-width: 0;
-}
-
-.configuration-runtime-validation-banner-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    width: 100%;
-    min-width: 0;
-}
-
-.configuration-runtime-validation-banner-message {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow-wrap: anywhere;
-}
-
-.configuration-runtime-validation-banner-action {
-    display: inline-flex;
-    flex: 0 0 auto;
-}
-
-.configuration-state-title-row {
-    min-width: 0;
-    overflow: visible;
-    padding-block: 0.25rem;
-}
-
-.configuration-runtime-validation-anchor {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    overflow: visible;
-    line-height: 1;
-}
-
-.configuration-runtime-validation-anchor ::deep .configuration-status-icon-slot > button {
-    transform: translateX(0.25rem);
-}
-
-.configuration-runtime-validation-popover-surface {
-    width: min(44rem, calc(100vw - 2rem));
-    max-height: min(34rem, calc(100vh - 8rem));
-    overflow: auto;
-}
-
-.configuration-state-page ::deep .configuration-state-grid {
-    align-items: stretch;
-    flex: 1 1 auto;
-    height: 100%;
-    max-height: 100%;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.configuration-state-page ::deep .configuration-state-grid > .mud-grid-item {
-    display: flex;
-    height: 100%;
-    min-height: 0;
-}
-
-.configuration-state-page ::deep .configuration-state-left,
-.configuration-state-page ::deep .configuration-state-right,
-.configuration-state-page ::deep .configuration-definition-shell {
-    flex: 1 1 auto;
-    align-self: stretch;
-    height: 100%;
-    max-height: 100%;
-    min-height: 0;
-    min-width: 0;
-    overflow: hidden;
-}
-
-.configuration-state-page ::deep .configuration-state-left {
-    flex: 0 0 25%;
-    max-width: 25%;
-}
-
-.configuration-state-page ::deep .configuration-state-right {
-    flex: 1 1 0;
-    max-width: 75%;
-}
-
-.configuration-state-page ::deep .configuration-definition-shell {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-.configuration-state-page ::deep .configuration-definition-content,
-.configuration-state-page ::deep .configuration-detail-grid,
-.configuration-state-page ::deep .configuration-detail-grid > .mud-grid-item,
-.configuration-state-page ::deep .configuration-detail-left,
-.configuration-state-page ::deep .configuration-detail-right {
-    flex: 1 1 auto;
-    min-height: 0;
-    min-width: 0;
-}
-
-.configuration-state-page ::deep .configuration-definition-content,
-.configuration-state-page ::deep .configuration-detail-grid {
-    height: 100%;
-    max-height: 100%;
-    overflow: hidden;
-}
-
-.configuration-state-page ::deep .configuration-definition-content {
-    display: flex;
-    flex-direction: column;
-}
-
-.configuration-definition-meta-actions {
-    align-items: center;
-}
-
-.configuration-description-icon {
-    display: inline-flex;
-    flex: 0 0 auto;
-    height: 1.5rem;
-    align-items: center;
-    justify-content: center;
-    line-height: 0;
-    vertical-align: middle;
-}
-
-.configuration-description-icon ::deep .mud-icon-root {
-    display: block;
-}
-
-.configuration-definition-meta-actions ::deep .mud-tooltip-root {
-    display: inline-flex;
-    align-items: center;
-    line-height: 0;
-}
-
-.configuration-state-page ::deep .configuration-detail-grid {
-    align-items: stretch;
-}
-
-.configuration-state-page ::deep .configuration-detail-grid > .mud-grid-item {
-    display: flex;
-    align-self: stretch;
-    height: 100%;
-}
-
-.configuration-loading {
-    display: flex;
-    min-height: 16rem;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-}
-
-.configuration-state-page ::deep .configuration-section-panel,
-.configuration-state-page ::deep .configuration-values-panel {
-    flex: 1 1 auto;
-    min-height: 0;
-    max-height: 100%;
-    overflow: auto;
-}
-
-.configuration-section-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-height: 0;
-}
-
-.configuration-section-list ::deep .configuration-section-button {
-    justify-content: flex-start;
-    min-width: 0;
-    padding: 0.625rem;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    text-align: left;
-}
-
-.configuration-section-list ::deep .configuration-section-button-selected {
-    border-color: var(--mud-palette-primary);
-    background-color: var(--mud-palette-action-default-hover);
-}
-
-.configuration-section-list ::deep .mud-button-label {
-    min-width: 0;
-    justify-content: flex-start;
-}
-
-.configuration-section-content,
-.configuration-section-title-row {
-    width: 100%;
-    min-width: 0;
-}
-
-.configuration-section-content ::deep .mud-typography {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.configuration-state-page ::deep .configuration-detail-left {
-    max-height: 100%;
-    overflow: hidden;
-}
-
-.configuration-state-page ::deep .configuration-detail-right {
-    display: flex;
-    flex-direction: column;
-    max-height: 100%;
-    overflow: hidden;
-}
-
-@media (max-width: 959.98px) {
-    .configuration-state-page,
-    .configuration-state-page ::deep .configuration-state-container,
-    .configuration-state-page ::deep .configuration-state-layout,
-    .configuration-state-page ::deep .configuration-state-grid,
-    .configuration-state-page ::deep .configuration-definition-shell,
-    .configuration-state-page ::deep .configuration-definition-content,
-    .configuration-state-page ::deep .configuration-detail-grid,
-    .configuration-state-page ::deep .configuration-detail-grid > .mud-grid-item,
-    .configuration-state-page ::deep .configuration-detail-left,
-    .configuration-state-page ::deep .configuration-detail-right,
-    .configuration-state-page ::deep .configuration-section-panel,
-    .configuration-state-page ::deep .configuration-values-panel {
-        height: auto;
-        max-height: none;
-        min-height: 0;
-        overflow: visible;
-    }
-
-    .configuration-runtime-validation-popover-surface {
-        width: calc(100vw - 2rem);
-        max-height: calc(100vh - 6rem);
-    }
-
-    .configuration-runtime-validation-banner-content {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .configuration-runtime-validation-banner-action {
-        align-self: flex-start;
-    }
-
-    .configuration-state-page ::deep .configuration-state-left,
-    .configuration-state-page ::deep .configuration-state-right {
-        flex: 1 1 100%;
-        max-width: 100%;
-    }
-}
-
-@media (max-width: 599.98px) {
-    .configuration-state-page {
-        padding-block: 1.25rem 1.5rem;
-    }
-
-    .configuration-state-title-row {
-        flex-wrap: wrap;
-    }
-}
+.configuration-state-page { display: grid; gap: 24px; width: 100%; min-width: 0; padding: clamp(20px, 3vw, 36px); color: var(--mud-palette-text-primary); }
+.configuration-workbench-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 4px 0 24px; border-bottom: 1px solid var(--mud-palette-lines-default); }
+.configuration-workbench-heading-copy { min-width: 0; }
+.configuration-workbench-eyebrow { display: block; margin-bottom: 10px; color: color-mix(in srgb, var(--mud-palette-primary) 60%, var(--mud-palette-text-primary)); font-size: 11px; font-weight: 600; letter-spacing: .09em; }
+.configuration-workbench-heading h1 { margin: 0; font-size: clamp(25px, 2.3vw, 34px); font-weight: 600; line-height: 1.25; letter-spacing: -.025em; }
+.configuration-workbench-heading p { margin: 12px 0 0; color: var(--mud-palette-text-secondary); line-height: 1.6; }
+.configuration-workbench-controls { display: grid; justify-items: end; gap: 12px; flex: 0 0 auto; }
+.configuration-state-actions, .configuration-state-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.configuration-runtime-validation-anchor { display: inline-flex; align-items: center; }
+.configuration-runtime-validation-popover-anchor { height: 0; }
+.configuration-runtime-validation-popover-surface { width: min(44rem, calc(100vw - 32px)); max-height: calc(100dvh - 128px); overflow: auto; }
+.configuration-runtime-validation-banner-content { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-width: 0; }
+.configuration-runtime-validation-banner-message { min-width: 0; overflow-wrap: anywhere; }
+.configuration-runtime-validation-banner-action { flex-shrink: 0; }
+.configuration-state-grid { display: grid; grid-template-columns: minmax(260px, 300px) minmax(0, 1fr); gap: 24px; align-items: start; min-width: 0; }
+.configuration-state-catalog { position: sticky; top: 20px; min-width: 0; }
+.configuration-state-editor { min-width: 0; }
+.configuration-definition-shell { min-width: 0; border: 1px solid var(--mud-palette-lines-default); border-radius: var(--mud-default-borderradius); background: var(--mud-palette-surface); }
+.configuration-definition-content { display: grid; gap: 24px; padding: clamp(20px, 2vw, 28px); min-width: 0; }
+.configuration-definition-name { margin: 0; font-size: 23px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.configuration-definition-key { display: block; margin-top: 8px; font-size: 11px; line-height: 1.6; color: var(--mud-palette-text-secondary); overflow-wrap: anywhere; }
+.configuration-definition-description { margin: 10px 0 0; color: var(--mud-palette-text-secondary); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.configuration-definition-meta-actions { min-width: 0; }
+.configuration-definition-meta-actions ::deep .mud-tooltip-root { display: inline-flex; align-items: center; }
+.configuration-loading { display: flex; min-height: 240px; align-items: center; justify-content: center; gap: 16px; }
+.configuration-section-navigation { display: grid; gap: 12px; padding-block: 20px; border-block: 1px solid var(--mud-palette-lines-default); min-width: 0; }
+.configuration-section-label { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--mud-palette-text-secondary); }
+.configuration-section-list { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.configuration-section-list ::deep .mud-tooltip-root { min-width: 0; max-width: 100%; }
+.configuration-section-list ::deep .configuration-section-button { padding: 10px 14px; border: 1px solid transparent; text-align: start; max-width: 100%; }
+.configuration-section-list ::deep .configuration-section-button.is-selected { color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-text-primary)); border-color: color-mix(in srgb, var(--mud-palette-primary) 30%, var(--mud-palette-divider)); background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface)); }
+.configuration-section-list ::deep .mud-button-label { min-width: 0; }
+.configuration-section-content { display: grid; gap: 4px; min-width: 0; }
+.configuration-section-title { display: flex; gap: 16px; align-items: center; justify-content: space-between; font-size: 13px; }
+.configuration-section-count { color: var(--mud-palette-text-secondary); font-size: 11px; }
+.configuration-section-path { color: var(--mud-palette-text-secondary); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.configuration-values-panel { display: grid; gap: 0; min-width: 0; }
+.configuration-draft-dock { position: sticky; bottom: 16px; z-index: 2; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 18px 24px; border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-divider)); border-radius: var(--mud-default-borderradius); background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface)); box-shadow: var(--mud-elevation-2); }
+.configuration-draft-summary { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-width: 0; }
+.configuration-draft-summary strong { font-size: 14px; font-weight: 600; }
+.configuration-draft-summary p { margin: 4px 0 0; color: var(--mud-palette-text-secondary); font-size: 12px; line-height: 1.5; }
+.configuration-draft-errors { color: var(--mud-palette-error); font-size: 12px; }
+.configuration-draft-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 1100px) { .configuration-workbench-heading { align-items: flex-start; } .configuration-state-grid { grid-template-columns: minmax(230px, 270px) minmax(0, 1fr); gap: 16px; } }
+@media (max-width: 800px) { .configuration-state-page { padding: 20px; gap: 20px; } .configuration-workbench-heading { flex-direction: column; gap: 18px; } .configuration-workbench-controls { justify-items: start; } .configuration-state-grid { grid-template-columns: minmax(0, 1fr); } .configuration-state-catalog { position: static; } .configuration-runtime-validation-banner-content { flex-direction: column; align-items: flex-start; } .configuration-draft-dock { padding: 16px; bottom: 8px; } }

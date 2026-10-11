@@ -68,6 +68,8 @@ When admission and retirement share a lock, reserve each action's completion tas
 
 A circuit-scoped state injected from DI is borrowed by its routed consumers. It can hold detached evidence and serialize operations while accepting the component's token; the component owns its own cancellation and admitted work, not disposal of the injected state. A component-created session is different: follow its explicit ownership contract and drain it before disposal. The [page-state pattern](../../monica-architecture/references/page-state-pattern.md) supplies a complete component-owned cancellation/drain example and explains the state boundary.
 
+When a public persistence operation is intentionally uncancelled after admission, route retirement must drain its actual producer and captured reconciliation callback. Reconcile applied outcomes with the borrowed draft state even after the route retires, while suppressing retired UI work. Closing the dialog or abandoning a cancellable await does not establish that persistence stopped.
+
 An async dialog open or JS import produces a resource. Observe the actual task and close/dispose a result arriving after retirement, instead of canceling the await and losing the result. Dialog results, native focus ownership, and interop teardown have their own mechanics; see the dialog heading contract above and the interop section below.
 
 A child inspector belongs to both its routed owner and its originating dialog. Link those lifetimes, reject a late native dialog reference after either retires, and close/dismiss an acquired child before draining its parent's callback. Keep renderer-bound cancellation callbacks on the renderer: `CancellationTokenSource.CancelAsync()` schedules callbacks without preserving that dispatcher, so a registration that directly closes a native dialog cannot assume it runs on the UI context. Cancel synchronously from renderer-owned retirement, or explicitly dispatch the callback and observe its actual task.
@@ -254,6 +256,8 @@ public class AppStateContainer
 }
 ```
 
+Draft review and undo must capture the originating route and the exact draft and validation-issue objects being reviewed. Reject undo after that route retires, and remove an item only if the current state still matches its captured object. Reconcile a save by its actual applied request IDs with the same comparison. A newer draft or issue at the same path must survive an older review's undo or persistence completion.
+
 ## 6. Error Handling
 
 ### 6.1 Use ErrorBoundary
@@ -311,6 +315,10 @@ public async Task<Res<TData>> GetDataAsync()
 ```
 
 ### 7.2 Custom Validation
+
+Configuration editor identities come from the scanned schema: use its `RelativePath` for commands, search selection, and deep links, and its aliased names for JSON fields. Never reconstruct these identities from CLR property names. CLR member names returned by object validation require the owning validation layer's schema mapping; see [options and validation](../../monica-infra-configuration/references/options-and-validation.md).
+
+Portable field or fragment validation is not authoritative complete-object approval. Stage related sibling edits together and use the complete-group preview and save boundary to enforce their combined constraints; keep the two validation scopes explicit in the UI.
 
 ```csharp
 public class CustomValidator : ComponentBase

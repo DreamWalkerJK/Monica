@@ -15,9 +15,9 @@ else
                     <MudPaper Outlined="true" Class="pa-3">
                         <MudStack Spacing="2">
                             <div class="configuration-pending-review-definition-header">
-                                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-pending-review-definition-identity">
                                     <MudText Typo="Typo.subtitle2">@definition.DisplayName</MudText>
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@definition.DefinitionKey</MudChip>
+                                    <code class="configuration-pending-review-definition-key">@definition.DefinitionKey</code>
                                     @if (definition.Changes.Count > 0)
                                     {
                                         <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
@@ -60,7 +60,7 @@ else
                             @if (definition.Changes.Count > 0)
                             {
                                 <div class="configuration-pending-review-change-table">
-                                    <MudTable T="PendingChange" Items="definition.Changes" Dense="true" Hover="true" Elevation="0">
+                                    <MudTable T="PendingChange" Items="definition.Changes" Dense="true" Hover="true" Elevation="0" Square="true">
                                         <HeaderContent>
                                             <MudTh>@L["State:Columns:Path"]</MudTh>
                                             <MudTh>@L["History:Columns:Target"]</MudTh>

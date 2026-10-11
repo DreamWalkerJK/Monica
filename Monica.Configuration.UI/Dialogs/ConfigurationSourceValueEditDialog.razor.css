@@ -1,0 +1,94 @@
+.configuration-source-edit {
+    --configuration-source-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary));
+    padding: 20px;
+    min-width: 0;
+    color: var(--mud-palette-text-primary);
+}
+
+.configuration-source-identity {
+    padding: 20px;
+    min-width: 0;
+    border-inline-start: 3px solid var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface));
+}
+
+.configuration-source-identity h3 {
+    font-size: 18px;
+    line-height: 1.5;
+    font-weight: 500;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-identity p {
+    margin: 4px 0 16px;
+    color: var(--configuration-source-muted);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-identity dl {
+    margin: 0;
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.configuration-source-identity dl > div {
+    min-width: 0;
+}
+
+.configuration-source-identity dt {
+    color: var(--configuration-source-muted);
+    font-size: 12px;
+    margin-bottom: 3px;
+}
+
+.configuration-source-identity dd {
+    margin: 0;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-identity code {
+    display: block;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-edit ::deep .mud-input-control, .configuration-source-edit ::deep .mud-stack, .configuration-source-edit ::deep .mud-alert-message {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-edit ::deep .mud-error-text {
+    color: color-mix(in srgb, var(--mud-palette-error) 25%, var(--mud-palette-text-primary)) !important;
+}
+
+.configuration-source-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    padding: 12px 20px 20px;
+}
+
+.configuration-source-actions ::deep .mud-button-filled-primary:not(:disabled) {
+    background: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)) !important;
+    color: var(--mud-palette-surface) !important;
+}
+
+@media (max-width: 600px) {
+    .configuration-source-edit, .configuration-source-identity {
+        padding: 16px;
+    }
+
+    .configuration-source-actions {
+        padding: 8px 16px 16px;
+    }
+
+}
