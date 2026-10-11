@@ -28,7 +28,12 @@
       "MultilingualLayoutInvalidDescription": "已启用多语言文档，但检测到部分 Markdown 文件不在受支持的语言目录下。请将所有 Markdown 文件移动到如 zh-CN 或 en-US 这样的文化根目录下。",
       "InvalidLanguageLayoutPaths": "语言目录之外的 Markdown 文件：",
       "DocumentLanguageMissing": "当前文档在 {0} 中不存在",
-      "DocumentLanguageMissingDescription": "请从当前目录树中选择其他文档，或切换回包含该页面的语言。"
+      "DocumentLanguageMissingDescription": "请从当前目录树中选择其他文档，或切换回包含该页面的语言。",
+      "CatalogFailed": "无法加载文档库",
+      "ContentFailed": "无法加载文档",
+      "TreeFailed": "无法加载文档导航",
+      "NoLibrariesDescription": "当前主机未注册文档库。",
+      "EmptyDocument": "此文档暂无正文。"
     },
     "Navbar": {
       "ShowSidebar": "显示侧边栏",
@@ -36,8 +41,7 @@
       "OpenKnowledgeBaseSwitcher": "切换文档库",
       "UnknownKnowledgeBase": "未知文档库",
       "KnowledgeBaseDocumentCount": "共 {0} 篇文档",
-      "Outline": "目录",
-      "LastEdited": "最后更新于 {0}"
+      "Outline": "目录"
     },
     "Toolbar": {
       "SearchPlaceholder": "搜索文档",
@@ -45,14 +49,13 @@
       "DocumentTree": "文档树",
       "ShowOutline": "显示目录",
       "HideOutline": "隐藏目录",
-      "OutlineDescription": "在当前文档标题之间快速跳转。",
       "NoOutlineAvailable": "当前文档生成标题后，这里会显示目录。",
       "NoDocumentOutline": "请选择一个文档后再浏览目录。"
     },
     "Dialogs": {
       "SwitchKnowledgeBaseTitle": "切换文档库",
       "Search": {
-        "Title": "搜索",
+        "Title": "搜索文档",
         "IncludeAllKnowledgeBases": "跨文档库查询",
         "InputPlaceholder": "输入标题、主题或文件夹",
         "Hint": "输入关键词后搜索当前文档库中的文档内容。",
@@ -61,16 +64,23 @@
         "MinimumQueryLength": "请输入至少 {0} 个字符。",
         "NoResults": "没有匹配的文档。",
         "SearchFailed": "搜索失败：{0}"
-      }
+      },
+      "AllLanguagesCount": "所有已注册语言 · {0} 篇文档"
     },
     "Messages": {
       "LoadDataFailed": "加载 Markdown 数据失败：{0}"
     },
-    "Time": {
-      "JustNow": "刚刚",
-      "MinutesAgo": "{0} 分钟前",
-      "HoursAgo": "{0} 小时前",
-      "DaysAgo": "{0} 天前"
+    "Metadata": {
+      "About": "关于此文档",
+      "Author": "作者",
+      "Modified": "最后修改",
+      "Path": "文档路径",
+      "Language": "文档语言",
+      "Size": "文件大小",
+      "Bytes": "{0:N0} 字节",
+      "Fields": "文档元数据",
+      "NoFrontMatter": "此文档未提供元数据。",
+      "Library": "文档库"
     }
   }
 }

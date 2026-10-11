@@ -4,21 +4,21 @@
 @using Monica.Markdown.UIMarkdown.Models
 @using Monica.Markdown.UIMarkdown.State
 @using Monica.Markdown.UIMarkdown.Support
+@using Monica.UI.Shared.Components.Dialogs
 @implements IAsyncDisposable
 
 @inject MarkdownDocumentSearchStateFactory SearchStateFactory
 @inject IStringLocalizer<MarkdownResource> L
 
-<MudDialog>
+<MudDialog Style="width: min(880px, calc(100vw - 32px));">
     <TitleContent>
-        <span class="document-search-chrome-spacer" aria-hidden="true"></span>
+        <MoDialogHeading Text="@L["MarkdownViewer:Dialogs:Search:Title"]" />
     </TitleContent>
 
     <DialogContent>
         <div class="document-search-dialog">
             <div class="document-search-header">
                 <div class="document-search-heading">
-                    <h2 class="document-search-title">@L["MarkdownViewer:Dialogs:Search:Title"]</h2>
                     <p class="document-search-current-group">@GetCurrentGroupTitle()</p>
                 </div>
 
@@ -26,17 +26,14 @@
                     <MudSwitch T="bool"
                                Value="SearchState.IncludeAllKnowledgeBases"
                                ValueChanged="SearchState.OnIncludeAllKnowledgeBasesChangedAsync"
-                               Color="Color.Primary" />
-                    <span class="document-search-scope-copy">
-                        @L["MarkdownViewer:Dialogs:Search:IncludeAllKnowledgeBases"]
-                    </span>
+                               Color="Color.Primary" Label="@L["MarkdownViewer:Dialogs:Search:IncludeAllKnowledgeBases"]" />
                 </div>
             </div>
 
             <MudTextField T="string"
                           Value="SearchState.Query"
                           ValueChanged="SearchState.OnQueryChanged"
-                          Placeholder="@L["MarkdownViewer:Dialogs:Search:InputPlaceholder"]"
+                          Label="@L["MarkdownViewer:Dialogs:Search:InputPlaceholder"]"
                           Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Filled.Search"
                           Variant="Variant.Outlined"
@@ -47,7 +44,7 @@
                           OnDebounceIntervalElapsed="SearchState.OnQueryDebouncedAsync"
                           Class="document-search-input" />
 
-            <div class="document-search-status-row">
+            <div class="document-search-status-row" role="status" aria-live="polite">
                 @if (SearchState.IsSearching)
                 {
                     <span class="document-search-status-inline">
@@ -62,10 +59,6 @@
                 else if (SearchState.HasSearchQuery)
                 {
                     <span>@L["MarkdownViewer:Dialogs:Search:MinimumQueryLength", SearchState.MinimumQueryLength]</span>
-                }
-                else
-                {
-                    <span>@L["MarkdownViewer:Dialogs:Search:Hint"]</span>
                 }
             </div>
 
@@ -94,15 +87,7 @@
                         </MudStack>
                     </div>
                 }
-                else if (!SearchState.HasEnoughQueryLength)
-                {
-                    <div class="document-search-state">
-                        <MudText Typo="Typo.body1">
-                            @L["MarkdownViewer:Dialogs:Search:MinimumQueryLength", SearchState.MinimumQueryLength]
-                        </MudText>
-                    </div>
-                }
-                else if (SearchState.Results.Count == 0)
+                else if (SearchState.HasEnoughQueryLength && SearchState.Results.Count == 0)
                 {
                     <div class="document-search-state">
                         <MudStack AlignItems="AlignItems.Center" Spacing="2">
@@ -114,7 +99,7 @@
                         </MudStack>
                     </div>
                 }
-                else
+                else if (SearchState.HasEnoughQueryLength)
                 {
                     @foreach (var result in SearchState.Results)
                     {

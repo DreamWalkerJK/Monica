@@ -1,7 +1,3 @@
-export function shouldShowSidebarByDefault() {
-    return window.matchMedia("(min-width: 961px)").matches;
-}
-
 export function createMarkdownViewerSession(viewerRoot, dotNetReference) {
     return new MarkdownViewerSession(viewerRoot, dotNetReference);
 }
@@ -14,6 +10,8 @@ class MarkdownViewerSession {
         this.activeHeadingTracker = null;
         this.activeSearchHit = null;
         this.pendingCallbacks = new Set();
+        this.pendingViewport = null;
+        this.viewportNotificationTask = null;
         this.disposed = false;
         this.shutdownPromise = null;
         this.removalObserver = new MutationObserver(() => {
@@ -26,6 +24,44 @@ class MarkdownViewerSession {
         if (observerRoot) {
             this.removalObserver.observe(observerRoot, { childList: true, subtree: true });
         }
+
+        this.viewportObserver = new ResizeObserver(entries => {
+            const entry = entries.find(item => item.target === this.viewerRoot);
+            if (entry) {
+                this.queueViewport(entry.contentRect.width, entry.contentRect.height);
+            }
+        });
+        this.viewportObserver.observe(viewerRoot);
+    }
+
+    queueViewport(width, height) {
+        if (this.disposed || !Number.isFinite(width) || !Number.isFinite(height)) {
+            return;
+        }
+
+        this.pendingViewport = { width, height };
+        if (this.viewportNotificationTask) {
+            return;
+        }
+
+        const task = Promise.resolve().then(async () => {
+            while (!this.disposed && this.pendingViewport) {
+                const measurement = this.pendingViewport;
+                this.pendingViewport = null;
+                await this.dotNetReference?.invokeMethodAsync(
+                    "OnViewportChanged", measurement.width, measurement.height);
+            }
+        }).catch(() => {}).finally(() => {
+            this.pendingCallbacks.delete(task);
+            this.viewportNotificationTask = null;
+            if (!this.disposed && this.pendingViewport) {
+                const measurement = this.pendingViewport;
+                this.queueViewport(measurement.width, measurement.height);
+            }
+        });
+
+        this.viewportNotificationTask = task;
+        this.pendingCallbacks.add(task);
     }
 
     observeActiveHeading(headingIds, currentAnchorId) {
@@ -44,6 +80,29 @@ class MarkdownViewerSession {
         tracker.sync(true);
         tracker.scrollRoot.addEventListener("scroll", tracker.handleScroll, { passive: true });
         this.window.addEventListener("resize", tracker.handleResize);
+    }
+
+    revealDocumentHeading(groupKey, documentRelativePath, culture) {
+        if (this.disposed || !this.viewerRoot?.isConnected) {
+            return false;
+        }
+
+        const content = this.viewerRoot.querySelector("[data-markdown-content-root='true']");
+        if (!content || content.dataset.markdownGroup !== groupKey
+            || content.dataset.markdownDocument !== documentRelativePath
+            || (content.dataset.markdownCulture ?? "").toLowerCase() !== (culture ?? "").toLowerCase()) {
+            return false;
+        }
+
+        const heading = content.querySelector("[data-markdown-document-heading='true']");
+        const scrollRoot = this.viewerRoot.querySelector("[data-markdown-scroll-root='true']");
+        if (!heading || !scrollRoot) {
+            return false;
+        }
+
+        heading.focus({ preventScroll: true });
+        scrollRoot.scrollTo({ top: 0, behavior: "auto" });
+        return true;
     }
 
     disposeActiveHeadingTracker() {
@@ -96,7 +155,10 @@ class MarkdownViewerSession {
             return false;
         }
 
-        const textMap = buildNormalizedTextMap(contentRoot);
+        const documentHeading = contentRoot.querySelector("[data-markdown-document-heading='true']");
+        const markdownBody = contentRoot.querySelector("[data-markdown-body='true']");
+        const searchableRoots = [documentHeading, markdownBody].filter(Boolean);
+        const textMap = buildNormalizedTextMap(contentRoot, searchableRoots);
         if (!textMap.text) {
             return false;
         }
@@ -144,6 +206,8 @@ class MarkdownViewerSession {
 
         this.disposed = true;
         this.removalObserver.disconnect();
+        this.viewportObserver.disconnect();
+        this.pendingViewport = null;
         this.disposeActiveHeadingTracker();
         this.dotNetReference = null;
         this.activeSearchHit = null;
@@ -318,10 +382,10 @@ function resolveHeadingElement(markdownBody, anchorId) {
     return null;
 }
 
-function buildNormalizedTextMap(root) {
+function buildNormalizedTextMap(root, searchableRoots) {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
-            if (!node.textContent) {
+            if (!node.textContent || !searchableRoots.some(element => element.contains(node))) {
                 return NodeFilter.FILTER_REJECT;
             }
 
@@ -342,10 +406,21 @@ function buildNormalizedTextMap(root) {
     const indexMap = [];
     let text = "";
     let previousWasWhitespace = true;
+    let previousRoot = null;
 
     while (walker.nextNode()) {
         const node = walker.currentNode;
         const value = node.textContent ?? "";
+        const currentRoot = searchableRoots.find(element => element.contains(node));
+
+        // The title and authored body are separate text regions. Their intervening
+        // breadcrumbs, summary, and inspector are deliberately outside the search map.
+        if (previousRoot && currentRoot !== previousRoot && !previousWasWhitespace) {
+            text += " ";
+            indexMap.push({ node, offset: 0 });
+            previousWasWhitespace = true;
+        }
+        previousRoot = currentRoot;
 
         for (let index = 0; index < value.length; index++) {
             const character = value[index];

@@ -1,59 +1,123 @@
+@using System.Globalization
+@using Microsoft.Extensions.Localization
+@using Monica.Markdown.Localization
 @using Monica.Markdown.Models
+@using Monica.Markdown.UIMarkdown.Support
+@inject IStringLocalizer<MarkdownResource> L
 
-<div class="metadata-row">
-    @if (FrontMatter.Tags.Count > 0)
-    {
-        @foreach (var tag in FrontMatter.Tags)
+<div class="document-metadata">
+    <div class="metadata-summary">
+        @if (AuthorDisplay is not null)
         {
-            <span class="meta-tag">@tag</span>
+            <span class="metadata-summary-item">
+                <span class="metadata-label">@L["MarkdownViewer:Metadata:Author"]</span>
+                <span class="metadata-author">@AuthorDisplay</span>
+            </span>
         }
-    }
 
-    @if (!string.IsNullOrWhiteSpace(AuthorDisplay))
-    {
-        <span class="meta-text">
-            <MudIcon Icon="@Icons.Material.Filled.Person"
-                     Size="Size.Small" Class="meta-icon" />
-            By @AuthorDisplay
+        <span class="metadata-summary-item">
+            <span class="metadata-label">@L["MarkdownViewer:Metadata:Modified"]</span>
+            <time datetime="@ModifiedTimestamp" title="@ModifiedTimestamp">
+                @Document.LastModifiedUtc.ToLocalTime().ToString("F", CultureInfo.CurrentCulture)
+            </time>
         </span>
-    }
 
-    @if (ReadTimeMinutes > 0)
-    {
-        <span class="meta-separator">·</span>
-        <span class="meta-text">@ReadTimeMinutes min read</span>
-    }
+        @if (Document.FrontMatter is { Tags.Count: > 0 } frontMatter)
+        {
+            <span class="metadata-tags">
+                @foreach (var tag in frontMatter.Tags)
+                {
+                    <span class="metadata-tag" title="@tag">@tag</span>
+                }
+            </span>
+        }
+    </div>
 
-    @foreach (var kv in GetCustomMetadata())
-    {
-        <MudTooltip Text="@kv.Key">
-            <span class="meta-text meta-custom">@kv.Key: @kv.Value</span>
-        </MudTooltip>
-    }
+    <MudExpansionPanels Elevation="0" Dense="true" Gutters="false" Outlined="false" Class="metadata-panels">
+        <MudExpansionPanel @bind-Expanded="_expanded"
+                           Text="@L["MarkdownViewer:Metadata:About"]"
+                           HeaderClass="metadata-about-header"
+                           Class="metadata-about">
+            <div class="metadata-inspector">
+                <dl class="metadata-fields">
+                    <div class="metadata-field">
+                        <dt>@L["MarkdownViewer:Metadata:Path"]</dt>
+                        <dd class="metadata-exact">@Document.NavigationRelativePath</dd>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Document.Culture))
+                    {
+                        <div class="metadata-field">
+                            <dt>@L["MarkdownViewer:Metadata:Language"]</dt>
+                            <dd>@Document.Culture</dd>
+                        </div>
+                    }
+                    <div class="metadata-field">
+                        <dt>@L["MarkdownViewer:Metadata:Library"]</dt>
+                        <dd class="metadata-exact">@Document.GroupKey</dd>
+                    </div>
+                    <div class="metadata-field">
+                        <dt>@L["MarkdownViewer:Metadata:Size"]</dt>
+                        <dd>@L["MarkdownViewer:Metadata:Bytes", Document.FileSize]</dd>
+                    </div>
+                    <div class="metadata-field">
+                        <dt>@L["MarkdownViewer:Metadata:Modified"]</dt>
+                        <dd class="metadata-exact"><time datetime="@ModifiedTimestamp">@ModifiedTimestamp</time></dd>
+                    </div>
+                </dl>
+
+                <h2 class="metadata-fields-title">@L["MarkdownViewer:Metadata:Fields"]</h2>
+                @if (Document.FrontMatter is { RawMetadata.Count: > 0 } metadata)
+                {
+                    <dl class="metadata-fields metadata-authored-fields">
+                        @foreach (var field in metadata.RawMetadata)
+                        {
+                            <div class="metadata-field">
+                                <dt class="metadata-exact">@field.Key</dt>
+                                <dd><pre class="metadata-value">@MarkdownMetadataFormatter.FormatValue(field.Value)</pre></dd>
+                            </div>
+                        }
+                    </dl>
+                }
+                else
+                {
+                    <p class="metadata-empty">@L["MarkdownViewer:Metadata:NoFrontMatter"]</p>
+                }
+            </div>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
 </div>
 
 @code {
+    /// <summary>
+    /// Gets or sets the selected catalog document whose file evidence and complete parsed metadata are displayed.
+    /// Required. The About panel starts collapsed and collapses again when group, physical path, or culture changes.
+    /// </summary>
     [Parameter, EditorRequired]
-    public MarkdownFrontMatter FrontMatter { get; set; } = null!;
+    public MarkdownDocument Document { get; set; } = null!;
 
-    [Parameter]
-    public long FileSize { get; set; }
+    private bool _expanded;
+    private (string Group, string Path, string? Culture)? _lastDocumentIdentity;
 
-    private string? AuthorDisplay =>
-        FrontMatter.RawMetadata.TryGetValue("author", out var author)
-            ? author?.ToString()
-            : null;
+    private string ModifiedTimestamp => Document.LastModifiedUtc.ToString("O", CultureInfo.InvariantCulture);
 
-    private int ReadTimeMinutes =>
-        FileSize > 0 ? Math.Max(1, (int)Math.Ceiling(FileSize / 5.0 / 200.0)) : 0;
-
-    private static readonly HashSet<string> ReservedKeys =
-        new(StringComparer.OrdinalIgnoreCase) { "title", "date", "tags", "author" };
-
-    private IEnumerable<KeyValuePair<string, string>> GetCustomMetadata()
+    private string? AuthorDisplay
     {
-        return FrontMatter.RawMetadata
-            .Where(kv => !ReservedKeys.Contains(kv.Key) && kv.Value is not null)
-            .Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value?.ToString() ?? ""));
+        get
+        {
+            return Document.FrontMatter is { } frontMatter
+                   && frontMatter.RawMetadata.TryGetValue("author", out var author)
+                ? MarkdownMetadataFormatter.FormatValue(author)
+                : null;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        var identity = (Document.GroupKey, Document.RelativePath, Document.Culture);
+        if (_lastDocumentIdentity != identity)
+        {
+            _lastDocumentIdentity = identity;
+            _expanded = false;
+        }
     }
 }

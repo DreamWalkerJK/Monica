@@ -17,7 +17,7 @@ All script paths in this document are relative to the `monica-ui-localization` s
 4. Finish every i18n change by running the strict validator from the repository root:
 
 ```bash
-python scripts/validate_localization.py --strict
+python skills/monica-ui-localization/scripts/validate_localization.py --strict
 ```
 
 The strict result must have zero JSON integrity errors, missing keys, invalid navigation resource keys, unused keys, and language sync issues. A non-strict `PASSED` result with unused-key warnings is not acceptable for completed i18n work.
@@ -43,25 +43,25 @@ The strict result must have zero JSON integrity errors, missing keys, invalid na
 Basic validation:
 
 ```bash
-python scripts/validate_localization.py
+python skills/monica-ui-localization/scripts/validate_localization.py
 ```
 
 Strict validation:
 
 ```bash
-python scripts/validate_localization.py --strict
+python skills/monica-ui-localization/scripts/validate_localization.py --strict
 ```
 
 JSON output:
 
 ```bash
-python scripts/validate_localization.py --strict --json
+python skills/monica-ui-localization/scripts/validate_localization.py --strict --json
 ```
 
 Validate another root:
 
 ```bash
-python scripts/validate_localization.py --root <project-root> --strict
+python skills/monica-ui-localization/scripts/validate_localization.py --root <project-root> --strict
 ```
 
 ## Reference
