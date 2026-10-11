@@ -9,7 +9,7 @@
 @inject IStringLocalizer<ConfigurationUIResource> L
 @implements IAsyncDisposable
 
-<section class="@RowShellClass">
+<section class="@RowShellClass" aria-busy="@(_openingDialog ? "true" : "false")">
     <div class="configuration-value-row">
         <header class="configuration-value-identity">
             <div class="configuration-value-name"><h4>@DisplayName</h4>
@@ -510,9 +510,18 @@
         if (_operations.IsRetired || _openingDialog) return;
         var context = new RowContext(Definition, Node, ReadOnly, IsCurrentSourceReadOnly, StateStore.GetPending().ToArray());
         _openingDialog = true; // Admission only; native openers stay enabled for focus restoration.
-        try { await _operations.RunAsync(_ => callback(context)); }
+        try
+        {
+            await InvokeAsync(() => { if (!_operations.IsRetired) StateHasChanged(); });
+            await _operations.RunAsync(_ => callback(context));
+        }
         catch (OperationCanceledException) when (_operations.IsRetired) { }
-        finally { _openingDialog = false; }
+        finally
+        {
+            _openingDialog = false;
+            if (!_operations.IsRetired)
+                await InvokeAsync(() => { if (!_operations.IsRetired) StateHasChanged(); });
+        }
     }
 
     private async Task RunCallbackAsync(Func<Task> callback)

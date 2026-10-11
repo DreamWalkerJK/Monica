@@ -1,69 +1,19 @@
-.diff-viewer {
-    position: relative;
-    min-width: 0;
-    overflow: hidden;
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: 8px;
-    font-family: var(--mo-font-family-mono);
-    font-size: .8125rem;
-    line-height: 1.45;
-}
-
-.diff-error {
-    margin: 1rem;
-    border-radius: 8px;
-}
-
-.diff-header {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    min-width: 0;
+.diff-viewer { min-width: 0; }
+.diff-viewer__busy,
+.diff-viewer__uncomputed {
+    margin: 0;
     padding: .75rem 1rem;
-    border-bottom: 1px solid var(--mud-palette-divider);
-    background: var(--mud-palette-background-gray);
-    flex-wrap: wrap;
-}
-
-.diff-content {
-    max-height: 38rem;
-    min-width: 0;
-    overflow: auto;
+    color: var(--mud-palette-text-primary);
     background: var(--mud-palette-surface);
-    scrollbar-color: var(--mud-palette-text-disabled) var(--mud-palette-background-gray);
-    scrollbar-width: thin;
+    font-size: .875rem;
 }
-
-.diff-viewer ::deep .mud-alert {
-    margin: 1rem;
+.diff-viewer__error {
+    margin-block-end: .75rem;
+    padding: .75rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-error) 35%, var(--mud-palette-lines-default));
+    border-inline-start: 3px solid var(--mud-palette-error);
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-text-primary);
+    background: color-mix(in srgb, var(--mud-palette-error) 8%, var(--mud-palette-surface) 92%);
 }
-
-.view-mode-toggle,
-.display-mode-chips {
-    display: flex;
-    gap: .25rem;
-    min-width: 0;
-    flex-wrap: wrap;
-}
-
-.display-mode-chips {
-    margin-inline-end: .5rem;
-}
-
-@media (max-width: 600px) {
-    .diff-viewer {
-        font-size: .75rem;
-    }
-
-    .diff-header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .diff-viewer ::deep .mud-button-root,
-    .diff-viewer ::deep .mud-chip {
-        transition: none !important;
-    }
-}
+.diff-viewer__error p { margin: .25rem 0 0; overflow-wrap: anywhere; }
