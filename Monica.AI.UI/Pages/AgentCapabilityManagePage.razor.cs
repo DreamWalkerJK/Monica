@@ -39,9 +39,12 @@ public partial class AgentCapabilityManagePage : IAsyncDisposable
     private readonly AIAdministrationOperationLifetime _ui = new();
     private AgentCapabilityAdministrationState _state = null!;
     private AIAdministrationDialogSession _dialogs = null!;
-    private ElementReference _detailHeading;
+    private ElementReference _pageElement;
+    private readonly string _focusVisit = "capability-" + Guid.NewGuid().ToString("N");
+    private long _focusVersion;
+    private FocusIntent? _focusIntent;
+    private Task<IJSObjectReference>? _focusModuleImport;
     private bool _catalogOpen;
-    private bool _focusDetail;
     private bool _clipboardBusy;
 
     private bool Busy => _state?.IsBusy == true;
@@ -66,49 +69,71 @@ public partial class AgentCapabilityManagePage : IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!_focusDetail || _state.SelectedEntry is null || _ui.IsRetired) return;
-        _focusDetail = false;
+        if (_focusIntent is not { } intent || _ui.IsRetired) return;
+        _focusIntent = null;
         try
         {
             await _ui.RunAsync(async token =>
             {
                 token.ThrowIfCancellationRequested();
-                await _detailHeading.FocusAsync();
+                // Observe the actual resource-producing task even if this visit retires during import.
+                _focusModuleImport ??= JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Monica.AI.UI/UIAgentCapabilities/capability-picker.js").AsTask();
+                var module = await _focusModuleImport;
+                if (_ui.IsRetired || intent.Version != _focusVersion || intent.Key != (_state.SelectedEntry?.Key ?? string.Empty)) return;
+                await module.InvokeVoidAsync("reveal", _pageElement, _focusVisit, intent.Version, intent.Kind, intent.Key);
             });
         }
         catch (OperationCanceledException) when (_ui.IsRetired) { }
         catch (JSDisconnectedException) { }
     }
 
+    private void CancelFocusIntent() { _focusVersion++; _focusIntent = null; }
+    private void SetQuery(string? value) { CancelFocusIntent(); _state.SetQuery(value); }
+    private void ClearFilters() { CancelFocusIntent(); _state.ClearFilters(); }
+
     private async Task RefreshAsync()
     {
         if (Busy || _ui.IsRetired) return;
+        CancelFocusIntent();
         await _state.RefreshAsync();
         if (_ui.IsRetired) return;
         if (_state.SelectedEntry is null) _catalogOpen = true;
         await InvokeAsync(StateHasChanged);
     }
 
-    private void SetEffectiveFilter(string value) => _state.SetEnabledFilter(value switch
+    private void SetEffectiveFilter(string value)
     {
-        "available" => true, "unavailable" => false, _ => null
-    });
+        CancelFocusIntent();
+        _state.SetEnabledFilter(value switch { "available" => true, "unavailable" => false, _ => null });
+    }
 
     private void SetSourceFilter(string value)
     {
+        CancelFocusIntent();
         if (_state.ActiveKind == AgentCapabilityKind.Skill)
             _state.SetSkillSourceFilter(Enum.TryParse<AgentCapabilitySourceKind>(value, out var skillSource) ? skillSource : null);
         else
             _state.SetMcpSourceFilter(Enum.TryParse<McpCatalogSourceKind>(value, out var mcpSource) ? mcpSource : null);
     }
 
-    private void ToggleCatalog() => _catalogOpen = !_catalogOpen;
+    private void ToggleCatalog()
+    {
+        if (_ui.IsRetired) return;
+        CancelFocusIntent();
+        _catalogOpen = !_catalogOpen;
+        if (_catalogOpen) _focusIntent = new(_focusVersion, "catalog", _state.SelectedEntry?.Key ?? string.Empty);
+    }
 
     private void SelectEntry(AgentCapabilityEntryInfo entry)
     {
+        if (_ui.IsRetired) return;
+        var pickerWasOpen = _catalogOpen;
         _state.SelectEntry(entry);
+        if (_state.SelectedEntry?.Key != entry.Key) return;
+        CancelFocusIntent();
         _catalogOpen = false;
-        _focusDetail = true;
+        // Ordinary wide selection has no focus interop; compact picker admission is checked again against actual CSS in JS.
+        if (pickerWasOpen) _focusIntent = new(_focusVersion, "detail", entry.Key);
     }
 
     private Task SetCatalogEnabledAsync(bool enabled) => RunMutationAsync(() => _state.SetCatalogEnabledAsync(_state.ActiveKind, enabled));
@@ -287,5 +312,15 @@ public partial class AgentCapabilityManagePage : IAsyncDisposable
 
     /// <summary>Cancels and drains component-owned consumers without disposing borrowed services.</summary>
     public async ValueTask DisposeAsync() => await Task.WhenAll(
-        _ui.RetireAsync().AsTask(), _dialogs.DisposeAsync().AsTask(), _state.DisposeAsync().AsTask());
+        _ui.RetireAsync(DisposeFocusModuleAsync).AsTask(), _dialogs.DisposeAsync().AsTask(), _state.DisposeAsync().AsTask());
+
+    private async ValueTask DisposeFocusModuleAsync()
+    {
+        if (_focusModuleImport is null) return;
+        try { await (await _focusModuleImport).DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+        catch (OperationCanceledException) when (_ui.IsRetired) { }
+    }
+
+    private sealed record FocusIntent(long Version, string Kind, string Key);
 }

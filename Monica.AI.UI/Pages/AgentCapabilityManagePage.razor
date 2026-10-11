@@ -5,7 +5,7 @@
 
 <PageTitle>@PageTitleText</PageTitle>
 
-<div class="capability-page">
+<div class="capability-page" @ref="_pageElement" data-focus-visit="@_focusVisit" data-focus-version="@_focusVersion" data-selected-key="@(_state?.SelectedEntry?.Key ?? string.Empty)" data-catalog-open="@(_catalogOpen ? "true" : "false")">
     <AIAdministrationHeader Title="@PageTitleText" Description="@PageSubtitleText" IsProviderPage="false" IsMcpPage="@(CatalogKind == AgentCapabilityKind.Mcp)">
         <Actions>
             @if (CatalogKind == AgentCapabilityKind.Mcp)
@@ -47,7 +47,7 @@
                 </button>
                 <div class="catalog-body" id="capability-catalog-body">
                     <div class="catalog-heading"><h2>@L["Capabilities:Administration:Catalog"]</h2><span>@ResultCount</span></div>
-                    <MudTextField T="string" Value="@_state.Query" ValueChanged="_state.SetQuery" Label="@L["Capabilities:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" />
+                    <MudTextField T="string" Value="@_state.Query" ValueChanged="SetQuery" Label="@L["Capabilities:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" />
                     <div class="catalog-filters">
                         <MudSelect T="string" Value="@EffectiveFilter" ValueChanged="SetEffectiveFilter" Label="@L["Capabilities:Administration:EffectiveFilter"]" Variant="Variant.Outlined" Margin="Margin.Dense">
                             <MudSelectItem T="string" Value='@("all")'>@L["Capabilities:Administration:AllEntries"]</MudSelectItem>
@@ -67,11 +67,11 @@
                             }
                         </MudSelect>
                     </div>
-                    @if (HasFilters) { <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="_state.ClearFilters">@L["Capabilities:Administration:ClearFilters"]</MudButton> }
+                    @if (HasFilters) { <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="ClearFilters">@L["Capabilities:Administration:ClearFilters"]</MudButton> }
                     <div class="entry-list" role="group" aria-label="@L["Capabilities:Administration:Catalog"]" tabindex="0">
                         @foreach (var catalogEntry in _state.VisibleEntries)
                         {
-                            <button type="button" class="@(catalogEntry.Key == _state.SelectedEntry?.Key ? "entry-button selected" : "entry-button")" aria-pressed="@(catalogEntry.Key == _state.SelectedEntry?.Key ? "true" : "false")" @onclick="@(() => SelectEntry(catalogEntry))" @key="catalogEntry.Key">
+                            <button type="button" class="@(catalogEntry.Key == _state.SelectedEntry?.Key ? "entry-button selected" : "entry-button")" aria-pressed="@(catalogEntry.Key == _state.SelectedEntry?.Key ? "true" : "false")" data-entry-key="@catalogEntry.Key" @onclick="@(() => SelectEntry(catalogEntry))" @key="catalogEntry.Key">
                                 <span class="entry-identity"><MudIcon Icon="@GetEntryIcon(catalogEntry)" Size="Size.Small" /><strong>@catalogEntry.Title</strong></span>
                                 @if (catalogEntry.Title != catalogEntry.Name) { <span class="technical entry-name">@catalogEntry.Name</span> }
                                 <span class="entry-description">@catalogEntry.Description</span>
@@ -95,9 +95,9 @@
     </div>;
 
     private RenderFragment RenderDetail(AgentCapabilityEntryInfo entry) => @<article class="detail-panel" @key="entry.Key">
-        <header class="detail-header">
+        <header class="detail-header" data-entry-key="@entry.Key">
             <span class="identity-emblem"><MudIcon Icon="@GetEntryIcon(entry)" /></span>
-            <div class="detail-heading"><h2 tabindex="-1" @ref="_detailHeading">@entry.Title</h2><span class="technical">@entry.Name</span><p>@entry.Description</p></div>
+            <div class="detail-heading"><h2 tabindex="-1" id="@(_focusVisit + "-detail-title")">@entry.Title</h2><span class="technical">@entry.Name</span><p>@entry.Description</p></div>
             <MudSwitch T="bool" Value="@entry.IsEntryEnabled" ValueChanged="@((bool value) => SetEntryEnabledAsync(entry, value))" ReadOnly="@Busy" aria-disabled="@BusyAttribute" Color="Color.Primary" Label="@L["Capabilities:Administration:EntryEnabled"]" />
         </header>
         <section class="detail-section access-section">
