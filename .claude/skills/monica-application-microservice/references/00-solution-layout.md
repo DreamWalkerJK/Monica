@@ -57,6 +57,7 @@ Recommended `.slnx` folders should mirror the physical layout:
 
 ## Mapping Rules
 
+- For shared specialization naming, mechanism choice, and capability placement, follow the [project-level extension rules](../../monica-application-project-unit-development/references/01-project-unit-naming-and-boundaries.md#project-level-extensions) within this topology.
 - Keep the same shared platform split across solution styles to reduce learning overhead.
 - Use the strict solution-project reference chain `{Subdomain}Service.API -> {Subdomain}Service.Domain -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`.
 - Put project-agnostic infrastructure extensions into `Shared/Platform.BuildingBlocks/Platform.BuildingBlocks.csproj`.

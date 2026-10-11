@@ -35,6 +35,48 @@ These are not part of `Monica.ProjectUnits` discovery, but they are part of the 
 | --- | --- | --- |
 | `Utility` helper | `Utils*` | Pure helper code that stays inside the domain boundary and does not deserve its own `DomainService` |
 
+## Project-Level Extensions
+
+Project-level extensions specialize an existing role. They do not add another application skill, business role, architecture layer, or transaction/job framework. Use the native Monica type directly when it already supplies the required behavior and contract.
+
+Distinguish three naming decisions:
+
+| Type | Naming rule | Example |
+| --- | --- | --- |
+| Native capability | Keep its Monica name | `ApplicationService`, `DomainService`, `RecurringJob` |
+| Reusable product specialization | Product identity plus a meaningful capability or role | `{Product}Entity`, `{Product}EfRepository`, `I{Product}CurrentUser` |
+| Concrete business unit or support type | Keep its business meaning and the existing role convention | `Order`, `IRepositoryOrder`, `RepositoryOrder`, `CommandHandlerApproveOrder` |
+
+Choose the product identity in the application's guidance. `Our`, `My`, `Custom`, and `Ex` do not establish ownership or responsibility. Use `Extensions` only for actual extension methods, such as `{Product}EntityIdExtensions`; it is not a general container for bases, DTOs, persistence, and startup logic.
+
+### Choose the Existing Mechanism
+
+1. Use native configuration when it expresses the required behavior.
+2. Implement an existing extension point for a policy or behavior, such as `IPersistencePolicy`; preserve its execution and ownership contract.
+3. Inherit when a stable type specialization supplies a useful common contract, consumed marker, state structure, or framework lifecycle adaptation.
+4. Compose independently varying capabilities through explicit dependencies. Keep an existing cohesive implementation when splitting it adds no meaningful boundary.
+
+A thin or empty class body can be justified by a marker that has real consumers or by a stable contract/state shape. A naming alias, speculative future use, or fewer constructor parameters is not sufficient value. Document the protected behavior, inputs and outputs, dependencies, lifetime/ownership, allowed consumers, and the source or behavioral evidence for that value.
+
+Inject the dependencies a concrete unit actually uses. Do not create a common service toolbox exposing current user, ID generation, events, clocks, and unrelated capabilities to every subclass. Do not hide business dependencies behind `IServiceProvider`, a cached service locator, a new scanner, or an independently built service provider; use the established host registration and lifecycle.
+
+### Keep Ownership and Consumers Explicit
+
+| Responsibility | Existing owner |
+| --- | --- |
+| Project-common reusable implementation, including technical extensions | `Platform.BuildingBlocks`, in a folder named for the capability |
+| Shared business language and published contracts | `Platform.Protocol/PublishedLanguages` |
+| Host composition, registration, and solution integration wiring | `Platform.Infrastructure` |
+| A domain's repository, adapter, or other implementation | The owning service/domain project and its existing role folder |
+
+Preserve the chosen solution's dependency chain. A shared implementation that consumes Protocol contracts must live where that direction allows it; BuildingBlocks cannot reference Protocol or a concrete domain. Technical dependencies do not make BuildingBlocks a pure domain kernel, and do not justify moving a domain-owned repository into Platform. Capability folders for shared extensions do not change the domain's `Repository/` placement.
+
+An EF specialization such as `{Product}EfRepository` and its wide adapter contract describe infrastructure access. Handlers, jobs, and domain services consume the narrow domain repository interface. Only an existing persistence-facing CRUD adapter may consume the concrete implementation or EF contract under the [repository template](13-repository-and-persistence-template.md). The same implementation serves both views; do not add a forwarding repository layer.
+
+Shared bases, markers, policies, and other support types do not automatically become business ProjectUnits. Determine discovery from the actual type and framework rules. Each discovered concrete unit retains its own explicit metadata and actual requirement references under the [metadata contract](03-project-unit-context-metadata.md); a base cannot supply these and examples must not invent requirement IDs.
+
+Validate a specialization through its owning behavior: host registration/discovery, scoped repository/context identity, tracked mutation, operation commit and rollback, or the adapter's existing semantics. Use `$monica-application-unit-testing` when executable verification is needed. Record the application's adoption and differences locally instead of maintaining a second universal type catalog.
+
 ## Placement Rules
 
 Use the same leaf folder semantics across solution styles. Keep folders flat and rely on prefix naming before introducing extra sub-folders.

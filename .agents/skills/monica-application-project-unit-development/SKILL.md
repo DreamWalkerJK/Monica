@@ -17,8 +17,7 @@ When adding or refactoring application EventBus events and consumers, including 
 
 ## Ground Rules
 
-- Prefer Monica-native base classes and interfaces. A project-local extension should own meaningful reusable behavior and document its purpose, dependencies, and lifecycle; do not introduce a base class solely as a naming alias. Keep application-specific conventions in that application's guidance.
-- Follow the [type naming, source filename, placement, and boundary rules](references/01-project-unit-naming-and-boundaries.md). Type conventions align with `Monica.ProjectUnits` discovery; file conventions keep source navigation consistent.
+- Prefer Monica-native types. Follow the [type naming, source filename, placement, boundary, and project-level extension rules](references/01-project-unit-naming-and-boundaries.md) when selecting a reusable specialization. Keep the application's concrete names and adopted extension families in its local guidance.
 - Keep persistence concerns in repositories and persistence classes, not in request handlers. Use `$monica-infra-persistence` for the current operation, transaction, and provider contracts.
 - Keep repository implementations in the owning subdomain or service infrastructure boundary. Do not move a repository or adapter to `Platform` just because it uses an external library; only project-common reusable infrastructure belongs in `Platform`.
 - Keep contracts stable: requests, DTOs, and events are not persistence entities.
@@ -35,7 +34,7 @@ When adding or refactoring application EventBus events and consumers, including 
 ## Reference Navigation
 
 - Unit catalog and responsibilities: [00-project-unit-overview.md](references/00-project-unit-overview.md)
-- Naming, placement, and boundary rules: [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md)
+- Naming, placement, boundaries, and project-level extensions: [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md)
 - Unit selection by feature shape: [02-project-unit-composition-map.md](references/02-project-unit-composition-map.md)
 - Metadata, ownership, and requirement traceability: [03-project-unit-context-metadata.md](references/03-project-unit-context-metadata.md)
 - `ApplicationService` templates: [10-application-service-template.md](references/10-application-service-template.md)

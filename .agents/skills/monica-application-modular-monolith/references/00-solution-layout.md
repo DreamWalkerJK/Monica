@@ -57,6 +57,7 @@ Recommended `.slnx` folders should mirror the physical layout:
 
 ## Mapping Rules
 
+- For shared specialization naming, mechanism choice, and capability placement, follow the [project-level extension rules](../../monica-application-project-unit-development/references/01-project-unit-naming-and-boundaries.md#project-level-extensions) within this topology.
 - Split by subdomain under `Domains/` first. Do not create global `Application`, `Domain`, or `Infrastructure` buckets for the whole solution.
 - Keep the same shared platform split across solution styles to reduce learning overhead.
 - Use the strict solution-project reference chain `AppHost -> Domains.{Subdomain} -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`.
