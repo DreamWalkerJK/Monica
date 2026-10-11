@@ -510,35 +510,33 @@
     "AppliedWithIssues": "回滚值已保存，但重新加载、通知、审计或验证的后续处理出现问题。"
   },
   "Versions": {
-    "Subtitle": "查看当前统一配置版本，并将历史版本与当前版本对比后按需恢复。",
+    "Subtitle": "查看自动捕获记录，比较保留快照，并针对当前生效值预览恢复方案。",
     "Empty": "未找到统一配置版本。",
     "Current": {
-      "Title": "当前版本",
+      "Title": "最新捕获快照",
       "DefinitionCount": "{0} 个定义"
     },
     "List": {
-      "Title": "历史版本",
-      "Empty": "暂无可与当前版本对比的历史版本。",
-      "ComparedToCurrent": "对比当前 {0}"
+      "Title": "快照目录"
     },
     "Compare": {
-      "AgainstCurrent": "{0} -> 当前 {1}",
+      "AgainstCurrent": "{0} → 最新保存 {1}",
       "AgainstPrevious": "{0} -> {1}",
-      "CurrentOnly": "历史版本列表中的对比均以当前版本作为目标版本。",
-      "PreviousPair": "该对比来自历史版本项的上一版本对比操作。",
-      "NoSelection": "选择一个历史版本",
-      "Unavailable": "无法加载该版本与当前版本的差异。"
+      "CurrentOnly": "目标是最新保存的快照，不是实时生效配置。",
+      "PreviousPair": "原始是前一个保留快照；已删除的版本可能使编号不连续。",
+      "NoSelection": "选择原始与目标快照",
+      "Unavailable": "无法加载所选快照的比较结果。"
     },
     "Definitions": {
       "Empty": "未捕获配置定义。"
     },
     "Actions": {
-      "ComparePrevious": "与上一版本对比",
-      "Delete": "删除历史版本"
+      "ComparePrevious": "与前一个保留快照比较",
+      "Delete": "删除保存快照"
     },
     "Delete": {
       "ConfirmTitle": "删除 {0}？",
-      "ConfirmMessage": "确定永久删除 {0} 的历史快照吗？此操作不会修改当前版本或任何生效配置值。",
+      "ConfirmMessage": "永久删除保存的快照 {0}？生效值和最新保存的快照保持不变。",
       "Confirm": "删除版本",
       "Messages": {
         "Succeeded": "已删除 {0}。",
@@ -555,7 +553,9 @@
         "Added": "新增",
         "Removed": "移除",
         "Modified": "修改"
-      }
+      },
+      "Origin": "原始快照",
+      "Target": "目标快照"
     },
     "Rollback": {
       "Title": "回滚 {0}",
@@ -591,7 +591,15 @@
         "CompositeSourceConflict": "该容器还接收来自 {0} 的值；整体替换会产生未经确认的覆盖值",
         "LowerPriorityFallback": "移除后将暴露低优先级来源 {0}",
         "NoWritableTarget": "没有可写目标",
-        "DiffDirection": "当前生效值 -> 回滚目标值"
+        "DiffDirection": "当前生效值 -> 回滚目标值",
+        "PreviewFingerprint": "已审阅方案指纹",
+        "CapturedSchemaHash": "快照架构哈希",
+        "CurrentSchemaHash": "当前架构哈希",
+        "CurrentSchemaVersion": "当前架构版本",
+        "SourceKey": "来源键",
+        "ExpectedValueVersion": "预期存储版本",
+        "ExpectedSourceRevision": "预期来源修订",
+        "ExpectedSourceChainRevision": "预期来源链修订"
       },
       "MutationKinds": {
         "Set": "设置",
@@ -618,6 +626,33 @@
         "LowerPriorityFallback": "低优先级值回退",
         "UnsupportedSource": "不支持的来源"
       }
+    },
+    "Workbench": {
+      "LatestHelp": "纳入捕获范围的配置变更完成后自动保存。这份历史快照与当前生效值是不同的数据。",
+      "CapturedAt": "捕获时间",
+      "CaptureGroup": "捕获变更组",
+      "CapturedDefinitions": "捕获范围",
+      "TriggeredBy": "触发定义",
+      "RetainedEvidence": "已保留证据",
+      "LedgerHelp": "查看已加载快照的完整标识、捕获定义和操作审计。",
+      "Loaded": "已加载 {0} 个快照",
+      "Filter": "筛选已加载快照",
+      "Matched": "显示 {0} / {1} 个已加载快照",
+      "Snapshot": "快照",
+      "Audit": "捕获审计",
+      "Actions": "操作",
+      "LatestBadge": "最新捕获",
+      "CompareSnapshot": "与最新保存的快照比较",
+      "LatestProtected": "最新保存的快照不能删除。",
+      "NoMatches": "没有匹配的快照",
+      "NoMatchesHelp": "调整或清空筛选条件，查看已加载的快照。",
+      "LoadedLimit": "此视图加载最新的 200 个保留快照。已加载数量不代表全部保留数量。",
+      "EmptyHelp": "主机配置纳入捕获范围的定义，在其变更组成功保存后自动生成快照。此处不提供手动捕获操作。",
+      "Comparison": "快照比较",
+      "SavedEvidence": "已保存快照比较",
+      "ComparisonHelp": "选择两个保留快照，比较其中捕获的生效值。原始和目标的顺序决定比较方向。",
+      "Compare": "比较快照",
+      "PairHelp": "仅比较已保存的值。定义和敏感性依据当前加载的架构检查。"
     }
   },
   "Debug": {
@@ -947,6 +982,10 @@
     "Errors": {
       "LoadFailed": "加载失败",
       "InvalidPath": "逻辑路径无效"
+    },
+    "Pagination": {
+      "RowsPerPage": "每页快照数",
+      "InfoFormat": "第 {first_item}-{last_item} 项，共 {all_items} 项"
     }
   },
   "ValidationRules": {

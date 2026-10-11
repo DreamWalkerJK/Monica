@@ -220,11 +220,10 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
     }
 
     [Fact]
-    public async Task CreateAsync_WhenStoredListKeepsExplicitNullsButRuntimeOmitsThem_ShouldNotReportDrift()
+    public async Task CreateAsync_WhenStoredListKeepsExplicitNullsAndRuntimeRebindsThem_ShouldNotReportDrift()
     {
-        // Reproduces the production incident: a stored document keeps "Tag": null inside list items
-        // while runtime JSON reconstruction omits null members. The semantic comparer must treat the
-        // explicit null and the absent property as equal instead of flagging RuntimeOutOfSync.
+        // The configured source omits Tag, while complete binding retains the nullable CLR default.
+        // Comparing the captured and bound values must not report a store/runtime drift.
         var definition = CreateDefinition(
             "Definition.ListWithNulls",
             "ListWithNulls",
@@ -381,8 +380,27 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
         IConfigurationMetadataStore? metadataStore = null)
     {
         var registry = new ConfigurationDefinitionRegistry();
-        registry.RegisterRange(definitions);
+        registry.RegisterRange(definitions.Where(static definition => definition.Origin == ConfigurationDefinitionOrigin.LocalScan));
+        foreach (var definition in definitions.Where(static definition => definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata))
+        {
+            metadataStore ??= Substitute.For<IConfigurationMetadataStore>();
+            metadataStore.GetPublishedDefinitionEntryAsync(definition.DefinitionKey, Arg.Any<CancellationToken>())
+                .Returns(ConfigurationPublishedDefinitionEntry.Materialize(new ConfigurationPublishedDefinitionRecord
+                {
+                    StoreKey = "test", DefinitionKey = definition.DefinitionKey, SectionPath = definition.SectionPath,
+                    DisplayName = definition.DisplayName, ClrTypeName = definition.ClrTypeName,
+                    FromProject = definition.FromProject, SchemaVersion = definition.SchemaVersion,
+                    DefinitionRevision = definition.DefinitionRevision, SchemaHash = definition.SchemaHash,
+                    ReloadBehavior = definition.ReloadBehavior.ToString(),
+                    SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition)
+                }));
+        }
         var definitionResolver = new ConfigurationDefinitionResolver(registry, metadataStore);
+        var localRegistry = new ConfigurationLocalDefinitionRegistry();
+        localRegistry.RegisterRange(definitions
+            .Where(static definition => definition.Origin == ConfigurationDefinitionOrigin.LocalScan)
+            .Select(static definition => new ConfigurationDefinitionRegistration(OptionsType(definition.Root), definition)));
+        var materializer = new ConfigurationObjectMaterializer(localRegistry);
 
         var documentsByKey = documents.ToDictionary(
             static document => document.DefinitionKey,
@@ -402,7 +420,7 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
         var reloadCoordinator = new TestReloadCoordinator(documentsByKey);
         var effectiveSnapshotReader = new ConfigurationEffectiveSnapshotReader(
             effectiveValueStore,
-            ConfigurationValidationTestServices.CreateSeedFactory(runtimeContext),
+            new ConfigurationEffectiveValueSeedFactory(runtimeContext, localRegistry, materializer),
             reloadCoordinator);
 
         var monicaSource = new ConfigurationSourceDescriptor
@@ -466,7 +484,8 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
         var factory = new ConfigurationUnifiedVersionRollbackPreviewFactory(
             definitionResolver,
             effectiveSnapshotReader,
-            ConfigurationValidationTestServices.CreateCoordinator(),
+            new ConfigurationValidationCoordinator(new ConfigurationValueValidationEngine(), localRegistry,
+                materializer, new ConfigurationObjectValidationWalker()),
             persistencePlanner,
             groupApplyService);
         return new PreviewFactoryFixture(factory, effectiveValueStore);
@@ -509,12 +528,10 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
             DefinitionKey = definitionKey,
             SectionPath = sectionPath,
             DisplayName = definitionKey,
+            ClrTypeName = OptionsType(root).AssemblyQualifiedName!,
             SchemaVersion = 1,
             DefinitionRevision = 1,
-            ValidationContract = new ConfigurationValidationContract
-            {
-                Capability = ConfigurationValidationCapability.PortableOnly, Revision = "test-portable-contract"
-            },
+            ValidationContract = ConfigurationLocalDefinitionDescriptor.CreateContract(OptionsType(root), root),
             Root = root
         };
         return definition with
@@ -561,6 +578,28 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
     private sealed record PreviewFactoryFixture(
         ConfigurationUnifiedVersionRollbackPreviewFactory Factory,
         IConfigurationEffectiveValueStore EffectiveValueStore);
+
+    private static Type OptionsType(ConfigurationNodeDefinition root)
+        => root.Children.Any(static child => child.Name == "Services") ? typeof(PlanningListOptions) : typeof(PlanningOptions);
+
+    private sealed class PlanningOptions
+    {
+        public PlanningOptions() { }
+        public int WorkerId { get; set; }
+    }
+
+    private sealed class PlanningListOptions
+    {
+        public PlanningListOptions() { }
+        public int WorkerId { get; set; }
+        public List<PlanningService> Services { get; set; } = [];
+    }
+
+    private sealed class PlanningService
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Tag { get; set; }
+    }
 
     private sealed class TestReloadCoordinator(
         IReadOnlyDictionary<string, ConfigurationEffectiveValueDocument> documentsByKey)

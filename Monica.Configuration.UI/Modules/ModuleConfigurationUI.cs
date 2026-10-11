@@ -97,7 +97,6 @@ public sealed class ModuleConfigurationUI : MonicaModule<ModuleConfigurationUIOp
         services.AddScoped<ConfigurationPendingChangeCompactor>();
         services.AddScoped<ConfigurationJsonDraftService>();
         services.AddScoped<ConfigurationParameterPackageService>();
-        services.AddScoped<ConfigurationVersionsPageState>();
     }
 }
 

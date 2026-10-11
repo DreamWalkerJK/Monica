@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Abstractions;
+using Monica.Configuration.Binding;
 using Monica.Configuration.Models;
 using Monica.Configuration.Projection;
 using Monica.Configuration.Serialization;
@@ -95,8 +96,9 @@ internal sealed class ConfigurationSourceInspector(
         }
 
         var descriptors = GetSources().ToDictionary(source => source.PriorityIndex);
+        var providers = root.Providers.ToArray();
         var sources = new List<RuntimeConfigurationSource>(descriptors.Count);
-        foreach (var (provider, index) in root.Providers.Select((provider, index) => (provider, index)))
+        foreach (var (provider, index) in providers.Select((provider, index) => (provider, index)))
         {
             // Chained providers are aliases over another IConfiguration, not leaf sources. Querying them as direct
             // value sources can re-enter the active root and block source-chain reads.
@@ -112,7 +114,9 @@ internal sealed class ConfigurationSourceInspector(
                 definition,
                 logicalPath,
                 pathProjector.Project(definition.SectionPath, logicalPath),
-                sources))
+                sources,
+                providers,
+                root))
             .ToArray();
     }
 
@@ -127,6 +131,10 @@ internal sealed class ConfigurationSourceInspector(
         var source = GetRequiredSource(sourceKey);
         var provider = root.Providers.ElementAtOrDefault(source.PriorityIndex)
                        ?? throw new KeyNotFoundException($"Configuration source '{sourceKey}' is no longer active.");
+        if (provider is ChainedConfigurationProvider)
+        {
+            throw new InvalidOperationException("Chained configuration aliases do not have a physical source projection revision.");
+        }
         return ConfigurationProviderProjectionRevision.Compute(provider, definition);
     }
 
@@ -141,11 +149,12 @@ internal sealed class ConfigurationSourceInspector(
         }
 
         var sources = GetSources().ToDictionary(source => source.PriorityIndex);
+        var providers = root.Providers.ToArray();
         var counters = new Dictionary<string, ContributionCounter>(StringComparer.OrdinalIgnoreCase);
         var effectivePriorityByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var entries = new List<SourceContributionEntry>();
 
-        foreach (var (provider, index) in root.Providers.Select((provider, index) => (provider, index)))
+        foreach (var (provider, index) in providers.Select((provider, index) => (provider, index)))
         {
             if (!sources.TryGetValue(index, out var source))
             {
@@ -175,6 +184,7 @@ internal sealed class ConfigurationSourceInspector(
         {
             if (effectivePriorityByPath.TryGetValue(entry.ConfigurationPath, out var priority)
                 && priority == entry.PriorityIndex
+                && !IsHiddenByHigherProvider(entry.ConfigurationPath, priority, providers, root)
                 && counters.TryGetValue(entry.SourceKey, out var counter))
             {
                 counter.EffectiveValueCount++;
@@ -205,6 +215,7 @@ internal sealed class ConfigurationSourceInspector(
 
         var definitions = await GetKnownDefinitionsAsync(cancellationToken);
         var sources = GetSources();
+        var providers = root.Providers.ToArray();
         var sourcesByPriority = sources.ToDictionary(source => source.PriorityIndex);
         var builders = sources.ToDictionary(
             source => source.SourceKey,
@@ -214,7 +225,7 @@ internal sealed class ConfigurationSourceInspector(
         var effectivePriorityByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var includeUnmanaged = moduleOptions.Value.IncludeUnmanagedSourceInventoryItems;
 
-        foreach (var (provider, index) in root.Providers.Select((provider, index) => (provider, index)))
+        foreach (var (provider, index) in providers.Select((provider, index) => (provider, index)))
         {
             if (!sourcesByPriority.TryGetValue(index, out var source))
             {
@@ -292,7 +303,8 @@ internal sealed class ConfigurationSourceInspector(
         foreach (var entry in entries)
         {
             var isEffective = effectivePriorityByPath.TryGetValue(entry.Item.ConfigurationPath, out var priority)
-                              && priority == entry.PriorityIndex;
+                              && priority == entry.PriorityIndex
+                              && !IsHiddenByHigherProvider(entry.Item.ConfigurationPath, priority, providers, root);
             builders[entry.SourceKey].Add(entry.Item with { IsEffective = isEffective });
         }
 
@@ -386,7 +398,9 @@ internal sealed class ConfigurationSourceInspector(
         ConfigurationDefinition definition,
         LogicalPath logicalPath,
         string configurationPath,
-        IReadOnlyList<RuntimeConfigurationSource> sources)
+        IReadOnlyList<RuntimeConfigurationSource> sources,
+        IReadOnlyList<IConfigurationProvider> providers,
+        IConfigurationRoot activeRoot)
     {
         var targetNode = ConfigurationSchemaNavigator.ResolveNode(definition.Root, logicalPath);
         var isSensitive = ConfigurationSchemaNavigator.IsSensitivePath(definition.Root, logicalPath);
@@ -408,6 +422,10 @@ internal sealed class ConfigurationSourceInspector(
         }
 
         var effectiveIndex = hits.Count == 0 ? -1 : hits.Max(hit => hit.Source.PriorityIndex);
+        if (effectiveIndex >= 0 && IsHiddenByHigherProvider(configurationPath, effectiveIndex, providers, activeRoot))
+        {
+            effectiveIndex = -1;
+        }
         return new ConfigurationSourceChain
         {
             DefinitionKey = definition.DefinitionKey,
@@ -418,6 +436,52 @@ internal sealed class ConfigurationSourceInspector(
                 .OrderByDescending(hit => hit.Source.PriorityIndex)
                 .ToArray()
         };
+    }
+
+    private static bool IsHiddenByHigherProvider(string configurationPath, int priorityIndex,
+        IReadOnlyList<IConfigurationProvider> providers, IConfigurationRoot activeRoot)
+    {
+        for (var index = priorityIndex + 1; index < providers.Count; index++)
+        {
+            if (providers[index] is ChainedConfigurationProvider chain)
+            {
+                var leaves = new List<IConfigurationProvider>();
+                // Prove the entire independent graph before querying any leaf. Active-root aliases, cycles and
+                // opaque non-root chains cannot establish that a lower physical source is still the winner.
+                var visited = new HashSet<IConfiguration>(ReferenceEqualityComparer.Instance) { activeRoot };
+                if (!TryCollectIndependentChainProviders(chain.Configuration, leaves, visited)) return true;
+                if (leaves.Any(provider => ConfigurationShapeView.HasBarrier(provider, configurationPath)
+                    || provider.TryGet(configurationPath, out _)
+                    || provider is IConfigurationValueShapeProvider shapes && shapes.TryGetShape(configurationPath, out _)
+                    || provider.GetChildKeys([], configurationPath.Length == 0 ? null : configurationPath).Any())) return true;
+                continue;
+            }
+            if (ConfigurationShapeView.HasBarrier(providers[index], configurationPath))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryCollectIndependentChainProviders(IConfiguration? configuration,
+        ICollection<IConfigurationProvider> leaves, ISet<IConfiguration> visited)
+    {
+        if (configuration is not IConfigurationRoot root || !visited.Add(root)) return false;
+        try
+        {
+            foreach (var provider in root.Providers)
+            {
+                if (provider is ChainedConfigurationProvider chain)
+                {
+                    if (!TryCollectIndependentChainProviders(chain.Configuration, leaves, visited)) return false;
+                }
+                else leaves.Add(provider);
+            }
+            return true;
+        }
+        finally { visited.Remove(root); }
     }
 
     private sealed record RuntimeConfigurationSource(
@@ -441,6 +505,27 @@ internal sealed class ConfigurationSourceInspector(
                     IsSensitive = isSensitive
                 }
                 : null;
+        }
+
+        if (provider is IConfigurationValueShapeProvider shapes
+            && shapes.TryGetShape(configurationPath, out var shape))
+        {
+            var explicitContainer = shape switch
+            {
+                ConfigurationValueShape.Null => "null",
+                ConfigurationValueShape.Object when !provider.GetChildKeys([], configurationPath).Any() => "{}",
+                ConfigurationValueShape.List when !provider.GetChildKeys([], configurationPath).Any() => "[]",
+                _ => null
+            };
+            if (explicitContainer is not null)
+            {
+                return new ConfigurationSourceValue
+                {
+                    Source = source,
+                    DisplayValue = isSensitive ? null : explicitContainer,
+                    IsSensitive = isSensitive
+                };
+            }
         }
 
         var node = BuildProviderJsonNode(provider, targetNode, configurationPath);
@@ -979,6 +1064,8 @@ internal sealed class ConfigurationSourceInspector(
         IConfigurationProvider provider,
         string? parentPath)
     {
+        // Aliases are never attributed as physical supplied values or queried through the active root.
+        if (provider is ChainedConfigurationProvider) yield break;
         var childKeys = provider.GetChildKeys([], parentPath)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(key => key, StringComparer.OrdinalIgnoreCase);

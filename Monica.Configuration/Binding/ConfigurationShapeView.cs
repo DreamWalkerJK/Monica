@@ -93,7 +93,11 @@ internal sealed class ConfigurationShapeView(IConfiguration configuration)
         return keys.Order(ConfigurationKeyComparer.Instance).Select(key => GetSection(path.Length == 0 ? key : $"{path}:{key}"));
     }
 
-    private static bool HasBarrier(IConfigurationProvider provider, string path, bool includeSelf = false)
+    /// <summary>
+    /// Tests whether an explicit null or empty container hides the requested descendants in one provider.
+    /// Source inspection shares this rule with binding rather than treating masked lower values as winners.
+    /// </summary>
+    internal static bool HasBarrier(IConfigurationProvider provider, string path, bool includeSelf = false)
     {
         if (provider is not IConfigurationValueShapeProvider shapes) return false;
         var current = includeSelf ? path : Parent(path);

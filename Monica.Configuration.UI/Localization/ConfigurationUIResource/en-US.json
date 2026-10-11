@@ -510,35 +510,33 @@
     "AppliedWithIssues": "The rollback values were saved, but reload, notification, audit, or verification follow-up work reported a problem."
   },
   "Versions": {
-    "Subtitle": "Review the current unified configuration version, compare history against it, and restore when needed.",
+    "Subtitle": "Review automatic captures, compare retained snapshots, and preview a restore against current effective values.",
     "Empty": "No unified configuration versions were found.",
     "Current": {
-      "Title": "Current Version",
+      "Title": "Latest captured snapshot",
       "DefinitionCount": "{0} definitions"
     },
     "List": {
-      "Title": "History Versions",
-      "Empty": "No history versions are available for comparison with the current version.",
-      "ComparedToCurrent": "Compared to current {0}"
+      "Title": "Saved snapshots"
     },
     "Compare": {
-      "AgainstCurrent": "{0} -> current {1}",
+      "AgainstCurrent": "{0} → latest saved {1}",
       "AgainstPrevious": "{0} -> {1}",
-      "CurrentOnly": "Every comparison in the history list uses the current version as the target.",
-      "PreviousPair": "This comparison comes from the history item's previous-version action.",
-      "NoSelection": "Select a history version",
-      "Unavailable": "Unable to load the difference between this version and the current version."
+      "CurrentOnly": "The target is the latest saved snapshot, not the live effective configuration.",
+      "PreviousPair": "The origin is the preceding retained snapshot; deleted version numbers may leave gaps.",
+      "NoSelection": "Choose an origin and target snapshot",
+      "Unavailable": "Unable to load the selected saved-snapshot comparison."
     },
     "Definitions": {
       "Empty": "No definitions were captured."
     },
     "Actions": {
-      "ComparePrevious": "Compare with previous version",
-      "Delete": "Delete history version"
+      "ComparePrevious": "Compare with preceding retained snapshot",
+      "Delete": "Delete saved snapshot"
     },
     "Delete": {
       "ConfirmTitle": "Delete {0}?",
-      "ConfirmMessage": "Permanently delete the {0} history snapshot? This does not change the current version or any effective configuration values.",
+      "ConfirmMessage": "Permanently delete saved snapshot {0}? Effective values and the latest saved snapshot remain unchanged.",
       "Confirm": "Delete version",
       "Messages": {
         "Succeeded": "{0} was deleted.",
@@ -555,7 +553,9 @@
         "Added": "Added",
         "Removed": "Removed",
         "Modified": "Modified"
-      }
+      },
+      "Origin": "Origin snapshot",
+      "Target": "Target snapshot"
     },
     "Rollback": {
       "Title": "Roll Back {0}",
@@ -591,7 +591,15 @@
         "CompositeSourceConflict": "This container also receives values from {0}; replacing it would create unreviewed overrides",
         "LowerPriorityFallback": "Removal would reveal lower-priority source {0}",
         "NoWritableTarget": "No writable target",
-        "DiffDirection": "Current effective value -> rollback target"
+        "DiffDirection": "Current effective value -> rollback target",
+        "PreviewFingerprint": "Reviewed plan fingerprint",
+        "CapturedSchemaHash": "Captured schema hash",
+        "CurrentSchemaHash": "Current schema hash",
+        "CurrentSchemaVersion": "Current schema version",
+        "SourceKey": "Source key",
+        "ExpectedValueVersion": "Expected store version",
+        "ExpectedSourceRevision": "Expected source revision",
+        "ExpectedSourceChainRevision": "Expected source-chain revision"
       },
       "MutationKinds": {
         "Set": "Set",
@@ -618,6 +626,33 @@
         "LowerPriorityFallback": "Lower-priority fallback",
         "UnsupportedSource": "Unsupported source"
       }
+    },
+    "Workbench": {
+      "LatestHelp": "Automatically captured after an included configuration change. This saved evidence is separate from current effective values.",
+      "CapturedAt": "Captured at",
+      "CaptureGroup": "Capture group",
+      "CapturedDefinitions": "Captured scope",
+      "TriggeredBy": "Triggered by",
+      "RetainedEvidence": "RETAINED EVIDENCE",
+      "LedgerHelp": "Review the complete identity, included definitions, and audit trail of each loaded snapshot.",
+      "Loaded": "{0} snapshots loaded",
+      "Filter": "Filter loaded snapshots",
+      "Matched": "Showing {0} / {1} loaded",
+      "Snapshot": "Snapshot",
+      "Audit": "Capture audit",
+      "Actions": "Actions",
+      "LatestBadge": "Latest capture",
+      "CompareSnapshot": "Compare with latest saved snapshot",
+      "LatestProtected": "The latest saved snapshot cannot be deleted.",
+      "NoMatches": "No matching saved snapshots",
+      "NoMatchesHelp": "Change or clear the filter to review loaded snapshots.",
+      "LoadedLimit": "This view loads the newest 200 retained snapshots. The loaded count is not a total retained count.",
+      "EmptyHelp": "Snapshots are captured automatically after successful mutation groups affecting definitions included in the host's capture configuration. There is no manual capture action here.",
+      "Comparison": "Comparison",
+      "SavedEvidence": "SAVED SNAPSHOT COMPARISON",
+      "ComparisonHelp": "Choose two retained snapshots and compare their captured effective values. Origin and target order controls the direction.",
+      "Compare": "Compare snapshots",
+      "PairHelp": "This compares saved values only. Definitions and sensitivity are checked against the currently loaded schemas."
     }
   },
   "Debug": {
@@ -947,6 +982,10 @@
     "Errors": {
       "LoadFailed": "Failed to load data",
       "InvalidPath": "Invalid logical path"
+    },
+    "Pagination": {
+      "RowsPerPage": "Snapshots per page",
+      "InfoFormat": "{first_item}-{last_item} of {all_items}"
     }
   },
   "ValidationRules": {
