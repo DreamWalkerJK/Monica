@@ -51,6 +51,7 @@ public class MudBlazorDefaultTheme : ThemeDefinitionBase
     private readonly PaletteDark _darkPalette = new()
     {
         Primary = "#9d91ff",
+        PrimaryDarken = "#8b7dff",
         PrimaryContrastText = "#171427",
         InfoContrastText = "#101b2d",
         SuccessContrastText = "#0b2513",

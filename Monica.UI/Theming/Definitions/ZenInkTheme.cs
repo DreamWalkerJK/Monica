@@ -140,7 +140,7 @@ public sealed class ZenInkTheme : ThemeDefinitionBase
         {
             Primary = "#6a9c86", // Lighter Cyan-Green for dark mode
             PrimaryLighten = "#8bc2aa",
-            PrimaryDarken = "#4b7060",
+            PrimaryDarken = "#78ab94",
             PrimaryContrastText = "#121212",
 
             Secondary = "#bc7441", // Lighter Ochre

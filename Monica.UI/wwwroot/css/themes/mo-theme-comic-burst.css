@@ -108,7 +108,7 @@
     --mo-comic-ink-soft: #695f50;
     --mo-comic-shadow: #1b150d;
     --mo-comic-accent: #d8202a;
-    --mo-comic-on-accent: #ffffff;
+    --mo-comic-on-accent: var(--mud-palette-primary-text);
     --mo-comic-warn: #f5a300;
     --mo-comic-on-warn: #1b150d;
     --mo-comic-tone: rgba(27, 21, 13, 0.16);
@@ -138,7 +138,7 @@
     --mo-comic-ink-soft: #b9ad98;
     --mo-comic-shadow: #000000;
     --mo-comic-accent: #ff4a54;
-    --mo-comic-on-accent: #ffffff;
+    --mo-comic-on-accent: var(--mud-palette-primary-text);
     --mo-comic-warn: #ffc247;
     --mo-comic-on-warn: #1b150d;
     --mo-comic-tone: rgba(240, 233, 218, 0.14);
@@ -318,8 +318,8 @@
     border: var(--mo-comic-border-control);
 }
 
-.mo-theme-comic-burst-light .mud-button-filled-primary,
-.mo-theme-comic-burst-dark .mud-button-filled-primary {
+.mo-theme-comic-burst-light .mud-button-filled-primary:not(:disabled),
+.mo-theme-comic-burst-dark .mud-button-filled-primary:not(:disabled) {
     background: var(--mo-comic-accent);
     border-color: var(--mo-comic-ink);
     color: var(--mo-comic-on-accent);

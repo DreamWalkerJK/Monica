@@ -1,0 +1,29 @@
+@using Monica.UI.Shared.Components.Navigation
+@using Monica.Utilities.Localization
+@using Monica.Utilities.Pages
+@inject IStringLocalizer<UtilitiesResource> L
+
+<div class="utilities-page mo-page-shell mo-page-shell--full-width">
+    <header class="utilities-heading">
+        <span class="utilities-family">@L["Page:Title"]</span>
+        <h1>@L[IsTextPage ? "TextJson:Title" : "Connectivity:Title"]</h1>
+        <p>@L[IsTextPage ? "TextJson:Subtitle" : "Connectivity:Subtitle"]</p>
+    </header>
+    <MoWorkbenchNavigation Label="@L["Page:Navigation"]">
+        <a href="@UIUtilitiesPage.PAGE_URL" aria-current="@(!IsTextPage ? "page" : null)">
+            <MudIcon Icon="@Icons.Material.Outlined.Lan" />@L["Tabs:Connectivity"]
+        </a>
+        <a href="@UIUtilitiesTextPage.PAGE_URL" aria-current="@(IsTextPage ? "page" : null)">
+            <MudIcon Icon="@Icons.Material.Outlined.Code" />@L["Tabs:TextJson"]
+        </a>
+    </MoWorkbenchNavigation>
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Gets or sets whether the text workspace is current; connectivity is the default.</summary>
+    [Parameter] public bool IsTextPage { get; set; }
+
+    /// <summary>Gets or sets the selected tool's working surface.</summary>
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+}

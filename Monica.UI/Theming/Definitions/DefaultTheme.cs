@@ -116,7 +116,7 @@ public sealed class DefaultTheme : ThemeDefinitionBase
     {
         Primary = "#6366f1", // Indigo 500
         PrimaryLighten = "#818cf8", // Indigo 400
-        PrimaryDarken = "#4f46e5", // Indigo 600
+        PrimaryDarken = "#7579f4", // Hover fill retains contrast with the dark primary foreground.
         PrimaryContrastText = "#000000",
 
         Secondary = "#a1a1aa", // Zinc 400
