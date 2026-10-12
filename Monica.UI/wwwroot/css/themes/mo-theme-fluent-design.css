@@ -127,16 +127,18 @@
 .mo-theme-fluent-design-light .mud-icon-button,
 .mo-theme-fluent-design-dark .mud-icon-button{
     border-radius: var(--mo-fluent-radius-control) !important;
-    color: var(--mud-palette-text-secondary) !important;
     transition:
         background-color var(--mo-fluent-motion),
         color var(--mo-fluent-motion);
 }
 
-.mo-theme-fluent-design-light .action-button:hover,
-.mo-theme-fluent-design-dark .action-button:hover,
-.mo-theme-fluent-design-light .mud-icon-button:hover,
-.mo-theme-fluent-design-dark .mud-icon-button:hover{
+.mo-theme-fluent-design-light :is(.action-button, .mud-icon-button):not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]),
+.mo-theme-fluent-design-dark :is(.action-button, .mud-icon-button):not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]) {
+    color: var(--mud-palette-text-secondary) !important;
+}
+
+.mo-theme-fluent-design-light :is(.action-button, .mud-icon-button):not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):hover,
+.mo-theme-fluent-design-dark :is(.action-button, .mud-icon-button):not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):hover {
     background: var(--mo-fluent-fill-subtle-secondary) !important;
     color: var(--mud-palette-text-primary) !important;
 }
@@ -229,7 +231,6 @@
 .mo-theme-fluent-design-dark .mud-button {
     min-height: var(--mo-fluent-control-height);
     border-radius: var(--mo-fluent-radius-control);
-    box-shadow: none !important;
     font-family: var(--mo-fluent-font-text);
     font-size: 0.875rem;
     font-weight: 400;
@@ -244,49 +245,54 @@
         box-shadow var(--mo-fluent-motion);
 }
 
-.mo-theme-fluent-design-light .mud-button-filled,
-.mo-theme-fluent-design-dark .mud-button-filled {
+.mo-theme-fluent-design-light .mud-button:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]),
+.mo-theme-fluent-design-dark .mud-button:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]) {
+    box-shadow: none !important;
+}
+
+.mo-theme-fluent-design-light .mud-button-filled:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]),
+.mo-theme-fluent-design-dark .mud-button-filled:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]) {
     background: var(--mo-fluent-fill-control) !important;
     border: 1px solid var(--mo-fluent-stroke-control) !important;
     color: var(--mud-palette-text-primary) !important;
 }
 
-.mo-theme-fluent-design-light .mud-button-filled:hover,
-.mo-theme-fluent-design-dark .mud-button-filled:hover {
+.mo-theme-fluent-design-light .mud-button-filled:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):hover,
+.mo-theme-fluent-design-dark .mud-button-filled:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):hover {
     background: var(--mo-fluent-fill-control-secondary) !important;
 }
 
-.mo-theme-fluent-design-light .mud-button-filled:active,
-.mo-theme-fluent-design-dark .mud-button-filled:active {
+.mo-theme-fluent-design-light .mud-button-filled:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):active,
+.mo-theme-fluent-design-dark .mud-button-filled:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):active {
     background: var(--mo-fluent-fill-control-active) !important;
 }
 
-.mo-theme-fluent-design-light .mud-button-filled-primary,
-.mo-theme-fluent-design-dark .mud-button-filled-primary {
+.mo-theme-fluent-design-light .mud-button-filled-primary:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]),
+.mo-theme-fluent-design-dark .mud-button-filled-primary:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]) {
     background: var(--mud-palette-primary) !important;
     border-color: transparent !important;
     color: var(--mud-palette-primary-text) !important;
 }
 
-.mo-theme-fluent-design-light .mud-button-filled-primary:hover,
-.mo-theme-fluent-design-dark .mud-button-filled-primary:hover {
+.mo-theme-fluent-design-light .mud-button-filled-primary:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):hover,
+.mo-theme-fluent-design-dark .mud-button-filled-primary:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):hover {
     background: var(--mo-fluent-fill-accent-hover) !important;
 }
 
-.mo-theme-fluent-design-light .mud-button-filled-primary:active,
-.mo-theme-fluent-design-dark .mud-button-filled-primary:active {
+.mo-theme-fluent-design-light .mud-button-filled-primary:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):active,
+.mo-theme-fluent-design-dark .mud-button-filled-primary:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):active {
     background: var(--mo-fluent-fill-accent-pressed) !important;
 }
 
-.mo-theme-fluent-design-light .mud-button-outlined,
-.mo-theme-fluent-design-dark .mud-button-outlined {
+.mo-theme-fluent-design-light .mud-button-outlined:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]),
+.mo-theme-fluent-design-dark .mud-button-outlined:not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]) {
     background: var(--mo-fluent-fill-control) !important;
     border-color: var(--mo-fluent-stroke-control) !important;
     color: var(--mud-palette-text-primary) !important;
 }
 
-.mo-theme-fluent-design-light :is(.mud-button-text:hover, .mud-button-outlined:hover),
-.mo-theme-fluent-design-dark :is(.mud-button-text:hover, .mud-button-outlined:hover) {
+.mo-theme-fluent-design-light :is(.mud-button-text, .mud-button-outlined):not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):hover,
+.mo-theme-fluent-design-dark :is(.mud-button-text, .mud-button-outlined):not(:disabled, [disabled], .mud-disabled, [aria-disabled="true"]):hover {
     background: var(--mo-fluent-fill-subtle-secondary) !important;
 }
 

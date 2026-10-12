@@ -2,23 +2,9 @@
 @using Monica.DevOps.Localization
 @attribute [Route(PAGE_URL)]
 @inject IStringLocalizer<FileOpsResource> L
-
 <PageTitle>@L["Page:DocumentTitle"]</PageTitle>
-
-<div class="file-ops-page">
-    <MudContainer MaxWidth="MaxWidth.False" Class="file-ops-page__container">
-        <div class="file-ops-page__content">
-            <header class="file-ops-header">
-                <div class="file-ops-header__eyebrow"><span aria-hidden="true"></span><span>@L["Page:Eyebrow"]</span></div>
-                <MudText Typo="Typo.h3" HtmlTag="h1">@L["Page:Title"]</MudText>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="file-ops-header__description">@L["Page:Subtitle"]</MudText>
-            </header>
-
-            <FileOpsWorkspace />
-        </div>
-    </MudContainer>
-</div>
-
+<div class="file-ops-page"><FileOpsFamilyHeader /><FileOpsWorkspace /></div>
 @code {
+    /// <summary>The portable FileOps entry route.</summary>
     public const string PAGE_URL = "/ui/file-ops";
 }

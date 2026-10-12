@@ -1,0 +1,127 @@
+@using Monica.DevOps.FileOps.Models
+@using Monica.DevOps.FileOps.State
+@using Monica.DevOps.Localization
+@inject IStringLocalizer<FileOpsResource> L
+<section class="inventory-owner" aria-label="@L["Inventory:Title"]">
+    <div class="inventory-toolbar">
+        @if (!TableMode && Entries.Count > 0)
+        { <MudCheckBox T="bool?" Value="@AllSelected" ValueChanged="SelectAllAsync" Color="Color.Primary" Disabled="@Busy" aria-label="@L["Batch:SelectAll"]" /> }
+        @if (Selected.Count > 0)
+        {
+            <strong>@L[Controller.Browse?.IsTruncated == true ? "Batch:SelectedShown" : "Batch:SelectedCount", Selected.Count]</strong>
+            <div class="toolbar-actions">
+                <MudTooltip Text="@L["Batch:ArchiveRule"]"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Archive" Disabled="@(Busy || !CanZip)" OnClick="@(() => DownloadSelection.InvokeAsync())">@L["Actions:DownloadSelected"]</MudButton></MudTooltip>
+                <MudTooltip Text="@L["Batch:DeleteRule"]"><MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep" Disabled="@(Busy || !CanDelete)" OnClick="@(() => DeleteSelection.InvokeAsync())">@L["Actions:DeleteSelected"]</MudButton></MudTooltip>
+                <MudButton Variant="Variant.Text" Disabled="@Busy" OnClick="ClearAsync">@L["Actions:ClearSelection"]</MudButton>
+            </div>
+            <p class="batch-hint">@L["Batch:ArchiveRule"]</p>
+            @if (!CanZip || !CanDelete) { <p class="batch-hint">@L["Batch:Unavailable"]</p> }
+        }
+        else
+        {
+            <div class="inventory-heading"><h2>@L["Inventory:Title"]</h2>@if (Controller.Browse is { } browse) { <span>@L["Location:Shown", browse.Entries.Count]</span> }</div>
+            <MudMenu Label="@SortLabel" EndIcon="@(Controller.SortDescending ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward)" Disabled="@Busy">
+                @foreach (var field in Enum.GetValues<FileOpsSortField>())
+                { <MudMenuItem OnClick="@(() => SortAsync(field))">@FieldLabel(field)</MudMenuItem> }
+                <MudDivider />
+                <MudMenuItem OnClick="DirectionAsync">@L[Controller.SortDescending ? "Inventory:Ascending" : "Inventory:Descending"]</MudMenuItem>
+            </MudMenu>
+        }
+    </div>
+    @if (Controller.Browse?.IsTruncated == true)
+    { <div class="cap-notice"><MudIcon Size="Size.Small" Icon="@Icons.Material.Outlined.Info" Color="Color.Info" /><span>@L["Workspace:TruncatedEntries", Controller.Browse.EntryLimit]</span><a href="/ui/file-ops/policy">@L["Inventory:AdjustLimit"]</a></div> }
+    @if (Controller.BrowseStale) { <p class="retained-note">@L["Inventory:Retained"]</p> }
+    @if (Controller.Browse is null)
+    {
+        <div class="empty-state" tabindex="-1">
+            @if (Busy) { <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" /><h3>@L["Workspace:Loading"]</h3> }
+            else { <MudIcon Icon="@Icons.Material.Outlined.FolderOff" /><h3>@L["Inventory:NoAccepted"]</h3><p>@L["Inventory:RetryHint"]</p> }
+        </div>
+    }
+    else if (Entries.Count == 0)
+    { <div class="empty-state" tabindex="-1"><MudIcon Icon="@Icons.Material.Outlined.FolderOpen" /><h3>@L["Workspace:EmptyDirectory"]</h3></div> }
+    else
+    {
+        @if (Selected.Count == 0 && Controller.InspectedEntry is null) { <p class="inventory-instruction">@L["Inventory:OpenHint"]</p> }
+        <div class="inventory-list" tabindex="0" aria-label="@L["Inventory:Entries"]">
+            @if (TableMode)
+            {
+                <MudTable T="FileOpsEntrySummary" Items="@Entries" Elevation="0" Square="true" Hover="true" Breakpoint="Breakpoint.None" RowClassFunc="@RowClass">
+                    <ColGroup><col class="check-column" /><col /><col class="type-column" /><col class="size-column" /><col class="modified-column" /><col class="actions-column" /></ColGroup>
+                    <HeaderContent>
+                        <MudTh Class="check-cell"><MudCheckBox T="bool?" Value="@AllSelected" ValueChanged="SelectAllAsync" Disabled="@Busy" Color="Color.Primary" aria-label="@L["Batch:SelectAll"]" /></MudTh>
+                        @foreach (var field in Enum.GetValues<FileOpsSortField>())
+                        { <MudTh aria-sort="@SortAria(field)"><MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@Busy" OnClick="@(() => SortAsync(field))" EndIcon="@(Controller.SortField == field ? Controller.SortDescending ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward : null)">@FieldLabel(field)</MudButton></MudTh> }
+                        <MudTh Class="actions-cell"><span class="sr-only">@L["Columns:Actions"]</span></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd Class="check-cell"><MudCheckBox T="bool" Value="@Controller.IsSelected(context)" ValueChanged="@((bool value) => CheckAsync(context, value))" Disabled="@Busy" Color="Color.Primary" aria-label="@L["Inventory:Check", context.Name]" /></MudTd>
+                        <MudTd Class="name-cell"><div class="entry-identity"><MudIcon Icon="@(context.IsDirectory ? Icons.Material.Outlined.Folder : Icons.Material.Outlined.Description)" Color="@(context.IsDirectory ? Color.Primary : Color.Default)" Size="Size.Small" /><MudButton Class="entry-open" Variant="Variant.Text" aria-disabled="@(Busy ? "true" : "false")" data-entry-path="@context.FullPath" OnClick="@(() => Open.InvokeAsync(context))" title="@context.FullPath">@context.Name</MudButton>@Indicators(context)</div></MudTd>
+                        <MudTd><span class="entry-type" title="@TypeText(context)">@TypeText(context)</span></MudTd>
+                        <MudTd><span title="@(context.SizeBytes?.ToString() ?? L["Inventory:NotReported"].Value)">@context.SizeDisplay</span></MudTd>
+                        <MudTd><time datetime="@context.LastModifiedAt.ToString("O")" title="@DateText(context.LastModifiedAt)">@DateText(context.LastModifiedAt)</time></MudTd>
+                        <MudTd Class="actions-cell">@EntryMenu(context)</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            else
+            {
+                <ul class="compact-entries">
+                    @foreach (var entry in Entries)
+                    {
+                        <li class="@RowClass(entry, 0)" @key="entry.FullPath">
+                            <MudCheckBox T="bool" Value="@Controller.IsSelected(entry)" ValueChanged="@((bool value) => CheckAsync(entry, value))" Color="Color.Primary" Disabled="@Busy" aria-label="@L["Inventory:Check", entry.Name]" />
+                            <div class="compact-identity">
+                                <div class="entry-identity"><MudIcon Icon="@(entry.IsDirectory ? Icons.Material.Outlined.Folder : Icons.Material.Outlined.Description)" Color="@(entry.IsDirectory ? Color.Primary : Color.Default)" Size="Size.Small" /><MudButton Class="entry-open" Variant="Variant.Text" aria-disabled="@(Busy ? "true" : "false")" data-entry-path="@entry.FullPath" OnClick="@(() => Open.InvokeAsync(entry))" title="@entry.FullPath">@entry.Name</MudButton>@Indicators(entry)</div>
+                                <div class="entry-metadata"><span>@TypeText(entry)</span>@if (!entry.IsDirectory && entry.SizeBytes.HasValue) { <span>@entry.SizeDisplay</span> }<time datetime="@entry.LastModifiedAt.ToString("O")">@DateText(entry.LastModifiedAt)</time></div>
+                            </div>
+                            @EntryMenu(entry)
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+</section>
+@code {
+    /// <summary>The borrowed controller; presentation has no independent selection or sort state.</summary>
+    [Parameter, EditorRequired] public FileOpsWorkspaceController Controller { get; set; } = null!;
+    /// <summary>True only when the actual rendered inventory owner is at least 800 CSS pixels wide.</summary>
+    [Parameter] public bool TableMode { get; set; }
+    /// <summary>Opens a captured displayed entry without checking it.</summary>
+    [Parameter] public EventCallback<FileOpsEntrySummary> Open { get; set; }
+    /// <summary>Downloads the captured file on disk.</summary>
+    [Parameter] public EventCallback<string> Download { get; set; }
+    /// <summary>Confirms deletion of a captured entry.</summary>
+    [Parameter] public EventCallback<FileOpsEntrySummary> Delete { get; set; }
+    /// <summary>Downloads the captured checked subset as a ZIP.</summary>
+    [Parameter] public EventCallback DownloadSelection { get; set; }
+    /// <summary>Confirms deletion of the checked subset.</summary>
+    [Parameter] public EventCallback DeleteSelection { get; set; }
+    /// <summary>Notifies the visit after a synchronous sort/check transition, without authorizing focus.</summary>
+    [Parameter] public EventCallback Changed { get; set; }
+    private IReadOnlyList<FileOpsEntrySummary> Entries => Controller.SortedEntries;
+    private List<FileOpsEntrySummary> Selected => Entries.Where(Controller.IsSelected).ToList();
+    private bool Busy => Controller.IsBusy;
+    private bool CanZip => Selected.Count > 0 && Selected.All(entry => entry.IsDirectory || entry.CanDownload);
+    private bool CanDelete => Selected.Count > 0 && Selected.All(entry => entry.CanDelete);
+    private bool? AllSelected => Selected.Count == 0 ? false : Selected.Count == Entries.Count ? true : null;
+    private string SortLabel => L["Inventory:Sort", FieldLabel(Controller.SortField), L[Controller.SortDescending ? "Inventory:Descending" : "Inventory:Ascending"]];
+    private string FieldLabel(FileOpsSortField field) => L[field switch { FileOpsSortField.Name => "Columns:Name", FileOpsSortField.Type => "Columns:Type", FileOpsSortField.Size => "Columns:Size", _ => "Columns:Modified" }];
+    private string SortAria(FileOpsSortField field) => Controller.SortField != field ? "none" : Controller.SortDescending ? "descending" : "ascending";
+    private string TypeText(FileOpsEntrySummary entry) => entry.IsDirectory ? L["Labels:Directory"] : string.IsNullOrWhiteSpace(entry.Extension) ? L["Labels:File"] : entry.Extension;
+    private static string DateText(DateTimeOffset value) => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm zzz");
+    private string RowClass(FileOpsEntrySummary entry, int index) => Same(entry.FullPath, Controller.InspectedEntry?.FullPath) ? "entry-row entry-selected" : "entry-row";
+    private static bool Same(string? left, string? right) => string.Equals(left, right, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    private async Task CheckAsync(FileOpsEntrySummary entry, bool value) { Controller.ToggleEntrySelection(entry, value); await Changed.InvokeAsync(); }
+    private async Task SelectAllAsync(bool? value) { Controller.SelectAll(value == true); await Changed.InvokeAsync(); }
+    private async Task ClearAsync() { Controller.ClearSelection(); await Changed.InvokeAsync(); }
+    private async Task SortAsync(FileOpsSortField field) { if (Busy) return; Controller.SetSort(field, Controller.SortField == field && !Controller.SortDescending); await Changed.InvokeAsync(); }
+    private async Task DirectionAsync() { if (Busy) return; Controller.SetSort(Controller.SortField, !Controller.SortDescending); await Changed.InvokeAsync(); }
+    private RenderFragment Indicators(FileOpsEntrySummary entry) => @<span class="entry-indicators">@if (entry.IsReadOnly) { <MudTooltip Text="@L["Location:ReadOnly"]"><MudIcon Size="Size.Small" Icon="@Icons.Material.Outlined.Lock" /></MudTooltip> }@if (entry.IsHidden) { <MudTooltip Text="@L["Inventory:Hidden"]"><MudIcon Size="Size.Small" Icon="@Icons.Material.Outlined.VisibilityOff" /></MudTooltip> }</span>;
+    private RenderFragment EntryMenu(FileOpsEntrySummary entry) => @<MudMenu Icon="@Icons.Material.Filled.MoreVert" aria-label="@L["Inventory:Actions", entry.Name]" Disabled="@Busy">
+        @if (!entry.IsDirectory && entry.CanDownload) { <MudMenuItem Icon="@Icons.Material.Outlined.Download" OnClick="@(() => Download.InvokeAsync(entry.FullPath))">@L["Actions:Download"]</MudMenuItem> }
+        @if (entry.CanDelete) { <MudMenuItem Icon="@Icons.Material.Outlined.Delete" OnClick="@(() => Delete.InvokeAsync(entry))">@L["Actions:Delete"]</MudMenuItem> }
+        @if (!entry.CanDelete && (entry.IsDirectory || !entry.CanDownload)) { <MudMenuItem Disabled="true">@L["Inventory:NoActions"]</MudMenuItem> }
+    </MudMenu>;
+}

@@ -1,0 +1,56 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using Monica.DevOps.FileOps.Models
+@using Monica.DevOps.FileOps.State
+@using Monica.Tool.Text
+@implements IAsyncDisposable
+<NavigationLock OnBeforeInternalNavigation="BeforeNavigationAsync" />
+<div class="policy-workspace">
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Policy:Scope"]</MudAlert>
+    @if (_controller is null || !_initialized)
+    {
+        @if (_controller?.IsBusy == true) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" aria-label="@L["Policy:Loading"]" /> }
+        <FileOpsOutcomeView Outcome="@_controller?.LastRead" />
+        @if (_controller is not null && !_controller.IsBusy) { <MudButton Variant="Variant.Outlined" OnClick="ReloadAsync">@L["Policy:Reload"]</MudButton> }
+    }
+    else
+    {
+        @if (Busy) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" aria-label="@L["Workspace:Working"]" /> }
+        <section class="policy-surface" aria-label="@L["Policy:Form"]">
+            <div class="policy-groups">
+                <section class="policy-locations"><h2>@L["Policy:Locations"]</h2>
+                    <div class="technical-fields">
+                        <MudTextField T="string" Label="@L["Policy:AllowedRoots"]" HelperText="@L["Policy:RootsHelper"]" Value="@_roots" ValueChanged="SetRoots" Lines="4" Variant="Variant.Outlined" Immediate="true" spellcheck="false" />
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Policy:EmptyRoots"]</MudAlert>
+                        <MudTextField T="string" Label="@L["Policy:Startup"]" HelperText="@L["Policy:StartupHelper"]" Value="@_draft.StartupPath" ValueChanged="SetStartup" Variant="Variant.Outlined" Immediate="true" spellcheck="false" />
+                        <MudTextField T="string" Label="@L["Policy:ReadOnlyPaths"]" HelperText="@L["Policy:ReadOnlyHelper"]" Value="@_readOnly" ValueChanged="SetReadOnly" Lines="4" Variant="Variant.Outlined" Immediate="true" spellcheck="false" />
+                    </div>
+                </section>
+                <div class="policy-right">
+                    <section><h2>@L["Policy:Operations"]</h2><div class="switch-rows">
+                        <div><MudSwitch T="bool" Value="@_draft.AllowWriteOperations" ValueChanged="SetWrite" Color="Color.Primary" Label="@L["Policy:AllowWrite"]" /><p>@L["Policy:WriteHelper"]</p></div>
+                        <div><MudSwitch T="bool" Value="@_draft.AllowDeleteOperations" ValueChanged="SetDelete" Color="@(_draft.AllowDeleteOperations ? Color.Warning : Color.Default)" Label="@L["Policy:AllowDelete"]" /><p>@L["Policy:DeleteHelper"]</p></div>
+                        <div><MudSwitch T="bool" Value="@_draft.AllowHiddenEntries" ValueChanged="SetHidden" Color="@(_draft.AllowHiddenEntries ? Color.Info : Color.Default)" Label="@L["Policy:AllowHidden"]" /><p>@L["Policy:HiddenHelper"]</p></div>
+                    </div></section>
+                    <section><h2>@L["Policy:Limits"]</h2><div class="limit-fields">
+                        <MudNumericField T="long" Label="@L["Policy:MaxText"]" HelperText="@L["Policy:TextLimitHelper", _draft.MaxTextFileSizeBytes.FormatByteSize()]" Value="@_draft.MaxTextFileSizeBytes" ValueChanged="SetTextLimit" Min="4096" Variant="Variant.Outlined" Immediate="true" Error="@(_draft.MaxTextFileSizeBytes < 4096)" ErrorText="@L["Policy:TextMinimum"]" />
+                        <MudNumericField T="long" Label="@L["Policy:MaxUpload"]" HelperText="@L["Policy:UploadLimitHelper", _draft.MaxUploadFileSizeBytes.FormatByteSize()]" Value="@_draft.MaxUploadFileSizeBytes" ValueChanged="SetUploadLimit" Min="65536" Variant="Variant.Outlined" Immediate="true" Error="@(_draft.MaxUploadFileSizeBytes < 65536)" ErrorText="@L["Policy:UploadMinimum"]" />
+                        <MudNumericField T="long" Label="@L["Policy:MaxDownload"]" HelperText="@L["Policy:DownloadLimitHelper", _draft.MaxDownloadFileSizeBytes.FormatByteSize()]" Value="@_draft.MaxDownloadFileSizeBytes" ValueChanged="SetDownloadLimit" Min="65536" Variant="Variant.Outlined" Immediate="true" Error="@(_draft.MaxDownloadFileSizeBytes < _draft.MaxUploadFileSizeBytes)" ErrorText="@L["Policy:DownloadMinimum"]" />
+                        <MudNumericField T="int" Label="@L["Policy:MaxEntries"]" HelperText="@L["Policy:EntriesHelper"]" Value="@_draft.MaxDirectoryEntries" ValueChanged="SetEntryLimit" Min="50" Max="5000" Variant="Variant.Outlined" Immediate="true" Error="@(_draft.MaxDirectoryEntries < 50 || _draft.MaxDirectoryEntries > 5000)" ErrorText="@L["Policy:EntryRange"]" />
+                    </div></section>
+                    <section><h2>@L["Policy:TextEditing"]</h2><div class="technical-fields"><MudTextField T="string" Label="@L["Policy:Extensions"]" HelperText="@L["Policy:ExtensionsHelper"]" Value="@_extensions" ValueChanged="SetExtensions" Lines="3" Variant="Variant.Outlined" Immediate="true" spellcheck="false" /></div></section>
+                </div>
+            </div>
+            <div class="policy-outcomes">
+                <FileOpsOutcomeView Outcome="@_controller.LastCommand" ShowSuccess="true" />
+                <FileOpsOutcomeView Outcome="@_controller.LastRead" />
+                @if (_newerEdits) { <p class="newer-edits">@L["Policy:NewerEdits"]</p> }
+                @if (_controller.LastCommand is { Kind: FileOpsOperationKind.SavePolicy, Succeeded: true } && _controller.LastRead is { Succeeded: false })
+                { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Policy:ReadbackFailed"]</MudAlert> }
+            </div>
+            <footer class="policy-actions"><span><MudIcon Size="Size.Small" Icon="@(Dirty ? Icons.Material.Outlined.Edit : Icons.Material.Outlined.Check)" Color="@(Dirty ? Color.Warning : Color.Default)" />@L[Dirty ? "Inspector:Unsaved" : "Policy:NoChanges"]</span><div>
+                <MudButton Variant="Variant.Outlined" Disabled="@Busy" OnClick="ReloadAsync">@L["Policy:Reload"]</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Check" Disabled="@(Busy || !Dirty || !Valid)" OnClick="ApplyAsync">@L["Policy:Apply"]</MudButton>
+            </div></footer>
+        </section>
+    }
+</div>

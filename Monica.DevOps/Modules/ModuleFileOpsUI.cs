@@ -1,8 +1,10 @@
+using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.FileOps.Pages;
+using Monica.DevOps.FileOps.State;
 using Monica.DevOps.Localization;
 using Monica.UI.Shell.Models;
 using MudBlazor;
@@ -10,8 +12,18 @@ using MudBlazor;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
+/// <summary>Composes the Files and host runtime-policy routes with localized shell navigation.</summary>
+/// <remarks>Requires FileOps infrastructure, localization and the shell. The scoped return context contains
+/// passive identities only; each routed workspace owns and retires its controller and native resources.</remarks>
 public class ModuleFileOpsUI : MonicaModule<ModuleFileOpsUIOption>, IUIModule
 {
+    /// <inheritdoc />
+    public override void ConfigureServices(ModuleContext<ModuleFileOpsUIOption> context)
+    {
+        context.Services.AddScoped<FileOpsNavigationState>();
+    }
+
+    /// <inheritdoc />
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleFileOps, ModuleFileOpsOption>();
@@ -19,20 +31,33 @@ public class ModuleFileOpsUI : MonicaModule<ModuleFileOpsUIOption>, IUIModule
             static option => option.AddResource<FileOpsResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
+            {
                 registry.RegisterLocalizedPage<UIFileOpsPage, FileOpsResource>(
                     UIFileOpsPage.PAGE_URL,
                     "Pages:FileOps:Title",
                     Icons.Material.Filled.Folder,
                     BuiltInNavigationCategoryIds.Infrastructure,
                     addToNav: true,
-                    navOrder: 36)));
+                    navOrder: 36);
+                registry.RegisterLocalizedPage<UIFileOpsPolicyPage, FileOpsResource>(
+                    UIFileOpsPolicyPage.PAGE_URL,
+                    "Pages:FileOpsPolicy:Title",
+                    Icons.Material.Filled.Tune,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 37);
+            }));
     }
 }
 
+/// <summary>Registers the localized FileOps route family.</summary>
 public static class ModuleFileOpsUIBuilderExtensions
 {
     extension(IMonicaBuilder builder)
     {
+        /// <summary>Adds Files and runtime-policy UI using the host's existing access configuration.</summary>
+        /// <param name="action">Optional UI module configuration; omitted configuration uses module defaults.</param>
+        /// <returns>The UI module registration.</returns>
         public ModuleRegistration<ModuleFileOpsUI, ModuleFileOpsUIOption> AddFileOpsUI(Action<ModuleFileOpsUIOption>? action = null)
         {
             return builder.AddModule<ModuleFileOpsUI, ModuleFileOpsUIOption>(action);
@@ -42,4 +67,5 @@ public static class ModuleFileOpsUIBuilderExtensions
 
 
 
+/// <summary>FileOps UI module options; this route family adds no independent authorization policy.</summary>
 public class ModuleFileOpsUIOption : ModuleOptions<ModuleFileOpsUI>;

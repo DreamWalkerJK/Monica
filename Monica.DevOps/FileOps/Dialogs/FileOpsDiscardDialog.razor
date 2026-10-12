@@ -1,0 +1,28 @@
+@using Monica.DevOps.FileOps.State
+@using Monica.DevOps.Localization
+@using Monica.UI.Shared.Components.Dialogs
+@inject IStringLocalizer<FileOpsResource> L
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px">
+    <TitleContent><MoDialogHeading Text="@L[IsPolicy ? "Discard:PolicyTitle" : "Discard:Title"]" /></TitleContent>
+    <DialogContent><div class="decision-content">
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L[IsPolicy ? "Discard:PolicyEffect" : Request?.Reason == FileOpsDiscardReason.UploadReplacement ? "Discard:UploadEffect" : "Discard:Effect"]</MudAlert>
+        @if (Request is { } request)
+        { <code>@request.FullPath</code><p>@ReasonText(request.Reason)</p>@if (!string.IsNullOrWhiteSpace(request.DestinationPath) && request.DestinationPath != request.FullPath) { <code>@request.DestinationPath</code> } }
+    </div></DialogContent>
+    <DialogActions><div class="decision-actions"><MudButton OnClick="@(() => Dialog.Cancel())">@L[IsPolicy ? "Discard:KeepPolicy" : "Discard:KeepEditing"]</MudButton><MudButton Variant="Variant.Outlined" Color="Color.Warning" OnClick="@(() => Dialog.Close(DialogResult.Ok(true)))">@L["Discard:Confirm"]</MudButton></div></DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    /// <summary>The exact dirty file/action/revision captured by the visit controller.</summary>
+    [Parameter] public FileOpsDiscardRequest? Request { get; set; }
+    /// <summary>Uses the same native decision for the policy editor's independently captured revision.</summary>
+    [Parameter] public bool IsPolicy { get; set; }
+    private string ReasonText(FileOpsDiscardReason reason) => L[reason switch {
+        FileOpsDiscardReason.Navigate => "Discard:Navigate",
+        FileOpsDiscardReason.OpenFile => "Discard:Open",
+        FileOpsDiscardReason.Reload => "Discard:Reload",
+        FileOpsDiscardReason.UploadReplacement => "Discard:Upload",
+        FileOpsDiscardReason.PolicyReplacement => "Discard:Policy",
+        FileOpsDiscardReason.CloseInspector => "Discard:Close",
+        _ => "Discard:Leave" }];
+}

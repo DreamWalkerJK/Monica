@@ -1,0 +1,10 @@
+@using Monica.DevOps.FileOps.Components
+@using Monica.DevOps.Localization
+@attribute [Route(PAGE_URL)]
+@inject IStringLocalizer<FileOpsResource> L
+<PageTitle>@L["Policy:Title"]</PageTitle>
+<div class="file-ops-policy-page"><FileOpsFamilyHeader IsPolicy="true" /><FileOpsPolicyEditor /></div>
+@code {
+    /// <summary>The sibling host-wide in-memory FileOps policy destination.</summary>
+    public const string PAGE_URL = "/ui/file-ops/policy";
+}

@@ -1,0 +1,15 @@
+@using Monica.DevOps.FileOps.Pages
+@using Monica.DevOps.Localization
+@using Monica.UI.Shared.Components.Navigation
+@inject IStringLocalizer<FileOpsResource> L
+<div class="family-header">
+    <header><h1>@L[IsPolicy ? "Policy:Title" : "Page:Title"]</h1><p>@L[IsPolicy ? "Policy:Subtitle" : "Page:Subtitle"]</p></header>
+    <MoWorkbenchNavigation Label="@L["Navigation:Label"]">
+        <a href="@UIFileOpsPage.PAGE_URL" aria-current="@(!IsPolicy ? "page" : null)"><MudIcon Icon="@Icons.Material.Outlined.Folder" />@L["Navigation:Files"]</a>
+        <a href="@UIFileOpsPolicyPage.PAGE_URL" aria-current="@(IsPolicy ? "page" : null)"><MudIcon Icon="@Icons.Material.Outlined.Tune" />@L["Navigation:Policy"]</a>
+    </MoWorkbenchNavigation>
+</div>
+@code {
+    /// <summary>Identifies the exact active sibling route.</summary>
+    [Parameter] public bool IsPolicy { get; set; }
+}

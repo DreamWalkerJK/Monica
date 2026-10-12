@@ -1,0 +1,69 @@
+@using Monica.DevOps.FileOps.Models
+@using Monica.DevOps.FileOps.State
+@using Monica.DevOps.Localization
+@using Monica.Tool.Text
+@inject IStringLocalizer<FileOpsResource> L
+<section class="file-inspector" aria-label="@L["Inspector:Title"]">
+    <header class="inspector-heading" data-entry-path="@PathValue">
+        <div><h2 tabindex="-1">@NameValue</h2><p class="draft-state"><MudIcon Size="Size.Small" Icon="@(Controller.IsDirty ? Icons.Material.Outlined.Edit : Icons.Material.Outlined.Description)" Color="@(Controller.IsDirty ? Color.Warning : Color.Default)" />@L[File is null ? "Inspector:NoTextLoaded" : Controller.IsDirty ? "Inspector:Unsaved" : "Inspector:Clean"]</p></div>
+        <p class="compact-path" title="@PathValue" aria-label="@L["Inspector:FullPath"]"><code>@PathValue</code></p>
+        <details class="exact-path"><summary>@L["Inspector:FullPath"]</summary><code>@PathValue</code></details>
+        <div class="inspector-actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@(Busy || File?.CanSave != true || !Controller.IsDirty)" OnClick="@(() => Save.InvokeAsync())">@L["Actions:Save"]</MudButton>
+            <MudButton Variant="Variant.Text" Disabled="@(Busy || File is null)" OnClick="@(() => Reload.InvokeAsync())">@L["Actions:Reload"]</MudButton>
+            @if (CanDownload) { <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Download" Disabled="@Busy" OnClick="@(() => Download.InvokeAsync(PathValue))">@L["Actions:Download"]</MudButton> }
+            @* Keep the native dialog return target focusable; the visit rejects busy Close requests. *@
+            <MudIconButton Icon="@Icons.Material.Filled.Close" aria-label="@L["Actions:CloseFile"]" aria-disabled="@(Busy ? "true" : "false")" OnClick="@(() => Close.InvokeAsync())" />
+            @if (Entry?.CanDelete == true) { <MudMenu Icon="@Icons.Material.Filled.MoreVert" aria-label="@L["Inspector:Actions"]" Disabled="@Busy"><MudMenuItem OnClick="@(() => Delete.InvokeAsync(Entry))">@L["Actions:Delete"]</MudMenuItem></MudMenu> }
+        </div>
+    </header>
+    @if (Controller.IsDirty && CanDownload) { <p class="evidence-note">@L["Inspector:DownloadDisk"]</p> }
+    @if (Controller.LastCommand?.Kind == FileOpsOperationKind.SaveText) { <FileOpsOutcomeView Outcome="@Controller.LastCommand" Target="@CommandTarget" ShowSuccess="true" /> }
+    @if (Controller.LastRead?.Kind == FileOpsOperationKind.ReadText) { <FileOpsOutcomeView Outcome="@Controller.LastRead" /> }
+    @if (Controller.InspectionAttempt is { } attempt && !Same(attempt.FullPath, PathValue))
+    { <div class="attempted-file"><p>@L["Inspector:RetainedAfterAttempt"]</p><code>@attempt.FullPath</code></div> }
+    @if (Controller.MetadataStale) { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Inspector:RetainedMetadata"]</MudAlert> }
+    @if (Controller.DiskContentDiffers) { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Inspector:DiskDiffers"]</MudAlert> }
+    @if (File is { } file)
+    {
+        <section class="disk-evidence" aria-label="@L["Inspector:DiskEvidence"]"><h3>@L[Controller.MetadataStale ? "Inspector:RetainedEvidence" : "Inspector:DiskEvidence"]</h3><dl>
+            <div><dt>@L["Labels:Encoding"]</dt><dd>@file.EncodingName</dd></div>
+            <div><dt>@L["Labels:Size"]</dt><dd title="@file.SizeBytes.ToString()">@file.SizeBytes.FormatByteSize()</dd></div>
+            <div><dt>@L["Labels:LineCount"]</dt><dd>@file.LineCount</dd></div>
+            <div><dt>@L["Labels:LastModified"]</dt><dd><time datetime="@file.LastModifiedAt.ToString("O")">@file.LastModifiedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</time></dd></div>
+        </dl></section>
+        @if (!file.CanSave) { <p class="read-only-note"><MudIcon Size="Size.Small" Icon="@Icons.Material.Outlined.Lock" />@ReadOnlyReason</p> }
+        <div class="text-editor"><MudTextField T="string" Value="@Controller.DraftText" ValueChanged="@((string value) => DraftChanged.InvokeAsync(value))" Label="@L["Inspector:Text"]" Variant="Variant.Outlined" Immediate="true" Lines="12" ReadOnly="@(!file.CanSave)" spellcheck="false" /></div>
+    }
+    else
+    {
+        <div class="preview-unavailable"><MudIcon Icon="@Icons.Material.Outlined.Description" /><h3>@L["Inspector:Unavailable"]</h3><p>@L["Inspector:UnavailableHint"]</p></div>
+        @if (Entry is { } entry) { <dl class="entry-evidence"><div><dt>@L["Columns:Type"]</dt><dd>@(string.IsNullOrEmpty(entry.Extension) ? L["Labels:File"] : entry.Extension)</dd></div><div><dt>@L["Labels:Size"]</dt><dd>@entry.SizeDisplay</dd></div><div><dt>@L["Labels:LastModified"]</dt><dd>@entry.LastModifiedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</dd></div></dl> }
+    }
+</section>
+@code {
+    /// <summary>The borrowed visit controller owning accepted disk evidence and exact draft revision.</summary>
+    [Parameter, EditorRequired] public FileOpsWorkspaceController Controller { get; set; } = null!;
+    /// <summary>Saves the captured revision and performs the controller-owned real reread.</summary>
+    [Parameter] public EventCallback Save { get; set; }
+    /// <summary>Explicitly reloads disk text through the draft guard.</summary>
+    [Parameter] public EventCallback Reload { get; set; }
+    /// <summary>Closes this exact inspector through its draft guard.</summary>
+    [Parameter] public EventCallback Close { get; set; }
+    /// <summary>Downloads current disk bytes rather than unsaved editor text.</summary>
+    [Parameter] public EventCallback<string> Download { get; set; }
+    /// <summary>Confirms deletion of the inspected target.</summary>
+    [Parameter] public EventCallback<FileOpsEntrySummary> Delete { get; set; }
+    /// <summary>Updates only the controller's draft and revision.</summary>
+    [Parameter] public EventCallback<string> DraftChanged { get; set; }
+    /// <summary>The captured saved-file outcome target; later inspection does not relabel that result.</summary>
+    [Parameter] public string? CommandTarget { get; set; }
+    private FileOpsFileTextContent? File => Controller.InspectedFile;
+    private FileOpsEntrySummary? Entry => Controller.InspectedEntry;
+    private bool Busy => Controller.IsBusy;
+    private string PathValue => File?.FullPath ?? Entry?.FullPath ?? Controller.InspectionAttempt?.FullPath ?? "";
+    private string NameValue => File?.Name ?? Entry?.Name ?? Controller.InspectionAttempt?.Name ?? "";
+    private bool CanDownload => File?.CanDownload ?? Entry?.CanDownload == true;
+    private static bool Same(string? left, string? right) => string.Equals(left, right, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    private string ReadOnlyReason => L[File?.IsReadOnly == true ? "Inspector:ReadOnlyPath" : Controller.RuntimeConfig?.AllowWriteOperations == false ? "Inspector:WritesDisabled" : Controller.RuntimeConfig?.CanEditExtension(File?.Extension) == false ? "Inspector:ExtensionDenied" : "Inspector:EditingUnavailable"];
+}

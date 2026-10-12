@@ -1,63 +1,11 @@
 {
-  "Pages": {
-    "FileOps": {
-      "Title": "FileOps Workspace"
-    }
-  },
-  "Page": {
-    "DocumentTitle": "FileOps Workspace",
-    "Title": "FileOps Workspace",
-    "Subtitle": "Emergency file operations for containerized or otherwise restricted runtimes, backed by .NET cross-platform file APIs.",
-    "Eyebrow": "Container rescue"
-  },
-  "Actions": {
-    "Refresh": "Refresh",
-    "Browse": "Browse",
-    "RuntimeConfiguration": "Runtime Configuration",
-    "GoUp": "Go Up",
-    "Open": "Open",
-    "Download": "Download",
-    "Delete": "Delete",
-    "Save": "Save",
-    "CreateDirectory": "Create Directory",
-    "DownloadSelected": "Download selected",
-    "DeleteSelected": "Delete selected",
-    "ClearSelection": "Clear selection"
-  },
   "Labels": {
-    "CurrentRoot": "Current root",
-    "CurrentPath": "Current path",
     "Encoding": "Encoding",
     "LineCount": "Line count",
     "Size": "Size",
     "LastModified": "Last modified",
-    "WriteModeEnabled": "Write enabled",
-    "WriteModeDisabled": "Read-only mode",
-    "DeleteModeEnabled": "Delete enabled",
-    "DeleteModeDisabled": "Delete disabled",
-    "HiddenVisible": "Hidden items visible",
-    "HiddenHidden": "Hidden items hidden",
     "Directory": "Directory",
-    "File": "File",
-    "EditorWritable": "Editor writable",
-    "EditorReadOnly": "Editor read-only"
-  },
-  "Workspace": {
-    "PathInput": "Absolute path inside the allowed roots",
-    "PathHelper": "You can paste a full path. The module still enforces allowed roots and read-only segments.",
-    "EmptyDirectory": "This directory does not contain any visible entries.",
-    "NoSelectionTitle": "Choose a file or folder",
-    "NoSelectionSubtitle": "Browse from the left workspace and open a text file for preview or editing.",
-    "DirectorySelectionTitle": "Directory selected",
-    "DirectorySelectionSubtitle": "Open the directory to continue browsing or upload/create content inside it.",
-    "EditorTitle": "Text editor",
-    "EditorSubtitle": "Only configured text extensions can be edited. Binary files stay download-only.",
-    "UploadHelper": "Single-file uploads keep the workflow predictable in restricted environments.",
-    "TruncatedEntries": "Only the first {0} entries are shown for this directory.",
-    "Loading": "Loading file workspace...",
-    "ReadOnlyDirectory": "The current directory is read-only under the active runtime policy.",
-    "DropZone": "Click to select one file",
-    "DropZoneHint": "The upload obeys the active max upload size and allowed root policy."
+    "File": "File"
   },
   "Columns": {
     "Name": "Name",
@@ -66,59 +14,13 @@
     "Modified": "Modified",
     "Actions": "Actions"
   },
-  "Batch": {
-    "SelectAll": "Select all",
-    "SelectedCount": "{0} selected"
-  },
-  "RuntimeConfigDialog": {
-    "Title": "FileOps Runtime Configuration",
-    "Intro": "Keep the scope narrow. This module is designed for emergency access in constrained runtimes, not as a general-purpose file manager.",
-    "AllowedRoots": "Allowed roots",
-    "AllowedRootsHelper": "One path per line. Only these roots and their descendants are reachable.",
-    "ReadOnlyPaths": "Read-only paths",
-    "ReadOnlyPathsHelper": "One path per line. Writes, uploads, edits, and deletes are blocked under these paths.",
-    "StartupPath": "Startup path",
-    "StartupPathHelper": "Initial location when the page opens. It falls back to the first allowed root when invalid.",
-    "EditableExtensions": "Editable extensions",
-    "EditableExtensionsHelper": "Comma, semicolon, or newline separated. Only these extensions can be edited in the built-in editor.",
-    "MaxTextSize": "Max text editor size (bytes)",
-    "MaxUploadSize": "Max upload size (bytes)",
-    "MaxDownloadSize": "Max download size (bytes)",
-    "MaxDirectoryEntries": "Max directory entries shown",
-    "AllowWrite": "Allow write operations",
-    "AllowDelete": "Allow delete operations",
-    "AllowHidden": "Show hidden files and directories",
-    "Save": "Save configuration"
-  },
-  "CreateDirectoryDialog": {
-    "Title": "Create directory",
-    "CurrentPath": "Parent path",
-    "DirectoryName": "Directory name",
-    "DirectoryNameHelper": "Use a single directory name. Path separators are not allowed.",
-    "Confirm": "Create"
-  },
-  "DeleteDialog": {
-    "Title": "Delete entry",
-    "Summary": "Delete {0} \"{1}\"?",
-    "DirectoryWarning": "Directory deletion may remove nested files that are currently the fastest way to inspect production issues. Use it carefully.",
-    "Recursive": "Delete recursively",
-    "Confirm": "Delete now"
-  },
-  "BatchDeleteDialog": {
-    "Title": "Delete selected entries",
-    "Summary": "Delete {0} selected entries?",
-    "DirectoryWarning": "{0} selected directories will be deleted recursively when this option is enabled.",
-    "Recursive": "Delete selected directories recursively",
-    "Confirm": "Delete selected"
-  },
   "Messages": {
     "RuntimeConfigSaved": "Runtime configuration saved. {0} allowed root location(s) are now active.",
     "TextFileSaved": "Saved {0}.",
     "DirectoryCreated": "Created directory {0}.",
     "EntryDeleted": "Deleted {0} {1}.",
     "EntriesDeleted": "Deleted {0} selected entries.",
-    "FilesUploaded": "Uploaded {0} file(s) into {1}.",
-    "ArchiveDownloadStarted": "Preparing ZIP archive for {0} selected entries."
+    "FilesUploaded": "Uploaded {0} file(s) into {1}."
   },
   "ServiceMessages": {
     "LoadRuntimeConfigFailed": "Failed to load FileOps runtime configuration: {0}",
@@ -156,6 +58,206 @@
     "EditableExtensionRequired": "File \"{0}\" cannot be edited with the current extension policy.",
     "SelectionRequired": "Select at least one file system entry."
   },
-  "Common:Cancel": "Cancel",
-  "Common:Empty": "-"
+  "Pages": {
+    "FileOps": {
+      "Title": "File operations"
+    },
+    "FileOpsPolicy": {
+      "Title": "FileOps runtime policy"
+    }
+  },
+  "Page": {
+    "DocumentTitle": "File operations",
+    "Title": "File operations",
+    "Subtitle": "Browse allowed locations, transfer files, and edit text on this host."
+  },
+  "Navigation": {
+    "Label": "FileOps navigation",
+    "Files": "Files",
+    "Policy": "Runtime policy"
+  },
+  "Actions": {
+    "Refresh": "Refresh",
+    "Browse": "Browse",
+    "Download": "Download",
+    "Delete": "Delete",
+    "Save": "Save file",
+    "Reload": "Reload",
+    "CloseFile": "Close file",
+    "CreateDirectory": "New folder",
+    "Upload": "Upload file",
+    "DownloadSelected": "Download ZIP",
+    "DeleteSelected": "Delete",
+    "ClearSelection": "Clear"
+  },
+  "Location": {
+    "Label": "Location and directory operations",
+    "Up": "Go to parent directory",
+    "Root": "Root: {0}",
+    "Breadcrumbs": "Accepted directory breadcrumbs",
+    "Ancestors": "Intermediate directories",
+    "GoToPath": "Go to path",
+    "DismissPath": "Dismiss path input",
+    "Shown": "{0} entries shown",
+    "ReadOnly": "Read-only location",
+    "Writable": "Directory writes permitted by policy",
+    "WritesUnavailable": "Directory writes unavailable",
+    "UploadRule": "One file · Up to {0} · Replaces the same name",
+    "ReadOnlyReason": "Configured read-only paths prevent creation, upload, editing, and deletion here.",
+    "WriteReason": "The current policy does not permit creation or upload here. Deletion is controlled separately."
+  },
+  "Workspace": {
+    "PathInput": "Absolute path inside the allowed roots",
+    "TruncatedEntries": "Showing the first {0} entries. Selection applies to these entries.",
+    "Loading": "Loading directory",
+    "EmptyDirectory": "This directory is empty",
+    "Working": "File operation in progress",
+    "ReturnFallback": "The previous location is unavailable. Showing the current startup directory.",
+    "Picker": "Files · {0}",
+    "Uploading": "Uploading {0}"
+  },
+  "Inventory": {
+    "Title": "Contents",
+    "Ascending": "Ascending",
+    "Descending": "Descending",
+    "Sort": "Sort: {0} · {1}",
+    "AdjustLimit": "Adjust limit",
+    "Retained": "Retained directory evidence. The latest refresh failed.",
+    "NoAccepted": "Directory unavailable",
+    "RetryHint": "Browse an allowed path or refresh to try again.",
+    "OpenHint": "Open a file to inspect its contents.",
+    "Entries": "Displayed directory entries",
+    "NotReported": "Not reported",
+    "Check": "Select {0}",
+    "Actions": "Actions for {0}",
+    "Hidden": "Hidden entry",
+    "NoActions": "No operations available"
+  },
+  "Batch": {
+    "SelectAll": "Select shown entries",
+    "SelectedCount": "{0} selected",
+    "SelectedShown": "{0} shown entries selected",
+    "ArchiveRule": "Selected folders include visible descendants. The download limit applies per file.",
+    "DeleteRule": "All selected targets must permit deletion under the current policy.",
+    "Unavailable": "An action is unavailable because one or more selected entries are ineligible."
+  },
+  "Inspector": {
+    "Title": "File inspector",
+    "Unsaved": "Unsaved changes",
+    "Clean": "No unsaved text changes",
+    "Actions": "Inspected file actions",
+    "FullPath": "Full exact path",
+    "DownloadDisk": "Download reads the file on disk; unsaved editor text is not included.",
+    "RetainedMetadata": "File details could not be refreshed. The metadata below is retained; saved content remains separate.",
+    "DiskDiffers": "The current disk content differs from the editor baseline. Reload explicitly to replace the editor text.",
+    "DiskEvidence": "On disk",
+    "RetainedEvidence": "Retained disk metadata",
+    "Text": "File text",
+    "Unavailable": "Text preview unavailable",
+    "UnavailableHint": "The file could not be read as text. Eligible disk operations remain available.",
+    "ReadOnlyPath": "This file is under a configured read-only path. Its text remains selectable.",
+    "WritesDisabled": "Text saving is disabled by the current write policy.",
+    "ExtensionDenied": "This extension is not enabled for saving. Text preview remains readable.",
+    "EditingUnavailable": "Editing is unavailable under the current policy.",
+    "RetainedAfterAttempt": "The attempted file could not be previewed. The previous editor and its draft are retained.",
+    "NoTextLoaded": "No text loaded"
+  },
+  "Outcome": {
+    "Failed": "Operation failed",
+    "Saved": "File saved",
+    "PolicyApplied": "Runtime policy applied",
+    "Created": "Folder created",
+    "Deleted": "Deletion completed",
+    "Uploaded": "File uploaded",
+    "DownloadStarted": "Download started",
+    "Updated": "Evidence updated",
+    "PartialDelete": "Some entries may already have been deleted. The refreshed directory is the current evidence."
+  },
+  "CreateDirectoryDialog": {
+    "Title": "New folder",
+    "CurrentPath": "Create inside",
+    "DirectoryName": "Folder name",
+    "DirectoryNameHelper": "Use a single name. Path separators are not allowed.",
+    "InvalidName": "Enter a nonempty folder name without path separators.",
+    "Confirm": "Create"
+  },
+  "DeleteDialog": {
+    "Title": "Delete entry",
+    "Summary": "Delete this captured entry?",
+    "Origin": "Originating directory",
+    "DirtyLoss": "Unsaved changes to this inspected file will be discarded:",
+    "DirectoryWarning": "Including folder contents removes nested files and folders.",
+    "DeleteFolder": "Delete folder",
+    "DeleteFile": "Delete file"
+  },
+  "BatchDeleteDialog": {
+    "Title": "Delete selected entries",
+    "Summary": "Delete these {0} captured entries?",
+    "Recursive": "Include folder contents",
+    "NoRollback": "Deletion stops at the first error. Earlier deletions are not rolled back.",
+    "Confirm": "Delete {0} entries"
+  },
+  "Discard": {
+    "Title": "Unsaved text changes",
+    "PolicyTitle": "Unsaved policy changes",
+    "Effect": "Discard the unsaved changes to this file?",
+    "PolicyEffect": "Discard this policy draft? The currently applied host policy is unchanged.",
+    "UploadEffect": "Replace this file and discard its unsaved changes?",
+    "KeepPolicy": "Keep editing policy",
+    "KeepEditing": "Keep editing",
+    "Confirm": "Discard changes",
+    "Navigate": "Continue to the requested directory.",
+    "Open": "Continue to the requested file.",
+    "Reload": "Reload the file's current disk text.",
+    "Upload": "Continue with the captured replacement upload.",
+    "Policy": "Continue applying the runtime policy.",
+    "Close": "Close the inspected file.",
+    "Leave": "Continue to the requested destination."
+  },
+  "Policy": {
+    "Title": "FileOps runtime policy",
+    "Subtitle": "Paths, permissions, and limits for this running host.",
+    "Scope": "Changes apply to FileOps on this running host. Runtime changes are kept in memory; this form does not update host configuration files.",
+    "Loading": "Loading current runtime policy",
+    "Form": "Host runtime policy editor",
+    "Locations": "Locations",
+    "AllowedRoots": "Allowed roots",
+    "RootsHelper": "One exact path per line. Defaults come from the working directory, application base directory, and process temporary directory.",
+    "EmptyRoots": "An empty list restores the host's default roots; it does not block all access.",
+    "Startup": "Startup directory",
+    "StartupHelper": "An invalid, unavailable, or outside startup directory falls back to the first allowed root.",
+    "ReadOnlyPaths": "Read-only paths",
+    "ReadOnlyHelper": "Writes, uploads, edits, and deletes are blocked beneath these configured paths. Paths outside allowed roots are removed during normalization.",
+    "Operations": "Operations",
+    "AllowWrite": "Allow writes",
+    "WriteHelper": "Allows creating folders, uploading files, and saving text.",
+    "AllowDelete": "Allow deletion",
+    "DeleteHelper": "Deletion is independent of the write permission.",
+    "AllowHidden": "Show hidden entries",
+    "HiddenHelper": "Allows access to hidden files and directories under the allowed roots.",
+    "Limits": "Limits",
+    "MaxText": "Text preview/edit limit (bytes)",
+    "TextLimitHelper": "{0} · Minimum 4 KiB; default 512 KiB.",
+    "TextMinimum": "The text limit must be at least 4,096 bytes.",
+    "MaxUpload": "Single upload limit (bytes)",
+    "UploadLimitHelper": "{0} · Minimum 64 KiB; default 20 MiB.",
+    "UploadMinimum": "The upload limit must be at least 65,536 bytes.",
+    "MaxDownload": "Per-file download limit (bytes)",
+    "DownloadLimitHelper": "{0} · At least the upload limit; default 100 MiB.",
+    "DownloadMinimum": "The download limit must be at least the upload limit.",
+    "MaxEntries": "Directory entries shown",
+    "EntriesHelper": "Display cap 50–5,000; default 500. This is not a page size or total count.",
+    "EntryRange": "Use a display cap from 50 to 5,000 entries.",
+    "TextEditing": "Text editing",
+    "Extensions": "Editable extensions",
+    "ExtensionsHelper": "Comma, semicolon, or newline separated. Restricts saving; preview also depends on size and text inspection.",
+    "Reload": "Reload current policy",
+    "Apply": "Apply runtime policy",
+    "NoChanges": "No changes",
+    "NewerEdits": "The captured policy was applied or reloaded. Your newer edits are retained and have not been applied.",
+    "ReadbackFailed": "The policy update completed, but authoritative normalized values could not be reread. The draft remains available; reload current policy before treating these fields as accepted."
+  },
+  "Common": {
+    "Cancel": "Cancel"
+  }
 }

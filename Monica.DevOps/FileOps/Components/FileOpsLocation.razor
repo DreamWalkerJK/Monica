@@ -1,0 +1,96 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using Monica.DevOps.FileOps.Models
+@using Monica.DevOps.FileOps.State
+@using Monica.DevOps.Localization
+@using Monica.Tool.Text
+@inject IStringLocalizer<FileOpsResource> L
+<section class="location-band" aria-label="@L["Location:Label"]">
+    <div class="location-line">
+        <div class="location-identity">
+        <MudMenu Label="@L["Location:Root", RootName]" StartIcon="@Icons.Material.Outlined.Folder" EndIcon="@Icons.Material.Filled.ExpandMore" Disabled="@Busy" Class="root-choice">
+            @foreach (var root in Controller.RuntimeConfig?.AllowedRoots ?? [])
+            { <MudMenuItem OnClick="@(() => Navigate.InvokeAsync(root))"><span class="exact-root">@root</span></MudMenuItem> }
+        </MudMenu>
+        @if (Browse is { } accepted)
+        {
+            <nav class="@(AtRoot ? "breadcrumbs breadcrumbs-at-root" : "breadcrumbs")" aria-label="@L["Location:Breadcrumbs"]">
+                @foreach (var segment in accepted.Breadcrumbs.Take(accepted.Breadcrumbs.Count > 4 ? 1 : Math.Max(0, accepted.Breadcrumbs.Count - 1)))
+                { <MudButton Variant="Variant.Text" Disabled="@Busy" OnClick="@(() => Navigate.InvokeAsync(segment.Path))" title="@segment.Path">@segment.Name</MudButton><span aria-hidden="true">/</span> }
+                @if (accepted.Breadcrumbs.Count > 4)
+                {
+                    <MudMenu Icon="@Icons.Material.Filled.MoreHoriz" aria-label="@L["Location:Ancestors"]" Disabled="@Busy">
+                        @foreach (var segment in accepted.Breadcrumbs.Skip(1).Take(accepted.Breadcrumbs.Count - 3))
+                        { <MudMenuItem OnClick="@(() => Navigate.InvokeAsync(segment.Path))">@segment.Name <span class="exact-root">@segment.Path</span></MudMenuItem> }
+                    </MudMenu><span aria-hidden="true">/</span>
+                    @foreach (var segment in accepted.Breadcrumbs.TakeLast(2).Take(1))
+                    { <MudButton Variant="Variant.Text" Disabled="@Busy" OnClick="@(() => Navigate.InvokeAsync(segment.Path))" title="@segment.Path">@segment.Name</MudButton><span aria-hidden="true">/</span> }
+                }
+                <h2 title="@accepted.CurrentPath">@DirectoryName</h2>
+            </nav>
+        }
+        </div>
+        <div class="location-tools"><MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@L["Location:Up"]" Disabled="@(Busy || Browse?.ParentPath is null)" OnClick="@(() => Up.InvokeAsync())" /><MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.EditLocationAlt" Disabled="@Busy" OnClick="TogglePath">@L["Location:GoToPath"]</MudButton><MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="@L["Actions:Refresh"]" Disabled="@Busy" OnClick="@(() => Refresh.InvokeAsync())" /></div>
+    </div>
+    @if (_pathOpen || Browse is null || PathFailed)
+    {
+        <div class="path-row">
+            <MudTextField T="string" Value="@Controller.ProposedPath" ValueChanged="SetPath" Label="@L["Workspace:PathInput"]" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" ReadOnly="@Busy" OnKeyDown="PathKeyAsync" Error="@PathFailed" ErrorText="@(PathFailed ? Controller.LastRead?.Message : null)" />
+            <MudButton Variant="Variant.Outlined" Disabled="@(Busy || string.IsNullOrWhiteSpace(Controller.ProposedPath))" OnClick="@(() => Navigate.InvokeAsync(Controller.ProposedPath))">@L["Actions:Browse"]</MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" aria-label="@L["Location:DismissPath"]" Disabled="@(!CanDismissPath)" OnClick="DismissPathAsync" />
+        </div>
+    }
+    <div class="operation-line">
+        <div class="location-facts">
+            @if (Browse is { } current)
+            {
+                <span>@L["Location:Shown", current.Entries.Count]</span>
+                <span class="location-capability"><MudIcon Size="Size.Small" Icon="@(current.IsReadOnly ? Icons.Material.Outlined.Lock : Icons.Material.Outlined.FolderOpen)" />@L[current.IsReadOnly ? "Location:ReadOnly" : current.CanCreateDirectory || current.CanUpload ? "Location:Writable" : "Location:WritesUnavailable"]</span>
+            }
+        </div>
+        <div class="directory-actions">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.CreateNewFolder" Disabled="@(Busy || Browse?.CanCreateDirectory != true)" OnClick="@(() => Create.InvokeAsync())">@L["Actions:CreateDirectory"]</MudButton>
+            <MudFileUpload T="IBrowserFile" FilesChanged="@((IBrowserFile? file) => file is null ? Task.CompletedTask : Upload.InvokeAsync(file))" MaximumFileCount="1" Disabled="@(Busy || Browse?.CanUpload != true)">
+                <CustomContent Context="upload"><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.UploadFile" Disabled="@(Busy || Browse?.CanUpload != true)" OnClick="upload.OpenFilePickerAsync">@L["Actions:Upload"]</MudButton></CustomContent>
+                <SelectedTemplate></SelectedTemplate>
+            </MudFileUpload>
+        </div>
+        @if (Controller.RuntimeConfig is { } config) { <p class="upload-hint">@(UploadName is null ? L["Location:UploadRule", config.MaxUploadFileSizeBytes.FormatByteSize()] : L["Workspace:Uploading", UploadName])</p> }
+    </div>
+    @if (Browse is { CanUpload: false, CanCreateDirectory: false })
+    { <p class="restriction">@L[Browse.IsReadOnly ? "Location:ReadOnlyReason" : "Location:WriteReason"]</p> }
+</section>
+@code {
+    /// <summary>The borrowed visit state; all accepted identities come from its browse evidence.</summary>
+    [Parameter, EditorRequired] public FileOpsWorkspaceController Controller { get; set; } = null!;
+    /// <summary>Browses an explicitly captured directory through the visit's draft guard.</summary>
+    [Parameter] public EventCallback<string> Navigate { get; set; }
+    /// <summary>Navigates to the accepted parent.</summary>
+    [Parameter] public EventCallback Up { get; set; }
+    /// <summary>Refreshes accepted evidence without replacing drafts.</summary>
+    [Parameter] public EventCallback Refresh { get; set; }
+    /// <summary>Collects a child name for the captured accepted directory.</summary>
+    [Parameter] public EventCallback Create { get; set; }
+    /// <summary>Admits one captured browser file.</summary>
+    [Parameter] public EventCallback<IBrowserFile> Upload { get; set; }
+    /// <summary>The captured filename during an admitted upload, or null while idle.</summary>
+    [Parameter] public string? UploadName { get; set; }
+    /// <summary>Cancels a pending selection reveal when an operator begins editing location input.</summary>
+    [Parameter] public EventCallback Changed { get; set; }
+    private bool _pathOpen;
+    private FileOpsBrowseResult? Browse => Controller.Browse;
+    private bool Busy => Controller.IsBusy;
+    private bool PathFailed => Controller.LastRead is { Kind: FileOpsOperationKind.Browse, Succeeded: false };
+    private bool AtRoot => Browse is { } browse && string.Equals(Path.TrimEndingDirectorySeparator(browse.CurrentPath), Path.TrimEndingDirectorySeparator(browse.CurrentRootPath), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    private bool CanDismissPath => !Busy && !PathFailed && string.Equals(Controller.ProposedPath, Browse?.CurrentPath, StringComparison.Ordinal);
+    private string RootName => Name(Browse?.CurrentRootPath);
+    private string DirectoryName => Browse?.Breadcrumbs.LastOrDefault()?.Name ?? Name(Browse?.CurrentPath);
+    private static string Name(string? path) => string.IsNullOrEmpty(path) ? "—" : Path.GetFileName(Path.TrimEndingDirectorySeparator(path)) is { Length: > 0 } name ? name : path;
+    private async Task SetPath(string? value) { if (Busy) return; Controller.ProposedPath = value ?? ""; await Changed.InvokeAsync(); }
+    private async Task TogglePath() { if (Busy) return; if (!_pathOpen && !PathFailed) Controller.ProposedPath = Browse?.CurrentPath ?? Controller.ProposedPath; _pathOpen = true; await Changed.InvokeAsync(); }
+    private async Task DismissPathAsync() { if (!CanDismissPath) return; _pathOpen = false; await Changed.InvokeAsync(); }
+    private async Task PathKeyAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !Busy && !string.IsNullOrWhiteSpace(Controller.ProposedPath)) await Navigate.InvokeAsync(Controller.ProposedPath);
+        else if (args.Key == "Escape" && CanDismissPath) await DismissPathAsync();
+    }
+}
