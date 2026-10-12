@@ -1,4 +1,129 @@
-.key-dialog__diagnostic-input ::deep input,
-.key-dialog__diagnostic-input ::deep textarea {
+.key-dialog-heading,
+.key-dialog-body,
+.key-dialog-actions {
+    box-sizing: border-box;
+    min-width: 0;
+    color: var(--mud-palette-text-primary);
+}
+
+.key-dialog-heading {
+    padding: 20px 56px 16px 24px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.key-dialog-heading ::deep .mo-dialog-heading {
+    font-family: var(--mud-typography-default-family);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.key-dialog-provider {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin: 8px 0 0;
+    font-size: .875rem;
+    line-height: 1.5;
+}
+
+.key-dialog-provider span {
+    color: var(--mud-palette-text-secondary);
+}
+
+.key-dialog-provider code {
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-family: var(--mo-font-family-mono);
+    font-size: inherit;
+}
+
+.key-dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+}
+
+.key-dialog-body ::deep .mud-input-control {
+    min-width: 0;
+}
+
+.key-dialog-body ::deep .mud-input-helper-text {
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+}
+
+.key-dialog-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    margin-top: -8px;
+}
+
+.key-dialog-tools ::deep .mud-button-label,
+.key-dialog-actions ::deep .mud-button-label {
+    white-space: normal;
+}
+
+.key-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 16px 24px 20px;
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+.key-dialog-body ::deep .key-dialog__diagnostic-input input,
+.key-dialog-body ::deep .key-dialog-value textarea {
+    font-family: var(--mo-font-family-mono);
+    font-size: .875rem;
+}
+
+.key-dialog-body ::deep .key-dialog-value textarea {
+    box-sizing: border-box;
+    height: clamp(9rem, 30dvh, 20rem);
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+    .key-dialog-heading {
+        padding: 16px 48px 16px 18px;
+    }
+
+    .key-dialog-body {
+        gap: 18px;
+        padding: 20px 18px;
+    }
+
+    .key-dialog-actions {
+        padding: 16px 18px;
+    }
+}
+
+.key-dialog-body,
+.key-dialog-tools,
+.key-dialog-actions {
+    --state-dialog-primary-ink: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+}
+
+.key-dialog-tools ::deep .state-dialog-primary-text.mud-button-text-primary:not(:disabled):not(.mud-disabled),
+.key-dialog-actions ::deep .state-dialog-primary-text.mud-button-text-primary:not(:disabled):not(.mud-disabled) {
+    color: var(--state-dialog-primary-ink) !important;
+}
+
+.key-dialog-body ::deep .mud-input-control:not(.mud-input-error):not(.mud-disabled):not(:has(input:disabled, textarea:disabled)) .mud-input:not(.mud-input-error):focus-within ~ label.mud-input-label-inputcontrol:not(.mud-input-error):not(.mud-disabled) {
+    color: var(--state-dialog-primary-ink) !important;
+}
+
+.key-dialog-tools {
+    --state-dialog-secondary-ink: color-mix(in srgb, var(--mud-palette-secondary) 70%, var(--mud-palette-text-primary));
+}
+
+.key-dialog-tools ::deep .state-dialog-secondary-text.mud-button-text-secondary:not(:disabled):not(.mud-disabled) {
+    color: var(--state-dialog-secondary-ink) !important;
 }

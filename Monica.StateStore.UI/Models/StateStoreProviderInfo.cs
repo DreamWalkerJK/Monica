@@ -57,8 +57,11 @@ public class StateStoreProviderInfo
     /// <summary>Gets whether this provider has a dedicated module-option diagnostics source.</summary>
     public bool HasOptionDiagnostics => OptionDiagnosticsTarget is not null;
 
-    /// <summary>Gets the stable identity used to rebind provider-detail state.</summary>
-    public string UniqueId => $"{ProviderType}:{ServiceKey ?? "default"}:{ImplementationType}";
+    /// <summary>
+    /// Gets the opaque registration identity used to rebind provider-detail state.
+    /// An unkeyed registration remains distinct from a keyed registration named "default".
+    /// </summary>
+    public string UniqueId => $"{ProviderType}:{(ServiceKey is null ? "unkeyed" : $"keyed:{ServiceKey.Length}:{ServiceKey}")}:{ImplementationType}";
 
     /// <summary>
     /// Whether the provider supports pattern-based key browsing.

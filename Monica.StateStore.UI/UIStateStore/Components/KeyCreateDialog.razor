@@ -1,48 +1,59 @@
 @using Monica.StateStore.UI.Services
 @using Monica.StateStore.UI.Models
 @using Monica.Core.Results;
+@using Monica.UI.Shared.Components.Dialogs
 @inject StateStoreUIService StateStoreService
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<StateStoreResource> L
-@implements IDisposable
+@implements IAsyncDisposable
 
-<MudDialog>
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" Gutters="false" TitleClass="pa-0" ContentClass="pa-0" ActionsClass="pa-0">
     <TitleContent>
-        <MudText Typo="Typo.h6">@L["KeyCreate:Dialogs:Title"]</MudText>
+        <div class="key-dialog-heading">
+            <MoDialogHeading Text="@L["KeyCreate:Dialogs:Title"]" />
+            <p class="key-dialog-provider">
+                <span>@L["KeyExplorer:Detail:Labels:Provider"]</span>
+                <code>@(dialogServiceKey ?? L["KeyExplorer:Labels:DefaultProvider"])</code>
+            </p>
+        </div>
     </TitleContent>
     <DialogContent>
-        <MudStack Spacing="3">
-            @* Key name *@
+        <div class="key-dialog-body">
             <MudTextField @bind-Value="keyName"
+                          Disabled="isSaving"
                           Label="@L["KeyCreate:Labels:KeyName"]"
                           Variant="Variant.Outlined"
                           Required="true"
                           RequiredError="@L["KeyCreate:Labels:KeyNameRequired"]"
                           Class="key-dialog__diagnostic-input"
+                          UserAttributes="structuredInputAttributes"
                           Placeholder="@L["KeyCreate:Placeholders:KeyNameExample"]" />
 
-            @* TTL *@
             <MudNumericField @bind-Value="ttlSeconds"
+                             Disabled="isSaving"
+                             UserAttributes="structuredInputAttributes"
                              Label="@L["KeyCreate:Labels:TTL"]"
                              Variant="Variant.Outlined"
                              Min="0"
                              Adornment="Adornment.End"
                              AdornmentText="@L["KeyCreate:Labels:TTLUnit"]" />
 
-            @* JSON value editor *@
             <MudTextField @bind-Value="jsonValue"
+                          Disabled="isSaving"
                           Label="@L["KeyCreate:Labels:JsonValue"]"
                           Variant="Variant.Outlined"
                           Lines="10"
-                          Class="key-dialog__diagnostic-input"
+                          Class="key-dialog-value"
+                          UserAttributes="structuredInputAttributes"
                           HelperText="@L["KeyCreate:Labels:JsonHelperText"]"
                           Placeholder="@L["KeyCreate:Placeholders:JsonExample"]" />
 
-            <div class="d-flex gap-2">
+            <div class="key-dialog-tools">
                 <MudButton Variant="Variant.Text"
                            Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.FormatIndentIncrease"
                            OnClick="FormatJson"
+                           Class="state-dialog-primary-text"
+                           Disabled="isSaving"
                            Size="Size.Small">
                     @L["KeyCreate:Actions:FormatJson"]
                 </MudButton>
@@ -50,6 +61,8 @@
                            Color="Color.Secondary"
                            StartIcon="@Icons.Material.Filled.Compress"
                            OnClick="MinifyJson"
+                           Class="state-dialog-secondary-text"
+                           Disabled="isSaving"
                            Size="Size.Small">
                     @L["KeyCreate:Actions:MinifyJson"]
                 </MudButton>
@@ -59,37 +72,69 @@
             {
                 <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
             }
-        </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">@L["KeyCreate:Actions:Cancel"]</MudButton>
-        <MudButton Color="Color.Primary"
-                   Variant="Variant.Filled"
-                   OnClick="CreateAsync"
-                   Disabled="@(isSaving || string.IsNullOrWhiteSpace(keyName))">
-            @if (isSaving)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-            }
-            @L["KeyCreate:Actions:Create"]
-        </MudButton>
+        <div class="key-dialog-actions">
+            <MudButton OnClick="Cancel">@L["KeyCreate:Actions:Cancel"]</MudButton>
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       OnClick="CreateAsync"
+                       Disabled="@(isSaving || string.IsNullOrWhiteSpace(keyName))">
+                @if (isSaving)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                @L["KeyCreate:Actions:Create"]
+            </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    /// <summary>
+    /// Originating provider service identity, captured when the dialog initializes. Null selects the default provider.
+    /// </summary>
     [Parameter] public string? ServiceKey { get; set; }
     [Parameter] public EventCallback<StateStoreKeyInfo> OnCreated { get; set; }
 
+    /// <summary>
+    /// Cancels dialog-owned work when the originating provider visit retires.
+    /// Defaults to an uncancelled scope. The dialog owns its linked source, not the caller's token.
+    /// Cancellation suppresses late UI completion; an admitted write may already have persisted.
+    /// </summary>
+    [Parameter] public CancellationToken ScopeCancellationToken { get; set; }
+
+    private readonly Dictionary<string, object> structuredInputAttributes = new() { ["spellcheck"] = "false" };
     private string keyName = "";
+    private string? dialogServiceKey;
     private string jsonValue = "{}";
     private int ttlSeconds = 0;
     private bool isSaving = false;
     private bool isDisposed;
     private string? errorMessage;
+    private CancellationTokenSource? lifetimeCancellation;
+    private CancellationToken lifetimeToken;
+    private TaskCompletionSource? saveCompletion;
+    private Task? retirementTask;
+
+    private bool IsRetired => isDisposed || lifetimeToken.IsCancellationRequested;
+
+    protected override void OnInitialized()
+    {
+        dialogServiceKey = ServiceKey;
+        lifetimeCancellation = CancellationTokenSource.CreateLinkedTokenSource(ScopeCancellationToken);
+        lifetimeToken = lifetimeCancellation.Token;
+    }
 
     private void FormatJson()
     {
+        if (IsRetired || isSaving)
+        {
+            return;
+        }
+
         try
         {
             var obj = System.Text.Json.JsonSerializer.Deserialize<object>(jsonValue);
@@ -107,6 +152,11 @@
 
     private void MinifyJson()
     {
+        if (IsRetired || isSaving)
+        {
+            return;
+        }
+
         try
         {
             var obj = System.Text.Json.JsonSerializer.Deserialize<object>(jsonValue);
@@ -121,28 +171,36 @@
 
     private async Task CreateAsync()
     {
+        if (IsRetired || isSaving)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(keyName))
         {
             errorMessage = L["KeyCreate:Messages:KeyNameRequired"];
             return;
         }
 
+        var request = new StateStoreKeyUpdateRequest
+        {
+            Key = keyName,
+            Value = jsonValue,
+            TTL = ttlSeconds > 0 ? TimeSpan.FromSeconds(ttlSeconds) : null
+        };
+        var serviceKey = dialogServiceKey;
+        var onCreated = OnCreated;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        saveCompletion = completion;
         isSaving = true;
         errorMessage = null;
-        StateHasChanged();
 
         try
         {
-            var request = new StateStoreKeyUpdateRequest
-            {
-                Key = keyName,
-                Value = jsonValue,
-                TTL = ttlSeconds > 0 ? TimeSpan.FromSeconds(ttlSeconds) : null
-            };
+            StateHasChanged();
+            var result = await StateStoreService.CreateKeyAsync(serviceKey, request, lifetimeToken);
 
-            var result = await StateStoreService.CreateKeyAsync(ServiceKey, request);
-
-            if (isDisposed)
+            if (IsRetired)
             {
                 return;
             }
@@ -155,29 +213,96 @@
             {
                 var newKey = result.Data ?? new StateStoreKeyInfo
                 {
-                    Key = keyName,
-                    RawValue = jsonValue,
+                    Key = request.Key,
+                    RawValue = request.Value,
                     IsValueLoaded = true
                 };
-                await OnCreated.InvokeAsync(newKey);
+                await onCreated.InvokeAsync(newKey);
+                if (IsRetired)
+                {
+                    return;
+                }
+
                 MudDialog.Close(DialogResult.Ok(true));
             }
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
+            if (!IsRetired)
+            {
+                errorMessage = ex.Message;
+            }
         }
         finally
         {
-            isSaving = false;
-            if (!isDisposed)
+            try
             {
-                StateHasChanged();
+                if (!IsRetired)
+                {
+                    isSaving = false;
+                    StateHasChanged();
+                }
+            }
+            finally
+            {
+                completion.TrySetResult();
             }
         }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private async Task Cancel()
+    {
+        var retirement = DisposeAsync().AsTask();
+        MudDialog.Cancel();
+        await retirement;
+    }
 
-    public void Dispose() => isDisposed = true;
+    /// <summary>
+    /// Retires the dialog and joins its admitted persistence, read-back, and callback work.
+    /// A creation callback must not await this retirement or the dialog result it completes.
+    /// </summary>
+    public ValueTask DisposeAsync()
+    {
+        if (retirementTask is not null)
+        {
+            return new ValueTask(retirementTask);
+        }
+
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        retirementTask = completion.Task;
+        isDisposed = true;
+        _ = RetireAsync(completion);
+        return new ValueTask(retirementTask);
+    }
+
+    private async Task RetireAsync(TaskCompletionSource completion)
+    {
+        try
+        {
+            try
+            {
+                try
+                {
+                    lifetimeCancellation?.Cancel();
+                }
+                finally
+                {
+                    if (saveCompletion is not null)
+                    {
+                        await saveCompletion.Task;
+                    }
+                }
+            }
+            finally
+            {
+                lifetimeCancellation?.Dispose();
+            }
+
+            completion.TrySetResult();
+        }
+        catch (Exception ex)
+        {
+            completion.TrySetException(ex);
+        }
+    }
 }
