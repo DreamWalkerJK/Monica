@@ -127,13 +127,12 @@ public partial class AgentCapabilityManagePage : IAsyncDisposable
     private void SelectEntry(AgentCapabilityEntryInfo entry)
     {
         if (_ui.IsRetired) return;
-        var pickerWasOpen = _catalogOpen;
         _state.SelectEntry(entry);
         if (_state.SelectedEntry?.Key != entry.Key) return;
         CancelFocusIntent();
         _catalogOpen = false;
-        // Ordinary wide selection has no focus interop; compact picker admission is checked again against actual CSS in JS.
-        if (pickerWasOpen) _focusIntent = new(_focusVersion, "detail", entry.Key);
+        // Reveal the selected dossier in either layout without changing the inventory's local scroll.
+        _focusIntent = new(_focusVersion, "detail", entry.Key);
     }
 
     private Task SetCatalogEnabledAsync(bool enabled) => RunMutationAsync(() => _state.SetCatalogEnabledAsync(_state.ActiveKind, enabled));

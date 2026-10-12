@@ -1,8 +1,9 @@
-// Callback-free compact focus/reveal. The page owns admission, visit/version guards and import drainage.
+// Callback-free focus/reveal. The page owns admission, visit/version guards and import drainage.
 export function reveal(root, visit, version, kind, key) {
     if (!root?.isConnected || root.dataset.focusVisit !== visit || root.dataset.focusVersion !== String(version) || root.dataset.selectedKey !== key) return;
     const toggle = root.querySelector(".compact-catalog-toggle");
-    if (!toggle || getComputedStyle(toggle).display === "none") return;
+    const compact = toggle && getComputedStyle(toggle).display !== "none";
+    if (kind === "catalog" && !compact) return;
     const open = root.dataset.catalogOpen === "true";
     if ((kind === "catalog") !== open) return;
     const shell = root.closest(".mo-body-content");
@@ -20,7 +21,8 @@ export function reveal(root, visit, version, kind, key) {
         target = [...root.querySelectorAll(".detail-header")].find(header => header.dataset.entryKey === key)?.querySelector("h2");
     }
     if (!target) return;
-    target.focus({ preventScroll: true });
+    // Wide selection retains native row focus; compact selection focuses the revealed target.
+    if (compact) target.focus({ preventScroll: true });
     const revealed = kind === "detail" ? target.closest(".detail-header")
         : target.matches("input") ? target.closest(".mud-input-control") ?? target : target;
     const bounds = shell.getBoundingClientRect(), band = revealed.getBoundingClientRect();
