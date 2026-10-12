@@ -2,66 +2,24 @@
   "Pages": {
     "GitRepositories": {
       "Title": "Git 仓库"
+    },
+    "GitCredentials": {
+      "Title": "Git 凭据与解析器"
     }
   },
   "GitDashboard": {
-    "PageTitle": "Git 仓库",
-    "Title": "Git 仓库",
-    "Eyebrow": "Monica / 源代码控制",
-    "Description": "在同一个宿主控制面中协调工作副本、同步状态、凭据与解析器归属。",
-    "Summary": {
-      "AriaLabel": "Git 仓库运行摘要",
-      "Repositories": "仓库",
-      "Ready": "就绪",
-      "Dirty": "脏工作区",
-      "Credentials": "凭据"
-    },
-    "Ownership": {
-      "Title": "宿主所有权阻止仓库 {0}",
-      "Description": "宿主进程无法安全操作位于 {0} 的工作副本。请修正文件系统所有权，或仅为该可信路径显式配置 Git safe-directory 策略。"
-    },
-    "Sections": {
-      "Repositories": "仓库列表",
-      "RepositoriesDescription": "已配置工作副本及其当前同步证据。",
-      "Details": "仓库详情",
-      "DetailsDescription": "所选仓库的解析身份与运行状态。",
-      "Credentials": "凭据列表",
-      "CredentialsDescription": "已注册的凭据引用，不暴露密钥内容。",
-      "Resolvers": "凭据解析器",
-      "ResolversDescription": "宿主用于远端认证的解析顺序。"
-    },
     "Columns": {
-      "Id": "标识",
-      "Provider": "提供商",
-      "Branch": "分支",
-      "State": "状态",
-      "Commit": "提交",
-      "Updated": "更新时间",
-      "Actions": "操作",
-      "CredentialId": "凭据",
-      "Type": "类型",
-      "UserName": "用户名",
-      "HasSecret": "已配置密钥",
-      "Resolver": "解析器",
-      "Order": "顺序",
-      "Size": "大小"
+      "State": "状态"
     },
     "Labels": {
       "RemoteUrl": "远端地址",
       "ResolvedLocalPath": "解析后路径",
       "ResolvedBranch": "实际分支",
-      "Available": "可用",
-      "Dirty": "脏工作区",
       "Credential": "凭据",
-      "CurrentCommit": "当前提交",
-      "LastSync": "最近同步"
+      "CurrentCommit": "当前提交"
     },
     "Actions": {
-      "Refresh": "刷新",
-      "SyncAll": "全部同步",
-      "Sync": "同步",
-      "Select": "查看",
-      "DeleteLocal": "删除本地副本"
+      "Refresh": "刷新"
     },
     "States": {
       "NotReady": "未就绪",
@@ -72,22 +30,7 @@
       "No": "否",
       "None": "(无)"
     },
-    "Dialogs": {
-      "DeleteLocalRepository": {
-        "Title": "删除本地仓库",
-        "Message": "是否删除仓库 '{0}' 的本地工作副本？后续仍可通过同步重新克隆。",
-        "Confirm": "删除",
-        "Cancel": "取消"
-      }
-    },
     "Messages": {
-      "LoadFailed": "加载 Git 面板失败: {0}",
-      "SyncAllSuccess": "全部仓库同步成功。",
-      "SyncAllInProgress": "正在同步全部仓库...",
-      "SyncRepositorySuccess": "仓库 '{0}' 同步成功。",
-      "SyncInProgress": "仓库 '{0}' 正在同步...",
-      "DeleteRepositorySuccess": "仓库 '{0}' 的本地工作副本已删除。",
-      "OperationFailed": "操作失败: {0}",
       "NoRepositories": "未配置任何 Git 仓库。",
       "NoCredentials": "未配置任何 Git 凭据。",
       "NoResolvers": "未注册任何凭据解析器。",
@@ -99,6 +42,109 @@
       "Fetching": "正在拉取远端变更",
       "Checkout": "正在检出文件",
       "Deleting": "正在删除本地仓库"
+    }
+  },
+  "Workspace": {
+    "Navigation": {
+      "Label": "Git 工作区",
+      "Repositories": "仓库",
+      "Credentials": "凭据与解析器"
+    },
+    "AuthenticationTypes": {
+      "Token": "令牌",
+      "UserPassword": "用户名和密码"
+    },
+    "Credentials": {
+      "Title": "Git 凭据与解析器",
+      "Description": "查看已注册的凭据引用与远程认证所使用的解析器顺序。",
+      "PresenceHint": "注册信息中存在密钥不代表认证成功。运行时解析器也可能提供凭据。",
+      "Loading": "正在加载凭据与解析器元数据…",
+      "ReadFailed": "无法读取凭据或解析器元数据。",
+      "PreviousData": "继续显示先前已接受的元数据；这些信息可能已过时。",
+      "Observed": "元数据观测时间",
+      "ReferenceMissing": "凭据引用“{0}”不在已接受的注册信息中。",
+      "ReferenceFiltered": "引用的凭据注册信息不在当前搜索结果中。",
+      "Registrations": "凭据注册信息",
+      "Results": "显示 {1} 个凭据注册信息中的 {0} 个",
+      "Search": "搜索凭据元数据",
+      "Id": "凭据 ID",
+      "AuthenticationType": "认证类型",
+      "UserName": "用户名",
+      "Secret": "注册的密钥",
+      "Present": "存在",
+      "NotPresent": "注册信息中不存在",
+      "NoMatches": "没有匹配此搜索的凭据注册信息。",
+      "RowsPerPage": "每页行数",
+      "PageInfo": "第 {first_item}–{last_item} 项，共 {all_items} 项",
+      "EvaluationOrder": "求值顺序",
+      "ResolverRule": "顺序值较高的解析器先执行；顺序值相同时按解析器 ID 排序。采用第一个返回凭据的解析器结果。",
+      "Order": "顺序值",
+      "ResolverId": "解析器 ID",
+      "ImplementationType": "实现类型"
+    },
+    "Repositories": {
+      "Title": "Git 仓库",
+      "Description": "查看并维护此主机已配置的工作副本。",
+      "Catalog": "工作副本",
+      "Search": "搜索仓库标识",
+      "Results": "显示 {1} 个已配置工作副本中的 {0} 个",
+      "Changes": "本地更改",
+      "ChangesOnly": "仅显示本地更改",
+      "Choose": "选择仓库",
+      "Change": "更换仓库",
+      "ClearFilters": "清除筛选",
+      "NoMatches": "没有匹配这些筛选条件的工作副本。",
+      "EmptyInspection": "没有可查看的工作副本。请在此主机的 Git 配置中注册仓库。",
+      "NoAcceptedData": "尚未接受仓库快照。请刷新重试。",
+      "FilteredSelection": "所选工作副本不在当前筛选结果中。",
+      "Remote": "远程来源",
+      "Worktree": "本地工作树",
+      "ConfiguredBranch": "配置的分支",
+      "AutomaticBranch": "自动解析",
+      "ConfiguredPath": "配置的本地路径",
+      "ConfiguredResolvedPath": "配置与解析后的本地路径",
+      "Available": "本地路径可用",
+      "AvailabilityHint": "可用性表示本地磁盘证据，不表示远程连接状态。",
+      "Dirty": "报告的本地更改",
+      "DirtyUnavailable": "对于不可用的工作副本，尚未确定本地更改状态。",
+      "LastSuccessfulSync": "上次成功同步",
+      "NeverSynced": "此主机运行时未记录成功同步。",
+      "Size": "报告的目录大小",
+      "SizeHint": "尽力统计的大小包含 Git 数据，操作期间可能保留先前的值。",
+      "Sync": "同步工作副本…",
+      "SyncAll": "同步全部…",
+      "Delete": "删除本地副本…",
+      "LossHint": "同步会替换已跟踪文件的本地更改，并移除未跟踪文件。",
+      "ManualDisabled": "主机配置已禁用手动同步。",
+      "ReadFailed": "刷新失败；继续显示已接受的证据。",
+      "MetadataFailed": "无法读取凭据元数据。",
+      "CredentialMissing": "此凭据引用不在已接受的注册信息中。",
+      "AwaitingConfirmation": "等待确认",
+      "RequestingSync": "正在请求同步",
+      "RequestingDelete": "正在删除本地副本",
+      "Outcome": "操作结果",
+      "OutcomeSummary": "成功 {0} 项；失败 {1} 项",
+      "OperationFailed": "操作失败：{0}",
+      "OperationSucceeded": "操作已完成。",
+      "Loading": "正在加载工作副本证据…",
+      "ResultSucceeded": "成功",
+      "ResultFailed": "失败",
+      "ServiceMessage": "服务消息"
+    },
+    "Confirm": {
+      "SyncTitle": "同步工作副本",
+      "SyncAllTitle": "同步全部已配置工作副本",
+      "DeleteTitle": "删除本地副本",
+      "AllTargets": "全部 {0} 个已配置仓库，不受清单筛选条件影响。",
+      "SyncEffect": "同步会抓取或克隆远程仓库，强制检出目标分支并硬重置到远程提交，移除未跟踪文件。已跟踪文件的更改和分叉的本地状态可能被丢弃。",
+      "DeleteEffect": "将移除整个本地目录，包括 Git 数据和仅存在于本地的文件。注册信息和远程仓库仍保留配置。同步可以重新克隆远程仓库，但无法恢复已丢弃的本地独有内容。",
+      "EvidenceHint": "这些是固定的确认目标；执行前本地磁盘内容可能发生变化。",
+      "Cancel": "取消",
+      "SyncAction": "同步并替换",
+      "SyncAllAction": "同步全部 {0} 项",
+      "DeleteAction": "删除本地副本",
+      "TargetId": "仓库 ID",
+      "ObservedChanges": "报告的本地更改"
     }
   }
 }
