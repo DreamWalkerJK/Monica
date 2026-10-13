@@ -7,48 +7,97 @@
   "Page": {
     "DocumentTitle": "Terminal",
     "Title": "Terminal",
-    "Subtitle": "Run local commands from the Monica host process environment.",
-    "Eyebrow": "Local process"
+    "Subtitle": "Run local commands in the Monica host environment."
   },
   "Actions": {
     "Run": "Run",
-    "Cancel": "Cancel",
-    "Clear": "Clear",
-    "NewSession": "New Session",
-    "CloseSession": "Close Session"
+    "Cancel": "Cancel command",
+    "Clear": "Clear output",
+    "NewSession": "New session",
+    "CloseSession": "Close session",
+    "SelectSession": "Select session",
+    "More": "Session actions",
+    "Latest": "Jump to latest",
+    "CloseContext": "Close details",
+    "Retry": "Retry",
+    "Details": "Details"
   },
   "Labels": {
+    "LocalProcess": "Local process",
     "Session": "Session",
+    "SessionName": "Name",
+    "SessionId": "Session ID",
     "WorkingDirectory": "Working directory",
-    "Shell": "Shell",
-    "OperatingSystem": "OS",
+    "RunningDirectory": "Running in",
+    "Shell": "Shell executable",
+    "ShellArguments": "Shell arguments",
+    "OperatingSystem": "Operating system",
     "Architecture": "Architecture",
-    "Runtime": "Runtime",
-    "BaseDirectory": "Base directory",
+    "Runtime": "Runtime identifier",
+    "BaseDirectory": "Application base directory",
+    "DefaultDirectory": "Host default directory",
     "Command": "Command",
     "History": "History",
+    "SessionHost": "Session & host",
+    "Host": "Host",
     "ExitCode": "Exit code",
     "Duration": "Duration",
-    "Status": "Status"
+    "DurationValue": "{0} s",
+    "Transcript": "Output",
+    "LatestResult": "Latest completed command",
+    "CurrentCommand": "Current command",
+    "ResultDirectory": "Command directory",
+    "CreatedAt": "Created",
+    "ActivityAt": "Latest activity"
   },
   "States": {
-    "Loading": "Loading terminal...",
+    "Loading": "Loading terminal…",
     "Ready": "Ready",
     "Running": "Running",
-    "NoSession": "No terminal session is active.",
-    "NoOutput": "Run a command to see output here.",
+    "NoOutput": "No retained output. Enter a command below.",
     "Canceled": "Canceled",
-    "TimedOut": "Timed out"
+    "TimedOut": "Timed out",
+    "Completed": "Completed",
+    "Exited": "Exited with code {0}",
+    "CancellationRequested": "Cancellation requested",
+    "NoSession": "No terminal session is active. Create a session to continue."
   },
   "Messages": {
-    "CreateSessionFailed": "Failed to create terminal session.",
+    "OwnerStorageFailed": "The browser session partition could not be saved. Retry before running commands.",
+    "InitializationFailed": "Terminal initialization failed: {0}",
+    "RefreshFailed": "Session refresh failed. Previously accepted evidence is retained: {0}",
+    "OperationFailed": "The operation failed: {0}",
+    "BrowserFailure": "Browser output controls failed: {0}",
     "LoadEnvironmentFailed": "Failed to load terminal environment.",
-    "RunCommandFailed": "Failed to run command.",
-    "CancelFailed": "Failed to cancel command.",
-    "SessionClosed": "Terminal session closed."
+    "LoadSessionsFailed": "Failed to load terminal sessions.",
+    "CreateSessionFailed": "Failed to create terminal session.",
+    "RunCommandFailed": "Failed to run terminal command.",
+    "CancelFailed": "Failed to request command cancellation.",
+    "SessionClosed": "Terminal session closed.",
+    "CloseSessionFailed": "Failed to close terminal session.",
+    "OutputCleared": "Terminal output cleared.",
+    "ClearOutputFailed": "Failed to clear terminal output."
+  },
+  "History": {
+    "Scope": "Latest {0} of {1} retained commands. Selecting a command copies it into the draft.",
+    "Empty": "No retained commands in this session.",
+    "Reuse": "Reuse command: {0}"
+  },
+  "Behavior": {
+    "Title": "How commands run",
+    "Shell": "Each command starts a fresh shell without interactive input. Shell variables and environment changes reset after each command.",
+    "Directory": "Use the dedicated cd command to change this session’s working directory. Compound shell commands do not update the retained directory.",
+    "Lifetime": "Sessions and output remain in host memory until closed or the host restarts. An accepted command continues when you leave this page. Cancellation does not undo applied effects.",
+    "Partition": "This browser identifier groups retained sessions. It does not authenticate a user or authorize command execution."
+  },
+  "Streams": {
+    "Input": "Submitted command",
+    "Output": "Standard output",
+    "Error": "Standard error",
+    "System": "System information"
   },
   "Input": {
     "Placeholder": "Enter a command",
-    "Helper": "Commands run on the Monica host using the detected shell."
+    "Helper": "Shell state resets after each command. Use cd to change this session’s directory."
   }
 }

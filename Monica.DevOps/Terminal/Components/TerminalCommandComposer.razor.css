@@ -1,0 +1,12 @@
+.terminal-composer { padding: 16px 20px; border-top: 1px solid var(--mud-palette-lines-default); background: var(--mud-palette-surface); }
+.terminal-composer__row { display: flex; align-items: center; gap: 12px; }
+.terminal-composer__field { flex: 1; min-width: 0; }
+.terminal-composer__field ::deep input { font-family: var(--mo-font-family-mono); }
+.terminal-composer__row ::deep .mud-button { flex-shrink: 0; min-height: 40px; }
+.terminal-composer p { margin: 8px 0 0; color: var(--mud-palette-text-secondary); font-size: .78rem; line-height: 1.5; }
+@container terminal-page (max-width: 520px) {
+    .terminal-composer { padding: 14px 16px; }
+    .terminal-composer__row { flex-wrap: wrap; gap: 8px; }
+    .terminal-composer__field { flex-basis: 100%; }
+    .terminal-composer__row ::deep .mud-button { width: 100%; }
+}

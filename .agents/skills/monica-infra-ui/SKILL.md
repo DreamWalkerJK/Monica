@@ -17,6 +17,7 @@ The shell hosts pages; feature UI modules add operational views, while Markdown 
 | Inspect registered object-mapping pairs and generated expressions | [Mapper workspace](references/mapper.md) |
 | Inspect or maintain configured Git working copies and credential resolver metadata | [Git workspace](references/git-workspace.md) |
 | Browse bounded host files, edit text, transfer files, or configure FileOps runtime policy | [FileOps workspace](references/fileops-workspace.md) |
+| Execute host-local commands and inspect session, output, history and cancellation evidence | [Terminal workspace](references/terminal-workspace.md) |
 | Compare text or embed a Diff viewer with source-faithful line evidence | [Text comparison](references/diff.md) |
 | Set theme/language defaults or integrate custom page localization | [Theme and localization](references/theme-and-localization.md) |
 

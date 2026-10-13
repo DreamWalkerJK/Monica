@@ -1,0 +1,49 @@
+@using Monica.DevOps.Localization
+@using Monica.DevOps.Terminal.Models
+@inject IStringLocalizer<TerminalResource> L
+
+<div class="terminal-target">
+    <div class="terminal-target__handle">
+        <span class="terminal-target__caption">@L["Labels:Session"]</span>
+        <MudMenu Label="@Session.Name" StartIcon="@Icons.Material.Outlined.Terminal" EndIcon="@Icons.Material.Filled.ExpandMore"
+                 Variant="Variant.Filled" Color="Color.Primary" AriaLabel="@L["Actions:SelectSession"]" Disabled="@Disabled"
+                 AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" MaxHeight="360">
+            <ChildContent>
+                @foreach (var session in Sessions)
+                {
+                    <MudMenuItem Disabled="@Disabled" OnClick="@(() => Selected.InvokeAsync(session.Id))">
+                        <span class="terminal-choice"><strong>@session.Name</strong><code>@session.WorkingDirectory</code>
+                            <span>@(session.IsRunning ? L["States:Running"] : L["States:Ready"])</span></span>
+                    </MudMenuItem>
+                }
+            </ChildContent>
+        </MudMenu>
+    </div>
+    <div class="terminal-target__directory" tabindex="-1" @ref="_heading">
+        <span>@(Session.IsRunning ? L["Labels:RunningDirectory"] : L["Labels:WorkingDirectory"])</span>
+        <code>@(Session.ActiveCommand?.WorkingDirectory ?? Session.WorkingDirectory)</code>
+        @if (Environment is not null)
+        {
+            <small>@L["Labels:LocalProcess"] · @Environment.OperatingSystemFamily · @ShellName(Environment.ShellPath)</small>
+        }
+    </div>
+    <div class="terminal-target__actions">
+        <MudMenu Icon="@Icons.Material.Filled.MoreHoriz" Disabled="@Disabled" AriaLabel="@L["Actions:More"]">
+            <MudMenuItem Icon="@Icons.Material.Outlined.DeleteSweep" Disabled="@Disabled" OnClick="Clear">@L["Actions:Clear"]</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Outlined.Close" Disabled="@Disabled" OnClick="CloseSession">@L["Actions:CloseSession"]</MudMenuItem>
+        </MudMenu>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TerminalSessionSnapshot Session { get; set; } = default!;
+    [Parameter] public IReadOnlyList<TerminalSessionSnapshot> Sessions { get; set; } = [];
+    [Parameter] public TerminalEnvironmentSnapshot? Environment { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<string> Selected { get; set; }
+    [Parameter] public EventCallback Clear { get; set; }
+    [Parameter] public EventCallback CloseSession { get; set; }
+    private ElementReference _heading;
+    internal ValueTask FocusTargetAsync() => _heading.FocusAsync();
+    private static string ShellName(string path) => path.Replace('\\', '/').Split('/').Last();
+}

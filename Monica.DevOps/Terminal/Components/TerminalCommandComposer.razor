@@ -1,0 +1,45 @@
+@using Monica.DevOps.Localization
+@inject IStringLocalizer<TerminalResource> L
+
+<div class="terminal-composer">
+    <div class="terminal-composer__row">
+        <div class="terminal-composer__field">
+            <MudTextField @ref="_input" T="string" Value="@Draft" ValueChanged="DraftChanged"
+                          Label="@L["Labels:Command"]" Placeholder="@L["Input:Placeholder"]"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                          Lines="1" Disabled="@Disabled" OnKeyDown="KeyDownAsync"
+                          UserAttributes="_inputAttributes" />
+        </div>
+        @if (Running)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@Icons.Material.Outlined.StopCircle"
+                       Disabled="@(!CanCancel)" OnClick="Cancel">
+                @(CancellationRequested ? L["States:CancellationRequested"] : L["Actions:Cancel"])
+            </MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PlayArrow"
+                       Disabled="@(!CanRun)" OnClick="Run">@L["Actions:Run"]</MudButton>
+        }
+    </div>
+    <p>@L["Input:Helper"]</p>
+</div>
+
+@code {
+    [Parameter] public string Draft { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> DraftChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Running { get; set; }
+    [Parameter] public bool CancellationRequested { get; set; }
+    [Parameter] public bool CanRun { get; set; }
+    [Parameter] public bool CanCancel { get; set; }
+    [Parameter] public EventCallback Run { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
+    private MudTextField<string>? _input;
+    private readonly Dictionary<string, object> _inputAttributes = new() { ["spellcheck"] = "false", ["autocomplete"] = "off" };
+
+    internal ValueTask FocusAsync() => _input?.FocusAsync() ?? ValueTask.CompletedTask;
+    private Task KeyDownAsync(KeyboardEventArgs args) => args.Key == "Enter" && !args.ShiftKey && CanRun
+        ? Run.InvokeAsync() : Task.CompletedTask;
+}
