@@ -1,29 +1,45 @@
-.k8s-describe-dialog .describe-output {
-    max-height: 42vh;
-    overflow: auto;
+.k8s-inspector {
+    min-width: 0;
+    font-family: var(--mud-typography-default-family, var(--mo-font-family-body));
+}
+.k8s-inspector ::deep .mud-tabs { min-width: 0; }
+.k8s-inspector ::deep .mud-tabs-panels { min-width: 0; }
+.k8s-inspector ::deep .mud-tab { font-family: var(--mud-typography-default-family, var(--mo-font-family-body)); }
+.k8s-inspector ::deep .mud-chip-outlined.mud-chip-color-info { color: color-mix(in srgb, var(--mud-palette-info) 45%, var(--mud-palette-text-primary)); }
+.k8s-inspector ::deep .mud-chip-outlined.mud-chip-color-success { color: color-mix(in srgb, var(--mud-palette-success) 45%, var(--mud-palette-text-primary)); }
+.k8s-inspector ::deep .mud-chip-outlined.mud-chip-color-warning { color: color-mix(in srgb, var(--mud-palette-warning) 45%, var(--mud-palette-text-primary)); }
+.k8s-inspector ::deep .mud-chip-outlined.mud-chip-color-error { color: color-mix(in srgb, var(--mud-palette-error) 45%, var(--mud-palette-text-primary)); }
+.tab-body {
+    padding: 24px 20px;
+    min-width: 0;
     border: 1px solid var(--mud-palette-lines-default);
+    border-top: 0;
     background: var(--mud-palette-surface);
+    overflow-wrap: anywhere;
 }
-
-.k8s-describe-dialog .describe-output pre {
+.facts {
+    display: grid;
+    grid-template-columns: minmax(120px, .34fr) minmax(0, 1fr);
+    gap: 12px 24px;
     margin: 0;
-    padding: 16px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 0.85rem;
+    font-size: .875rem;
 }
-
-.k8s-describe-dialog .pods-panel {
-    max-height: 36vh;
-    overflow: auto;
+.facts dt { color: var(--mud-palette-text-secondary); }
+.facts dd { margin: 0; min-width: 0; }
+.k8s-inspector ::deep .explanation { margin-top: 20px; }
+.related-workloads { margin-top: 24px; }
+.pod-evidence { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: .875rem; }
+.k8s-inspector ::deep .mud-table-container { overflow-x: auto; overflow-y: visible; }
+.k8s-inspector ::deep .mud-table-cell { overflow-wrap: anywhere; font-size: .875rem; }
+.describe-output { max-width: 100%; overflow-x: auto; background: var(--mud-palette-background); border: 1px solid var(--mud-palette-lines-default); }
+.describe-output pre { margin: 0; padding: 20px; white-space: pre; font: .875rem/1.6 var(--mo-font-family-mono); }
+@media (max-width: 960px) {
+    .k8s-inspector ::deep .mud-table-cell { padding: 12px 16px; }
+    .k8s-inspector ::deep .mud-table-cell::before { padding-inline-end: 16px; }
 }
-
-.k8s-describe-dialog .issue-cell {
-    min-width: 260px;
-}
-
-.k8s-describe-dialog .pod-phase-chip {
-    min-width: 92px;
-    justify-content: center;
+@media (max-width: 600px) {
+    .tab-body { padding: 20px 16px; }
+    .facts { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .facts dd { margin-bottom: 12px; }
+    .describe-output pre { padding: 16px; }
 }

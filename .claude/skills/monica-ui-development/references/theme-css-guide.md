@@ -185,6 +185,12 @@ Contrast preflight against C# palette values is only an initial check. Verify bo
 
 Choose foreground and background together when deriving an action or tinted surface from theme tokens. Verify the final pair in normal, hover, focus and selected states, and preserve semantic and disabled behavior. Check both text and icons in light and dark modes rather than treating a correct background token or `Color.Primary` parameter as proof of readable content.
 
+Measure the element that owns the visible glyphs. A child label can override an ancestor's color; `textContent` on a glyphless ancestor does not establish the foreground actually painted. Keep ancestor styles as cascade evidence, and bind contrast and realized-font samples to the visible text owner and its composed background. Exclude inactive, hidden or covered text from an active-surface claim, with an explicit qualification when glyph evidence is absent.
+
+### Portaled native option labels
+
+Native popup content can render outside a feature's isolated wrapper. When the feature owns an option label, a regular HTML span inside the native item gives that label its own isolation attribute. A selector such as `.mud-selected-item:not(.mud-list-item-disabled) .owned-option-label` scopes its rightmost label while retaining the native selected-state ancestor, so it can match portaled content without a global theme override. Inspect the emitted selector and actual glyph owner in the browser. Preserve the native item, selected background, keyboard behavior and disabled roles; unselected labels and the closed field should keep their existing inheritance. Check the installed component's closed-value presenter before changing its child content.
+
 ### Snackbars and overlays
 
 If you replace the default surface/background treatment, also verify:
@@ -198,7 +204,7 @@ Changing only the container background is often not enough.
 
 ## Verification Workflow
 
-1. Persist the target theme through `IBrowserStorage` or manual `localStorage` setup.
+1. Apply the target theme through native Appearance controls. Await the chosen control's selection acknowledgement, then the actual applied palette, layout and settled transitions. Storage configuration can prepare a reproduction, but does not verify native Apply behavior.
 2. Verify the actual runtime state by checking:
    - wrapper class
    - `data-theme`

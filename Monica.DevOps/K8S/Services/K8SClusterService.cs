@@ -7,6 +7,9 @@ using Monica.DevOps.K8S.Services.Support;
 
 namespace Monica.DevOps.K8S.Services;
 
+/// <summary>
+/// Discovers cluster resources and details using one detached runtime configuration snapshot per operation.
+/// </summary>
 public class K8SClusterService(
     IK8SRuntimeConfigStore runtimeConfigStore,
     K8SResourceDiscoveryService discoveryService,
@@ -91,7 +94,15 @@ public class K8SClusterService(
 
     public async Task<K8SResourceListResult> ListResourcesAsync(string namespaceName, K8SResourceType resourceType, CancellationToken cancellationToken = default)
     {
-        var runtimeConfig = runtimeConfigStore.GetCurrent();
+        return await ListResourcesAsync(runtimeConfigStore.GetCurrent(), namespaceName, resourceType, cancellationToken);
+    }
+
+    private async Task<K8SResourceListResult> ListResourcesAsync(
+        K8SRuntimeConfig runtimeConfig,
+        string namespaceName,
+        K8SResourceType resourceType,
+        CancellationToken cancellationToken)
+    {
         runtimeConfig.EnsureNamespaceAllowed(namespaceName);
 
         var items = resourceType == K8SResourceType.Service
@@ -111,7 +122,15 @@ public class K8SClusterService(
 
     public async Task<K8SServiceDetails> DescribeServiceAsync(string namespaceName, string serviceName, CancellationToken cancellationToken = default)
     {
-        var runtimeConfig = runtimeConfigStore.GetCurrent();
+        return await DescribeServiceAsync(runtimeConfigStore.GetCurrent(), namespaceName, serviceName, cancellationToken);
+    }
+
+    private async Task<K8SServiceDetails> DescribeServiceAsync(
+        K8SRuntimeConfig runtimeConfig,
+        string namespaceName,
+        string serviceName,
+        CancellationToken cancellationToken)
+    {
         runtimeConfig.EnsureNamespaceAllowed(namespaceName);
 
         var services = await discoveryService.ListServiceSummariesAsync(runtimeConfig, namespaceName, cancellationToken);
@@ -150,13 +169,13 @@ public class K8SClusterService(
         var runtimeConfig = runtimeConfigStore.GetCurrent();
         runtimeConfig.EnsureNamespaceAllowed(namespaceName);
 
-        var listResult = await ListResourcesAsync(namespaceName, resourceType, cancellationToken);
+        var listResult = await ListResourcesAsync(runtimeConfig, namespaceName, resourceType, cancellationToken);
         var summary = listResult.Items.FirstOrDefault(item => string.Equals(item.Name, resourceName, StringComparison.OrdinalIgnoreCase))
             ?? throw K8SOperationException.ResourceNotFound(resourceType, resourceName, namespaceName);
 
         if (resourceType == K8SResourceType.Service)
         {
-            var serviceDetails = await DescribeServiceAsync(namespaceName, resourceName, cancellationToken);
+            var serviceDetails = await DescribeServiceAsync(runtimeConfig, namespaceName, resourceName, cancellationToken);
             return new K8SResourceDetails
             {
                 Summary = summary,

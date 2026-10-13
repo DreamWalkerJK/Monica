@@ -8,7 +8,9 @@
 
 @if (_accessState == RouteAccessState.Allowed)
 {
-    <RouteView RouteData="@RouteData" DefaultLayout="@DefaultLayout" />
+    <CascadingValue Value="@RouteData">
+        <RouteView RouteData="@RouteData" DefaultLayout="@DefaultLayout" />
+    </CascadingValue>
     <FocusOnNavigate RouteData="@RouteData" Selector="h1" />
 }
 else

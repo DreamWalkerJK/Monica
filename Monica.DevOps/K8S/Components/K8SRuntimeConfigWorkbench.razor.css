@@ -1,0 +1,15 @@
+.k8s-config-workbench { display: grid; gap: 24px; width: 100%; min-width: 0; padding: 24px; font-family: var(--mud-typography-default-family); }
+.k8s-config-editor { container: k8s-config / inline-size; min-width: 0; padding: 24px; background: var(--mud-palette-surface); border: 1px solid var(--mud-palette-lines-default); border-radius: 12px; display: grid; gap: 20px; }
+.config-lifetime { margin: 0; color: var(--mud-palette-text-secondary); font-size: 14px; line-height: 1.5; }
+.config-groups { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+.config-group { display: grid; align-content: start; gap: 16px; min-width: 0; }
+.config-group h2 { font-size: 18px; font-weight: 500; margin: 0; }
+.provider { display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px; }
+.provider span:first-child { color: var(--mud-palette-text-secondary); }
+.field-help { margin: 0; font-size: 14px; line-height: 1.5; color: var(--mud-palette-text-secondary); }
+.configured-addresses { display: grid; gap: 20px; padding: 8px 0; }
+.config-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; border-top: 1px solid var(--mud-palette-lines-default); padding-top: 20px; }
+.config-actions > span { flex: 1; font-size: 14px; color: var(--mud-palette-text-secondary); }
+.k8s-config-workbench ::deep input, .k8s-config-workbench ::deep textarea, .k8s-config-workbench ::deep .mud-input-control { font-family: var(--mud-typography-default-family); }
+@container k8s-config (max-width: 800px) { .config-groups { grid-template-columns: minmax(0, 1fr); gap: 28px; } }
+@media (max-width: 600px) { .k8s-config-workbench { padding: 16px; gap: 20px; } .k8s-config-editor { padding: 20px 16px; } .config-actions > span { flex-basis: 100%; } }
