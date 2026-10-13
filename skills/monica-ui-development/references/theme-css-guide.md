@@ -29,6 +29,14 @@ The theme token is generated from `MonicaThemeKind.ToCssToken()`, for example:
 - CSS should define theme tokens, surfaces, borders, typography accents, and shared component structure
 - Color palettes, typography defaults, and MudBlazor tokens should still be rooted in the `MudTheme` returned by the C# definition
 
+### Shared typography roles
+
+`Monica.UI/wwwroot/css/mo-fonts.css` owns shared local font faces and the public typography roles. `--mo-font-family-body` resolves from the active MudBlazor `--mud-typography-default-family`; `--mo-font-family-display` resolves from `--mud-typography-h1-family`. Their offline baseline stacks are fallbacks when MudBlazor has not supplied those variables. Theme definitions remain the source of the selected families; do not repeat a theme's font list in feature CSS or add per-theme public-role overrides. `--mo-font-family-mono` retains its purpose-specific diagnostic/code family.
+
+Use the body role for interface text and the display role for deliberate page identity. The shared faces retain existing CSS aliases even when a licensed derivative has a different internal family name. Both `MoGroveSerifSC` and `Noto Serif SC` reference one complete variable CJK asset; `MoM3Text` and `MoM3Display` likewise share one Roboto asset. Keep each face's weight range consistent with its actual variation axes. See [offline font requirements](offline-requirements.md) for coverage, provenance and licensing.
+
+During native theme switching, inspect the computed family on the element that paints the visible glyphs, then verify the realized font and local resource request. A correct ancestor family or successful `document.fonts.load()` does not prove which font painted a child or whether CJK silently used a fallback. Include both Latin and Chinese text, cold and warm loading, and both theme modes when the affected theme supports them. Complete source coverage still has limits: codepoints absent from that source use the declared fallback stack.
+
 ## Theme Authoring Workflow
 
 1. Add a new `MonicaThemeKind` enum value.
