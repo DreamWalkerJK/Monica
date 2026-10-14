@@ -24,8 +24,9 @@ public readonly record struct LogReadResult(IReadOnlyList<string> Lines, long St
 /// </summary>
 /// <remarks>
 /// Reads are serialized. Cancellation throws and does not adopt an incomplete read. Truncation and
-/// observable replacement invalidate the generation. Detection uses length, creation time, and prior
-/// prefix/end bytes; it is not an operating-system file identity and cannot prove every in-place rewrite.
+/// observable replacement invalidate the generation. Detection uses length, prior prefix/end bytes,
+/// and Windows creation time; Unix creation timestamps can change on append when birth time is unavailable.
+/// It is not an operating-system file identity and cannot prove every in-place rewrite.
 /// A file read is bounded to its opening length, not a filesystem-atomic archive snapshot.
 /// </remarks>
 public sealed class LogTailService(
@@ -99,7 +100,7 @@ public sealed class LogTailService(
 
             await using var stream = OpenRead(path);
             var length = stream.Length;
-            var creation = File.GetCreationTimeUtc(path);
+            var creation = ReadCreationTime(path);
             var changed = before.Initialized && (!before.Exists || length < before.Position
                 || creation != before.CreationTime
                 || !await BytesMatchAsync(stream, 0, before.Prefix, length, token).ConfigureAwait(false)
@@ -186,7 +187,7 @@ public sealed class LogTailService(
             lock (_sync) { current = _cursor; path = _logFilePath; }
             if (current.Generation != generation || !current.Exists || !File.Exists(path)) return false;
             await using var stream = OpenRead(path);
-            return stream.Length >= current.Position && File.GetCreationTimeUtc(path) == current.CreationTime
+            return stream.Length >= current.Position && ReadCreationTime(path) == current.CreationTime
                 && await BytesMatchAsync(stream, 0, current.Prefix, stream.Length, token).ConfigureAwait(false)
                 && await BytesMatchAsync(stream, Math.Max(0, current.Position - current.Anchor.Length), current.Anchor, stream.Length, token).ConfigureAwait(false);
         }
@@ -249,6 +250,9 @@ public sealed class LogTailService(
         Mode = FileMode.Open, Access = FileAccess.Read, Share = FileShare.ReadWrite | FileShare.Delete,
         Options = FileOptions.Asynchronous | FileOptions.SequentialScan
     });
+
+    private static DateTime ReadCreationTime(string path)
+        => OperatingSystem.IsWindows() ? File.GetCreationTimeUtc(path) : default;
 
     private static async Task<bool> BytesMatchAsync(FileStream stream, long offset, byte[] expected, long length, CancellationToken token)
     {
