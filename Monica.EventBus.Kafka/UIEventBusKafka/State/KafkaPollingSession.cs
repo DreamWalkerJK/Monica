@@ -226,6 +226,9 @@ internal sealed class KafkaPollingSession<TSnapshot>(
             {
                 linked.Token.ThrowIfCancellationRequested();
                 result = await work(linked.Token);
+                // Parent cancellation is visible before CancelAsync finishes linked callbacks.
+                token.ThrowIfCancellationRequested();
+                lifetimeToken.ThrowIfCancellationRequested();
             }
             completion.TrySetResult(result);
         }
@@ -261,6 +264,9 @@ internal sealed class KafkaPollingSession<TSnapshot>(
             }
             Notify();
             var result = await capture(target, captureToken);
+            // A cancellation-ignoring capture must still retire with its caller or target.
+            token.ThrowIfCancellationRequested();
+            targetToken.ThrowIfCancellationRequested();
             captureToken.ThrowIfCancellationRequested();
             lock (_sync)
             {
@@ -282,7 +288,8 @@ internal sealed class KafkaPollingSession<TSnapshot>(
                 return true;
             }
         }
-        catch (OperationCanceledException) when (captureToken.IsCancellationRequested) { throw; }
+        catch (OperationCanceledException) when (token.IsCancellationRequested
+            || targetToken.IsCancellationRequested || captureToken.IsCancellationRequested) { throw; }
         catch (Exception exception)
         {
             lock (_sync)
