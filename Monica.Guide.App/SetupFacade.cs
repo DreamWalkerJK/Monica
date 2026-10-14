@@ -712,10 +712,11 @@ public sealed class SetupFacade(SetupSession session)
     /// </summary>
     public async Task<IReadOnlyList<string>> DescribeProfileClosureAsync(
         string profile,
+        IReadOnlyList<string>? capabilities = null,
         CancellationToken cancellationToken = default)
         => await Task.Run(() =>
             new GuideWorkspaceService(Product, GuidePaths.ForCurrentUser(), LoadWorkspaceCatalog())
-                .ProfileClosureSkills(profile), cancellationToken);
+                .ProfileClosureSkills(profile, capabilities), cancellationToken);
 
     /// <summary>
     /// Describes the switchable managed rules of one initialized workspace with their current

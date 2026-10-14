@@ -16,4 +16,6 @@ Start with composition for module-graph or host-lifecycle problems, then select 
 | Store key-value state using a memory, distributed, or keyed provider | [State stores](references/state-stores.md) |
 | Inspect local or remote failures and choose response diagnostic visibility | [Exception diagnostics](references/exception-diagnostics.md) |
 
-For database aggregates and write boundaries, use [persistence](../monica-infra-persistence/SKILL.md); for telemetry, use [observability](../monica-infra-observability/SKILL.md); for module implementation, use [development](../monica-development/SKILL.md).
+For database aggregates and write boundaries, use [persistence](../monica-infra-persistence/SKILL.md); for telemetry, use [observability](../monica-infra-observability/SKILL.md). For module implementation, use `$monica-framework`, then `$monica-development`.
+
+If a routed authoring skill is unavailable, use `$monica-guide` to resolve the verified Monica checkout (`source resolve --repository monica --json`) and read its canonical `skills/<name>/SKILL.md`.

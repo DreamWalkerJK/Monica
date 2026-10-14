@@ -82,7 +82,8 @@ public sealed record SkillCatalog(
     IReadOnlyList<SkillCatalogEntry> Skills,
     GuideManagedInstructions? ManagedInstructions = null,
     IReadOnlyDictionary<string, GuideSourceRepositoryDefinition>? SourceRepositories = null,
-    IReadOnlyDictionary<string, GuideSkillAlias>? Aliases = null);
+    IReadOnlyDictionary<string, GuideSkillAlias>? Aliases = null,
+    IReadOnlyDictionary<string, GuideProfileSkillSelection>? ProfileSelections = null);
 
 /// <summary>One exact skill tree in the packaged catalog.</summary>
 public sealed record SkillCatalogEntry(
@@ -93,6 +94,22 @@ public sealed record SkillCatalogEntry(
     IReadOnlyList<string> Dependencies,
     string TreeDigest,
     IReadOnlyList<string>? Profiles = null);
+
+/// <summary>
+/// Canonical profile selection projected from the product's authoring catalog. Required and
+/// recommended roots install by default; conditional roots install only for matching workspace
+/// capabilities. All roots expand through required skill dependencies, never recommendations.
+/// Products without capability selections can use the per-entry <c>Profiles</c> membership.
+/// </summary>
+public sealed record GuideProfileSkillSelection(
+    IReadOnlyList<string> Required,
+    IReadOnlyList<string> Recommended,
+    IReadOnlyList<GuideConditionalSkillSelection> Conditional);
+
+/// <summary>Additional profile roots enabled by one explicitly selected workspace capability.</summary>
+public sealed record GuideConditionalSkillSelection(
+    string Capability,
+    IReadOnlyList<string> Skills);
 
 /// <summary>
 /// Managed workspace instruction contract projected from the canonical catalog. The guide

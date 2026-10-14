@@ -11,6 +11,7 @@ Use these rules to keep the modular monolith clean instead of turning it into a 
 - Domain-owned `Application` units depend on shared protocol contracts through their own domain package.
 - `Domains.{Subdomain}.csproj` owns the domain's persistence and helper code.
 - AppHost entry projects compose domains, but they should not absorb handlers, jobs, domain models, repositories, utility helpers, or extra shared platform references.
+- Composition-only permits AppHost modules and registration/host adapters. It limits responsibility, not the number of source files.
 
 ## Shared Platform Responsibilities
 

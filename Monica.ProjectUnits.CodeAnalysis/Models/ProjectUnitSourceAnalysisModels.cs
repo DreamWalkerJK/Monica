@@ -7,9 +7,9 @@ namespace Monica.ProjectUnits.CodeAnalysis.Models;
 public static class ProjectUnitSourceAnalysisContract
 {
     /// <summary>
-    /// Version 5 preserves outgoing symbol references and class/method test declaration scope.
+    /// Version 6 includes request associations for response-less and custom-result application services.
     /// </summary>
-    public const string Version = "monica-project-units-source/v5";
+    public const string Version = "monica-project-units-source/v6";
 
     /// <summary>Architectural roles the current source classifier can produce.</summary>
     public static IReadOnlySet<ProjectUnitSourceType> DiscoverableUnitTypes { get; } = new[]

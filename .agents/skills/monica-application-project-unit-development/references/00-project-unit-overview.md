@@ -1,30 +1,36 @@
 # ProjectUnit Overview
 
-Use this file to decide which Monica-native ProjectUnit should own a new piece of business behavior.
+Use this file to choose the owner of behavior within the project's adopted application specification. The role table defines native unit choices; it does not require every feature to create every role. Use the [composition map](02-project-unit-composition-map.md) for feature selection.
 
-The current Monica project-unit discovery logic recognizes these core patterns:
+The current runtime and source discovery implementations recognize the following roles. Classification follows inheritance/interfaces and explicit attributes; naming conventions report separate diagnostics. A discovered type can still violate application rules or lack approval. Reserved enum values outside `ProjectUnitSourceAnalysisContract.DiscoverableUnitTypes` are not implemented source roles.
 
 | Unit | Base type or contract | Naming convention | Primary responsibility |
 | --- | --- | --- | --- |
-| `ApplicationService` | `ApplicationService<TRequest, TResponse>` or `ApplicationService<TRequest>` | `CommandHandler*`, `QueryHandler*`, or another `*Handler*` name | Boundary use case orchestration that returns `Res` |
+| `ApplicationService` | `ApplicationService<TRequest, TResponse>`, `ApplicationService<TRequest>`, or native `CustomApplicationService<TRequest, TResult>` | `CommandHandler*`, `QueryHandler*`, or another `*Handler*` name | HTTP-exposed mediator use-case orchestration with a deliberate result boundary |
 | `RequestDto` | `IResultRequest<TResponse>` or `IResultRequest` | `Command*`, `Query*`, `Request*` | Stable request contract for a use case |
-| `DomainService` | `DomainService` | `Domain*` | Reusable domain logic that spans multiple entities or workflows |
+| `DomainService` | `DomainService` | `Domain*` | Meaningful domain rule with no natural entity owner, often spanning aggregates |
 | `Entity` | `Entity<TKey>` or `Entity` plus `IEntity` | Place under `Entities/` | Own state, invariants, and behavior |
-| `Repository` | `IRepository<TEntity>` or `IRepository<TEntity, TKey>` plus implementation | `IRepository*` and `Repository*` | Persistence access for one aggregate or entity family |
+| `Repository` | Minimal `IRepository<TEntity>` or keyed contract plus concrete implementation | `IRepository{Aggregate}` / exact `Repository{Aggregate}` | Tracked aggregate loading, staging, and materialized business reads |
 | `DomainEvent` | `DomainEvent` | `Event*` | An application fact or shared notification contract worth publishing or reacting to |
 | `DomainEventHandler` | `DomainEventHandler<TEvent>` | `DomainEventHandler*` | React to distributed events |
 | `LocalEventHandler` | `LocalEventHandler<TEvent>` | `LocalEventHandler*` | React to in-process events |
 | `Configuration` | `[Configuration]` class | `*Options` | Typed runtime configuration |
 | `RecurringJob` | `RecurringJob` | `Worker*` | Scheduled background work |
 | `TriggeredJob` | `TriggeredJob<TArgs>` | `Job*` | On-demand asynchronous work |
+| `CrudApplicationService` | `ApplicationService` plus `ICrudApplicationService`, normally native `CrudApplicationService<...>` | Project convention; configured CRUD suffix is a route aid | Bounded persistence-facing CRUD adapter |
+| `Seeder` | `ISeeder`, normally `SeederBase` | Project convention; no native prefix rule | Finite, idempotent startup preparation |
+| `HostedService` | `IHostedService`; Monica observation uses `MoHostedService` / `MoBackgroundService` | Project convention; no native prefix rule | Host lifecycle or continuous infrastructure work |
+| `HttpApi` | `ControllerBase` | Usually `*Controller`; no native prefix rule | HTTP transport adapter, including generated mediated controllers |
 
 For concrete folder placement in microservice and modular-monolith layouts, use [01-project-unit-naming-and-boundaries.md](01-project-unit-naming-and-boundaries.md).
 
-The framework also recognizes `IDomainEvent`, `IDistributedEventHandler<TEvent>`, and `ILocalEventHandler<TEvent>` implementations. The table selects the base classes used by application units; transport-level interface support does not replace those conventions.
+The framework also recognizes `IDomainEvent`, `IDistributedEventHandler<TEvent>`, and `ILocalEventHandler<TEvent>` implementations. The table selects the base classes used by application units; transport-level interface support does not replace those conventions. Read [adapters and lifecycle types](04-adapters-lifecycle-and-support-types.md) before selecting CRUD, seeding, host, or controller roles.
+
+Ordinary internal `IRequestHandler<TRequest, TResult>` handlers, Facades, DTOs/value objects, modules, mappers, validators, and pure helpers are support types unless their actual shape matches a discovered role. `IResultRequest` itself is discoverable as `RequestDto` even when its handler is internal. Do not add a fake ProjectUnit base or new application role merely to make a support type appear in the catalog.
 
 ## Agent Context Contract
 
-Every discovered unit should declare its own human-readable responsibility and requirement traceability:
+Every application-authored discovered unit must declare its own human-readable responsibility and associate applicable actual requirement IDs when they can be resolved. Generated types remain generator-owned. Missing legitimate traceability is [coverage debt](03-project-unit-context-metadata.md), not permission to invent a behavioral commitment:
 
 ```csharp
 using Monica.ProjectUnits.Annotations;
@@ -57,11 +63,12 @@ An empty catalog reports no data, not 100% coverage. Use [03-project-unit-contex
 - Apply `[ExcludeFromBusinessTypeDiscovery]` directly to a runtime-only type that must be absent from both runtime and source ProjectUnit catalogs. The exclusion does not flow to derived types.
 - Use `ProjectUnitSourceAnalysisContract.DiscoverableUnitTypes` when validating a source-level create role; not every reserved `ProjectUnitSourceType` value is implemented by the current analyzer.
 - Create a new `ApplicationService` when you need a new externally visible use case.
-- Create a `DomainService` when the business rule must be reused by multiple handlers, jobs, or event handlers.
+- Create a `DomainService` only for a meaningful domain rule without a natural entity owner, including a rule reused across entry points or spanning aggregates. A one-entity transition normally stays on the entity and the handler calls it directly.
 - Create or extend an `Entity` when the rule belongs to the state owner itself.
 - Create a `Repository` only when persistence access is needed. Do not hide pure business rules inside repositories.
 - Create a `DomainEvent` only when the fact itself matters to other handlers or modules. Do not emit events for trivial internal control flow.
 - Create a `Configuration` class only for genuine host-configurable behavior, not for constants.
+- Choose events, jobs, outbox/inbox, or retry policies for a demonstrated delivery or execution requirement. An ordinary command does not acquire a reliability architecture merely because those capabilities exist.
 
 ## Placement
 

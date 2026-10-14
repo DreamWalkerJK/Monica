@@ -13,4 +13,6 @@ The shell hosts pages; feature UI modules add operational views, while Markdown 
 | Publish searchable documents, use the viewer, or serve local images | [Markdown](references/markdown.md) |
 | Set theme/language defaults or integrate custom page localization | [Theme and localization](references/theme-and-localization.md) |
 
-For building components, use [UI development](../monica-ui-development/SKILL.md); for authoring translation resources, use [UI localization](../monica-ui-localization/SKILL.md); configure each feature's underlying service through its owning infrastructure skill.
+For building components, use `$monica-ui-development`; for authoring translation resources, use `$monica-ui-localization`; configure each feature's underlying service through its owning infrastructure skill.
+
+If a routed authoring skill is unavailable, use `$monica-guide` to resolve the verified Monica checkout (`source resolve --repository monica --json`) and read its canonical `skills/<name>/SKILL.md`.

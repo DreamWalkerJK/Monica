@@ -62,6 +62,20 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
                 f"{profile_name} omits {sorted(closure - declared)}",
             )
 
+    def test_direct_application_skill_installations_include_specification_router_without_cycles(self) -> None:
+        granular_skills = {
+            "monica-application-microservice",
+            "monica-application-modular-monolith",
+            "monica-application-project-unit-development",
+            "monica-application-unit-testing",
+        }
+        self.assertEqual([], validator.find_required_cycles(self.catalog["skills"]))
+        for skill in granular_skills:
+            closure = validator.required_closure(self.catalog["skills"], [skill])
+            self.assertIn("monica-application", closure, skill)
+        router_closure = validator.required_closure(self.catalog["skills"], ["monica-application"])
+        self.assertFalse(router_closure & granular_skills)
+
     def test_profile_closure_uses_explicit_buckets_and_required_edges_only(self) -> None:
         framework = self.catalog["profiles"]["framework-contributor"]
         framework_default = validator.profile_selection_closure(
@@ -266,7 +280,7 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
 
     def test_managed_instruction_rules_are_switchable_and_route_source_lookup_through_guide(self) -> None:
         instructions = self.catalog["managedInstructions"]
-        self.assertEqual(3, instructions["version"])
+        self.assertEqual(4, instructions["version"])
         for profile_name, template in instructions["templates"].items():
             rules = [rule["text"] for rule in template["rules"]]
             rule_ids = [rule["id"] for rule in template["rules"]]

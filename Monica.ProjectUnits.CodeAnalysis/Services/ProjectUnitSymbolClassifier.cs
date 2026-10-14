@@ -8,6 +8,8 @@ internal sealed class ProjectUnitSymbolClassifier
 {
     private const string APPLICATION_SERVICE = "Monica.WebApi.Abstractions.ApplicationService";
     private const string APPLICATION_SERVICE_GENERIC = "Monica.WebApi.Abstractions.ApplicationService`2";
+    private const string APPLICATION_SERVICE_WITHOUT_RESPONSE = "Monica.WebApi.Abstractions.ApplicationService`1";
+    private const string CUSTOM_APPLICATION_SERVICE_GENERIC = "Monica.WebApi.Abstractions.CustomApplicationService`2";
     private const string DISTRIBUTED_EVENT_HANDLER_EXECUTION_POINT = "eventbus.distributed-handler";
     private const string CONTROLLER_BASE = "Microsoft.AspNetCore.Mvc.ControllerBase";
     private const string CONFIGURATION_ATTRIBUTE = "Monica.Configuration.Annotations.ConfigurationAttribute";
@@ -268,7 +270,10 @@ internal sealed class ProjectUnitSymbolClassifier
         {
             case ProjectUnitSourceType.ApplicationService:
             case ProjectUnitSourceType.CrudApplicationService:
-                if (symbol.FindBaseType(APPLICATION_SERVICE_GENERIC)?.TypeArguments.FirstOrDefault() is INamedTypeSymbol request)
+                var applicationServiceBase = symbol.FindBaseType(APPLICATION_SERVICE_GENERIC)
+                    ?? symbol.FindBaseType(APPLICATION_SERVICE_WITHOUT_RESPONSE)
+                    ?? symbol.FindBaseType(CUSTOM_APPLICATION_SERVICE_GENERIC);
+                if (applicationServiceBase?.TypeArguments.FirstOrDefault() is INamedTypeSymbol request)
                 {
                     dependencies.Add(new(request, "ProjectUnit.ApplicationService.Request.NotFound"));
                 }

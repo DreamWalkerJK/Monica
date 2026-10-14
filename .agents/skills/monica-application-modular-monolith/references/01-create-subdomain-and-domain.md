@@ -64,17 +64,18 @@ Use `monica-application-project-unit-development` to place domain-owned units in
 - Add one assembly-level `WebApiGenerationConfig("api/v1", DomainName = "{Subdomain}")` file at the project root for local requests.
 - Co-locate domain-private endpoint requests and responses with their handlers by default. Put `[ApiEndpoint]` and the XML summary on the request; do not put endpoint metadata on the handler.
 
-## Step 4. Keep AppHost as the Program-only entry
+## Step 4. Keep AppHost composition-only
 
 Create or extend an AppHost entry project:
 
 ```text
 src/AppHost/{ProjectName}/
 ├── {ProjectName}.csproj
-└── Program.cs
+├── Program.cs
+└── Modules/          # optional composition modules
 ```
 
-Keep AppHost as the composition root only. Do not place handlers, jobs, repositories, utilities, or other business ProjectUnits here.
+Keep AppHost as the composition root. Modules, registration extensions, and thin host adapters may organize wiring; handlers, jobs, repositories, business helpers, and other domain behavior remain with their owner.
 
 ## Step 5. Register the domain and update the solution
 

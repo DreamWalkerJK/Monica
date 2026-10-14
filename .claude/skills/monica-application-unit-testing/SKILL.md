@@ -1,9 +1,11 @@
 ---
 name: monica-application-unit-testing
-description: Create or review Monica application tests through real host composition, business pipelines, scoped database arrange/act/assert, durable event assertions, and isolated provider seams.
+description: Apply Monica application testing rules when creating, refactoring, or reviewing behavior tests, host scenarios, persistence isolation, and provider seams. Load monica-application and the repository's project specification first.
 ---
 
 # Monica Application Unit Testing
+
+Load `$monica-application` and the repository-designated project specification before test design or edits, including direct invocation of this skill. Use its validation contract and adopted architecture/unit rules. The [shared specification](../monica-application/references/00-application-specification.md) defines rule strength; use [specification evolution](../monica-application/references/01-specification-evolution.md) before introducing a new testing or execution model.
 
 Test business behavior through a complete Monica host when composition matters. Each scenario owns its host and database; registrations are finalized before build. Arrange, act and assert use independent scopes.
 

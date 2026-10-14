@@ -40,6 +40,171 @@ public sealed class GuideProjectInstallTests
         Assert.Equal(fixture.ProjectSkillRoot(workspace), installation.TargetRoot);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ApplyWorkspacePlan_WhenUntouchedGlobalInstallationHasDrift_ShouldVerifyOnlyChangedTargets(
+        bool unconfigure)
+    {
+        using var fixture = new ProjectFixture();
+        using var service = fixture.CreateService();
+        var globalRequest = new GuideConfigureRequest(null, null,
+            [new GuideTargetSelection(AgentGuideService.NativeEnvironment(), [GuideTarget.Shared])],
+            Skills: [ProjectFixture.ApplicationSkill]);
+        var globalPreview = await service.PreviewConfigureAsync(globalRequest, cancellationToken: CancellationToken);
+        await service.ApplyConfigureAsync(globalRequest, globalPreview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        var globalBefore = Assert.Single(fixture.ProductInstallations());
+
+        var workspace = fixture.CreateWorkspace("monica-application", [".agents/skills", ".claude/skills"]);
+        var configureRequest = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+        var unconfigureRequest = new GuideUnconfigureRequest(Workspace: workspace);
+        if (unconfigure)
+        {
+            var installationPreview = await service.PreviewConfigureAsync(configureRequest, cancellationToken: CancellationToken);
+            await service.ApplyConfigureAsync(configureRequest, installationPreview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        }
+
+        var globalSkillFile = Path.Combine(fixture.GlobalSharedRoot, ProjectFixture.ApplicationSkill, "SKILL.md");
+        var driftedContent = await File.ReadAllTextAsync(globalSkillFile, CancellationToken) + "\nLocal drift remains untouched.\n";
+        await File.WriteAllTextAsync(globalSkillFile, driftedContent, CancellationToken);
+
+        var preview = unconfigure
+            ? await service.PreviewUnconfigureAsync(unconfigureRequest, cancellationToken: CancellationToken)
+            : await service.PreviewConfigureAsync(configureRequest, cancellationToken: CancellationToken);
+        Assert.NotEqual(GuideStatus.Error, preview.Status);
+        Assert.DoesNotContain(preview.Plan!.Actions, action =>
+            action.Target.StartsWith(fixture.GlobalSharedRoot, StringComparison.OrdinalIgnoreCase));
+        var applied = unconfigure
+            ? await service.ApplyUnconfigureAsync(unconfigureRequest, preview.Plan.PlanDigest, cancellationToken: CancellationToken)
+            : await service.ApplyConfigureAsync(configureRequest, preview.Plan.PlanDigest, cancellationToken: CancellationToken);
+
+        Assert.True(applied.Plan!.Applied);
+        Assert.Equal(driftedContent, await File.ReadAllTextAsync(globalSkillFile, CancellationToken));
+        var globalAfter = Assert.Single(fixture.ProductInstallations(), installation => installation.Target == GuideTarget.Shared);
+        Assert.Equal(globalBefore.TargetRoot, globalAfter.TargetRoot);
+        Assert.Equal(globalBefore.Environment, globalAfter.Environment);
+        Assert.Equal(globalBefore.Trees, globalAfter.Trees);
+        foreach (var target in new[] { ".agents", ".claude" })
+        {
+            var targetRoot = Path.Combine(workspace, target, "skills");
+            Assert.Equal(!unconfigure, Directory.Exists(targetRoot));
+            if (!unconfigure)
+            {
+                Assert.Equal(
+                    await File.ReadAllBytesAsync(Path.Combine(fixture.SkillsRoot, ProjectFixture.ApplicationSkill, "SKILL.md"), CancellationToken),
+                    await File.ReadAllBytesAsync(Path.Combine(targetRoot, ProjectFixture.ApplicationSkill, "SKILL.md"), CancellationToken));
+            }
+        }
+
+        var status = await service.GetStatusAsync(cancellationToken: CancellationToken);
+        var globalCheck = Assert.Single(status.Checks, check =>
+            check.Id.Contains(".shared.", StringComparison.Ordinal) && check.Id.EndsWith(".catalog", StringComparison.Ordinal));
+        Assert.Equal(GuideCheckStatus.Warning, globalCheck.Status);
+        Assert.Contains(ProjectFixture.ApplicationSkill, globalCheck.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ConfigureAndRefresh_WhenWorkspacesHaveDifferentCapabilities_ShouldPreserveTheirSelections()
+    {
+        using var fixture = new ProjectFixture(withCapabilities: true);
+        using var service = fixture.CreateService();
+        var microservice = fixture.CreateWorkspace("monica-application", capabilities: ["microservice"]);
+        var modular = fixture.CreateWorkspace("monica-application", capabilities: ["modular-monolith"]);
+        foreach (var workspace in new[] { microservice, modular })
+        {
+            var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+            var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+            Assert.NotEqual(GuideStatus.Error, preview.Status);
+            await service.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        }
+
+        var refreshRequest = new GuideConfigureRequest(null, null, []);
+        var refresh = await service.PreviewConfigureAsync(refreshRequest, cancellationToken: CancellationToken);
+        var applied = await service.ApplyConfigureAsync(refreshRequest, refresh.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        Assert.True(applied.Plan!.Applied);
+        foreach (var (workspace, selected, excluded, capability) in new[]
+                 {
+                     (microservice, ProjectFixture.MicroserviceSkill, ProjectFixture.ModularSkill, "microservice"),
+                     (modular, ProjectFixture.ModularSkill, ProjectFixture.MicroserviceSkill, "modular-monolith")
+                 })
+        {
+            var names = Assert.Single(fixture.ProductInstallations(), installation => installation.WorkspaceRoot == workspace)
+                .Trees.Select(static tree => tree.Name).ToArray();
+            Assert.Equal(new[] { ProjectFixture.ApplicationSkill, ProjectFixture.RequiredSkill, selected }.Order(StringComparer.Ordinal), names);
+            Assert.False(Directory.Exists(Path.Combine(fixture.ProjectSkillRoot(workspace), excluded)));
+            var inspection = new GuideWorkspaceService(ProjectFixture.Product, fixture.EnginePaths, fixture.LoadCatalog(), fixture.ProductPaths);
+            Assert.Equal(names, inspection.ProfileClosureSkills("monica-application", [capability]));
+            var check = Assert.Single(inspection.Inspect(workspace).Checks, item => item.Id == "workspace.skills");
+            Assert.Equal(GuideCheckStatus.Ok, check.Status);
+            Assert.Equal("3", check.Details!["profile"]);
+        }
+    }
+
+    [Fact]
+    public async Task Configure_WhenExplicitSkillDependsOnOtherSkills_ShouldInstallTheRequiredClosure()
+    {
+        using var fixture = new ProjectFixture(withCapabilities: true);
+        using var service = fixture.CreateService();
+        var request = new GuideConfigureRequest(null, null,
+            [new GuideTargetSelection(AgentGuideService.NativeEnvironment(), [GuideTarget.Shared])],
+            Skills: [ProjectFixture.MicroserviceSkill]);
+        var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+        var applied = await service.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        Assert.True(applied.Plan!.Applied);
+        Assert.Equal(new[] { ProjectFixture.ApplicationSkill, ProjectFixture.MicroserviceSkill, ProjectFixture.RequiredSkill }.Order(StringComparer.Ordinal),
+            Assert.Single(fixture.ProductInstallations()).Trees.Select(static tree => tree.Name));
+    }
+
+    [Fact]
+    public async Task ConfigureWorkspace_WhenClaudeHasALegacyProductSpan_ShouldConvergeToTheAgentsImport()
+    {
+        using var fixture = new ProjectFixture();
+        using var service = fixture.CreateService();
+        var workspace = fixture.CreateWorkspace("monica-application", [".agents/skills", ".claude/skills"]);
+        var claude = Path.Combine(workspace, "CLAUDE.md");
+        const string prefix = "# User instructions\n\n<!-- monica-workflow:managed:start -->\nSibling rules.\n<!-- monica-workflow:managed:end -->\n\n";
+        const string before = prefix + "@AGENTS.md\n\n<!-- monica-guide:managed:start -->\nObsolete product rules.\n<!-- monica-guide:managed:end -->\n";
+        await File.WriteAllTextAsync(claude, before, CancellationToken);
+        var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+
+        var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+        Assert.Equal(before, await File.ReadAllTextAsync(claude, CancellationToken));
+        var applied = await service.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        var after = await File.ReadAllTextAsync(claude, CancellationToken);
+
+        Assert.True(applied.Plan!.Applied);
+        Assert.Contains("# User instructions", after, StringComparison.Ordinal);
+        Assert.Contains("<!-- monica-workflow:managed:start -->\nSibling rules.\n<!-- monica-workflow:managed:end -->", after, StringComparison.Ordinal);
+        Assert.DoesNotContain("Obsolete product rules.", after, StringComparison.Ordinal);
+        Assert.Equal(GuideClaudeImportStatus.Valid, GuideInstructionBlock.ClaudeImportState(after));
+        Assert.Equal(prefix + "@AGENTS.md\n", after);
+        var repeat = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+        Assert.DoesNotContain(repeat.Plan!.Actions, action => action.Id == "workspace.instructions.claude");
+    }
+
+    [Fact]
+    public async Task ConfigureWorkspace_WhenClaudeProductSpanIsMalformed_ShouldBlockWithoutWriting()
+    {
+        using var fixture = new ProjectFixture();
+        using var service = fixture.CreateService();
+        var workspace = fixture.CreateWorkspace("monica-application", [".agents/skills", ".claude/skills"]);
+        var claude = Path.Combine(workspace, "CLAUDE.md");
+        const string before = "# Kept\n<!-- monica-guide:managed:start -->\nMissing end marker.\n";
+        await File.WriteAllTextAsync(claude, before, CancellationToken);
+        var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+
+        var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+        var applied = await service.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        Assert.Equal(GuideStatus.Error, preview.Status);
+        Assert.False(applied.Plan!.Applied);
+        Assert.Equal(before, await File.ReadAllTextAsync(claude, CancellationToken));
+        Assert.False(File.Exists(Path.Combine(workspace, "AGENTS.md")));
+        Assert.False(Directory.Exists(fixture.ProjectSkillRoot(workspace)));
+    }
+
     [Fact]
     public async Task ConfigureWorkspace_FromSetupTreeBundlesResolvesTheParentCatalog()
     {
@@ -609,9 +774,12 @@ public sealed class GuideProjectInstallTests
         internal const string ApplicationSkill = "monica-application";
         internal const string ExtensionSkill = "monica-extension";
         internal const string GuideSkill = "monica-guide";
+        internal const string RequiredSkill = "monica-required-capability";
+        internal const string MicroserviceSkill = "monica-application-microservice";
+        internal const string ModularSkill = "monica-application-modular-monolith";
         private readonly string _root = Path.Combine(Path.GetTempPath(), $"guide-project-{Guid.NewGuid():N}");
 
-        internal ProjectFixture()
+        internal ProjectFixture(bool withCapabilities = false)
         {
             EnginePaths = new GuidePaths(Path.Combine(_root, "engine-data"));
             ProductPaths = new AgentProductPaths(Path.Combine(_root, "product-data"));
@@ -621,7 +789,7 @@ public sealed class GuideProjectInstallTests
             ExecutablePath = Path.Combine(ApplicationDirectory, "Monica.Guide.exe");
             Directory.CreateDirectory(ApplicationDirectory);
             File.WriteAllText(ExecutablePath, "test executable marker");
-            WriteCatalog();
+            WriteCatalog(withCapabilities);
             Runtime = new FakeRuntime(Path.Combine(_root, "user-home"));
             WorkflowProductPaths = new AgentProductPaths(Path.Combine(_root, "workflow-product-data"));
         }
@@ -690,7 +858,8 @@ public sealed class GuideProjectInstallTests
             => GuideReleaseMetadata.LoadSkillCatalog(SkillsRoot);
 
         /// <summary>Creates a workspace directory with a guide configuration for one profile.</summary>
-        internal string CreateWorkspace(string profile, string[]? skillTargets = null, AgentProductDefinition? product = null)
+        internal string CreateWorkspace(string profile, string[]? skillTargets = null,
+            AgentProductDefinition? product = null, IReadOnlyList<string>? capabilities = null)
         {
             var workspace = Path.Combine(_root, "workspaces", $"repo-{Guid.NewGuid():N}");
             Directory.CreateDirectory(workspace);
@@ -700,7 +869,7 @@ public sealed class GuideProjectInstallTests
                     GuideWorkspaceStore.GuideWorkspaceConfig.CurrentSchemaVersion,
                     (product ?? Product).ProductId,
                     profile,
-                    [],
+                    capabilities ?? [],
                     false,
                     skillTargets);
                 Directory.CreateDirectory(Path.GetDirectoryName(GuideWorkspaceStore.ConfigPath(workspace))!);
@@ -741,16 +910,21 @@ public sealed class GuideProjectInstallTests
             }
         }
 
-        private void WriteCatalog()
+        private void WriteCatalog(bool withCapabilities)
         {
             var entries = new List<(string Name, string Role, string[] Profiles)>();
             var aggregate = new List<(string Name, string Digest)>();
-            foreach (var (name, role, profiles) in new[]
+            var definitions = new List<(string Name, string Role, string[] Profiles)>
                      {
                          (ApplicationSkill, "development", new[] { "monica-application" }),
                          (ExtensionSkill, "development", new[] { "monica-extension" }),
                          (GuideSkill, "router", new[] { "monica-application" })
-                     })
+                     };
+            if (withCapabilities)
+                definitions.AddRange([
+                    (RequiredSkill, "capability", []), (MicroserviceSkill, "capability", []), (ModularSkill, "capability", [])
+                ]);
+            foreach (var (name, role, profiles) in definitions.OrderBy(static item => item.Name, StringComparer.Ordinal))
             {
                 var skillRoot = Path.Combine(SkillsRoot, name);
                 Directory.CreateDirectory(skillRoot);
@@ -767,7 +941,10 @@ public sealed class GuideProjectInstallTests
                     path = $"skills/{entry.Name}",
                     role = entry.Role,
                     files = new[] { "SKILL.md" },
-                    dependencies = Array.Empty<string>(),
+                    dependencies = withCapabilities && entry.Name == ApplicationSkill
+                        ? new[] { RequiredSkill }
+                        : withCapabilities && entry.Name is MicroserviceSkill or ModularSkill
+                            ? new[] { ApplicationSkill } : Array.Empty<string>(),
                     treeDigest = aggregate.First(item => item.Name == entry.Name).Digest,
                     profiles = entry.Profiles
                 })
@@ -778,6 +955,13 @@ public sealed class GuideProjectInstallTests
                 skillCount = skills.Length,
                 treeDigest = CatalogDigest([.. aggregate]),
                 skills,
+                profileSelections = withCapabilities
+                    ? new Dictionary<string, GuideProfileSkillSelection>
+                    {
+                        ["monica-application"] = new([ApplicationSkill, GuideSkill], [],
+                            [new("microservice", [MicroserviceSkill]), new("modular-monolith", [ModularSkill])]),
+                        ["monica-extension"] = new([ExtensionSkill], [], [])
+                    } : null,
                 managedInstructions = new
                 {
                     version = 1,

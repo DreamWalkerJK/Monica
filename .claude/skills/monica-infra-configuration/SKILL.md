@@ -13,4 +13,6 @@ Choose bootstrap guidance when managed values determine host construction; choos
 | Declare managed options and pure object rules, validate a supplied instance, choose binding identity, or distinguish source reports from observed options | [Options and validation](references/options-and-validation.md) |
 | Inspect source precedence, preview complete mutation groups, change or roll back values, reload replicas, or use the operator UI | [Runtime changes](references/runtime-changes.md) |
 
-For module implementation, use [development](../monica-development/SKILL.md); for building configuration UI components, use [UI development](../monica-ui-development/SKILL.md).
+For module implementation, use `$monica-framework`, then `$monica-development`; for building configuration UI components, use `$monica-ui-development`.
+
+If a routed authoring skill is unavailable, use `$monica-guide` to resolve the verified Monica checkout (`source resolve --repository monica --json`) and read its canonical `skills/<name>/SKILL.md`.

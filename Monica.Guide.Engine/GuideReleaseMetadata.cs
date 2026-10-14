@@ -401,11 +401,14 @@ public static class GuideReleaseMetadata
         }
 
         EnsureOrdinal(catalog.Skills.Select(static skill => skill.Name), "skill entries");
+        var packaged = catalog.Skills.Select(static skill => skill.Name).ToHashSet(StringComparer.Ordinal);
         using var aggregate = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (var skill in catalog.Skills)
         {
             EnsureOrdinal(skill.Files, $"files for skill '{skill.Name}'");
             EnsureOrdinal(skill.Dependencies, $"dependencies for skill '{skill.Name}'");
+            if (skill.Dependencies.Any(dependency => !packaged.Contains(dependency)))
+                throw new InvalidDataException($"Skill '{skill.Name}' requires an unpackaged dependency.");
             if (skill.Profiles is { Count: > 0 })
             {
                 EnsureOrdinal(skill.Profiles, $"profiles for skill '{skill.Name}'");
@@ -439,6 +442,21 @@ public static class GuideReleaseMetadata
         }
 
         ValidateWorkspaceProjection(catalog);
+        if (catalog.ProfileSelections is not null)
+        {
+            foreach (var (profile, selection) in catalog.ProfileSelections)
+            {
+                if (string.IsNullOrWhiteSpace(profile)
+                    || selection.Required.Count + selection.Recommended.Count == 0
+                    || selection.Conditional.Any(static condition =>
+                        string.IsNullOrWhiteSpace(condition.Capability) || condition.Skills.Count == 0))
+                    throw new InvalidDataException($"Profile selection '{profile}' is invalid.");
+                var roots = selection.Required.Concat(selection.Recommended)
+                    .Concat(selection.Conditional.SelectMany(static condition => condition.Skills));
+                if (roots.Any(name => !packaged.Contains(name)))
+                    throw new InvalidDataException($"Profile selection '{profile}' references an unpackaged skill.");
+            }
+        }
     }
 
     /// <summary>

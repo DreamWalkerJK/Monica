@@ -2,12 +2,15 @@
 
 Use this structure when the business solution is one deployment but still needs explicit DDD subdomain boundaries.
 
+The dependency chain and ownership rules are mandatory within this profile. The tree illustrates their physical layout; create only the folders used by actual units. The project's application specification records concrete topology, names, and approved deviations.
+
 ```text
 src/
 ├── AppHost/
 │   └── {ProjectName}/
 │       ├── {ProjectName}.csproj              # Entry point, prefer explicit names such as Monica.Docs.Api
-│       └── Program.cs                        # Composition root only
+│       ├── Program.cs                        # Composition root only
+│       └── Modules/                          # Optional composition modules; no business units
 ├── Shared/
 │   ├── Platform.BuildingBlocks/
 │   │   └── Platform.BuildingBlocks.csproj    # Project-agnostic infrastructure building blocks and third-party extensions
@@ -72,6 +75,6 @@ Recommended `.slnx` folders should mirror the physical layout:
 - Keep `DomainServices/` as the standard folder for `DomainService` units.
 - Keep `Utilities/` as the standard folder for pure helpers and name them `Utils*`.
 - Do not create `Persistence/` or `Providers/` as default folders. Keep repository implementations, `DbContext`, and EF mapping in `Repository/`.
-- Keep AppHost entry projects down to `{ProjectName}.csproj` and `Program.cs`. Do not place business ProjectUnits there.
+- Keep AppHost projects composition-only. `Program.cs`, composition modules, registration extensions, and thin host adapters are allowed; business ProjectUnits and domain behavior remain in their owning domain.
 - Keep `.slnx` folders aligned with the real `src/` tree so the solution view matches the layout rules.
-- Do not force `*.WebHost` naming or nested `Modules/Endpoints` folders inside AppHost.
+- Do not require `*.WebHost` names or an extra endpoint layer inside AppHost. Use `Modules/` when composition benefits from modules.

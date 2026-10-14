@@ -5,11 +5,12 @@ Use `$DomainNamespace$` for the domain project namespace and `$RepositoryNamespa
 ## Rules
 
 - Business repository interfaces inherit the minimal native `IRepository<TEntity, TKey>` contract: stage `Add`/`Remove` and load tracked aggregates with `FindAsync`/`GetAsync`. Add purposeful business methods instead of mirroring LINQ.
+- Name the pair `IRepository{Aggregate}` and exact `Repository{Aggregate}`. Runtime/source classification requires the implementation to implement `I{ImplementationClassName}`; a differently named interface can compile while leaving the repository absent from the catalog.
 - Put materialized read projections and tracked mutation loaders on that owning repository interface and implementation. Do not introduce an undefined parallel query role or expose `IQueryable`, `DbContext`, `IEfEntityStore`, or save methods through the business interface.
 - A mutation loader returns tracked aggregates from the current operation's identity map. Mutate those instances; do not attach detached copies or call a generic `Update`.
 - The operation owns commit and rollback. A repository stages changes; it does not save independently.
 - Use native EF LINQ inside the persistence implementation and materialize reads before the scope ends. `IEfEntityStore` and any project-wide EF adapter contract belong to the technical view of that implementation.
-- Only an existing persistence-facing CRUD adapter may consume the concrete repository or its wide EF contract. Handlers, jobs, and domain services use the narrow business interface; the exception does not create a general concrete-injection rule.
+- Only a persistence-facing CRUD adapter in an approved/adopted pattern may consume the concrete repository or its wide EF contract. New concrete endpoints within that family are ordinary implementation. Handlers, jobs, and domain services use the narrow business interface; the exception does not authorize a new pattern or general concrete injection.
 - Inject the scoped context directly into `EfRepository`. Context, repository, and caller share the operation scope and tracked entity identity. Keep the established registration/discovery mechanism.
 - A justified project-common base may specialize `EfRepository` under the [project-level extension rules](01-project-unit-naming-and-boundaries.md#project-level-extensions); the concrete repository stays with its domain and retains the `Repository*` name.
 - Use `$monica-infra-persistence` for save policies, operation scopes, transactions, and read-only request behavior.

@@ -62,7 +62,6 @@
       ],
       "dependencies": {
         "required": [
-          "monica-application-project-unit-development",
           "monica-infra-hosting",
           "monica-infra-persistence",
           "monica-infra-messaging",
@@ -108,6 +107,7 @@
       "managed": true,
       "dependencies": {
         "required": [
+          "monica-application",
           "monica-application-project-unit-development"
         ],
         "recommended": [
@@ -124,6 +124,7 @@
       "managed": true,
       "dependencies": {
         "required": [
+          "monica-application",
           "monica-application-project-unit-development"
         ],
         "recommended": [
@@ -139,7 +140,9 @@
       "ownership": "monica",
       "managed": true,
       "dependencies": {
-        "required": [],
+        "required": [
+          "monica-application"
+        ],
         "recommended": [
           "monica-application-unit-testing"
         ],
@@ -153,7 +156,9 @@
       "ownership": "monica",
       "managed": true,
       "dependencies": {
-        "required": [],
+        "required": [
+          "monica-application"
+        ],
         "recommended": [],
         "conditional": [],
         "external": [
@@ -1014,7 +1019,7 @@
     }
   },
   "managedInstructions": {
-    "version": 3,
+    "version": 4,
     "markers": {
       "start": "<!-- monica-guide:managed:start -->",
       "end": "<!-- monica-guide:managed:end -->"
@@ -1036,7 +1041,15 @@
           },
           {
             "id": "monica-application-routing",
-            "text": "Use $monica-application to route ordinary Monica application development work."
+            "text": "Before designing, implementing, refactoring, or reviewing a Monica application, load $monica-application and the repository-designated project application specification skill, then read the affected architecture and ProjectUnit references."
+          },
+          {
+            "id": "monica-application-specification-evolution",
+            "text": "Use monica-application's specification evolution rules for a concrete gap or new pattern; obtain a scoped human decision before adopting a new role, layer, dependency direction, base family, execution model, or local deviation. Reuse existing explicit approval within its agreed scope."
+          },
+          {
+            "id": "reconcile-project-application-specification",
+            "text": "Reconcile impacted project application specification facts and rules with the implementation in the same change. Keep rule rationale with the rule and use Git/history or existing project decision evidence."
           }
         ]
       },
