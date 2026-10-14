@@ -10,9 +10,18 @@ from pathlib import Path
 from typing import Iterable
 
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_SOURCE_FONT = REPO_ROOT / ".tmp" / "monica-ui-font-sources" / "zcool_qingke_huangyou.ttf"
-DEFAULT_TARGET_FONT = REPO_ROOT / "Monica.UI" / "wwwroot" / "fonts" / "Komi-ZCOOL-QingKe-HuangYou.woff2"
+from skill_repository import find_repository_root
+
+
+REPO_ROOT = find_repository_root(__file__)
+DEFAULT_SOURCE_FONT = (
+    REPO_ROOT / ".tmp" / "monica-ui-font-sources" / "zcool_qingke_huangyou.ttf"
+    if REPO_ROOT else None
+)
+DEFAULT_TARGET_FONT = (
+    REPO_ROOT / "Monica.UI" / "wwwroot" / "fonts" / "Komi-ZCOOL-QingKe-HuangYou.woff2"
+    if REPO_ROOT else None
+)
 EXCLUDED_DEFAULT_LOCALIZATION_PROJECTS = {
     "Monica.Testing",
 }
@@ -27,11 +36,21 @@ COMMON_UI_TEXT = (
 
 
 def discover_default_localization_dirs() -> list[Path]:
+    if REPO_ROOT is None:
+        return []
     return [
         path
         for path in sorted(REPO_ROOT.glob("Monica*/Localization"))
         if path.is_dir() and path.parent.name not in EXCLUDED_DEFAULT_LOCALIZATION_PROJECTS
     ]
+
+
+def display_path(path: Path) -> str:
+    """Prefer repository-relative paths while supporting external inputs/outputs."""
+
+    if REPO_ROOT is not None and path.is_relative_to(REPO_ROOT):
+        return str(path.relative_to(REPO_ROOT))
+    return str(path)
 
 
 def walk_strings(value: object) -> Iterable[str]:
@@ -122,7 +141,7 @@ def parse_args() -> argparse.Namespace:
         "--localization-dir",
         type=Path,
         action="append",
-        default=discover_default_localization_dirs(),
+        default=None,
         help=(
             "Localization directory to scan recursively. Can be provided multiple times. "
             "Defaults to all top-level Monica*/Localization directories except test projects."
@@ -130,18 +149,31 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--extra-text", default="")
     parser.add_argument("--extra-text-file", type=Path, action="append", default=[])
-    return parser.parse_args()
+    args = parser.parse_args()
+    for option in ("source_font", "target_font"):
+        if getattr(args, option) is None:
+            parser.error(
+                f"No Monica repository default; pass --{option.replace('_', '-')} <path>."
+            )
+    if args.localization_dir is None:
+        if REPO_ROOT is None and not (args.extra_text or args.extra_text_file):
+            parser.error(
+                "No Monica repository resource default; pass --localization-dir <path> "
+                "(repeatable), --extra-text, or --extra-text-file."
+            )
+        args.localization_dir = discover_default_localization_dirs()
+    return args
 
 
 def main() -> int:
     args = parse_args()
-    source_font = args.source_font.resolve()
-    target_font = args.target_font.resolve()
+    source_font = args.source_font.expanduser().resolve()
+    target_font = args.target_font.expanduser().resolve()
 
     if not source_font.exists():
         print(
-            "Source font not found. Copy the upstream TTF/OTF to "
-            f"{DEFAULT_SOURCE_FONT.relative_to(REPO_ROOT)} or pass --source-font. "
+            f"Source font not found: {display_path(source_font)}. "
+            "Pass --source-font <existing-TTF-or-OTF-path>. "
             "Do not place source TTF/OTF files under Monica.UI because they can be packed into NuGet.",
             file=sys.stderr,
         )
@@ -153,7 +185,7 @@ def main() -> int:
         previous_size = target_font.stat().st_size if target_font.exists() else 0
         run_subset(source_font, target_font, text)
         print(
-            f"Generated {target_font.relative_to(REPO_ROOT)} "
+            f"Generated {display_path(target_font)} "
             f"from {len(set(text))} unique characters "
             f"({previous_size:,} -> {target_font.stat().st_size:,} bytes)."
         )
@@ -164,18 +196,18 @@ def main() -> int:
         run_subset(source_font, generated, text)
 
         if not target_font.exists():
-            print(f"Target font is missing: {target_font.relative_to(REPO_ROOT)}", file=sys.stderr)
+            print(f"Target font is missing: {display_path(target_font)}", file=sys.stderr)
             return 1
 
         if generated.read_bytes() != target_font.read_bytes():
             print(
-                f"Font subset is stale: {target_font.relative_to(REPO_ROOT)}. "
+                f"Font subset is stale: {display_path(target_font)}. "
                 "Run this script with --mode generate.",
                 file=sys.stderr,
             )
             return 1
 
-    print(f"Font subset is current: {target_font.relative_to(REPO_ROOT)}")
+    print(f"Font subset is current: {display_path(target_font)}")
     return 0
 
 
