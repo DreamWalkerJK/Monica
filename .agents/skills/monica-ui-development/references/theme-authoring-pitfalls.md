@@ -376,3 +376,11 @@ The common failure mode is:
 2. do not apply `overflow: hidden` to shared table or grid hosts in a theme
 3. verify `scrollWidth > clientWidth` cases on real pages such as `module-system-dashboard` and `程序集分析`
 4. keep decorative pseudo-elements off scroll hosts unless you have confirmed they do not interfere with scrolling or clipping
+
+## 13. A held ripple changes the rendered action background
+
+A filled button can pass a foreground/background calculation yet lose legibility while pressed. MudBlazor creates a descendant `.mud-ripple-effect` on pointer down; its expanding state keeps a foreground-colored layer at `--mud-ripple-opacity` until release. Compositing only the button and its ancestors misses that layer. The held fill can therefore differ from both the resting and hover background returned by computed style.
+
+Inspect the actual enabled button at rest, hover, keyboard focus and native pointer-down hold. Include descendants and pseudo-elements, their opacity, color, transform and painted overlap. Wait for the relevant transition to settle, retain the true native state, and compare the unchanged screenshot's solid interior with opaque label pixels. Antialiased edges are not the intended foreground. Report computed base colors separately from rendered composite evidence; one passing sample does not certify every animation frame or component.
+
+Correct the existing theme's state fill and ripple composition together. Inspect the winning custom-property declaration: the package's filled-button rule sets ripple opacity with `!important`, so a normal theme declaration can exist without changing the rendered value. Scope a verified cascade correction to the enabled action family, preserve its feedback and theme identity, and retain native disabled palette/interaction guards. For a mutating action, capture the held state without submitting: move outside before releasing and cancel the draft afterward. Recheck native focus restoration and the actual post-release state as separate contracts.

@@ -31,6 +31,7 @@ public partial class FileOpsWorkspace
     private Task<IJSObjectReference>? _moduleImport, _sizingStart;
     private DotNetObjectReference<FileOpsWorkspace>? _callback;
     private bool _retired, _sizingAdmitted, _split, _tableMode, _catalogOpen = true;
+    private bool _createActive;
     private long _focusVersion;
     private FocusIntent? _focusIntent;
     private string? _uploadName;
@@ -126,7 +127,19 @@ public partial class FileOpsWorkspace
         }
         Remember();
     });
-    private Task CreateAsync() => CommandAsync(() => _controller.CreateDirectoryAsync(CollectDirectoryAsync), _controller.Browse?.CurrentPath);
+    private Task CreateAsync() => Track(async () =>
+    {
+        if (_retired || _createActive || _controller.IsBusy || _controller.Browse is not { CanCreateDirectory: true } browse) return;
+        // Reserve the exact native opener before controller admission publishes Busy.
+        // MudBlazor owns restoration; this button must remain focusable through its dialog result.
+        _createActive = true;
+        try { await CommandAsync(() => _controller.CreateDirectoryAsync(CollectDirectoryAsync), browse.CurrentPath); }
+        finally
+        {
+            _createActive = false;
+            if (!_retired) StateHasChanged();
+        }
+    });
     private Task DeleteAsync(FileOpsEntrySummary entry) { CancelFocus(); return CommandAsync(() => _controller.DeleteEntryAsync(entry, ConfirmDeleteAsync), entry.FullPath); }
     private Task DeleteSelectionAsync() { CancelFocus(); return CommandAsync(() => _controller.DeleteSelectedAsync(ConfirmDeleteAsync), string.Join(Environment.NewLine, _controller.SelectedPaths)); }
     private Task UploadAsync(IBrowserFile file) => CommandAsync(async () =>

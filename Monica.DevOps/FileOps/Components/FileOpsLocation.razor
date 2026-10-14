@@ -48,7 +48,7 @@
             }
         </div>
         <div class="directory-actions">
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.CreateNewFolder" Disabled="@(Busy || Browse?.CanCreateDirectory != true)" OnClick="@(() => Create.InvokeAsync())">@L["Actions:CreateDirectory"]</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.CreateNewFolder" Disabled="@(Browse?.CanCreateDirectory != true || Busy && !CreateActive)" aria-disabled="@(CreateUnavailable ? "true" : "false")" OnClick="CreateAsync">@L["Actions:CreateDirectory"]</MudButton>
             <MudFileUpload T="IBrowserFile" FilesChanged="@((IBrowserFile? file) => file is null ? Task.CompletedTask : Upload.InvokeAsync(file))" MaximumFileCount="1" Disabled="@(Busy || Browse?.CanUpload != true)">
                 <CustomContent Context="upload"><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.UploadFile" Disabled="@(Busy || Browse?.CanUpload != true)" OnClick="upload.OpenFilePickerAsync">@L["Actions:Upload"]</MudButton></CustomContent>
                 <SelectedTemplate></SelectedTemplate>
@@ -70,6 +70,9 @@
     [Parameter] public EventCallback Refresh { get; set; }
     /// <summary>Collects a child name for the captured accepted directory.</summary>
     [Parameter] public EventCallback Create { get; set; }
+    /// <summary>Keeps this visit's admitted Create opener natively focusable while its dialog result drains.</summary>
+    /// <remarks>Busy remains exposed through aria-disabled and duplicate activation is rejected. This does not override a missing directory capability.</remarks>
+    [Parameter] public bool CreateActive { get; set; }
     /// <summary>Admits one captured browser file.</summary>
     [Parameter] public EventCallback<IBrowserFile> Upload { get; set; }
     /// <summary>The captured filename during an admitted upload, or null while idle.</summary>
@@ -79,6 +82,10 @@
     private bool _pathOpen;
     private FileOpsBrowseResult? Browse => Controller.Browse;
     private bool Busy => Controller.IsBusy;
+    private bool CreateUnavailable => Busy || CreateActive || Browse?.CanCreateDirectory != true;
+    private Task CreateAsync() => CreateUnavailable
+        ? Task.CompletedTask
+        : Create.InvokeAsync();
     private bool PathFailed => Controller.LastRead is { Kind: FileOpsOperationKind.Browse, Succeeded: false };
     private bool AtRoot => Browse is { } browse && string.Equals(Path.TrimEndingDirectorySeparator(browse.CurrentPath), Path.TrimEndingDirectorySeparator(browse.CurrentRootPath), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     private bool CanDismissPath => !Busy && !PathFailed && string.Equals(Controller.ProposedPath, Browse?.CurrentPath, StringComparison.Ordinal);

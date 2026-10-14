@@ -8,7 +8,7 @@
 <div class="file-workspace" @ref="_root" data-visit="@_visit" data-focus-version="@_focusVersion" data-selected-path="@SelectedPath" data-catalog-open="@(_catalogOpen ? "true" : "false")" data-split="@(_split ? "true" : "false")">
     @if (_controller is not null)
     {
-        <FileOpsLocation Controller="_controller" UploadName="@_uploadName" Navigate="NavigateAsync" Up="UpAsync" Refresh="RefreshAsync" Create="CreateAsync" Upload="UploadAsync" Changed="CancelFocus" />
+        <FileOpsLocation Controller="_controller" CreateActive="@_createActive" UploadName="@_uploadName" Navigate="NavigateAsync" Up="UpAsync" Refresh="RefreshAsync" Create="CreateAsync" Upload="UploadAsync" Changed="CancelFocus" />
         @if (_controller.NavigationNotice is { } notice)
         { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Workspace:ReturnFallback"] @notice.Message</MudAlert> }
         @if (_controller.IsBusy && _controller.Browse is not null) { <div class="busy-status" role="status"><MudProgressLinear Color="Color.Primary" Indeterminate="true" aria-label="@(_uploadName is null ? L["Workspace:Working"] : L["Workspace:Uploading", _uploadName])" /><span>@(_uploadName is null ? L["Workspace:Working"] : L["Workspace:Uploading", _uploadName])</span></div> }
