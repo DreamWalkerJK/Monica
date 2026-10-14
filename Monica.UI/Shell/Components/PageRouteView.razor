@@ -3,8 +3,9 @@
 
 @inject IStringLocalizer<SharedResource> L
 @inject PageAccessEvaluator PageAccess
+@inject IJSRuntime JSRuntime
 
-@implements IDisposable
+@implements IAsyncDisposable
 
 @if (_accessState == RouteAccessState.Allowed)
 {
@@ -19,22 +20,27 @@ else
         @if (_accessState == RouteAccessState.Checking)
         {
             <PageTitle>@L["RouteAccess:CheckingPageTitle"]</PageTitle>
-            <MudContainer MaxWidth="MaxWidth.Medium" Class="pa-6">
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Lock" role="status">
-                    @L["RouteAccess:Checking"]
-                </MudAlert>
-            </MudContainer>
+            <ShellPageState @key="_evaluationVersion" @ref="_accessPageState"
+                            HeadingId="route-access-checking-title"
+                            Title="@L["RouteAccess:CheckingPageTitle"]"
+                            Description="@L["RouteAccess:Checking"]"
+                            Icon="@Icons.Material.Outlined.Lock"
+                            Severity="Severity.Info" IsChecking="true" />
         }
         else
         {
             <PageTitle>@L["RouteAccess:DeniedPageTitle"]</PageTitle>
-            <MudContainer MaxWidth="MaxWidth.Medium" Class="pa-6">
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Lock" role="alert">
-                    <MudText Typo="Typo.h6">@L["RouteAccess:DeniedTitle"]</MudText>
-                    <MudText Typo="Typo.body1">@L["RouteAccess:DeniedDescription"]</MudText>
-                </MudAlert>
-            </MudContainer>
+            <ShellPageState @key="_evaluationVersion" @ref="_accessPageState"
+                            HeadingId="route-access-denied-title"
+                            Title="@L["RouteAccess:DeniedTitle"]"
+                            Description="@L["RouteAccess:DeniedDescription"]"
+                            RecoveryHint="@L["RouteAccess:DeniedRecovery"]"
+                            Icon="@Icons.Material.Outlined.Lock"
+                            Severity="Severity.Warning"
+                            IsChecking="false"
+                            HomeLabel="@L["Common:GoHome"]" />
         }
+        <span class="mud-sr-only" role="status">@_denialAnnouncement</span>
     </LayoutView>
 }
 
@@ -43,6 +49,12 @@ else
     private long _evaluationVersion;
     private int _disposed;
     private RouteAccessState _accessState = RouteAccessState.Checking;
+    private ShellPageState? _accessPageState;
+    private JsModuleSession? _focusInterop;
+    private RouteData? _announcedRouteData;
+    private string _denialAnnouncement = string.Empty;
+    private readonly object _disposeSync = new();
+    private Task? _disposeTask;
 
     /// <summary>
     /// Gets or sets the route selected by the Blazor router.
@@ -60,6 +72,7 @@ else
     {
         var evaluationVersion = Interlocked.Increment(ref _evaluationVersion);
         _accessState = RouteAccessState.Checking;
+        _denialAnnouncement = string.Empty;
 
         using var evaluationCancellation = new CancellationTokenSource();
         var previousEvaluation = Interlocked.Exchange(ref _evaluationCancellation, evaluationCancellation);
@@ -87,15 +100,96 @@ else
         }
     }
 
-    public void Dispose()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        if (Volatile.Read(ref _disposed) != 0 || _accessState != RouteAccessState.Denied ||
+            ReferenceEquals(_announcedRouteData, RouteData) || _accessPageState is not { } accessPageState)
         {
             return;
         }
 
-        Interlocked.Increment(ref _evaluationVersion);
-        Interlocked.Exchange(ref _evaluationCancellation, null)?.Cancel();
+        var evaluationVersion = Volatile.Read(ref _evaluationVersion);
+        _announcedRouteData = RouteData;
+        var heading = accessPageState.HeadingReference;
+
+        try
+        {
+            _focusInterop ??= new JsModuleSession(JSRuntime, "./_content/Monica.UI/js/shell-page-focus.js");
+            var focused = await _focusInterop.InvokeAsync<bool>("focusDeniedHeading", heading);
+            if (!focused && Volatile.Read(ref _disposed) == 0 &&
+                evaluationVersion == Volatile.Read(ref _evaluationVersion) &&
+                _accessState == RouteAccessState.Denied)
+            {
+                // Keep a persistent control's focus and announce only the concise transition.
+                await InvokeAsync(() =>
+                {
+                    if (Volatile.Read(ref _disposed) == 0 &&
+                        evaluationVersion == Volatile.Read(ref _evaluationVersion) &&
+                        _accessState == RouteAccessState.Denied)
+                    {
+                        _denialAnnouncement = L["RouteAccess:DeniedTitle"];
+                        StateHasChanged();
+                    }
+                });
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // A disconnected browser cannot receive a route-focus request.
+        }
+        catch (ObjectDisposedException) when (Volatile.Read(ref _disposed) != 0)
+        {
+            // Retirement can win while a module import or focus call is waiting.
+        }
+        catch (OperationCanceledException) when (Volatile.Read(ref _disposed) != 0)
+        {
+            // Circuit retirement can cancel an admitted browser request after this owner retires.
+        }
+    }
+
+    /// <summary>Cancels the current access evaluation and drains owned heading interop before releasing its module.</summary>
+    public ValueTask DisposeAsync()
+    {
+        TaskCompletionSource completion;
+        lock (_disposeSync)
+        {
+            if (_disposeTask is { } disposal)
+            {
+                return new ValueTask(disposal);
+            }
+
+            Interlocked.Exchange(ref _disposed, 1);
+            Interlocked.Increment(ref _evaluationVersion);
+            completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _disposeTask = completion.Task;
+        }
+
+        _ = CompleteDisposalAsync(completion);
+        return new ValueTask(completion.Task);
+    }
+
+    private async Task CompleteDisposalAsync(TaskCompletionSource completion)
+    {
+        try
+        {
+            try
+            {
+                Interlocked.Exchange(ref _evaluationCancellation, null)?.Cancel();
+            }
+            finally
+            {
+                if (_focusInterop is { } interop)
+                {
+                    await interop.DisposeAsync();
+                }
+            }
+
+            completion.SetResult();
+        }
+        catch (Exception exception)
+        {
+            completion.SetException(exception);
+        }
     }
 
     private enum RouteAccessState

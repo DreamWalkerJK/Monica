@@ -1,0 +1,117 @@
+.shell-page-state {
+    --shell-state-accent: var(--mud-palette-info);
+    container: shell-state / inline-size;
+    display: grid;
+    gap: 24px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: var(--mo-page-gutter-block) var(--mo-page-gutter-inline);
+    font-family: var(--mo-font-family-body);
+}
+
+.shell-page-state[data-tone="warning"] { --shell-state-accent: var(--mud-palette-warning); }
+.shell-page-state[data-tone="error"] { --shell-state-accent: var(--mud-palette-error); }
+
+.shell-page-state__surface {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) max-content;
+    align-items: start;
+    column-gap: 20px;
+    min-width: 0;
+    padding: 28px;
+    border: 1px solid color-mix(in srgb, var(--shell-state-accent) 28%, var(--mud-palette-lines-default));
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--shell-state-accent) 6%, var(--mud-palette-surface));
+    color: var(--mud-palette-text-primary);
+}
+
+.shell-page-state__icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--shell-state-accent) 13%, transparent);
+    color: var(--shell-state-accent);
+}
+.shell-page-state__icon ::deep .mud-icon-root { font-size: 28px; }
+.shell-page-state__copy { min-width: 0; }
+.shell-page-state__copy h1 {
+    margin: 0;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-font-family-display);
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+.shell-page-state__copy p {
+    max-width: 68ch;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.6;
+    color: color-mix(in srgb, var(--mud-palette-text-primary) 30%, var(--mud-palette-text-secondary));
+}
+.shell-page-state__copy .shell-page-state__description { margin-top: 8px; }
+.shell-page-state__copy .shell-page-state__recovery { margin-top: 12px; }
+.shell-page-state__progress {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-inline-end: 6px;
+    vertical-align: -2px;
+    box-sizing: border-box;
+    border: 2px solid color-mix(in srgb, var(--shell-state-accent) 24%, transparent);
+    border-top-color: var(--shell-state-accent);
+    border-radius: 50%;
+    animation: shell-state-checking 1s linear infinite;
+}
+.shell-page-state__action { min-width: 0; }
+.shell-page-state__action ::deep .mud-button-root {
+    min-height: 40px;
+    font-family: var(--mo-font-family-body);
+    font-size: 14px;
+    font-weight: 500;
+}
+.shell-page-state__action ::deep .mud-button-root:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 4px;
+}
+.shell-page-state__evidence {
+    display: grid;
+    grid-column: 1 / -1;
+    gap: 4px;
+    min-width: 0;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--mud-palette-divider);
+}
+.shell-page-state__evidence > span {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--mud-palette-text-primary);
+}
+.shell-page-state__evidence code {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--mo-font-family-mono);
+    font-size: 13px;
+    line-height: 1.5;
+    user-select: text;
+}
+
+@container shell-state (max-width: 680px) {
+    .shell-page-state__surface { grid-template-columns: 48px minmax(0, 1fr); padding: 20px; }
+    .shell-page-state__action { grid-column: 1 / -1; margin-top: 20px; }
+    .shell-page-state__action ::deep .mud-button-root { width: 100%; min-height: 44px; }
+}
+@container shell-state (max-width: 480px) {
+    .shell-page-state__surface { grid-template-columns: minmax(0, 1fr); }
+    .shell-page-state__icon { width: 40px; height: 40px; margin-bottom: 20px; }
+    .shell-page-state__icon ::deep .mud-icon-root { font-size: 24px; }
+    .shell-page-state__copy h1 { font-size: 28px; line-height: 1.25; }
+}
+@keyframes shell-state-checking { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .shell-page-state__progress { animation: none; } }

@@ -26,10 +26,18 @@
     </div>
 </ThemeProviderHost>
 
-<div id="blazor-error-ui" data-nosnippet>
-    @L["Layout:Error"]
-    <a href="." class="reload">@L["Layout:Reload"]</a>
-    <button type="button" class="dismiss" aria-label="@L["Layout:DismissError"]">×</button>
+<div id="blazor-error-ui" data-nosnippet role="alert">
+    <div class="blazor-error-ui__content">
+        <span class="blazor-error-ui__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" />
+        </span>
+        <div class="blazor-error-ui__copy">
+            <p class="blazor-error-ui__message">@L["Layout:Error"]</p>
+            <p>@L["Layout:ErrorRecovery"]</p>
+        </div>
+        <a href="." class="reload">@L["Layout:Reload"]</a>
+        <button type="button" class="dismiss" aria-label="@L["Layout:DismissError"]"><span aria-hidden="true">×</span></button>
+    </div>
 </div>
 
 @code {
