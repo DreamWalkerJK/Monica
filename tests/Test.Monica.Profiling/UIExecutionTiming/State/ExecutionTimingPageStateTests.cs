@@ -4,11 +4,13 @@ using Monica.Profiling.ExecutionTiming.Abstractions;
 using Monica.Profiling.ExecutionTiming.Facades;
 using Monica.Profiling.ExecutionTiming.Models;
 using Monica.Profiling.UIExecutionTiming.State;
+using Test.Monica.Profiling.Support;
 using Test.Monica.Profiling.UIExecutionTiming.Support;
 using Xunit;
 
 namespace Test.Monica.Profiling.UIExecutionTiming.State;
 
+[Collection(BlockingProfilingQueryCollection.NAME)]
 public sealed class ExecutionTimingPageStateTests
 {
     [Theory]

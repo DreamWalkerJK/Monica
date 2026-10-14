@@ -6,11 +6,13 @@ using Monica.Profiling.RuntimeMetrics.Facades;
 using Monica.Profiling.RuntimeMetrics.Models;
 using Monica.Profiling.UIRuntimeMetrics.State;
 using Monica.Testing.Hosting;
+using Test.Monica.Profiling.Support;
 using Test.Monica.Profiling.UIRuntimeMetrics.Support;
 using Xunit;
 
 namespace Test.Monica.Profiling.UIRuntimeMetrics.State;
 
+[Collection(BlockingProfilingQueryCollection.NAME)]
 public sealed class RuntimeMetricsPageStateTests
 {
     [Theory]
