@@ -1,16 +1,16 @@
 .metadata-list {
     display: flex;
     flex-direction: column;
-    margin: 8px 0 0;
+    margin: 0;
     min-width: 0;
 }
 
 .metadata-row {
     display: grid;
-    grid-template-columns: minmax(92px, 0.38fr) minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: minmax(100px,.35fr) minmax(0,1fr);
+    gap: 20px;
     min-width: 0;
-    padding: 9px 0;
+    padding: 12px 0;
     border-top: 1px solid var(--mud-palette-lines-default);
 }
 
@@ -20,10 +20,10 @@
 
 .metadata-row dt {
     min-width: 0;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+    font-size: 12px;
+    line-height: 1.6;
     overflow-wrap: anywhere;
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.75rem;
-    font-weight: 600;
 }
 
 .metadata-row dd {
@@ -33,61 +33,62 @@
 
 .metadata-value {
     display: block;
-    overflow-wrap: anywhere;
     color: var(--mud-palette-text-primary);
-    font-family: var(--mo-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
-    font-size: 0.78rem;
+    font-family: var(--mo-font-family-mono);
+    font-size: 12px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
-.metadata-complex {
+.metadata-structured {
     min-width: 0;
 }
 
-.metadata-complex ::deep .mud-expansion-panels {
-    box-shadow: none;
-}
-
-.metadata-complex ::deep .mud-expansion-panel {
+.metadata-structured ::deep .mud-expansion-panel {
     overflow: hidden;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 8px;
-    background-color: var(--mud-palette-background-gray);
+    border-radius: 6px;
+    background: var(--mud-palette-background-gray);
 }
 
-.metadata-complex ::deep .mud-expand-panel-header {
-    min-height: 38px;
-    padding-inline: 10px;
+.metadata-structured ::deep .mud-expand-panel-header {
+    min-height: 40px;
+    padding: 10px 14px;
+    font-size: 12px;
+}
+
+.metadata-structured ::deep .mud-expand-panel-content {
+    padding: 0;
 }
 
 .metadata-code {
-    max-height: 280px;
+    max-height: 300px;
     margin: 0;
-    padding: 10px;
+    padding: 16px;
     overflow: auto;
     color: var(--mud-palette-text-primary);
-    background-color: var(--mud-palette-surface);
-    font-family: var(--mo-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
-    font-size: 0.75rem;
-    line-height: 1.55;
+    background: var(--mud-palette-surface);
+    font-family: var(--mo-font-family-mono);
+    font-size: 12px;
+    line-height: 1.65;
     white-space: pre;
 }
 
 .metadata-empty {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    padding: 10px 0;
-    color: var(--mud-palette-text-secondary);
+    margin: 0;
+    padding: 12px 0;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+    font-size: 13px;
 }
 
-@media (max-width: 600px) {
+@media(max-width:600px) {
     .metadata-row {
-        grid-template-columns: minmax(0, 1fr);
-        gap: 4px;
+        grid-template-columns: minmax(0,1fr);
+        gap: 5px;
     }
-
     .metadata-code {
-        max-height: 220px;
+        padding: 16px;
+        max-height: 240px;
     }
 }

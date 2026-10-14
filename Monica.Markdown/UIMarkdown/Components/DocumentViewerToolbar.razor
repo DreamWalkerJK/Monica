@@ -1,0 +1,68 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Markdown.Localization
+@using Monica.Markdown.Models
+@inject IStringLocalizer<MarkdownResource> L
+
+<header class="reader-toolbar">
+    <button type="button" class="reader-library-button" @onclick="OnOpenGroupSwitcher"
+            title="@CurrentGroup?.Title" aria-label="@L["MarkdownViewer:Navbar:OpenKnowledgeBaseSwitcher"]">
+        <MudIcon Icon="@Icons.Material.Outlined.MenuBook" />
+        <span class="reader-library-copy"><span class="reader-library-name">@(CurrentGroup?.Title ?? L["MarkdownViewer:Navbar:UnknownKnowledgeBase"])</span>
+        <span class="reader-library-count">@L["MarkdownViewer:Navbar:KnowledgeBaseDocumentCount", CurrentGroup?.ResolveLanguage(CurrentCulture)?.DocumentCount ?? CurrentGroup?.DocumentCount ?? 0]</span></span>
+        <MudIcon Icon="@Icons.Material.Outlined.ExpandMore" Size="Size.Small" />
+    </button>
+    <div class="reader-tool-actions">
+        <MudButton OnClick="OnToggleSidebar" StartIcon="@Icons.Material.Outlined.FolderOpen" Class="reader-documents-button"
+            aria-label="@(IsSidebarVisible ? L["MarkdownViewer:Navbar:HideSidebar"] : L["MarkdownViewer:Navbar:ShowSidebar"])"
+            aria-expanded="@IsSidebarVisible.ToString().ToLowerInvariant()" aria-pressed="@IsSidebarVisible.ToString().ToLowerInvariant()"><span class="reader-button-label">@L["MarkdownViewer:Toolbar:DocumentTree"]</span></MudButton>
+        <MudButton OnClick="OnOpenDocumentSearch" StartIcon="@Icons.Material.Outlined.Search" Variant="Variant.Outlined"
+            Class="reader-search-button">@L["MarkdownViewer:Toolbar:SearchPlaceholder"]</MudButton>
+        @if (ShowLanguageSwitcher)
+        {
+            <MudMenu Label="@LanguageLabel" StartIcon="@Icons.Material.Outlined.Language" EndIcon="@Icons.Material.Outlined.ExpandMore"
+                AriaLabel="@L["MarkdownViewer:Toolbar:SwitchLanguage"]" Variant="Variant.Text" Dense="true"
+                AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="reader-language-menu">
+                @foreach (var language in Languages)
+                {
+                    <MudMenuItem role="menuitem" OnClick="@(() => OnLanguageChanged.InvokeAsync(language.Culture))"
+                        Icon="@(string.Equals(language.Culture, CurrentCulture, StringComparison.OrdinalIgnoreCase) ? Icons.Material.Outlined.Check : null)">@language.DisplayName</MudMenuItem>
+                }
+            </MudMenu>
+        }
+        <MudButton OnClick="OnToggleOutline" StartIcon="@Icons.Material.Outlined.Toc" Disabled="@(!HasOutline)"
+            aria-label="@(IsOutlineVisible ? L["MarkdownViewer:Toolbar:HideOutline"] : L["MarkdownViewer:Toolbar:ShowOutline"])"
+            aria-pressed="@IsOutlineVisible.ToString().ToLowerInvariant()"
+            aria-expanded="@IsOutlineVisible.ToString().ToLowerInvariant()"
+            Class="@(IsOutlineVisible ? "reader-outline-button is-active" : "reader-outline-button")"><span class="reader-button-label">@L["MarkdownViewer:Navbar:Outline"]</span></MudButton>
+    </div>
+</header>
+
+@code {
+    /// <summary>The selected library whose identity and registered count are displayed.</summary>
+    [Parameter] public MarkdownDocumentGroup? CurrentGroup { get; set; }
+    /// <summary>The selected document culture, independent of the shell language.</summary>
+    [Parameter] public string? CurrentCulture { get; set; }
+    /// <summary>The selected language descriptor used for the menu label.</summary>
+    [Parameter] public MarkdownDocumentLanguage? CurrentLanguage { get; set; }
+    /// <summary>The actual registered languages available in the selected library.</summary>
+    [Parameter] public IReadOnlyList<MarkdownDocumentLanguage> Languages { get; set; } = [];
+    /// <summary>Whether this library permits switching document languages.</summary>
+    [Parameter] public bool ShowLanguageSwitcher { get; set; }
+    /// <summary>Whether the persistent or temporary document index is open.</summary>
+    [Parameter] public bool IsSidebarVisible { get; set; }
+    /// <summary>Whether the persistent or temporary heading outline is open.</summary>
+    [Parameter] public bool IsOutlineVisible { get; set; }
+    /// <summary>Whether the accepted document has actual rendered headings.</summary>
+    [Parameter] public bool HasOutline { get; set; }
+    /// <summary>Requests document-index visibility through the owning page state.</summary>
+    [Parameter] public EventCallback OnToggleSidebar { get; set; }
+    /// <summary>Requests the page-owned native library chooser.</summary>
+    [Parameter] public EventCallback OnOpenGroupSwitcher { get; set; }
+    /// <summary>Requests the page-owned native search dialog.</summary>
+    [Parameter] public EventCallback OnOpenDocumentSearch { get; set; }
+    /// <summary>Requests a registered document culture through the owning location state.</summary>
+    [Parameter] public EventCallback<string> OnLanguageChanged { get; set; }
+    /// <summary>Requests heading-outline visibility through the owning page state.</summary>
+    [Parameter] public EventCallback OnToggleOutline { get; set; }
+    private string LanguageLabel => CurrentLanguage?.DisplayName ?? CurrentCulture ?? L["MarkdownViewer:Toolbar:SwitchLanguage"];
+}

@@ -1,0 +1,52 @@
+.execution-pipeline-status {
+    --plan-status-color: var(--mud-palette-text-secondary);
+    --plan-status-ink: color-mix(in srgb, var(--plan-status-color) 70%, var(--mud-palette-text-primary));
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: max-content;
+    max-width: 100%;
+    padding: 5px 8px;
+    border: 1px solid color-mix(in srgb, var(--plan-status-color) 22%, transparent);
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--plan-status-color) 7%, var(--mud-palette-surface));
+    color: var(--plan-status-ink);
+    font-family: var(--mud-typography-default-family);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+.execution-pipeline-status[data-status="Building"] {
+    --plan-status-color: var(--mud-palette-info);
+}
+
+.execution-pipeline-status[data-status="Ready"] {
+    --plan-status-color: var(--mud-palette-success);
+}
+
+.execution-pipeline-status[data-status="Faulted"] {
+    --plan-status-color: var(--mud-palette-error);
+}
+
+.execution-pipeline-status ::deep .mud-icon-root {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+}
+
+.execution-pipeline-status--small {
+    padding: 3px 6px;
+    font-size: 10px;
+}
+
+.execution-pipeline-status--small ::deep .mud-icon-root {
+    flex-basis: 12px;
+    width: 12px;
+    height: 12px;
+}
+
+.execution-pipeline-status--large {
+    padding: 6px 10px;
+    font-size: 12px;
+}

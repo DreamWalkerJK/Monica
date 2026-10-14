@@ -10,7 +10,7 @@
 @inject IStringLocalizer<SharedResource> L
 @implements IAsyncDisposable
 
-<MudMenu Icon="@Icons.Material.Filled.Language"
+<MudMenu Icon="@ShellIcons.Globe"
          Color="Color.Primary"
          Size="Size.Medium"
          AnchorOrigin="Origin.BottomCenter"
@@ -28,7 +28,7 @@
 
         <MudMenuItem OnClick="@(() => ChangeCultureAsync(culture))"
                      Class="@(isCurrentCulture ? "active" : null)"
-                     Icon="@(isCurrentCulture ? Icons.Material.Filled.Check : null)">
+                     Icon="@(isCurrentCulture ? ShellIcons.Check : null)">
             @displayName
         </MudMenuItem>
     }

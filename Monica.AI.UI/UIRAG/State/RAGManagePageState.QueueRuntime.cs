@@ -21,6 +21,7 @@ public sealed partial class RAGManagePageState
     /// </summary>
     public void ToggleDocumentSelection(DocumentQueueItem document, bool isSelected)
     {
+        if (_session.IsRetired) return;
         if (document.Status is not (DocumentStatus.Pending or DocumentStatus.Error))
         {
             SelectedDocumentIds.Remove(document.Id);
@@ -45,6 +46,7 @@ public sealed partial class RAGManagePageState
     /// </summary>
     public void SelectAllIndexableDocuments()
     {
+        if (_session.IsRetired) return;
         SelectedDocumentIds.Clear();
         foreach (var document in DocumentQueue.Where(static item => item.Status is DocumentStatus.Pending or DocumentStatus.Error))
         {
@@ -59,6 +61,7 @@ public sealed partial class RAGManagePageState
     /// </summary>
     public void ClearDocumentSelection()
     {
+        if (_session.IsRetired) return;
         SelectedDocumentIds.Clear();
         NotifyStateChanged();
     }
@@ -73,18 +76,20 @@ public sealed partial class RAGManagePageState
         SelectedDocumentIds.RemoveWhere(id => !availableDocumentIds.Contains(id));
     }
 
-    private void OnBatchIndexingProgress(IndexingProgress progress)
+    private void OnBatchIndexingProgress(string knowledgeBaseId, long generation)
     {
-        if (SelectedKnowledgeBase is null)
+        if (_session.IsRetired || generation != _session.Generation
+            || !string.Equals(SelectedKnowledgeBase?.Id, knowledgeBaseId, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        _ = _queuePollingState.RefreshFromProgressAsync(SelectedKnowledgeBase.Id);
+        _session.StartBackground(() => _queuePollingState.RefreshFromProgressAsync(knowledgeBaseId));
     }
 
     private void EnsureQueuePolling()
     {
+        if (_session.IsRetired) return;
         if (SelectedKnowledgeBase is null)
         {
             _queuePollingState.Stop();

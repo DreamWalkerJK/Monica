@@ -29,6 +29,7 @@ ResourceKey = Tuple[str, str]
 RegistrationLocation = Tuple[str, int, str]
 
 EXCLUDED_RELATIVE_DIRECTORIES = {
+    '.evidence',
     '.git',
     '.tmp',
     '.vs',
@@ -604,6 +605,17 @@ class LocalizationValidator:
                             'displayNameKey',
                             registered_resource_types,
                         )
+                    description = self._find_string_argument(args, 7, 'descriptionKey')
+                    if description:
+                        self._record_registration_key(
+                            project_path,
+                            resource_type,
+                            description,
+                            relative_path,
+                            line_number,
+                            'descriptionKey',
+                            registered_resource_types,
+                        )
 
                 category_calls = self._extract_generic_calls(
                     masked_content,
@@ -629,6 +641,17 @@ class LocalizationValidator:
                             relative_path,
                             line_number,
                             'categoryDisplayNameKey',
+                            registered_resource_types,
+                        )
+                    description = self._find_string_argument(args, 5, 'descriptionKey')
+                    if description:
+                        self._record_registration_key(
+                            project_path,
+                            resource_type,
+                            description,
+                            relative_path,
+                            line_number,
+                            'categoryDescriptionKey',
                             registered_resource_types,
                         )
 

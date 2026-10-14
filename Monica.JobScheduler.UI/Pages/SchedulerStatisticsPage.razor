@@ -1,10 +1,14 @@
 @attribute [Route(PAGE_URL)]
 
+@using System.Globalization
 @using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Executions.State
+@using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
 
 @inject SchedulerStatisticsPageStateFactory PageStateFactory
 @inject IStringLocalizer<JobSchedulerResource> L
 @inject SchedulerTimePresentation TimePresentation
+@inject IDialogService DialogService
 
 @implements IAsyncDisposable
 
@@ -13,115 +17,186 @@
 <SchedulerWorkspace Title="@L["Workspace:Pages:Statistics:Title"]"
                     Description="@L["Workspace:Pages:Statistics:Description"]"
                     ActivePanelIndex="3">
-    @if (_state is not null)
+    @if (_state is { } state)
     {
-        <SchedulerAccessBoundary AccessChecked="@_state.AccessChecked" IsAuthorized="@_state.IsAuthorized">
-            <div class="statistics-page">
-                <MudPaper Outlined="true" Class="statistics-page__toolbar pa-3">
-                    <div>
-                        <MudText Typo="Typo.subtitle1">@L["Analytics:Range:Title"]</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @L["Analytics:Range:Description", TimePresentation.TimeZoneId]
-                        </MudText>
-                    </div>
-                    <MudChipSet T="SchedulerAnalyticsTimeRange"
-                                SelectedValue="@_state.TimeRange"
-                                SelectedValueChanged="@_state.SetTimeRangeAsync"
-                                SelectionMode="SelectionMode.SingleSelection"
-                                CheckMark="true"
-                                Color="Color.Primary">
-                        @foreach (var range in Enum.GetValues<SchedulerAnalyticsTimeRange>())
+        <div class="statistics-page">
+            @if (state.Error is not null)
+            {
+                <MudAlert Severity="@(state.HasLoadedSnapshot ? Severity.Warning : Severity.Error)" Variant="Variant.Outlined" Dense="true">
+                    @(state.HasLoadedSnapshot ? L["Analytics:RefreshFailed", state.Error] : state.Error)
+                </MudAlert>
+            }
+            @if (!state.AccessChecked && state.IsQueryFailed && !state.IsLoading)
+            {
+                <div class="statistics-page__unavailable" role="status">
+                    <MudIcon Icon="@Icons.Material.Outlined.QueryStats" aria-hidden="true" />
+                    <h2>@L["Analytics:Window:Unavailable"]</h2>
+                    <p>@L["Analytics:Window:UnavailableDescription"]</p>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="RefreshAsync">@L["Common:Retry"]</MudButton>
+                </div>
+            }
+            else
+            {
+                <SchedulerAccessBoundary AccessChecked="@state.AccessChecked" IsAuthorized="@state.IsAuthorized">
+                    <section class="statistics-window" aria-labelledby="statistics-window-heading" aria-busy="@(state.IsLoading ? "true" : "false")">
+                        <div class="statistics-window__summary">
+                            <div class="statistics-window__completion">
+                                <span class="statistics-window__eyebrow" id="statistics-window-heading">@L["Analytics:Window:Completed"]</span>
+                                <strong>@(state.Snapshot is { } result ? result.CompletedTerminalCount.ToString("N0", CultureInfo.CurrentCulture) : "—")</strong>
+                                <span>@L["Analytics:Window:CompletedDescription"]</span>
+                            </div>
+                            <div class="statistics-window__evidence">
+                                @if ((state.LoadedQuery ?? state.RequestedQuery) is { } query)
+                                {
+                                    <span class="statistics-window__eyebrow">@(state.HasLoadedSnapshot ? L["Analytics:Window:Accepted"] : L["Analytics:Window:Requested"])</span>
+                                    <div class="statistics-window__interval">
+                                        <time datetime="@query.StartTimeUtc.ToString("O")">@TimePresentation.FormatTimestampWithOffset(query.StartTimeUtc)</time>
+                                        <span aria-hidden="true">→</span>
+                                        <time datetime="@query.EndTimeUtc.ToString("O")">@TimePresentation.FormatTimestampWithOffset(query.EndTimeUtc)</time>
+                                    </div>
+                                    <span>@L["Analytics:Window:Bounds", TimePresentation.TimeZoneId]</span>
+                                }
+                                @if (state.Snapshot is { } snapshot)
+                                {
+                                    <dl class="statistics-window__facts">
+                                        <div><dt>@L["Analytics:Window:Resolved"]</dt><dd>@snapshot.Trend.Sum(bucket => bucket.SucceededCount + bucket.FailedCount).ToString("N0", CultureInfo.CurrentCulture)</dd></div>
+                                        <div><dt>@L["Analytics:Window:Measured"]</dt><dd>@snapshot.Duration.Count.ToString("N0", CultureInfo.CurrentCulture)</dd></div>
+                                        <div><dt>@L["Analytics:Window:Observed"]</dt><dd>@TimePresentation.FormatTimestampWithOffset(state.ObservedAtUtc)</dd></div>
+                                    </dl>
+                                }
+                            </div>
+                        </div>
+                        <div class="statistics-window__controls">
+                            <p class="statistics-window__basis">@L["Analytics:Range:Description", TimePresentation.TimeZoneId]</p>
+                            <div class="statistics-window__presets" role="group" aria-label="@L["Analytics:Range:Title"]">
+                                @foreach (var range in Enum.GetValues<SchedulerAnalyticsTimeRange>())
+                                {
+                                    <button type="button" class="@(state.TimeRange == range ? "is-selected" : null)"
+                                            aria-pressed="@(state.TimeRange == range ? "true" : "false")"
+                                            @onclick="@(() => SelectRangeAsync(range))">@L[$"Analytics:Range:{range}"]</button>
+                                }
+                            </div>
+                            <button type="button" class="statistics-window__refresh" disabled="@state.IsLoading" @onclick="RefreshAsync">
+                                <MudIcon Icon="@Icons.Material.Outlined.Refresh" Size="Size.Small" aria-hidden="true" />
+                                <span>@L["Common:Refresh"]</span>
+                            </button>
+                        </div>
+                    </section>
+                    @if (state.IsLoading && !state.HasLoadedSnapshot)
+                    {
+                        <div class="statistics-page__loading" role="status">
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                            <span>@L["Common:Loading"]</span>
+                        </div>
+                    }
+                    else if (!state.HasLoadedSnapshot && state.IsQueryFailed)
+                    {
+                        <div class="statistics-page__unavailable" role="status">
+                            <MudIcon Icon="@Icons.Material.Outlined.QueryStats" aria-hidden="true" />
+                            <h2>@L["Analytics:Window:Unavailable"]</h2>
+                            <p>@L["Analytics:Window:UnavailableDescription"]</p>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="RefreshAsync">@L["Common:Retry"]</MudButton>
+                        </div>
+                    }
+                    else if (state.Snapshot is { } acceptedSnapshot)
+                    {
+                        @if (state.IsLoading)
                         {
-                            <MudChip T="SchedulerAnalyticsTimeRange" Value="@range" Size="Size.Small">
-                                @L[$"Analytics:Range:{range}"]
-                            </MudChip>
+                            <MudProgressLinear Color="Color.Primary" Indeterminate="true" aria-label="@L["Common:Loading"]" />
                         }
-                    </MudChipSet>
-                    <MudTooltip Text="@L["Common:Refresh"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                       Color="Color.Primary"
-                                       Variant="Variant.Outlined"
-                                       Disabled="@_state.IsLoading"
-                                       OnClick="@_state.RefreshAsync"
-                                       aria-label="@L["Common:Refresh"]" />
-                    </MudTooltip>
-                </MudPaper>
-
-                @if (_state.IsLoading && _state.Snapshot is null)
-                {
-                    <div class="statistics-page__loading" role="status">
-                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
-                    </div>
-                }
-                else if (_state.Error is not null && _state.Snapshot is null)
-                {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-                        @_state.Error
-                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@_state.RefreshAsync">
-                            @L["Common:Retry"]
-                        </MudButton>
-                    </MudAlert>
-                }
-                else if (_state.Snapshot is { } snapshot)
-                {
-                    @if (_state.IsLoading)
-                    {
-                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                        @if (state.IsQueryFailed && state.LoadedTimeRange is { } loadedRange)
+                        {
+                            <p class="statistics-page__retained">@L["Analytics:Window:Retained", L[$"Analytics:Range:{loadedRange}"]]</p>
+                        }
+                        <SchedulerAnalyticsDashboard Snapshot="@acceptedSnapshot" InspectExecution="InspectAsync" />
                     }
-
-                    @if (_state.Error is not null)
-                    {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                            @L["Analytics:RefreshFailed", _state.Error]
-                        </MudAlert>
-                    }
-
-                    <SchedulerAnalyticsDashboard Snapshot="@snapshot" />
-
-                    <footer class="statistics-page__freshness">
-                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
-                        <span>@L["Analytics:ObservedAt", TimePresentation.FormatTimestamp(_state.ObservedAtUtc)]</span>
-                    </footer>
-                }
-            </div>
-        </SchedulerAccessBoundary>
+                </SchedulerAccessBoundary>
+            }
+        </div>
     }
 </SchedulerWorkspace>
 
 @code {
-    /// <summary>
-    /// Gets the route for cross-job scheduler analytics.
-    /// </summary>
+    /// <summary>Gets the route for cross-job scheduler analytics.</summary>
     public const string PAGE_URL = "/job-scheduler/statistics";
 
+    private readonly SchedulerOperationLifetime _lifetime = new();
+    private readonly object _retirementGate = new();
+    private TaskCompletionSource? _retirement;
     private SchedulerStatisticsPageState? _state;
-    private bool _disposed;
+    private ExecutionDialogSession? _inspectors;
 
     protected override async Task OnInitializedAsync()
     {
-        _state = PageStateFactory.Create();
-        _state.Changed += OnStateChangedAsync;
-        await _state.InitializeAsync();
+        _inspectors = new(id => ExecutionDetailDialogLauncher.OpenAsync(DialogService, L, id), RefreshAsync);
+        var state = PageStateFactory.Create();
+        _state = state;
+        state.Changed += OnStateChangedAsync;
+        try { await _lifetime.RunAsync(_ => state.InitializeAsync()); }
+        catch (OperationCanceledException) when (_lifetime.IsRetired) { }
     }
 
-    private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+    private Task OnStateChangedAsync() => _lifetime.IsRetired ? Task.CompletedTask : InvokeAsync(() =>
+    {
+        if (!_lifetime.IsRetired) StateHasChanged();
+    });
+
+    private Task SelectRangeAsync(SchedulerAnalyticsTimeRange range) =>
+        RunStateAsync(state => state.SetTimeRangeAsync(range));
+
+    private Task RefreshAsync() => RunStateAsync(state => state.RefreshAsync());
+
+    private async Task RunStateAsync(Func<SchedulerStatisticsPageState, Task> operation)
+    {
+        if (_state is not { } state || _lifetime.IsRetired) return;
+        try { await _lifetime.RunAsync(_ => operation(state)); }
+        catch (OperationCanceledException) when (_lifetime.IsRetired || state.IsDisposed) { }
+    }
+
+    private async Task InspectAsync(JobExecutionAnalyticsSlowExecution execution)
+    {
+        // The displayed immutable record supplies the exact identity before authorization can yield.
+        var exactId = execution.InstanceId;
+        if (_state is not { } state || _inspectors is not { } inspectors || _lifetime.IsRetired) return;
+        try
+        {
+            await _lifetime.RunAsync(async _ =>
+            {
+                if (!await state.ReauthorizeAsync() || _lifetime.IsRetired || _state != state) return;
+                await inspectors.OpenAsync(exactId);
+            });
+        }
+        catch (OperationCanceledException) when (_lifetime.IsRetired || state.IsDisposed) { }
+    }
 
     /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_disposed)
+        TaskCompletionSource completion;
+        lock (_retirementGate)
         {
-            return;
+            if (_retirement is not null) return new(_retirement.Task);
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _retirement = completion;
         }
-
-        _disposed = true;
         var state = _state;
-        _state = null;
-        if (state is not null)
+        if (state is not null) state.Changed -= OnStateChangedAsync;
+        // Retire every owner before joining so an outstanding native callback can finish against canceled reads.
+        var operations = _lifetime.RetireAsync(() => ValueTask.CompletedTask);
+        var inspectors = _inspectors?.DisposeAsync() ?? ValueTask.CompletedTask;
+        var stateRetirement = state?.DisposeAsync() ?? ValueTask.CompletedTask;
+        _ = CompleteRetirementAsync([operations, inspectors, stateRetirement], completion);
+        return new(completion.Task);
+    }
+
+    private static async Task CompleteRetirementAsync(ValueTask[] owners, TaskCompletionSource completion)
+    {
+        var failures = new List<Exception>();
+        foreach (var owner in owners)
         {
-            state.Changed -= OnStateChangedAsync;
-            await state.DisposeAsync();
+            try { await owner; } catch (Exception exception) { failures.Add(exception); }
         }
+        if (failures.Count == 0) completion.TrySetResult();
+        else completion.TrySetException(new AggregateException("Scheduler analytics retirement failed.", failures));
     }
 }

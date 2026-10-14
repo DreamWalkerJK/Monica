@@ -129,8 +129,13 @@ internal sealed class KnowledgeDocumentService(
     }
 
     /// <summary>
-    /// Resolves persisted or markdown-backed source content for an inventory item.
+    /// Resolves an inventory item's persisted source, or its exact recorded Markdown group and path.
     /// </summary>
+    /// <remarks>
+    /// Persisted content remains authoritative for every source kind. Without persisted content, only
+    /// Markdown records with an explicit group may use the catalog; uploaded and unknown records never
+    /// borrow catalog content. Missing groups or paths do not fall back to an unrelated catalog owner.
+    /// </remarks>
     public async Task<string?> GetContentAsync(
         string knowledgeBaseId,
         DocumentQueueItem document,
@@ -142,24 +147,22 @@ internal sealed class KnowledgeDocumentService(
             return storedContent;
         }
 
-        if (!string.Equals(document.SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(document.SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(document.SourceGroupKey))
         {
             return null;
         }
 
-        if (!string.IsNullOrWhiteSpace(document.SourceGroupKey))
-        {
-            var groupDocuments = await markdownCatalog.GetDocumentsAsync(document.SourceGroupKey);
-            var matchedDocument = groupDocuments.FirstOrDefault(item =>
-                string.Equals(item.RelativePath, document.Id, StringComparison.OrdinalIgnoreCase));
-            if (matchedDocument is not null)
-            {
-                return await markdownCatalog.GetDocumentContentAsync(matchedDocument);
-            }
-        }
+        ct.ThrowIfCancellationRequested();
+        var groupDocuments = await markdownCatalog.GetDocumentsAsync(document.SourceGroupKey);
+        ct.ThrowIfCancellationRequested();
+        var matchedDocument = groupDocuments.FirstOrDefault(item =>
+            string.Equals(item.RelativePath, document.Id, StringComparison.OrdinalIgnoreCase));
+        if (matchedDocument is null) return null;
 
-        var markdownDocument = await markdownCatalog.GetDocumentByPathAsync(document.Id);
-        return await markdownCatalog.GetDocumentContentAsync(markdownDocument);
+        var content = await markdownCatalog.GetDocumentContentAsync(matchedDocument);
+        ct.ThrowIfCancellationRequested();
+        return content;
     }
 
     /// <summary>

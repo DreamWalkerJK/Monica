@@ -5,15 +5,15 @@
 
 .service-filter-panel ::deep .service-filter-panel__surface {
     background: var(--mud-palette-surface);
-    border-color: var(--mud-palette-divider);
-    border-radius: 8px;
-    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    overflow: clip;
     width: 100%;
 }
 
 .service-filter-panel__main {
     display: grid;
-    gap: 0;
+    gap: 12px;
     grid-template-columns: minmax(16rem, 0.9fr) repeat(2, minmax(0, 1fr));
 }
 
@@ -25,15 +25,15 @@
 
 .service-filter-panel__search,
 .service-filter-panel__filter {
-    padding: 1rem;
+    padding: 12px 26px;
 }
 
 .service-filter-panel__search {
-    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
+    background: var(--mud-palette-surface);
 }
 
 .service-filter-panel__filter {
-    border-inline-start: 1px solid var(--mud-palette-divider);
+    border-inline-start: 0;
     display: flex;
     flex-direction: column;
     gap: 0.625rem;
@@ -63,6 +63,7 @@
 
 .service-filter-panel__filter-actions ::deep .mud-button-root {
     min-width: 0;
+    color: color-mix(in srgb, var(--mud-palette-primary) 60%, var(--mud-palette-text-primary));
 }
 
 .service-filter-panel__chips ::deep .mud-chipset,
@@ -81,9 +82,28 @@
     max-width: 100%;
 }
 
+.service-filter-panel__chips ::deep .mud-chip-color-info:not(.status-filter) {
+    color: color-mix(in srgb, var(--mud-palette-info) 55%, var(--mud-palette-text-primary));
+}
+
+.service-filter-panel__chips ::deep .status-filter {
+    --status-tone: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--status-tone) 35%, var(--mud-palette-text-primary));
+    border-color: color-mix(in srgb, var(--status-tone) 40%, var(--mud-palette-lines-default));
+    background: var(--mud-palette-surface);
+}
+.service-filter-panel__chips ::deep .status-filter.mud-chip-color-success { --status-tone: var(--mud-palette-success); }
+.service-filter-panel__chips ::deep .status-filter.mud-chip-color-info { --status-tone: var(--mud-palette-info); }
+.service-filter-panel__chips ::deep .status-filter.mud-chip-color-error { --status-tone: var(--mud-palette-error); }
+.service-filter-panel__chips ::deep .status-filter.mud-chip-color-warning { --status-tone: var(--mud-palette-warning); }
+.service-filter-panel__chips ::deep .status-filter--selected {
+    background: color-mix(in srgb, var(--status-tone) 10%, var(--mud-palette-surface));
+    border-color: color-mix(in srgb, var(--status-tone) 65%, var(--mud-palette-lines-default));
+}
+
 .service-filter-panel__footer {
-    background: color-mix(in srgb, var(--mud-palette-background-gray) 52%, var(--mud-palette-surface));
-    border-top: 1px solid var(--mud-palette-divider);
+    background: var(--mud-palette-surface);
+    border-top: 0;
     min-width: 0;
     padding: 0.625rem 1rem;
 }

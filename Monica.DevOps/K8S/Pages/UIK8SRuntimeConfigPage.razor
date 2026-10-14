@@ -1,0 +1,17 @@
+@using Monica.DevOps.K8S.Components
+@using Monica.DevOps.Localization
+@inject IStringLocalizer<K8SResource> L
+
+<PageTitle>@L["Workbench:Config:Title"]</PageTitle>
+<K8SRuntimeConfigWorkbench NamespaceHint="@NamespaceHint" KindHint="@KindHint" SearchHint="@SearchHint" />
+
+@code {
+    /// <summary>The runtime configuration route owned by the shared K8S page family.</summary>
+    public const string PAGE_URL = "/ui/k8s/runtime-config";
+    /// <summary>The nonsecret return namespace preference.</summary>
+    [Parameter] public string? NamespaceHint { get; set; }
+    /// <summary>The nonsecret return resource-kind preference.</summary>
+    [Parameter] public string? KindHint { get; set; }
+    /// <summary>The nonsecret return search preference.</summary>
+    [Parameter] public string? SearchHint { get; set; }
+}

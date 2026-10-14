@@ -31,6 +31,9 @@ public static class ModuleTerminalBuilderExtensions
 /// <summary>
 /// Local process-backed terminal module.
 /// </summary>
+/// <remarks>Sessions and commands are host-owned in memory. UI departure does not cancel execution;
+/// host async disposal requests cancellation and joins process/output/callback drainage.
+/// Owner partition keys do not provide authentication or authorization.</remarks>
 public sealed class ModuleTerminal : MonicaModule<ModuleTerminalOption>
 {
     /// <inheritdoc />
@@ -60,7 +63,8 @@ public sealed class ModuleTerminalOption : ModuleOptions<ModuleTerminal>
     public int MaxTimeoutSeconds { get; set; } = 900;
 
     /// <summary>
-    /// Gets or sets the maximum number of command output lines retained per command result.
+    /// Gets or sets the maximum number of lines retained in each command result and session transcript.
+    /// Defaults to 2,000; zero retains no lines. This does not bound line length, bytes, or transient capture/observer memory.
     /// </summary>
     public int MaxOutputLines { get; set; } = 2_000;
 

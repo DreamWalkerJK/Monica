@@ -31,14 +31,11 @@ public sealed class InkLandscapeTheme : ThemeDefinitionBase
                 AppbarHeight = "56px",
                 DrawerWidthLeft = "272px",
                 DrawerWidthRight = "272px",
-                DrawerMiniWidthLeft = "72px",
-                DrawerMiniWidthRight = "72px"
+                DrawerMiniWidthLeft = "64px",
+                DrawerMiniWidthRight = "64px"
             },
             Typography = CreateTypography(),
-            Shadows = new Shadow
-            {
-                Elevation = CreateShadows()
-            },
+            Shadows = MonicaShadowDefaults.Create(),
             ZIndex = new ZIndex
             {
                 Drawer = 1200,
@@ -80,9 +77,9 @@ public sealed class InkLandscapeTheme : ThemeDefinitionBase
             SuccessDarken = "#3c5b43",
             SuccessContrastText = "#fffdf8",
 
-            Warning = "#a06f2b",
-            WarningLighten = "#bd8a44",
-            WarningDarken = "#7d531f",
+            Warning = "#986525",
+            WarningLighten = "#b88640",
+            WarningDarken = "#784e19",
             WarningContrastText = "#fffdf8",
 
             Error = "#a33e35",
@@ -284,36 +281,4 @@ public sealed class InkLandscapeTheme : ThemeDefinitionBase
         };
     }
 
-    private static string[] CreateShadows()
-    {
-        return
-        [
-            "none",
-            "0 1px 2px rgba(32, 36, 31, 0.05)",
-            "0 2px 6px rgba(32, 36, 31, 0.07)",
-            "0 4px 12px rgba(32, 36, 31, 0.08)",
-            "0 8px 20px rgba(32, 36, 31, 0.10)",
-            "0 12px 28px rgba(32, 36, 31, 0.12)",
-            "0 16px 36px rgba(32, 36, 31, 0.14)",
-            "0 18px 42px rgba(32, 36, 31, 0.14)",
-            "0 20px 48px rgba(32, 36, 31, 0.15)",
-            "0 22px 52px rgba(32, 36, 31, 0.15)",
-            "0 24px 56px rgba(32, 36, 31, 0.16)",
-            "0 26px 60px rgba(32, 36, 31, 0.16)",
-            "0 28px 64px rgba(32, 36, 31, 0.17)",
-            "0 30px 68px rgba(32, 36, 31, 0.17)",
-            "0 32px 72px rgba(32, 36, 31, 0.18)",
-            "0 34px 76px rgba(32, 36, 31, 0.18)",
-            "0 36px 80px rgba(32, 36, 31, 0.19)",
-            "0 38px 84px rgba(32, 36, 31, 0.19)",
-            "0 40px 88px rgba(32, 36, 31, 0.20)",
-            "0 42px 92px rgba(32, 36, 31, 0.20)",
-            "0 44px 96px rgba(32, 36, 31, 0.21)",
-            "0 46px 100px rgba(32, 36, 31, 0.21)",
-            "0 48px 104px rgba(32, 36, 31, 0.22)",
-            "0 50px 108px rgba(32, 36, 31, 0.22)",
-            "0 52px 112px rgba(32, 36, 31, 0.23)",
-            "0 54px 116px rgba(32, 36, 31, 0.23)"
-        ];
-    }
 }

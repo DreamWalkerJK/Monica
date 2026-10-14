@@ -20,6 +20,63 @@ public sealed class ChatSessionWorkspaceTests
     private static readonly ChatHistoryPartition PARTITION = new("workspace-test");
 
     [Fact]
+    public async Task InitializeAsync_WhenCatalogIsUnreadable_ShouldBlockWritesUntilExplicitReload()
+    {
+        await using var fixture = await WorkspaceFixture.CreateAsync();
+        var ct = TestContext.Current.CancellationToken;
+        var original = await File.ReadAllBytesAsync(fixture.CatalogPath, ct);
+        await File.WriteAllTextAsync(fixture.CatalogPath, "invalid catalog JSON", ct);
+        var warnings = new List<ChatHistoryWorkspaceWarning>();
+        fixture.Workspace.WarningRaised += warnings.Add;
+
+        await fixture.Workspace.InitializeAsync(ct);
+
+        fixture.Workspace.IsInitialized.Should().BeTrue();
+        fixture.Workspace.IsLoading.Should().BeFalse();
+        fixture.Workspace.HasLoadFailure.Should().BeTrue();
+        fixture.Workspace.CurrentSession.Should().BeNull();
+        (await fixture.Workspace.ClearAsync(ct)).Should().BeFalse();
+        (await fixture.Workspace.SetPinnedAsync("session-1", true, ct)).Should().BeFalse();
+        (await File.ReadAllTextAsync(fixture.CatalogPath, ct)).Should().Be("invalid catalog JSON");
+        warnings.Should().ContainSingle(item => item.Kind == ChatHistoryWorkspaceWarningKind.LoadFailed);
+
+        await File.WriteAllBytesAsync(fixture.CatalogPath, original, ct);
+        await fixture.Workspace.ReloadAsync(ct);
+
+        fixture.Workspace.HasLoadFailure.Should().BeFalse();
+        fixture.Workspace.CurrentSessionId.Should().Be("session-1");
+        fixture.Workspace.CurrentSession!.Messages.Should().ContainSingle(message => message.Content == "persisted message");
+        (await fixture.Workspace.SetPinnedAsync("session-1", true, ct)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ReloadAsync_WhenCatalogIsUnreadable_ShouldRetainLoadedEvidenceAndBlockSnapshotWrites()
+    {
+        await using var fixture = await WorkspaceFixture.CreateAsync();
+        var ct = TestContext.Current.CancellationToken;
+        await fixture.Workspace.InitializeAsync(ct);
+        var local = fixture.Workspace.CurrentSession!;
+        var revision = fixture.Workspace.Revision;
+        var original = await File.ReadAllBytesAsync(fixture.CatalogPath, ct);
+        await File.WriteAllTextAsync(fixture.CatalogPath, "invalid catalog JSON", ct);
+
+        await fixture.Workspace.ReloadAsync(ct);
+
+        fixture.Workspace.HasLoadFailure.Should().BeTrue();
+        fixture.Workspace.CurrentSession.Should().BeSameAs(local);
+        fixture.Workspace.Sessions.Should().ContainSingle();
+        fixture.Workspace.Revision.Should().Be(revision);
+        (await fixture.Workspace.SaveSessionAsync(local, ct)).Should().BeFalse();
+        (await File.ReadAllTextAsync(fixture.CatalogPath, ct)).Should().Be("invalid catalog JSON");
+
+        await File.WriteAllBytesAsync(fixture.CatalogPath, original, ct);
+        await fixture.Workspace.ReloadAsync(ct);
+        fixture.Workspace.HasLoadFailure.Should().BeFalse();
+        fixture.Workspace.CurrentSession.Should().NotBeSameAs(local);
+        fixture.Workspace.CurrentSession!.Messages.Should().ContainSingle(message => message.Content == "persisted message");
+    }
+
+    [Fact]
     public async Task InitializeAsync_WhenCurrentSnapshotExists_ShouldRestoreTranscriptWithoutRuntime()
     {
         await using var fixture = await WorkspaceFixture.CreateAsync();
@@ -259,6 +316,7 @@ public sealed class ChatSessionWorkspaceTests
         internal ChatSessionWorkspace Workspace { get; }
 
         internal ChatHistoryFacade HistoryFacade { get; }
+        internal string CatalogPath => Directory.EnumerateFiles(Path.Combine(_directory!, "conversations"), "catalog.json", SearchOption.AllDirectories).Single();
 
         internal static async Task<WorkspaceFixture> CreateAsync(bool includeSecondSession = false)
         {

@@ -1,0 +1,7 @@
+.k8s-family-header { display: grid; gap: 16px; min-width: 0; }
+.k8s-family-header header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; min-width: 0; }
+.k8s-family-header header > div:first-child { min-width: 0; }
+.k8s-family-header ::deep .k8s-family-title { font-size: clamp(28px, 2.4vw, 34px); font-weight: 500; line-height: 1.2; overflow-wrap: anywhere; }
+.k8s-family-header p { margin: 8px 0 0; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); font: 400 14px/1.5 var(--mud-typography-default-family); }
+.k8s-family-actions { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; }
+@media (max-width: 600px) { .k8s-family-header header { flex-wrap: wrap; gap: 10px; } .k8s-family-header { gap: 12px; } }

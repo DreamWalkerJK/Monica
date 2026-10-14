@@ -27,7 +27,7 @@
 .mo-theme-hermes-teal-dark {
     --mo-hermes-content-font: 'Mondwest', 'Noto Serif SC', Georgia, serif;
     --mo-hermes-compressed-font: 'RulesCompressed', 'Noto Serif SC', 'Arial Narrow', sans-serif;
-    --mo-hermes-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+    --mo-hermes-shadow: var(--mud-elevation-8);
     --mo-nav-menu-border-radius: 0px;
     --mo-appbar-backdrop-filter: blur(12px);
     --mo-appbar-gap: 20px;
@@ -125,61 +125,6 @@
         url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%23eaeaea' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
     background-size: 512px 512px;
     mix-blend-mode: soft-light;
-}
-
-.mo-theme-hermes-teal-light .mo-layout,
-.mo-theme-hermes-teal-dark .mo-layout,
-.mo-theme-hermes-teal-light .mo-main-content,
-.mo-theme-hermes-teal-dark .mo-main-content,
-.mo-theme-hermes-teal-light .mo-body-content,
-.mo-theme-hermes-teal-dark .mo-body-content {
-    background: transparent;
-}
-
-.mo-theme-hermes-teal-light .navbar-link,
-.mo-theme-hermes-teal-dark .navbar-link,
-.mo-theme-hermes-teal-light .navbar-measure-link,
-.mo-theme-hermes-teal-dark .navbar-measure-link {
-    color: var(--mo-hermes-muted);
-    font-family: var(--mo-hermes-content-font);
-    font-size: 0.8rem;
-    font-weight: 400;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.mo-theme-hermes-teal-light .navbar-link:hover,
-.mo-theme-hermes-teal-dark .navbar-link:hover {
-    color: var(--mud-palette-text-primary);
-    background-color: var(--mo-hermes-hover);
-}
-
-.mo-theme-hermes-teal-light .navbar-link::before,
-.mo-theme-hermes-teal-dark .navbar-link::before {
-    height: 1px;
-    background: currentColor;
-}
-
-.mo-theme-hermes-teal-light .more-menu,
-.mo-theme-hermes-teal-dark .more-menu,
-.mo-theme-hermes-teal-light .flyout-menu,
-.mo-theme-hermes-teal-dark .flyout-menu,
-.mo-theme-hermes-teal-light .dropdown-menu,
-.mo-theme-hermes-teal-dark .dropdown-menu {
-    background: var(--mo-hermes-panel-strong);
-    border: 1px solid var(--mo-hermes-border);
-    border-radius: 0;
-    box-shadow: var(--mo-hermes-shadow);
-    backdrop-filter: blur(14px);
-}
-
-.mo-theme-hermes-teal-light .more-menu-header,
-.mo-theme-hermes-teal-dark .more-menu-header,
-.mo-theme-hermes-teal-light .flyout-menu-header,
-.mo-theme-hermes-teal-dark .flyout-menu-header {
-    color: var(--mo-hermes-muted);
-    font-family: var(--mo-hermes-compressed-font);
-    letter-spacing: 0.14em;
 }
 
 .mo-theme-hermes-teal-light .mud-card:not(.mo-self-painted),
@@ -451,36 +396,4 @@
 .mo-theme-hermes-teal-light .mud-data-grid-row:hover,
 .mo-theme-hermes-teal-dark .mud-data-grid-row:hover {
     background: var(--mo-hermes-hover);
-}
-
-.mo-theme-hermes-teal-light .theme-card,
-.mo-theme-hermes-teal-dark .theme-card {
-    border: 1px solid var(--mo-hermes-border);
-    border-radius: 0;
-    background: var(--mo-hermes-panel);
-    box-shadow: none;
-}
-
-.mo-theme-hermes-teal-light .theme-card:hover,
-.mo-theme-hermes-teal-dark .theme-card:hover {
-    transform: none;
-    background: color-mix(in srgb, var(--mo-hermes-panel) 88%, var(--mo-hermes-accent-soft));
-    box-shadow: none;
-}
-
-.mo-theme-hermes-teal-light .theme-card.selected,
-.mo-theme-hermes-teal-dark .theme-card.selected {
-    border: 1px solid var(--mud-palette-primary);
-    background: color-mix(in srgb, var(--mo-hermes-panel) 84%, var(--mo-hermes-accent-soft));
-}
-
-.mo-theme-hermes-teal-light .mo-body-content::-webkit-scrollbar-thumb,
-.mo-theme-hermes-teal-dark .mo-body-content::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--mo-hermes-text) 22%, transparent);
-    border-radius: 0;
-}
-
-.mo-theme-hermes-teal-light .mo-body-content::-webkit-scrollbar-thumb:hover,
-.mo-theme-hermes-teal-dark .mo-body-content::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in srgb, var(--mo-hermes-text) 34%, transparent);
 }

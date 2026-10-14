@@ -137,14 +137,14 @@ public class RuntimeMetricsTrend
     public DateTime? EndTime => DataPoints.Count > 0 ? DataPoints[^1].Timestamp : null;
 
     /// <summary>
-    /// Gets the average GC heap size in mebibytes.
+    /// Gets the average GC heap size in decimal megabytes.
     /// </summary>
     public double AverageHeapSizeMB => DataPoints.Count > 0
         ? DataPoints.Average(p => p.GcHeapSizeMB)
         : 0;
 
     /// <summary>
-    /// Gets the maximum GC heap size in mebibytes.
+    /// Gets the maximum GC heap size in decimal megabytes.
     /// </summary>
     public double MaxHeapSizeMB => DataPoints.Count > 0
         ? DataPoints.Max(p => p.GcHeapSizeMB)

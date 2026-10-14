@@ -1,424 +1,122 @@
-@using System.Web
 @using Monica.UI.UIDiffHighlight.Models
-@using MudBlazor
 @inject IStringLocalizer<SharedResource> L
 
-@if (DiffResult?.Lines?.Any() == true)
-{
-    @if (ViewMode == EDiffViewMode.Split)
+<div class="diff-lines" data-view="@ViewMode" data-display="@DisplayMode">
+    @if (DiffResult?.Lines is { Count: > 0 } lines)
     {
-        @* split view *@        <div class="split-view-container">
-            <div class="split-view-panel split-view-panel-left">
-                <div class="split-view-header">
-                    <MudText Typo="Typo.subtitle2" Class="panel-title">@L["DiffViewer:OriginalContent"]</MudText>
-                </div>
-                @foreach (var line in GetSplitViewLines(true))
-                {
-                    <div class="line @GetSplitLineClass(line, true)">
-                        <div class="line-number">
-                            @(line.OldLineNumber > 0 ? line.OldLineNumber.ToString() : "")
-                        </div>
-                        <div class="split-line-content">
-                            @((MarkupString)GetSplitLineContent(line, true))
-                        </div>
-                    </div>
-                }
-            </div>
-            <div class="split-view-panel split-view-panel-right">
-                <div class="split-view-header">
-                    <MudText Typo="Typo.subtitle2" Class="panel-title">@L["DiffViewer:NewContent"]</MudText>
-                </div>
-                @foreach (var line in GetSplitViewLines(false))
-                {
-                    <div class="line @GetSplitLineClass(line, false)">
-                        <div class="line-number">
-                            @(line.NewLineNumber > 0 ? line.NewLineNumber.ToString() : "")
-                        </div>
-                        <div class="split-line-content">
-                            @((MarkupString)GetSplitLineContent(line, false))
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-    else
-    {
-        @* unified view *@        @foreach (var line in GetUnifiedViewLines())
+        @if (ViewMode == EDiffViewMode.Split)
         {
-            <div class="line @GetLineClass(line.Type)">
-                <div class="line-numbers">
-                    <span class="line-old-number">
-                        @(line.OldLineNumber > 0 ? line.OldLineNumber.ToString() : "")
-                    </span>
-                    <span class="line-new-number">
-                        @(line.NewLineNumber > 0 ? line.NewLineNumber.ToString() : "")
-                    </span>
+            <p class="diff-lines__stacked-hint">@L["DiffViewer:SplitStacked"]</p>
+            <div class="diff-lines__headings" aria-hidden="true"><span>@L["DiffViewer:OriginalContent"]</span><span>@L["DiffViewer:NewContent"]</span></div>
+        }
+        @for (var index = 0; index < lines.Count; index++)
+        {
+            var line = lines[index];
+            @if (ViewMode == EDiffViewMode.Split)
+            {
+                <div class="diff-pair" data-logical-index="@index" data-type="@line.Type" role="group"
+                     aria-label="@(line.Type == EDiffLineType.Modified ? L["DiffViewer:Modified"].Value : null)">
+                    @Cell(line, index, true, line.Type == EDiffLineType.Added, true)
+                    @Cell(line, index, false, line.Type == EDiffLineType.Deleted, true)
                 </div>
-                <div class="line-marker">
-                    @GetLineMarker(line.Type)
+            }
+            else if (DisplayMode == EDiffDisplayMode.Compare && line.Type == EDiffLineType.Modified)
+            {
+                <div class="diff-modified" data-logical-index="@index" data-type="Modified" role="group" aria-label="@L["DiffViewer:Modified"]">
+                    @Cell(line, index, true)
+                    @Cell(line, index, false)
                 </div>
-                <div class="line-content">
-                    @((MarkupString)GetUnifiedLineContent(line))
-                </div>
-            </div>
+            }
+            else if (DisplayMode != EDiffDisplayMode.NewOnly || line.Type != EDiffLineType.Deleted)
+            {
+                @if (DisplayMode != EDiffDisplayMode.OldOnly || line.Type != EDiffLineType.Added)
+                {
+                    var oldSide = DisplayMode == EDiffDisplayMode.OldOnly
+                        || (DisplayMode == EDiffDisplayMode.Compare && line.Type != EDiffLineType.Added);
+                    @Cell(line, index, oldSide, bothNumbers: DisplayMode == EDiffDisplayMode.Compare && line.Type == EDiffLineType.Unchanged)
+                }
+            }
         }
     }
-}
-else
-{
-    <MudAlert Severity="Severity.Info">
-        <MudText>@L["DiffViewer:NoDifferences"]</MudText>
-    </MudAlert>
-}
+</div>
 
 @code {
+    /// <summary>Accepted logical lines and side-specific ranges. Null or no lines renders an empty reader; no work is computed.</summary>
     [Parameter] public DiffHighlightResult? DiffResult { get; set; }
+    /// <summary>
+    /// Accepted settings controlling character-range presentation. Defaults to null (no ranges);
+    /// callers should pass the result's accepted options rather than live draft settings.
+    /// </summary>
     [Parameter] public DiffHighlightOptions? Options { get; set; }
+    /// <summary>Unified by default. Split keeps each logical pair together and stacks that pair below reader width 760px.</summary>
     [Parameter] public EDiffViewMode ViewMode { get; set; } = EDiffViewMode.Unified;
+    /// <summary>Compare by default. Original/updated filtering applies to Unified only; Split always shows both source sides.</summary>
     [Parameter] public EDiffDisplayMode DisplayMode { get; set; } = EDiffDisplayMode.Compare;
 
-    // Get row data of split view
-    private IEnumerable<DiffLine> GetSplitViewLines(bool isOldSide)
-    {
-        if (DiffResult?.Lines == null) return Enumerable.Empty<DiffLine>();
-
-        return DiffResult.Lines.Select(line =>
-        {
-            // Create appropriate row data for split view
-            return line.Type switch
+    private RenderFragment Cell(DiffLine line, int index, bool oldSide, bool absent = false, bool paired = false, bool bothNumbers = false) => @<div
+        class="diff-cell @CellClass(line, oldSide, absent) @(paired ? "diff-cell--paired" : null)"
+        data-side="@(oldSide ? "old" : "new")" data-logical-index="@index" data-type="@line.Type" data-absent="@(absent ? "true" : "false")"
+        role="group" aria-label="@(oldSide ? L["DiffViewer:OriginalContent"] : L["DiffViewer:NewContent"])">
+        <div class="diff-cell__metadata">
+            <span class="diff-cell__side">@(oldSide ? L["DiffViewer:OriginalContent"] : L["DiffViewer:NewContent"])</span>
+            <span class="diff-cell__number" data-side="@(oldSide ? "old" : "new")">@Number(oldSide ? line.OldLineNumber : line.NewLineNumber)</span>
+            @if (bothNumbers)
             {
-                EDiffLineType.Added when isOldSide => new DiffLine 
-                { 
-                    Type = EDiffLineType.Unchanged, 
-                    OldContent = "", 
-                    NewContent = "", 
-                    OldLineNumber = 0, 
-                    NewLineNumber = 0 
-                },
-                EDiffLineType.Deleted when !isOldSide => new DiffLine 
-                { 
-                    Type = EDiffLineType.Unchanged, 
-                    OldContent = "", 
-                    NewContent = "", 
-                    OldLineNumber = 0, 
-                    NewLineNumber = 0 
-                },
-                _ => line
-            };
-        });
-    }
-
-    // Get the style class of the split view row
-    private string GetSplitLineClass(DiffLine line, bool isOldSide)
-    {
-        return line.Type switch
-        {
-            EDiffLineType.Added when !isOldSide => "split-line-added",
-            EDiffLineType.Deleted when isOldSide => "split-line-deleted",
-            EDiffLineType.Modified => isOldSide ? "split-line-modified-old" : "split-line-modified-new",
-            _ => "split-line-unchanged"
-        };
-    }
-
-    // Get the contents of the split view row
-    private string GetSplitLineContent(DiffLine line, bool isOldSide)
-    {
-        // Blank line processing
-        if (line is { OldLineNumber: 0, NewLineNumber: 0})
-        {
-            return "&nbsp;";
-        }
-
-        var content = isOldSide ? line.OldContent : line.NewContent;
-        
-        // If character-level comparison is enabled and character-level difference information is available
-        if (Options?.Mode is EDiffHighlightMode.Character or EDiffHighlightMode.Mixed 
-            && line.CharacterDiffs?.Any() == true)
-        {
-            return RenderSplitCharacterDiffs(content, line.CharacterDiffs, isOldSide);
-        }
-
-        return HttpUtility.HtmlEncode(content);
-    }
-
-    // Character-level differences in rendering split views
-    private string RenderSplitCharacterDiffs(string content, List<DiffCharacterRange> characterDiffs, bool isOldSide)
-    {
-        if (string.IsNullOrEmpty(content)) return "&nbsp;";
-        if (!characterDiffs.Any()) return HttpUtility.HtmlEncode(content);
-
-        // We need different logic for old side and new side
-        if (isOldSide)
-        {
-            // Old side: only handles deleted and modified characters, added characters do not affect the display of old content
-            return RenderOldSideCharacterDiffs(content, characterDiffs);
-        }
-        else
-        {
-            // New side: Only added and modified characters are processed. Deleted characters do not affect the display of new content.
-            return RenderNewSideCharacterDiffs(content, characterDiffs);
-        }
-    }
-
-    private string RenderOldSideCharacterDiffs(string content, List<DiffCharacterRange> characterDiffs)
-    {
-        var result = new System.Text.StringBuilder();
-        var lastIndex = 0;
-
-        // Only handles deletion and modification type differences that actually exist in the old content
-        var relevantDiffs = characterDiffs
-            .Where(d => d.Type == EDiffLineType.Deleted || d.Type == EDiffLineType.Modified)
-            .Where(d => d.Start >= 0 && d.Start < content.Length)
-            .OrderBy(d => d.Start)
-            .ToList();
-
-        foreach (var diff in relevantDiffs)
-        {
-            // Add unchanged parts
-            if (diff.Start > lastIndex && lastIndex < content.Length)
+                <span class="diff-cell__number" data-side="new" title="@L["DiffViewer:NewContent"]">@Number(line.NewLineNumber)</span>
+            }
+            <span class="diff-cell__marker" aria-hidden="true">@Marker(line, oldSide, absent)</span>
+        </div>
+        <div class="diff-cell__content">
+            <code class="diff-source" data-side="@(oldSide ? "old" : "new")" data-logical-index="@index"
+                  data-line-number="@(oldSide ? line.OldLineNumber : line.NewLineNumber)">@Source(line, oldSide, absent)</code>
+            @if (absent)
             {
-                var length = Math.Min(diff.Start - lastIndex, content.Length - lastIndex);
-                if (length > 0)
+                <span class="diff-cell__absence">@L["DiffViewer:Absent"]</span>
+            }
+        </div>
+    </div>;
+
+    private static string Number(int number) => number > 0 ? number.ToString() : string.Empty;
+    private static string CellClass(DiffLine line, bool oldSide, bool absent) => absent ? "diff-cell--absent" : line.Type switch
+    {
+        EDiffLineType.Added => "diff-cell--added",
+        EDiffLineType.Deleted => "diff-cell--deleted",
+        EDiffLineType.Modified => oldSide ? "diff-cell--deleted" : "diff-cell--added",
+        _ => "diff-cell--unchanged"
+    };
+    private static string Marker(DiffLine line, bool oldSide, bool absent) => absent ? string.Empty : line.Type switch
+    {
+        EDiffLineType.Added => "+",
+        EDiffLineType.Deleted => "−",
+        EDiffLineType.Modified => oldSide ? "−" : "+",
+        _ => string.Empty
+    };
+
+    private RenderFragment Source(DiffLine line, bool oldSide, bool absent) => builder =>
+    {
+        var content = absent ? string.Empty : oldSide ? line.OldContent : line.NewContent;
+        var cursor = 0;
+        if (Options?.Mode is EDiffHighlightMode.Character or EDiffHighlightMode.Mixed && line.CharacterDiffs is { } ranges)
+        {
+            // Every range is interpreted in its own source side's coordinates; text comes from that side.
+            foreach (var range in ranges.Where(range => oldSide
+                         ? range.Type is EDiffLineType.Deleted or EDiffLineType.Modified
+                         : range.Type is EDiffLineType.Added or EDiffLineType.Modified).OrderBy(range => range.Start))
+            {
+                var start = Math.Clamp(range.Start, cursor, content.Length);
+                var end = (int)Math.Clamp((long)range.Start + range.Length, start, content.Length);
+                if (start > cursor) builder.AddContent(0, content[cursor..start]);
+                if (end > start)
                 {
-                    result.Append(HttpUtility.HtmlEncode(content.Substring(lastIndex, length)));
+                    builder.OpenElement(1, "span");
+                    builder.AddAttribute(2, "class", oldSide ? "diff-range-deleted" : "diff-range-added");
+                    builder.AddContent(3, content[start..end]);
+                    builder.CloseElement();
                 }
-            }
-
-            // Calculate the actual difference range
-            var diffEnd = Math.Min(diff.Start + diff.Length, content.Length);
-            if (diffEnd > diff.Start)
-            {
-                var actualContent = content.Substring(diff.Start, diffEnd - diff.Start);
-                result.Append($"<span class=\"char-modified-old\">");
-                result.Append(HttpUtility.HtmlEncode(actualContent));
-                result.Append("</span>");
-            }
-
-            lastIndex = diffEnd;
-        }
-
-        // add remaining part
-        if (lastIndex < content.Length)
-        {
-            result.Append(HttpUtility.HtmlEncode(content[lastIndex..]));
-        }
-
-        return result.ToString();
-    }
-
-    private string RenderNewSideCharacterDiffs(string content, List<DiffCharacterRange> characterDiffs)
-    {
-        var result = new System.Text.StringBuilder();
-        var lastIndex = 0;
-
-        // Only add and modify type differences are handled, and those differences actually exist in the new content
-        var relevantDiffs = characterDiffs
-            .Where(d => d.Type == EDiffLineType.Added || d.Type == EDiffLineType.Modified)
-            .Where(d => d.Start >= 0 && d.Start < content.Length)
-            .OrderBy(d => d.Start)
-            .ToList();
-
-        foreach (var diff in relevantDiffs)
-        {
-            // Add unchanged parts
-            if (diff.Start > lastIndex && lastIndex < content.Length)
-            {
-                var length = Math.Min(diff.Start - lastIndex, content.Length - lastIndex);
-                if (length > 0)
-                {
-                    result.Append(HttpUtility.HtmlEncode(content.Substring(lastIndex, length)));
-                }
-            }
-
-            // Calculate the actual difference range
-            var diffEnd = Math.Min(diff.Start + diff.Length, content.Length);
-            if (diffEnd > diff.Start)
-            {
-                var actualContent = content.Substring(diff.Start, diffEnd - diff.Start);
-                result.Append($"<span class=\"char-modified-new\">");
-                result.Append(HttpUtility.HtmlEncode(actualContent));
-                result.Append("</span>");
-            }
-
-            lastIndex = diffEnd;
-        }
-
-        // add remaining part
-        if (lastIndex < content.Length)
-        {
-            result.Append(HttpUtility.HtmlEncode(content[lastIndex..]));
-        }
-
-        return result.ToString();
-    }
-
-    // Get the row data of the unified view (filtered according to DisplayMode)
-    private IEnumerable<DiffLine> GetUnifiedViewLines()
-    {
-        if (DiffResult?.Lines == null) return Enumerable.Empty<DiffLine>();
-
-        return DisplayMode switch
-        {
-            EDiffDisplayMode.NewOnly => DiffResult.Lines.Where(line => 
-                line.Type is EDiffLineType.Added or EDiffLineType.Modified or EDiffLineType.Unchanged),
-            EDiffDisplayMode.OldOnly => DiffResult.Lines.Where(line => 
-                line.Type is EDiffLineType.Deleted or EDiffLineType.Modified or EDiffLineType.Unchanged),
-            _ => DiffResult.Lines
-        };
-    }
-
-    // Get the content of the unified view row (adjust the content according to DisplayMode)
-    private string GetUnifiedLineContent(DiffLine line)
-    {
-        // Select displayed content based on DisplayMode.
-        var content = DisplayMode switch
-        {
-            EDiffDisplayMode.NewOnly => line.NewContent,
-            EDiffDisplayMode.OldOnly => line.OldContent,
-            _ => line.Type switch
-            {
-                EDiffLineType.Added => line.NewContent,
-                EDiffLineType.Deleted => line.OldContent,
-                EDiffLineType.Modified => line.NewContent,
-                _ => line.OldContent
-            }
-        };
-
-        // If character-level comparison is enabled and there is character-level difference information, and the comparison mode is
-        if (DisplayMode == EDiffDisplayMode.Compare && 
-            Options?.Mode is EDiffHighlightMode.Character or EDiffHighlightMode.Mixed 
-            && line.CharacterDiffs?.Any() == true)
-        {
-            return RenderCharacterDiffs(content, line.CharacterDiffs);
-        }
-        
-        // For new value/old value mode, use special rendering if there are character level differences
-        if (DisplayMode is EDiffDisplayMode.NewOnly or EDiffDisplayMode.OldOnly &&
-            line.CharacterDiffs?.Any() == true)
-        {
-            var isNewOnly = DisplayMode == EDiffDisplayMode.NewOnly;
-            return RenderSplitCharacterDiffs(content, line.CharacterDiffs, !isNewOnly);
-        }
-
-        return HttpUtility.HtmlEncode(content);
-    }
-
-    private string RenderCharacterDiffs(string content, List<DiffCharacterRange> characterDiffs)
-    {
-        if (string.IsNullOrEmpty(content)) return string.Empty;
-        if (!characterDiffs.Any()) return HttpUtility.HtmlEncode(content);
-        
-        var result = new System.Text.StringBuilder();
-        var contentIndex = 0;
-
-        // Sort by starting position, but require special handling of relative positions for deletions and additions
-        var sortedDiffs = characterDiffs.OrderBy(d => d.Start).ThenBy(d => d.Type == EDiffLineType.Deleted ? 0 : 1).ToList();
-
-        foreach (var diff in sortedDiffs)
-        {
-            // For deletion type differences, show what was deleted
-            if (diff.Type == EDiffLineType.Deleted)
-            {
-                // Add the unchanged content before the deleted location
-                if (diff.Start > contentIndex && contentIndex < content.Length)
-                {
-                    var length = Math.Min(diff.Start - contentIndex, content.Length - contentIndex);
-                    if (length > 0)
-                    {
-                        result.Append(HttpUtility.HtmlEncode(content.Substring(contentIndex, length)));
-                        contentIndex += length;
-                    }
-                }
-
-                // Show deleted content
-                var diffContent = diff.Content ?? "";
-                if (!string.IsNullOrEmpty(diffContent))
-                {
-                    result.Append($"<span class=\"char-deleted\">");
-                    result.Append(HttpUtility.HtmlEncode(diffContent));
-                    result.Append("</span>");
-                }
-                // For deleted segments, do not advance contentIndex because this content is absent from the new text.
-            }
-            // For added type differences, show what was added
-            else if (diff.Type == EDiffLineType.Added)
-            {
-                // Add unchanged content before adding location
-                if (diff.Start > contentIndex && contentIndex < content.Length)
-                {
-                    var length = Math.Min(diff.Start - contentIndex, content.Length - contentIndex);
-                    if (length > 0)
-                    {
-                        result.Append(HttpUtility.HtmlEncode(content.Substring(contentIndex, length)));
-                        contentIndex += length;
-                    }
-                }
-
-                // Show added content
-                var diffContent = diff.Content ?? "";
-                result.Append($"<span class=\"char-added\">");
-                result.Append(HttpUtility.HtmlEncode(diffContent));
-                result.Append("</span>");
-
-                // Adding a type requires skipping the corresponding part of the new content
-                var diffEnd = Math.Min(diff.Start + diff.Length, content.Length);
-                contentIndex = Math.Max(contentIndex, diffEnd);
-            }
-            // Differences in modification types
-            else if (diff.Type == EDiffLineType.Modified)
-            {
-                // Add unchanged content before modifying the position
-                if (diff.Start > contentIndex && contentIndex < content.Length)
-                {
-                    var length = Math.Min(diff.Start - contentIndex, content.Length - contentIndex);
-                    if (length > 0)
-                    {
-                        result.Append(HttpUtility.HtmlEncode(content.Substring(contentIndex, length)));
-                        contentIndex += length;
-                    }
-                }
-
-                // Show modified content
-                var diffContent = diff.Content ?? "";
-                result.Append($"<span class=\"char-added\">");
-                result.Append(HttpUtility.HtmlEncode(diffContent));
-                result.Append("</span>");
-
-                // Skip modified parts of new content
-                var diffEnd = Math.Min(diff.Start + diff.Length, content.Length);
-                contentIndex = Math.Max(contentIndex, diffEnd);
+                cursor = end;
             }
         }
-
-        // Add remaining unchanged content
-        if (contentIndex < content.Length)
-        {
-            result.Append(HttpUtility.HtmlEncode(content[contentIndex..]));
-        }
-
-        return result.ToString();
-    }
-
-    private string GetLineClass(EDiffLineType type)
-    {
-        return type switch
-        {
-            EDiffLineType.Added => "line-added",
-            EDiffLineType.Deleted => "line-deleted",
-            EDiffLineType.Modified => "line-modified",
-            _ => "line-unchanged"
-        };
-    }
-
-    private string GetLineMarker(EDiffLineType type)
-    {
-        return type switch
-        {
-            EDiffLineType.Added => "+",
-            EDiffLineType.Deleted => "-",
-            EDiffLineType.Modified => "~",
-            _ => " "
-        };
-    }
+        // AddContent encodes all raw source fragments, including a genuinely empty source line.
+        builder.AddContent(4, content[cursor..]);
+    };
 }

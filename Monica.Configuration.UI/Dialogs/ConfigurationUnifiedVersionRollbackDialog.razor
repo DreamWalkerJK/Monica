@@ -1,91 +1,77 @@
+@using Monica.UI.Shared.Components.Dialogs
 @inject ConfigurationFacade Facade
 @inject IStringLocalizer<ConfigurationUIResource> L
-@implements IDisposable
+@implements IAsyncDisposable
 
-<MudDialog>
+<MudDialog ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent><MoDialogHeading Text="@L["Versions:Rollback:Title", VersionLabel]" /></TitleContent>
     <DialogContent>
-        <div class="configuration-unified-version-rollback-dialog-content">
-            <MudStack Spacing="3">
-                @if (_loading)
-                {
-                    <MudProgressLinear Indeterminate="true" />
-                }
-                else
-                {
-                    @if (!string.IsNullOrWhiteSpace(_error))
-                    {
-                        <MudAlert Severity="Severity.Error">@_error</MudAlert>
-                    }
-
+        <div class="unified-version-rollback-dialog">
+            <header class="unified-version-rollback-context">
+                <MudIcon Icon="@Icons.Material.Outlined.Restore" />
+                <div>
+                    <h3>@VersionLabel</h3>
                     @if (_preview is not null)
                     {
-                        <MudAlert Severity="@PreviewMessageSeverity" Variant="Variant.Outlined">
-                            @PreviewMessage
-                        </MudAlert>
-
-                        <ConfigurationUnifiedVersionRollbackPreview Preview="_preview" />
-
-                        <MudTextField T="string"
-                                      @bind-Value="_reason"
-                                      Label="@L["Group:Reason"]"
-                                      Variant="Variant.Outlined"
-                                      Lines="2"
-                                      Disabled="_saving" />
+                        <dl><div><dt>@L["Versions:Rollback:Fields:PreviewFingerprint"]</dt><dd><code>@_preview.PreviewFingerprint</code></dd></div></dl>
                     }
-                }
-            </MudStack>
+                </div>
+            </header>
+            @if (_loading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+            }
+            @if (_preview is not null)
+            {
+                <MudAlert Severity="@PreviewMessageSeverity" Variant="Variant.Outlined">@PreviewMessage</MudAlert>
+                <ConfigurationUnifiedVersionRollbackPreview Preview="@_preview" LoadingChanged="OnPreviewLoadingChanged" />
+                <div class="unified-version-rollback-reason">
+                    <MudTextField T="string" @bind-Value="_reason" Label="@L["Group:Reason"]" Variant="Variant.Outlined" Lines="2" Disabled="@(_saving || _reloading)" />
+                </div>
+            }
+            @if (_saving || _reloading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Disabled="@(_saving || _reloading)">@L["Common:Actions:Cancel"]</MudButton>
-        @if (HasRuntimeOutOfSync)
-        {
-            <MudButton Color="Color.Warning"
-                       Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.Sync"
-                       OnClick="ReloadAndRefreshAsync"
-                       Disabled="@(_loading || _saving || _reloading)">
-                @L["Versions:Rollback:Actions:ReloadAndRefresh"]
-            </MudButton>
-        }
-        <MudButton Variant="Variant.Text"
-                   StartIcon="@Icons.Material.Filled.Refresh"
-                   OnClick="() => LoadPreviewAsync()"
-                   Disabled="@(_loading || _saving || _reloading)">
-            @L["Common:Actions:Refresh"]
-        </MudButton>
-        <MudButton Color="Color.Warning"
-                   Variant="Variant.Filled"
-                   StartIcon="@Icons.Material.Filled.Restore"
-                   OnClick="ApplyAsync"
-                   Disabled="@(!CanApply)">
-            @ApplyActionText
-        </MudButton>
+        <div class="unified-version-rollback-actions">
+            <MudButton OnClick="Cancel" Disabled="@(_saving || _reloading)">@L["Common:Actions:Cancel"]</MudButton>
+            @if (HasRuntimeOutOfSync)
+            {
+                <MudButton Color="Color.Default" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Sync"
+                           OnClick="ReloadAndRefreshAsync" Disabled="@(_loading || _saving || _reloading)">
+                    @L["Versions:Rollback:Actions:ReloadAndRefresh"]
+                </MudButton>
+            }
+            <MudButton StartIcon="@Icons.Material.Outlined.Refresh" OnClick="RefreshPreviewAsync" Disabled="@(_loading || _saving || _reloading)">@L["Common:Actions:Refresh"]</MudButton>
+            <MudButton Color="Color.Default" Variant="Variant.Filled" Class="unified-version-rollback-apply" StartIcon="@Icons.Material.Outlined.Restore"
+                       OnClick="ApplyAsync" Disabled="@(!CanApply)">@L["Versions:Rollback:Actions:Apply"]</MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    /// <summary>Gets the exact unified version frozen when this native rollback dialog initializes.</summary>
     [Parameter] public long Version { get; set; }
-
+    private readonly ConfigurationOperationLifetime _operations = new();
     private ConfigurationUnifiedVersionApplyPreview? _preview;
+    private long _version;
     private string? _reason;
     private string? _error;
     private bool _loading = true;
+    private bool _loadingPreviewDetails = true;
     private bool _saving;
     private bool _reloading;
-    private bool _disposed;
-    private long _previewGeneration;
-    private readonly CancellationTokenSource _lifetime = new();
-    private CancellationTokenSource? _previewCancellation;
-
-    private bool CanApply =>
-        !_disposed && !_loading && !_saving && !_reloading && _preview?.CanApply == true;
-
-    private bool HasRuntimeOutOfSync => _preview?.Targets.Any(static target =>
-        target.Status == ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync) == true;
-
-    private string ApplyActionText => L["Versions:Rollback:Actions:Apply"];
+    private string VersionLabel => ConfigurationUnifiedVersionJsonFormatter.VersionLabel(_version);
+    private bool CanApply => !_operations.IsRetired && !_loading && !_loadingPreviewDetails && !_saving && !_reloading && _preview?.CanApply == true;
+    private bool HasRuntimeOutOfSync => _preview?.Targets.Any(static target => target.Status == ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync) == true;
 
     private Severity PreviewMessageSeverity => _preview switch
     {
@@ -97,7 +83,6 @@
         { CompatibleSchemaDriftCount: > 0 } => Severity.Info,
         _ => Severity.Success
     };
-
     private string PreviewMessage => _preview switch
     {
         { } preview when preview.ValidationReports.Any(report => report.Coverage == ConfigurationValidationCoverage.Failed) => L["Validation:FailedNotice"],
@@ -105,146 +90,121 @@
         { } preview when preview.ValidationReports.Any(report => !report.IsValid) => L["Validation:Invalid"],
         { } preview when preview.Problems.Count > 0 => L["Validation:PreviewBlocked"],
         { BlockedCount: > 0 } => L["Versions:Rollback:Messages:Blocked"],
-        { HasChanges: false, SkippedCount: > 0 } => L["Versions:Rollback:Messages:NoChangesSkipped", _preview.SkippedCount],
+        { HasChanges: false, SkippedCount: > 0 } preview => L["Versions:Rollback:Messages:NoChangesSkipped", preview.SkippedCount],
         { HasChanges: false } => L["Versions:Rollback:Messages:NoChanges"],
-        { SkippedCount: > 0 } => L["Versions:Rollback:Messages:Skipped", _preview.SkippedCount],
+        { SkippedCount: > 0 } preview => L["Versions:Rollback:Messages:Skipped", preview.SkippedCount],
         { CompatibleSchemaDriftCount: > 0 } => L["Versions:Rollback:Messages:CompatibleSchemaDrift"],
         _ => L["Versions:Rollback:Messages:Ready"]
     };
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadPreviewAsync();
+        _version = Version;
+        await RunOwnedAsync(token => LoadPreviewCoreAsync(token));
     }
+    private Task RefreshPreviewAsync() => _loading || _saving || _reloading || _operations.IsRetired
+        ? Task.CompletedTask : RunOwnedAsync(token => LoadPreviewCoreAsync(token));
 
-    private async Task LoadPreviewAsync(bool preserveError = false)
+    private async Task LoadPreviewCoreAsync(CancellationToken token, bool preserveError = false)
     {
-        if (_disposed)
-        {
-            return;
-        }
-
-        var generation = ++_previewGeneration;
-        _previewCancellation?.Cancel();
-        _previewCancellation?.Dispose();
-        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
-        _previewCancellation = cancellation;
+        token.ThrowIfCancellationRequested();
         _loading = true;
-        if (!preserveError)
-        {
-            _error = null;
-        }
+        _loadingPreviewDetails = true;
+        if (!preserveError) _error = null;
         _preview = null;
         try
         {
-            var result = await Facade.PreviewUnifiedVersionRollbackAsync(Version, cancellation.Token);
-            if (_disposed || generation != _previewGeneration)
+            var result = await Facade.PreviewUnifiedVersionRollbackAsync(_version, token);
+            token.ThrowIfCancellationRequested();
+            _operations.TryApply(() =>
             {
-                return;
-            }
-
-            if (result.IsFailed(out var error, out var preview))
-            {
-                _error = preserveError && !string.IsNullOrWhiteSpace(_error)
-                    ? $"{_error}{Environment.NewLine}{error.Message}" : error.Message;
-                _preview = result.Data;
-                return;
-            }
-
-            _preview = preview;
+                if (result.IsFailed(out var error, out var preview))
+                {
+                    _error = preserveError && !string.IsNullOrWhiteSpace(_error) ? $"{_error}{Environment.NewLine}{error.Message}" : error.Message;
+                    _preview = result.Data;
+                }
+                else _preview = preview;
+            });
         }
-        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-        {
-        }
-        finally
-        {
-            if (!_disposed && generation == _previewGeneration)
-            {
-                _loading = false;
-            }
-        }
+        finally { _operations.TryApply(() => _loading = false); }
     }
 
     private async Task ApplyAsync()
     {
-        if (!CanApply || _preview is null)
+        if (!CanApply || _preview is null) return;
+        var request = new ConfigurationUnifiedVersionRollbackRequest
         {
-            return;
-        }
-
+            Version = _version, PreviewFingerprint = _preview.PreviewFingerprint, Reason = _reason
+        };
+        var options = MudDialog.Options;
         _saving = true;
         _error = null;
-        try
+        await RunOwnedAsync(async token =>
         {
-            var result = await Facade.RollbackUnifiedVersionAsync(new ConfigurationUnifiedVersionRollbackRequest
+            var closed = false;
+            try
             {
-                Version = Version,
-                PreviewFingerprint = _preview.PreviewFingerprint,
-                Reason = _reason
-            });
-            if (_disposed)
-            {
-                return;
+                await MudDialog.SetOptionsAsync(options with { BackdropClick = false, CloseOnEscapeKey = false, CloseButton = false });
+                token.ThrowIfCancellationRequested();
+                // Apply is tokenless: retirement joins its actual outcome and cannot reverse persistence.
+                var result = await Facade.RollbackUnifiedVersionAsync(request);
+                if (_operations.IsRetired) return;
+                if (result.IsFailed(out var error, out var rollback))
+                {
+                    _error = error.Message;
+                    await LoadPreviewCoreAsync(token, preserveError: true);
+                    return;
+                }
+                MudDialog.Close(DialogResult.Ok(rollback));
+                closed = true;
             }
-
-            if (result.IsFailed(out var error, out var rollback))
+            finally
             {
-                _error = error.Message;
-                await LoadPreviewAsync(preserveError: true);
-                return;
+                if (!_operations.IsRetired && !closed)
+                {
+                    try { await MudDialog.SetOptionsAsync(options); }
+                    finally { _operations.TryApply(() => _saving = false); }
+                }
             }
-
-            MudDialog.Close(DialogResult.Ok(rollback));
-        }
-        finally
-        {
-            if (!_disposed)
-            {
-                _saving = false;
-            }
-        }
+        });
     }
 
     private async Task ReloadAndRefreshAsync()
     {
+        if (_operations.IsRetired || _loading || _saving || _reloading || !HasRuntimeOutOfSync) return;
+        var options = MudDialog.Options;
         _reloading = true;
         _error = null;
-        try
+        await RunOwnedAsync(async token =>
         {
-            var result = await Facade.ReloadRuntimeConfigurationAsync();
-            if (_disposed)
+            try
             {
-                return;
+                await MudDialog.SetOptionsAsync(options with { BackdropClick = false, CloseOnEscapeKey = false, CloseButton = false });
+                token.ThrowIfCancellationRequested();
+                var result = await Facade.ReloadRuntimeConfigurationAsync();
+                if (_operations.IsRetired) return;
+                if (result.IsFailed(out var error, out _)) { _error = error.Message; return; }
+                await LoadPreviewCoreAsync(token);
             }
-            if (result.IsFailed(out var error, out _))
+            finally
             {
-                _error = error.Message;
-                return;
+                if (!_operations.IsRetired)
+                {
+                    try { await MudDialog.SetOptionsAsync(options); }
+                    finally { _operations.TryApply(() => _reloading = false); }
+                }
             }
-
-            await LoadPreviewAsync();
-        }
-        finally
-        {
-            if (!_disposed)
-            {
-                _reloading = false;
-            }
-        }
+        });
     }
-
-    private void Cancel()
+    private async Task RunOwnedAsync(Func<CancellationToken, Task> action)
     {
-        MudDialog.Cancel();
+        try { await _operations.RunAsync(action); }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+        catch (Exception exception) when (!_operations.IsRetired) { _error = exception.Message; }
     }
-
-    public void Dispose()
-    {
-        _disposed = true;
-        ++_previewGeneration;
-        _previewCancellation?.Cancel();
-        _previewCancellation?.Dispose();
-        _lifetime.Cancel();
-        _lifetime.Dispose();
-    }
+    private void OnPreviewLoadingChanged(bool loading) => _operations.TryApply(() => _loadingPreviewDetails = loading);
+    private void Cancel() { if (!_operations.IsRetired && !_saving && !_reloading) MudDialog.Cancel(); }
+    /// <summary>Rejects new work and joins actual preview reads, runtime reload and tokenless rollback apply.</summary>
+    /// <remarks>Repeated disposal joins the same completion. Persistence is not cancelled or reversed, and no late native UI is adopted.</remarks>
+    public ValueTask DisposeAsync() => _operations.RetireAsync();
 }

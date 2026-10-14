@@ -15,7 +15,7 @@ from check_mudblazor_source import (
     print_failure_details,
     resolve_mudblazor_source,
 )
-from mudblazor_skill_state import VARIABLES_JSON_FILE, ensure_state_dir
+from mudblazor_skill_state import VARIABLES_JSON_FILE
 
 OUTPUT_JSON = VARIABLES_JSON_FILE
 CONST_PATTERN = re.compile(r'private const string\s+(\w+)\s*=\s*"([^"]+)";')
@@ -59,7 +59,14 @@ def main() -> int:
         description="Initialize or update MudBlazor CSS variable JSON from MudBlazor source."
     )
     parser.add_argument("--force", action="store_true", help="Rewrite JSON even when unchanged.")
+    parser.add_argument(
+        "--output-json", type=Path, default=OUTPUT_JSON,
+        help="Catalog destination; defaults to the Monica repository cache when available.",
+    )
     args = parser.parse_args()
+    if args.output_json is None:
+        parser.error("No Monica repository default; pass --output-json <catalog-path>.")
+    output_json = args.output_json.expanduser().resolve()
 
     resolution = resolve_mudblazor_source()
     if not resolution.is_available:
@@ -87,19 +94,19 @@ def main() -> int:
     }
     json_content = json.dumps(payload, indent=2) + "\n"
 
-    mode = "initialized" if not OUTPUT_JSON.exists() else "updated"
-    ensure_state_dir()
+    mode = "initialized" if not output_json.exists() else "updated"
+    output_json.parent.mkdir(parents=True, exist_ok=True)
     if args.force:
-        OUTPUT_JSON.write_text(json_content, encoding="utf-8")
+        output_json.write_text(json_content, encoding="utf-8")
     else:
-        current_json = OUTPUT_JSON.read_text(encoding="utf-8") if OUTPUT_JSON.exists() else None
+        current_json = output_json.read_text(encoding="utf-8") if output_json.exists() else None
         if current_json != json_content:
-            OUTPUT_JSON.write_text(json_content, encoding="utf-8")
+            output_json.write_text(json_content, encoding="utf-8")
 
     print(f"[OK] MudBlazor CSS variable JSON {mode}.")
     print(f"Source root: {resolved_root}")
     print(f"Variable count: {len(variables)}")
-    print(f"JSON: {OUTPUT_JSON}")
+    print(f"JSON: {output_json}")
 
     return 0
 

@@ -1,0 +1,17 @@
+@inject IStringLocalizer<EventBusKafkaResource> L
+<dl class="kafka-dialog-context">
+    @if (!string.IsNullOrWhiteSpace(ClusterId))
+    {
+        <div><dt>@L["Common:Labels:ClusterId"]</dt><dd>@ClusterId</dd></div>
+    }
+    @if (!string.IsNullOrWhiteSpace(TopicName))
+    {
+        <div><dt>@L["Common:Labels:Topic"]</dt><dd>@TopicName</dd></div>
+    }
+</dl>
+@code {
+    /// <summary>Gets or sets the exact cluster identity frozen when this dialog was opened.</summary>
+    [Parameter] public string? ClusterId { get; set; }
+    /// <summary>Gets or sets the exact topic identity frozen when this dialog was opened.</summary>
+    [Parameter] public string? TopicName { get; set; }
+}

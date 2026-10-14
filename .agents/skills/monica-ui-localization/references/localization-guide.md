@@ -161,7 +161,8 @@ module.Require<ModuleShellUI, ModuleShellUIOption>(
         var categoryId = registry.RegisterLocalizedCategory<ExampleResource>(
             "Contoso.Monica.Example",
             "Navigation:Category",
-            order: 450);
+            order: 450,
+            descriptionKey: "Navigation:CategoryDescription");
 
         registry.RegisterLocalizedPage<UIExamplePage, ExampleResource>(
             UIExamplePage.PAGE_URL,
@@ -169,7 +170,8 @@ module.Require<ModuleShellUI, ModuleShellUIOption>(
             Icons.Material.Filled.Extension,
             categoryId,
             addToNav: true,
-            navOrder: 10);
+            navOrder: 10,
+            descriptionKey: "Navigation:PageDescription");
     }));
 ```
 
@@ -331,10 +333,15 @@ python scripts/validate_localization.py --json
 
 ### Validation Checks
 
+Discovery excludes exact generated or archive directory names below the requested root, including `.evidence`.
+Immutable evidence copies of projects, source files, and resources cannot define live resource identities or
+satisfy current key usages. Live `.ui-design` bridge projects remain in scope; similarly named directories such
+as `.evidence-copy` are not excluded. Exclusions do not apply to parent directories of an explicit `--root`.
+
 1. **Missing keys** (ERROR): Keys used in Razor or C# but not defined in JSON
 2. **Unused keys** (WARNING): Keys defined in JSON but never used
 3. **Language sync** (ERROR): Keys in one language but not another
-4. **Navigation registration keys** (ERROR): Every page/category key must resolve from its explicitly declared module resource
+4. **Navigation registration keys** (ERROR): Page/category labels and optional `descriptionKey` values must resolve from their explicitly declared module resource; named and positional description arguments are checked
 5. **Navigation resource registration** (ERROR): Every page/category resource must be registered through `AddResource<TResource>()`
 6. **Legacy navigation API** (ERROR): `RegisterLocalizedComponent` and an implicit resource type are rejected
 

@@ -45,10 +45,11 @@ public class ModuleExecutionTimingUI : MonicaModule<ModuleExecutionTimingUIOptio
                 registry.RegisterLocalizedPage<UIExecutionTimingPage, ExecutionTimingResource>(
                     UIExecutionTimingPage.PAGE_URL,
                     "Pages:ExecutionTiming:Title",
-                    Icons.Material.Filled.Timer,
+                    Icons.Material.Outlined.Timer,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
-                    navOrder: 30)));
+                    navOrder: 30,
+                    descriptionKey: "Page:Subtitle")));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleExecutionTimingUIOption> context)
@@ -64,7 +65,8 @@ public class ModuleExecutionTimingUIOption : ModuleOptions<ModuleExecutionTiming
 {
     /// <summary>
     /// Controls the automatic refresh interval of the execution-timing page in milliseconds.
-    /// Set this to 0 to disable timer-based refresh and require manual refresh only.
+    /// The default is 2000 milliseconds. A non-positive value disables timer-based refresh
+    /// and makes the page manual-only. Pausing page refresh does not pause recording.
     /// </summary>
     public int AutoRefreshIntervalMs { get; set; } = 2000;
 }

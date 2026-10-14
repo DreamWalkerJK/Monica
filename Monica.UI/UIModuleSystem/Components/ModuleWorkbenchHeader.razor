@@ -8,44 +8,35 @@
 
 <header class="workbench-header">
     <div class="workbench-title-block">
-        <MudText Typo="Typo.overline">@L["Page:Eyebrow"]</MudText>
-        <div class="workbench-title-line">
-            <MudText Typo="Typo.h4" HtmlTag="h1">@L["Page:Title"]</MudText>
-            @if (Session.Snapshot is { } snapshot)
-            {
-                <MudChip T="string"
-                         Size="Size.Small"
-                         Variant="Variant.Filled"
-                         Color="@OutcomeColor(snapshot.Outcome)">
-                    @(snapshot.IsFinal ? L["Common:Final"] : L["Common:Live"])
-                    · @ModuleDiagnosticsDisplay.Outcome(snapshot.Outcome, L)
-                </MudChip>
-            }
-        </div>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+        <span class="workbench-eyebrow">@L["Page:Eyebrow"]</span>
+        <h1>@L["Page:Title"]</h1>
+        <p>@L["Page:Subtitle"]</p>
+        @if (Session.Snapshot is { } current)
+        {
+            <div class="workbench-identity" aria-label="@L["Aria:SnapshotIdentity"]">
+                <span class="workbench-outcome workbench-outcome--@OutcomeColor(current.Outcome).ToString().ToLowerInvariant()">
+                    <i aria-hidden="true"></i>
+                    @(current.IsFinal ? L["Common:Final"] : L["Common:Live"])
+                    · @ModuleDiagnosticsDisplay.Outcome(current.Outcome, L)
+                </span>
+                <span class="workbench-revision">@L["Common:Revision"] <strong>#@current.Revision</strong></span>
+                <IdentifierValue Value="@current.CompositionId" />
+            </div>
+        }
     </div>
-
-    @if (Session.Snapshot is { } current)
-    {
-        <div class="workbench-identity" aria-label="@L["Aria:SnapshotIdentity"]">
-            <span>@L["Common:Revision"]</span>
-            <strong>#@current.Revision</strong>
-            <IdentifierValue Value="@current.CompositionId" />
-        </div>
-    }
 
     <div class="workbench-actions">
         <label class="baseline-file-button">
-            <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Outlined.CompareArrows" Size="Size.Small" />
             <span>@L["Actions:ImportBaseline"]</span>
             <InputFile OnChange="@BaselineSelected" accept="application/json,.json" />
         </label>
         <MudButton Variant="Variant.Outlined"
-                   StartIcon="@Icons.Material.Filled.Download"
+                   StartIcon="@Icons.Material.Outlined.Download"
                    OnClick="@ExportRequested">
             @L["Actions:Export"]
         </MudButton>
-        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+        <MudIconButton Icon="@Icons.Material.Outlined.Refresh"
                        Color="Color.Primary"
                        OnClick="@RefreshRequested"
                        Disabled="@(Session.LoadState == ModuleSystemWorkbenchLoadState.Refreshing)"

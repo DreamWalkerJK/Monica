@@ -1,0 +1,15 @@
+.kafka-dialog-body {
+    padding: 20px;
+    min-width: 0;
+}
+
+.kafka-dialog-body ::deep .mud-input-label.mud-input-error,
+.kafka-dialog-body ::deep .mud-input-helper-text.mud-input-error {
+    color: color-mix(in srgb, var(--mud-palette-error) 45%, var(--mud-palette-text-primary)) !important;
+}
+
+@media (max-width: 600px) {
+    .kafka-dialog-body {
+        padding: 16px;
+    }
+}

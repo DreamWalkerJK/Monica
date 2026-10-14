@@ -5,10 +5,11 @@ using Monica.Markdown.Abstractions;
 namespace Monica.AI.RAG.Services.Support;
 
 /// <summary>
-/// Coordinates chunk view retrieval with markdown fallback.
+/// Coordinates chunk views from persisted source or the document's recorded Markdown group.
 /// </summary>
 internal sealed class ChunkViewCoordinator(
     RAGChunkingService chunkingService,
+    RAGIndexStateCoordinator indexStates,
     IMarkdownDocumentCatalog markdownService,
     MarkdownDocumentResolver markdownDocumentResolver)
 {
@@ -20,10 +21,15 @@ internal sealed class ChunkViewCoordinator(
         var indexedView = await chunkingService.GetDocumentChunkViewAsync(kbId, documentId, ct);
         if (indexedView is not null)
         {
-            return await EnrichMarkdownMetadataAsync(indexedView, ct);
+            return indexedView;
         }
 
-        var markdownDocument = await markdownDocumentResolver.FindByPathAsync(documentId, ct);
+        var state = await indexStates.GetDocumentStateRequiredAsync(kbId, documentId, ct);
+        // Only recorded Markdown inventory may fall back to the catalog. Uploaded and unknown sources
+        // must never inherit same-path content or provenance from another document.
+        var markdownDocument = string.Equals(state.SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase)
+            ? await markdownDocumentResolver.FindByPathAsync(documentId, state.SourceGroupKey, ct)
+            : null;
         if (markdownDocument is null)
         {
             throw new FileNotFoundException(
@@ -36,42 +42,10 @@ internal sealed class ChunkViewCoordinator(
             markdownDocument.RelativePath,
             markdownDocument.Title,
             originalText,
-            sourceKind: KnowledgeDocumentSourceKinds.Markdown,
-            sourceGroupKey: markdownDocument.GroupKey,
+            sourceKind: state.SourceKind,
+            sourceGroupKey: state.SourceGroupKey,
             ct: ct);
 
         return previewView;
-    }
-
-    private async Task<DocumentChunkView> EnrichMarkdownMetadataAsync(
-        DocumentChunkView view,
-        CancellationToken ct)
-    {
-        var shouldResolveMarkdownMetadata =
-            string.Equals(view.SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(view.SourceKind, KnowledgeDocumentSourceKinds.Unknown, StringComparison.OrdinalIgnoreCase);
-
-        if (!shouldResolveMarkdownMetadata || !string.IsNullOrWhiteSpace(view.SourceGroupKey))
-        {
-            return view;
-        }
-
-        var markdownDocument = await markdownDocumentResolver.FindByPathAsync(view.DocumentPath, ct);
-        if (markdownDocument is null)
-        {
-            return view;
-        }
-
-        return new DocumentChunkView
-        {
-            DocumentPath = markdownDocument.RelativePath,
-            DocumentName = view.DocumentName,
-            OriginalText = view.OriginalText,
-            Chunks = view.Chunks,
-            ChunkerId = view.ChunkerId,
-            IsPreview = view.IsPreview,
-            SourceKind = KnowledgeDocumentSourceKinds.Markdown,
-            SourceGroupKey = markdownDocument.GroupKey
-        };
     }
 }

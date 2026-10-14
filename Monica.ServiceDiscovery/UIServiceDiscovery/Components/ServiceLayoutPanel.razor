@@ -2,48 +2,24 @@
 @using Monica.ServiceDiscovery.UIServiceDiscovery.Models
 @inject IStringLocalizer<ServiceDiscoveryResource> L
 
-<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
-    <MudGrid>
-        <MudItem xs="12" sm="6" md="4">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">@L["ServiceLayout:Labels:LayoutType"]</MudText>
-            <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined">
-                <MudButton OnClick="@(() => SetLayout(ServiceLayoutType.Force))"
-                           Variant="@(CurrentLayout == ServiceLayoutType.Force ? Variant.Filled : Variant.Outlined)">
-                    @L["ServiceLayout:Types:Force"]
-                </MudButton>
-                <MudButton OnClick="@(() => SetLayout(ServiceLayoutType.Hierarchy))"
-                           Variant="@(CurrentLayout == ServiceLayoutType.Hierarchy ? Variant.Filled : Variant.Outlined)">
-                    @L["ServiceLayout:Types:Hierarchy"]
-                </MudButton>
-                <MudButton OnClick="@(() => SetLayout(ServiceLayoutType.Circular))"
-                           Variant="@(CurrentLayout == ServiceLayoutType.Circular ? Variant.Filled : Variant.Outlined)">
-                    @L["ServiceLayout:Types:Circular"]
-                </MudButton>
-                <MudButton OnClick="@(() => SetLayout(ServiceLayoutType.Grid))"
-                           Variant="@(CurrentLayout == ServiceLayoutType.Grid ? Variant.Filled : Variant.Outlined)">
-                    @L["ServiceLayout:Types:Grid"]
-                </MudButton>
-            </MudButtonGroup>
-        </MudItem>
-        @if (CurrentLayout == ServiceLayoutType.Force)
-        {
-            <MudItem xs="12" sm="6" md="3">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">@L["ServiceLayout:Labels:NodeSpacing", ForceDistance]</MudText>
-                <MudSlider T="int" Value="@ForceDistance"
-                           ValueChanged="@OnForceDistanceChanged"
-                           Min="50" Max="500" Step="10"
-                           Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">@L["ServiceLayout:Labels:RepulsionStrength", ForceStrength]</MudText>
-                <MudSlider T="int" Value="@ForceStrength"
-                           ValueChanged="@OnForceStrengthChanged"
-                           Min="-1000" Max="-100" Step="50"
-                           Color="Color.Secondary" />
-            </MudItem>
-        }
-    </MudGrid>
-</MudPaper>
+<div class="atlas-layout">
+    <fieldset class="atlas-layout__types">
+        <legend>@L["ServiceLayout:Labels:LayoutType"]</legend>
+        <div class="atlas-layout__buttons">
+            <button type="button" aria-pressed="@(CurrentLayout == ServiceLayoutType.Force ? "true" : "false")" @onclick="@(() => SetLayout(ServiceLayoutType.Force))">@L["ServiceLayout:Types:Force"]</button>
+            <button type="button" aria-pressed="@(CurrentLayout == ServiceLayoutType.Hierarchy ? "true" : "false")" @onclick="@(() => SetLayout(ServiceLayoutType.Hierarchy))">@L["ServiceLayout:Types:Hierarchy"]</button>
+            <button type="button" aria-pressed="@(CurrentLayout == ServiceLayoutType.Circular ? "true" : "false")" @onclick="@(() => SetLayout(ServiceLayoutType.Circular))">@L["ServiceLayout:Types:Circular"]</button>
+            <button type="button" aria-pressed="@(CurrentLayout == ServiceLayoutType.Grid ? "true" : "false")" @onclick="@(() => SetLayout(ServiceLayoutType.Grid))">@L["ServiceLayout:Types:Grid"]</button>
+        </div>
+    </fieldset>
+    @if (CurrentLayout == ServiceLayoutType.Force)
+    {
+        <div class="atlas-layout__slider"><span>@L["ServiceLayout:Labels:NodeSpacing", ForceDistance]</span>
+            <MudSlider T="int" Value="@ForceDistance" ValueChanged="OnForceDistanceChanged" Min="50" Max="500" Step="10" Color="Color.Primary" aria-label="@L["ServiceLayout:Labels:NodeSpacing", ForceDistance]" /></div>
+        <div class="atlas-layout__slider"><span>@L["ServiceLayout:Labels:RepulsionStrength", ForceStrength]</span>
+            <MudSlider T="int" Value="@ForceStrength" ValueChanged="OnForceStrengthChanged" Min="-1000" Max="-100" Step="50" Color="Color.Primary" aria-label="@L["ServiceLayout:Labels:RepulsionStrength", ForceStrength]" /></div>
+    }
+</div>
 
 @code {
     [Parameter] public ServiceLayoutType CurrentLayout { get; set; } = ServiceLayoutType.Force;

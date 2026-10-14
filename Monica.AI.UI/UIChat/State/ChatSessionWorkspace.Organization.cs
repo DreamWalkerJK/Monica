@@ -6,7 +6,7 @@ public sealed partial class ChatSessionWorkspace
     public async Task<bool> SetPinnedAsync(string sessionId, bool isPinned, CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (IsConflicted) return false;
+        if (IsConflicted || HasLoadFailure) return false;
         var result = await historyFacade.SetPinnedAsync(sessionId, isPinned, Revision, ct);
         if (!TryApplyWriteResult(result, out _)) return false;
         var index = _sessions.FindIndex(item => item.SessionId == sessionId);
@@ -20,7 +20,7 @@ public sealed partial class ChatSessionWorkspace
     public async Task<bool> SetArchivedAsync(IReadOnlyList<string> sessionIds, bool isArchived, CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (IsConflicted) return false;
+        if (IsConflicted || HasLoadFailure) return false;
         var result = await historyFacade.SetArchivedAsync(sessionIds, isArchived, Revision, ct);
         if (!TryApplyWriteResult(result, out _)) return false;
         var ids = sessionIds.ToHashSet(StringComparer.Ordinal);
@@ -50,7 +50,7 @@ public sealed partial class ChatSessionWorkspace
     public async Task<bool> DeleteArchivedSessionsAsync(IReadOnlyList<string> sessionIds, CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (IsConflicted) return false;
+        if (IsConflicted || HasLoadFailure) return false;
         var result = await historyFacade.DeleteArchivedSessionsAsync(sessionIds, Revision, ct);
         if (!TryApplyWriteResult(result, out _)) return false;
         await ApplyPrunedSessionsAsync(sessionIds);

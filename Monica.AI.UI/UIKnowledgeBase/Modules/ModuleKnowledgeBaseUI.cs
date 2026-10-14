@@ -34,6 +34,8 @@ public static class ModuleKnowledgeBaseUIBuilderExtensions
 /// <summary>
 /// UI module for knowledge-base selection and management surfaces.
 /// </summary>
+/// <remarks>Enables the shell's Markdown services for document previews. RAG UI inherits this prerequisite
+/// through its knowledge-base UI dependency.</remarks>
 public sealed class ModuleKnowledgeBaseUI : MonicaModule<ModuleKnowledgeBaseUIOption>, IUIModule
 {
     /// <inheritdoc />
@@ -44,6 +46,8 @@ public sealed class ModuleKnowledgeBaseUI : MonicaModule<ModuleKnowledgeBaseUIOp
         module.Require<ModuleLocalization, ModuleLocalizationOption>(
             static option => option.AddResource<AIResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+        {
+            option.EnableMarkdown = true;
             option.ConfigureNavigation(static registry =>
                 registry.RegisterLocalizedPage<KnowledgeBaseManagePage, AIResource>(
                     KnowledgeBaseManagePage.PAGE_URL,
@@ -51,13 +55,14 @@ public sealed class ModuleKnowledgeBaseUI : MonicaModule<ModuleKnowledgeBaseUIOp
                     Icons.Material.Filled.Storage,
                     BuiltInNavigationCategoryIds.KnowledgeRetrieval,
                     addToNav: true,
-                    navOrder: 3)));
+                    navOrder: 3));
+        });
     }
 
     /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleKnowledgeBaseUIOption> context)
     {
-        context.Services.AddScoped<KnowledgeBaseManagePageState>();
+        context.Services.AddScoped<KnowledgeBaseManagePageStateFactory>();
     }
 }
 

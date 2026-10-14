@@ -1,14 +1,12 @@
 .identifier-value {
     min-width: 0;
     max-width: 100%;
-    overflow: hidden;
 }
 
 .identifier-value ::deep .mud-tooltip-root {
     display: block;
     min-width: 0;
     max-width: 100%;
-    overflow: hidden;
 }
 
 .identifier-value code {
@@ -16,7 +14,10 @@
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
-    color: var(--mud-palette-text-secondary);
+    color: var(--module-workbench-muted-text, var(--mud-palette-text-secondary));
+    font-family: var(--mo-font-family-mono);
+    font-size: 11px;
+    line-height: 1.7;
     text-overflow: ellipsis;
     white-space: nowrap;
 }

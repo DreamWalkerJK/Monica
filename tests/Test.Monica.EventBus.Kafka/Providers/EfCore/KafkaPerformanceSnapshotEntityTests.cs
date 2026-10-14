@@ -7,6 +7,28 @@ namespace Test.Monica.EventBus.Kafka.Providers.EfCore;
 
 public class KafkaPerformanceSnapshotEntityTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ToModel_WhenMetadataValidityIsSet_ShouldPreserveVerifiedEmptyOrFailedDefaultCounts(bool hasMetadata)
+    {
+        var snapshot = new KafkaPerformanceSnapshot
+        {
+            ClusterId = "primary", HasMetadataSnapshot = hasMetadata,
+            BrokerCount = 1, TopicCount = 0, ConsumerGroupCount = 0,
+            Message = hasMetadata ? "Optional offsets were incomplete." : "Topic metadata could not be queried."
+        };
+
+        var entity = KafkaPerformanceSnapshotEntity.FromModel(snapshot);
+        var restored = entity.ToModel();
+
+        entity.HasMetadataSnapshot.Should().Be(hasMetadata);
+        restored.HasMetadataSnapshot.Should().Be(hasMetadata);
+        restored.TopicCount.Should().Be(0);
+        restored.ConsumerGroupCount.Should().Be(0);
+        restored.Message.Should().Be(snapshot.Message);
+    }
+
     [Fact]
     public void ToModel_WhenConsumerGroupMetricsWereSerialized_ShouldRestoreNestedMemberMetrics()
     {

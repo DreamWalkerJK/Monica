@@ -29,20 +29,15 @@
         <MudDrawerContainer Class="seeder-drawer-container">
             <header class="seeder-page-header">
                 <div class="seeder-page-heading">
-                    <MudText Typo="Typo.overline">@L["Page:Eyebrow"]</MudText>
-                    <MudText Typo="Typo.h4">@L["Page:Heading"]</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+                    <span class="seeder-page-eyebrow">@L["Page:Eyebrow"]</span>
+                    <h1>@L["Page:Heading"]</h1>
+                    <p>@L["Page:Subtitle"]</p>
+                    <div class="seeder-page-host"><MudIcon Icon="@Icons.Material.Outlined.Dns" Size="Size.Small" /><span>@L["Page:CurrentHost", session.HostName]</span></div>
                 </div>
                 <div class="seeder-page-actions">
-                    <MudChip T="string"
-                             Icon="@Icons.Material.Filled.Dns"
-                             Variant="Variant.Outlined"
-                             Color="Color.Info">
-                        @L["Page:CurrentHost", session.HostName]
-                    </MudChip>
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Refresh"
+                               StartIcon="@Icons.Material.Outlined.Refresh"
                                Disabled="@session.IsRefreshing"
                                OnClick="@(() => RefreshAsync(session))">
                         @L["Actions:Refresh"]
@@ -91,9 +86,10 @@
                     break;
                 case SeederPageLoadState.Ready when session.Snapshot is not null:
                     <div class="seeder-page-content">
-                        <SeederRunOverview Session="@session" />
-                        <SeederConfigurationPanel Session="@session" />
-                        <SeederFilters Session="@session" />
+                        <div class="seeder-overview-grid">
+                            <SeederRunOverview Session="@session" />
+                            <SeederConfigurationPanel Session="@session" />
+                        </div>
                         <SeederExecutionTable Session="@session" />
                     </div>
                     break;

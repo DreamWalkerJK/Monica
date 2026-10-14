@@ -506,7 +506,8 @@
           "unit-of-work"
         ],
         "sourcePaths": [
-          "Monica.Repository"
+          "Monica.Repository",
+          "Monica.Repository.UI"
         ]
       }
     },
@@ -535,6 +536,11 @@
           "Monica.SignalR",
           "Monica.Framework.UI/UIEventBus",
           "Monica.Framework.UI/Modules/ModuleEventBusUI.cs",
+          "Monica.Framework.UI/Pages/UIEventBusMonitorPage.razor",
+          "Monica.Framework.UI/Pages/UIEventBusProvidersPage.razor",
+          "Monica.Framework.UI/Pages/UIEventBusSubscriptionsPage.razor",
+          "Monica.Framework.UI/Pages/UIEventBusChangesPage.razor",
+          "Monica.Framework.UI/Pages/UIEventBusTestToolsPage.razor",
           "Monica.Dapr/Modules/ModuleDaprEventBus.cs",
           "Monica.WebApi/RpcClient",
           "Monica.WebApi/Modules/ModuleRpcClient.cs",
@@ -709,11 +715,31 @@
         "title": "UI and Markdown",
         "modules": [
           "ui",
-          "markdown"
+          "markdown",
+          "utilities",
+          "terminal",
+          "k8s"
         ],
         "sourcePaths": [
           "Monica.UI",
-          "Monica.Markdown"
+          "Monica.Markdown",
+          "Monica.Utilities",
+          "Monica.DevOps/Terminal",
+          "Monica.DevOps/Modules/ModuleTerminal.cs",
+          "Monica.DevOps/Modules/ModuleTerminalUI.cs",
+          "Monica.DevOps/Localization/TerminalResource.cs",
+          "Monica.DevOps/Localization/TerminalResource",
+          "Monica.DevOps/K8S",
+          "Monica.DevOps/Modules/ModuleK8S.cs",
+          "Monica.DevOps/Modules/ModuleK8SUI.cs",
+          "Monica.DevOps/Localization/K8SResource.cs",
+          "Monica.DevOps/Localization/K8SResource",
+          "Monica.Framework.UI/Pages/UIMapperDebugPage.razor",
+          "Monica.Framework.UI/Pages/UIMapperDebugPage.razor.css",
+          "Monica.Framework.UI/UIMapper",
+          "Monica.Framework.UI/Modules/ModuleMapperUI.cs",
+          "Monica.Framework.UI/Localization/MapperResource",
+          "Monica.Framework.UI/wwwroot/UIMapper"
         ]
       }
     }

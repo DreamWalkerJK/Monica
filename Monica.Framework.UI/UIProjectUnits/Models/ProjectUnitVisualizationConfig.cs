@@ -75,26 +75,26 @@ public static class ProjectUnitVisualizationConfig
     {
         return unitType switch
         {
-            EProjectUnitType.ApplicationService => Icons.Material.Filled.BusinessCenter,
-            EProjectUnitType.CrudApplicationService => Icons.Material.Filled.EditNote,
-            EProjectUnitType.DomainService => Icons.Material.Filled.Domain,
-            EProjectUnitType.Repository => Icons.Material.Filled.Storage,
-            EProjectUnitType.DomainEvent => Icons.Material.Filled.Event,
-            EProjectUnitType.DomainEventHandler => Icons.Material.Filled.EventAvailable,
-            EProjectUnitType.LocalEventHandler => Icons.Material.Filled.EventNote,
-            EProjectUnitType.RecurringJob => Icons.Material.Filled.Work,
-            EProjectUnitType.TriggeredJob => Icons.Material.Filled.Schedule,
-            EProjectUnitType.HostedService => Icons.Material.Filled.Engineering,
-            EProjectUnitType.HttpApi => Icons.Material.Filled.Http,
-            EProjectUnitType.GrpcApi => Icons.Material.Filled.Api,
-            EProjectUnitType.Entity => Icons.Material.Filled.Dataset,
-            EProjectUnitType.RequestDto => Icons.Material.Filled.DataObject,
-            EProjectUnitType.Configuration => Icons.Material.Filled.Settings,
-            EProjectUnitType.Seeder => Icons.Material.Filled.Email,
-            EProjectUnitType.StateStore => Icons.Material.Filled.Memory,
-            EProjectUnitType.EventBus => Icons.Material.Filled.Hub,
-            EProjectUnitType.Actor => Icons.Material.Filled.Person,
-            _ => Icons.Material.Filled.Circle
+            EProjectUnitType.ApplicationService => Icons.Material.Outlined.BusinessCenter,
+            EProjectUnitType.CrudApplicationService => Icons.Material.Outlined.EditNote,
+            EProjectUnitType.DomainService => Icons.Material.Outlined.Domain,
+            EProjectUnitType.Repository => Icons.Material.Outlined.Storage,
+            EProjectUnitType.DomainEvent => Icons.Material.Outlined.Event,
+            EProjectUnitType.DomainEventHandler => Icons.Material.Outlined.EventAvailable,
+            EProjectUnitType.LocalEventHandler => Icons.Material.Outlined.EventNote,
+            EProjectUnitType.RecurringJob => Icons.Material.Outlined.Update,
+            EProjectUnitType.TriggeredJob => Icons.Material.Outlined.Schedule,
+            EProjectUnitType.HostedService => Icons.Material.Outlined.Engineering,
+            EProjectUnitType.HttpApi => Icons.Material.Outlined.Http,
+            EProjectUnitType.GrpcApi => Icons.Material.Outlined.Api,
+            EProjectUnitType.Entity => Icons.Material.Outlined.Dataset,
+            EProjectUnitType.RequestDto => Icons.Material.Outlined.DataObject,
+            EProjectUnitType.Configuration => Icons.Material.Outlined.Settings,
+            EProjectUnitType.Seeder => Icons.Material.Outlined.Grass,
+            EProjectUnitType.StateStore => Icons.Material.Outlined.Memory,
+            EProjectUnitType.EventBus => Icons.Material.Outlined.Hub,
+            EProjectUnitType.Actor => Icons.Material.Outlined.Person,
+            _ => Icons.Material.Outlined.Circle
         };
     }
 

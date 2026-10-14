@@ -1,38 +1,15 @@
-@using Monica.Core.Localization.Abstractions
 @using Monica.UI.Shell.Models
 @using Monica.UI.Shell.Support
-@inject ILocalizationCatalog LocalizationCatalog
 
-<div class="navbar-item" data-navigation-category-id="@CategoryId.Value">
-    <MudMenu AriaLabel="@Category"
-             Class="navbar-menu navbar-link"
-             ActivationEvent="@MouseEvent.MouseOver"
-             AnchorOrigin="Origin.BottomLeft"
-             TransformOrigin="Origin.TopLeft"
-             PopoverClass="dropdown-menu mo-navbar-menu-popover mo-navbar-dropdown-popover"
-             ListClass="mo-appbar-menu-list">
-        <ActivatorContent Context="menu">
-            <span class="mo-navbar-menu-activator-content" @onclick="menu.OpenAsync">
-                <span>@Category</span>
-                <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
-            </span>
-        </ActivatorContent>
-        <ChildContent>
-            @foreach (var item in Items)
-            {
-                <MudMenuItem Href="@item.Href"
-                             Icon="@item.Icon"
-                             Class="@NavigationRouteMatcher.GetActiveClass(CurrentRoute, item.Href)">
-                    @item.ResolveText(LocalizationCatalog)
-                </MudMenuItem>
-            }
-        </ChildContent>
-    </MudMenu>
+<div class="navbar-item" data-navigation-category-id="@Group.Id.Value">
+    <NavigationPopover Group="@Group" ActiveItem="@ActiveItem" Label="@Group.DisplayName" StartIcon="@Group.Icon"
+                       Header="@Group.DisplayName" HeaderDescription="@Group.Description"
+                       ShowOverview="true" OpenOnHover="true" Class="@MenuClass" />
 </div>
 
 @code {
-    [Parameter] public string Category { get; set; } = string.Empty;
-    [Parameter] public NavigationCategoryId CategoryId { get; set; } = default!;
-    [Parameter] public string CurrentRoute { get; set; } = string.Empty;
-    [Parameter] public IReadOnlyList<NavigationItem> Items { get; set; } = [];
+    [Parameter, EditorRequired] public NavigationGroup Group { get; set; } = default!;
+    [Parameter] public NavigationItem? ActiveItem { get; set; }
+    private string MenuClass => ActiveItem is not null && NavigationTreeBuilder.Flatten([Group]).Contains(ActiveItem)
+        ? "navbar-menu navbar-link is-active" : "navbar-menu navbar-link";
 }

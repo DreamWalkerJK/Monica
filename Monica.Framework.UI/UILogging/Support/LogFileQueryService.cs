@@ -1,208 +1,132 @@
-using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Results;
 using Monica.Framework.UI.UILogging.Models;
+using Monica.Logging.Services.Support;
 using Monica.Modules;
 
 namespace Monica.Framework.UI.UILogging.Support;
 
-/// <summary>
-/// Log file query and download service
-/// </summary>
+/// <summary>Shared stateless catalog, context and download access beneath the configured local log directory.</summary>
 public sealed class LogFileQueryService(
     IOptions<ModuleLoggingOption> loggingOptions,
     IOptions<ModuleLoggingUIOption> uiOptions,
     ILogger<LogFileQueryService> logger)
 {
-    private readonly string _logDirectory = ResolveDirectory(loggingOptions.Value, uiOptions.Value);
+    private readonly string _logDirectory = !string.IsNullOrWhiteSpace(uiOptions.Value.LogDirectory)
+        ? Path.GetFullPath(uiOptions.Value.LogDirectory)
+        : Path.GetDirectoryName(LogFileLocation.Resolve(loggingOptions.Value))!;
 
     public string LogDirectory => _logDirectory;
 
+    /// <summary>
+    /// Lists ordinary files recursively. A missing or unavailable configured directory returns a failed
+    /// result, distinct from an existing empty directory. Symbolic-link descendants are excluded.
+    /// </summary>
     public Task<Res<IReadOnlyList<LogFileDescriptor>>> ListFilesAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
             if (!Directory.Exists(_logDirectory))
+                return Task.FromResult((Res<IReadOnlyList<LogFileDescriptor>>)$"The configured log directory does not exist or cannot be accessed: {_logDirectory}");
+            var files = new List<LogFileDescriptor>();
+            foreach (var file in new DirectoryInfo(_logDirectory).EnumerateFiles("*", new EnumerationOptions
+                { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = false }))
             {
-                return Task.FromResult((Res<IReadOnlyList<LogFileDescriptor>>)Array.Empty<LogFileDescriptor>());
+                cancellationToken.ThrowIfCancellationRequested();
+                files.Add(new LogFileDescriptor(file.Name, file.Length, file.LastWriteTimeUtc,
+                    Path.GetRelativePath(_logDirectory, file.FullName).Replace(Path.DirectorySeparatorChar, '/')));
             }
-
-            var directory = new DirectoryInfo(_logDirectory);
-            var files = directory
-                .EnumerateFiles("*", SearchOption.AllDirectories)
-                .OrderByDescending(f => f.LastWriteTimeUtc)
-                .Select(f =>
-                {
-                    var relativePath = Path.GetRelativePath(_logDirectory, f.FullName)
-                        .Replace(Path.DirectorySeparatorChar, '/');
-
-                    return new LogFileDescriptor(
-                        f.Name,
-                        f.Length,
-                        f.LastWriteTime,
-                        relativePath);
-                })
-                .ToList();
-
-            return Task.FromResult((Res<IReadOnlyList<LogFileDescriptor>>)files);
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult((Res<IReadOnlyList<LogFileDescriptor>>)Array.AsReadOnly(files.OrderByDescending(file => file.LastModified)
+                .ThenBy(file => file.RelativePath, StringComparer.Ordinal).ToArray()));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            logger.LogError(ex, "读取日志目录失败");
-            return Task.FromResult((Res<IReadOnlyList<LogFileDescriptor>>) $"读取日志目录失败: {ex.Message}");
+            logger.LogWarning(ex, "Failed to list log directory {LogDirectory}.", _logDirectory);
+            return Task.FromResult((Res<IReadOnlyList<LogFileDescriptor>>)$"Failed to list log directory: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Opens a live log for sequential asynchronous reading while allowing its writer to append or rotate it.
+    /// Opens a file for sequential asynchronous reading while permitting append and rotation.
+    /// The caller owns the returned stream; this is a live handle, not an immutable archive snapshot.
+    /// Cancellation throws before a handle is returned. Paths outside the inspection directory are rejected.
     /// </summary>
-    /// <remarks>
-    /// The caller owns the returned stream and must dispose it. The file can change length while it is open;
-    /// this method does not create an immutable snapshot.
-    /// </remarks>
     public Task<Res<FileStream>> OpenFileAsync(string relativePath, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        FileStream? stream = null;
         try
         {
             var fullPath = ResolveFilePath(relativePath);
-            if (!File.Exists(fullPath))
+            if (!File.Exists(fullPath)) return Task.FromResult((Res<FileStream>)$"The requested log file does not exist: {relativePath}");
+            stream = new FileStream(fullPath, new FileStreamOptions
             {
-                return Task.FromResult((Res<FileStream>) $"指定日志文件不存在: {relativePath}");
-            }
-
-            var stream = new FileStream(fullPath, new FileStreamOptions
-            {
-                Mode = FileMode.Open,
-                Access = FileAccess.Read,
-                Share = FileShare.ReadWrite | FileShare.Delete,
+                Mode = FileMode.Open, Access = FileAccess.Read, Share = FileShare.ReadWrite | FileShare.Delete,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan
             });
+            cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult((Res<FileStream>)stream);
         }
+        catch (OperationCanceledException) { stream?.Dispose(); throw; }
         catch (Exception ex)
         {
-            logger.LogError(ex, "打开日志文件失败");
-            return Task.FromResult((Res<FileStream>) $"打开日志文件失败: {ex.Message}");
+            stream?.Dispose();
+            logger.LogWarning(ex, "Failed to open log file {RelativePath}.", relativePath);
+            return Task.FromResult((Res<FileStream>)$"Failed to open log file: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Read the context log around the specified line number
+    /// Compatibility context read beneath this service's directory. This overload has no source-generation
+    /// proof; reader pages should use LogReadingSession.ReadContextAsync with their frozen line request.
     /// </summary>
-    /// <param name="filePath">Log file path (absolute path)</param>
-    /// <param name="targetLineNumber">Target line number (absolute line number, starting from 1)</param>
-    /// <param name="contextLines">Number of context lines (how many lines are read before and after)</param>
-    /// <param name="cancellationToken">Cancellation Token</param>
-    /// <returns>List of log view models containing the target row and its context</returns>
-    public async Task<Res<ContextLogResult>> ReadContextAsync(
-        string filePath,
-        long targetLineNumber,
-        int contextLines = 50,
-        CancellationToken cancellationToken = default)
+    public async Task<Res<ContextLogResult>> ReadContextAsync(string filePath, long targetLineNumber,
+        int contextLines = 50, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
-            if (!File.Exists(filePath))
-            {
-                return $"日志文件不存在: {filePath}";
-            }
-
-            var startLine = Math.Max(1, targetLineNumber - contextLines);
-            var endLine = targetLineNumber + contextLines;
-
-            var lines = new List<LogLineViewModel>();
-            long currentLineNumber = 1;
-
-            await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            using var reader = new StreamReader(stream, Encoding.UTF8);
-
-            while (currentLineNumber <= endLine)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var rawLine = await reader.ReadLineAsync();
-                if (rawLine is null)
-                {
-                    break;
-                }
-
-                if (currentLineNumber >= startLine)
-                {
-                    var viewModel = LogLineViewModel.FromRaw(rawLine);
-                    viewModel.WithPosition(currentLineNumber, null);
-
-                    if (currentLineNumber == targetLineNumber)
-                    {
-                        viewModel.WithContextTarget(true);
-                    }
-
-                    lines.Add(viewModel);
-                }
-
-                currentLineNumber++;
-            }
-
-            if (lines.Count == 0)
-            {
-                return $"未找到行号 {targetLineNumber} 附近的日志内容";
-            }
-
-            var result = new ContextLogResult(lines, targetLineNumber, startLine, currentLineNumber - 1);
-            return result;
+            var fullPath = ResolveFilePath(Path.GetRelativePath(_logDirectory, Path.GetFullPath(filePath)));
+            if (!File.Exists(fullPath)) return $"The log file does not exist: {filePath}";
+            if (targetLineNumber < 1 || contextLines < 0) return "Log context requires a positive target line and nonnegative context count.";
+            var start = Math.Max(1, targetLineNumber - contextLines);
+            var end = targetLineNumber > long.MaxValue - contextLines ? long.MaxValue : targetLineNumber + contextLines;
+            var raw = await LogTailService.ReadRangeAsync(fullPath, start, end, cancellationToken).ConfigureAwait(false);
+            var lines = raw.Select((line, index) => LogLineViewModel.FromRaw(line).WithPosition(start + index, null)
+                .WithContextTarget(start + index == targetLineNumber)).ToArray();
+            if (!lines.Any(line => line.IsContextTarget)) return "The requested physical line is no longer available.";
+            cancellationToken.ThrowIfCancellationRequested();
+            return new ContextLogResult(Array.AsReadOnly(lines), targetLineNumber, start, start + lines.Length - 1) { ReadAt = DateTimeOffset.UtcNow };
         }
-        catch (OperationCanceledException)
-        {
-            return "读取上下文日志被取消";
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            logger.LogError(ex, "读取上下文日志失败，目标行号: {LineNumber}", targetLineNumber);
-            return $"读取上下文日志失败: {ex.Message}";
+            logger.LogWarning(ex, "Failed to read log context at physical line {LineNumber}.", targetLineNumber);
+            return $"Failed to read log context: {ex.Message}";
         }
     }
 
-    /// <summary>
-    /// Resolve relative path to full log file path
-    /// </summary>
-    /// <param name="relativePath">Path relative to the log directory</param>
-    /// <returns>Full file path</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the path attempts to access a location outside the log directory</exception>
+    /// <summary>Resolves a relative ordinary file path beneath the catalog directory.</summary>
+    /// <exception cref="InvalidOperationException">The path escapes the directory or traverses a symbolic-link descendant.</exception>
     public string ResolveFilePath(string relativePath)
     {
-        var combined = Path.Combine(_logDirectory, relativePath);
-        var fullPath = Path.GetFullPath(combined);
-        var directoryPath = Path.GetFullPath(_logDirectory);
-        if (!Path.EndsInDirectorySeparator(directoryPath))
-        {
-            directoryPath += Path.DirectorySeparatorChar;
-        }
-
-        // Match the directory boundary so similarly named sibling directories are not included.
+        ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
+        if (Path.IsPathRooted(relativePath)) throw new InvalidOperationException("Log file access requires a path relative to the inspection directory.");
+        var fullPath = Path.GetFullPath(Path.Combine(_logDirectory, relativePath));
+        var root = Path.TrimEndingDirectorySeparator(_logDirectory) + Path.DirectorySeparatorChar;
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        if (!fullPath.StartsWith(directoryPath, comparison))
+        if (!fullPath.StartsWith(root, comparison)) throw new InvalidOperationException("The requested path is outside the log inspection directory.");
+        var current = _logDirectory;
+        foreach (var part in Path.GetRelativePath(_logDirectory, fullPath).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
         {
-            throw new InvalidOperationException("非法的日志文件访问路径");
+            current = Path.Combine(current, part);
+            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidOperationException("Symbolic-link descendants are outside the log inspection boundary.");
         }
-
         return fullPath;
-    }
-
-    private static string ResolveDirectory(ModuleLoggingOption option, ModuleLoggingUIOption uiOption)
-    {
-        if (!string.IsNullOrWhiteSpace(uiOption.LogDirectory))
-        {
-            return Path.GetFullPath(uiOption.LogDirectory);
-        }
-
-        if (!string.IsNullOrWhiteSpace(option.LogFilePath))
-        {
-            var fullPath = Path.GetFullPath(option.LogFilePath);
-            var directory = Path.GetDirectoryName(fullPath);
-            return directory ?? AppContext.BaseDirectory;
-        }
-
-        var fallbackDirectory = option.LogDirectory ?? Path.Combine(AppContext.BaseDirectory, "Logs");
-        return Path.GetFullPath(fallbackDirectory);
     }
 }

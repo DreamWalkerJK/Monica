@@ -1,111 +1,127 @@
-@using Monica.Configuration.UI.Localization
+@implements IAsyncDisposable
 @inject ConfigurationFacade Facade
 @inject IDialogService DialogService
+@using Monica.Configuration.UI.Localization
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<ConfigurationUIResource> L
 
-<MudDialog>
+<MudDialog ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent>
+        <MoDialogHeading Text="@L["Sources:Definition:Title"]" />
+    </TitleContent>
     <DialogContent>
-        @if (_loading)
-        {
-            <MudProgressLinear Indeterminate="true" />
-        }
-        else if (_error is not null)
-        {
-            <MudAlert Severity="Severity.Error">@_error</MudAlert>
-        }
-        else if (_contributions.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info">@L["Sources:Empty"]</MudAlert>
-        }
-        else
-        {
-            <MudStack Spacing="2">
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Sources:Definition:Subtitle", Definition.DisplayName]</MudText>
-                <MudTable T="ConfigurationDefinitionSourceContribution" Items="@_contributions" Dense="true" Hover="true" Elevation="0">
-                    <HeaderContent>
-                        <MudTh>@L["Sources:Columns:Source"]</MudTh>
-                        <MudTh>@L["Sources:Columns:Priority"]</MudTh>
-                        <MudTh>@L["Sources:Columns:Supplied"]</MudTh>
-                        <MudTh>@L["Sources:Columns:Effective"]</MudTh>
-                        <MudTh>@L["Sources:Columns:State"]</MudTh>
-                        <MudTh></MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="@L["Sources:Columns:Source"]">
-                            <MudStack Spacing="0">
-                                <MudText Typo="Typo.body2">@context.Source.DisplayName</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@SourcePath(context.Source)</MudText>
-                            </MudStack>
-                        </MudTd>
-                        <MudTd DataLabel="@L["Sources:Columns:Priority"]">@context.Source.PriorityIndex</MudTd>
-                        <MudTd DataLabel="@L["Sources:Columns:Supplied"]">@context.SuppliedValueCount</MudTd>
-                        <MudTd DataLabel="@L["Sources:Columns:Effective"]">@context.EffectiveValueCount</MudTd>
-                        <MudTd DataLabel="@L["Sources:Columns:State"]">
-                            <MudChip T="string" Size="Size.Small" Color="@(context.Source.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined">
-                                @(context.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
-                            </MudChip>
-                        </MudTd>
-                        <MudTd>
-                            @if (context.Source.Kind == ConfigurationSourceKind.JsonFile)
-                            {
-                                <MudTooltip Text="@L["Sources:Actions:ViewFile"]">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Article"
-                                                   Size="Size.Small"
-                                                   OnClick="() => ViewFileAsync(context.Source)" />
-                                </MudTooltip>
-                            }
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            </MudStack>
-        }
+        <div class="configuration-sources" aria-busy="@((_loading || _fileDialogOpen) ? "true" : "false")">
+            <header class="configuration-sources-identity">
+                <h3>@_definitionDisplayName</h3>
+                <dl>
+                    <div>
+                        <dt>@L["Mutation:DefinitionKey"]</dt>
+                        <dd><code dir="auto">@_definitionKey</code></dd>
+                    </div>
+                </dl>
+            </header>
+
+            <div class="configuration-sources-explanation">
+                <p>@L["Sources:Definition:PriorityHelp"]</p>
+                <p>@L["Sources:Definition:CountsHelp"]</p>
+            </div>
+
+            @if (_fileError is not null)
+            {
+                <div class="configuration-sources-state" aria-live="polite">
+                    <MudAlert Severity="Severity.Error">@_fileError</MudAlert>
+                </div>
+            }
+
+            @if (_loading)
+            {
+                <div class="configuration-sources-state" role="status">
+                    <MudProgressLinear Indeterminate="true" Color="Color.Info" />
+                    <p>@L["Common:States:Loading"]</p>
+                </div>
+            }
+            else if (_error is not null)
+            {
+                <div class="configuration-sources-state">
+                    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+                </div>
+            }
+            else if (_contributions.Count == 0)
+            {
+                <div class="configuration-sources-state configuration-sources-empty">
+                    <MudIcon Icon="@Icons.Material.Outlined.AccountTree" aria-hidden="true" />
+                    <p>@L["Sources:Definition:Empty"]</p>
+                </div>
+            }
+            else
+            {
+                <div class="configuration-sources-evidence">
+                    <MudTable T="ConfigurationDefinitionSourceContribution"
+                              Items="@_contributions"
+                              AriaLabel="@L["Sources:Definition:Subtitle", _definitionDisplayName]"
+                              Breakpoint="Breakpoint.Xs"
+                              Dense="false"
+                              Hover="true"
+                              Square="true"
+                              Elevation="0">
+                        <ColGroup>
+                            <col class="configuration-sources-source-column" />
+                            <col class="configuration-sources-number-column" />
+                            <col class="configuration-sources-number-column" />
+                            <col class="configuration-sources-number-column" />
+                        </ColGroup>
+                        <HeaderContent>
+                            <MudTh>@L["Sources:Columns:Source"]</MudTh>
+                            <MudTh Class="configuration-sources-number-cell">@L["Sources:Columns:Priority"]</MudTh>
+                            <MudTh Class="configuration-sources-number-cell">@L["Sources:Columns:Supplied"]</MudTh>
+                            <MudTh Class="configuration-sources-number-cell">@L["Sources:Columns:Effective"]</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd Class="configuration-sources-source-cell" DataLabel="@L["Sources:Columns:Source"]">
+                                <div class="configuration-sources-source">
+                                    <div class="configuration-sources-source-heading">
+                                        <p class="configuration-sources-source-name" dir="auto">@context.Source.DisplayName</p>
+                                        <div class="configuration-sources-source-actions">
+                                            <span class="configuration-sources-access" data-tone="@(context.Source.IsWritable ? "info" : "neutral")">
+                                                @(context.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
+                                            </span>
+                                            @if (context.Source.Kind == ConfigurationSourceKind.JsonFile)
+                                            {
+                                                <MudButton @key="context.Source.SourceKey" Class="configuration-sources-file-action"
+                                                           Color="Color.Primary"
+                                                           Variant="Variant.Text"
+                                                           Size="Size.Small"
+                                                           StartIcon="@Icons.Material.Outlined.Description"
+                                                           aria-label="@L["Sources:Actions:ViewFileFor", context.Source.DisplayName]"
+                                                           Disabled="@FileButtonDisabled(context.Source)"
+                                                           aria-disabled="@(_fileDialogOpen ? "true" : "false")"
+                                                           OnClick="() => ViewFileAsync(context.Source)">
+                                                    @L["Sources:Actions:ViewFile"]
+                                                </MudButton>
+                                            }
+                                        </div>
+                                    </div>
+                                    <code class="configuration-sources-location" dir="auto">@SourcePath(context.Source)</code>
+                                </div>
+                            </MudTd>
+                            <MudTd Class="configuration-sources-number-cell configuration-sources-priority-cell" DataLabel="@L["Sources:Columns:Priority"]">
+                                <span class="configuration-sources-number">@context.Source.PriorityIndex</span>
+                            </MudTd>
+                            <MudTd Class="configuration-sources-number-cell" DataLabel="@L["Sources:Columns:Supplied"]">
+                                <span class="configuration-sources-number">@context.SuppliedValueCount</span>
+                            </MudTd>
+                            <MudTd Class="configuration-sources-number-cell configuration-sources-effective-cell" DataLabel="@L["Sources:Columns:Effective"]">
+                                <span class="configuration-sources-number">@context.EffectiveValueCount</span>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+            }
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+        <div class="configuration-sources-actions">
+            <MudButton OnClick="CloseAsync">@L["Common:Actions:Close"]</MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
-
-@code {
-    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
-    [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
-
-    private readonly List<ConfigurationDefinitionSourceContribution> _contributions = [];
-    private string? _error;
-    private bool _loading = true;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var result = await Facade.GetDefinitionSourceContributionsAsync(Definition.DefinitionKey);
-        if (result.IsFailed(out var error, out var contributions))
-        {
-            _error = error.Message;
-        }
-        else
-        {
-            _contributions.AddRange(contributions);
-        }
-
-        _loading = false;
-    }
-
-    private async Task ViewFileAsync(ConfigurationSourceDescriptor source)
-    {
-        var parameters = new DialogParameters<ConfigurationSourceFileDialog>();
-        parameters.Add(dialog => dialog.SourceKey, source.SourceKey);
-        await DialogService.ShowAsync<ConfigurationSourceFileDialog>(L["Sources:File:Title", source.DisplayName], parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true
-        });
-    }
-
-    private string SourcePath(ConfigurationSourceDescriptor source)
-    {
-        return source.PhysicalPath ?? source.SourcePath ?? source.ProviderType;
-    }
-
-    private void Close()
-    {
-        MudDialog.Close();
-    }
-}

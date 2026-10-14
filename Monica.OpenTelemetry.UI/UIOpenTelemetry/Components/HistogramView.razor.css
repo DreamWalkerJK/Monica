@@ -1,43 +1,23 @@
-.histogram-panel {
-    padding: 1rem;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 8px;
-    background-color: var(--mud-palette-surface);
-}
-
-.histogram-summary {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
-    gap: 1rem;
-}
-
-.bucket-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.bucket-row {
-    display: grid;
-    grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 2fr) minmax(3rem, auto);
-    gap: 0.75rem;
-    align-items: center;
-}
-
-.bucket-label {
-    overflow-wrap: anywhere;
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.8125rem;
-}
-
-.bucket-row ::deep .bucket-bar {
-    height: 0.625rem;
-    overflow: hidden;
-    border-radius: 6px;
-    background-color: var(--mud-palette-background-gray);
-}
-
-.bucket-count {
-    text-align: right;
-    color: var(--mud-palette-text-secondary);
-}
+.histogram-panel { min-width: 0; margin: 0 28px 24px; padding: 24px; border: 1px solid var(--mud-palette-lines-default); border-radius: 8px; background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface)); }
+.histogram-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.histogram-heading span { font-size: 11px; color: var(--telemetry-muted, var(--mud-palette-text-primary)); }
+.histogram-heading h3 { margin: 8px 0 0; font-size: 16px; font-weight: 500; }
+.histogram-help { margin: 14px 0 0; font-size: 12px; line-height: 1.75; color: var(--telemetry-muted, var(--mud-palette-text-primary)); }
+.histogram-percentiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 14px; margin: 24px 0; }
+.histogram-percentiles div { min-width: 0; padding: 14px 0; }
+.histogram-percentiles span { display: block; font-size: 11px; color: var(--telemetry-muted, var(--mud-palette-text-primary)); }
+.histogram-percentiles strong { display: block; margin-top: 10px; font: 400 21px/1.45 var(--mo-font-family-mono); overflow-wrap: anywhere; }
+.histogram-percentiles .percentile-focus { padding: 16px; border-left: 2px solid var(--mud-palette-primary); background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface)); }
+.percentile-focus strong { font-size: 28px; }
+.histogram-statistics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 18px 0; border-top: 1px solid var(--mud-palette-lines-default); border-bottom: 1px solid var(--mud-palette-lines-default); }
+.histogram-statistics div { min-width: 0; }
+.histogram-statistics dt { font-size: 11px; color: var(--telemetry-muted, var(--mud-palette-text-primary)); }
+.histogram-statistics dd { margin: 8px 0 0; font: 12px/1.65 var(--mo-font-family-mono); overflow-wrap: anywhere; }
+.histogram-panel h4 { margin: 24px 0 0; font-size: 14px; font-weight: 500; }
+.histogram-buckets { display: grid; gap: 14px; margin-top: 20px; min-width: 0; }
+.histogram-bucket { display: grid; grid-template-columns: minmax(130px, .9fr) minmax(0, 1.3fr) 28px; gap: 14px; align-items: center; min-width: 0; }
+.bucket-bounds { font: 11px/1.8 var(--mo-font-family-mono); overflow-wrap: anywhere; }
+.bucket-track { min-width: 0; height: 7px; border-radius: 2px; background: var(--mud-palette-background-gray); overflow: clip; }
+.bucket-fill { height: 100%; background: var(--mud-palette-primary); }
+.histogram-bucket code { font: 11px/1.8 var(--mo-font-family-mono); text-align: end; }
+@media (max-width: 600px) { .histogram-panel { margin: 0 20px 22px; padding: 20px 16px; } .histogram-percentiles { grid-template-columns: minmax(0, 1fr); gap: 8px; } .histogram-percentiles div { padding: 6px 0; } .histogram-statistics { grid-template-columns: minmax(0, 1fr); gap: 16px; } .histogram-statistics div { display: flex; justify-content: space-between; gap: 16px; } .histogram-statistics dd { margin: 0; text-align: end; } .histogram-bucket { grid-template-columns: minmax(0, 1fr) 28px; gap: 6px 12px; } .bucket-bounds { grid-column: 1 / -1; } }

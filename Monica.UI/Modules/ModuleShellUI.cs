@@ -15,6 +15,7 @@ using Monica.UI.Pages;
 using Monica.UI.Shell.Components;
 using Monica.UI.Shared.Components.Markdown;
 using Monica.UI.Shell.State;
+using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
 using Monica.UI.Theming;
 using MudBlazor;
@@ -75,7 +76,11 @@ public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequired
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleLocalization, ModuleLocalizationOption>(
-            static option => option.AddResource<SharedResource>());
+            static option =>
+            {
+                option.AddResource<SharedResource>();
+                option.AddResource<NavigationSearchResource>();
+            });
     }
 
     /// <inheritdoc />
@@ -130,6 +135,7 @@ public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequired
             static serviceProvider => serviceProvider.GetRequiredService<PageRegistry>());
         services.AddScoped<PageAccessEvaluator>();
         services.AddScoped<OperationalPageAccessEvaluator>();
+        services.AddScoped<NavigationSearchCatalog>();
 
         if (Option.OperationalPageAccess.DebugMode)
         {
@@ -143,6 +149,7 @@ public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequired
         // Register theme service (Scoped: each Blazor circuit gets its own theme state)
         services.AddScoped<ThemeState>();
         services.AddScoped<IThemeState>(sp => sp.GetRequiredService<ThemeState>());
+        services.AddScoped<ShellState>();
 
         // Register the default markdown asset resolver so Markdown components work without optional modules.
         services.TryAddScoped<IMoMarkdownAssetResolver, PassThroughMarkdownAssetResolver>();
@@ -295,12 +302,22 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     public bool DefaultDarkMode { get; set; }
 
     /// <summary>
+    /// The desktop navigation layout used when the browser has no saved shell preference.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="ShellNavigationLayout.Sidebar"/>. Appearance settings persist a browser-specific
+    /// override. Both layouts use a temporary navigation drawer on narrow screens.
+    /// </remarks>
+    public ShellNavigationLayout DefaultNavigationLayout { get; set; } = ShellNavigationLayout.Sidebar;
+
+    /// <summary>
     /// The maximum number of categories displayed in the top navigation bar (the excess will be placed in the "More" menu)
     /// </summary>
     public int MaxVisibleCategories { get; set; } = 10;
 
     /// <summary>
-    /// Whether to show the navigation bar search action when <see cref="NavBarSearchAction"/> is configured.
+    /// Whether to show navigation search and enable its Ctrl/Cmd+K shortcut. Defaults to true.
+    /// When no <see cref="NavBarSearchAction"/> is configured, the shell searches authorized registered navigation pages.
     /// </summary>
     public bool EnableNavBarSearch { get; set; } = true;
 
@@ -308,8 +325,8 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     /// Gets or sets the host-owned action invoked by the navigation bar search control.
     /// </summary>
     /// <remarks>
-    /// The search control is not rendered when this delegate is <see langword="null"/>, so the shell never presents
-    /// an interaction that has no behavior. The host owns dialog, routing, and cancellation concerns.
+    /// When null, the shell opens its built-in registered-page search palette. A configured callback replaces that
+    /// palette for both the toolbar control and Ctrl/Cmd+K. The host owns its custom dialog, routing, and cancellation.
     /// </remarks>
     public Func<Task>? NavBarSearchAction { get; set; }
 

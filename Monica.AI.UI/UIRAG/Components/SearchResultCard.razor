@@ -1,122 +1,46 @@
+@using System.Globalization
 @using Microsoft.Extensions.Localization
 @using Monica.AI.RAG.Models
 @using Monica.AI.UI.Localization
 @inject IStringLocalizer<AIResource> L
 
-<div class="result-card-wrapper" @onclick="HandleClick">
-    <div class="result-card">
-        <!-- Score header row with badge + progress indicator -->
-        <div class="result-score-row">
-            <div class="result-score-summary">
-                <span class="score-badge score-badge--@GetScoreLevel()">
-                    @GetPrimaryScoreText()
-                </span>
-                <span class="score-kind" title="@GetPrimaryScoreTooltip()">
-                    @GetPrimaryScoreLabel()
-                </span>
-                @if (ShowHybridRawScore())
-                {
-                    <span class="score-secondary" title="@L["RAG:Search:Score:HybridRankTooltip"]">
-                        @L["RAG:Search:Score:HybridRankValue", Result.Score ?? 0]
-                    </span>
-                }
-            </div>
-            <div class="score-bar-track">
-                <MudProgressLinear Value="@GetVisualScorePercentage()"
-                                   Color="@GetScoreColor()"
-                                   Size="Size.Small"
-                                   Rounded="true" />
-            </div>
-        </div>
-
-        <!-- Content area -->
-        <div class="result-body">
-            <div class="result-meta">
-                <span class="result-source-name">
-                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="source-icon" />
-                    @(Result.SourceName ?? L["RAG:Search:Result:UnknownSource"].Value)
-                </span>
-                @if (!string.IsNullOrEmpty(Result.SectionPath))
-                {
-                    <span class="meta-separator">·</span>
-                    <span class="result-section">@Result.SectionPath</span>
-                }
-                <span class="meta-separator">·</span>
-                <span class="result-view-link">@L["RAG:Search:Result:ViewInDocument"]</span>
-            </div>
-
-            <p class="result-text">@Result.Text</p>
-        </div>
+<article class="result-passage">
+    <div class="result-layout">
+    <div class="result-diagnostics">
+        @if (Rank > 0) { <span class="result-rank">@L["KnowledgeWorkbench:Retrieval:Rank", Rank]</span> }
+        <div class="score-evidence"><span>@PrimaryScoreLabel</span><strong title="@RawPrimaryScore">@PrimaryScoreText</strong></div>
+        @if (Result.ScoreKind == TextSearchScoreKind.HybridRank && Result.SimilarityScore is not null)
+        {
+            <div class="score-evidence"><span>@L["RAG:Search:Score:HybridRankLabel"]</span><strong title="@FormatRaw(Result.Score)">@FormatScore(Result.Score)</strong></div>
+        }
     </div>
-</div>
+    <div class="result-body">
+        <h3>@(Result.SourceName ?? L["RAG:Search:Result:UnknownSource"].Value)</h3>
+        <div class="result-provenance">
+            <span>@(KnowledgeBaseName ?? Result.KnowledgeBaseId ?? L["RAG:Search:Result:MissingKnowledgeBase"].Value)</span>
+            @if (!string.IsNullOrWhiteSpace(Result.SectionPath)) { <span>@Result.SectionPath</span> }
+        </div>
+        <p class="result-text">@Result.Text</p>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Description" OnClick="HandleClick" aria-label="@L["KnowledgeWorkbench:Retrieval:ViewSource", Result.SourceName ?? L["RAG:Search:Result:UnknownSource"].Value]">@L["RAG:Search:Result:ViewInDocument"]</MudButton>
+    </div>
+    </div>
+</article>
 
 @code {
-    [Parameter, EditorRequired]
-    public TextSearchResult Result { get; set; } = null!;
-
-    [Parameter]
-    public EventCallback OnClick { get; set; }
-
-    private double GetVisualScore()
-        => Math.Clamp(
-            Result.SimilarityScore
-            ?? Result.Score
-            ?? 0d,
-            0d,
-            1d);
-
-    private string GetPrimaryScoreText()
-    {
-        if (Result.SimilarityScore is double similarityScore)
-        {
-            return $"{Math.Clamp(similarityScore, 0d, 1d) * 100:F2}%";
-        }
-
-        return Result.ScoreKind == TextSearchScoreKind.HybridRank
-            ? $"{(Result.Score ?? 0d):F4}"
-            : $"{GetVisualScore() * 100:F2}%";
-    }
-
-    private string GetPrimaryScoreLabel() => Result switch
-    {
-        { SimilarityScore: not null } => L["RAG:Search:Score:SimilarityLabel"].Value,
-        { ScoreKind: TextSearchScoreKind.HybridRank } => L["RAG:Search:Score:HybridRankLabel"].Value,
-        _ => L["RAG:Search:Score:SimilarityLabel"].Value
-    };
-
-    private string GetPrimaryScoreTooltip() => Result switch
-    {
-        { SimilarityScore: not null, ScoreKind: TextSearchScoreKind.HybridRank } =>
-            L["RAG:Search:Score:SimilarityFromHybridTooltip", Result.Score ?? 0d].Value,
-        { ScoreKind: TextSearchScoreKind.HybridRank } =>
-            L["RAG:Search:Score:HybridRankTooltip"].Value,
-        _ => L["RAG:Search:Score:SimilarityTooltip"].Value
-    };
-
-    private bool ShowHybridRawScore()
-        => Result.ScoreKind == TextSearchScoreKind.HybridRank
-           && Result.Score is not null
-           && Result.SimilarityScore is not null;
-
-    private double GetVisualScorePercentage() => GetVisualScore() * 100;
-
-    private Color GetScoreColor() => GetVisualScore() switch
-    {
-        >= 0.8f => Color.Success,
-        >= 0.5f => Color.Warning,
-        _ => Color.Default
-    };
-
-    private string GetScoreLevel() => GetVisualScore() switch
-    {
-        >= 0.8f => "high",
-        >= 0.5f => "mid",
-        _ => "low"
-    };
-
-    private async Task HandleClick()
-    {
-        if (OnClick.HasDelegate)
-            await OnClick.InvokeAsync();
-    }
+    /// <summary>The returned passage and its original source identity.</summary>
+    [Parameter, EditorRequired] public TextSearchResult Result { get; set; } = null!;
+    /// <summary>The one-based display position in facade result order; zero hides the position.</summary>
+    [Parameter] public int Rank { get; set; }
+    /// <summary>The originating knowledge-base display name, falling back to result identity when absent.</summary>
+    [Parameter] public string? KnowledgeBaseName { get; set; }
+    /// <summary>Invoked by the native document inspection action.</summary>
+    [Parameter] public EventCallback OnClick { get; set; }
+    private double? PrimaryScore => Result.SimilarityScore ?? Result.Score;
+    private string PrimaryScoreLabel => Result.SimilarityScore is not null || Result.ScoreKind == TextSearchScoreKind.VectorSimilarity
+        ? L["RAG:Search:Score:SimilarityLabel"].Value : L["RAG:Search:Score:HybridRankLabel"].Value;
+    private string PrimaryScoreText => FormatScore(PrimaryScore);
+    private string RawPrimaryScore => FormatRaw(PrimaryScore);
+    private string FormatScore(double? score) => score?.ToString("0.0000", CultureInfo.CurrentCulture) ?? L["KnowledgeWorkbench:Retrieval:ScoreMissing"].Value;
+    private string FormatRaw(double? score) => score?.ToString("R", CultureInfo.InvariantCulture) ?? L["KnowledgeWorkbench:Retrieval:ScoreMissing"].Value;
+    private Task HandleClick() => OnClick.InvokeAsync();
 }

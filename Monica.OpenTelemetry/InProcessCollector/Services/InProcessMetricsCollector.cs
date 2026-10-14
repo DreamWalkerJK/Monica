@@ -88,8 +88,8 @@ public sealed class InProcessMetricsCollector(
                 DeploymentEnvironment = _option.DeploymentEnvironment,
                 TimestampUtc = DateTimeOffset.UtcNow,
                 MeterPatterns = _meterPatterns.ToList(),
-                SamplesPerSeries = _option.SamplesPerSeries,
-                MaxTagSetsPerInstrument = _option.MaxTagSetsPerInstrument,
+                SamplesPerSeries = Math.Max(1, _option.SamplesPerSeries),
+                MaxTagSetsPerInstrument = Math.Max(0, _option.MaxTagSetsPerInstrument),
                 Instruments = _states.Values
                     .Select(static state => state.Snapshot())
                     .OrderBy(static snapshot => snapshot.MeterName, StringComparer.Ordinal)
@@ -151,7 +151,7 @@ public sealed class InProcessMetricsCollector(
         {
             while (await _observableTimer.WaitForNextTickAsync(cancellationToken))
             {
-                _listener.RecordObservableInstruments();
+                RecordObservableMeasurements();
             }
         }
         catch (OperationCanceledException)
@@ -165,6 +165,10 @@ public sealed class InProcessMetricsCollector(
             logger.LogError(ex, "Monica OpenTelemetry in-process observable collection loop failed.");
         }
     }
+
+    // The production timer and structural tests use the same real listener callback boundary.
+    // UI snapshot reads never call this method or force observable resampling.
+    internal void RecordObservableMeasurements() => _listener.RecordObservableInstruments();
 
     private static void RecordMeasurement<T>(
         Instrument instrument,

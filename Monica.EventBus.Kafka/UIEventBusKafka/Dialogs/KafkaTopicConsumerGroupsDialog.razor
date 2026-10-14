@@ -1,98 +1,108 @@
+@using Monica.UI.Shared.Components.Dialogs
 @using Monica.EventBus.Kafka.UIEventBusKafka.Support
 @inject KafkaConsoleFacade Facade
 @inject IDialogService DialogService
 @inject IStringLocalizer<EventBusKafkaResource> L
+@implements IAsyncDisposable
 
-<MudDialog>
+<MudDialog Gutters="false">
+    <TitleContent><MoDialogHeading Text="@L["Topics:ConsumerGroupsDialog:Title", TopicName]" /></TitleContent>
     <DialogContent>
-        <MudStack Spacing="3">
-            <div class="topic-groups-heading">
-                <div class="topic-groups-heading__copy">
-                    <MudText Typo="Typo.h6" Class="topic-groups-topic-name">@TopicName</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @L["Topics:ConsumerGroupsDialog:Summary", _groups.Count]
-                    </MudText>
+        <div class="kafka-dialog-body">
+            <MudStack Spacing="3">
+                <KafkaDialogContext ClusterId="@ClusterId" TopicName="@TopicName" />
+                <div class="topic-groups-heading">
+                    <div class="topic-groups-heading__copy">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @(_hasLoaded ? L["Topics:ConsumerGroupsDialog:Summary", _groups.Count] : L["Common:Values:Unavailable"])
+                        </MudText>
+                    </div>
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               Disabled="@_isLoading"
+                               aria-label="@L["Common:Actions:Refresh"]"
+                               OnClick="LoadAsync">
+                        @L["Common:Actions:Refresh"]
+                    </MudButton>
                 </div>
-                <MudButton Variant="Variant.Outlined"
-                           StartIcon="@Icons.Material.Filled.Refresh"
-                           Disabled="@_isLoading"
-                           aria-label="@L["Common:Actions:Refresh"]"
-                           OnClick="LoadAsync">
-                    @L["Common:Actions:Refresh"]
-                </MudButton>
-            </div>
 
-            @if (!string.IsNullOrWhiteSpace(_errorMessage))
-            {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
-                    @_errorMessage
-                </MudAlert>
-            }
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                        @_errorMessage
+                    </MudAlert>
+                }
 
-            @if (_isLoading)
-            {
-                <div class="topic-groups-state">
-                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                    <MudText Typo="Typo.body2">@L["Topics:ConsumerGroupsDialog:Loading"]</MudText>
-                </div>
-            }
-            else if (_groups.Count == 0)
-            {
-                <KafkaWorkspaceState Icon="@Icons.Material.Filled.GroupOff"
-                                     Title="@L["Topics:ConsumerGroupsDialog:Title", TopicName]"
-                                     Description="@L["Topics:ConsumerGroupsDialog:Empty"]"
-                                     AccentColor="Color.Info" />
-            }
-            else
-            {
-                <KafkaTableSurface AriaLabel="@L["Topics:ConsumerGroupsDialog:Title", TopicName]"
-                                   AccentColor="Color.Secondary"
-                                   Size="KafkaTableSurfaceSize.Standard">
-                    <MudTable T="KafkaConsumerGroupSummary"
-                              Items="@_groups"
-                              Dense="true"
-                              Hover="true"
-                              Striped="true"
-                              Breakpoint="Breakpoint.None">
-                        <HeaderContent>
-                            <MudTh>@L["ConsumerGroups:Columns:GroupId"]</MudTh>
-                            <MudTh>@L["ConsumerGroups:Columns:State"]</MudTh>
-                            <MudTh>@L["ConsumerGroups:Columns:Members"]</MudTh>
-                            <MudTh>@L["ConsumerGroups:Columns:Lag"]</MudTh>
-                            <MudTh>@L["Common:Columns:Actions"]</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="@L["ConsumerGroups:Columns:GroupId"]">
-                                <span class="topic-group-id">@context.GroupId</span>
-                            </MudTd>
-                            <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]">
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Variant="Variant.Outlined"
-                                         Color="@KafkaConsumerGroupStateDisplay.GetColor(context.State)">
-                                    @KafkaConsumerGroupStateDisplay.GetText(context.State, L)
-                                </MudChip>
-                            </MudTd>
-                            <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">@context.MemberCount</MudTd>
-                            <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]">
-                                @KafkaMetricDisplayFormatter.FormatOptionalInt64(
-                                    context.TotalLag,
-                                    L["ConsumerGroups:Values:LagUnknown"])
-                            </MudTd>
-                            <MudTd DataLabel="@L["Common:Columns:Actions"]">
-                                <MudButton Variant="Variant.Text"
-                                           Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.Analytics"
-                                           aria-label="@L["ConsumerGroups:Actions:ViewDetails", context.GroupId]"
-                                           OnClick="@(() => OpenDetailsAsync(context))">
-                                    @L["Common:Actions:Details"]
-                                </MudButton>
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                </KafkaTableSurface>
-            }
-        </MudStack>
+                @if (_isLoading)
+                {
+                    <div class="topic-groups-state">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.body2">@L["Topics:ConsumerGroupsDialog:Loading"]</MudText>
+                    </div>
+                }
+                else if (!_hasLoaded)
+                {
+                    <KafkaWorkspaceState Icon="@Icons.Material.Outlined.ErrorOutline" Title="@L["Topics:ConsumerGroupsDialog:Title", TopicName]" Description="@L["Topics:ConsumerGroupsDialog:Unavailable"]" AccentColor="Color.Error" />
+                }
+                else if (_groups.Count == 0)
+                {
+                    <KafkaWorkspaceState Icon="@Icons.Material.Filled.GroupOff"
+                                         Title="@L["Topics:ConsumerGroupsDialog:Title", TopicName]"
+                                         Description="@L["Topics:ConsumerGroupsDialog:Empty"]"
+                                         AccentColor="Color.Info" />
+                }
+                else
+                {
+                    <KafkaTableSurface AriaLabel="@L["Topics:ConsumerGroupsDialog:Title", TopicName]"
+                                       AccentColor="Color.Secondary"
+                                       Size="KafkaTableSurfaceSize.Standard">
+                        <MudTable T="KafkaConsumerGroupSummary"
+                                  Items="@_groups"
+                                  Dense="true"
+                                  Hover="true"
+                                  Striped="true"
+                                  Breakpoint="Breakpoint.Xs" Square="true" Elevation="0" RowsPerPage="25">
+                            <HeaderContent>
+                                <MudTh>@L["ConsumerGroups:Columns:GroupId"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:Columns:State"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:Columns:Members"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:Columns:Lag"]</MudTh>
+                                <MudTh>@L["Common:Columns:Actions"]</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="@L["ConsumerGroups:Columns:GroupId"]">
+                                    <div class="topic-group-identity"><span class="topic-group-id">@context.GroupId</span>@if (!string.IsNullOrWhiteSpace(context.ErrorMessage)) { <span class="topic-group-diagnostic">@context.ErrorMessage</span> }</div>
+                                </MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]">
+                                    <MudChip T="string"
+                                             Size="Size.Small"
+                                             Variant="Variant.Outlined"
+                                             Color="@KafkaConsumerGroupStateDisplay.GetColor(context.State)">
+                                        @KafkaConsumerGroupStateDisplay.GetText(context.State, L)
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">@(string.IsNullOrWhiteSpace(context.ErrorMessage) ? context.MemberCount.ToString() : L["Common:Values:Unavailable"].Value)</MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]">
+                                    @KafkaMetricDisplayFormatter.FormatOptionalInt64(
+                                        context.TotalLag,
+                                        L["ConsumerGroups:Values:LagUnknown"])
+                                </MudTd>
+                                <MudTd DataLabel="@L["Common:Columns:Actions"]">
+                                    <MudButton Variant="Variant.Text"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Analytics"
+                                               aria-label="@L["ConsumerGroups:Actions:ViewDetails", context.GroupId]"
+                                               OnClick="@(() => OpenDetailsAsync(context))">
+                                        @L["Common:Actions:Details"]
+                                    </MudButton>
+                                </MudTd>
+                            </RowTemplate>
+                            <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
+                        </MudTable>
+                    </KafkaTableSurface>
+                }
+            </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
@@ -101,69 +111,115 @@
 
 @code {
     private readonly List<KafkaConsumerGroupSummary> _groups = [];
-    private bool _isLoading = true;
+    private readonly CancellationTokenSource _lifetime = new();
+    private bool _isLoading;
+    private bool _hasLoaded;
+    private volatile bool _isDisposed;
+    private readonly object _disposeGate = new();
+    private Task? _disposeTask;
+    private Task? _loadTask;
+    private Task? _detailTask;
+    private IDialogReference? _detailDialog;
+    private bool _openingDetails;
     private string? _errorMessage;
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    /// <summary>Gets or sets the exact cluster identity retained for every lookup and nested inspector.</summary>
+    [Parameter, EditorRequired] public string ClusterId { get; set; } = string.Empty;
+    /// <summary>Gets or sets the exact topic identity retained for every lookup and nested inspector.</summary>
+    [Parameter, EditorRequired] public string TopicName { get; set; } = string.Empty;
 
-    [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public string ClusterId { get; set; } = string.Empty;
-
-    [Parameter, EditorRequired]
-    public string TopicName { get; set; } = string.Empty;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private Task LoadAsync()
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
-        await LoadAsync();
-        StateHasChanged();
+        if (_isDisposed) return Task.CompletedTask;
+        return _loadTask is { IsCompleted: false } pending ? pending : _loadTask = LoadCoreAsync();
     }
-
-    private async Task LoadAsync()
+    private async Task LoadCoreAsync()
     {
         _isLoading = true;
         _errorMessage = null;
         try
         {
-            var result = await Facade.ListTopicConsumerGroupsAsync(ClusterId, TopicName);
-            if (result.IsFailed(out var error))
-            {
-                _errorMessage = error.Message;
-                return;
-            }
-
+            var result = await Facade.ListTopicConsumerGroupsAsync(ClusterId, TopicName, _lifetime.Token);
+            if (_isDisposed) return;
+            if (result.IsFailed(out var error)) { _errorMessage = error.Message; return; }
             _groups.Clear();
             _groups.AddRange(result.Data!);
+            _hasLoaded = true;
         }
-        finally
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception) { if (!_isDisposed) _errorMessage = exception.Message; }
+        finally { if (!_isDisposed) _isLoading = false; }
+    }
+    private Task OpenDetailsAsync(KafkaConsumerGroupSummary group)
+    {
+        if (_isDisposed) return Task.CompletedTask;
+        return _detailTask is { IsCompleted: false } pending ? pending : _detailTask = OpenDetailsCoreAsync(group);
+    }
+    private async Task OpenDetailsCoreAsync(KafkaConsumerGroupSummary group)
+    {
+        if (_isDisposed || _openingDetails) return;
+        _openingDetails = true;
+        try
         {
-            _isLoading = false;
+            var parameters = new DialogParameters<KafkaConsumerGroupMetricsDialog>
+            {
+                { dialog => dialog.ClusterId, ClusterId }, { dialog => dialog.TopicName, TopicName }, { dialog => dialog.GroupId, group.GroupId }
+            };
+            var dialog = await DialogService.ShowAsync<KafkaConsumerGroupMetricsDialog>(L["ConsumerGroups:MetricsDialog:TopicTitle"], parameters, KafkaDialogPresets.Detail);
+            _detailDialog = dialog;
+            Exception? closeFailure = null;
+            if (_isDisposed)
+            {
+                try { dialog.Close(); }
+                catch (Exception exception) { closeFailure = exception; }
+            }
+            try { await dialog.Result; }
+            catch (Exception exception) when (closeFailure is not null)
+            {
+                throw new AggregateException(closeFailure, exception);
+            }
+            if (closeFailure is not null) throw new AggregateException(closeFailure);
+        }
+        finally { _detailDialog = null; _openingDetails = false; }
+    }
+    private void Close() => MudDialog.Close();
+    /// <summary>Retires and drains owned work once, observing every cleanup failure before reporting it.</summary>
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeGate)
+        {
+            if (_disposeTask is not null) return new ValueTask(_disposeTask);
+            _isDisposed = true;
+            return new ValueTask(_disposeTask = DisposeCoreAsync());
         }
     }
-
-    private async Task OpenDetailsAsync(KafkaConsumerGroupSummary group)
+    private async Task DisposeCoreAsync()
     {
-        var parameters = new DialogParameters<KafkaConsumerGroupMetricsDialog>
+        List<Exception> failures = [];
+        var loadTask = _loadTask;
+        var detailTask = _detailTask;
+        Observe(_lifetime.Cancel);
+        Observe(() => _detailDialog?.Close());
+        if (loadTask is not null) await DrainAsync(loadTask);
+        if (detailTask is not null) await DrainAsync(detailTask);
+        Observe(_lifetime.Dispose);
+        if (failures.Count > 0) throw new AggregateException(failures);
+
+        void Observe(Action action)
         {
-            { dialog => dialog.ClusterId, ClusterId },
-            { dialog => dialog.TopicName, TopicName },
-            { dialog => dialog.GroupId, group.GroupId }
-        };
-        var dialog = await DialogService.ShowAsync<KafkaConsumerGroupMetricsDialog>(
-            L["ConsumerGroups:MetricsDialog:TopicTitle"],
-            parameters,
-            KafkaDialogPresets.Detail);
-        await dialog.Result;
+            try { action(); }
+            catch (Exception exception) { Collect(exception); }
+        }
+        async Task DrainAsync(Task task)
+        {
+            try { await task; }
+            catch (Exception exception) { Collect(task.Exception ?? exception); }
+        }
+        void Collect(Exception exception)
+        {
+            if (exception is AggregateException aggregate) failures.AddRange(aggregate.Flatten().InnerExceptions);
+            else failures.Add(exception);
+        }
     }
-
-    private void Close()
-    {
-        MudDialog.Close();
-    }
-
 }

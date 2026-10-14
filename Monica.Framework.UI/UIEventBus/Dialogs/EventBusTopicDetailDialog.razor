@@ -1,0 +1,21 @@
+@using Monica.EventBus.Models
+@using Monica.Framework.UI.UIEventBus.Support
+@using Monica.UI.Shared.Components.Dialogs
+@inject IStringLocalizer<EventBusResource> L
+
+<MudDialog>
+    <TitleContent><MoDialogHeading Text="@L["Overview:TopicInspector"]" /></TitleContent>
+    <DialogContent>
+        <div class="topic-inspector">
+            <header><span>@L.GetProviderKindText(Status.Provider) · @EventBusPresentation.KeyText(Status.ServiceKey, L)</span><h2>@Status.TopicName</h2><p>@L["Inspector:FrozenCapture"] · @EventBusPresentation.Timestamp(CapturedAt)</p></header>
+            <EventBusTopicEvidence Status="Status" />
+        </div>
+    </DialogContent>
+    <DialogActions><MudButton OnClick="() => MudDialog.Close()" Color="Color.Primary">@L["Shared:Common:Close"]</MudButton></DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public TopicSubscriptionStatus Status { get; set; } = null!;
+    [Parameter] public DateTimeOffset CapturedAt { get; set; }
+}

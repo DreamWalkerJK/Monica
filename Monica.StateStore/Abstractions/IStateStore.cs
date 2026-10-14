@@ -29,7 +29,7 @@ public interface IStateStore
     /// <param name="key">State key</param>
     /// <param name="value">State value</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <param name="ttl">Time to live. Use TimeSpan.Zero for permanent storage</param>
+    /// <param name="ttl">Optional expiration duration. The selected provider owns expiration semantics, including zero-duration handling. Memory treats null as permanent and a supplied zero duration as immediate expiration.</param>
     Task SaveStateAsync<T>(string key, T value, CancellationToken cancellationToken = default, TimeSpan? ttl = null);
 
     /// <summary>

@@ -3,12 +3,16 @@
 @inject IDialogService DialogService
 @inject IStringLocalizer<ConfigurationUIResource> L
 @inject Microsoft.Extensions.Options.IOptions<Monica.Modules.ModuleConfigurationUIOption> UIOptions
-@implements IDisposable
+@implements IAsyncDisposable
+@using Monica.UI.Shared.Components.Dialogs
 
 <MudDialog Class="configuration-save-group-dialog">
+    <TitleContent><MoDialogHeading Text="@L["Workbench:Review"]" /></TitleContent>
     <DialogContent>
+        <p class="configuration-save-group-intro">@L["Workbench:SaveHelp"]</p>
         <div class="configuration-save-group-dialog-body">
-            <div class="configuration-save-group-form">
+            <section class="configuration-save-group-form" aria-label="@L["Workbench:AuditDetails"]">
+                <h3>@L["Workbench:AuditDetails"]</h3>
                 <MudStack Spacing="3">
                     <MudTextField T="string"
                                   @bind-Value="_label"
@@ -16,7 +20,8 @@
                                   Variant="Variant.Outlined"
                                   Margin="Margin.Dense"
                                   Disabled="_saving"
-                                  Required="true" />
+                                  Required="true"
+                                  RequiredError="@L["Workbench:LabelRequired"]" />
                     <MudTextField T="string"
                                   @bind-Value="_reason"
                                   Label="@L["Group:Reason"]"
@@ -41,9 +46,10 @@
                         </MudAlert>
                     }
                 </MudStack>
-            </div>
+            </section>
 
-            <div class="configuration-save-group-preview">
+            <section class="configuration-save-group-preview" aria-label="@L["Workbench:ChangeReview"]">
+                <h3>@L["Workbench:ChangeReview"]</h3>
                 <ConfigurationPendingReviewTabs Review="_review"
                                                 ActionMode="ConfigurationPendingReviewActionMode.Undo"
                                                 ActionsDisabled="@(_saving || _previewing)"
@@ -57,13 +63,14 @@
                 }
                 else if (_validationPreview is not null)
                 {
+                    <h3 class="configuration-validation-heading">@L["Workbench:Validation"]</h3>
                     <ConfigurationMutationValidationPreview Preview="_validationPreview" JumpRequested="JumpToIssue" />
                 }
                 else
                 {
                     <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:PreviewRequired"]</MudAlert>
                 }
-            </div>
+            </section>
 
             @if (_saving)
             {
@@ -91,6 +98,8 @@
     [Parameter] public IReadOnlyList<PendingChange> Changes { get; set; } = [];
     [Parameter] public IReadOnlyList<ConfigurationValidationIssue> ValidationIssues { get; set; } = [];
     [Parameter] public EventCallback<ConfigurationPendingReviewUndoRequest> UndoRequested { get; set; }
+    /// <summary>Reconciles actual applied outcomes against the parent's captured drafts, including after retirement.</summary>
+    [Parameter] public EventCallback<ConfigurationMutationGroupApplyResult> Applied { get; set; }
 
     private string _label = string.Empty;
     private string? _reason;
@@ -99,7 +108,7 @@
     private bool _previewing;
     private bool _disposed;
     private long _previewGeneration;
-    private readonly CancellationTokenSource _lifetime = new();
+    private readonly ConfigurationOperationLifetime _operations = new();
     private ConfigurationMutationGroupValidationPreview? _validationPreview;
     private ConfigurationMutationGroupApplyRequest? _previewRequest;
     private ConfigurationPendingReviewState _review = null!;
@@ -127,6 +136,13 @@
 
     private async Task SaveAsync()
     {
+        if (_disposed) return;
+        try { await _operations.RunAsync(_ => SaveCoreAsync()); }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+    }
+
+    private async Task SaveCoreAsync()
+    {
         if (!CanSave || _previewRequest is null || _validationPreview is null)
         {
             return;
@@ -140,13 +156,16 @@
             Context = new ConfigurationMutationContext { Reason = _reason },
             ExpectedValidationFingerprint = _validationPreview.ValidationFingerprint
         };
+        var capturedChanges = _review.Changes.ToArray();
+        var applied = Applied;
+        var options = MudDialog.Options;
         _saving = true;
         _error = null;
 
         try
         {
             if (UIOptions.Value.EnableAffectedServiceConfirmation
-                && !await ConfirmAffectedServicesAsync(_review.Changes))
+                && !await ConfirmAffectedServicesAsync(capturedChanges))
             {
                 return;
             }
@@ -156,7 +175,14 @@
                 return;
             }
 
+            await MudDialog.SetOptionsAsync(options with { CloseOnEscapeKey = false, BackdropClick = false, CloseButton = false });
+            if (_disposed) return;
+            // Persistence is admitted without a caller cancellation token. Retirement drains its actual result.
             var applyResult = await Facade.ApplyMutationGroupAsync(request);
+            if (applyResult.Data is { } persisted && persisted.Outcomes.Any(outcome => outcome.Status == ConfigurationMutationOutcomeStatus.Applied))
+            {
+                await applied.InvokeAsync(persisted);
+            }
             if (_disposed)
             {
                 return;
@@ -185,11 +211,19 @@
             if (!_disposed)
             {
                 _saving = false;
+                await MudDialog.SetOptionsAsync(options);
             }
         }
     }
 
     private async Task RefreshValidationAsync()
+    {
+        if (_disposed) return;
+        try { await _operations.RunAsync(RefreshValidationCoreAsync); }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+    }
+
+    private async Task RefreshValidationCoreAsync(CancellationToken cancellationToken)
     {
         var generation = ++_previewGeneration;
         _previewRequest = null;
@@ -221,7 +255,7 @@
                 Reason = _reason,
                 Commands = commands
             };
-            var result = await Facade.PreviewMutationGroupAsync(request, _lifetime.Token);
+            var result = await Facade.PreviewMutationGroupAsync(request, cancellationToken);
             if (_disposed || generation != _previewGeneration)
             {
                 return;
@@ -237,7 +271,7 @@
             _validationPreview = preview;
             _previewRequest = request;
         }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
         finally
@@ -276,21 +310,10 @@
         parameters.Add(dialog => dialog.ChangeCount, changes.Count);
         parameters.Add(dialog => dialog.Impact, impact);
         parameters.Add(dialog => dialog.AnalysisError, analysisError);
-        var dialog = await DialogService.ShowAsync<ConfigurationAffectedServiceConfirmationDialog>(
+        var result = await _operations.ShowDialogAsync(() => DialogService.ShowAsync<ConfigurationAffectedServiceConfirmationDialog>(
             L["Dialogs:SaveGroup:Impact:Title"],
             parameters,
-            new DialogOptions
-            {
-                MaxWidth = MaxWidth.Large,
-                FullWidth = true
-            });
-        if (_disposed)
-        {
-            dialog.Close();
-            return false;
-        }
-
-        var result = await dialog.Result;
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true }));
         return result is { Canceled: false } && result.Data is true;
     }
 
@@ -375,11 +398,11 @@
         await RefreshValidationAsync();
     }
 
-    public void Dispose()
+    /// <summary>Retires previews and native children, then drains admitted persistence and outcome reconciliation.</summary>
+    public ValueTask DisposeAsync()
     {
         _disposed = true;
         ++_previewGeneration;
-        _lifetime.Cancel();
-        _lifetime.Dispose();
+        return _operations.RetireAsync();
     }
 }

@@ -18,6 +18,11 @@ public partial class ChatTrajectory
     /// <summary>Optional execution step selected from the chat view.</summary>
     [Parameter] public ChatExecutionStep? SelectedStep { get; set; }
 
+    private const int LedgerRowHeight = 48;
+    [CascadingParameter] private ChatWorkbenchLayout? Layout { get; set; }
+    private bool _timelineDefaultInitialized, _timelineInitiallyOpen;
+    private string? _restoreFocusId;
+
     private readonly TrajectoryViewport _viewport = new();
     private readonly HashSet<string> _folded = [];
     private ChatTrajectoryProjection _projection = ChatTrajectoryProjection.Create([], [], null, DateTimeOffset.UtcNow);
@@ -39,7 +44,12 @@ public partial class ChatTrajectory
         _projection = ChatTrajectoryProjection.Create(Session, _now);
         if (_lastSessionId != Session.SessionId)
         {
-            _lastSessionId = Session.SessionId; _selectedId = null; _folded.Clear(); _viewport.Reset(); _query = string.Empty;
+            _lastSessionId = Session.SessionId; _selectedId = null; _folded.Clear(); _viewport.Reset(); _query = string.Empty; _timelineDefaultInitialized = false;
+        }
+        if (!_timelineDefaultInitialized && Layout is { IsObserved: true } layout)
+        {
+            _timelineInitiallyOpen = layout.MainWidth > 700 && layout.Height > 600;
+            _timelineDefaultInitialized = true;
         }
         _viewport.UpdateExtent(_projection.ExtentSeconds);
         if (SelectedStep?.Id != _lastSelectedId)
@@ -64,7 +74,8 @@ public partial class ChatTrajectory
         if (_revealRow is { } row)
         {
             _revealRow = null;
-            await _interop.RevealAsync(row);
+            await _interop.RevealAsync(row, _restoreFocusId);
+            _restoreFocusId = null;
         }
     }
 
@@ -79,7 +90,19 @@ public partial class ChatTrajectory
     private void RebuildRows() => _rows = _projection.Rows(_query, _folded);
     private void RebuildTimeline() => _marks = TrajectoryTimelineProjection.Create(_projection, _viewport, _now);
     private void ChangeViewport(Action change) { change(); RebuildTimeline(); }
-    private void ClearSelection() => _selectedId = null;
+    private Task ClearSelectionAsync()
+    {
+        _restoreFocusId = _selectedId;
+        _selectedId = null;
+        RebuildTimeline();
+        if (_restoreFocusId is { } id)
+        {
+            var row = _rows.FindIndex(row => row.Record?.Id == id);
+            if (row >= 0) _revealRow = row;
+            else _restoreFocusId = null;
+        }
+        return Task.CompletedTask;
+    }
 
     private Task SelectRecordAsync(TrajectoryRecord record)
     {

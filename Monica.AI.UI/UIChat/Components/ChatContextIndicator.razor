@@ -1,11 +1,13 @@
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
 @using Monica.AI.UI.UIChat.Support
+@implements IAsyncDisposable
 @inject IStringLocalizer<AIResource> L
-<div class="context-indicator">
-    <MudMenu AriaLabel="@L["Workbench:Context"]" Dense="true">
+@inject IJSRuntime JSRuntime
+<div class="context-indicator" @onkeydown="HandleDismissalKeyAsync" @onkeydown:stopPropagation="true">
+    <MudMenu @ref="_menu" @bind-Open="_open" AriaLabel="@L["Workbench:Context"]" Dense="true">
         <ActivatorContent Context="menu">
-            <span class="context-activator" @onclick="@(args => menu.ToggleAsync(args))">
+            <span @ref="_activatorContent" class="context-activator" @onclick="@(args => menu.ToggleAsync(args))">
                 <span class="mud-sr-only">@L["Workbench:Context"]</span>
                 <span class="context-visual" aria-hidden="true">
                 <MudProgressCircular Value="@Percent" Size="Size.Small" Color="@OccupancyColor" Class="context-ring" />
@@ -14,7 +16,7 @@
             </span>
         </ActivatorContent>
         <ChildContent>
-            <div class="context-details">
+            <div class="context-details" @onkeydown="HandleDismissalKeyAsync" @onkeydown:stopPropagation="true">
                 <MudText Typo="Typo.subtitle2">@L["Workbench:Context"]</MudText>
                 <dl>
                     <dt>@L["Workbench:ContextCapacity"]</dt><dd>@ChatExecutionPresentation.Tokens(Usage?.ContextWindow)</dd>
@@ -52,6 +54,53 @@
     private double _thresholdPercent = 80, _lastThreshold = double.NaN;
     private int _retainedTurns = 4, _lastRetained;
     private int? _outputBudget, _lastOutputBudget;
+    private MudMenu? _menu;
+    private ElementReference _activatorContent;
+    private IJSObjectReference? _focusModule;
+    private bool _open, _closing, _disposed;
+    private Task? _closeTask, _retirement;
+
+    private Task HandleDismissalKeyAsync(KeyboardEventArgs args)
+    {
+        if (args.Key != "Escape" || !_open || _closing || _disposed || _menu is not { } menu) return Task.CompletedTask;
+        _closing = true;
+        return _closeTask = CloseAsync(menu);
+    }
+    private async Task CloseAsync(MudMenu menu)
+    {
+        try
+        {
+            await menu.CloseMenuAsync();
+            if (_disposed) return;
+            if (_focusModule is null)
+            {
+                // Import cannot be canceled without losing a late-created reference. Drain and retire it instead.
+                var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Monica.AI.UI/UIChat/Components/ChatContextIndicator.razor.js");
+                if (_disposed) { await DisposeModuleAsync(module); return; }
+                _focusModule = module;
+            }
+            if (!_disposed) await _focusModule.InvokeVoidAsync("focusNativeActivator", _activatorContent);
+        }
+        catch (JSDisconnectedException) { }
+        finally { _closing = false; }
+    }
+    public ValueTask DisposeAsync() => new(_retirement ??= RetireAsync());
+    private async Task RetireAsync()
+    {
+        _disposed = true;
+        try { if (_closeTask is not null) await _closeTask; }
+        finally
+        {
+            var module = _focusModule;
+            _focusModule = null;
+            if (module is not null) await DisposeModuleAsync(module);
+        }
+    }
+    private static async ValueTask DisposeModuleAsync(IJSObjectReference module)
+    {
+        try { await module.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+    }
     private bool PreferencesValid => double.IsFinite(_thresholdPercent) && _thresholdPercent is > 0 and < 100 && _retainedTurns > 0 && (_outputBudget is null or > 0)
         && !(_outputBudget is { } output && Usage?.ContextWindow is { } context && output >= context);
     protected override void OnParametersSet()

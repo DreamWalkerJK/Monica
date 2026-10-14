@@ -5,37 +5,33 @@
     }
   },
   "Page": {
-    "Title": "System dossier",
-    "Eyebrow": "MONICA / LIVE SERVICE PROFILE",
-    "Summary": "Identity, readiness, and runtime evidence for this host instance.",
+    "Title": "System information",
+    "Eyebrow": "Host profile",
+    "Summary": "Application identity and runtime evidence for this host.",
     "Actions": {
       "Refresh": "Refresh evidence",
       "Restart": "Restart service",
       "Retry": "Try again"
     },
     "Status": {
-      "Ready": "Ready",
       "Running": "Running",
       "Tracked": "Tracked",
       "Snapshot": "Snapshot",
       "Bound": "Bound",
-      "Captured": "Captured",
       "JustNow": "just now",
       "SecondsAgo": "{0}s ago"
     },
     "ServiceIdentity": {
       "ProductVersion": "Product version",
-      "ProcessStarted": "Process started",
-      "ProcessUptime": "Process uptime"
+      "ProcessStarted": "Process started"
     },
     "Startup": {
       "AriaLabel": "Application startup timing",
       "Title": "Application startup",
-      "Scope": "Start marker → ready",
+      "Scope": "Completed host startup interval",
       "StartMarker": "Start marker",
-      "HostReady": "Host ready",
-      "ReadyAt": "Host ready at",
-      "DurationValue": "{0:F4} ms"
+      "ReadyAt": "Host started at",
+      "DurationValue": "{0:N1} ms"
     },
     "Pulse": {
       "AriaLabel": "Service evidence summary",
@@ -46,15 +42,13 @@
       "CapturedAt": "Captured at"
     },
     "Index": {
-      "Title": "Dossier index",
-      "Hint": "Jump to evidence",
-      "AriaLabel": "Dossier index"
+      "Hint": "Jump to section",
+      "AriaLabel": "System evidence sections"
     },
     "Sections": {
       "Runtime": {
-        "Title": "Runtime pulse",
+        "Title": "Runtime",
         "Description": "Process and managed runtime evidence.",
-        "EvidenceLabel": "{0} evidence items",
         "DotNetRuntime": ".NET runtime",
         "ProcessArchitecture": "Process architecture",
         "Privilege": "Privilege",
@@ -71,17 +65,22 @@
         }
       },
       "Environment": {
-        "Title": "Environment fingerprint",
+        "Title": "Host environment",
         "Description": "Host identity and execution context.",
         "Machine": "Machine",
         "ProcessUser": "Process user",
         "OperatingSystem": "Operating system",
         "TimeZone": "Time zone",
         "WorkingDirectory": "Working directory",
-        "ProcessPath": "Process path"
+        "ProcessPath": "Process path",
+        "OperatingSystemBitness": "Operating system bitness",
+        "Values": {
+          "System64Bit": "64-bit OS",
+          "System32Bit": "32-bit OS"
+        }
       },
       "Endpoints": {
-        "Title": "Listening endpoints",
+        "Title": "Listening addresses",
         "Description": "Addresses currently bound by the host.",
         "ListeningAddress": "Listening address",
         "Transport": "Transport",
@@ -92,7 +91,7 @@
         "EmptyDescription": "The current host snapshot did not report any bound addresses."
       },
       "Artifact": {
-        "Title": "Artifact evidence",
+        "Title": "Executable artifact",
         "Description": "Product and artifact metadata.",
         "Product": "Product",
         "ProductVersion": "Product version",

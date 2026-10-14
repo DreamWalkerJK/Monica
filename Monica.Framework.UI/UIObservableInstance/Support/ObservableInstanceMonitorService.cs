@@ -16,6 +16,23 @@ public sealed class ObservableInstanceMonitorService(
 {
     private readonly ObservableInstanceFacade _facade = observableInstanceFacade;
 
+    /// <summary>Captures one registry membership read and all retained evidence without live value references.</summary>
+    /// <param name="cancellationToken">Cancels the underlying tracker captures.</param>
+    /// <returns>A detached capture; independent tracker reads are not globally atomic.</returns>
+    public async Task<Res<ObservableInstanceCapture>> CaptureAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _facade.CaptureAsync(cancellationToken);
+        if (result.IsFailed(out var error, out var instances)) return Res.Fail(error);
+        cancellationToken.ThrowIfCancellationRequested();
+        return Res.Ok(new ObservableInstanceCapture(DateTime.UtcNow, instances ?? []));
+    }
+
+    /// <summary>Clears retained records for the captured registration, preserving current state and lifetime counters.</summary>
+    /// <param name="identity">The frozen registration identity to clear.</param>
+    /// <param name="cancellationToken">Cancels before the side effect.</param>
+    public Task<Res> ClearHistoryAsync(ObservableInstanceReference identity, CancellationToken cancellationToken = default)
+        => _facade.ClearInstanceHistoryAsync(identity, cancellationToken);
+
     public async Task<Res<List<ObservableInstanceViewModel>>> GetAllInstancesAsync()
     {
         var result = await _facade.GetAllInstancesAsync();

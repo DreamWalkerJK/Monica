@@ -8,6 +8,7 @@
     @if (Message is { } selectedMessage)
     {
         <header class="inspector-heading"><span>@MessageHeading</span><span class="inspector-role">@RoleLabel(selectedMessage.Role)</span></header>
+        <div class="inspector-body">
         @if (RecordedAt is { } time)
         {
             <dl class="facts"><dt>@L["Workbench:RecordedAt"]</dt><dd>@time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff")</dd></dl>
@@ -21,6 +22,7 @@
         {
             <MudText Typo="Typo.body2">@L["Workbench:NoRecordedContent"]</MudText>
         }
+        </div>
     }
     else if (Step is not { } step)
     {
@@ -28,9 +30,9 @@
     }
     else
     {
-        <header class="inspector-heading"><span>@ChatExecutionPresentation.Title(step, L)</span><MudChip T="string" Size="Size.Small" Color="@ChatExecutionPresentation.StatusColor(step.Status)" Variant="Variant.Text">@ChatExecutionPresentation.Status(step.Status, L)</MudChip></header>
-        <MudTabs Elevation="0" Rounded="false" Class="inspector-tabs">
-            <MudTabPanel Text="@L["Workbench:Details"]">
+        <header class="inspector-heading"><span>@ChatExecutionPresentation.Title(step, L)</span><MudChip T="string" Size="Size.Small" Color="@(step.Status == ChatExecutionStatus.AwaitingApproval ? Color.Warning : ChatExecutionPresentation.StatusColor(step.Status))" Variant="Variant.Text">@ChatExecutionPresentation.Status(step.Status, L)</MudChip></header>
+        <div class="inspector-body">
+            <section class="inspector-section"><h3>@L["Workbench:Details"]</h3>
                 <dl class="facts"><dt>@L["Workbench:Started"]</dt><dd>@step.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff")</dd><dt>@L["Workbench:Elapsed"]</dt><dd>@ChatExecutionPresentation.Duration(step.Duration)</dd></dl>
                 @if (step.Request is { } request)
                 {
@@ -55,8 +57,8 @@
                     <MudText Typo="Typo.body2">@L["Workbench:CompactionSummary", compacted.BeforeTokens, compacted.AfterTokens]</MudText>
                     <p>@compacted.Reason</p><pre>@compacted.Summary</pre>
                 }
-            </MudTabPanel>
-            <MudTabPanel Text="@L["Workbench:Input"]">
+            </section>
+            <details class="inspector-section"><summary>@L["Workbench:Input"]</summary>
                 @if (step.Request is { } input)
                 {
                     @if (input.Instructions is { Length: > 0 } instructions) { <h4>@L["Provider:Settings:SystemPrompt"]</h4><pre>@instructions</pre> }
@@ -71,9 +73,11 @@
                         }
                     }
                 }
+                @if (step.Request is null && step.Tool is null) { <p>@L["Workbench:NoRecordedContent"]</p> }
                 @if (step.Tool is { } toolInput) { <pre>@toolInput.Arguments</pre> }
-            </MudTabPanel>
-            <MudTabPanel Text="@L["Workbench:Output"]">
+            </details>
+            <details class="inspector-section" open="@HasOutput(step)"><summary>@L["Workbench:Output"]</summary>
+                @if (!HasOutput(step)) { <p>@L["Workbench:NoRecordedContent"]</p> }
                 @if (step.Request is { } output)
                 {
                     @foreach (var part in output.Output)
@@ -83,18 +87,18 @@
                 }
                 @if (step.Tool is { } toolOutput) { <pre>@toolOutput.Result</pre> }
                 @if (step.Compaction is { } compactOutput) { <pre>@compactOutput.Summary</pre> }
-            </MudTabPanel>
+            </details>
             @if (step.Request is { } definitions)
             {
-                <MudTabPanel Text="@L["Workbench:Tools"]">
+                <details class="inspector-section"><summary>@L["Workbench:Tools"]</summary>
                     @foreach (var tool in definitions.Tools)
                     {
                         <details><summary>@tool.Name</summary><p>@tool.Description</p><pre>@Serialize(tool.Parameters)</pre></details>
                     }
                     @if (definitions.Tools.Count == 0) { <MudText Typo="Typo.body2">@L["Workbench:NoTools"]</MudText> }
-                </MudTabPanel>
+                </details>
             }
-        </MudTabs>
+        </div>
     }
 </div>
 @code {
@@ -106,6 +110,7 @@
     [Parameter] public string? MessageHeading { get; set; }
     /// <summary>Actual message or observation timestamp; null for preferences that have not been sent.</summary>
     [Parameter] public DateTimeOffset? RecordedAt { get; set; }
+    private static bool HasOutput(ChatExecutionStep step) => step.Request?.Output.Count > 0 || !string.IsNullOrWhiteSpace(step.Tool?.Result) || !string.IsNullOrWhiteSpace(step.Compaction?.Summary);
     private static readonly JsonSerializerOptions JSON_OPTIONS = new() { WriteIndented = true };
     private static string Serialize(object? value) => JsonSerializer.Serialize(value, JSON_OPTIONS);
     private string RoleLabel(AIChatRole role) => role switch

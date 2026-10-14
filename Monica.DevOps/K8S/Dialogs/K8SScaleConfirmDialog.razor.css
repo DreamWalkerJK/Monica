@@ -1,20 +1,26 @@
-.k8s-scale-dialog .list-panel {
-    max-height: 30vh;
-    overflow: auto;
+.operation-review { min-width: 0; padding: 12px 0; font-family: var(--mud-typography-default-family, var(--mo-font-family-body)); overflow-wrap: anywhere; }
+.workloads { min-width: 0; }
+.workloads ::deep .mud-typography-subtitle1 { margin-bottom: 12px; }
+.operation-review ::deep .mud-table-container { overflow-x: auto; overflow-y: visible; }
+.operation-review ::deep .mud-table-cell { font-size: .875rem; overflow-wrap: anywhere; }
+.disclosure-body { padding: 12px 4px; min-width: 0; }
+.target-list { margin: 0; padding-inline-start: 20px; font-size: .875rem; }
+.target-list li + li { margin-top: 12px; }
+.ignored-reason { margin: 6px 0 0; }
+.command-output { min-width: 0; max-width: 100%; margin-top: 16px; overflow-x: auto; background: var(--mud-palette-background); border: 1px solid var(--mud-palette-lines-default); }
+.command-output pre { margin: 0; padding: 16px; white-space: pre; font: .875rem/1.6 var(--mo-font-family-mono); }
+.replica-change { font-size: 1rem; font-weight: 500; }
+.k8s-confirm-actions { display: contents; }
+.k8s-confirm-actions ::deep .k8s-confirm-action.mud-button-root.mud-button-filled-error:not(:disabled):not(.mud-disabled) {
+    background: color-mix(in srgb, var(--mud-palette-error) 45%, var(--mud-palette-text-primary)) !important;
+    color: var(--mud-palette-surface) !important;
+    --mud-ripple-color: var(--mud-palette-surface);
 }
-
-.k8s-scale-dialog .command-output {
-    max-height: 28vh;
-    overflow: auto;
-    border: 1px solid var(--mud-palette-lines-default);
-    background: var(--mud-palette-surface);
+.k8s-confirm-actions ::deep .k8s-confirm-action.mud-button-root.mud-button-filled-error:not(:disabled):not(.mud-disabled):is(:hover, :focus, :focus-visible, :active) {
+    background: color-mix(in srgb, var(--mud-palette-error) 35%, var(--mud-palette-text-primary)) !important;
 }
-
-.k8s-scale-dialog .command-output pre {
-    margin: 0;
-    padding: 16px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 0.85rem;
+.k8s-confirm-actions ::deep .k8s-confirm-action.mud-button-root.mud-button-filled-error:not(:disabled):not(.mud-disabled) .mud-button-label { color: inherit; }
+@media (max-width: 960px) {
+    .operation-review ::deep .mud-table-cell { padding: 12px 16px; }
+    .operation-review ::deep .mud-table-cell::before { padding-inline-end: 16px; overflow-wrap: normal; word-break: normal; }
 }

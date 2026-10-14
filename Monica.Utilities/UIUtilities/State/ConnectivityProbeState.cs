@@ -7,13 +7,37 @@ using Monica.Utilities.Connectivity.Models;
 namespace Monica.Utilities.UIUtilities.State;
 
 /// <summary>
-/// Owns the transient UI state for the connectivity probe panel.
+/// Retains connectivity drafts and completed evidence for the circuit across tool visits.
+/// Each admitted request borrows its caller's lifetime token; canceling that visit cannot publish late evidence.
 /// </summary>
 public sealed class ConnectivityProbeState(
     ConnectivityProbeFacade connectivityProbeFacade,
     IOptions<ModuleUtilitiesOption> moduleOptions)
 {
     private readonly ModuleUtilitiesOption _moduleOption = moduleOptions.Value;
+    private CancellationTokenSource? _activeCancellation;
+    private long _revision;
+
+    /// <summary>
+    /// Notifies current panels of operation changes. Subscribers must retire their renderer callbacks on departure.
+    /// Notifications are awaited before the operation completes.
+    /// </summary>
+    public event Func<Task>? Changed;
+
+    /// <summary>Gets the current request/reset revision used to reject superseded UI continuations.</summary>
+    public long Revision => _revision;
+
+    /// <summary>Gets the immutable request currently being executed, or null when no request is active.</summary>
+    public ConnectivityProbeRequest? ActiveRequest { get; private set; }
+
+    /// <summary>
+    /// Gets the request associated with <see cref="LastResult"/>, including its HTTPS certificate-validation choice.
+    /// This snapshot never follows subsequent draft edits.
+    /// </summary>
+    public ConnectivityProbeRequest? CompletedRequest { get; private set; }
+
+    /// <summary>Gets the service's effective timeout upper bound, including its minimum of 250 milliseconds.</summary>
+    public int MaximumTimeoutMilliseconds => Math.Max(250, _moduleOption.MaximumProbeTimeoutMilliseconds);
 
     /// <summary>
     /// Gets or sets the target host name or IP address.
@@ -121,49 +145,76 @@ public sealed class ConnectivityProbeState(
     /// Runs the current probe request through the facade.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token that aborts the probe.</param>
-    /// <returns>The result envelope returned by the facade.</returns>
+    /// <returns>The real facade result, accepted only while this request remains current.</returns>
+    /// <exception cref="InvalidOperationException">Another request is already active.</exception>
+    /// <exception cref="OperationCanceledException">The caller canceled or Reset invalidated this request.</exception>
     public async Task<Res<ConnectivityProbeResult>> RunAsync(CancellationToken cancellationToken = default)
     {
+        if (IsBusy)
+            throw new InvalidOperationException("A connectivity request is already active.");
+        cancellationToken.ThrowIfCancellationRequested();
+
+        using var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var revision = ++_revision;
+        var request = new ConnectivityProbeRequest
+        {
+            Host = Host,
+            Port = Port,
+            ProbeKind = ProbeKind,
+            Path = Path,
+            TimeoutMilliseconds = TimeoutMilliseconds,
+            AllowInvalidCertificate = ProbeKind == ConnectivityProbeKind.Https && AllowInvalidCertificate
+        };
+        _activeCancellation = operationCancellation;
+        ActiveRequest = request;
         IsBusy = true;
         ErrorMessage = null;
 
         try
         {
-            var result = await connectivityProbeFacade.ProbeAsync(
-                new ConnectivityProbeRequest
-                {
-                    Host = Host,
-                    Port = Port,
-                    ProbeKind = ProbeKind,
-                    Path = Path,
-                    TimeoutMilliseconds = TimeoutMilliseconds,
-                    AllowInvalidCertificate = AllowInvalidCertificate
-                },
-                cancellationToken);
+            await NotifyChangedAsync();
+            operationCancellation.Token.ThrowIfCancellationRequested();
+            var result = await connectivityProbeFacade.ProbeAsync(request, operationCancellation.Token);
+
+            // Network services can return evidence, and the facade can return an envelope, after cancellation.
+            operationCancellation.Token.ThrowIfCancellationRequested();
+            if (revision != _revision)
+                throw new OperationCanceledException(operationCancellation.Token);
 
             if (result.IsFailed(out var error, out var probeResult))
             {
                 ErrorMessage = error.Message;
                 LastResult = null;
+                CompletedRequest = null;
             }
             else
             {
                 LastResult = probeResult;
+                CompletedRequest = request;
             }
 
             return result;
         }
         finally
         {
-            IsBusy = false;
+            if (ReferenceEquals(_activeCancellation, operationCancellation))
+            {
+                _activeCancellation = null;
+                ActiveRequest = null;
+                IsBusy = false;
+                await NotifyChangedAsync();
+            }
         }
     }
 
     /// <summary>
-    /// Clears the current inputs and discards the previous result.
+    /// Restores configured draft defaults and clears completed evidence.
+    /// Invalidates and cancels an active request; admission remains busy until that request drains.
     /// </summary>
     public void Reset()
     {
+        _revision++;
+        _activeCancellation?.Cancel();
         Host = string.Empty;
         Port = null;
         ProbeKind = ConnectivityProbeKind.Ping;
@@ -172,5 +223,14 @@ public sealed class ConnectivityProbeState(
         AllowInvalidCertificate = false;
         ErrorMessage = null;
         LastResult = null;
+        CompletedRequest = null;
+    }
+
+    private async Task NotifyChangedAsync()
+    {
+        if (Changed is not { } changed)
+            return;
+        foreach (var subscriber in changed.GetInvocationList().Cast<Func<Task>>())
+            await subscriber();
     }
 }

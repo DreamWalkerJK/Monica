@@ -1,0 +1,16 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.Utilities.Localization
+@using Monica.Utilities.UIUtilities.Components
+@inject IStringLocalizer<UtilitiesResource> L
+@rendermode RenderMode.InteractiveServer
+
+<PageTitle>@L["TextJson:Title"]</PageTitle>
+
+<UtilitiesWorkspace IsTextPage="true">
+    <TextTransformPanel />
+</UtilitiesWorkspace>
+
+@code {
+    /// <summary>Gets the directly addressable text and JSON transformation route.</summary>
+    public const string PAGE_URL = "/ui/utilities/text";
+}

@@ -1,70 +1,131 @@
 @using System.Globalization
+@inject IStringLocalizer<RepositoryUIResource> L
 
 <div class="activity-rows-table">
-    <MudTable T="RepositoryActivityRow"
-              Items="Rows"
-              Dense="true"
-              Hover="true"
-              Elevation="0"
-              Breakpoint="Breakpoint.Sm"
-              Class="activity-table">
+    <MudTable T="RepositoryActivityRow" Items="Rows" Dense="false" Hover="true" Elevation="0" Square="true"
+              Breakpoint="Breakpoint.Xs" Class="activity-table" AriaLabel="@L["Workbench:Activity:TableLabel"]"
+              @bind-RowsPerPage="_pageSize" @bind-CurrentPage="_currentPage">
         <HeaderContent>
-            <MudTh>@RuntimeLabel</MudTh>
-            <MudTh>@StateLabel</MudTh>
-            <MudTh>@UserLabel</MudTh>
-            <MudTh>@ApplicationLabel</MudTh>
-            <MudTh>@ClientLabel</MudTh>
-            <MudTh>@QueryLabel</MudTh>
+            <MudTh Class="activity-session-column">@L["Workbench:Activity:Session"]</MudTh>
+            <MudTh Class="activity-state-column">@StateLabel</MudTh>
+            <MudTh Class="activity-client-column">@ClientLabel</MudTh>
+            <MudTh Class="activity-query-column">@QueryLabel</MudTh>
+            <MudTh Class="activity-age-column">@RuntimeLabel</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="@RuntimeLabel">@FormatRuntime(context.Runtime)</MudTd>
-            <MudTd DataLabel="@StateLabel">@DisplayValue(context.State)</MudTd>
-            <MudTd DataLabel="@UserLabel">@DisplayValue(context.UserName)</MudTd>
-            <MudTd DataLabel="@ApplicationLabel">@DisplayValue(context.ApplicationName)</MudTd>
-            <MudTd DataLabel="@ClientLabel">@FormatClient(context)</MudTd>
-            <MudTd DataLabel="@QueryLabel">
-                <span class="query-cell" title="@DisplayValue(context.Query)">@DisplayValue(context.Query)</span>
+            <MudTd DataLabel="@L["Workbench:Activity:Session"]" Class="activity-session-column">
+                <div class="activity-cell activity-session">
+                    <strong class="activity-backend">@DisplayValue(context.BackendId)</strong>
+                    <span class="activity-database">@DisplayValue(context.DatabaseName)</span>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="@StateLabel" Class="activity-state-column">
+                <div class="activity-cell activity-state">
+                    <span class="activity-state-badge @StateClass(context.State)"><span aria-hidden="true" class="activity-state-dot"></span>@DisplayValue(context.State)</span>
+                    <span class="activity-wait @WaitClass(context.Waiting)">
+                        @if (context.Waiting == true) { <MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" Size="Size.Small" /> }
+                        @WaitingText(context.Waiting)
+                    </span>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="@ClientLabel" Class="activity-client-column">
+                <div class="activity-cell activity-client">
+                    <span class="activity-application" title="@ApplicationLabel">@DisplayValue(context.ApplicationName)</span>
+                    <span class="activity-client-account"><span>@UserLabel</span> @DisplayValue(context.UserName)</span>
+                    <span class="activity-client-address">@FormatClient(context)</span>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="@QueryLabel" Class="activity-query-column">
+                <div class="activity-cell activity-query">
+                    <code class="activity-query-preview">@QueryPreview(context.Query)</code>
+                    @if (OnInspect.HasDelegate)
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Text" EndIcon="@Icons.Material.Outlined.ArrowForward"
+                                   Disabled="InspectDisabled" OnClick="@(() => OnInspect.InvokeAsync(context))"
+                                   aria-label="@L["Workbench:Activity:InspectLabel", DisplayValue(context.BackendId), DisplayValue(context.DatabaseName)]">
+                            @L["Workbench:Activity:Inspect"]
+                        </MudButton>
+                    }
+                </div>
+            </MudTd>
+            <MudTd DataLabel="@RuntimeLabel" Class="activity-age-column">
+                <span class="activity-age-value">@FormatRuntime(context.Runtime)</span>
             </MudTd>
         </RowTemplate>
+        <NoRecordsContent>
+            <div class="activity-table-empty">@L["Activity:NoMatches"]</div>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="@PageSizes" RowsPerPageString="@L["Workbench:Activity:PageSize"]"
+                           InfoFormat="@L["Workbench:Activity:PageInfo"]" />
+        </PagerContent>
     </MudTable>
 </div>
 
 @code {
+    /// <summary>Detached rows in the selected sort order. Native paging keeps every row reachable.</summary>
     [Parameter] public IReadOnlyList<RepositoryActivityRow> Rows { get; set; } = [];
-
+    /// <summary>Changes when filters or ordering change and resets the native pager to its first page.</summary>
+    [Parameter] public int ViewRevision { get; set; }
+    /// <summary>Opens an exact detached row inspector owned by the calling activity component.</summary>
+    [Parameter] public EventCallback<RepositoryActivityRow> OnInspect { get; set; }
+    /// <summary>Prevents another inspector from opening while a dialog is being mounted.</summary>
+    [Parameter] public bool InspectDisabled { get; set; }
+    /// <summary>The captured provider kind. Omission keeps the generic waiting labels.</summary>
+    [Parameter] public RepositoryActivityProviderKind ProviderKind { get; set; }
     [Parameter] public string RuntimeLabel { get; set; } = string.Empty;
-
     [Parameter] public string StateLabel { get; set; } = string.Empty;
-
     [Parameter] public string UserLabel { get; set; } = string.Empty;
-
     [Parameter] public string ApplicationLabel { get; set; } = string.Empty;
-
     [Parameter] public string ClientLabel { get; set; } = string.Empty;
-
     [Parameter] public string QueryLabel { get; set; } = string.Empty;
-
     [Parameter] public string UnavailableLabel { get; set; } = string.Empty;
 
-    private string FormatRuntime(TimeSpan? runtime)
+    private static readonly int[] PageSizes = [10, 25, 50, 100];
+    private int _pageSize = 10;
+    private int _currentPage;
+    private int _lastRevision = -1;
+
+    protected override void OnParametersSet()
     {
-        return runtime?.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture) ?? UnavailableLabel;
+        if (_lastRevision != ViewRevision)
+        {
+            _lastRevision = ViewRevision;
+            _currentPage = 0;
+        }
+        _currentPage = Math.Min(_currentPage, Math.Max(0, (Rows.Count - 1) / _pageSize));
     }
+
+    private string FormatRuntime(TimeSpan? runtime) => runtime?.ToString("c", CultureInfo.InvariantCulture) ?? UnavailableLabel;
 
     private string FormatClient(RepositoryActivityRow row)
     {
-        if (string.IsNullOrWhiteSpace(row.ClientAddress))
-        {
-            return UnavailableLabel;
-        }
-
-        return row.ClientPort is null
-            ? row.ClientAddress
-            : $"{row.ClientAddress}:{row.ClientPort.Value.ToString(CultureInfo.InvariantCulture)}";
+        var address = string.IsNullOrWhiteSpace(row.ClientAddress) ? row.ClientHostname : row.ClientAddress;
+        if (string.IsNullOrWhiteSpace(address)) return UnavailableLabel;
+        return row.ClientPort is null ? address : $"{address}:{row.ClientPort.Value.ToString(CultureInfo.InvariantCulture)}";
     }
 
-    private string DisplayValue(string? value)
+    private string QueryPreview(string? value)
     {
-        return string.IsNullOrWhiteSpace(value) ? UnavailableLabel : value;
+        if (string.IsNullOrWhiteSpace(value)) return UnavailableLabel;
+        return value.Length <= 360 ? value : value[..360] + "…";
+    }
+
+    private string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? UnavailableLabel : value;
+    private bool IsPostgreSql => ProviderKind == RepositoryActivityProviderKind.PostgreSql;
+    private string WaitingText(bool? value) => value switch
+    {
+        true => IsPostgreSql ? L["Workbench:Activity:LockWait"] : L["Workbench:Activity:Waiting"],
+        false => IsPostgreSql ? L["Workbench:Activity:NoLockWait"] : L["Workbench:Activity:NotWaiting"],
+        _ => IsPostgreSql ? L["Workbench:Activity:LockWaitUnknown"] : L["Workbench:Activity:WaitUnknown"]
+    };
+    private static string WaitClass(bool? value) => value == true ? "activity-wait--waiting" : "activity-wait--neutral";
+    private static string StateClass(string? value)
+    {
+        var state = value?.Trim() ?? string.Empty;
+        if (state.Equals("active", StringComparison.OrdinalIgnoreCase)) return "activity-state-badge--active";
+        if (state.Equals("idle", StringComparison.OrdinalIgnoreCase)) return "activity-state-badge--idle";
+        if (state.StartsWith("idle in transaction", StringComparison.OrdinalIgnoreCase)) return "activity-state-badge--transaction";
+        return "activity-state-badge--other";
     }
 }

@@ -1,60 +1,29 @@
 {
   "Pages": {
     "EventBusMonitor": {
-      "Title": "事件总线监控"
+      "Title": "事件流转"
+    },
+    "EventBusProviders": {
+      "Title": "事件总线提供者"
+    },
+    "EventBusSubscriptions": {
+      "Title": "事件订阅"
+    },
+    "EventBusChanges": {
+      "Title": "订阅变更"
+    },
+    "EventBusTestTools": {
+      "Title": "事件测试工具"
     }
   },
   "Page": {
-    "PageTitle": "事件总线监控",
     "Header": {
-      "Title": "事件总线监控",
-      "Eyebrow": "Monica / 事件流转",
-      "Description": "观察宿主事件总线中的订阅、提供程序、拓扑变更和运行时测试监听器。",
       "Refresh": "刷新"
     },
-    "Summary": {
-      "AriaLabel": "事件总线运行摘要",
-      "Subscriptions": "订阅",
-      "Active": "活动路由",
-      "Unhealthy": "异常订阅",
-      "Providers": "提供程序",
-      "RecentChanges": "近期变更"
-    },
-    "Tabs": {
-      "Overview": "总览",
-      "Providers": "Provider",
-      "Subscriptions": "订阅浏览",
-      "TestTools": "测试工具"
-    },
-    "RecentChanges": {
-      "Title": "最近变更"
-    },
-    "States": {
-      "LoadingSubscriptions": "正在加载订阅信息..."
-    },
     "Messages": {
-      "LoadSubscriptionsFailed": "加载订阅列表失败：{0}",
-      "LoadStatisticsFailed": "加载统计信息失败：{0}",
-      "LoadProvidersFailed": "加载 Provider 列表失败：{0}",
-      "LoadDataFailed": "加载数据时发生错误：{0}",
-      "RefreshSucceeded": "数据已刷新。",
-      "RefreshProvidersFailed": "刷新 Provider 列表失败：{0}",
-      "RefreshProvidersSucceeded": "Provider 列表已刷新。",
-      "RealtimeUpdateFailed": "实时更新错误：{0}",
-      "ActivateFailed": "激活失败：{0}",
       "ActivateSucceeded": "订阅已激活。",
-      "DeactivateFailed": "停用失败：{0}",
       "DeactivateSucceeded": "订阅已停用。",
-      "StopRuntimeListenerFailed": "停止测试监听失败：{0}",
-      "UnsubscribeFailed": "移除失败：{0}",
       "UnsubscribeSucceeded": "订阅已移除。"
-    },
-    "DialogTitles": {
-      "SubscriptionDetail": "订阅详情 - {0}",
-      "SubscriptionTest": "测试订阅 - {0}",
-      "SubscriptionList": "订阅列表",
-      "EventTypeSubscriptions": "事件类型：{0}",
-      "TopicSubscriptions": "主题：{0}"
     }
   },
   "SubscriptionTable": {
@@ -62,37 +31,20 @@
       "EventType": "事件类型",
       "TopicName": "主题名称",
       "Handler": "处理器",
-      "Scope": "范围",
-      "State": "状态",
-      "CreatedAt": "创建时间",
       "Actions": "操作"
     },
     "Labels": {
-      "Auto": "自动",
-      "DeclaringType": "声明类型",
-      "MethodName": "方法名称",
-      "MethodSignature": "方法签名",
-      "StaticMethod": "静态方法",
-      "InstanceMethod": "实例方法",
       "TestListening": "测试监听中",
-      "RunningFor": "已运行 {0}",
       "RuntimeError": "最近错误：{0}（{1}）"
     },
-    "States": {
-      "Empty": "暂无订阅数据"
-    }
+    "States": {}
   },
   "SubscriptionFilter": {
-    "Title": "过滤条件",
     "Clear": "清空过滤",
-    "Provider": "Provider",
-    "Status": "状态",
-    "RuntimeStatus": "运行状态",
+    "Provider": "提供者",
     "Scope": "范围",
     "DiscoveryMode": "发现方式",
     "Search": "搜索",
-    "SearchPlaceholder": "事件类型或主题名称",
-    "Applied": "已应用 {0} 个过滤条件",
     "Options": {
       "All": "全部"
     }
@@ -105,22 +57,9 @@
       "Activate": "激活订阅"
     }
   },
-  "Statistics": {
-    "Sections": {
-      "TopEventTypes": "热门事件类型",
-      "TopEventTypesDescription": "订阅覆盖范围最广的事件路由。",
-      "TopTopics": "热门主题",
-      "TopTopicsDescription": "承载最多已注册处理器的通信频道。"
-    },
-    "States": {
-      "Empty": "暂无数据",
-      "Loading": "正在加载统计信息..."
-    }
-  },
   "SubscriptionDetail": {
     "Title": "订阅详情",
     "Sections": {
-      "BasicInformation": "基本信息",
       "HandlerInformation": "处理器信息",
       "Lifecycle": "生命周期",
       "Runtime": "运行时状态",
@@ -128,32 +67,24 @@
     },
     "Fields": {
       "SubscriptionId": "订阅 ID",
-      "State": "状态",
       "EventType": "事件类型",
       "TopicName": "主题名称",
-      "Scope": "范围",
       "ServiceKey": "服务键",
       "HandlerType": "处理器类型",
       "DeclaringType": "声明类型",
       "MethodName": "方法名称",
       "MethodSignature": "方法签名",
-      "HandlerFactory": "处理器工厂",
-      "DiscoveryMode": "发现方式",
-      "Key": "键",
-      "Value": "值"
+      "HandlerFactory": "处理器工厂"
     },
     "Timeline": {
       "Created": "创建",
       "Activated": "激活",
-      "Deactivated": "停用",
-      "CurrentState": "当前状态",
-      "ActiveRunning": "活跃 - 已运行 {0}"
+      "Deactivated": "停用"
     },
     "Runtime": {
       "NoData": "Provider 尚未上报该主题的运行时状态。",
-      "State": "运行状态",
       "StateSince": "当前状态开始于",
-      "Provider": "上报 Provider",
+      "Provider": "报告提供者",
       "ConsecutiveFailures": "连续失败次数",
       "RecoveryCount": "累计恢复次数",
       "MessageErrorCount": "消息处理错误",
@@ -168,12 +99,6 @@
       "NotSelected": "未选择订阅"
     }
   },
-  "ChangesFeed": {
-    "DefaultTitle": "最近变更",
-    "Truncated": "显示最近 {0} 条，共 {1} 条变更",
-    "Empty": "暂无变更记录",
-    "Count": "{0} 条"
-  },
   "Providers": {
     "Title": "已注册的 EventBus Provider",
     "Refresh": "刷新",
@@ -182,9 +107,6 @@
       "Empty": "未发现已注册的 EventBus Provider"
     },
     "Card": {
-      "Subscriptions": "订阅：{0}",
-      "Active": "活跃：{0}",
-      "UnhealthyTopics": "异常主题：{0}",
       "ViewDetails": "查看详情"
     },
     "Detail": {
@@ -207,8 +129,7 @@
         "NoDedicatedConfiguration": "该 Provider 使用共享基础设施，没有独立的模块配置投影。",
         "AccessDenied": "当前用户无权检查此 Provider 的配置诊断。",
         "LoadFailed": "无法读取配置诊断；当前 Host 可能未注册 ModuleSystem 诊断门面。",
-        "DefaultProfileFallback": "服务键“{0}”没有独立的命名配置档案，因此这里展示 Provider 模块的共享默认配置。",
-        "Retry": "重试"
+        "DefaultProfileFallback": "服务键“{0}”没有独立的命名配置档案，因此这里展示 Provider 模块的共享默认配置。"
       }
     },
     "Capabilities": {
@@ -221,7 +142,6 @@
     "Columns": {
       "EventType": "事件类型",
       "Topic": "主题",
-      "State": "状态",
       "DiscoveryMode": "发现方式"
     }
   },
@@ -229,36 +149,17 @@
     "Publish": {
       "Title": "发布测试消息",
       "TopicName": "主题名称",
-      "TopicHelper": "默认使用事件类型的完整名称",
       "MessageContent": "消息内容",
       "MessagePlaceholder": "输入要发送的测试消息...",
       "Sending": "发送中...",
       "Send": "发送消息"
     },
     "Subscribe": {
-      "Title": "订阅测试消息",
       "TopicName": "监听主题",
-      "TopicHelper": "默认使用事件类型的完整名称",
       "Start": "开始监听",
       "Stop": "取消监听",
       "Clear": "清空消息",
-      "ListeningStatus": "正在监听... 主题：{0} | 已接收：{1}",
-      "NotListening": "未监听",
-      "NoMessages": "暂无接收到的消息",
-      "NoMessagesHint": "消息将实时显示在这里（每 500ms 刷新）"
-    },
-    "Messages": {
-      "MessageId": "消息 ID：{0}",
-      "MessageContent": "消息内容：",
-      "CreatedAt": "创建：{0}",
-      "ReceivedAt": "接收：{0}"
-    },
-    "Instructions": {
-      "Title": "使用说明：",
-      "Publish": "1. 发布消息：填写主题名称和消息内容后点击“发送消息”。",
-      "Subscribe": "2. 订阅主题：填写监听主题后点击“开始监听”，消息将实时显示在下方。",
-      "DefaultTopic": "3. 主题名称默认为 {0}。",
-      "MultiTab": "4. 可以在多个浏览器标签页测试发布 / 订阅。"
+      "NoMessages": "暂无接收到的消息"
     },
     "Validation": {
       "MessageRequired": "请输入消息内容",
@@ -266,7 +167,6 @@
     },
     "Snackbars": {
       "PublishFailed": "发布失败：{0}",
-      "PublishSucceeded": "消息发布成功。",
       "SubscribeFailed": "订阅失败：{0}",
       "SubscribeSucceeded": "订阅成功，开始监听消息。",
       "UnsubscribeFailed": "取消订阅失败：{0}",
@@ -280,7 +180,7 @@
       "EventType": "事件类型",
       "TopicName": "主题名称",
       "Scope": "范围",
-      "Provider": "Provider",
+      "Provider": "提供者",
       "Handler": "处理器",
       "JsonSample": "JSON 示例"
     },
@@ -296,8 +196,6 @@
     },
     "States": {
       "NotSelected": "未选择订阅",
-      "Listening": "正在监听，已接收 {0} 条",
-      "NotListening": "未监听",
       "NoMessages": "暂无接收到的信息"
     },
     "Messages": {
@@ -305,7 +203,6 @@
       "JsonValidationFailed": "JSON 验证失败",
       "JsonValidationSucceeded": "JSON 验证成功",
       "PublishFailed": "发布失败",
-      "PublishSucceeded": "测试事件发布成功",
       "StartListeningFailed": "启动监听失败",
       "StartListeningSucceeded": "监听已开启",
       "StopListeningFailed": "停止监听失败",
@@ -465,5 +362,201 @@
       "HoursAgo": "{0}小时前",
       "DaysAgo": "{0}天前"
     }
+  },
+  "Workbench": {
+    "Eyebrow": "Monica / 事件流转",
+    "Captured": "最近快照",
+    "NoCapture": "尚未采集",
+    "Navigation": "事件总线工作区",
+    "AutoRefresh": "每 3 秒刷新",
+    "Scope": "当前主机 · 注册快照与主题运行证据",
+    "ReadFailed": "快照采集失败",
+    "UnavailableHelp": "尚未成功采集完整快照，当前无法显示统计数值。",
+    "PreviousCaptureHelp": "继续显示上一次成功采集的快照，其中的信息可能已过时。",
+    "Loading": "正在采集订阅、提供者与主题运行状态…",
+    "OperationFailed": "操作未能完成，请刷新后重试。",
+    "Overview": "总览",
+    "Providers": "提供者",
+    "Subscriptions": "订阅",
+    "Changes": "变更",
+    "TestTools": "测试工具",
+    "OverviewDescription": "了解处理器注册情况，并查看与消息投递问题有关的运行证据。",
+    "ProvidersDescription": "对比真实的总线注册、声明的能力与精确服务键归属。",
+    "SubscriptionsDescription": "查找处理器、检查路由证据，并管理注册生命周期。",
+    "ChangesDescription": "查看当前会话观察到的注册变更，以及变更发生时记录的证据。",
+    "TestToolsDescription": "发布诊断消息，通过临时监听器检查实际接收情况。",
+    "EmptyKey": "空服务键（\"\"）",
+    "WhitespaceKey": "空白服务键（{0} 个字符）",
+    "RetainedListeners": "保留的订阅测试监听器",
+    "RetainedListenersHelp": "这些监听器属于当前会话，关闭测试对话框后仍继续监听。可以重新打开测试，或在这里停止监听。",
+    "RemovedListenerSource": "源订阅已不在当前注册列表中"
+  },
+  "Registry": {
+    "EventRoute": "事件 / 主题",
+    "ProviderScope": "提供者 / 范围",
+    "Registration": "注册状态",
+    "ReportedRuntime": "已报告的运行状态",
+    "Inspect": "查看 {0}",
+    "LocalRuntime": "本地 · 无传输报告",
+    "NotReported": "尚未报告",
+    "SearchPlaceholder": "搜索事件类型、处理器、主题或订阅 ID",
+    "ExactKey": "精确匹配服务键",
+    "EmptyKeyPlaceholder": "空值匹配空服务键",
+    "AllRegistrations": "全部注册",
+    "Title": "已注册处理器",
+    "Shown": "显示 {0} / {1} 项注册",
+    "RuntimeHelp": "注册状态与主题报告状态相互独立。本地处理器没有外部传输报告；分布式主题缺少运行证据不代表健康。",
+    "ExactRoute": "精确路由选择",
+    "ProviderMissing": "当前快照中不存在所选提供者，该选择下不显示任何注册。",
+    "RemoveTitle": "移除此订阅？",
+    "RemoveHelp": "将移除下方精确标识的注册。后续如需再次启用，需要创建新的订阅。",
+    "RemoveListenerHelp": "当前会话为此注册拥有的订阅测试监听器将先停止。",
+    "Cancel": "取消",
+    "ConfirmRemove": "移除订阅",
+    "MissingProviderSelection": "所选提供者已不在当前快照中",
+    "NoMatches": "没有符合这些筛选条件的注册。",
+    "EmptyHost": "当前主机中没有可见的处理器注册。"
+  },
+  "Inspector": {
+    "FrozenCapture": "冻结证据 · 采集于",
+    "CounterScope": "这是提供者报告的主题累计计数，不代表端到端业务成功情况或速率。",
+    "NoTimestamp": "未记录",
+    "RetainedError": "此处为保留的错误证据。主题恢复后，该记录可能仍然存在。",
+    "RetainedErrors": "提供者报告的最近 {0} 条保留错误。",
+    "Routing": "路由与生命周期",
+    "RegistrationHelp": "注册成员关系与传输投递情况相互独立。",
+    "LocalHelp": "这是本地处理器，不适用外部主题运行状态。",
+    "NoMetadata": "此注册未记录任何元数据。"
+  },
+  "Overview": {
+    "RegistrationKicker": "主机注册分布",
+    "RegisteredHandlers": "已注册处理器",
+    "RegistrationHelp": "当前主机中全部可见的本地及分布式总线注册。",
+    "DiscoveryCounts": "自动发现 {0} 项 · 手动注册 {1} 项",
+    "ExploreRegistry": "浏览订阅",
+    "RuntimeKicker": "提供者报告证据",
+    "ReportedTopics": "已报告 {0} 个主题",
+    "RuntimeHelp": "传输报告有独立的数据范围。处理器处于启用状态不代表消息投递成功。",
+    "ReportedProblems": "已报告问题",
+    "ReportedCoverage": "具有报告的分布式处理器",
+    "LocalHandlers": "本地处理器",
+    "CoverageHelp": "覆盖计数仅包含匹配到报告的分布式处理器。主题报告可能没有对应的可见处理器；本地处理器不在覆盖范围内。",
+    "ExploreProviders": "查看 {0} 个提供者",
+    "TransportEvidence": "投递证据",
+    "TopicLedger": "已报告的主题状态",
+    "TopicLedgerHelp": "当前主机状态存储中的即时快照，包括没有匹配可见处理器的主题。",
+    "TopicCount": "{0} 个主题",
+    "MatchedHandlers": "匹配处理器",
+    "StateChanged": "状态变更时间",
+    "InspectTopic": "查看主题 {0}",
+    "TopicInspector": "主题运行证据",
+    "NoReportedTopics": "当前没有可用的主题报告，这不能证明传输健康。",
+    "RegistrationMap": "注册分布",
+    "EventTypes": "事件类型",
+    "EventTypesHelp": "全部已注册事件类型，按处理器数量排序。",
+    "Topics": "已注册主题",
+    "TopicsHelp": "跨范围与精确服务键的全部已注册主题。",
+    "Handlers": "处理器",
+    "NoRegistrations": "当前没有可见的处理器注册。"
+  },
+  "ProviderDirectory": {
+    "Eyebrow": "传输目录",
+    "Scope": "查看当前主机中已注册的传输提供者、声明的能力和订阅情况。",
+    "Search": "搜索服务键、实现类型或总线模式",
+    "Shown": "显示 {0} / {1} 个提供者",
+    "Loading": "正在获取提供者注册信息…",
+    "EmptyHelp": "当前主机中未发现 EventBus 提供者注册。",
+    "NoMatches": "没有匹配的提供者",
+    "ClearSearch": "清除搜索",
+    "Keyed": "按服务键注册的提供者",
+    "Default": "默认提供者注册",
+    "Registrations": "注册数",
+    "Active": "活动注册",
+    "ReportedProblems": "已报告的主题问题",
+    "Inspect": "查看 {0} · {1}",
+    "CountsHelp": "活动注册表示注册表中的活动成员，不代表消息投递成功。主题问题统计此服务键下已报告为恢复中或失败的分布式主题，也可能包含没有匹配注册行的主题。"
+  },
+  "ProviderInspector": {
+    "Title": "提供者详情",
+    "Captured": "获取时间（UTC）",
+    "Scope": "此详情在打开时固定所选提供者与订阅行的快照。能力表示提供者声明的契约，不代表传输当前可用。",
+    "CapabilitiesHelp": "这些能力由提供者声明，此处不会执行发布或连接测试。",
+    "LoadingOptions": "正在检查访问权限并加载脱敏配置…",
+    "SubscriptionScope": "此快照中有 {0} 行属于当前服务键和总线范围。注册状态与已报告的主题运行状态相互独立。",
+    "Registration": "注册状态",
+    "Runtime": "主题运行状态",
+    "NotApplicable": "本地总线不适用",
+    "NotReported": "尚未报告",
+    "NotSelected": "未选择提供者。",
+    "ReloadOptions": "重新加载配置"
+  },
+  "TestBench": {
+    "Eyebrow": "默认分布式提供者",
+    "Title": "测试分布式事件",
+    "Scope": "在默认分布式总线上发布并接收 TestEventMessage。",
+    "EventContract": "事件契约",
+    "PublishHelp": "选择主题，通过此提供者发送真实消息。",
+    "AcceptanceHelp": "发布成功表示提供者已接受消息。请在接收区确认当前监听器是否收到消息。",
+    "Accepted": "提供者已接受发布请求。",
+    "ReceiveTitle": "监听并查看接收记录",
+    "ReceiveHelp": "发布前监听相同主题，即可查看接收记录。",
+    "Listening": "监听中",
+    "Stopped": "已停止",
+    "Retained": "保留的接收记录 · {0}",
+    "Retention": "最近 100 条，保存在内存中",
+    "EmptyHelp": "启动监听器，再向其主题发布消息。提供者接受发布请求并不代表已经收到消息。",
+    "Received": "接收时间（本地）",
+    "MessageId": "消息 ID",
+    "CreatedUtc": "创建时间（UTC）",
+    "ListenerLifetime": "此页面拥有监听器，离开时会尝试停止。若移除失败，再次进入会恢复同一个监听器，您可以重新停止。最近的接收记录保留在当前浏览器会话中，直到清除记录或会话结束。",
+    "PreparingListener": "正在准备监听器…",
+    "ListenerUnavailable": "监听器不可用"
+  },
+  "RuntimeTest": {
+    "Target": "已固定的测试目标",
+    "Fanout": "此诊断操作会立即向所选行对应的主题、服务键和总线范围发送事件，不经过 Outbox 暂存。所有匹配的处理器都可能收到事件，并非仅调用当前处理器。",
+    "Compose": "编辑类型化事件",
+    "ValidationHelp": "验证仅检查 JSON 是否可反序列化为已注册的事件类型。",
+    "AcceptanceHelp": "本地发送成功表示分发已完成。分布式发送成功表示传输层已接受事件，不代表消费者已完成执行。下方记录仅显示此监听器实际捕获的事件。",
+    "Receive": "捕获匹配的事件",
+    "ReceiveHelp": "额外的测试监听器会接收与此目标完全匹配的事件。",
+    "Started": "开始于 {0}（本地时间）",
+    "EmptyHelp": "请先启动监听再发布事件。此处只显示该监听器实际收到的负载。",
+    "ListenerLifetime": "此监听器属于当前浏览器会话，关闭详情后仍会继续运行。请在此处或订阅注册表中手动停止。内存中仅保留有限数量的最近事件负载。"
+  },
+  "ChangeLedger": {
+    "Eyebrow": "会话观察记录",
+    "Title": "订阅变更",
+    "Scope": "保留当前浏览器会话实际观察到的最近 {0} 条订阅变更，仅存于内存中，不是主机的持久化历史。",
+    "Observed": "已观察变更",
+    "Retained": "保留条目",
+    "FeedLossTitle": "观察通知存在缺失",
+    "FeedLoss": "实时通知源报告丢失了 {0} 条通知。这与超出保留窗口的旧条目不同，此处无法重建这些缺失通知。",
+    "WindowTruncated": "有 {0} 条较早的已观察记录超出了最近 {1} 条的保留窗口。这表示窗口淘汰，不是通知丢失。",
+    "Search": "搜索事件类型、主题、服务键或订阅 ID",
+    "ChangeType": "变更类型",
+    "AllChanges": "全部变更",
+    "ClearFilters": "清除筛选",
+    "FilterScope": "筛选计数仅统计保留窗口，按观察顺序从新到旧排列。",
+    "Shown": "显示 {0} / {1} 条保留记录",
+    "RecordedChange": "变更记录 · UTC",
+    "Subscription": "事件与订阅",
+    "Route": "主题与提供者范围",
+    "Registration": "记录时的注册状态",
+    "Runtime": "记录时的主题运行状态",
+    "Evidence": "证据",
+    "SubscriptionId": "订阅 ID",
+    "ServiceKey": "服务键",
+    "LocalRuntime": "本地总线不适用",
+    "NotReported": "观察时尚未报告",
+    "InspectEvidence": "查看记录时的证据",
+    "Inspect": "查看订阅 {0}，变更为 {1}，记录时间为 {2}",
+    "Empty": "尚未观察到变更",
+    "EmptyHelp": "EventBus 工作台挂载后才开始观察。已有注册不会生成过去的变更记录，没有工作台挂载期间的活动也不会被捕获。",
+    "NoMatches": "没有匹配的观察记录",
+    "NoMatchesHelp": "请尝试其他搜索词或变更类型。筛选仅适用于此会话保留窗口中的记录。",
+    "RowsPerPage": "每页条目",
+    "PageInfo": "{first_item}–{last_item} / {all_items}",
+    "EvidenceHelp": "注册状态与已报告的主题运行状态相互独立，并随每条观察记录保存。查看操作会打开当时固定的证据，即使订阅已被移除，也不会重新查询当前注册行。"
   }
 }

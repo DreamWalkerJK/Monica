@@ -5,6 +5,11 @@ namespace Monica.DataChannel.UIDataChannel.Models;
 /// </summary>
 public class DataChannelExceptionInfo
 {
+    /// <summary>Gets or sets the UTC tracker capture time.</summary>
+    public DateTime CapturedAt { get; set; }
+
+    /// <summary>Gets or sets the requested detail limit; nonpositive limits produce an empty subset.</summary>
+    public int RequestedCount { get; set; }
     /// <summary>
     /// Channel ID
     /// </summary>
@@ -26,7 +31,7 @@ public class DataChannelExceptionInfo
     public long TotalExceptions { get; set; }
     
     /// <summary>
-    /// Maximum history depth for the exception pool.
+    /// Shared observable history capacity, including ordinary records as well as exceptions.
     /// </summary>
     public int MaxPoolSize { get; set; }
     
@@ -36,7 +41,7 @@ public class DataChannelExceptionInfo
     public bool HasExceptions { get; set; }
     
     /// <summary>
-    /// Details of each recorded exception.
+    /// Requested subset of recent retained exception details.
     /// </summary>
     public List<ExceptionDetailInfo> Exceptions { get; set; } = new();
 }
@@ -46,18 +51,20 @@ public class DataChannelExceptionInfo
 /// </summary>
 public class ExceptionDetailInfo
 {
+    /// <summary>Gets or sets the monotonic tracker sequence identifying this retained record.</summary>
+    public long Sequence { get; set; }
     /// <summary>
     /// Timestamp when the exception occurred.
     /// </summary>
     public DateTime Timestamp { get; set; }
     
     /// <summary>
-    /// CLR type of the component that raised the exception.
+    /// CLR source component type, or empty when provenance was not recorded.
     /// </summary>
     public string SourceType { get; set; } = string.Empty;
     
     /// <summary>
-    /// Description of the source component for the exception.
+    /// Source component description, or empty when provenance was not recorded.
     /// </summary>
     public string SourceDescription { get; set; } = string.Empty;
     
@@ -75,6 +82,9 @@ public class ExceptionDetailInfo
     /// Stack trace captured for the exception.
     /// </summary>
     public string StackTrace { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a custom exception rendering failure, or null when its evidence was captured.</summary>
+    public string? CaptureError { get; set; }
     
     /// <summary>
     /// Business-level description of the exception context.

@@ -1,0 +1,8 @@
+.approval-content { display: flex; flex-direction: column; gap: 20px; padding: 24px; min-width: 0; background: var(--mud-palette-surface); color: var(--mud-palette-text-primary); }
+.approval-content dl { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px 16px; margin: 0; font-size: .875rem; }
+.approval-content dt { font-weight: 600; }
+.approval-content dd { margin: 0; overflow-wrap: anywhere; }
+.approval-arguments { min-width: 0; }
+.approval-arguments strong { font-size: .875rem; font-weight: 600; }
+.approval-arguments pre { margin: 8px 0 0; padding: 16px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; font: .8125rem/1.65 var(--mo-font-family-mono); background: var(--mud-palette-background-gray); border-radius: var(--mud-default-borderradius); }
+@media(max-width: 600px) { .approval-content { padding: 16px; } .approval-content dl { grid-template-columns: minmax(0, 1fr); gap: 4px; } .approval-content dd { margin-bottom: 12px; } }

@@ -1,0 +1,40 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.Pages
+@using Monica.UI.Shared.Components.Navigation
+@inject IStringLocalizer<AIResource> L
+
+<div class="ai-administration-frame">
+    <header class="ai-administration-header">
+        <div class="ai-administration-heading">
+            <span class="ai-administration-eyebrow">@L["Administration:Title"]</span>
+            <h1>@Title</h1>
+            <p>@Description</p>
+        </div>
+        <div class="ai-administration-actions">@Actions</div>
+    </header>
+    <MoWorkbenchNavigation Label="@L["Administration:Navigation"]">
+        <a href="@ProviderManagePage.PAGE_URL" aria-current="@(IsProviderPage ? "page" : null)">
+            <MudIcon Icon="@Icons.Material.Outlined.Hub" />@L["Administration:Providers"]
+        </a>
+        <a href="@AgentCapabilityManagePage.PAGE_URL" aria-current="@(!IsProviderPage && !IsMcpPage ? "page" : null)">
+            <MudIcon Icon="@Icons.Material.Outlined.Extension" />@L["Administration:Skills"]
+        </a>
+        <a href="@McpCapabilityManagePage.PAGE_URL" aria-current="@(!IsProviderPage && IsMcpPage ? "page" : null)">
+            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" />@L["Administration:Mcp"]
+        </a>
+    </MoWorkbenchNavigation>
+</div>
+
+@code {
+    /// <summary>Gets or sets the localized page title.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    /// <summary>Gets or sets the localized scope description for this page.</summary>
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    /// <summary>Gets or sets whether provider management is current; the default is false.</summary>
+    [Parameter] public bool IsProviderPage { get; set; }
+    /// <summary>Gets or sets whether MCP management is current. When both page flags are false, skills are current.</summary>
+    [Parameter] public bool IsMcpPage { get; set; }
+    /// <summary>Gets or sets the native page action controls.</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

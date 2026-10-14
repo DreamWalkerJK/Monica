@@ -17,7 +17,7 @@ All script paths in this document are relative to the `monica-ui-localization` s
 4. Finish every i18n change by running the strict validator from the repository root:
 
 ```bash
-python scripts/validate_localization.py --strict
+python skills/monica-ui-localization/scripts/validate_localization.py --strict
 ```
 
 The strict result must have zero JSON integrity errors, missing keys, invalid navigation resource keys, unused keys, and language sync issues. A non-strict `PASSED` result with unused-key warnings is not acceptable for completed i18n work.
@@ -30,6 +30,7 @@ The strict result must have zero JSON integrity errors, missing keys, invalid na
 - Never use ambient or static localization access. When DI is unavailable inside a helper or view model, accept an `IStringLocalizer` parameter or move the display behavior into a cohesive formatter that receives one.
 - Inject `ILocalizationCatalog` only for scenarios that genuinely need generic resource lookup. At application-composition boundaries such as endpoint metadata configuration, resolve the localizer or catalog from the current host's service provider so localization state never crosses host boundaries.
 - For page content, use the module-local resource marker and JSON files.
+- Localize dependency-owned user text as well: pass localized required-field errors and table-pager labels/range formats to the native component. Exercise validation and pagination in the browser; a localized field label does not translate the component's default error or pager text.
 - Every localized page must use `RegisterLocalizedPage<TPage, TResource>(...)`. The page-title key lives in the owning module's `TResource`; no implicit or central page resource exists.
 - The owning module must contribute every navigation resource through `module.Require<ModuleLocalization, ModuleLocalizationOption>(option => option.AddResource<TResource>())` in `Describe`, so direct and transitive inclusion behave identically.
 - Treat category identity and category text as separate contracts. Use `BuiltInNavigationCategoryIds` for the small shell-owned taxonomy, or call `RegisterLocalizedCategory<TResource>(stableId, displayNameKey, order)` once for a module-owned category and pass the returned ID to its pages.
@@ -42,25 +43,25 @@ The strict result must have zero JSON integrity errors, missing keys, invalid na
 Basic validation:
 
 ```bash
-python scripts/validate_localization.py
+python skills/monica-ui-localization/scripts/validate_localization.py
 ```
 
 Strict validation:
 
 ```bash
-python scripts/validate_localization.py --strict
+python skills/monica-ui-localization/scripts/validate_localization.py --strict
 ```
 
 JSON output:
 
 ```bash
-python scripts/validate_localization.py --strict --json
+python skills/monica-ui-localization/scripts/validate_localization.py --strict --json
 ```
 
 Validate another root:
 
 ```bash
-python scripts/validate_localization.py --root <project-root> --strict
+python skills/monica-ui-localization/scripts/validate_localization.py --root <project-root> --strict
 ```
 
 ## Reference

@@ -349,7 +349,8 @@ public class StateStoreUIService(
             {
                 Key = request.Key,
                 RawValue = request.Value,
-                IsValueLoaded = true
+                IsValueLoaded = true,
+                Error = createdKey.Message ?? localizer["Service:Errors:KeyLoad"]
             });
         }
         catch (Exception ex)

@@ -60,6 +60,7 @@ This document provides a quick reference for MudBlazor v9 components.
 - **MudTooltip** - Tooltip
 - **MudCarousel** - Carousel
 - **MudTimeline** - Timeline
+- **MudChart<T>** - Typed charts; see [measurement time series](#measurement-time-series)
 - **MudChat/MudChatBubble** - Chat component (removed in v9)
 
 ### 5. Feedback Components
@@ -212,6 +213,18 @@ This document provides a quick reference for MudBlazor v9 components.
     <!-- Column definitions -->
 </MudDataGrid>
 ```
+
+## Measurement time series
+
+For MudBlazor v9.0.0, use `MudChart<double>` with `ChartType.Timeseries`, `ChartSeries<double>.Data` containing `(DateTime, double)[]`, and explicit `TimeSeriesChartOptions`. The native time-series chart places points using elapsed timestamp milliseconds; timestamp strings on a categorical Line chart instead represent equally spaced sample order. Choose the representation deliberately and preserve every retained observation, or disclose any reduction and retain access to the complete data.
+
+Construct typed options directly. The legacy `ChartOptions` conversion copies legend, tooltip and palette settings but does not transfer axis controls. `TimeSeriesChartOptions` defaults to five-minute label spacing and `HH:mm` axis/tooltips; choose a positive spacing for the actual span and include seconds or milliseconds when needed. Keep timestamps on one explicit basis, preferably UTC for elapsed-time geometry: the native component does not normalize `DateTime` kinds or time zones. Put the date and time basis with the window, and preserve the exact instant and an explicit offset in inspection. Empty data and a single distinct timestamp need their own states rather than invented points or a fabricated time span.
+
+Keep different units on distinct plots or a clearly declared shared-unit axis. Supply theme palette roles through `ChartPalette`; do not rely on native default colors for theme fidelity. Use `MatchBoundsToSize` when the chart must keep labels readable at its actual container width, and verify the settled SVG, tooltips and local overflow in the browser. Its native resize observation belongs to the chart; add no parallel page observer solely for this sizing behavior. The v9 time-series implementation does not interpolate curves, so do not promise smoothing through an interpolation option.
+
+`SelectedIndexChanged` identifies the **series**, including marker clicks; it is not an exact sample-selection callback. Provide a native button or link in an accessible data ledger when an inspector needs a specific observation. Carry the chosen record and its owning successful read time together so refresh, sorting, pagination or retention eviction cannot silently replace open evidence. The native dialog still needs a verified accessible name, focus containment, Escape/close behavior and focus restoration. Live polling can remove a timestamp-keyed trigger while its dialog remains open: after the native dialog result, preserve native restoration when that trigger is mounted, otherwise focus a stable native page action. Observe and drain dialog opening and closure separately so disposal can close the admitted dialog before waiting for its result. A provider can retire before its page: in v9, `Close` raises the close event and `Dismiss` completes the reference's result. Ensure the admitted result completes during owner retirement even when the provider has already unsubscribed; verify client navigation and reload with an inspector open. Keep scaled display values distinct from raw encoded measurement fields and machine timestamps. Backend units and counter limits belong to the owning infrastructure guidance, such as [Runtime Metrics](../../monica-infra-observability/references/metrics.md), rather than this component reference.
+
+Verify version-sensitive behavior against `src/MudBlazor/Components/Chart/MudChart.razor`, `Models/ChartData.TimeSeries.cs`, `Models/Options/TimeSeriesChartOptions.cs`, `Charts/TimeSeries.razor`/`.razor.cs`, and `Base/MudAxisChartBase.cs` in the installed dependency source. Source contracts establish API and selection semantics; browser checks establish containment, accessible interaction, theme contrast and visual readiness.
 
 ## Common Component Properties
 

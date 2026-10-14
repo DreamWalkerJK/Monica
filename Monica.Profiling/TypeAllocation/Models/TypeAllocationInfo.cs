@@ -1,7 +1,7 @@
 namespace Monica.Profiling.TypeAllocation.Models;
 
 /// <summary>
-/// Type Allocation Information - memory allocation statistics for a specific type
+/// Source-specific count and byte evidence grouped by full type name.
 /// </summary>
 public class TypeAllocationInfo
 {
@@ -14,12 +14,12 @@ public class TypeAllocationInfo
     public required string TypeName { get; init; }
 
     /// <summary>
-    /// Short type name (e.g. "String", "MyClass")
+    /// Short display preview (e.g. "String", "MyClass"). Different full identities can share this preview.
     /// </summary>
     public string ShortTypeName => GetShortTypeName(TypeName);
 
     /// <summary>
-    /// Allocate number of instances
+    /// Observed ETW tick count or enumerated heap object count, according to the snapshot data source.
     /// </summary>
     public long AllocationCount
     {
@@ -28,7 +28,8 @@ public class TypeAllocationInfo
     }
 
     /// <summary>
-    /// Total allocated bytes
+    /// ETW tick allocation volume attributed to this threshold-crossing type, or enumerated heap
+    /// object bytes. ETW attribution is sampled evidence, not an exact per-type allocation total.
     /// </summary>
     public long TotalBytes
     {
@@ -37,46 +38,67 @@ public class TypeAllocationInfo
     }
 
     /// <summary>
-    /// Atomicly increase the number of allocations
+    /// Atomically adds to the source-specific count.
     /// </summary>
     public void AddAllocationCount(long value) => Interlocked.Add(ref _allocationCount, value);
 
     /// <summary>
-    /// Atomicly increase the number of bytes
+    /// Atomically adds to the source-specific byte total.
     /// </summary>
     public void AddTotalBytes(long value) => Interlocked.Add(ref _totalBytes, value);
 
     /// <summary>
-    /// Average allocation size (bytes)
+    /// Byte total divided by source-specific count. This is a heap object average only for heap
+    /// evidence; for ETW it is attributed bytes per tick, not average allocated-object size.
     /// </summary>
     public double AverageSize => AllocationCount > 0 ? (double)TotalBytes / AllocationCount : 0;
 
     /// <summary>
-    /// % of total allocations
+    /// Percentage of the snapshot's complete source count: accepted ETW tick events or enumerated
+    /// heap objects. Retained ETW rows exclude evicted ranking entries, so their shares may sum below 100.
     /// </summary>
     public double AllocationPercentage { get; set; }
 
     /// <summary>
-    /// Percentage of total bytes
+    /// Percentage of the snapshot's complete source byte total, rather than a filtered or paged row total.
+    /// ETW attribution is sampled volume; retained ranking shares are not a complete allocation distribution.
     /// </summary>
     public double BytesPercentage { get; set; }
 
     /// <summary>
-    /// Is it a large object (>85KB, allocated on LOH)
+    /// Legacy aggregate-average threshold heuristic. It does not prove an object's GC heap kind;
+    /// in particular it must not classify ETW ticks as LOH allocations.
     /// </summary>
     public bool IsLargeObjectHeap => AverageSize >= 85000;
 
     /// <summary>
-    /// The time the allocation was last seen (UTC)
+    /// Provider observation time in UTC. ETW records this type's latest accepted tick timestamp;
+    /// heap census rows use enumeration completion time. It does not establish object allocation time or lifetime.
     /// </summary>
     public DateTime LastSeenUtc { get; set; }
 
     private static string GetShortTypeName(string fullName)
     {
+        var suffixStart = FindTypeSuffixStart(fullName);
+        if (suffixStart > 0 && suffixStart < fullName.Length)
+        {
+            return GetShortTypeName(fullName[..suffixStart]) + fullName[suffixStart..];
+        }
+
+        var nestedSeparator = FindNestedSeparator(fullName);
+        if (nestedSeparator > 0 && nestedSeparator < fullName.Length - 1)
+        {
+            return GetShortTypeName(fullName[..nestedSeparator]) + "+" + GetShortTypeName(fullName[(nestedSeparator + 1)..]);
+        }
+
         // Handle C#-style generic types (e.g., HashSet<Namespace.Type>)
-        // But NOT compiler-generated types that start with < (e.g., <GetEvents>d__19)
+        // Preserve generated <> prefixes while distinguishing their later generic-argument brackets.
         var angleBracketIndex = fullName.IndexOf('<');
-        if (angleBracketIndex > 0) // > 0, not >= 0, to exclude compiler-generated types
+        if (angleBracketIndex >= 0 && angleBracketIndex + 1 < fullName.Length && fullName[angleBracketIndex + 1] == '>')
+        {
+            angleBracketIndex = fullName.IndexOf('<', angleBracketIndex + 2);
+        }
+        if (angleBracketIndex > 0 && fullName[angleBracketIndex - 1] is not ('.' or '+'))
         {
             // Verify it's a real generic by checking for matching closing bracket
             var closingIndex = FindMatchingClosingBracket(fullName, angleBracketIndex, '<', '>');
@@ -128,6 +150,51 @@ public class TypeAllocationInfo
         // Handle non-generic types
         var dot = fullName.LastIndexOf('.');
         return dot >= 0 ? fullName[(dot + 1)..] : fullName;
+    }
+
+    private static int FindTypeSuffixStart(string fullName)
+    {
+        var end = fullName.Length;
+        while (end > 0)
+        {
+            if (fullName[end - 1] is '*' or '&')
+            {
+                end--;
+                continue;
+            }
+            if (fullName[end - 1] != ']') break;
+            var opening = fullName.LastIndexOf('[', end - 1);
+            if (opening < 0) break;
+            // Only array qualifiers are suffixes; square-bracket type arguments remain intact.
+            var rankOnly = true;
+            for (var i = opening + 1; i < end - 1; i++)
+            {
+                if (fullName[i] == ',' || (i == opening + 1 && i == end - 2 && fullName[i] == '*')) continue;
+                rankOnly = false;
+                break;
+            }
+            if (!rankOnly) break;
+            end = opening;
+        }
+        return end;
+    }
+
+    private static int FindNestedSeparator(string fullName)
+    {
+        var angleDepth = 0;
+        var squareDepth = 0;
+        for (var i = 0; i < fullName.Length; i++)
+        {
+            switch (fullName[i])
+            {
+                case '<': angleDepth++; break;
+                case '>': angleDepth--; break;
+                case '[': squareDepth++; break;
+                case ']': squareDepth--; break;
+                case '+' when angleDepth == 0 && squareDepth == 0: return i;
+            }
+        }
+        return -1;
     }
 
     private static int FindMatchingClosingBracket(string text, int openIndex, char open, char close)

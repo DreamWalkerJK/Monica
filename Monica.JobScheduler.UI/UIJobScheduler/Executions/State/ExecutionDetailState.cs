@@ -2,255 +2,275 @@ using Monica.Core.Results;
 using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 
-/// <summary>
-/// Owns one execution-detail dialog's evidence snapshot, mutation boundary, and async lifetime.
-/// </summary>
+/// <summary>Owns full retained evidence and operator requests for one immutable exact execution identifier.</summary>
+/// <remarks>
+/// Create a new state when the inspector identity changes. Async admission, including authorization, belongs to this
+/// session; retirement cancels and drains actual work. The component owns clipboard and native confirmation work
+/// separately and must not borrow this state's cancellation source.
+/// </remarks>
 internal sealed class ExecutionDetailState(
     JobSchedulerFacade facade,
     IJobSchedulerUiAccess access,
-    TimeProvider timeProvider) : IAsyncDisposable
+    TimeProvider timeProvider,
+    string instanceId) : IAsyncDisposable
 {
-    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SchedulerOperationLifetime _lifetime = new();
     private readonly SemaphoreSlim _loadGate = new(1, 1);
     private readonly SemaphoreSlim _mutationGate = new(1, 1);
-    private bool _disposed;
+    private int _loadVersion;
+    private int _accessVersion;
+    private int _pendingMutations;
 
-    /// <summary>
-    /// Raised when consumers should render a new detail snapshot.
-    /// </summary>
+    /// <summary>Raised outside owner locks when consumers should render the current detail evidence.</summary>
     public event Func<Task>? StateChanged;
 
-    /// <summary>
-    /// Gets the requested execution identifier.
-    /// </summary>
-    public string InstanceId { get; private set; } = string.Empty;
+    /// <summary>Gets the exact, unnormalized execution identifier fixed at construction.</summary>
+    public string InstanceId { get; } = ValidateIdentifier(instanceId);
 
-    /// <summary>
-    /// Gets the complete durable execution evidence snapshot.
-    /// </summary>
+    /// <summary>Gets the complete retained detail snapshot, including history, when accepted.</summary>
     public JobExecutionInstance? Execution { get; private set; }
 
-    /// <summary>
-    /// Gets whether authorization has been evaluated.
-    /// </summary>
+    /// <summary>Gets whether authorization has been evaluated.</summary>
     public bool AccessChecked { get; private set; }
 
-    /// <summary>
-    /// Gets whether the current operator can inspect the execution.
-    /// </summary>
+    /// <summary>Gets whether current authorization evidence permits inspection.</summary>
     public bool IsAuthorized { get; private set; }
 
-    /// <summary>
-    /// Gets whether the execution evidence is loading.
-    /// </summary>
+    /// <summary>Gets whether the newest admitted detail read is pending or running.</summary>
     public bool IsLoading { get; private set; } = true;
 
-    /// <summary>
-    /// Gets whether a cancellation mutation is in progress.
-    /// </summary>
+    /// <summary>Gets whether admitted cancellation and its post-mutation read are pending or running.</summary>
     public bool IsMutating { get; private set; }
 
-    /// <summary>
-    /// Gets whether the execution did not exist at the time of the latest read.
-    /// </summary>
+    /// <summary>Gets whether a successful read accepted an execution or a confirmed missing result.</summary>
+    public bool HasLoadedSnapshot { get; private set; }
+
+    /// <summary>Gets whether the newest read failed instead of confirming available or missing evidence.</summary>
+    public bool IsQueryFailed { get; private set; }
+
+    /// <summary>Gets whether the execution was absent in the accepted successful read.</summary>
     public bool IsNotFound { get; private set; }
 
-    /// <summary>
-    /// Gets the latest detail-load error, if any.
-    /// </summary>
+    /// <summary>Gets the latest read or authorization error, if any.</summary>
     public string? Error { get; private set; }
 
-    /// <summary>
-    /// Gets when the current detail snapshot was observed.
-    /// </summary>
+    /// <summary>Gets when the accepted detail read completed.</summary>
     public DateTimeOffset? ObservedAtUtc { get; private set; }
 
-    /// <summary>
-    /// Gets the component-owned lifetime token for cancellable UI interop.
-    /// </summary>
-    public CancellationToken LifetimeToken => _lifetimeCancellation.Token;
+    /// <summary>Gets whether retirement has stopped new async work.</summary>
+    public bool IsDisposed => _lifetime.IsRetired;
 
-    /// <summary>
-    /// Loads a complete evidence snapshot for the supplied execution.
-    /// </summary>
-    public async Task InitializeAsync(string instanceId)
+    /// <summary>Loads full retained evidence for this state's immutable execution identifier.</summary>
+    /// <exception cref="OperationCanceledException">The owning state retired.</exception>
+    public Task InitializeAsync() => RefreshAsync();
+
+    /// <summary>Reloads full retained evidence, preserving prior same-ID evidence only on a read failure.</summary>
+    /// <remarks>Authorization denial or provider faults clear inaccessible evidence.</remarks>
+    /// <exception cref="OperationCanceledException">The owning state retired.</exception>
+    public Task RefreshAsync() => _lifetime.RunAsync(async token =>
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(instanceId);
-        ThrowIfDisposed();
-        InstanceId = instanceId;
-        await LoadAsync();
-    }
-
-    /// <summary>
-    /// Reloads the current complete evidence snapshot.
-    /// </summary>
-    public Task RefreshAsync()
-    {
-        ThrowIfDisposed();
-        return LoadAsync();
-    }
-
-    /// <summary>
-    /// Reauthorizes and durably requests cancellation before refreshing the evidence snapshot.
-    /// </summary>
-    public async Task<ExecutionCancellationUiResult> RequestCancellationAsync()
-    {
-        ThrowIfDisposed();
-        var cancellationToken = _lifetimeCancellation.Token;
-        try
-        {
-            await _mutationGate.WaitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return new ExecutionCancellationUiResult(IsAuthorized, null, null);
-        }
-
-        try
-        {
-            ThrowIfDisposed();
-            IsMutating = true;
-            await NotifyStateChangedAsync();
-
-            IsAuthorized = await access.IsAuthorizedAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            AccessChecked = true;
-            if (!IsAuthorized)
+        var version = 0;
+        if (!_lifetime.TryApply(() =>
             {
-                Execution = null;
+                version = ++_loadVersion;
+                IsLoading = true;
+                IsQueryFailed = false;
                 Error = null;
-                return new ExecutionCancellationUiResult(false, null, null);
-            }
+            })) throw RetiredCancellation();
+        await LoadAsync(version, token);
+    });
 
-            var result = await facade.CancelExecutionAsync(InstanceId, cancellationToken: cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (result.IsFailed(out var error, out var cancellation))
-            {
-                return new ExecutionCancellationUiResult(true, null, error.Message);
-            }
-
-            await LoadAsync();
-            return new ExecutionCancellationUiResult(true, cancellation.Status, null);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return new ExecutionCancellationUiResult(IsAuthorized, null, null);
-        }
-        catch (Exception exception)
-        {
-            return new ExecutionCancellationUiResult(true, null, exception.Message);
-        }
-        finally
-        {
-            if (!_disposed)
-            {
-                IsMutating = false;
-                await NotifyStateChangedAsync();
-            }
-
-            _mutationGate.Release();
-        }
-    }
-
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    /// <summary>Rechecks current access before the caller opens an operator confirmation.</summary>
+    /// <remarks>
+    /// The confirmed mutation performs its own authorization check. Denial returns false; a provider fault also
+    /// returns false, clears inaccessible evidence, and retains its diagnostic in <see cref="Error"/>.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">The owning state retired.</exception>
+    public Task<bool> ReauthorizeAsync() => _lifetime.RunAsync(async token =>
     {
-        if (_disposed)
-        {
-            return;
-        }
+        var authorization = await EnsureAuthorizedAsync(token);
+        await NotifyChangedAsync();
+        return authorization.IsAuthorized;
+    });
 
-        _disposed = true;
+    /// <summary>Reauthorizes and requests durable cancellation, then separately reauthorizes a full detail refresh.</summary>
+    /// <remarks>
+    /// The returned status is the actual store outcome. Cooperative cancellation does not imply terminal completion.
+    /// A subsequent read failure retains the mutation outcome and reports the failed read separately in this state.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">The owning state retired before actual work completed.</exception>
+    public Task<ExecutionCancellationUiResult> RequestCancellationAsync() =>
+        _lifetime.RunAsync<ExecutionCancellationUiResult>(async token =>
+        {
+            if (!_lifetime.TryApply(() => { _pendingMutations++; IsMutating = true; })) throw RetiredCancellation();
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                await NotifyChangedAsync();
+                await _mutationGate.WaitAsync(token);
+                JobCancellationStatus status;
+                try
+                {
+                    var authorization = await EnsureAuthorizedAsync(token);
+                    if (!authorization.IsAuthorized) return new(false, null, authorization.Error);
+                    var result = await facade.CancelExecutionAsync(InstanceId, cancellationToken: token);
+                    token.ThrowIfCancellationRequested();
+                    if (result.IsFailed(out var error, out var cancellation)) return new(true, null, error.Message);
+                    status = cancellation.Status;
+                }
+                finally { _mutationGate.Release(); }
+                await RefreshAsync();
+                return new(true, status, null);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception exception) { return new(IsAuthorized, null, exception.Message); }
+            finally
+            {
+                if (_lifetime.TryApply(() => { _pendingMutations--; IsMutating = _pendingMutations > 0; }))
+                    await NotifyChangedAsync();
+            }
+        });
+
+    /// <summary>Cancels and drains actual admitted work before releasing serialization resources.</summary>
+    /// <remarks>Repeated calls share the same completion, including unexpected faults.</remarks>
+    /// <exception cref="AggregateException">Cancellation callbacks, admitted work, or cleanup failed unexpectedly.</exception>
+    public ValueTask DisposeAsync()
+    {
         StateChanged = null;
-        await _lifetimeCancellation.CancelAsync();
-        await WaitForGateAsync(_loadGate);
-        await WaitForGateAsync(_mutationGate);
-        _loadGate.Dispose();
-        _mutationGate.Dispose();
-        _lifetimeCancellation.Dispose();
+        return _lifetime.RetireAsync(() =>
+        {
+            try { _loadGate.Dispose(); }
+            finally { _mutationGate.Dispose(); }
+        });
     }
 
-    private async Task LoadAsync()
+    private async Task LoadAsync(int version, CancellationToken token)
     {
-        ThrowIfDisposed();
-        var cancellationToken = _lifetimeCancellation.Token;
+        var entered = false;
+        int? authorizedVersion = null;
         try
         {
-            await _loadGate.WaitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-
-        try
-        {
-            ThrowIfDisposed();
-            IsLoading = true;
-            Error = null;
-            IsNotFound = false;
-            await NotifyStateChangedAsync();
-
-            IsAuthorized = await access.IsAuthorizedAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            AccessChecked = true;
-            if (!IsAuthorized)
+            token.ThrowIfCancellationRequested();
+            await NotifyChangedAsync();
+            await _loadGate.WaitAsync(token);
+            entered = true;
+            var authorization = await EnsureAuthorizedAsync(token);
+            authorizedVersion = authorization.Version;
+            if (!authorization.IsAuthorized)
             {
-                Execution = null;
+                _lifetime.TryApply(() => { if (version == _loadVersion) IsQueryFailed = authorization.Error is not null; });
                 return;
             }
-
-            var result = await facade.GetExecutionAsync(InstanceId, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
+            var result = await facade.GetExecutionAsync(InstanceId, token);
+            token.ThrowIfCancellationRequested();
             if (result.IsFailed(out var error, out var execution))
             {
-                Error = error.Message;
+                _lifetime.TryApply(() =>
+                {
+                    if (version != _loadVersion || !CanAcceptAccess(authorization.Version)) return;
+                    Error = error.Message;
+                    IsQueryFailed = true;
+                });
                 return;
             }
-
-            Execution = execution;
-            IsNotFound = execution is null;
-            ObservedAtUtc = timeProvider.GetUtcNow();
+            var observedAtUtc = timeProvider.GetUtcNow();
+            if (!_lifetime.TryApply(() =>
+                {
+                    if (version != _loadVersion || !CanAcceptAccess(authorization.Version)) return;
+                    Execution = execution;
+                    IsNotFound = execution is null;
+                    HasLoadedSnapshot = true;
+                    IsQueryFailed = false;
+                    Error = null;
+                    ObservedAtUtc = observedAtUtc;
+                })) throw RetiredCancellation();
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception exception)
         {
-            Error = exception.Message;
+            _lifetime.TryApply(() =>
+            {
+                if (version != _loadVersion || (authorizedVersion is { } accessVersion && !CanAcceptAccess(accessVersion))) return;
+                Error = exception.Message;
+                IsQueryFailed = true;
+            });
         }
         finally
         {
-            if (!_disposed)
-            {
-                IsLoading = false;
-                await NotifyStateChangedAsync();
-            }
-
-            _loadGate.Release();
+            if (entered) _loadGate.Release();
+            if (_lifetime.TryApply(() => { if (version == _loadVersion) IsLoading = false; }))
+                await NotifyChangedAsync();
         }
     }
 
-    private async Task NotifyStateChangedAsync()
+    private async Task<(bool IsAuthorized, string? Error, int Version)> EnsureAuthorizedAsync(CancellationToken token)
     {
-        var handlers = StateChanged?.GetInvocationList().Cast<Func<Task>>().ToArray() ?? [];
-        foreach (var handler in handlers)
+        var version = 0;
+        if (!_lifetime.TryApply(() => version = _accessVersion)) throw RetiredCancellation();
+        try
         {
-            await handler();
+            var authorized = await access.IsAuthorizedAsync(token);
+            token.ThrowIfCancellationRequested();
+            var accepted = false;
+            if (!_lifetime.TryApply(() =>
+                {
+                    if (!authorized)
+                    {
+                        _accessVersion++;
+                        IsAuthorized = false;
+                        AccessChecked = true;
+                        ClearEvidence();
+                        Error = null;
+                        return;
+                    }
+                    if (version != _accessVersion) return;
+                    IsAuthorized = true;
+                    AccessChecked = true;
+                    accepted = true;
+                })) throw RetiredCancellation();
+            return (accepted, null, version);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!_lifetime.TryApply(() =>
+                {
+                    _accessVersion++;
+                    IsAuthorized = false;
+                    AccessChecked = true;
+                    ClearEvidence();
+                    Error = exception.Message;
+                })) throw RetiredCancellation();
+            return (false, exception.Message, version);
         }
     }
 
-    private static async Task WaitForGateAsync(SemaphoreSlim gate)
+    private bool CanAcceptAccess(int version) => IsAuthorized && version == _accessVersion;
+
+    private void ClearEvidence()
     {
-        await gate.WaitAsync();
-        gate.Release();
+        Execution = null;
+        HasLoadedSnapshot = false;
+        IsQueryFailed = false;
+        IsNotFound = false;
+        ObservedAtUtc = null;
     }
 
-    private void ThrowIfDisposed()
+    private async Task NotifyChangedAsync()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        foreach (var handler in _lifetime.SnapshotHandlers(StateChanged)) await handler();
     }
+
+    private static string ValidateIdentifier(string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        return value;
+    }
+
+    private static OperationCanceledException RetiredCancellation() => new(new CancellationToken(canceled: true));
 }

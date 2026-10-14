@@ -39,13 +39,64 @@ public class ModuleProjectUnitsUI : MonicaModule<ModuleProjectUnitsUIOption>, IU
             static option => option.AddResource<ProjectUnitsResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
+            {
+                var category = registry.RegisterLocalizedCategory<ProjectUnitsResource>(
+                    "Monica.Framework.UI.ProjectUnits",
+                    "Pages:ProjectUnits:Title",
+                    order: 20,
+                    parentId: BuiltInNavigationCategoryIds.Monitor,
+                    icon: Icons.Material.Outlined.AccountTree,
+                    descriptionKey: "Pages:ProjectUnits:Description");
+
                 registry.RegisterLocalizedPage<UIProjectUnitsPage, ProjectUnitsResource>(
                     UIProjectUnitsPage.PAGE_URL,
-                    "Pages:ProjectUnits:Title",
-                    Icons.Material.Filled.Monitor,
-                    BuiltInNavigationCategoryIds.Monitor,
+                    "Pages:ProjectUnits:Overview:Title",
+                    Icons.Material.Outlined.SpaceDashboard,
+                    category,
                     addToNav: true,
-                    navOrder: 20)));
+                    navOrder: 0,
+                    descriptionKey: "Pages:ProjectUnits:Overview:Description");
+                registry.RegisterLocalizedPage<UIProjectUnitsCatalogPage, ProjectUnitsResource>(
+                    UIProjectUnitsCatalogPage.PAGE_URL,
+                    "Pages:ProjectUnits:Catalog:Title",
+                    Icons.Material.Outlined.AccountTree,
+                    category,
+                    addToNav: true,
+                    navOrder: 10,
+                    descriptionKey: "Pages:ProjectUnits:Catalog:Description");
+                registry.RegisterLocalizedPage<UIProjectUnitsGraphPage, ProjectUnitsResource>(
+                    UIProjectUnitsGraphPage.PAGE_URL,
+                    "Pages:ProjectUnits:Graph:Title",
+                    Icons.Material.Outlined.Hub,
+                    category,
+                    addToNav: true,
+                    navOrder: 20,
+                    descriptionKey: "Pages:ProjectUnits:Graph:Description");
+                registry.RegisterLocalizedPage<UIProjectUnitsEventsPage, ProjectUnitsResource>(
+                    UIProjectUnitsEventsPage.PAGE_URL,
+                    "Pages:ProjectUnits:Events:Title",
+                    Icons.Material.Outlined.Event,
+                    category,
+                    addToNav: true,
+                    navOrder: 30,
+                    descriptionKey: "Pages:ProjectUnits:Events:Description");
+                registry.RegisterLocalizedPage<UIProjectUnitsRequestFiltersPage, ProjectUnitsResource>(
+                    UIProjectUnitsRequestFiltersPage.PAGE_URL,
+                    "Pages:ProjectUnits:RequestFilters:Title",
+                    Icons.Material.Outlined.FilterAlt,
+                    category,
+                    addToNav: true,
+                    navOrder: 40,
+                    descriptionKey: "Pages:ProjectUnits:RequestFilters:Description");
+                registry.RegisterLocalizedPage<UIProjectUnitsEnumsPage, ProjectUnitsResource>(
+                    UIProjectUnitsEnumsPage.PAGE_URL,
+                    "Pages:ProjectUnits:Enums:Title",
+                    Icons.Material.Outlined.DataObject,
+                    category,
+                    addToNav: true,
+                    navOrder: 50,
+                    descriptionKey: "Pages:ProjectUnits:Enums:Description");
+            }));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleProjectUnitsUIOption> context)

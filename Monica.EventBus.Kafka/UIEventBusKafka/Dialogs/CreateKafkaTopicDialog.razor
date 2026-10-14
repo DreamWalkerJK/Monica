@@ -1,24 +1,30 @@
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<EventBusKafkaResource> L
 
-<MudDialog>
+<MudDialog Gutters="false">
+    <TitleContent><MoDialogHeading Text="@L["Topics:Dialog:CreateTitle"]" /></TitleContent>
     <DialogContent>
-        <MudStack Spacing="3">
-            @if (!string.IsNullOrWhiteSpace(_errorMessage))
-            {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-                    @_errorMessage
-                </MudAlert>
-            }
+        <div class="kafka-dialog-body">
+            <MudStack Spacing="3">
+                <KafkaDialogContext ClusterId="@ClusterId" />
+                <MudText Typo="Typo.body2">@L["Topics:Dialog:CreateHint"]</MudText>
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @_errorMessage
+                    </MudAlert>
+                }
 
-            <MudTextField T="string" @bind-Value="_topicName" Label="@L["Topics:Fields:TopicName"]" Required="true" />
-            <MudNumericField T="int" @bind-Value="_partitions" Label="@L["Topics:Fields:Partitions"]" Min="1" />
-            <MudNumericField T="int" @bind-Value="_replicationFactor" Label="@L["Topics:Fields:ReplicationFactor"]" Min="1" />
-            <MudNumericField T="long?" @bind-Value="_retentionMs" Label="@L["Topics:Fields:RetentionMs"]" Min="1" />
-        </MudStack>
+                <MudTextField T="string" @bind-Value="_topicName" Label="@L["Topics:Fields:TopicName"]" Required="true" RequiredError="@L["Topics:Validation:NameRequired"]" />
+                <MudNumericField T="int" @bind-Value="_partitions" Label="@L["Topics:Fields:Partitions"]" Min="1" />
+                <MudNumericField T="int" @bind-Value="_replicationFactor" Label="@L["Topics:Fields:ReplicationFactor"]" Min="1" Max="@short.MaxValue" />
+                <MudNumericField T="long?" @bind-Value="_retentionMs" Label="@L["Topics:Fields:RetentionMs"]" Min="1" />
+            </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Text" OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">@L["Topics:Actions:Create"]</MudButton>
+        <KafkaPrimaryButton OnClick="Save">@L["Topics:Actions:Create"]</KafkaPrimaryButton>
     </DialogActions>
 </MudDialog>
 

@@ -21,4 +21,6 @@ builder.AddMonica(monica =>
 
 The core `IRepository<TEntity>` stages `Add`/`Remove`; `IRepository<TEntity,TKey>` additionally loads a tracked aggregate by key. Domain-specific repositories add purposeful tracked queries. The repository interface deliberately has no `Save` method; [transactions](transactions.md) owns the commit. Registration supplies a local database boundary, not a distributed transaction or an EventBus transport. Add [transactional events](transactional-events.md) when outbox, inbox, or entity projections must join the commit.
 
+To inspect these registrations through `AddRepositoryUI()`, use [Repository diagnostics](repository-diagnostics.md) for the four task routes, exact context identity, provider activity scope, and migration command outcomes.
+
 Repository model and save policy: `Monica.Repository/Persistence/Services/RepositoryDbContext.cs`. Registration: `Monica.Repository/Modules/ModuleRepository.cs` and `ModuleUnitOfWork.cs`. `tests/Test.Monica.Repository/UnitOfWork/UnitOfWorkRepositoryCommitTests.cs` exercises repository commit behavior.

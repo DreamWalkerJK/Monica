@@ -1,24 +1,29 @@
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<EventBusKafkaResource> L
 
-<MudDialog>
+<MudDialog Gutters="false">
+    <TitleContent><MoDialogHeading Text="@L["Topics:Dialog:RetentionTitle"]" /></TitleContent>
     <DialogContent>
-        <MudStack Spacing="3">
-            @if (!string.IsNullOrWhiteSpace(_errorMessage))
-            {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-                    @_errorMessage
-                </MudAlert>
-            }
+        <div class="kafka-dialog-body">
+            <MudStack Spacing="3">
+                <KafkaDialogContext ClusterId="@ClusterId" TopicName="@Topic.TopicName" />
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @_errorMessage
+                    </MudAlert>
+                }
 
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                @L["Topics:Dialog:RetentionMessage", Topic.TopicName]
-            </MudText>
-            <MudNumericField T="long" @bind-Value="_retentionMs" Label="@L["Topics:Fields:RetentionMs"]" Min="1" />
-        </MudStack>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @L["Topics:Dialog:RetentionMessage", Topic.TopicName]
+                </MudText>
+                <MudNumericField T="long" @bind-Value="_retentionMs" Label="@L["Topics:Fields:RetentionMs"]" Min="1" />
+            </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Text" OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">@L["Common:Actions:Save"]</MudButton>
+        <KafkaPrimaryButton OnClick="Save">@L["Common:Actions:Save"]</KafkaPrimaryButton>
     </DialogActions>
 </MudDialog>
 
@@ -26,6 +31,9 @@
     [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
 
     [Parameter, EditorRequired] public KafkaTopicSummary Topic { get; set; } = new();
+
+    /// <summary>Gets or sets the exact cluster identity frozen when the editor was opened.</summary>
+    [Parameter] public string? ClusterId { get; set; }
 
     private long _retentionMs;
 

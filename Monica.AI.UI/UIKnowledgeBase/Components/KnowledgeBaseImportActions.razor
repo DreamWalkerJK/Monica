@@ -1,85 +1,28 @@
-@using Microsoft.AspNetCore.Components
-@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
 @using Monica.AI.UI.UIKnowledgeBase.State
-@using Monica.UI.Localization
 @inject IStringLocalizer<AIResource> L
-@inject IStringLocalizer<SharedResource> Shared
 
-<div class="import-actions-grid">
-    <div class="import-card">
-        <div class="import-card-title">
-            <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" Color="Color.Primary" />
-            <MudText Typo="Typo.subtitle2">@L["KnowledgeBase:DocumentImport:MarkdownTitle"]</MudText>
-        </div>
-        <div class="markdown-group-section">
-            @if (PageState.IsMarkdownGroupsLoading)
-            {
-                <div class="markdown-loading-state">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        @Shared["Common:Loading"]
-                    </MudText>
-                    <MudProgressLinear Indeterminate="true"
-                                       Color="Color.Primary"
-                                       Rounded="true"
-                                       Class="markdown-loading-progress" />
-                </div>
-            }
-            <MudSelect T="string"
-                       @bind-Value="@SelectedMarkdownGroup"
-                       Label="@L["RAG:Indexing:MarkdownGroup"]"
-                       Variant="Variant.Outlined"
-                       Margin="Margin.Dense"
-                       Disabled="@(PageState.IsMarkdownGroupsLoading || PageState.MarkdownGroups.Count == 0)"
-                       FullWidth="true">
-                @foreach (var group in PageState.MarkdownGroups)
-                {
-                    <MudSelectItem T="string" Value="@group">@group</MudSelectItem>
-                }
+<section class="import-shelf" aria-label="@L["KnowledgeWorkbench:AddSources"]">
+    <div class="import-heading"><MudIcon Icon="@Icons.Material.Outlined.NoteAdd" /><div><h3>@L["KnowledgeWorkbench:AddSources"]</h3><p>@L["KnowledgeWorkbench:ImportHint"]</p></div></div>
+    <div class="import-methods">
+        <div class="markdown-import">
+            <MudSelect T="string" @bind-Value="SelectedMarkdownGroup" Label="@L["RAG:Indexing:MarkdownGroup"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(PageState.IsMarkdownGroupsLoading || PageState.MarkdownGroups.Count == 0)">
+                @foreach (var group in PageState.MarkdownGroups) { <MudSelectItem T="string" Value="@group">@group</MudSelectItem> }
             </MudSelect>
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.FolderOpen"
-                       OnClick="@PageState.ShowDocumentImportDialogAsync"
-                       Disabled="@string.IsNullOrEmpty(SelectedMarkdownGroup)"
-                       FullWidth="true">
-                @L["KnowledgeBase:DocumentImport:Add"]
-            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.FolderOpen" OnClick="PageState.ShowDocumentImportDialogAsync" Disabled="@string.IsNullOrEmpty(SelectedMarkdownGroup)">@L["KnowledgeBase:DocumentImport:Add"]</MudButton>
+        </div>
+        <div class="file-import">
+            <MudFileUpload T="IBrowserFile" Accept=".txt,.md,.pdf" MaximumFileCount="1" FilesChanged="PageState.UploadFileAsync">
+                <CustomContent Context="upload"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.UploadFile" OnClick="upload.OpenFilePickerAsync">@L["RAG:Indexing:UploadFile"]</MudButton></CustomContent>
+            </MudFileUpload>
+            <span>@L["KnowledgeWorkbench:UploadHint"]</span>
         </div>
     </div>
-
-    <div class="import-card">
-        <div class="import-card-title">
-            <MudIcon Icon="@Icons.Material.Filled.Upload" Size="Size.Small" Color="Color.Primary" />
-            <MudText Typo="Typo.subtitle2">@L["RAG:Indexing:UploadFile"]</MudText>
-        </div>
-        <MudFileUpload T="IBrowserFile"
-                       Accept=".txt,.md,.pdf"
-                       FilesChanged="@OnFileSelected"
-                       MaximumFileCount="1"
-                       Class="upload-file-input">
-            <CustomContent Context="upload">
-                <div class="upload-drop-zone" @onclick="upload.OpenFilePickerAsync">
-                    <MudIcon Icon="@Icons.Material.Filled.UploadFile" Size="Size.Large" Class="upload-icon" />
-                    <MudText Typo="Typo.body2" Class="upload-hint-primary">@L["RAG:Indexing:ClickToUpload"]</MudText>
-                    <MudText Typo="Typo.caption" Class="upload-hint-secondary">.md, .txt, .pdf</MudText>
-                </div>
-            </CustomContent>
-        </MudFileUpload>
-    </div>
-</div>
-
+    @if (PageState.IsMarkdownGroupsLoading) { <MudProgressLinear Color="Color.Primary" Indeterminate="true" /> }
+</section>
 @code {
-    [Parameter, EditorRequired]
-    public required KnowledgeBaseManagePageState PageState { get; set; }
-
-    private string? SelectedMarkdownGroup
-    {
-        get => PageState.SelectedMarkdownGroup;
-        set => PageState.SelectedMarkdownGroup = value;
-    }
-
-    private Task OnFileSelected(IBrowserFile file)
-        => PageState.UploadFileAsync(file);
+    /// <summary>Gets or sets the page-owned state that captures the originating collection before imports or uploads.</summary>
+    [Parameter, EditorRequired] public required KnowledgeBaseManagePageState PageState { get; set; }
+    private string? SelectedMarkdownGroup { get => PageState.SelectedMarkdownGroup; set => PageState.SelectedMarkdownGroup = value; }
 }

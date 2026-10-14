@@ -1,256 +1,245 @@
 @using Monica.DevOps.K8S.Facades
-@using Monica.DevOps.Localization
 @using Monica.DevOps.K8S.Models
+@using Monica.DevOps.K8S.Support
+@using Monica.DevOps.Localization
+@using Monica.UI.Shared.Components.Dialogs
+@implements IAsyncDisposable
 @inject IStringLocalizer<K8SResource> L
 @inject K8SFacade K8SFacade
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
-<MudDialog Class="k8s-describe-dialog">
+<MudDialog DefaultFocus="DefaultFocus.Element">
+    <TitleContent><MoDialogHeading @ref="_heading" Text="@L["DescribeDialog:Title", GetResourceDisplayName(Details.Summary.Kind, Details.Summary.Name), Details.Summary.Namespace]" /></TitleContent>
     <DialogContent>
-        <MudStack Spacing="3">
-            <MudGrid Spacing="2">
-                <MudItem xs="12" md="6">
-                    <MudPaper Class="pa-4" Outlined="true">
-                        <MudStack Spacing="1">
-                            <MudText Typo="Typo.subtitle2">@L["DescribeDialog:Resource"]</MudText>
-                            <MudText Typo="Typo.h6">@GetResourceDisplayName(Details.Summary.Kind, Details.Summary.Name)</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:Namespace"]: @Details.Summary.Namespace</MudText>
+        <div class="k8s-inspector">
+            <MudTabs Elevation="0" Rounded="false" KeepPanelsAlive="true">
+                <MudTabPanel Text="@L["Inspector:Summary"]">
+                    <div class="tab-body">
+                        <dl class="facts">
+                            <dt>@L["DescribeDialog:Resource"]</dt><dd>@GetResourceDisplayName(Details.Summary.Kind, Details.Summary.Name)</dd>
+                            <dt>@L["DescribeDialog:Namespace"]</dt><dd>@Details.Summary.Namespace</dd>
                             @if (Details.Summary.ResourceType == K8SResourceType.Service)
                             {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:ServiceType"]: @Details.Summary.Type</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:ClusterIp"]: @Details.Summary.ClusterIp</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:BackingWorkloadRestart"]: @Details.Summary.LastRestartedAtDisplay</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:ServiceExplanation"]</MudText>
+                                <dt>@L["DescribeDialog:ServiceType"]</dt><dd>@DisplayValue(Details.Summary.Type)</dd>
+                                <dt>@L["DescribeDialog:ClusterIp"]</dt><dd>@DisplayValue(Details.Summary.ClusterIp)</dd>
+                                <dt>@L["DescribeDialog:BackingWorkloadRestart"]</dt><dd>@Details.Summary.LastRestartedAtDisplay</dd>
                             }
                             else
                             {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:ReadyDesired"]: @Details.Summary.ReplicaStatus</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:LastRestart"]: @Details.Summary.LastRestartedAtDisplay</MudText>
+                                <dt>@L["DescribeDialog:ReadyDesired"]</dt><dd>@Details.Summary.ReplicaStatus</dd>
+                                <dt>@L["DescribeDialog:LastRestart"]</dt><dd>@Details.Summary.LastRestartedAtDisplay</dd>
                             }
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:Selector"]: @Details.Summary.SelectorDisplay</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:Ports"]: @Details.Summary.PortsDisplay</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:Images"]: @Details.Summary.ImagesDisplay</MudText>
-                        </MudStack>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudPaper Class="pa-4" Outlined="true">
-                        <MudStack Spacing="1">
-                            <MudText Typo="Typo.subtitle2">@L["DescribeDialog:RelatedWorkloads"]</MudText>
+                            <dt>@L["DescribeDialog:Selector"]</dt><dd>@Details.Summary.SelectorDisplay</dd>
+                            <dt>@L["DescribeDialog:Ports"]</dt><dd>@Details.Summary.PortsDisplay</dd>
+                            <dt>@L["DescribeDialog:Images"]</dt><dd>@Details.Summary.ImagesDisplay</dd>
+                        </dl>
+                        @if (Details.Summary.ResourceType == K8SResourceType.Service)
+                        {
+                            <MudText Typo="Typo.body2" Class="explanation">@L["DescribeDialog:ServiceExplanation"]</MudText>
+                        }
+                        <section class="related-workloads">
+                            <MudText Typo="Typo.subtitle1">@L["DescribeDialog:RelatedWorkloads"]</MudText>
                             @if (Details.RelatedWorkloads.Count == 0)
                             {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:NoRelatedWorkloads"]</MudText>
+                                <MudText Typo="Typo.body2">@L["DescribeDialog:NoRelatedWorkloads"]</MudText>
                             }
                             else
                             {
-                                @foreach (var workload in Details.RelatedWorkloads)
-                                {
-                                    <MudChip T="string" Value="@GetResourceDisplayName(workload.Kind, workload.Name)" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-2 mb-2">
-                                        @L["DescribeDialog:RelatedWorkloadChip", GetResourceDisplayName(workload.Kind, workload.Name), workload.ReplicaStatus, workload.LastRestartedAtDisplay]
-                                    </MudChip>
-                                }
+                                <MudList T="string" Dense="true">
+                                    @foreach (var workload in Details.RelatedWorkloads)
+                                    {
+                                        <MudListItem T="string">@L["DescribeDialog:RelatedWorkloadChip", GetResourceDisplayName(workload.Kind, workload.Name), workload.ReplicaStatus, workload.LastRestartedAtDisplay]</MudListItem>
+                                    }
+                                </MudList>
+                            }
+                        </section>
+                    </div>
+                </MudTabPanel>
+                <MudTabPanel Text="@GetPodsTabCaption()">
+                    <div class="tab-body">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.subtitle1">@L["DescribeDialog:PodStatusTitle"]</MudText>
+                            <MudText Typo="Typo.body2">@L["DescribeDialog:PodStatusDescription"]</MudText>
+                            @if (UnhealthyPodCount > 0)
+                            {
+                                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["DescribeDialog:PodsNeedAttention", UnhealthyPodCount]</MudAlert>
+                            }
+                            @if (Details.RelatedPods.Count == 0)
+                            {
+                                <MudText Typo="Typo.body2">@L["DescribeDialog:NoRelatedPods"]</MudText>
+                            }
+                            else
+                            {
+                                <MudTable T="K8SPodSummary" Items="Details.RelatedPods" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                                    <HeaderContent>
+                                        <MudTh>@L["DescribeDialog:Pod"]</MudTh><MudTh>@L["Inspector:State"]</MudTh>
+                                        <MudTh>@L["Inspector:RestartsStarted"]</MudTh><MudTh>@L["Inspector:Placement"]</MudTh>
+                                        <MudTh>@L["DescribeDialog:Issue"]</MudTh><MudTh>@L["DescribeDialog:Actions"]</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="@L["DescribeDialog:Pod"]"><div class="pod-evidence"><span>@context.Name</span><span>@L["DescribeDialog:Workload"]: @GetPodWorkloadDisplayName(context)</span></div></MudTd>
+                                        <MudTd DataLabel="@L["Inspector:State"]"><div class="pod-evidence">
+                                            <span>@L["DescribeDialog:Phase"]:</span>
+                                            <MudChip T="string" Color="@GetPodPhaseColor(context)" Variant="Variant.Outlined" Size="Size.Small">@context.PhaseDisplay</MudChip>
+                                            <span>@L["DescribeDialog:Ready"]: @context.ReadyDisplay</span>
+                                            <MudChip T="string" Color="@(context.IsReady ? Color.Success : Color.Warning)" Variant="Variant.Outlined" Size="Size.Small">@(context.IsReady ? L["DescribeDialog:ReadyStateReady"] : L["DescribeDialog:ReadyStateNotReady"])</MudChip>
+                                        </div></MudTd>
+                                        <MudTd DataLabel="@L["Inspector:RestartsStarted"]"><div class="pod-evidence"><span>@L["DescribeDialog:Restarts"]: @context.RestartCount</span><span>@L["DescribeDialog:Started"]: @context.StartTimeDisplay</span></div></MudTd>
+                                        <MudTd DataLabel="@L["Inspector:Placement"]"><div class="pod-evidence"><span>@L["DescribeDialog:Node"]: @DisplayValue(context.NodeName)</span><span>@L["DescribeDialog:PodIp"]: @DisplayValue(context.PodIp)</span></div></MudTd>
+                                        <MudTd DataLabel="@L["DescribeDialog:Issue"]">@GetPodIssueText(context)</MudTd>
+                                        <MudTd DataLabel="@L["DescribeDialog:Actions"]"><MudButton Variant="Variant.Text" Disabled="@(_loadingPodName is not null && !IsLoadingPod(context))" aria-disabled="@(IsLoadingPod(context) ? "true" : "false")" OnClick="@(() => OpenPodDescribeDialogAsync(context))">@(IsLoadingPod(context) ? L["Common:Loading"] : L["DescribeDialog:DescribePod"])</MudButton></MudTd>
+                                    </RowTemplate>
+                                </MudTable>
                             }
                         </MudStack>
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
-
-            <MudPaper Class="pa-4 pods-panel" Outlined="true">
-                <MudStack Spacing="2">
-                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.subtitle2">@L["DescribeDialog:PodStatusTitle"]</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @L["DescribeDialog:PodStatusDescription"]
-                            </MudText>
-                        </MudStack>
-                        @if (UnhealthyPodCount > 0)
-                        {
-                            <MudChip T="string" Value="@L["DescribeDialog:PodsNeedAttention", UnhealthyPodCount].Value" Color="Color.Warning" Variant="Variant.Filled">
-                                @L["DescribeDialog:PodsNeedAttention", UnhealthyPodCount]
-                            </MudChip>
-                        }
-                    </MudStack>
-
-                    @if (Details.RelatedPods.Count == 0)
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DescribeDialog:NoRelatedPods"]</MudText>
-                    }
-                    else
-                    {
-                        <MudTable T="K8SPodSummary" Items="Details.RelatedPods" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
-                            <HeaderContent>
-                                <MudTh>@L["DescribeDialog:Pod"]</MudTh>
-                                <MudTh>@L["DescribeDialog:Phase"]</MudTh>
-                                <MudTh>@L["DescribeDialog:Ready"]</MudTh>
-                                <MudTh>@L["DescribeDialog:Restarts"]</MudTh>
-                                <MudTh>@L["DescribeDialog:Workload"]</MudTh>
-                                <MudTh>@L["DescribeDialog:Node"]</MudTh>
-                                <MudTh>@L["DescribeDialog:PodIp"]</MudTh>
-                                <MudTh>@L["DescribeDialog:Started"]</MudTh>
-                                <MudTh>@L["DescribeDialog:Issue"]</MudTh>
-                                <MudTh>@L["DescribeDialog:Actions"]</MudTh>
-                            </HeaderContent>
-                            <RowTemplate>
-                                <MudTd DataLabel="@L["DescribeDialog:Pod"]">@context.Name</MudTd>
-                                <MudTd DataLabel="@L["DescribeDialog:Phase"]">
-                                    <MudChip T="string" Value="@context.PhaseDisplay" Color="@GetPodPhaseColor(context)" Variant="Variant.Outlined" Class="pod-phase-chip">
-                                        @context.PhaseDisplay
-                                    </MudChip>
-                                </MudTd>
-                                <MudTd DataLabel="@L["DescribeDialog:Ready"]">
-                                    <MudStack Spacing="0">
-                                        <MudText Typo="Typo.body2">@context.ReadyDisplay</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@(context.IsReady ? L["DescribeDialog:ReadyStateReady"].Value : L["DescribeDialog:ReadyStateNotReady"].Value)</MudText>
-                                    </MudStack>
-                                </MudTd>
-                                <MudTd DataLabel="@L["DescribeDialog:Restarts"]">@context.RestartCount</MudTd>
-                                <MudTd DataLabel="@L["DescribeDialog:Workload"]">@GetPodWorkloadDisplayName(context)</MudTd>
-                                <MudTd DataLabel="@L["DescribeDialog:Node"]">@DisplayValue(context.NodeName)</MudTd>
-                                <MudTd DataLabel="@L["DescribeDialog:PodIp"]">@DisplayValue(context.PodIp)</MudTd>
-                                <MudTd DataLabel="@L["DescribeDialog:Started"]">@context.StartTimeDisplay</MudTd>
-                                <MudTd DataLabel="@L["DescribeDialog:Issue"]">
-                                    <MudStack Spacing="0" Class="issue-cell">
-                                        <MudText Typo="Typo.body2">@GetPodIssueText(context)</MudText>
-                                    </MudStack>
-                                </MudTd>
-                                <MudTd DataLabel="@L["DescribeDialog:Actions"]">
-                                    <MudButton Variant="Variant.Text"
-                                               StartIcon="@Icons.Material.Filled.Description"
-                                               Disabled="@(!string.IsNullOrWhiteSpace(_loadingPodName))"
-                                               OnClick="@(() => OpenPodDescribeDialogAsync(context))">
-                                        @(IsLoadingPod(context.Name) ? L["Common:Loading"].Value : L["DescribeDialog:DescribePod"].Value)
-                                    </MudButton>
-                                </MudTd>
-                            </RowTemplate>
-                        </MudTable>
-                    }
-                </MudStack>
-            </MudPaper>
-
-            <MudPaper Class="describe-output" Outlined="true">
-                <pre>@Details.DescriptionText</pre>
-            </MudPaper>
-        </MudStack>
+                    </div>
+                </MudTabPanel>
+                <MudTabPanel Text="@L["Inspector:Describe"]"><div class="tab-body"><div class="describe-output"><pre>@Details.DescriptionText</pre></div></div></MudTabPanel>
+            </MudTabs>
+        </div>
     </DialogContent>
-    <DialogActions>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">
-            @L["Common:Close"]
-        </MudButton>
-    </DialogActions>
+    <DialogActions><MudButton Variant="Variant.Text" OnClick="CloseAsync">@L["Common:Close"]</MudButton></DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
-
+    /// <summary>Gets or sets the captured resource evidence shown by this inspector.</summary>
     [Parameter] public K8SResourceDetails Details { get; set; } = new();
-
+    /// <summary>Gets or sets the originating visit token. Actual reads are still drained after cancellation.</summary>
+    [Parameter] public CancellationToken LifetimeToken { get; set; }
+    private MoDialogHeading? _heading;
+    private readonly object _sync = new();
+    private CancellationTokenSource? _lifetime;
+    private CancellationToken _token;
+    private K8SDialogOwner? _nested;
+    private Task? _podTask;
+    private Task? _retirement;
+    private volatile bool _retired;
+    private string? _loadingPodNamespace;
     private string? _loadingPodName;
-
     private int UnhealthyPodCount => Details.RelatedPods.Count(pod => pod.HasIssue);
+    private string GetPodsTabCaption() => UnhealthyPodCount > 0
+        ? L["Inspector:PodsWithAttention", Details.RelatedPods.Count, UnhealthyPodCount].Value
+        : L["Inspector:PodsWithCount", Details.RelatedPods.Count].Value;
 
-    private void Close()
+    protected override void OnInitialized()
     {
+        _lifetime = CancellationTokenSource.CreateLinkedTokenSource(LifetimeToken);
+        _token = _lifetime.Token;
+        _nested = new(DialogService, action => InvokeAsync(action));
+    }
+
+    private async Task CloseAsync()
+    {
+        var retiring = DisposeAsync().AsTask();
         MudDialog?.Close();
+        await retiring;
     }
 
-    private async Task OpenPodDescribeDialogAsync(K8SPodSummary pod)
+    private Task OpenPodDescribeDialogAsync(K8SPodSummary pod)
     {
-        if (!string.IsNullOrWhiteSpace(_loadingPodName))
+        TaskCompletionSource completion;
+        var namespaceName = Details.Summary.Namespace;
+        var podName = pod.Name;
+        var workloadKind = pod.WorkloadKind;
+        var workloadName = pod.WorkloadName;
+        lock (_sync)
         {
-            return;
+            if (_retired || _token.IsCancellationRequested || _podTask is { IsCompleted: false }) return Task.CompletedTask;
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _podTask = completion.Task;
+            _loadingPodNamespace = namespaceName;
+            _loadingPodName = podName;
         }
+        _ = ReadAndShowAsync();
+        return completion.Task;
 
-        _loadingPodName = pod.Name;
-
-        try
+        async Task ReadAndShowAsync()
         {
-            var response = await K8SFacade.DescribePodAsync(Details.Summary.Namespace, pod.Name);
-            if (response.IsFailed(out var error, out var details))
+            Exception? failure = null;
+            try
             {
-                Snackbar.Add(error?.Message ?? L["ServiceMessages:DescribePodFailed", pod.Name, Details.Summary.Namespace, string.Empty].Value, Severity.Error);
-                return;
+                var response = await K8SFacade.DescribePodAsync(namespaceName, podName, _token);
+                if (_retired || _token.IsCancellationRequested) return;
+                if (response.IsFailed(out var error, out var details))
+                {
+                    Snackbar.Add(error?.Message ?? L["ServiceMessages:DescribePodFailed", podName, namespaceName, string.Empty].Value, Severity.Error);
+                    return;
+                }
+                var parameters = new DialogParameters<K8SPodDescribeDialog>
+                {
+                    { dialog => dialog.Details, details },
+                    { dialog => dialog.ResolvedWorkloadKind, workloadKind },
+                    { dialog => dialog.ResolvedWorkloadName, workloadName },
+                    { dialog => dialog.CapturedNamespace, namespaceName },
+                    { dialog => dialog.CapturedPodName, podName }
+                };
+                await _nested!.ShowAsync<K8SPodDescribeDialog>(podName, parameters, new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true, CloseOnEscapeKey = true });
             }
-
-            var parameters = new DialogParameters<K8SPodDescribeDialog>
+            catch (OperationCanceledException) when (_token.IsCancellationRequested) { }
+            catch (Exception exception) { failure = exception; }
+            finally
             {
-                { dialog => dialog.Details, details }
-            };
+                _loadingPodNamespace = null;
+                _loadingPodName = null;
+                if (failure is null) completion.TrySetResult();
+                else completion.TrySetException(failure);
+            }
+        }
+    }
 
-            var options = new DialogOptions
+    /// <summary>Retires child dialogs before draining the actual Pod producer, then releases local resources.</summary>
+    public ValueTask DisposeAsync()
+    {
+        TaskCompletionSource completion;
+        Task producer;
+        lock (_sync)
+        {
+            if (_retirement is not null) return new(_retirement);
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _retirement = completion.Task;
+            _retired = true;
+            producer = _podTask ?? Task.CompletedTask;
+        }
+        _ = DrainAsync();
+        return new(completion.Task);
+
+        async Task DrainAsync()
+        {
+            var failures = new List<Exception>();
+            var nested = _nested?.DisposeAsync().AsTask() ?? Task.CompletedTask;
+            try
             {
-                MaxWidth = MaxWidth.ExtraLarge,
-                FullWidth = true,
-                CloseButton = true
-            };
-
-            await DialogService.ShowAsync<K8SPodDescribeDialog>($"{details.Summary.Name}", parameters, options);
+                try { _lifetime?.Cancel(); } catch (Exception exception) { failures.Add(exception); }
+                // Start child retirement first, then observe both completions independently.
+                foreach (var task in new[] { producer, nested })
+                {
+                    try { await task; } catch (Exception exception) { failures.Add(exception); }
+                }
+                try { if (_heading is not null) await _heading.DisposeAsync(); } catch (Exception exception) { failures.Add(exception); }
+            }
+            finally { _lifetime?.Dispose(); }
+            if (failures.Count == 0) completion.TrySetResult();
+            else completion.TrySetException(new AggregateException(failures));
         }
-        finally
-        {
-            _loadingPodName = null;
-        }
     }
-
-    private bool IsLoadingPod(string podName)
+    private bool IsLoadingPod(K8SPodSummary pod) =>
+        string.Equals(_loadingPodNamespace, Details.Summary.Namespace, StringComparison.Ordinal) &&
+        string.Equals(_loadingPodName, pod.Name, StringComparison.Ordinal);
+    private static Color GetPodPhaseColor(K8SPodSummary pod) => pod.Phase.ToLowerInvariant() switch
     {
-        return string.Equals(_loadingPodName, podName, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static Color GetPodPhaseColor(K8SPodSummary pod)
+        "running" => Color.Info, "succeeded" => Color.Success, "pending" => Color.Warning, "failed" => Color.Error, _ => Color.Default
+    };
+    private string GetPodIssueText(K8SPodSummary pod) => !string.IsNullOrWhiteSpace(pod.IssueSummary) ? pod.IssueSummary : L["Common:Empty"].Value;
+    private string DisplayValue(string value) => string.IsNullOrWhiteSpace(value) ? L["Common:Empty"].Value : value;
+    private string GetPodWorkloadDisplayName(K8SPodSummary pod) => !string.IsNullOrWhiteSpace(pod.WorkloadKind) && !string.IsNullOrWhiteSpace(pod.WorkloadName)
+        ? GetResourceDisplayName(pod.WorkloadKind, pod.WorkloadName)
+        : !string.IsNullOrWhiteSpace(pod.OwnerKind) && !string.IsNullOrWhiteSpace(pod.OwnerName) ? GetResourceDisplayName(pod.OwnerKind, pod.OwnerName) : L["Common:Empty"].Value;
+    private string GetResourceDisplayName(string kind, string name) => $"{GetLocalizedKind(kind)}/{name}";
+    private string GetLocalizedKind(string kind) => kind switch
     {
-        return pod.HasIssue ? Color.Warning : Color.Success;
-    }
-
-    private string GetPodIssueText(K8SPodSummary pod)
-    {
-        var issueSegments = new[] { pod.Reason, pod.Message }
-            .Where(segment => !string.IsNullOrWhiteSpace(segment))
-            .ToList();
-
-        if (issueSegments.Count > 0)
-        {
-            return string.Join(" | ", issueSegments);
-        }
-
-        return pod.IsReady ? L["Common:Empty"] : L["DescribeDialog:ReadyStateNotReady"];
-    }
-
-    private string DisplayValue(string value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? L["Common:Empty"] : value;
-    }
-
-    private string GetPodWorkloadDisplayName(K8SPodSummary pod)
-    {
-        if (!string.IsNullOrWhiteSpace(pod.WorkloadKind) && !string.IsNullOrWhiteSpace(pod.WorkloadName))
-        {
-            return GetResourceDisplayName(pod.WorkloadKind, pod.WorkloadName);
-        }
-
-        if (!string.IsNullOrWhiteSpace(pod.OwnerKind) && !string.IsNullOrWhiteSpace(pod.OwnerName))
-        {
-            return GetResourceDisplayName(pod.OwnerKind, pod.OwnerName);
-        }
-
-        return L["Common:Empty"];
-    }
-
-    private string GetResourceDisplayName(string kind, string name)
-    {
-        return $"{GetLocalizedKind(kind)}/{name}";
-    }
-
-    private string GetLocalizedKind(string kind)
-    {
-        return kind switch
-        {
-            "Service" => L["ResourceTypes:Service"].Value,
-            "Deployment" => L["ResourceTypes:Deployment"].Value,
-            "StatefulSet" => L["ResourceTypes:StatefulSet"].Value,
-            "DaemonSet" => L["ResourceTypes:DaemonSet"].Value,
-            _ => kind
-        };
-    }
+        "Service" => L["ResourceTypes:Service"].Value, "Deployment" => L["ResourceTypes:Deployment"].Value,
+        "StatefulSet" => L["ResourceTypes:StatefulSet"].Value, "DaemonSet" => L["ResourceTypes:DaemonSet"].Value, _ => kind
+    };
 }

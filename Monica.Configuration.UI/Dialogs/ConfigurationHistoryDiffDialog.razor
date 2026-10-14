@@ -1,205 +1,174 @@
 @using Monica.Configuration.UI.Localization
+@using Monica.UI.Shared.Components.Dialogs
 @using Monica.UI.UIDiffHighlight.Models
 @inject ConfigurationFacade Facade
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
+@implements IAsyncDisposable
 
-<MudDialog Class="configuration-history-diff-dialog">
+<MudDialog Class="configuration-history-diff-dialog" ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent><MoDialogHeading Text="@DialogTitle" /></TitleContent>
     <DialogContent>
-        <MudStack Spacing="3" Class="configuration-history-diff-dialog-content">
-            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                <MudStack Spacing="0">
-                    @if (Group is not null)
+        <div class="configuration-history-diff-dialog-content">
+            @if (_group is not null || _focusPath is not null)
+            {
+                <header class="configuration-history-diff-context">
+                    @if (_group is not null)
                     {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:GroupSubtitle", Group.MutationCount, Group.DefinitionKeys.Count]</MudText>
+                        <p>@L["History:Dialog:GroupSubtitle", _group.MutationCount, _group.DefinitionKeys.Count]</p>
+                        <span class="configuration-history-diff-badge" data-tone="@GroupTone(_group.Status)">@StatusText(_group.Status)</span>
+                        <dl><div><dt>@L["History:Dialog:MutationGroup"]</dt><dd><code>@_group.GroupId</code></dd></div></dl>
                     }
-                    else if (!string.IsNullOrWhiteSpace(FocusPathText))
+                    @if (_focusPath is not null)
                     {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@FocusPathText</MudText>
+                        <dl><div><dt>@L["History:Dialog:LogicalPath"]</dt><dd><code>@_focusPath.ToCanonicalString()</code></dd></div></dl>
                     }
-                </MudStack>
-                @if (Group is not null)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@StatusText(Group.Status)</MudChip>
-                }
-            </MudStack>
-
+                </header>
+            }
             @if (_entries.Count == 0)
             {
                 <MudAlert Severity="Severity.Info">@L["History:Dialog:NoPreview"]</MudAlert>
             }
             else
             {
-                <MudGrid Spacing="3" Class="configuration-history-diff-layout">
-                    <MudItem xs="12" md="4" Class="configuration-history-diff-timeline-column">
-                        <MudPaper Outlined="true" Class="pa-3 configuration-history-diff-timeline-panel">
-                            <MudText Typo="Typo.subtitle2" Class="mb-2">@L["History:Dialog:Timeline"]</MudText>
-                            <div class="configuration-history-diff-timeline-scroll">
-                                <MudTimeline TimelinePosition="TimelinePosition.Left" TimelineOrientation="TimelineOrientation.Vertical">
-                                    @foreach (var entry in _entries)
-                                    {
-                                        <MudTimelineItem Color="@entry.Color" Icon="@entry.Icon" Size="Size.Small">
-                                            <ItemContent>
-                                                <MudButton Variant="@(entry == _selectedEntry ? Variant.Outlined : Variant.Text)"
-                                                           Color="Color.Primary"
-                                                           FullWidth="true"
-                                                           Class="@TimelineButtonClass(entry)"
-                                                           OnClick="() => SelectEntry(entry)">
-                                                    <MudStack Spacing="1" AlignItems="AlignItems.Start">
-                                                        <MudText Typo="Typo.subtitle2">@entry.Title</MudText>
-                                                        @if (!string.IsNullOrWhiteSpace(entry.Subtitle))
-                                                        {
-                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Subtitle</MudText>
-                                                        }
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
-                                                    </MudStack>
-                                                </MudButton>
-                                            </ItemContent>
-                                        </MudTimelineItem>
-                                    }
-                                </MudTimeline>
-                            </div>
-                        </MudPaper>
-                    </MudItem>
-
-                    <MudItem xs="12" md="8" Class="configuration-history-diff-preview-column">
-                        <MudPaper Outlined="true" Class="pa-3 configuration-history-diff-preview-panel">
-                            @if (_selectedEntry is not null)
+                <div class="configuration-history-diff-layout">
+                    <nav class="configuration-history-diff-navigation" aria-label="@L["History:Dialog:Timeline"]">
+                        <h3>@L["History:Dialog:Timeline"]</h3>
+                        <div class="configuration-history-diff-native-selection">
+                            <MudSelect T="HistoryTimelineEntry" Value="@_selectedEntry" ValueChanged="SelectEntry"
+                                       Label="@L["History:Dialog:Timeline"]" Variant="Variant.Outlined" Dense="true"
+                                       ToStringFunc="@(entry => entry?.Title ?? string.Empty)">
+                                @foreach (var entry in _entries)
+                                {
+                                    <MudSelectItem T="HistoryTimelineEntry" Value="@entry">
+                                        <div class="configuration-history-diff-option">
+                                            <strong>@entry.Title</strong>
+                                            <span>@entry.Subtitle</span>
+                                            <time datetime="@entry.Time.ToString("O")">@FormatTime(entry.Time)</time>
+                                        </div>
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </div>
+                        <div class="configuration-history-diff-entry-list">
+                            @foreach (var entry in _entries)
                             {
-                                <MudStack Spacing="2">
-                                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                                        <MudStack Spacing="0">
-                                            <MudText Typo="Typo.subtitle1">@_selectedEntry.Title</MudText>
-                                            @if (!string.IsNullOrWhiteSpace(_selectedEntry.Subtitle))
-                                            {
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@_selectedEntry.Subtitle</MudText>
-                                            }
-                                        </MudStack>
-                                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
-                                            <MudChip T="string"
-                                                     Size="Size.Small"
-                                                     Color="@TargetColor(_selectedEntry.Rows)"
-                                                     Variant="Variant.Outlined"
-                                                     Icon="@TargetIcon(_selectedEntry.Rows)">
-                                                @TargetKindText(_selectedEntry.Rows)
-                                            </MudChip>
-                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L["History:Dialog:Version", _selectedEntry.Version]</MudChip>
-                                            <MudChip T="ConfigurationMutationKind" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedEntry.MutationKind</MudChip>
-                                            @if (_selectedEntry.Rows.Count > 0)
-                                            {
-                                                <MudTooltip Text="@SelectedRollbackTooltip">
-                                                    <MudButton Size="Size.Small"
-                                                               Color="Color.Warning"
-                                                               Variant="Variant.Outlined"
-                                                               StartIcon="@Icons.Material.Filled.Restore"
-                                                               Disabled="@(!CanRollbackSelectedEntry)"
-                                                               OnClick="RollbackSelectedEntryAsync">
-                                                        @L["Rollback:Confirm"]
-                                                    </MudButton>
-                                                </MudTooltip>
-                                            }
-                                        </MudStack>
-                                    </MudStack>
-
-                                    @if (_selectedEntry.Rows.Count == 1)
-                                    {
-                                        <MudGrid Spacing="2" Class="configuration-history-target-details">
-                                            <MudItem xs="12" sm="6">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:TargetKind"]</MudText>
-                                                <MudText Typo="Typo.body2">@TargetKindText(_selectedEntry.Rows)</MudText>
-                                            </MudItem>
-                                            <MudItem xs="12" sm="6">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:Target"]</MudText>
-                                                <MudText Typo="Typo.body2">@TargetDisplay(_selectedEntry.Rows[0])</MudText>
-                                            </MudItem>
-                                            @if (_selectedEntry.Rows[0].TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
-                                            {
-                                                <MudItem xs="12" sm="6">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:SourceProvider"]</MudText>
-                                                    <MudText Typo="Typo.body2">@ValueOrEmpty(_selectedEntry.Rows[0].SourceProviderType)</MudText>
-                                                </MudItem>
-                                                <MudItem xs="12" sm="6">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:SourceConfigurationPath"]</MudText>
-                                                    <MudText Typo="Typo.body2">@ValueOrEmpty(_selectedEntry.Rows[0].SourceConfigurationPath ?? _selectedEntry.Rows[0].ConfigurationPath)</MudText>
-                                                </MudItem>
-                                                <MudItem xs="12">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:SourcePhysicalPath"]</MudText>
-                                                    <MudText Typo="Typo.body2" Class="configuration-history-source-path">@ValueOrEmpty(_selectedEntry.Rows[0].SourcePhysicalPath)</MudText>
-                                                </MudItem>
-                                                <MudItem xs="12" sm="6">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:SourceRevisionBefore"]</MudText>
-                                                    <MudText Typo="Typo.body2">@ShortRevision(_selectedEntry.Rows[0].SourceRevisionBefore)</MudText>
-                                                </MudItem>
-                                                <MudItem xs="12" sm="6">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:SourceRevisionAfter"]</MudText>
-                                                    <MudText Typo="Typo.body2">@ShortRevision(_selectedEntry.Rows[0].SourceRevisionAfter)</MudText>
-                                                </MudItem>
-                                            }
-                                        </MudGrid>
-                                    }
-                                    else
-                                    {
-                                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Storage">
-                                                @L["History:Dialog:MonicaTargetCount", _selectedEntry.Rows.Count(row => row.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore)]
-                                            </MudChip>
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Description">
-                                                @L["History:Dialog:ExternalTargetCount", _selectedEntry.Rows.Count(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)]
-                                            </MudChip>
-                                        </MudStack>
-                                    }
-
-                                    <ConfigurationHistoryDiffPreview Rows="@_selectedEntry.Rows"
-                                                                     ViewMode="EDiffViewMode.Unified" />
-
-                                    <MudGrid Spacing="2">
-                                        <MudItem xs="12" sm="6">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:Operator"]</MudText>
-                                            <MudText Typo="Typo.body2">@OperatorText(_selectedEntry.Rows[0])</MudText>
-                                        </MudItem>
-                                        <MudItem xs="12" sm="6">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Group:Reason"]</MudText>
-                                            <MudText Typo="Typo.body2">@ReasonText(_selectedEntry.Rows)</MudText>
-                                        </MudItem>
-                                    </MudGrid>
-                                </MudStack>
+                                <div class="configuration-history-diff-entry" data-tone="@TargetTone(entry.Rows)" data-selected="@(entry == _selectedEntry ? "true" : "false")" @key="entry.Id">
+                                    <MudButton Variant="Variant.Text" Color="Color.Default" FullWidth="true"
+                                               aria-pressed="@(entry == _selectedEntry ? "true" : "false")" OnClick="() => SelectEntry(entry)">
+                                        <div class="configuration-history-diff-entry-content">
+                                            <MudIcon Icon="@entry.Icon" Size="Size.Small" />
+                                            <div><strong>@entry.Title</strong><span>@entry.Subtitle</span><time datetime="@entry.Time.ToString("O")">@FormatTime(entry.Time)</time></div>
+                                        </div>
+                                    </MudButton>
+                                </div>
                             }
-                        </MudPaper>
-                    </MudItem>
-                </MudGrid>
+                        </div>
+                    </nav>
+                    @if (_selectedEntry is { } selected)
+                    {
+                        <section class="configuration-history-diff-evidence">
+                            <header class="configuration-history-diff-selection-heading">
+                                <h3>@selected.Title</h3><p>@selected.Subtitle</p>
+                                <div class="configuration-history-diff-selection-actions">
+                                    <span class="configuration-history-diff-badge" data-tone="@TargetTone(selected.Rows)"><MudIcon Icon="@TargetIcon(selected.Rows)" Size="Size.Small" />@TargetKindText(selected.Rows)</span>
+                                    <span class="configuration-history-diff-badge">@L["History:Dialog:Version", selected.Version]</span>
+                                    @if (selected.Id != GROUP_SUMMARY_ENTRY_ID)
+                                    {
+                                        <span class="configuration-history-diff-badge" data-tone="@(selected.MutationKind == ConfigurationMutationKind.Remove ? "warning" : "info")">@MutationText(selected.MutationKind)</span>
+                                    }
+                                    <MudTooltip Text="@SelectedRollbackTooltip">
+                                        <MudButton Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Restore"
+                                                   Disabled="@(!CanRollbackSelectedEntry)" OnClick="RollbackSelectedEntryAsync">@L["Rollback:Confirm"]</MudButton>
+                                    </MudTooltip>
+                                </div>
+                            </header>
+                            <dl class="configuration-history-diff-facts">
+                                <div><dt>@L["History:Columns:Time"]</dt><dd><time datetime="@selected.Time.ToString("O")">@FormatTime(selected.Time)</time></dd></div>
+                                <div><dt>@L["History:Dialog:Operator"]</dt><dd>@OperatorText(selected.Rows[0])<code>@ValueOrEmpty(selected.Rows[0].ModifierId)</code></dd></div>
+                                <div class="configuration-history-diff-fact-wide"><dt>@L["Group:Reason"]</dt><dd>@ReasonText(selected.Rows)</dd></div>
+                            </dl>
+                            <div class="configuration-history-diff-targets">
+                                @foreach (var row in selected.Rows)
+                                {
+                                    <section class="configuration-history-diff-target" @key="row.HistoryId">
+                                        <div class="configuration-history-diff-target-heading"><strong>@DefinitionDisplay(row.DefinitionKey)</strong><span class="configuration-history-diff-badge" data-tone="@TargetTone(new[] { row })">@TargetKindText(new[] { row })</span></div>
+                                        <dl class="configuration-history-diff-facts">
+                                            <div><dt>@L["History:Dialog:Definition"]</dt><dd><code>@row.DefinitionKey</code></dd></div>
+                                            <div><dt>@L["History:Dialog:LogicalPath"]</dt><dd><code>@row.LogicalPath.ToCanonicalString()</code></dd></div>
+                                            <div><dt>@L["History:Dialog:HistoryRecord"]</dt><dd><code>@row.HistoryId</code></dd></div>
+                                            <div><dt>@L["History:Dialog:Target"]</dt><dd>@TargetDisplay(row)</dd></div>
+                                            @if (row.MutationGroupId is not null)
+                                            {
+                                                <div class="configuration-history-diff-fact-wide"><dt>@L["History:Dialog:MutationGroup"]</dt><dd><code>@row.MutationGroupId</code></dd></div>
+                                            }
+                                            @if (row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
+                                            {
+                                                <div><dt>@L["History:Dialog:SourceProvider"]</dt><dd>@ValueOrEmpty(row.SourceProviderType)</dd></div>
+                                                <div><dt>@L["History:Dialog:SourceConfigurationPath"]</dt><dd><code>@ValueOrEmpty(row.SourceConfigurationPath ?? row.ConfigurationPath)</code></dd></div>
+                                                <div class="configuration-history-diff-fact-wide"><dt>@L["History:Dialog:SourcePhysicalPath"]</dt><dd><code>@ValueOrEmpty(row.SourcePhysicalPath)</code></dd></div>
+                                                <div><dt>@L["History:Dialog:SourceRevisionBefore"]</dt><dd><code>@ValueOrEmpty(row.SourceRevisionBefore)</code></dd></div>
+                                                <div><dt>@L["History:Dialog:SourceRevisionAfter"]</dt><dd><code>@ValueOrEmpty(row.SourceRevisionAfter)</code></dd></div>
+                                            }
+                                        </dl>
+                                    </section>
+                                }
+                            </div>
+                            <ConfigurationHistoryDiffPreview Rows="@selected.Rows" ViewMode="EDiffViewMode.Unified" />
+                        </section>
+                    }
+                </div>
             }
-        </MudStack>
+            @if (_loadError is not null)
+            {
+                <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
+            }
+        </div>
     </DialogContent>
     <DialogActions>
-        @if (_hasMore)
-        {
-            <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.ExpandMore"
-                       Disabled="@_loadingMore"
-                       OnClick="LoadMoreAsync">
-                @L["History:Actions:LoadMore"]
-            </MudButton>
-        }
-        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+        <div class="configuration-history-diff-dialog-actions">
+            @if (_hasMore)
+            {
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.ExpandMore" Disabled="@_loadingMore" OnClick="LoadMoreAsync">@L["History:Actions:LoadMore"]</MudButton>
+            }
+            <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
-
 @code {
     private const string GROUP_SUMMARY_ENTRY_ID = "group";
 
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
 
+    /// <summary>Gets the captured immutable history rows initially inspected by this dialog.</summary>
     [Parameter] public IReadOnlyList<ConfigurationValueHistory> Rows { get; set; } = [];
+    /// <summary>Gets locally available definition metadata used to gate rollback.</summary>
     [Parameter] public IReadOnlyList<ConfigurationDefinitionSummary> Definitions { get; set; } = [];
+    /// <summary>Gets an optional authoritative definition for member history.</summary>
     [Parameter] public ConfigurationDefinition? Definition { get; set; }
+    /// <summary>Gets whether the caller permits rollback; the default is true.</summary>
     [Parameter] public bool AllowRollback { get; set; } = true;
+    /// <summary>Gets an optional persisted group whose exact identity is frozen on initialization.</summary>
     [Parameter] public ConfigurationMutationGroup? Group { get; set; }
+    /// <summary>Gets an optional localized native dialog heading.</summary>
     [Parameter] public string? Title { get; set; }
+    /// <summary>Gets the optional exact logical-path context.</summary>
     [Parameter] public LogicalPath? FocusPath { get; set; }
+    /// <summary>Gets the captured bounded query used to load subsequent mutation units.</summary>
     [Parameter] public ConfigurationHistoryPageRequest? HistoryRequest { get; set; }
+    /// <summary>Gets the accepted initial page and its continuation cursor.</summary>
     [Parameter] public ConfigurationHistoryPageResult? InitialPage { get; set; }
 
+    private readonly ConfigurationOperationLifetime _operations = new();
+    private IReadOnlyList<ConfigurationDefinitionSummary> _definitions = [];
+    private ConfigurationDefinition? _definition;
+    private ConfigurationMutationGroup? _group;
+    private LogicalPath? _focusPath;
+    private string? _title;
+    private bool _allowRollback;
+    private bool _rollbackOpening;
+    private string? _loadError;
     private readonly List<ConfigurationValueHistory> _loadedRows = [];
     private readonly List<HistoryTimelineEntry> _entries = [];
     private ConfigurationHistoryPageRequest? _pagingRequest;
@@ -208,21 +177,21 @@
     private bool _hasMore;
     private bool _loadingMore;
 
-    private string DialogTitle => !string.IsNullOrWhiteSpace(Title)
-        ? Title!
-        : Group is not null
-            ? L["History:Dialog:GroupTitle", Group.Label]
+    private string DialogTitle => !string.IsNullOrWhiteSpace(_title)
+        ? _title!
+        : _group is not null
+            ? L["History:Dialog:GroupTitle", _group.Label]
             : L["History:Dialog:Title"];
 
-    private string? FocusPathText => FocusPath?.ToCanonicalString();
+
 
     private bool CanRollbackSelectedEntry =>
-        AllowRollback
+        !_operations.IsRetired && _allowRollback
         && _selectedEntry is { Rows.Count: > 0 } entry
-        && (Group is null || Group.Status != ConfigurationMutationGroupStatus.RolledBack)
+        && (_group is null || _group.Status != ConfigurationMutationGroupStatus.RolledBack)
         && entry.Rows.All(CanRollbackRow);
 
-    private string SelectedRollbackTooltip => !AllowRollback
+    private string SelectedRollbackTooltip => !_allowRollback
         ? L["History:Actions:RollbackBlockedRetired"].Value
         : CanRollbackSelectedEntry
             ? L["Rollback:Confirm"].Value
@@ -230,10 +199,16 @@
 
     protected override void OnInitialized()
     {
+        _definitions = Definitions.ToArray();
+        _definition = Definition;
+        _group = Group is null ? null : Group with { DefinitionKeys = Group.DefinitionKeys.ToArray() };
+        _focusPath = FocusPath;
+        _title = Title;
+        _allowRollback = AllowRollback;
         _loadedRows.AddRange(InitialPage?.Items ?? Rows);
         _pagingRequest = HistoryRequest is null || InitialPage is null
             ? null
-            : HistoryRequest;
+            : HistoryRequest with { };
         _nextCursor = InitialPage?.NextCursor;
         _hasMore = _pagingRequest is not null && InitialPage?.HasMore is true;
         RebuildEntries();
@@ -247,20 +222,20 @@
             .ThenByDescending(row => row.Version)
             .ThenByDescending(row => row.HistoryId, StringComparer.Ordinal)
             .ToArray();
-        var focusedSinglePath = Group is null && FocusPath is not null;
+        var focusedSinglePath = _group is null && _focusPath is not null;
 
-        if (Group is not null && orderedRows.Length > 1)
+        if (_group is not null && orderedRows.Length > 1)
         {
             _entries.Add(new HistoryTimelineEntry(
                 GROUP_SUMMARY_ENTRY_ID,
                 L["History:Dialog:GroupSummary"],
-                L["History:Dialog:GroupSubtitle", Group.MutationCount, Group.DefinitionKeys.Count],
-                Group.CreatedTime,
+                L["History:Dialog:GroupSubtitle", _group.MutationCount, _group.DefinitionKeys.Count],
+                _group.CreatedTime,
                 orderedRows,
                 ConfigurationMutationKind.Set,
                 orderedRows.Max(row => row.Version),
                 Color.Primary,
-                Icons.Material.Filled.Folder));
+                Icons.Material.Outlined.Folder));
         }
 
         foreach (var displayRow in ConfigurationHistoryDisplayGrouper.Collapse(orderedRows))
@@ -270,7 +245,7 @@
                 TimelineTitle(displayRow, focusedSinglePath),
                 TimelineSubtitle(displayRow, focusedSinglePath),
                 displayRow.ModifiedTime,
-                displayRow.Rows,
+                displayRow.Rows.ToArray(),
                 displayRow.Representative.MutationKind,
                 displayRow.Version,
                 TargetColor(displayRow.Rows),
@@ -282,69 +257,61 @@
 
     private async Task LoadMoreAsync()
     {
-        if (_loadingMore || !_hasMore || _pagingRequest is null || _nextCursor is null)
-        {
-            return;
-        }
-
+        if (_operations.IsRetired || _loadingMore || !_hasMore || _pagingRequest is null || _nextCursor is null) return;
+        var request = _pagingRequest with { Cursor = _nextCursor };
         _loadingMore = true;
+        _loadError = null;
         try
         {
-            var result = await Facade.QueryHistoryPageAsync(_pagingRequest with { Cursor = _nextCursor });
-            if (result.IsFailed(out var error, out var page))
+            await _operations.RunAsync(async token =>
             {
-                Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-                return;
-            }
-
-            var loadedIds = _loadedRows
-                .Select(static history => history.HistoryId)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            _loadedRows.AddRange(page.Items.Where(history => loadedIds.Add(history.HistoryId)));
-            _nextCursor = page.NextCursor;
-            _hasMore = page.HasMore;
-            RebuildEntries();
+                try
+                {
+                    var result = await Facade.QueryHistoryPageAsync(request);
+                    token.ThrowIfCancellationRequested();
+                    _operations.TryApply(() =>
+                    {
+                        if (result.IsFailed(out var error, out var page)) { _loadError = error.Message; return; }
+                        var ids = _loadedRows.Select(row => row.HistoryId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                        _loadedRows.AddRange(page.Items.Where(row => ids.Add(row.HistoryId)));
+                        _nextCursor = page.NextCursor;
+                        _hasMore = page.HasMore;
+                        RebuildEntries();
+                    });
+                }
+                finally { _operations.TryApply(() => _loadingMore = false); }
+            });
         }
-        finally
-        {
-            _loadingMore = false;
-        }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+        catch (Exception exception) when (!_operations.IsRetired) { _loadError = exception.Message; }
     }
 
-    private void SelectEntry(HistoryTimelineEntry entry)
+    private void SelectEntry(HistoryTimelineEntry? entry)
     {
-        _selectedEntry = entry;
+        if (entry is not null && !_rollbackOpening) _operations.TryApply(() => _selectedEntry = entry);
     }
-
-    private string TimelineButtonClass(HistoryTimelineEntry entry)
-    {
-        return entry == _selectedEntry
-            ? "configuration-history-diff-timeline-button selected"
-            : "configuration-history-diff-timeline-button";
-    }
-
     private string DefinitionDisplay(string definitionKey)
     {
-        if (Definition is not null && string.Equals(Definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))
+        if (_definition is not null && string.Equals(_definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))
         {
-            return Definition.DisplayName;
+            return _definition.DisplayName;
         }
 
-        return Definitions.FirstOrDefault(definition =>
+        return _definitions.FirstOrDefault(definition =>
             string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? definitionKey;
     }
 
     private bool CanRollbackRow(ConfigurationValueHistory row)
     {
-        if (Definition is not null
-            && string.Equals(Definition.DefinitionKey, row.DefinitionKey, StringComparison.OrdinalIgnoreCase))
+        if (_definition is not null
+            && string.Equals(_definition.DefinitionKey, row.DefinitionKey, StringComparison.OrdinalIgnoreCase))
         {
-            return Definition.SchemaVersion == row.SchemaVersion
+            return _definition.SchemaVersion == row.SchemaVersion
                    && !string.IsNullOrWhiteSpace(row.SchemaHash)
-                   && string.Equals(Definition.SchemaHash, row.SchemaHash, StringComparison.Ordinal);
+                   && string.Equals(_definition.SchemaHash, row.SchemaHash, StringComparison.Ordinal);
         }
 
-        var summary = Definitions.FirstOrDefault(definition =>
+        var summary = _definitions.FirstOrDefault(definition =>
             string.Equals(definition.DefinitionKey, row.DefinitionKey, StringComparison.OrdinalIgnoreCase));
         return summary is { CanMutate: true }
                && summary.SchemaVersion == row.SchemaVersion
@@ -367,7 +334,7 @@
     private string TimelineSubtitle(ConfigurationValueHistory row, bool focusedSinglePath)
     {
         return focusedSinglePath
-            ? L["History:Dialog:TimelineFocusedSubtitle", row.MutationKind, row.Version]
+            ? L["History:Dialog:TimelineFocusedSubtitle", MutationText(row.MutationKind), row.Version]
             : L["History:Dialog:TimelineRowSubtitle", row.LogicalPath.ToCanonicalString(), TargetDisplay(row)];
     }
 
@@ -387,18 +354,15 @@
 
     private string TargetKindText(IReadOnlyList<ConfigurationValueHistory> rows)
     {
-        if (rows.Count == 1)
+        if (rows.All(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource))
         {
-            return rows[0].TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
-                ? L["History:Targets:External"]
-                : L["History:Targets:Monica"];
+            return L["History:Targets:External"];
         }
 
         return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
             ? L["History:Targets:Mixed"]
             : L["History:Targets:Monica"];
     }
-
     private static Color TargetColor(IReadOnlyList<ConfigurationValueHistory> rows)
     {
         return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
@@ -416,21 +380,21 @@
     private static string TargetIcon(IReadOnlyList<ConfigurationValueHistory> rows)
     {
         return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
-            ? Icons.Material.Filled.Description
-            : Icons.Material.Filled.Storage;
+            ? Icons.Material.Outlined.Description
+            : Icons.Material.Outlined.Storage;
     }
 
     private static string TimelineIcon(ConfigurationHistoryDisplayRow row)
     {
         return row.IsCollapsed
-            ? Icons.Material.Filled.AccountTree
+            ? Icons.Material.Outlined.AccountTree
             : TimelineIcon(row.Representative);
     }
 
     private static string TimelineIcon(ConfigurationValueHistory row)
     {
         return row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
-            ? Icons.Material.Filled.Description
+            ? Icons.Material.Outlined.Description
             : MutationIcon(row.MutationKind);
     }
 
@@ -439,16 +403,15 @@
         return string.IsNullOrWhiteSpace(value) ? L["Common:States:Empty"] : value;
     }
 
-    private string ShortRevision(string? revision)
+    private string MutationText(ConfigurationMutationKind kind) => kind == ConfigurationMutationKind.Remove ? L["Mutation:Kinds:Remove"] : L["Mutation:Kinds:Set"];
+    private static string FormatTime(DateTimeOffset value) => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fffffff zzz");
+    private static string TargetTone(IReadOnlyList<ConfigurationValueHistory> rows) => rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource) ? "warning" : "primary";
+    private static string GroupTone(ConfigurationMutationGroupStatus status) => status switch
     {
-        if (string.IsNullOrWhiteSpace(revision))
-        {
-            return L["Common:States:Empty"];
-        }
-
-        return revision.Length <= 12 ? revision : revision[..12];
-    }
-
+        ConfigurationMutationGroupStatus.Applied => "success",
+        ConfigurationMutationGroupStatus.PartiallyApplied => "warning",
+        _ => "secondary"
+    };
     private string StatusText(ConfigurationMutationGroupStatus status)
     {
         return L[$"Group:StatusValues:{status}"];
@@ -473,66 +436,62 @@
     {
         return kind switch
         {
-            ConfigurationMutationKind.Remove => Icons.Material.Filled.Delete,
-            _ => Icons.Material.Filled.Edit
+            ConfigurationMutationKind.Remove => Icons.Material.Outlined.Delete,
+            _ => Icons.Material.Outlined.Edit
         };
     }
 
     private async Task RollbackSelectedEntryAsync()
     {
-        if (_selectedEntry is null || !CanRollbackSelectedEntry)
+        if (_operations.IsRetired || _rollbackOpening || _selectedEntry is null) return;
+        if (!CanRollbackSelectedEntry)
         {
-            Snackbar.Add(
-                AllowRollback
-                    ? L["History:Actions:RollbackBlockedMetadata"]
-                    : L["History:Actions:RollbackBlockedRetired"],
-                Severity.Warning);
+            Snackbar.Add(_allowRollback ? L["History:Actions:RollbackBlockedMetadata"] : L["History:Actions:RollbackBlockedRetired"], Severity.Warning);
             return;
         }
-
+        var selected = _selectedEntry;
+        var rows = selected.Rows.ToArray();
+        var group = _group;
         var parameters = new DialogParameters<RollbackConfirmationDialog>();
         string title;
-        if (Group is not null
-            && (_selectedEntry.Id == GROUP_SUMMARY_ENTRY_ID || Group.MutationCount == 1))
+        if (group is not null && (selected.Id == GROUP_SUMMARY_ENTRY_ID || group.MutationCount == 1))
         {
-            parameters.Add(dialog => dialog.Group, Group);
-            parameters.Add(dialog => dialog.GroupRows, _selectedEntry.Rows);
+            parameters.Add(dialog => dialog.Group, group);
+            parameters.Add(dialog => dialog.GroupRows, rows);
             title = L["Rollback:GroupTitle"];
         }
-        else if (_selectedEntry.Rows.Count == 1)
+        else if (rows.Length == 1)
         {
-            var row = _selectedEntry.Rows[0];
-            parameters.Add(dialog => dialog.HistoryRow, row);
-            parameters.Add(dialog => dialog.GroupRows, new[] { row });
+            parameters.Add(dialog => dialog.HistoryRow, rows[0]);
+            parameters.Add(dialog => dialog.GroupRows, rows);
             title = L["Rollback:SingleTitle"];
-        }
-        else if (_selectedEntry.Rows.Count > 1)
-        {
-            parameters.Add(dialog => dialog.GroupRows, _selectedEntry.Rows);
-            title = L["Rollback:SelectionTitle"];
         }
         else
         {
-            return;
+            parameters.Add(dialog => dialog.GroupRows, rows);
+            title = L["Rollback:SelectionTitle"];
         }
-
-        var dialog = await DialogService.ShowAsync<RollbackConfirmationDialog>(title, parameters, new DialogOptions
+        _rollbackOpening = true;
+        try
         {
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true
-        });
-        var result = await dialog.Result;
-        if (result is { Canceled: false, Data: ConfigurationHistoryRollbackDialogResult rollback })
-        {
-            MudDialog.Close(DialogResult.Ok(rollback));
+            await _operations.RunAsync(async _ =>
+            {
+                try
+                {
+                    var result = await _operations.ShowDialogAsync(() => DialogService.ShowAsync<RollbackConfirmationDialog>(title, parameters,
+                        new DialogOptions { MaxWidth = MaxWidth.ExtraLarge, FullWidth = true, CloseOnEscapeKey = true, CloseButton = true }));
+                    if (!_operations.IsRetired && result is { Canceled: false, Data: ConfigurationHistoryRollbackDialogResult rollback })
+                        MudDialog.Close(DialogResult.Ok(rollback));
+                }
+                finally { _operations.TryApply(() => _rollbackOpening = false); }
+            });
         }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
     }
 
-    private void Close()
-    {
-        MudDialog.Close();
-    }
-
+    private void Close() { if (!_operations.IsRetired) MudDialog.Close(); }
+    /// <summary>Rejects new work and drains actual page loads and nested rollback dialog results.</summary>
+    public ValueTask DisposeAsync() => _operations.RetireAsync();
     private sealed record HistoryTimelineEntry(
         string Id,
         string Title,

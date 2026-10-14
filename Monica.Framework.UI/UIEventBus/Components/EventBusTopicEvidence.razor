@@ -1,0 +1,48 @@
+@using Monica.EventBus.Models
+@using Monica.Framework.UI.UIEventBus.Support
+@inject IStringLocalizer<EventBusResource> L
+
+@if (Status is { } status)
+{
+    <div class="topic-evidence">
+        <div class="topic-evidence-status"><EventBusStatusBadge Tone="@EventBusPresentation.RuntimeColor(status.State)">@L.GetTopicRuntimeStateText(status.State)</EventBusStatusBadge><span>@L["SubscriptionDetail:Runtime:StateSince"] <time>@EventBusPresentation.Timestamp(status.StateChangedAt)</time></span></div>
+        <dl class="topic-evidence-counts">
+            <div><dt>@L["SubscriptionDetail:Runtime:ProcessedMessages"]</dt><dd>@status.ProcessedMessages</dd></div>
+            <div><dt>@L["SubscriptionDetail:Runtime:MessageErrorCount"]</dt><dd>@status.MessageErrorCount</dd></div>
+            <div><dt>@L["SubscriptionDetail:Runtime:ConsecutiveFailures"]</dt><dd>@status.ConsecutiveFailures</dd></div>
+            <div><dt>@L["SubscriptionDetail:Runtime:RecoveryCount"]</dt><dd>@status.RecoveryCount</dd></div>
+        </dl>
+        <p class="topic-evidence-note">@L["Inspector:CounterScope"]</p>
+        <dl class="topic-evidence-facts">
+            <div><dt>@L["SubscriptionDetail:Runtime:Provider"]</dt><dd>@L.GetProviderKindText(status.Provider)</dd></div>
+            <div><dt>@L["SubscriptionDetail:Runtime:LastMessageAt"]</dt><dd>@(status.LastMessageReceivedAt is { } received ? EventBusPresentation.Timestamp(received) : L["Inspector:NoTimestamp"].Value)</dd></div>
+            <div><dt>@L["SubscriptionDetail:Runtime:LastErrorAt"]</dt><dd>@(status.LastErrorAt is { } lastErrorAt ? EventBusPresentation.Timestamp(lastErrorAt) : L["Inspector:NoTimestamp"].Value)</dd></div>
+        </dl>
+        @if (!string.IsNullOrWhiteSpace(status.LastErrorMessage))
+        {
+            <section class="topic-evidence-error"><h3>@L["SubscriptionDetail:Runtime:LastError"]</h3><p>@status.LastErrorMessage</p><p class="topic-evidence-note">@L["Inspector:RetainedError"]</p></section>
+        }
+        @if (!string.IsNullOrWhiteSpace(status.LastErrorException))
+        {
+            <MudExpansionPanels Elevation="0" Outlined="true"><MudExpansionPanel Text="@L["SubscriptionDetail:Runtime:ExceptionDetails"]"><pre>@status.LastErrorException</pre></MudExpansionPanel></MudExpansionPanels>
+        }
+        @if (status.RecentErrors.Count > 0)
+        {
+            <section class="topic-evidence-history">
+                <h3>@L["SubscriptionDetail:Runtime:RecentErrors"]</h3>
+                <p class="topic-evidence-note">@L["Inspector:RetainedErrors", status.RecentErrors.Count]</p>
+                @foreach (var error in status.RecentErrors)
+                {
+                    <article><time>@EventBusPresentation.Timestamp(error.OccurredAt)</time><p>@error.Message</p>
+                        @if (!string.IsNullOrWhiteSpace(error.ExceptionText))
+                        {
+                            <MudExpansionPanels Elevation="0" Outlined="true"><MudExpansionPanel Text="@L["SubscriptionDetail:Runtime:ExceptionDetails"]"><pre>@error.ExceptionText</pre></MudExpansionPanel></MudExpansionPanels>
+                        }
+                    </article>
+                }
+            </section>
+        }
+    </div>
+}
+
+@code { [Parameter] public TopicSubscriptionStatus? Status { get; set; } }

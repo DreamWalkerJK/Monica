@@ -1,11 +1,8 @@
-.configuration-version-comparison-panel {
-    min-width: 0;
-    position: sticky;
-    top: 1rem;
-}
-
-@media (max-width: 959.98px) {
-    .configuration-version-comparison-panel {
-        position: static;
-    }
-}
+.configuration-version-comparison-panel { min-width: 0; padding: 24px 28px; }
+.configuration-version-comparison-panel header { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 24px; }
+.configuration-version-comparison-panel header > div { min-width: 0; }
+.configuration-version-comparison-panel h3 { margin: 0; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.configuration-version-comparison-panel p { margin: 8px 0 0; color: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary)); font-size: 13px; line-height: 1.7; }
+.configuration-version-comparison-panel header > span { font-size: 12px; color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-text-primary)); flex-shrink: 0; }
+.configuration-version-comparison-state { display: grid; gap: 16px; padding: 28px 0; }
+@media (max-width: 800px) { .configuration-version-comparison-panel { padding: 20px; } .configuration-version-comparison-panel header { flex-wrap: wrap; } }

@@ -1,0 +1,23 @@
+<span class="kafka-primary-button">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@Href"
+               StartIcon="@StartIcon" Disabled="@Disabled" OnClick="@OnClick">
+        @ChildContent
+    </MudButton>
+</span>
+
+@code {
+    /// <summary>Gets or sets the native button's localized content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Gets or sets the navigation destination; null keeps native button semantics.</summary>
+    [Parameter] public string? Href { get; set; }
+
+    /// <summary>Gets or sets the optional native start icon.</summary>
+    [Parameter] public string StartIcon { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets whether native activation is disabled; defaults to false.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Gets or sets the native activation callback.</summary>
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+}

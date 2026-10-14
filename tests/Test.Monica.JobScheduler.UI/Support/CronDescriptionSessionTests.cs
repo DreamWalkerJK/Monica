@@ -183,6 +183,40 @@ public sealed class CronDescriptionSessionTests
         await session.DisposeAsync();
     }
 
+    [Fact]
+    public async Task DisposeAsync_WhenModuleTeardownReenters_ShouldJoinReservedActualCompletion()
+    {
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        CronDescriptionSession? session = null;
+        Task? reentered = null;
+        var module = new RecordingCronModule([], () =>
+        {
+            reentered = session!.DisposeAsync().AsTask();
+            return new ValueTask(release.Task);
+        });
+        session = new CronDescriptionSession(new ImmediateJsRuntime(module));
+        var observationTimeout = TimeSpan.FromSeconds(10);
+        try
+        {
+            await session.DescribeAsync([new("cleanup", "0 */5 * * * *")], "en-US",
+                TestContext.Current.CancellationToken).AsTask().WaitAsync(observationTimeout, TestContext.Current.CancellationToken);
+            var retirement = session.DisposeAsync().AsTask();
+
+            Assert.Same(retirement, reentered);
+            Assert.Same(retirement, session.DisposeAsync().AsTask());
+            Assert.False(retirement.IsCompleted);
+            Assert.Equal(1, module.DisposeCount);
+            release.TrySetResult();
+            await retirement.WaitAsync(observationTimeout, TestContext.Current.CancellationToken);
+            Assert.Equal(1, module.DisposeCount);
+        }
+        finally
+        {
+            release.TrySetResult();
+            await session.DisposeAsync().AsTask().WaitAsync(observationTimeout, TestContext.Current.CancellationToken);
+        }
+    }
+
     private sealed record JsInvocation(string Identifier, object?[] Arguments);
 
     private static string FindRepositoryFile(params string[] relativeSegments)
@@ -251,7 +285,7 @@ public sealed class CronDescriptionSessionTests
         private async Task<TValue> CompleteAsync<TValue>() => (TValue)await _module.Task;
     }
 
-    private sealed class RecordingCronModule(CronDescriptionResult[] results) : IJSObjectReference
+    private sealed class RecordingCronModule(CronDescriptionResult[] results, Func<ValueTask>? dispose = null) : IJSObjectReference
     {
         public List<JsInvocation> Invocations { get; } = [];
 
@@ -272,7 +306,7 @@ public sealed class CronDescriptionSessionTests
         public ValueTask DisposeAsync()
         {
             DisposeCount++;
-            return ValueTask.CompletedTask;
+            return dispose?.Invoke() ?? ValueTask.CompletedTask;
         }
     }
 }

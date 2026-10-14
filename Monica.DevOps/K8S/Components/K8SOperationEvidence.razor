@@ -1,0 +1,45 @@
+@using Monica.DevOps.K8S.Models
+@using Monica.DevOps.Localization
+@inject IStringLocalizer<K8SResource> L
+
+<div class="k8s-operation-evidence">
+    <MudAlert Severity="@(Failure is null ? Severity.Success : Severity.Error)" Variant="Variant.Outlined">
+        <strong>@L[Failure is null ? "Workbench:Operation:Completed" : "Workbench:Operation:Failed"]</strong>
+        <div class="operation-context">@Namespace · @Scope · @CompletedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</div>
+        <p>@(Failure ?? L["Workbench:Operation:Readiness"].Value)</p>
+        @if (Failure is not null) { <p>@L["Workbench:Operation:Partial"]</p> }
+        @if (Failure is null)
+        {
+            <MudExpansionPanels Elevation="0"><MudExpansionPanel Text="@L["Workbench:Operation:Details"]">
+                <div class="operation-details">
+                    <div><h3>@L["Workbench:Operation:Targets"]</h3>@foreach (var target in Restart?.AffectedTargets ?? Scale?.AffectedTargets ?? []) { <div>@target</div> }</div>
+                    <div><h3>@L["Workbench:Operation:Workloads"]</h3>
+                        @foreach (var workload in Restart?.Workloads ?? []) { <div>@workload.DisplayName · @workload.ReplicaStatus</div> }
+                        @foreach (var workload in Scale?.Workloads ?? [])
+                        { <div>@workload.Kind/@workload.Name · @L["OperationReview:ReplicaChange"]: @workload.CurrentReplicas → @workload.TargetReplicas · @L["OperationReview:RecordedReplicas"]: @(workload.PreviousReplicas?.ToString() ?? L["Common:Empty"].Value)</div> }
+                    </div>
+                    <div><h3>@L["Workbench:Operation:Ignored"]</h3>
+                        @foreach (var target in Restart?.IgnoredTargets ?? []) { <div>@target.DisplayText</div> }
+                        @foreach (var target in Scale?.IgnoredTargets ?? []) { <div>@target.DisplayText</div> }
+                    </div>
+                    <div><h3>@L["Workbench:Operation:Commands"]</h3>@foreach (var command in Restart?.ExecutedCommands ?? Scale?.ExecutedCommands ?? []) { <pre>@command</pre> }</div>
+                </div>
+            </MudExpansionPanel></MudExpansionPanels>
+        }
+    </MudAlert>
+</div>
+
+@code {
+    /// <summary>The actual completed restart result, when this operation restarted workloads.</summary>
+    [Parameter] public K8SRestartResult? Restart { get; set; }
+    /// <summary>The actual completed scale result, when this operation changed replicas.</summary>
+    [Parameter] public K8SScaleResult? Scale { get; set; }
+    /// <summary>The actual failed command envelope message; partial effects are unknown.</summary>
+    [Parameter] public string? Failure { get; set; }
+    /// <summary>The captured operation namespace.</summary>
+    [Parameter] public string Namespace { get; set; } = string.Empty;
+    /// <summary>The actual backend scope for completed commands, or localized attempted request scope on failure.</summary>
+    [Parameter] public string Scope { get; set; } = string.Empty;
+    /// <summary>The backend completion time or failed attempt completion time.</summary>
+    [Parameter] public DateTimeOffset CompletedAt { get; set; }
+}

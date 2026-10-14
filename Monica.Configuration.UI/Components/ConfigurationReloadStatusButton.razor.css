@@ -9,9 +9,13 @@
 }
 
 .configuration-reload-status-popover-content {
-    width: min(46rem, calc(100vw - 2rem));
-    max-height: min(36rem, calc(100vh - 8rem));
-    overflow: auto;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-height: min(70dvh, calc(100dvh - 208px));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
 }
 
 .configuration-reload-version-list {
@@ -37,11 +41,4 @@
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-@media (max-width: 599.98px) {
-    .configuration-reload-status-popover-content {
-        width: calc(100vw - 1rem);
-        max-height: calc(100vh - 6rem);
-    }
 }

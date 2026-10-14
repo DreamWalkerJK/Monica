@@ -45,13 +45,33 @@ public sealed class ModuleEventBusKafkaUI : MonicaModule<ModuleEventBusKafkaUIOp
             static option => option.AddResource<EventBusKafkaResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
+            {
+                var category = registry.RegisterLocalizedCategory<EventBusKafkaResource>(
+                    "monica.kafka", "Pages:EventBusKafka:Title", 38,
+                    parentId: BuiltInNavigationCategoryIds.Infrastructure,
+                    icon: Icons.Material.Outlined.Storage,
+                    descriptionKey: "Workbench:CategoryDescription");
                 registry.RegisterLocalizedPage<UIEventBusKafkaPage, EventBusKafkaResource>(
                     UIEventBusKafkaPage.PAGE_URL,
-                    "Pages:EventBusKafka:Title",
-                    Icons.Material.Filled.Storage,
-                    BuiltInNavigationCategoryIds.Infrastructure,
+                    "Workbench:Titles:Overview",
+                    Icons.Material.Outlined.Dashboard,
+                    category,
                     addToNav: true,
-                    navOrder: 38)));
+                    navOrder: 0,
+                    descriptionKey: "Workbench:Descriptions:Overview");
+                registry.RegisterLocalizedPage<UIEventBusKafkaClustersPage, EventBusKafkaResource>(
+                    UIEventBusKafkaClustersPage.PAGE_URL, "Workbench:Titles:Clusters", Icons.Material.Outlined.Dns,
+                    category, addToNav: true, navOrder: 1, descriptionKey: "Workbench:Descriptions:Clusters");
+                registry.RegisterLocalizedPage<UIEventBusKafkaTopicsPage, EventBusKafkaResource>(
+                    UIEventBusKafkaTopicsPage.PAGE_URL, "Workbench:Titles:Topics", Icons.Material.Outlined.Topic,
+                    category, addToNav: true, navOrder: 2, descriptionKey: "Workbench:Descriptions:Topics");
+                registry.RegisterLocalizedPage<UIEventBusKafkaConsumerGroupsPage, EventBusKafkaResource>(
+                    UIEventBusKafkaConsumerGroupsPage.PAGE_URL, "Workbench:Titles:ConsumerGroups", Icons.Material.Outlined.PeopleAlt,
+                    category, addToNav: true, navOrder: 3, descriptionKey: "Workbench:Descriptions:ConsumerGroups");
+                registry.RegisterLocalizedPage<UIEventBusKafkaPerformancePage, EventBusKafkaResource>(
+                    UIEventBusKafkaPerformancePage.PAGE_URL, "Workbench:Titles:Performance", Icons.Material.Outlined.MonitorHeart,
+                    category, addToNav: true, navOrder: 4, descriptionKey: "Workbench:Descriptions:Performance");
+            }));
     }
 
     /// <inheritdoc />
@@ -61,6 +81,7 @@ public sealed class ModuleEventBusKafkaUI : MonicaModule<ModuleEventBusKafkaUIOp
         services.AddScoped<EventBusKafkaPageState>();
         services.AddScoped<KafkaPerformancePollingState>();
         services.AddScoped<KafkaConsumerMetricsPollingStateFactory>();
+        services.AddScoped<KafkaWorkbenchSessionFactory>();
     }
 }
 
@@ -70,11 +91,12 @@ public sealed class ModuleEventBusKafkaUI : MonicaModule<ModuleEventBusKafkaUIOp
 public sealed class ModuleEventBusKafkaUIOption : ModuleOptions<ModuleEventBusKafkaUI>
 {
     /// <summary>
-    /// Gets or sets whether the Kafka performance tab starts live sampling automatically.
+    /// Gets or sets whether a routed Kafka workspace starts live sampling after its selected broker is verified.
     /// </summary>
     /// <remarks>
     /// The page still provides a manual capture button when this is disabled. The default is
-    /// enabled so a newly opened console establishes a rate baseline without extra clicks.
+    /// enabled so a newly opened workspace with a verified broker establishes a rate baseline.
+    /// Each composing workbench owns and retires its sampler; navigation does not borrow another route's loop.
     /// </remarks>
     public bool EnablePerformanceAutoRefresh { get; set; } = true;
 
@@ -82,8 +104,8 @@ public sealed class ModuleEventBusKafkaUIOption : ModuleOptions<ModuleEventBusKa
     /// Gets or sets the default interval used by the live performance sampler.
     /// </summary>
     /// <remarks>
-    /// The default is five seconds. Users can change the interval on the performance tab for the
-    /// current page session; this option controls the initial value for new sessions.
+    /// The default is five seconds. Users can change the interval in the performance workspace for the
+    /// current routed session; this option controls the initial value for new sessions.
     /// </remarks>
     public TimeSpan PerformanceRefreshInterval { get; set; } = TimeSpan.FromSeconds(5);
 }

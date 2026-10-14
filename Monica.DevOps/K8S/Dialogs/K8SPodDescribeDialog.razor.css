@@ -1,15 +1,19 @@
-.k8s-pod-describe-dialog .describe-output {
-    max-height: 58vh;
-    overflow: auto;
-    border: 1px solid var(--mud-palette-lines-default);
-    background: var(--mud-palette-surface);
-}
-
-.k8s-pod-describe-dialog .describe-output pre {
-    margin: 0;
-    padding: 16px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 0.85rem;
+.k8s-pod-inspector { min-width: 0; font-family: var(--mud-typography-default-family, var(--mo-font-family-body)); }
+.k8s-pod-inspector ::deep .mud-tabs, .k8s-pod-inspector ::deep .mud-tabs-panels { min-width: 0; }
+.k8s-pod-inspector ::deep .mud-tab { font-family: var(--mud-typography-default-family, var(--mo-font-family-body)); }
+.k8s-pod-inspector ::deep .mud-chip-outlined.mud-chip-color-info { color: color-mix(in srgb, var(--mud-palette-info) 45%, var(--mud-palette-text-primary)); }
+.k8s-pod-inspector ::deep .mud-chip-outlined.mud-chip-color-success { color: color-mix(in srgb, var(--mud-palette-success) 45%, var(--mud-palette-text-primary)); }
+.k8s-pod-inspector ::deep .mud-chip-outlined.mud-chip-color-warning { color: color-mix(in srgb, var(--mud-palette-warning) 45%, var(--mud-palette-text-primary)); }
+.k8s-pod-inspector ::deep .mud-chip-outlined.mud-chip-color-error { color: color-mix(in srgb, var(--mud-palette-error) 45%, var(--mud-palette-text-primary)); }
+.tab-body { padding: 24px 20px; min-width: 0; border: 1px solid var(--mud-palette-lines-default); border-top: 0; background: var(--mud-palette-surface); overflow-wrap: anywhere; }
+.facts { display: grid; grid-template-columns: minmax(120px, .4fr) minmax(0, 1fr); gap: 12px 24px; margin: 0 0 24px; font-size: .875rem; }
+.facts dt { color: var(--mud-palette-text-secondary); }
+.facts dd { margin: 0; min-width: 0; }
+.describe-output { max-width: 100%; overflow-x: auto; background: var(--mud-palette-background); border: 1px solid var(--mud-palette-lines-default); }
+.describe-output pre { margin: 0; padding: 20px; white-space: pre; font: .875rem/1.6 var(--mo-font-family-mono); }
+@media (max-width: 600px) {
+    .tab-body { padding: 20px 16px; }
+    .facts { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .facts dd { margin-bottom: 12px; }
+    .describe-output pre { padding: 16px; }
 }

@@ -150,6 +150,100 @@ class LocalizationValidatorTests(unittest.TestCase):
             validator.module_resource_missing_keys,
         )
 
+    def test_navigation_descriptions_support_named_and_positional_resource_keys(self) -> None:
+        navigation = {
+            'Page': 'Page',
+            'Category': 'Category',
+            'CategoryNamed': 'Category explanation',
+            'PagePositional': 'Page purpose',
+            'CategoryPositional': 'Another category explanation',
+            'PageNamed': 'Another page purpose',
+        }
+        self._add_project(
+            'MixedPackage',
+            resources={
+                'ResourceA': {
+                    'en-US': {'Navigation': navigation},
+                    'zh-CN': {'Navigation': navigation},
+                },
+            },
+            sources={
+                'Modules/ModuleDashboard.cs': (
+                    'public sealed class ModuleDashboard : IUIModule\n'
+                    '{\n'
+                    '    void Register(INavigationRegistryBuilder registry)\n'
+                    '    {\n'
+                    '        localization.AddResource<ResourceA>();\n'
+                    '        registry.RegisterLocalizedCategory<ResourceA>(\n'
+                    '            "Acme.Named", "Navigation:Category",\n'
+                    '            descriptionKey: "Navigation:CategoryNamed");\n'
+                    '        registry.RegisterLocalizedPage<Page, ResourceA>(\n'
+                    '            "/positional", "Navigation:Page", null, null, true, 0, null,\n'
+                    '            "Navigation:PagePositional");\n'
+                    '        registry.RegisterLocalizedCategory<ResourceA>(\n'
+                    '            "Acme.Positional", "Navigation:Category", 0, null, null,\n'
+                    '            "Navigation:CategoryPositional");\n'
+                    '        registry.RegisterLocalizedPage<Page, ResourceA>(\n'
+                    '            "/named", "Navigation:Page",\n'
+                    '            descriptionKey: "Navigation:PageNamed");\n'
+                    '    }\n'
+                    '    ModuleRegistration<ModuleLocalization, ModuleLocalizationOption> localization = default!;\n'
+                    '}\n'
+                ),
+            },
+            razor_sdk=False,
+        )
+
+        validator, report = self._validate()
+        resource = self._resource_path('MixedPackage', 'ResourceA')
+
+        for key in navigation:
+            identity = (resource, f'Navigation:{key}')
+            self.assertIn(identity, validator.module_resource_used_keys)
+            self.assertNotIn(identity, validator.unused_keys)
+        self.assertEqual(0, report['summary']['missing_count'])
+        self.assertEqual([], report['resource_resolution_errors'])
+
+    def test_navigation_descriptions_cannot_resolve_from_another_resource(self) -> None:
+        self._add_project(
+            'MixedPackage',
+            resources={
+                'ResourceA': {
+                    'en-US': {'Navigation': {'PageDescription': 'Purpose', 'CategoryDescription': 'Capabilities'}},
+                    'zh-CN': {'Navigation': {'PageDescription': '用途', 'CategoryDescription': '能力'}},
+                },
+                'ResourceB': {
+                    'en-US': {'Navigation': {'Page': 'Page', 'Category': 'Category'}},
+                    'zh-CN': {'Navigation': {'Page': '页面', 'Category': '分类'}},
+                },
+            },
+            sources={
+                'Modules/ModuleDashboard.cs': (
+                    'public sealed class ModuleDashboard : IUIModule\n'
+                    '{\n'
+                    '    void Register(INavigationRegistryBuilder registry)\n'
+                    '    {\n'
+                    '        localization.AddResource<ResourceB>();\n'
+                    '        registry.RegisterLocalizedCategory<ResourceB>(\n'
+                    '            "Acme.Diagnostics", "Navigation:Category",\n'
+                    '            descriptionKey: "Navigation:CategoryDescription");\n'
+                    '        registry.RegisterLocalizedPage<Page, ResourceB>(\n'
+                    '            "/page", "Navigation:Page",\n'
+                    '            descriptionKey: "Navigation:PageDescription");\n'
+                    '    }\n'
+                    '    ModuleRegistration<ModuleLocalization, ModuleLocalizationOption> localization = default!;\n'
+                    '}\n'
+                ),
+            },
+            razor_sdk=False,
+        )
+
+        validator, _ = self._validate()
+        resource = self._resource_path('MixedPackage', 'ResourceB')
+
+        self.assertIn((resource, 'Navigation:PageDescription'), validator.module_resource_missing_keys)
+        self.assertIn((resource, 'Navigation:CategoryDescription'), validator.module_resource_missing_keys)
+
     def test_localized_page_without_explicit_resource_is_rejected(self) -> None:
         self._add_project(
             'MixedPackage',
@@ -310,6 +404,101 @@ class LocalizationValidatorTests(unittest.TestCase):
         self.assertEqual('FAILED', report['summary']['status'])
         self.assertEqual(1, report['summary']['discovery_errors_count'])
         self.assertEqual(1, report['summary']['discovery_warnings_count'])
+
+    def test_evidence_input_copies_do_not_shadow_resources_or_hide_live_design_bridge_errors(self) -> None:
+        self._add_project(
+            'Shell',
+            resources={
+                'SharedResource': {
+                    'en-US': {'Navigation': {'Title': 'Navigation'}},
+                    'zh-CN': {'Navigation': {'Title': '导航'}},
+                },
+            },
+            sources={'Page.razor': '@inject IStringLocalizer<SharedResource> L\n@L["Navigation:Title"]\n'},
+        )
+        bridge = self._add_project(
+            '.ui-design/review/bridge/ReviewHost',
+            resources={
+                'BridgeResource': {
+                    'en-US': {'Page': {'Title': 'Review'}},
+                    'zh-CN': {'Page': {'Title': '预览'}},
+                },
+            },
+            sources={
+                'Page.razor': (
+                    '@inject IStringLocalizer<BridgeResource> B\n'
+                    '@inject IStringLocalizer<SharedResource> L\n'
+                    '@B["Page:Title"]\n'
+                    '@L["Navigation:Title"]\n'
+                    '@L["Navigation:Missing"]\n'
+                ),
+            },
+        )
+        archive = self._add_project(
+            '.ui-design/review/.evidence/before/inputs/Shell',
+            resources={
+                'SharedResource': {
+                    'en-US': {'Navigation': {'Title': 'Old title', 'Missing': 'Archived only'}},
+                    'zh-CN': {'Navigation': {'Title': '旧标题', 'Missing': '仅归档'}},
+                },
+            },
+            sources={'Page.razor': '@inject IStringLocalizer<SharedResource> L\n@L["Old:Missing"]\n'},
+        )
+
+        validator, report = self._validate()
+        shared = self._resource_path('Shell', 'SharedResource')
+
+        self.assertIn(bridge.resolve(), validator.ui_projects)
+        self.assertNotIn(archive.resolve(), validator.ui_projects)
+        self.assertEqual([shared], validator.resources_by_name['SharedResource'])
+        self.assertEqual([], report['resource_resolution_errors'])
+        self.assertEqual(0, report['summary']['unused_count'])
+        self.assertEqual(1, report['summary']['missing_count'])
+        self.assertEqual('FAILED', report['summary']['status'])
+        self.assertEqual(
+            [(str((bridge / 'Page.razor').relative_to(self.root)), 5)],
+            validator.missing_keys[(shared, 'Navigation:Missing')],
+        )
+
+    def test_only_exact_evidence_directory_is_excluded_and_live_duplicate_resource_remains_unresolved(self) -> None:
+        resources = {
+            'SharedResource': {
+                'en-US': {'Page': {'Title': 'Title'}},
+                'zh-CN': {'Page': {'Title': '标题'}},
+            },
+        }
+        self._add_project(
+            'Shell', resources=resources,
+            sources={'Page.razor': '@inject IStringLocalizer<SharedResource> L\n@L["Page:Title"]\n'},
+        )
+        similarly_named = self._add_project(
+            '.ui-design/review/.evidence-copy/OtherLiveOwner', resources=resources,
+            sources={'Page.razor': '@inject IStringLocalizer<SharedResource> L\n@L["Page:Title"]\n'},
+        )
+        self._add_project(
+            '.ui-design/review/bridge/ReviewHost',
+            resources={
+                'BridgeResource': {
+                    'en-US': {'Page': {'Title': 'Review'}},
+                    'zh-CN': {'Page': {'Title': '预览'}},
+                },
+            },
+            sources={
+                'Page.razor': (
+                    '@inject IStringLocalizer<BridgeResource> B\n'
+                    '@inject IStringLocalizer<SharedResource> L\n'
+                    '@B["Page:Title"]\n@L["Page:Title"]\n'
+                ),
+            },
+        )
+
+        validator, report = self._validate()
+
+        self.assertIn(similarly_named.resolve(), validator.ui_projects)
+        self.assertEqual(2, len(validator.resources_by_name['SharedResource']))
+        self.assertIn(('<unresolved:SharedResource>', 'Page:Title'), validator.unresolved_used_keys)
+        self.assertTrue(report['resource_resolution_errors'])
+        self.assertEqual('FAILED', report['summary']['status'])
 
     def _validate(self):
         validator = LocalizationValidator(self.root, ['zh-CN', 'en-US'])

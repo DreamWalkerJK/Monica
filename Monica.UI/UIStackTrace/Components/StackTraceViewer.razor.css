@@ -2,6 +2,9 @@
 
 /* overall container */
 .stack-trace-container {
+    --stack-trace-error-ink: color-mix(in srgb, var(--mud-palette-error) 60%, var(--mud-palette-text-primary));
+    --stack-trace-info-ink: color-mix(in srgb, var(--mud-palette-info) 60%, var(--mud-palette-text-primary));
+    --stack-trace-warning-ink: color-mix(in srgb, var(--mud-palette-warning) 60%, var(--mud-palette-text-primary));
     position: relative;
     background-color: var(--mud-palette-background-gray);
     border-left: 4px solid var(--mud-palette-error);
@@ -18,21 +21,14 @@
 
 /* Copy button wrapper */
 .copy-button-wrapper {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    z-index: 10;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
 }
 
 /* Styling MudIconButton through CSS isolation using ::deep selector */
 .copy-button-wrapper ::deep .mud-icon-button {
-    opacity: 0.3;
-    transition: opacity 0.2s ease;
     background-color: var(--mud-palette-surface);
-}
-
-.copy-button-wrapper ::deep .mud-icon-button:hover {
-    opacity: 1;
 }
 
 /* abnormal head */
@@ -46,7 +42,7 @@
 
 .exception-type {
     font-weight: 700;
-    color: var(--mud-palette-error);
+    color: var(--stack-trace-error-ink);
     margin-right: 4px;
 }
 
@@ -72,7 +68,7 @@
 /* "at" keyword: bold + Color.Info */
 .at-keyword {
     font-weight: 700;
-    color: var(--mud-palette-info);
+    color: var(--stack-trace-info-ink);
     margin-right: 2px;
 }
 
@@ -91,7 +87,7 @@
 /* Method name: Bold + Color.Warning */
 .method-name {
     font-weight: 700;
-    color: var(--mud-palette-warning);
+    color: var(--stack-trace-warning-ink);
 }
 
 /* Parameter brackets: bold */
@@ -139,19 +135,19 @@
 /* Filename: Bold + Color.Warning */
 .file-name {
     font-weight: 700;
-    color: var(--mud-palette-warning);
+    color: var(--stack-trace-warning-ink);
 }
 
 /* "line:" part: bold + Color.Error */
 .line-info {
     font-weight: 700;
-    color: var(--mud-palette-error);
+    color: var(--stack-trace-error-ink);
 }
 
 /* Line number: Bold + Color.Error */
 .line-number {
     font-weight: 700;
-    color: var(--mud-palette-error);
+    color: var(--stack-trace-error-ink);
 }
 
 /* Internal exception title */
@@ -171,7 +167,7 @@
 
 /* Internal abend marker */
 .inner-exception-end {
-    color: var(--mud-palette-warning);
+    color: var(--stack-trace-warning-ink);
     font-weight: 500;
     font-style: italic;
 }

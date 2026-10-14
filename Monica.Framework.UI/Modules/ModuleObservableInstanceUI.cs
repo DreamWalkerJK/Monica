@@ -45,19 +45,31 @@ public class ModuleObservableInstanceUI : MonicaModule<ModuleObservableInstanceU
             static option => option.AddResource<ObservableInstanceResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
+            {
                 registry.RegisterLocalizedPage<UIObservableInstanceMonitorPage, ObservableInstanceResource>(
                     UIObservableInstanceMonitorPage.PAGE_URL,
                     "Pages:ObservableInstance:Title",
-                    Icons.Material.Filled.Inventory,
+                    Icons.Material.Outlined.Inventory2,
                     BuiltInNavigationCategoryIds.Debug,
                     addToNav: true,
-                    navOrder: 50)));
+                    navOrder: 50);
+                registry.RegisterLocalizedPage<UIObservableInstanceRegistryPage, ObservableInstanceResource>(
+                    UIObservableInstanceRegistryPage.PAGE_URL, "Workbench:InstancesTitle", Icons.Material.Outlined.Inventory2,
+                    BuiltInNavigationCategoryIds.Debug, addToNav: true, navOrder: 51);
+                registry.RegisterLocalizedPage<UIObservableInstanceGroupsPage, ObservableInstanceResource>(
+                    UIObservableInstanceGroupsPage.PAGE_URL, "Workbench:GroupsTitle", Icons.Material.Outlined.Workspaces,
+                    BuiltInNavigationCategoryIds.Debug, addToNav: true, navOrder: 52);
+                registry.RegisterLocalizedPage<UIObservableInstanceExceptionsPage, ObservableInstanceResource>(
+                    UIObservableInstanceExceptionsPage.PAGE_URL, "Workbench:ExceptionsTitle", Icons.Material.Outlined.ErrorOutline,
+                    BuiltInNavigationCategoryIds.Debug, addToNav: true, navOrder: 53);
+            }));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleObservableInstanceUIOption> context)
     {
-        // Register as Singleton to maintain consistent state
+        // The query service is stateless; the Blazor circuit owns workspace evidence and filters.
         context.Services.AddSingleton<ObservableInstanceMonitorService>();
+        context.Services.AddScoped<ObservableWorkspaceState>();
     }
 
     public override void ConfigureEndpoints(WebModuleContext<ModuleObservableInstanceUIOption> context)

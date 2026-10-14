@@ -1,204 +1,138 @@
+@implements IAsyncDisposable
+@using Microsoft.Extensions.Logging
 @inject ConfigurationFacade Facade
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
+@inject ILogger<ConfigurationUnifiedVersionHistoryPanel> Logger
 
-<div class="configuration-version-history-panel">
-    <MudPaper Outlined="true" Class="pa-3">
-        <MudStack Spacing="2">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                <MudStack Spacing="0">
-                    <MudText Typo="Typo.subtitle1">@L["Versions:List:Title"]</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        @L["Versions:List:ComparedToCurrent", CurrentVersionLabel]
-                    </MudText>
-                </MudStack>
-                <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">@Versions.Count</MudChip>
-            </MudStack>
-
-            @if (Versions.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info">@L["Versions:List:Empty"]</MudAlert>
-            }
-            else
-            {
-                <div class="configuration-version-history-list">
-                    @foreach (var version in Versions)
-                    {
-                        <div class="@HistoryItemClass(version)" @key="version.Version">
-                            <button type="button"
-                                    class="configuration-version-history-selection"
-                                    aria-pressed="@(SelectedVersion == version.Version ? "true" : "false")"
-                                    @onclick="() => OnVersionSelected.InvokeAsync(version.Version)">
-                                <span class="configuration-version-history-identity">
-                                    <span class="configuration-version-history-version">
-                                        @ConfigurationUnifiedVersionDisplayFormatter.VersionLabel(version)
-                                    </span>
-                                    <span class="configuration-version-history-timestamp">
-                                        @ConfigurationUnifiedVersionDisplayFormatter.CreatedTimeText(version)
-                                    </span>
-                                </span>
-                                <span class="configuration-version-history-metadata">
-                                    <MudTooltip Text="@DefinitionTooltip(version)">
-                                        <span class="configuration-version-history-metadata-item">
-                                            <MudIcon Icon="@Icons.Material.Filled.Description"
-                                                     Size="Size.Small"
-                                                     Color="Color.Secondary" />
-                                            <span>@L["Versions:Current:DefinitionCount", version.DefinitionCount]</span>
-                                        </span>
-                                    </MudTooltip>
-                                    @if (ConfigurationUnifiedVersionDisplayFormatter.OperatorTextOrNull(version) is { } operatorText)
-                                    {
-                                        <span class="configuration-version-history-metadata-item">
-                                            <MudIcon Icon="@Icons.Material.Filled.Person"
-                                                     Size="Size.Small"
-                                                     Color="Color.Secondary" />
-                                            <span>@operatorText</span>
-                                        </span>
-                                    }
-                                    @if (!string.IsNullOrWhiteSpace(version.Reason))
-                                    {
-                                        <span class="configuration-version-history-metadata-item configuration-version-history-reason">
-                                            <MudIcon Icon="@Icons.Material.Filled.Notes"
-                                                     Size="Size.Small"
-                                                     Color="Color.Secondary" />
-                                            <span>@version.Reason</span>
-                                        </span>
-                                    }
-                                </span>
-                            </button>
-                            <div class="configuration-version-history-actions">
-                                <MudTooltip Text="@L["Versions:Actions:ComparePrevious"]">
-                                    <MudIconButton Icon="@Icons.Material.Filled.CompareArrows"
-                                                   Size="Size.Small"
-                                                   Color="@(PreviousComparisonVersion == version.Version ? Color.Primary : Color.Default)"
-                                                   Disabled="@(!HasPreviousVersion(version))"
-                                                   OnClick="() => OnComparePrevious.InvokeAsync(version)"
-                                                   aria-label="@L["Versions:Actions:ComparePrevious"]" />
-                                </MudTooltip>
-                                <MudTooltip Text="@L["Rollback:Confirm"]">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Restore"
-                                                   Size="Size.Small"
-                                                   Color="Color.Warning"
-                                                   OnClick="() => OnRollback.InvokeAsync(version)"
-                                                   aria-label="@L["Rollback:Confirm"]" />
-                                </MudTooltip>
-                                <MudTooltip Text="@L["Versions:Actions:Delete"]">
-                                    <MudIconButton Icon="@(IsDeleting(version) ? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.Delete)"
-                                                   Size="Size.Small"
-                                                   Color="Color.Error"
-                                                   Disabled="@DeleteBusy"
-                                                   OnClick="() => DeleteAsync(version)"
-                                                   aria-label="@L["Versions:Actions:Delete"]" />
-                                </MudTooltip>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-        </MudStack>
-    </MudPaper>
-</div>
+<section class="configuration-version-ledger" aria-label="@L["Versions:List:Title"]">
+    <div class="configuration-version-ledger-heading">
+        <div><span class="configuration-version-eyebrow">@L["Versions:Workbench:RetainedEvidence"]</span><h2>@L["Versions:List:Title"]</h2><p>@L["Versions:Workbench:LedgerHelp"]</p></div>
+        <span>@L["Versions:Workbench:Loaded", Versions.Count]</span>
+    </div>
+    <div class="configuration-version-ledger-filter">
+        <MudTextField T="string" @ref="_filterField" @bind-Value="_search" Label="@L["Versions:Workbench:Filter"]" aria-label="@L["Versions:Workbench:Filter"]" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Clearable="true" />
+        <span>@L["Versions:Workbench:Matched", VisibleVersions.Count, Versions.Count]</span>
+    </div>
+    <div class="configuration-version-table">
+        <MudTable T="ConfigurationUnifiedVersionSummary" Items="@VisibleVersions" Hover="true" Elevation="0" Square="true" Breakpoint="Breakpoint.Sm" RowsPerPage="10" RowClassFunc="RowClass">
+            <ColGroup><col class="configuration-version-column-snapshot" /><col class="configuration-version-column-scope" /><col class="configuration-version-column-audit" /><col class="configuration-version-column-actions" /></ColGroup>
+            <HeaderContent><MudTh>@L["Versions:Workbench:Snapshot"]</MudTh><MudTh>@L["Versions:Workbench:CapturedDefinitions"]</MudTh><MudTh>@L["Versions:Workbench:Audit"]</MudTh><MudTh>@L["Versions:Workbench:Actions"]</MudTh></HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["Versions:Workbench:Snapshot"]">
+                    <div class="configuration-version-identity"><strong>@ConfigurationUnifiedVersionDisplayFormatter.VersionLabel(context)</strong>
+                        @if (context.Version == LatestVersion) { <span class="configuration-version-latest">@L["Versions:Workbench:LatestBadge"]</span> }
+                        <time datetime="@context.CreatedTime.ToString("O")">@ConfigurationUnifiedVersionDisplayFormatter.CreatedTimeText(context)</time>
+                        <span class="configuration-version-meta-label">@L["Versions:Workbench:CaptureGroup"]</span><code>@ConfigurationUnifiedVersionDisplayFormatter.ValueOrEmpty(context.MutationGroupId, L["Common:States:Empty"])</code>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["Versions:Workbench:CapturedDefinitions"]">
+                    <div class="configuration-version-scope"><strong>@L["Versions:Current:DefinitionCount", context.DefinitionCount]</strong>
+                        @foreach (var key in context.DefinitionKeys) { <code>@key</code> }
+                        @if (context.DefinitionKeys.Count == 0) { <span>@L["Versions:Definitions:Empty"]</span> }
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["Versions:Workbench:Audit"]">
+                    <div class="configuration-version-audit"><strong>@ConfigurationUnifiedVersionDisplayFormatter.OperatorText(context, L["Common:States:Empty"])</strong>
+                        @if (!string.IsNullOrWhiteSpace(context.ModifierId)) { <code>@context.ModifierId</code> }
+                        @if (!string.IsNullOrWhiteSpace(context.Reason)) { <p>@context.Reason</p> }
+                        @if (context.TriggerDefinitionKeys.Count > 0) { <span class="configuration-version-meta-label">@L["Versions:Workbench:TriggeredBy"]</span>@foreach (var key in context.TriggerDefinitionKeys) { <code>@key</code> } }
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["Versions:Workbench:Actions"]">
+                    <div class="configuration-version-actions">
+                        <MudTooltip Text="@L["Versions:Workbench:CompareSnapshot"]"><MudIconButton Icon="@Icons.Material.Outlined.CompareArrows" Size="Size.Small" Color="Color.Primary" Disabled="@(DeleteBusy || Loading)" aria-label="@L["Versions:Workbench:CompareSnapshot"]" aria-pressed="@(SelectedVersion == context.Version ? "true" : "false")" OnClick="() => OnVersionSelected.InvokeAsync(context.Version)" /></MudTooltip>
+                        <MudTooltip Text="@L["Versions:Actions:ComparePrevious"]"><MudIconButton Icon="@Icons.Material.Outlined.Difference" Size="Size.Small" Disabled="@(!HasPreviousVersion(context) || DeleteBusy || Loading)" aria-label="@L["Versions:Actions:ComparePrevious"]" OnClick="() => OnComparePrevious.InvokeAsync(context)" /></MudTooltip>
+                        <MudTooltip Text="@L["Rollback:Confirm"]"><MudIconButton Icon="@Icons.Material.Outlined.Restore" Size="Size.Small" Color="Color.Warning" Disabled="@(DeleteBusy || Loading)" aria-label="@L["Rollback:Confirm"]" OnClick="() => OnRollback.InvokeAsync(context)" /></MudTooltip>
+                        <MudTooltip Text="@(context.Version == LatestVersion ? L["Versions:Workbench:LatestProtected"] : L["Versions:Actions:Delete"])"><MudIconButton Icon="@(IsDeleting(context) ? Icons.Material.Outlined.HourglassEmpty : Icons.Material.Outlined.Delete)" Size="Size.Small" Color="Color.Error" Disabled="@(context.Version == LatestVersion)" aria-disabled="@(DeleteBusy || Loading ? "true" : "false")" aria-label="@L["Versions:Actions:Delete"]" OnClick="() => DeleteAsync(context)" /></MudTooltip>
+                    </div>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent><div class="configuration-version-empty"><MudIcon Icon="@Icons.Material.Outlined.LayersClear" /><h3>@L["Versions:Workbench:NoMatches"]</h3><p>@L["Versions:Workbench:NoMatchesHelp"]</p></div></NoRecordsContent>
+            <PagerContent><MudTablePager PageSizeOptions="@PageSizes" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
+        </MudTable>
+    </div>
+    <footer class="configuration-version-ledger-footer"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" /><span>@L["Versions:Workbench:LoadedLimit"]</span></footer>
+</section>
 
 @code {
-    [Parameter, EditorRequired]
-    public IReadOnlyList<ConfigurationUnifiedVersionSummary> Versions { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<ConfigurationUnifiedVersionSummary> Versions { get; set; } = [];
+    [Parameter, EditorRequired] public string CurrentVersionLabel { get; set; } = string.Empty;
+    /// <summary>Gets or sets the newest retained snapshot, which the store protects from deletion.</summary>
+    [Parameter] public long? LatestVersion { get; set; }
+    /// <summary>Gets or sets whether the parent is reconciling its retained snapshot list.</summary>
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public long? SelectedVersion { get; set; }
+    [Parameter] public long? PreviousComparisonVersion { get; set; }
+    [Parameter] public EventCallback<long> OnVersionSelected { get; set; }
+    [Parameter] public EventCallback<ConfigurationUnifiedVersionSummary> OnComparePrevious { get; set; }
+    [Parameter] public EventCallback<ConfigurationUnifiedVersionSummary> OnRollback { get; set; }
+    [Parameter] public EventCallback OnDeleted { get; set; }
 
-    [Parameter, EditorRequired]
-    public string CurrentVersionLabel { get; set; } = string.Empty;
-
-    [Parameter]
-    public long? SelectedVersion { get; set; }
-
-    [Parameter]
-    public long? PreviousComparisonVersion { get; set; }
-
-    [Parameter]
-    public EventCallback<long> OnVersionSelected { get; set; }
-
-    [Parameter]
-    public EventCallback<ConfigurationUnifiedVersionSummary> OnComparePrevious { get; set; }
-
-    [Parameter]
-    public EventCallback<ConfigurationUnifiedVersionSummary> OnRollback { get; set; }
-
-    [Parameter]
-    public EventCallback OnDeleted { get; set; }
-
+    private static readonly int[] PageSizes = [10, 20, 50];
+    private readonly ConfigurationOperationLifetime _lifetime = new();
+    private string? _search;
+    private MudTextField<string>? _filterField;
     private long? _deletingVersion;
-
     private bool DeleteBusy => _deletingVersion is not null;
+    private IReadOnlyList<ConfigurationUnifiedVersionSummary> VisibleVersions => string.IsNullOrWhiteSpace(_search)
+        ? Versions
+        : Versions.Where(version => Matches(version, _search.Trim())).ToArray();
+
+    private static bool Matches(ConfigurationUnifiedVersionSummary version, string query) =>
+        ConfigurationUnifiedVersionDisplayFormatter.VersionLabel(version).Contains(query, StringComparison.OrdinalIgnoreCase)
+        || (version.Reason?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+        || (version.ModifierId?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+        || (version.ModifierName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+        || (version.MutationGroupId?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+        || version.DefinitionKeys.Any(key => key.Contains(query, StringComparison.OrdinalIgnoreCase));
 
     private async Task DeleteAsync(ConfigurationUnifiedVersionSummary version)
     {
-        if (DeleteBusy)
-        {
-            return;
-        }
-
-        _deletingVersion = version.Version;
-        var versionLabel = ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version.Version);
-
+        if (DeleteBusy || Loading || version.Version == LatestVersion || _lifetime.IsRetired) return;
+        var captured = version with { DefinitionKeys = version.DefinitionKeys.ToArray(), TriggerDefinitionKeys = version.TriggerDefinitionKeys.ToArray() };
+        _deletingVersion = captured.Version;
         try
         {
-            var confirmed = await DialogService.ShowMessageBoxAsync(
-                L["Versions:Delete:ConfirmTitle", versionLabel],
-                L["Versions:Delete:ConfirmMessage", versionLabel],
-                yesText: L["Versions:Delete:Confirm"],
-                cancelText: L["Common:Actions:Cancel"]);
-            if (confirmed != true)
+            await _lifetime.RunAsync(async token =>
             {
-                return;
-            }
-
-            var result = await Facade.DeleteUnifiedVersionAsync(version.Version);
-            if (result.IsFailed(out var error))
-            {
-                Snackbar.Add(
-                    L["Versions:Delete:Messages:Failed", versionLabel, error.Message ?? string.Empty],
-                    Severity.Error);
-                return;
-            }
-
-            Snackbar.Add(L["Versions:Delete:Messages:Succeeded", versionLabel], Severity.Success);
-            await OnDeleted.InvokeAsync();
+                var parameters = new DialogParameters<ConfigurationSavedVersionDeleteDialog>();
+                parameters.Add(dialog => dialog.Version, captured);
+                var label = ConfigurationUnifiedVersionJsonFormatter.VersionLabel(captured.Version);
+                var result = await _lifetime.ShowDialogAsync(() => DialogService.ShowAsync<ConfigurationSavedVersionDeleteDialog>(
+                    L["Versions:Delete:ConfirmTitle", label], parameters,
+                    new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true, CloseOnEscapeKey = true }));
+                if (_lifetime.IsRetired || result is not { Canceled: false, Data: long accepted } || accepted != captured.Version) return;
+                token.ThrowIfCancellationRequested();
+                var deletion = await Facade.DeleteUnifiedVersionAsync(accepted);
+                if (_lifetime.IsRetired) return;
+                if (deletion.IsFailed(out var error))
+                {
+                    Snackbar.Add(L["Versions:Delete:Messages:Failed", label, error.Message ?? string.Empty], Severity.Error);
+                    return;
+                }
+                Snackbar.Add(L["Versions:Delete:Messages:Succeeded", label], Severity.Success);
+                if (_filterField is not null)
+                {
+                    try { await _filterField.FocusAsync(); }
+                    catch (Exception exception)
+                    {
+                        // Focus is best effort; it must not prevent reconciliation after persisted deletion.
+                        Logger.LogDebug(exception, "Could not focus the saved-version filter after deletion.");
+                    }
+                }
+                if (_lifetime.IsRetired) return;
+                await OnDeleted.InvokeAsync();
+            });
         }
-        finally
-        {
-            _deletingVersion = null;
-        }
+        catch (OperationCanceledException) when (_lifetime.IsRetired) { }
+        finally { _lifetime.TryApply(() => _deletingVersion = null); }
     }
 
-    private bool HasPreviousVersion(ConfigurationUnifiedVersionSummary version)
-    {
-        for (var index = 0; index < Versions.Count; index++)
-        {
-            if (Versions[index].Version == version.Version)
-            {
-                return index + 1 < Versions.Count;
-            }
-        }
-
-        return false;
-    }
-
-    private bool IsDeleting(ConfigurationUnifiedVersionSummary version)
-    {
-        return _deletingVersion == version.Version;
-    }
-
-    private string HistoryItemClass(ConfigurationUnifiedVersionSummary version)
-    {
-        return SelectedVersion == version.Version
-            ? "configuration-version-history-item is-selected"
-            : "configuration-version-history-item";
-    }
-
-    private string DefinitionTooltip(ConfigurationUnifiedVersionSummary version)
-    {
-        return ConfigurationUnifiedVersionDisplayFormatter.DefinitionTooltip(
-            version,
-            L["Versions:Definitions:Empty"]);
-    }
-
+    private bool HasPreviousVersion(ConfigurationUnifiedVersionSummary version) => Versions.SkipWhile(item => item.Version != version.Version).Skip(1).Any();
+    private bool IsDeleting(ConfigurationUnifiedVersionSummary version) => _deletingVersion == version.Version;
+    private string RowClass(ConfigurationUnifiedVersionSummary version, int _) => SelectedVersion == version.Version ? "configuration-version-selected" : string.Empty;
+    /// <summary>Drains admitted confirmation, actual deletion, and parent reconciliation before teardown.</summary>
+    public ValueTask DisposeAsync() => _lifetime.RetireAsync();
 }

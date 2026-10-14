@@ -2,7 +2,8 @@
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <div class="configuration-definition-list-shell">
-    <MudPaper Outlined="true" Class="pa-3 configuration-definition-list">
+    <section class="configuration-definition-list">
+        <div class="configuration-catalog-heading"><h2>@L["Workbench:Catalog"]</h2><span>@L["Workbench:DefinitionCount", Definitions.Count]</span></div>
         <div class="configuration-definition-list-content">
             <div class="configuration-definition-list-toolbar">
                 <div class="configuration-definition-list-search">
@@ -84,6 +85,7 @@
                                     <MudListItem T="ConfigurationDefinitionSummary"
                                                  Value="@definition"
                                                  Icon="@DefinitionIcon(definition)"
+                                                 aria-current="@(IsSelected(definition) ? "true" : null)"
                                                  Class="@(IsSelected(definition) ? "selected-definition" : null)"
                                                  OnClick="() => SelectedDefinitionChanged.InvokeAsync(definition)">
                                         <MudStack Spacing="0">
@@ -91,16 +93,6 @@
                                                 <MudText Typo="Typo.body2">
                                                     <MudHighlighter Text="@definition.DisplayName" HighlightedTexts="@SearchTerms" />
                                                 </MudText>
-                                                @if (!string.IsNullOrWhiteSpace(definition.Description))
-                                                {
-                                                    <MudTooltip Text="@definition.Description">
-                                                        <span class="configuration-description-icon" @onclick:stopPropagation="true">
-                                                            <MudIcon Icon="@Icons.Material.Filled.Info"
-                                                                     Size="Size.Small"
-                                                                     Color="Color.Info" />
-                                                        </span>
-                                                    </MudTooltip>
-                                                }
                                                 @if (definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata)
                                                 {
                                                     <MudTooltip Text="@L["State:Definitions:PublishedMetadataTooltip"]">
@@ -124,11 +116,6 @@
                                                         </MudChip>
                                                     </MudTooltip>
                                                 }
-                                                <ConfigurationSchemaMetadataChip SchemaVersion="@definition.SchemaVersion"
-                                                                                 DefinitionRevision="@definition.DefinitionRevision"
-                                                                                 SchemaHash="@definition.SchemaHash"
-                                                                                 CompactLabel="true"
-                                                                                 Placement="Placement.Right" />
                                                 @if (pendingCount > 0)
                                                 {
                                                     <MudTooltip Text="@L["State:Footer:PendingCount"]">
@@ -157,6 +144,8 @@
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                 <MudHighlighter Text="@GetOptionsTypeName(definition)" HighlightedTexts="@SearchTerms" />
                                             </MudText>
+                                        </MudStack>
+                                    </MudListItem>
                                             @if (matches.Count > 0)
                                             {
                                                 <div class="configuration-node-match-list">
@@ -185,8 +174,7 @@
                                                     }
                                                 </div>
                                             }
-                                        </MudStack>
-                                    </MudListItem>
+
                                 }
                             }
                         }
@@ -195,52 +183,11 @@
             </div>
 
             <div class="configuration-definition-list-footer">
-                <MudDivider />
-
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        <MudTooltip Text="@L["State:Footer:PendingCount"]">
-                            <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                                @PendingCount
-                            </MudChip>
-                        </MudTooltip>
-                        @if (ValidationIssueCount > 0)
-                        {
-                            <MudTooltip Text="@L["State:Footer:ValidationIssueCount"]">
-                                <MudChip T="int" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
-                                    @ValidationIssueCount
-                                </MudChip>
-                            </MudTooltip>
-                        }
-                        @if (RuntimeValidationIssueCount > 0)
-                        {
-                            <MudTooltip Text="@L["State:RuntimeValidation:IssueCount"]">
-                                <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">
-                                    @RuntimeValidationIssueCount
-                                </MudChip>
-                            </MudTooltip>
-                        }
-                    </MudStack>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-definition-list-footer-actions">
-                        <MudTooltip Text="@L["State:Actions:UndoAll"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.Undo"
-                                           Disabled="@(PendingCount == 0 && ValidationIssueCount == 0)"
-                                           OnClick="UndoAll" />
-                        </MudTooltip>
-                        <MudTooltip Text="@(CanSaveGroup
-                            ? L["State:Actions:SaveGroup"]
-                            : L["State:Footer:SaveBlockedMetadata"])">
-                            <MudIconButton Icon="@Icons.Material.Filled.Save"
-                                           Color="Color.Primary"
-                                           Variant="Variant.Filled"
-                                           Disabled="@(!CanSaveGroup || (PendingCount == 0 && ValidationIssueCount == 0))"
-                                           OnClick="SaveGroup" />
-                        </MudTooltip>
-                    </MudStack>
-                </MudStack>
+                <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" />
+                <span>@L["Workbench:CatalogHelp"]</span>
             </div>
         </div>
-    </MudPaper>
+    </section>
 </div>
 
 @code {
@@ -322,7 +269,7 @@
     {
         return definition.LifecycleState == ConfigurationDefinitionLifecycleState.Retired
             ? Icons.Material.Filled.Inventory2
-            : Icons.Material.Filled.Settings;
+            : Icons.Material.Outlined.Tune;
     }
 
     private bool IsSelected(ConfigurationDefinitionSummary definition)

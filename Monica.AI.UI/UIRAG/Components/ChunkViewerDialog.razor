@@ -1,5 +1,6 @@
 @using System.Text
 @using System.Web
+@using Monica.UI.Shared.Components.Dialogs
 @using Microsoft.Extensions.Localization
 @using Monica.AI.KnowledgeBase.Models
 @using Monica.AI.RAG.Models
@@ -9,93 +10,90 @@
 @inject IStringLocalizer<AIResource> L
 @inject IJSRuntime JSRuntime
 
-<MudDialog>
+<div class="chunk-viewer-dialog" @ref="_viewerRoot">
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" ContentClass="chunk-viewer-dialog-body pa-0" ActionsClass="pa-0" Style="max-height:calc(100dvh - 24px);margin:12px;overflow:hidden">
+    <TitleContent><MoDialogHeading Text="@L["KnowledgeDialogs:ChunkTitle", DocumentName]" /></TitleContent>
     <DialogContent>
-        <div class="chunk-viewer-root" @ref="_viewerRoot">
-            <div class="chunk-viewer-header">
-                <div class="chunk-viewer-title-block">
-                    <MudText Typo="Typo.h6">@DocumentName</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @L["RAG:ChunkViewer:Info", ChunkCount, StatusText]
-                    </MudText>
+        <div class="chunk-viewer-root">
+            <div class="chunk-viewer-context">
+                <div class="chunk-viewer-provenance">
+                    <span>@L["KnowledgeDialogs:ChunkCount", ChunkCount]</span>
+                    @if (!string.IsNullOrWhiteSpace(StatusText)) { <span>@StatusText</span> }
+                    @if (!string.IsNullOrWhiteSpace(DocumentPath)) { <code>@DocumentPath</code> }
+                    <span>@L["KnowledgeBase:Documents:Preview:Source", GetSourceDisplay()]</span>
+                    @if (!string.IsNullOrWhiteSpace(SourceGroupKey)) { <span>@L["KnowledgeDialogs:SourceGroup", SourceGroupKey]</span> }
                 </div>
-
                 @if (HasMatchedChunk)
                 {
-                    <MudChip T="string"
-                             Color="Color.Warning"
-                             Variant="Variant.Outlined"
-                             Size="Size.Small"
-                             Class="chunk-viewer-match-chip">
-                        @L["RAG:ChunkViewer:MatchedBadge"]
-                    </MudChip>
+                    <div class="matched-label"><MudIcon Icon="@Icons.Material.Outlined.MyLocation" Size="Size.Small" /><span>@L["RAG:ChunkViewer:MatchedBadge"]</span></div>
                 }
             </div>
-
-            <div class="chunk-viewer-content" data-chunk-scroll-root="true">
+            <div class="chunk-viewer-content">
                 @if (string.IsNullOrWhiteSpace(OriginalText))
                 {
-                    <div class="empty-state">
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            @L["RAG:ChunkViewer:NoContent"]
-                        </MudText>
-                    </div>
+                    <div class="empty-state">@L["RAG:ChunkViewer:NoContent"]</div>
                 }
                 else if (UseMarkdownRendering)
                 {
                     <div class="markdown-preview-content">
-                        <RAGChunkMarkdown Value="@OriginalText"
-                                          ScopeKey="@SourceGroupKey"
-                                          DocumentRelativePath="@DocumentPath"
-                                          Chunks="@Chunks"
-                                          MatchedChunkIndex="@MatchedChunkIndex" />
+                        <RAGChunkMarkdown Value="@OriginalText" ScopeKey="@SourceGroupKey" DocumentRelativePath="@DocumentPath" Chunks="@Chunks" MatchedChunkIndex="@MatchedChunkIndex" />
                     </div>
                 }
                 else
                 {
-                    <div class="original-text">
-                        @((MarkupString)BuildHighlightedHtml())
-                    </div>
+                    <div class="original-text">@((MarkupString)BuildHighlightedHtml())</div>
                 }
             </div>
         </div>
     </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Close">@L["Common:Close"]</MudButton>
-    </DialogActions>
+    <DialogActions><div class="chunk-viewer-actions"><MudButton OnClick="Close">@L["Common:Close"]</MudButton></div></DialogActions>
 </MudDialog>
+</div>
 
 @code {
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = null!;
 
+    /// <summary>The source document display name used by the native dialog heading.</summary>
     [Parameter]
     public string DocumentName { get; set; } = string.Empty;
 
+    /// <summary>The exact document identity used to resolve relative Markdown assets.</summary>
     [Parameter]
     public string DocumentPath { get; set; } = string.Empty;
 
+    /// <summary>The source text underlying the supplied end-exclusive highlight ranges.</summary>
     [Parameter]
     public string OriginalText { get; set; } = string.Empty;
 
+    /// <summary>Chunk boundary evidence; ordered by source offset for display, with original indexes retained.</summary>
     [Parameter]
     public IReadOnlyList<ChunkHighlight> Chunks { get; set; } = Array.Empty<ChunkHighlight>();
 
+    /// <summary>The exact originating chunk index to focus; offscreen matches scroll within the native dialog body.
+    /// Null means no retrieval match.</summary>
     [Parameter]
     public int? MatchedChunkIndex { get; set; }
 
+    /// <summary>Caller-supplied provenance or test status; the viewer does not infer indexing readiness.</summary>
     [Parameter]
     public string StatusText { get; set; } = string.Empty;
 
+    /// <summary>Source provenance controlling Markdown rendering; Unknown uses encoded plain text.</summary>
     [Parameter]
     public string SourceKind { get; set; } = KnowledgeDocumentSourceKinds.Unknown;
 
+    /// <summary>The originating Markdown group used for scoped asset resolution, when supplied.</summary>
     [Parameter]
     public string? SourceGroupKey { get; set; }
 
     private readonly List<ChunkHighlight> OrderedChunks = [];
     private ElementReference _viewerRoot;
     private ChunkViewerInteropSession? _interopSession;
+    private readonly SemaphoreSlim _componentGate = new(1, 1);
+    private readonly object _disposeGate = new();
+    private volatile bool _retired;
+    private Task? _disposeTask;
     private string _lastAppliedSignature = string.Empty;
 
     private int ChunkCount => OrderedChunks.Count;
@@ -108,30 +106,33 @@
 
     protected override void OnParametersSet()
     {
+        if (_retired) return;
         OrderedChunks.Clear();
         OrderedChunks.AddRange(Chunks.OrderBy(chunk => chunk.Start).ThenBy(chunk => chunk.Index));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!HasMatchedChunk)
+        if (_retired || !HasMatchedChunk) return;
+        await _componentGate.WaitAsync();
+        try
         {
-            return;
+            if (_retired || !HasMatchedChunk) return;
+            var signature = BuildScrollSignature();
+            if (string.Equals(signature, _lastAppliedSignature, StringComparison.Ordinal)) return;
+            _interopSession ??= new ChunkViewerInteropSession(JSRuntime);
+            if (await _interopSession.ScrollToMatchedChunkAsync(_viewerRoot) && !_retired)
+                _lastAppliedSignature = signature;
         }
-
-        var signature = BuildScrollSignature();
-        if (string.Equals(signature, _lastAppliedSignature, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        _interopSession ??= new ChunkViewerInteropSession(JSRuntime);
-        if (await _interopSession.ScrollToMatchedChunkAsync(_viewerRoot))
-        {
-            _lastAppliedSignature = signature;
-        }
-
+        finally { _componentGate.Release(); }
     }
+
+    private string GetSourceDisplay()
+        => string.Equals(SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase)
+            ? L["KnowledgeBase:Documents:Source:Markdown"].Value
+            : string.Equals(SourceKind, KnowledgeDocumentSourceKinds.Uploaded, StringComparison.OrdinalIgnoreCase)
+                ? L["KnowledgeBase:Documents:Source:Uploaded"].Value
+                : L["KnowledgeBase:Documents:Source:Unknown"].Value;
 
     private void Close() => MudDialog.Close();
 
@@ -140,8 +141,8 @@
         return string.Join(
             "|",
             MatchedChunkIndex?.ToString() ?? string.Empty,
-            OriginalText.Length,
-            ChunkCount,
+            OriginalText,
+            string.Join(";", OrderedChunks.Select(chunk => $"{chunk.Index}:{chunk.Start}:{chunk.End}:{chunk.Section}")),
             SourceKind,
             SourceGroupKey ?? string.Empty,
             DocumentPath);
@@ -192,7 +193,7 @@
             var metadata = BuildChunkMetadata(activeChunks);
             html.Append("<span");
             html.Append($" class=\"{BuildChunkClass(activeChunks, isBlock: false)}\"");
-            html.Append(" data-rag-chunk=\"true\"");
+            html.Append(" data-rag-chunk=\"true\" tabindex=\"0\"");
             html.Append($" data-rag-chunk-ids=\"{HttpUtility.HtmlAttributeEncode(string.Join(",", activeChunks.Select(chunk => chunk.Index)))}\"");
             html.Append($" data-rag-chunk-label=\"{HttpUtility.HtmlAttributeEncode(metadata)}\"");
             html.Append($" title=\"{HttpUtility.HtmlAttributeEncode(metadata)}\"");
@@ -259,14 +260,25 @@
         return chunkLabel;
     }
 
-    public async ValueTask DisposeAsync()
+    /// <summary>Retires rendering before draining matched-chunk interop and its late module imports.</summary>
+    public ValueTask DisposeAsync()
     {
-        var interopSession = Interlocked.Exchange(ref _interopSession, null);
-        if (interopSession is null)
+        lock (_disposeGate)
         {
-            return;
+            _retired = true;
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
         }
+    }
 
-        await interopSession.DisposeAsync();
+    private async Task DisposeCoreAsync()
+    {
+        await _componentGate.WaitAsync();
+        try
+        {
+            var session = _interopSession;
+            _interopSession = null;
+            if (session is not null) await session.DisposeAsync();
+        }
+        finally { _componentGate.Release(); }
     }
 }

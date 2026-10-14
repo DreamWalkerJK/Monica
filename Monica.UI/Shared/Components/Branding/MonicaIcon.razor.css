@@ -1,0 +1,62 @@
+.mo-brand-icon {
+    display: inline-flex;
+    width: var(--mo-brand-icon-size);
+    height: var(--mo-brand-icon-size);
+    flex: 0 0 auto;
+    vertical-align: middle;
+    color: var(--mo-color-brand-foreground);
+    background: transparent;
+    border-radius: var(--mo-brand-frame-radius);
+}
+
+svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.brand-field {
+    fill: var(--mo-color-brand-background);
+    stroke: var(--mo-color-brand-accent);
+    stroke-width: var(--mo-brand-frame-width);
+    rx: var(--mo-brand-frame-radius);
+}
+
+.brand-monogram {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--mo-brand-mark-width);
+    stroke-linecap: var(--mo-brand-stroke-cap);
+    stroke-linejoin: var(--mo-brand-stroke-join);
+}
+
+.brand-grid {
+    fill: none;
+    stroke: var(--mo-color-brand-accent);
+    stroke-width: 0.6;
+    opacity: var(--mo-brand-grid-opacity);
+}
+
+.brand-leaf,
+.brand-seal {
+    fill: none;
+    stroke: var(--mo-color-brand-accent);
+    stroke-width: 1.3;
+    stroke-linejoin: round;
+    opacity: var(--mo-brand-leaf-opacity);
+}
+
+.brand-seal {
+    opacity: var(--mo-brand-seal-opacity);
+}
+
+.brand-heart,
+.brand-spark {
+    fill: var(--mo-color-brand-accent);
+    opacity: var(--mo-brand-heart-opacity);
+}
+
+.brand-spark {
+    opacity: var(--mo-brand-spark-opacity);
+}

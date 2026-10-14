@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Serilog;
 using Serilog.Core;
 using Monica.Logging.Extensions;
+using Monica.Logging.Services.Support;
 using Monica.Modules;
 
 namespace Monica.Logging.Providers.Serilog;
@@ -55,15 +56,10 @@ internal static class SerilogLoggingBootstrapper
         if (option.EnableFileSink)
         {
             configuration = configuration.WriteTo.Async(sink =>
-                sink.File(ResolveLogFilePath(option), outputTemplate: option.OutputTemplate));
+                sink.File(LogFileLocation.Resolve(option), outputTemplate: option.OutputTemplate));
         }
 
         return configuration;
     }
 
-    private static string ResolveLogFilePath(ModuleLoggingOption option)
-    {
-        return option.LogFilePath
-            ?? Path.Combine(option.LogDirectory ?? AppContext.BaseDirectory, "Logs", option.LogFileName);
-    }
 }

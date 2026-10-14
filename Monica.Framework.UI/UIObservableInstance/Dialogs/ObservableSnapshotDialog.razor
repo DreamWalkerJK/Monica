@@ -1,0 +1,72 @@
+@using Monica.Core.ObservableInstance.Models
+@using Monica.Framework.UI.UIObservableInstance.Models
+@using Monica.UI.Shared.Components.Dialogs
+@using Monica.UI.UIStackTrace.Components
+@inject IStringLocalizer<ObservableInstanceResource> L
+
+<MudDialog>
+    <TitleContent><MoDialogHeading Text="@L["Workbench:InspectorTitle"]" /></TitleContent>
+    <DialogContent>
+        @if (_instance is { } instance)
+        {
+            <div class="observable-inspector" data-registration-id="@instance.Identity.RegistrationId">
+                <div class="inspector-identity"><span>@L["Workbench:FrozenCapture"]</span><h3>@instance.InstanceName</h3><code>@instance.Identity.InstanceId</code><p>@L["Workbench:FrozenHelp"]</p><time datetime="@instance.CapturedAt.ToString("O")">@instance.CapturedAt.ToString("O")</time></div>
+                <nav class="inspector-nav" aria-label="@L["Workbench:InspectorSections"]">@foreach (var section in Sections) { <button type="button" class="@(_section == section ? "is-active" : "")" aria-current="@(_section == section ? "page" : null)" @onclick="() => SelectSection(section)">@L[$"Workbench:{section}"]@if (section != "Current") { <span>@(section == "History" ? instance.History.Count : instance.History.Count(e => e.Exception is not null))</span> }</button> }</nav>
+                @if (_section == "Current")
+                {
+                    <dl class="inspector-metadata"><div><dt>@L["Shared:Fields:Type"]</dt><dd>@(instance.InstanceTypeName ?? L["Workbench:NoType"].Value)</dd></div><div><dt>@L["Shared:Fields:Group"]</dt><dd>@(string.IsNullOrEmpty(instance.GroupId) ? L["Shared:Labels:Ungrouped"].Value : instance.GroupId)</dd></div><div><dt>@L["Shared:Fields:InstanceKey"]</dt><dd>@(instance.InstanceKey ?? "—")</dd></div><div><dt>@L["Workbench:Registration"]</dt><dd><code>@instance.Identity.RegistrationId</code></dd></div><div><dt>@L["Workbench:RegisteredUTC"]</dt><dd>@instance.RegisteredAt.ToString("O")</dd></div><div><dt>@L["Workbench:LastRecordedUTC"]</dt><dd>@(instance.TotalRecords == 0 ? "—" : instance.LastRecordedAt.ToString("O"))</dd></div><div><dt>@L["Workbench:MappedHealth"]</dt><dd>@L[$"Shared:HealthStates:{ObservableInstanceCapture.Health(instance)}"] · @L[$"Shared:LogLevels:{instance.CurrentLogLevel?.ToString() ?? "Unknown"}"]</dd></div><div><dt>@L["Workbench:Retention"]</dt><dd>@L["Workbench:RetentionPair", instance.History.Count, instance.MaxHistorySize]</dd></div><div><dt>@L["Workbench:LifetimeRecords"]</dt><dd>@instance.TotalRecords</dd></div><div><dt>@L["Workbench:LifetimeExceptions"]</dt><dd>@instance.TotalExceptions</dd></div></dl>
+                    <section class="inspector-value"><h4>@L["Shared:Fields:CurrentState"]</h4><small>@instance.CurrentState.TypeName</small>@if (instance.CurrentState.CaptureError is { } error) { <p role="alert">@L["Workbench:ValueUnavailable"] · @error</p> } else { <pre tabindex="0">@(instance.CurrentState.Text ?? L["Workbench:NoState"].Value)</pre> }</section>
+                }
+                else
+                {
+                    <p class="inspector-scope">@L["Workbench:HistoryScope"]</p>
+                    @if (Entries.Count == 0) { <div class="inspector-empty">@L[_section == "History" ? "Shared:States:NoStateHistory" : "Shared:States:NoExceptions"]</div> }
+                    @foreach (var entry in Entries.Skip(_page * PageSize).Take(PageSize))
+                    {
+                        <article class="inspector-entry" data-sequence="@entry.Sequence"><header><span>#@entry.Sequence</span><time datetime="@entry.Timestamp.ToString("O")">@entry.Timestamp.ToString("O")</time><span>@L[$"Shared:LogLevels:{entry.LogLevel?.ToString() ?? "Unknown"}"]</span></header><p>@entry.Message</p>
+                        @if (entry.Exception is { } exception)
+                        {
+                            <div class="inspector-exception"><strong>@exception.TypeName</strong><p>@exception.Message</p>@if (exception.CaptureError is not null) { <p role="alert">@exception.CaptureError</p> }<details open="@(_section == "Exceptions" && SelectedSequence == entry.Sequence)"><summary>@L["Shared:Fields:ExceptionDetails"]</summary><pre tabindex="0">@exception.Details</pre></details><details class="formatted-evidence"><summary>@L["Workbench:FormattedEvidence"]</summary><StackTraceViewer Message="@exception.Details" /></details></div>
+                        }
+                        <details><summary>@L["Workbench:StateEvidence"]</summary><div class="entry-values"><section><h4>@L["Shared:Fields:Previous"]</h4><small>@entry.PreviousState.TypeName</small><pre tabindex="0">@(entry.PreviousState.CaptureError ?? entry.PreviousState.Text ?? L["Workbench:NoState"].Value)</pre></section><section><h4>@L["Shared:Fields:After"]</h4><small>@entry.CurrentState.TypeName</small><pre tabindex="0">@(entry.CurrentState.CaptureError ?? entry.CurrentState.Text ?? L["Workbench:NoState"].Value)</pre></section></div></details>
+                        </article>
+                    }
+                    <footer class="inspector-pager"><span role="status">@L["Workbench:PageCount", _page + 1, PageCount, Entries.Count]</span><div><button type="button" aria-disabled="@(_page == 0)" @onclick="PreviousPage" aria-label="@L["Workbench:Previous"]"><MudIcon Icon="@Icons.Material.Outlined.ChevronLeft" /></button><button type="button" aria-disabled="@(_page + 1 >= PageCount)" @onclick="NextPage" aria-label="@L["Workbench:Next"]"><MudIcon Icon="@Icons.Material.Outlined.ChevronRight" /></button></div></footer>
+                }
+            </div>
+        }
+    </DialogContent>
+    <DialogActions><MudButton OnClick="Close" Color="Color.Default">@L["Shared:Actions:Close"]</MudButton></DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    /// <summary>Gets or sets the full frozen tracker read, including every retained record.</summary>
+    [Parameter, EditorRequired] public ObservableInstanceSnapshot Instance { get; set; } = default!;
+    /// <summary>Gets or sets the initial Current, History, or Exceptions section.</summary>
+    [Parameter] public string InitialSection { get; set; } = "Current";
+    /// <summary>Gets or sets the exact source-qualified sequence to reveal in retained evidence.</summary>
+    [Parameter] public long? SelectedSequence { get; set; }
+    private static readonly string[] Sections = ["Current", "History", "Exceptions"];
+    private const int PageSize = 12;
+    private ObservableInstanceSnapshot? _instance;
+    private string _section = "Current";
+    private int _page;
+    private IReadOnlyList<ObservableStateEntrySnapshot> Entries => (_section == "Exceptions" ? _instance?.History.Where(e => e.Exception is not null) : _instance?.History)?.OrderByDescending(e => e.Sequence).ToArray() ?? [];
+    private int PageCount => Math.Max(1, (Entries.Count + PageSize - 1) / PageSize);
+    protected override void OnParametersSet()
+    {
+        if (_instance is not null) return;
+        _instance = Instance;
+        _section = Sections.Contains(InitialSection) ? InitialSection : "Current";
+        if (SelectedSequence is { } sequence)
+        {
+            var index = Entries.ToList().FindIndex(e => e.Sequence == sequence);
+            if (index >= 0) _page = index / PageSize;
+        }
+    }
+    private void SelectSection(string section) { _section = section; _page = 0; }
+    private void PreviousPage() { if (_page > 0) _page--; }
+    private void NextPage() { if (_page + 1 < PageCount) _page++; }
+    private void Close() => MudDialog.Close();
+}

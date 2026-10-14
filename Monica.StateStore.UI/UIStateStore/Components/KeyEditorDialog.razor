@@ -2,58 +2,87 @@
 @using Monica.StateStore.UI.Models
 @using Monica.Core.Results;
 @using Monica.StateStore.Models
+@using Monica.UI.Shared.Components.Dialogs
 @inject StateStoreUIService StateStoreService
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<StateStoreResource> L
-@implements IDisposable
+@implements IAsyncDisposable
 
-<MudDialog>
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" Gutters="false" TitleClass="pa-0" ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent>
+        <div class="key-dialog-heading">
+            <MoDialogHeading Text="@(ReadOnly ? L["KeyExplorer:Dialogs:ViewKeyTitle"] : L["KeyExplorer:Dialogs:EditKeyTitle"])" />
+            <p class="key-dialog-provider">
+                <span>@L["KeyExplorer:Detail:Labels:Provider"]</span>
+                <code>@(dialogServiceKey ?? L["KeyExplorer:Labels:DefaultProvider"])</code>
+            </p>
+        </div>
+    </TitleContent>
     <DialogContent>
-        <MudStack Spacing="3">
-            @* Key name *@
-            <MudTextField Value="@KeyInfo.Key"
-                          Label="@L["KeyEditor:Labels:KeyName"]"
-                          Variant="Variant.Outlined"
-                          ReadOnly="true"
-                          Class="key-dialog__diagnostic-input" />
+        <div class="key-dialog-body">
+            <dl class="key-dialog-identity">
+                <dt>@L["KeyEditor:Labels:KeyName"]</dt>
+                <dd>@originalKey.Key</dd>
+            </dl>
 
-            @* ETag *@
-            @if (!string.IsNullOrEmpty(KeyInfo.ETag))
+            <div class="key-dialog-metadata">
+                <dl class="key-dialog-fact">
+                    <dt>@L["KeyEditor:Labels:ETag"]</dt>
+                    <dd>@(string.IsNullOrEmpty(originalKey.ETag) ? L["KeyExplorer:Detail:NoETag"] : originalKey.ETag)</dd>
+                </dl>
+
+                @if (!ReadOnly)
+                {
+                    <MudNumericField @bind-Value="ttlSeconds"
+                                     Disabled="isSaving"
+                                     UserAttributes="structuredInputAttributes"
+                                     Label="@L["KeyEditor:Labels:TTL"]"
+                                     Variant="Variant.Outlined"
+                                     Min="0"
+                                     Adornment="Adornment.End"
+                                     AdornmentText="@L["KeyEditor:Labels:TTLUnit"]" />
+                }
+                else
+                {
+                    <dl class="key-dialog-fact">
+                        <dt>@L["KeyExplorer:Detail:Labels:TTL"]</dt>
+                        <dd>@GetTtlText()</dd>
+                    </dl>
+                }
+            </div>
+
+            @if (ReadOnly && !string.IsNullOrWhiteSpace(originalKey.Error))
             {
-                <MudTextField Value="@KeyInfo.ETag"
-                              Label="@L["KeyEditor:Labels:ETag"]"
+                <MudAlert Severity="@(originalKey.RawValue is null ? Severity.Error : Severity.Warning)">
+                    @(originalKey.RawValue is null ? originalKey.Error : L["KeyExplorer:Messages:ValueRefreshFailed", originalKey.Error])
+                </MudAlert>
+                @if (originalKey.RawValue is not null)
+                {
+                    <p>@L["KeyExplorer:Messages:PreviewRetainedTitle"]</p>
+                }
+            }
+
+            @if (!ReadOnly || string.IsNullOrWhiteSpace(originalKey.Error) || originalKey.RawValue is not null)
+            {
+                <MudTextField @bind-Value="editedValue"
+                              Disabled="isSaving"
+                              Label="@L["KeyEditor:Labels:JsonValue"]"
                               Variant="Variant.Outlined"
-                              ReadOnly="true"
-                              Class="key-dialog__diagnostic-input" />
+                              Lines="10"
+                              ReadOnly="@ReadOnly"
+                              Class="key-dialog-value"
+                              UserAttributes="structuredInputAttributes"
+                              HelperText="@(ReadOnly ? "" : L["KeyEditor:Labels:JsonHelperText"])" />
             }
-
-            @* TTL (edit mode only) *@
-            @if (!ReadOnly)
-            {
-                <MudNumericField @bind-Value="ttlSeconds"
-                                 Label="@L["KeyEditor:Labels:TTL"]"
-                                 Variant="Variant.Outlined"
-                                 Min="0"
-                                 Adornment="Adornment.End"
-                                 AdornmentText="@L["KeyEditor:Labels:TTLUnit"]" />
-            }
-
-            @* JSON value editor *@
-            <MudTextField @bind-Value="editedValue"
-                          Label="@L["KeyEditor:Labels:JsonValue"]"
-                          Variant="Variant.Outlined"
-                          Lines="15"
-                          ReadOnly="@ReadOnly"
-                          Class="key-dialog__diagnostic-input"
-                          HelperText="@(ReadOnly ? "" : L["KeyEditor:Labels:JsonHelperText"])" />
 
             @if (!ReadOnly)
             {
-                <div class="d-flex gap-2">
+                <div class="key-dialog-tools">
                     <MudButton Variant="Variant.Text"
                                Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.FormatIndentIncrease"
                                OnClick="FormatJson"
+                           Class="state-dialog-primary-text"
+                               Disabled="isSaving"
                                Size="Size.Small">
                         @L["KeyEditor:Actions:FormatJson"]
                     </MudButton>
@@ -61,6 +90,8 @@
                                Color="Color.Secondary"
                                StartIcon="@Icons.Material.Filled.Compress"
                                OnClick="MinifyJson"
+                           Class="state-dialog-secondary-text"
+                               Disabled="isSaving"
                                Size="Size.Small">
                         @L["KeyEditor:Actions:MinifyJson"]
                     </MudButton>
@@ -71,52 +102,106 @@
             {
                 <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
             }
-        </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">@L["KeyEditor:Actions:Cancel"]</MudButton>
-        @if (!ReadOnly)
-        {
-            <MudButton Color="Color.Primary"
-                       Variant="Variant.Filled"
-                       OnClick="SaveAsync"
-                       Disabled="isSaving">
-                @if (isSaving)
-                {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                }
-                @L["KeyEditor:Actions:Save"]
-            </MudButton>
-        }
+        <div class="key-dialog-actions">
+            <MudButton Class="@(ReadOnly ? "state-dialog-primary-text" : null)" Color="@(ReadOnly ? Color.Primary : Color.Default)" OnClick="Cancel">@(ReadOnly ? L["KeyEditor:Actions:Close"] : L["KeyEditor:Actions:Cancel"])</MudButton>
+            @if (!ReadOnly)
+            {
+                <MudButton Color="Color.Primary"
+                           Variant="Variant.Filled"
+                           OnClick="SaveAsync"
+                           Disabled="isSaving">
+                    @if (isSaving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    @L["KeyEditor:Actions:Save"]
+                </MudButton>
+            }
+        </div>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    /// <summary>
+    /// Initial provider evidence. The dialog edits a detached draft and never mutates this borrowed instance.
+    /// </summary>
     [Parameter] public StateStoreKeyInfo KeyInfo { get; set; } = null!;
+    /// <summary>
+    /// Originating provider service identity, captured when the dialog initializes. Null selects the default provider.
+    /// </summary>
     [Parameter] public string? ServiceKey { get; set; }
     [Parameter] public bool ReadOnly { get; set; }
     [Parameter] public EventCallback<StateStoreKeyInfo> OnSaved { get; set; }
 
+    /// <summary>
+    /// Cancels dialog-owned work when the originating provider visit retires.
+    /// Defaults to an uncancelled scope. The dialog owns its linked source, not the caller's token.
+    /// Cancellation suppresses late UI completion; an admitted write may already have persisted.
+    /// </summary>
+    [Parameter] public CancellationToken ScopeCancellationToken { get; set; }
+
+    private readonly Dictionary<string, object> structuredInputAttributes = new() { ["spellcheck"] = "false" };
+    private StateStoreKeyInfo originalKey = null!;
+    private string? dialogServiceKey;
     private string editedValue = "";
     private int ttlSeconds = 0;
     private bool isSaving = false;
     private bool isDisposed;
     private string? errorMessage;
+    private CancellationTokenSource? lifetimeCancellation;
+    private CancellationToken lifetimeToken;
+    private TaskCompletionSource? saveCompletion;
+    private Task? retirementTask;
+
+    private bool IsRetired => isDisposed || lifetimeToken.IsCancellationRequested;
 
     protected override void OnInitialized()
     {
-        editedValue = KeyInfo.RawValue ?? "";
-        ttlSeconds = KeyInfo.TTLStatus switch
+        dialogServiceKey = ServiceKey;
+        lifetimeCancellation = CancellationTokenSource.CreateLinkedTokenSource(ScopeCancellationToken);
+        lifetimeToken = lifetimeCancellation.Token;
+        originalKey = new StateStoreKeyInfo
         {
-            EStateStoreKeyTtlStatus.Expiring when KeyInfo.TTL.HasValue => (int)Math.Ceiling(KeyInfo.TTL.Value.TotalSeconds),
+            Key = KeyInfo.Key,
+            RawValue = KeyInfo.RawValue,
+            IsValueLoaded = KeyInfo.IsValueLoaded,
+            ETag = KeyInfo.ETag,
+            TTL = KeyInfo.TTL,
+            TTLStatus = KeyInfo.TTLStatus,
+            Error = KeyInfo.Error
+        };
+        editedValue = originalKey.RawValue ?? "";
+        ttlSeconds = originalKey.TTLStatus switch
+        {
+            EStateStoreKeyTtlStatus.Expiring when originalKey.TTL.HasValue => (int)Math.Ceiling(originalKey.TTL.Value.TotalSeconds),
             EStateStoreKeyTtlStatus.Permanent => 0,
             _ => ttlSeconds
         };
     }
 
+    private string GetTtlText()
+    {
+        return originalKey.TTLStatus switch
+        {
+            EStateStoreKeyTtlStatus.Expiring when originalKey.TTL.HasValue =>
+                (originalKey.TTL.Value < TimeSpan.Zero ? TimeSpan.Zero : originalKey.TTL.Value).ToString("c"),
+            EStateStoreKeyTtlStatus.Permanent => L["KeyExplorer:Detail:TTLPermanent"],
+            EStateStoreKeyTtlStatus.Unsupported => L["KeyExplorer:Detail:TTLUnavailable"],
+            _ => L["KeyExplorer:Detail:TTLUnknown"]
+        };
+    }
+
     private void FormatJson()
     {
+        if (IsRetired || isSaving || ReadOnly)
+        {
+            return;
+        }
+
         try
         {
             var obj = System.Text.Json.JsonSerializer.Deserialize<object>(editedValue);
@@ -134,6 +219,11 @@
 
     private void MinifyJson()
     {
+        if (IsRetired || isSaving || ReadOnly)
+        {
+            return;
+        }
+
         try
         {
             var obj = System.Text.Json.JsonSerializer.Deserialize<object>(editedValue);
@@ -148,23 +238,31 @@
 
     private async Task SaveAsync()
     {
+        if (IsRetired || isSaving || ReadOnly)
+        {
+            return;
+        }
+
+        var request = new StateStoreKeyUpdateRequest
+        {
+            Key = originalKey.Key,
+            Value = editedValue,
+            ETag = originalKey.ETag,
+            TTL = ttlSeconds > 0 ? TimeSpan.FromSeconds(ttlSeconds) : null
+        };
+        var serviceKey = dialogServiceKey;
+        var onSaved = OnSaved;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        saveCompletion = completion;
         isSaving = true;
         errorMessage = null;
-        StateHasChanged();
 
         try
         {
-            var request = new StateStoreKeyUpdateRequest
-            {
-                Key = KeyInfo.Key,
-                Value = editedValue,
-                ETag = KeyInfo.ETag,
-                TTL = ttlSeconds > 0 ? TimeSpan.FromSeconds(ttlSeconds) : null
-            };
+            StateHasChanged();
+            var result = await StateStoreService.SaveKeyAsync(serviceKey, request, lifetimeToken);
 
-            var result = await StateStoreService.SaveKeyAsync(ServiceKey, request);
-
-            if (isDisposed)
+            if (IsRetired)
             {
                 return;
             }
@@ -175,19 +273,35 @@
             }
             else
             {
-                var refreshedKey = await StateStoreService.GetKeyAsync(ServiceKey, KeyInfo.Key);
-                if (isDisposed)
+                var refreshedKey = await StateStoreService.GetKeyAsync(serviceKey, request.Key, lifetimeToken);
+                if (IsRetired)
                 {
                     return;
                 }
-                if (refreshedKey.IsOk(out var loadedKey))
+                StateStoreKeyInfo savedKey;
+                if (refreshedKey.IsFailed(out var refreshError, out var loadedKey))
                 {
-                    await OnSaved.InvokeAsync(loadedKey);
+                    // The write succeeded, but the submitted draft is not fresh provider metadata.
+                    savedKey = new StateStoreKeyInfo
+                    {
+                        Key = request.Key,
+                        RawValue = request.Value,
+                        IsValueLoaded = true,
+                        ETag = null,
+                        TTL = null,
+                        TTLStatus = EStateStoreKeyTtlStatus.Unknown,
+                        Error = refreshError.Message
+                    };
                 }
                 else
                 {
-                    KeyInfo.RawValue = editedValue;
-                    await OnSaved.InvokeAsync(KeyInfo);
+                    savedKey = loadedKey;
+                }
+
+                await onSaved.InvokeAsync(savedKey);
+                if (IsRetired)
+                {
+                    return;
                 }
 
                 MudDialog.Close(DialogResult.Ok(true));
@@ -195,19 +309,81 @@
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
+            if (!IsRetired)
+            {
+                errorMessage = ex.Message;
+            }
         }
         finally
         {
-            isSaving = false;
-            if (!isDisposed)
+            try
             {
-                StateHasChanged();
+                if (!IsRetired)
+                {
+                    isSaving = false;
+                    StateHasChanged();
+                }
+            }
+            finally
+            {
+                completion.TrySetResult();
             }
         }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private async Task Cancel()
+    {
+        var retirement = DisposeAsync().AsTask();
+        MudDialog.Cancel();
+        await retirement;
+    }
 
-    public void Dispose() => isDisposed = true;
+    /// <summary>
+    /// Retires the dialog and joins its admitted persistence, read-back, and callback work.
+    /// A save callback must not await this retirement or the dialog result it completes.
+    /// </summary>
+    public ValueTask DisposeAsync()
+    {
+        if (retirementTask is not null)
+        {
+            return new ValueTask(retirementTask);
+        }
+
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        retirementTask = completion.Task;
+        isDisposed = true;
+        _ = RetireAsync(completion);
+        return new ValueTask(retirementTask);
+    }
+
+    private async Task RetireAsync(TaskCompletionSource completion)
+    {
+        try
+        {
+            try
+            {
+                try
+                {
+                    lifetimeCancellation?.Cancel();
+                }
+                finally
+                {
+                    if (saveCompletion is not null)
+                    {
+                        await saveCompletion.Task;
+                    }
+                }
+            }
+            finally
+            {
+                lifetimeCancellation?.Dispose();
+            }
+
+            completion.TrySetResult();
+        }
+        catch (Exception ex)
+        {
+            completion.TrySetException(ex);
+        }
+    }
 }

@@ -1,29 +1,56 @@
 {
   "Pages": {
     "ProjectUnits": {
-      "Title": "Project Units"
+      "Title": "Project Units",
+      "Description": "Explore the host's discovered units, architecture relationships, context completeness, and operational tools.",
+      "Overview": {
+        "Title": "Project unit overview",
+        "Description": "Review catalog composition, context completeness, and units that need attention."
+      },
+      "Catalog": {
+        "Title": "Project unit catalog",
+        "Description": "Find discovered units by identity, type, relationships, and diagnostics; inspect their full evidence."
+      },
+      "Graph": {
+        "Title": "Project unit relationships",
+        "Description": "Trace directed dependencies, explore connected units, and inspect the architecture graph."
+      },
+      "Events": {
+        "Title": "Domain event tools",
+        "Description": "Inspect event descriptors and prepare editable payloads for this host's distributed event bus."
+      },
+      "RequestFilters": {
+        "Title": "Request path controls",
+        "Description": "Review disabled request paths and manage the host's configured request filter."
+      },
+      "Enums": {
+        "Title": "Enum reference",
+        "Description": "Browse assembly and enum identities, value descriptions, and search matches."
+      }
     }
   },
   "Page": {
-    "PageTitle": "Project Units",
     "Header": {
       "Title": "Project Units",
       "Eyebrow": "Monica / Architecture Registry",
       "Description": "Explore the host's discovered capabilities, architecture relationships, context completeness, and operational test tools."
     },
     "Tabs": {
-      "StatusOverview": "Status Overview",
-      "ProjectUnit": "Project Units",
-      "ArchitectureVisualization": "Architecture Visualization",
-      "DomainEventTester": "Domain Event Tester",
-      "RequestFilterManager": "Request Filter Manager",
-      "EnumInfo": "Enum Information"
+      "StatusOverview": "Overview",
+      "ProjectUnit": "Unit catalog",
+      "ArchitectureVisualization": "Relationships",
+      "DomainEventTester": "Domain events",
+      "RequestFilterManager": "Request paths",
+      "EnumInfo": "Enums"
     }
+  },
+  "Workspace": {
+    "Context": "Architecture",
+    "NavigationLabel": "Project Units views"
   },
   "Shared": {
     "Actions": {
       "Refresh": "Refresh",
-      "Details": "Details",
       "Close": "Close",
       "SelectAll": "Select all",
       "Clear": "Clear",
@@ -136,7 +163,7 @@
   "DomainEventTester": {
     "Header": {
       "Title": "Domain Event Tester",
-      "Description": "Select a discovered domain event, inspect its contract, and publish a controlled test payload."
+      "Description": "Inspect a discovered event contract, edit its JSON draft, and publish through this host."
     },
     "Actions": {
       "Refresh": "Refresh event list",
@@ -144,23 +171,29 @@
       "Publishing": "Publishing..."
     },
     "Sections": {
-      "EventList": "Event list",
-      "EventTester": "Event test"
+      "EventList": "Discovered events",
+      "EventTester": "Payload draft"
     },
     "Fields": {
-      "EventName": "Event name",
+      "EventName": "Dispatch identity",
       "EventContent": "Event content (JSON)",
       "EventContentPlaceholder": "Enter the event JSON payload..."
     },
     "States": {
-      "Empty": "No domain event data is available. Click refresh to load the data.",
-      "NoSelection": "Select a domain event from the left list before testing."
+      "Empty": "No domain events were discovered in this host.",
+      "NoSelection": "Select a discovered event to inspect its identity and prepare a payload."
     },
     "Messages": {
       "SelectEventAndContent": "Select an event and provide its content.",
       "PublishFailed": "Publish failed: {0}",
       "PublishSucceeded": "Published successfully.",
       "PublishException": "Publish exception: {0}"
+    },
+    "Desk": {
+      "Eyebrow": "EVENT CONTRACTS",
+      "DraftLabel": "EDITABLE PAYLOAD",
+      "DispatchHint": "Publishes through this host's distributed event bus.",
+      "DraftHint": "Selection generates a representative draft. Publishing sends the edited JSON."
     }
   },
   "EnumInfoViewer": {
@@ -170,7 +203,7 @@
     },
     "Search": {
       "Placeholder": "Search assemblies, enums, and values",
-      "Hint": "Enter keywords to highlight and navigate assemblies, enums, and enum values."
+      "Hint": "All keywords must match one assembly, enum, or value. Matches navigate the complete catalog."
     },
     "Panels": {
       "Assemblies": "Assemblies",
@@ -178,9 +211,9 @@
       "Values": "Enum values"
     },
     "States": {
-      "Empty": "No enum data is available. Click refresh to load the data.",
-      "SelectAssembly": "Select an assembly from the left panel first.",
-      "SelectEnum": "Select an enum from the middle panel first."
+      "Empty": "No enums were discovered in this host.",
+      "SelectAssembly": "Select an assembly to inspect its enums.",
+      "SelectEnum": "Select an enum to inspect its values."
     },
     "Summaries": {
       "NotLoaded": "Data not loaded",
@@ -188,6 +221,14 @@
       "SelectEnum": "Displayed after selecting an enum",
       "StartSearch": "Enter keywords to start searching",
       "MatchProgress": "{0} / {1} matches"
+    },
+    "Desk": {
+      "Eyebrow": "ENUM REFERENCE",
+      "SearchLabel": "Search the full enum catalog",
+      "StagesLabel": "Reference panels",
+      "PositionHint": "Position is enumeration order, not the numeric enum value.",
+      "Position": "Position",
+      "NavigationFailed": "Enum navigation is unavailable: {0}"
     }
   },
   "ProjectUnitFilterPanel": {
@@ -204,6 +245,9 @@
     "Switches": {
       "OnlyDependencies": "Show only units with dependencies",
       "OnlyAlerts": "Show only units with alerts"
+    },
+    "Actions": {
+      "ClearSearch": "Clear search"
     }
   },
   "ProjectUnitLayoutPanel": {
@@ -219,12 +263,17 @@
     "Fields": {
       "ForceDistance": "Node distance: {0}",
       "ForceStrength": "Repulsion strength: {0}"
+    },
+    "Workspace": {
+      "DistanceLabel": "Force link distance",
+      "StrengthLabel": "Force charge strength"
     }
   },
   "ProjectUnitMonitor": {
     "Header": {
-      "Title": "Project Unit Monitor",
-      "Description": "Search the live catalog and inspect each unit's type, identity, and architecture relationships."
+      "Title": "Unit catalog",
+      "Description": "Find a discovered capability, read its full identity, and inspect its relationships.",
+      "Eyebrow": "Architecture registry"
     },
     "Columns": {
       "Name": "Unit name",
@@ -236,14 +285,26 @@
     },
     "States": {
       "Empty": "No project unit data is available. Click refresh to load the data.",
-      "NoMatches": "No project units match the current filters."
+      "NoMatches": "No project units match the current filters.",
+      "Retained": "The previously loaded catalog remains visible. Refresh did not replace it."
     },
     "Summary": {
-      "VisibleCount": "Showing {0} of {1} project units"
+      "VisibleCount": "Showing {0} of {1} project units",
+      "SortHint": "Name and full name support multiple sorting.",
+      "SortBy": "Sort by"
+    },
+    "Sorting": {
+      "KeyAscending": "Full key: ascending",
+      "KeyDescending": "Full key: descending",
+      "KeyNone": "Sort by full key"
+    },
+    "Actions": {
+      "Reset": "Reset filters",
+      "Inspect": "Inspect {0}"
     }
   },
   "ProjectUnitDetailDialog": {
-    "Title": "Project Unit Details",
+    "Title": "Architectural dossier",
     "Fields": {
       "Owner": "Owner",
       "Dependencies": "Dependencies",
@@ -251,7 +312,8 @@
       "Methods": "Methods",
       "Alerts": "Alerts",
       "ConstructorParameters": "Constructor parameters",
-      "DefinitionKey": "Definition key"
+      "DefinitionKey": "Definition key",
+      "ConfigurationMode": "Access mode"
     },
     "Sections": {
       "Requirements": "Requirement traceability",
@@ -260,7 +322,11 @@
       "Relationships": "Architecture relationships",
       "Configuration": "Configuration behavior",
       "TechnicalShape": "Technical shape",
-      "PublicMethods": "Public methods ({0})"
+      "PublicMethods": "Public methods ({0})",
+      "Identity": "Project unit",
+      "RelationshipsHint": "Follow full catalog identities to inspect outgoing dependencies and incoming dependents.",
+      "ConfigurationHint": "Definition metadata and discovered options access patterns. Configuration values are not loaded here.",
+      "TechnicalHint": "Discovered constructor and public method metadata. Opening this dossier does not execute the unit."
     },
     "Badges": {
       "MetadataDeclared": "Metadata declared",
@@ -271,7 +337,8 @@
     "States": {
       "Loading": "Loading project-unit details...",
       "LoadFailed": "Unable to load project-unit details: {0}",
-      "NoRequirements": "No requirement references have been declared for this project unit."
+      "NoRequirements": "No requirement references have been declared for this project unit.",
+      "NoDescription": "No description has been declared for this unit."
     },
     "Actions": {
       "FocusInGraph": "Focus in graph"
@@ -279,30 +346,32 @@
   },
   "ProjectUnitDashboard": {
     "Actions": {
-      "Retry": "Retry"
+      "Retry": "Retry",
+      "Inspect": "Inspect {0}"
     },
     "Service": {
       "Eyebrow": "Active service catalog",
       "ProjectName": "Project: {0}",
       "AppId": "Application ID: {0}",
-      "Domain": "Domain: {0}"
+      "Domain": "Domain: {0}",
+      "Scope": "The current host's discovered catalog. Reloading this view does not rescan assemblies or execute units."
     },
     "Metrics": {
       "TotalUnits": "Project units",
-      "UnitTypes": "Unit types",
-      "MetadataCoverage": "Metadata coverage",
-      "RequirementCoverage": "Requirement coverage",
-      "Alerts": "Catalog alerts"
+      "UnitTypes": "Unit types"
     },
     "Sections": {
       "Distribution": "Unit distribution",
       "DistributionHint": "Discovered architecture categories in the current host.",
-      "Coverage": "Agent context coverage",
+      "Coverage": "Context coverage",
       "CoverageHint": "Independent evidence dimensions across every discovered unit.",
-      "ArchitectureHealth": "Architecture health",
+      "ArchitectureHealth": "Topology & diagnostics",
       "ArchitectureHealthHint": "Topology and explicit discovery diagnostics for this host.",
-      "CoverageGaps": "Actionable context gaps",
-      "CoverageGapsHint": "Open a unit to add the missing metadata, ownership, documentation, or traceability."
+      "CoverageGaps": "Units needing context",
+      "CoverageGapsHint": "Inspect missing context and declared diagnostics. These are catalog observations, not runtime health checks.",
+      "CoverageEyebrow": "Context completeness",
+      "WholeCatalog": "Whole catalog",
+      "AttentionEyebrow": "Context backlog"
     },
     "Coverage": {
       "Metadata": "Metadata",
@@ -315,11 +384,20 @@
       "DependencyEdges": "Dependency edges",
       "IsolatedUnits": "Isolated units",
       "Errors": "Errors",
-      "Warnings": "Warnings"
+      "Warnings": "Warnings",
+      "Information": "Information"
     },
     "Gaps": {
       "Missing": "Missing {0}",
-      "Alerts": "{0} alerts"
+      "Alerts": "{0} alerts",
+      "VisibleCount": "{0} of {1} backlog units",
+      "PageRange": "{0}–{1} of {2}",
+      "PageSize": "Rows per page",
+      "FirstPage": "First page",
+      "PreviousPage": "Previous page",
+      "NextPage": "Next page",
+      "LastPage": "Last page",
+      "PageNumber": "{0} / {1}"
     },
     "States": {
       "Loading": "Loading architecture status...",
@@ -327,7 +405,19 @@
       "LoadFailed": "Unable to load the project-unit dashboard: {0}",
       "EmptyTitle": "No project units discovered",
       "EmptyDescription": "The current host has no supported project-unit types. Coverage has no data and is not treated as complete.",
-      "NoCoverageGaps": "Every discovered unit has complete context metadata and no catalog alerts."
+      "NoCoverageGaps": "Every discovered unit has complete context metadata and no catalog alerts.",
+      "Retained": "The previously loaded snapshot remains visible. Refresh did not replace it.",
+      "NoGapMatches": "No units in the context backlog match these filters."
+    },
+    "Filters": {
+      "Search": "Search backlog",
+      "Placeholder": "Name, full name, owner, tag, or description",
+      "Type": "Unit type",
+      "AllTypes": "All types",
+      "Missing": "Missing context",
+      "AllGaps": "Any context dimension",
+      "OnlyAlerts": "Only units with alerts",
+      "Reset": "Reset filters"
     }
   },
   "ProjectUnitVisualization": {
@@ -341,11 +431,8 @@
       "LayoutSettingsTooltip": "Layout settings",
       "FilterSettingsTooltip": "Filter settings"
     },
-    "States": {
-      "RelatedNodesAlert": "Showing all nodes connected to <strong>{0}</strong>."
-    },
+    "States": {},
     "Legend": {
-      "VisibleCount": "Showing {0} of {1} project units",
       "SimpleUnit": "Circle: simple unit",
       "ComplexUnit": "Rectangle: complex unit"
     },
@@ -382,12 +469,55 @@
         "DependencyCount": "Dependency count",
         "MethodCount": "Method count"
       }
+    },
+    "Workspace": {
+      "Eyebrow": "Dependency atlas",
+      "ConnectedScope": "Connected component",
+      "ConnectedScopeHint": "This scope follows dependencies in both directions and temporarily overrides the ordinary filters.",
+      "CanvasLabel": "Project unit dependency graph",
+      "VisibleUnits": "visible / {0} catalog units",
+      "DirectedEdges": "directed dependencies",
+      "Fit": "Fit all visible units",
+      "ZoomOut": "Zoom out",
+      "ZoomIn": "Zoom in",
+      "Loading": "Loading the host catalog…",
+      "LoadError": "The catalog could not be loaded",
+      "EmptyCatalog": "No project units discovered",
+      "EmptyCatalogHint": "This host has not registered any project units in its catalog.",
+      "NoMatches": "No units in this scope",
+      "NoMatchesHint": "Adjust the filters or clear the current scope to explore the catalog.",
+      "CanvasHint": "Pan and zoom to explore. Select a node to inspect; right-click for scope actions. The ledgers below provide the same identities and directed relationships.",
+      "SelectedLabel": "Selected unit",
+      "OutsideScope": "This unit is outside the current visible scope. Its catalog evidence remains available.",
+      "Dependencies": "Depends on",
+      "Dependents": "Used by",
+      "Methods": "Methods",
+      "NoDependencies": "No outgoing dependencies recorded.",
+      "NoDependents": "No incoming dependents recorded.",
+      "SelectUnit": "Trace a unit",
+      "SelectUnitHint": "Select a graph node or a ledger row to read its identity, dependency direction, and available actions.",
+      "NativeEvidence": "Units and relationships",
+      "NativeEyebrow": "Accessible evidence",
+      "NativeHint": "The same visible scope, with full CLR identities and native keyboard actions. Dependencies run from the consuming unit to the required unit.",
+      "HideEvidence": "Hide ledger",
+      "ShowEvidence": "Open ledger",
+      "UnitsTab": "Units · {0}",
+      "RelationshipsTab": "Relationships · {0}",
+      "UnitColumn": "Project unit",
+      "ActionsColumn": "Actions",
+      "SourceColumn": "Consuming unit",
+      "TargetColumn": "Required unit",
+      "DependencyDirection": "depends on",
+      "NoEvidence": "No records in this visible scope.",
+      "PageRange": "{0}–{1} of {2} records",
+      "PreviousPage": "Previous evidence page",
+      "NextPage": "Next evidence page"
     }
   },
   "RequestFilterManager": {
     "Header": {
       "Title": "Request Filter Manager",
-      "Description": "Control request-path availability and review the host's currently disabled routes."
+      "Description": "Review this host's request-filter state and apply explicit changes to individual or batch paths."
     },
     "Actions": {
       "RefreshState": "Refresh state",
@@ -409,7 +539,7 @@
       "DisabledUrls": "Currently disabled URLs"
     },
     "States": {
-      "EmptyDisabledUrls": "There are no disabled URLs. All requests are currently accessible."
+      "EmptyDisabledUrls": "No paths are listed as disabled in this snapshot."
     },
     "Messages": {
       "RequireUrl": "Enter a URL path.",
@@ -429,6 +559,21 @@
       "EnableAllFailed": "Failed to enable all URLs: {0}",
       "EnableAllSucceeded": "All URLs have been enabled successfully.",
       "EnableAllException": "Enable all exception: {0}"
+    },
+    "Desk": {
+      "Eyebrow": "REQUEST PATH OPERATIONS",
+      "StateLabel": "HOST FILTER SNAPSHOT",
+      "Available": "Request-filter service registered",
+      "Unavailable": "Request-filter service unavailable",
+      "AvailabilityHint": "This snapshot lists paths disabled by the registered filter. Middleware attachment and access policies are separate.",
+      "UnavailableHint": "This host has no registered request-filter service. Path changes are unavailable.",
+      "EnablePath": "Enable path {0}",
+      "ControlsHint": "Trimmed paths are applied exactly; path casing is preserved.",
+      "ModeLabel": "Path input mode",
+      "SingleMode": "Single path",
+      "BatchMode": "Batch paths",
+      "BatchCount": "{0} input paths · one per line",
+      "Applying": "Applying path changes…"
     }
   }
 }

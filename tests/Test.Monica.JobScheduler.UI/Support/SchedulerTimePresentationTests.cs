@@ -46,6 +46,73 @@ public sealed class SchedulerTimePresentationTests
     }
 
     [Fact]
+    public void OffsetTimestamp_WhenWallHourRepeats_ShouldRetainDistinctAbsoluteBoundaries()
+    {
+        var presentation = CreatePresentation(CreateDaylightSavingTimeZone());
+        var earlier = new DateTimeOffset(2026, 11, 1, 5, 30, 0, TimeSpan.Zero);
+        var later = earlier.AddHours(1);
+
+        presentation.FormatTimestamp(earlier).Should().Be(presentation.FormatTimestamp(later));
+        presentation.FormatTimestampWithOffset(earlier).Should().Be("2026-11-01 01:30:00.000 -04:00");
+        presentation.FormatTimestampWithOffset(later).Should().Be("2026-11-01 01:30:00.000 -05:00");
+        presentation.FormatUtcTimestamp(earlier).Should().Be("2026-11-01T05:30:00.0000000+00:00");
+        presentation.FormatUtcTimestamp(later.ToOffset(TimeSpan.FromHours(8))).Should().Be("2026-11-01T06:30:00.0000000+00:00");
+        presentation.FormatTimestampWithOffset(null).Should().Be("—");
+        presentation.FormatUtcTimestamp(null).Should().Be("—");
+    }
+
+    [Fact]
+    public void ExecutionDuration_WhenQueuedRetryRetainsPriorStart_ShouldRemainUnavailable()
+    {
+        var presentation = CreatePresentation(TimeZoneInfo.Utc);
+        var start = new DateTimeOffset(2026, 10, 11, 12, 0, 0, TimeSpan.Zero);
+        var execution = Execution(JobExecutionState.Queued, start, null);
+
+        SchedulerTimePresentation.GetExecutionDuration(execution, start.AddHours(1)).Should().BeNull();
+        presentation.FormatExecutionDuration(execution, start.AddHours(1)).Should().Be("—");
+    }
+
+    [Fact]
+    public void ExecutionDuration_WhenRunning_ShouldUseObservationAndOnlyRunningPrefix()
+    {
+        var presentation = CreatePresentation(TimeZoneInfo.Utc);
+        var start = new DateTimeOffset(2026, 10, 11, 12, 0, 0, TimeSpan.Zero);
+        var execution = Execution(JobExecutionState.Running, start, null);
+
+        SchedulerTimePresentation.GetExecutionDuration(execution, start.AddSeconds(3)).Should().Be(TimeSpan.FromSeconds(3));
+        presentation.FormatExecutionDuration(execution, start.AddSeconds(3)).Should().Contain("Common:RunningDuration");
+        SchedulerTimePresentation.GetExecutionDuration(execution, start.AddSeconds(-1)).Should().Be(TimeSpan.Zero);
+    }
+
+    [Theory]
+    [InlineData(JobExecutionState.Succeeded)]
+    [InlineData(JobExecutionState.Failed)]
+    [InlineData(JobExecutionState.Cancelled)]
+    public void ExecutionDuration_WhenTerminal_ShouldUseDurableCompletionRatherThanLaterObservation(JobExecutionState state)
+    {
+        var presentation = CreatePresentation(TimeZoneInfo.Utc);
+        var start = new DateTimeOffset(2026, 10, 11, 12, 0, 0, TimeSpan.Zero);
+        var execution = Execution(state, start, start.AddSeconds(4));
+
+        SchedulerTimePresentation.GetExecutionDuration(execution, start.AddHours(1)).Should().Be(TimeSpan.FromSeconds(4));
+        presentation.FormatExecutionDuration(execution, start.AddHours(1)).Should().NotContain("Common:RunningDuration");
+        SchedulerTimePresentation.GetExecutionDuration(execution with { CompletedAtUtc = start.AddSeconds(-1) }, start)
+            .Should().Be(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public void ExecutionDuration_WhenStartOrTerminalCompletionIsMissing_ShouldRemainUnavailable()
+    {
+        var now = new DateTimeOffset(2026, 10, 11, 12, 0, 0, TimeSpan.Zero);
+        SchedulerTimePresentation.GetExecutionDuration(Execution(JobExecutionState.Skipped, null, now), now)
+            .Should().BeNull();
+        SchedulerTimePresentation.GetExecutionDuration(Execution(JobExecutionState.Failed, now.AddSeconds(-1), null), now)
+            .Should().BeNull();
+        SchedulerTimePresentation.GetExecutionDuration(Execution(JobExecutionState.Running, null, null), now)
+            .Should().BeNull();
+    }
+
+    [Fact]
     public void SchedulerWallTime_ShouldRoundTripThroughConfiguredTimezone()
     {
         var presentation = CreatePresentation(CreateFixedTimeZone());
@@ -149,7 +216,7 @@ public sealed class SchedulerTimePresentationTests
         "Scheduler test time",
         "Scheduler test time");
 
-    private static TimeZoneInfo CreateDaylightSavingTimeZone()
+    internal static TimeZoneInfo CreateDaylightSavingTimeZone()
     {
         var daylightStart = TimeZoneInfo.TransitionTime.CreateFloatingDateRule(
             new DateTime(1, 1, 1, 2, 0, 0),
@@ -176,7 +243,7 @@ public sealed class SchedulerTimePresentationTests
             [adjustment]);
     }
 
-    private static TimeZoneInfo CreateMidnightTransitionTimeZone()
+    internal static TimeZoneInfo CreateMidnightTransitionTimeZone()
     {
         var daylightStart = TimeZoneInfo.TransitionTime.CreateFixedDateRule(
             new DateTime(1, 1, 1, 0, 0, 0),
@@ -200,4 +267,14 @@ public sealed class SchedulerTimePresentationTests
             "Scheduler midnight-transition daylight time",
             [adjustment]);
     }
+
+    private static JobExecutionInstance Execution(JobExecutionState state, DateTimeOffset? started, DateTimeOffset? completed) => new()
+    {
+        InstanceId = "duration-evidence",
+        Template = new()
+        {
+            SchedulerScopeKey = "duration-scope", OwnerKey = "owner", JobKey = "job", JobName = "Duration job"
+        },
+        State = state, StartedAtUtc = started, CompletedAtUtc = completed
+    };
 }

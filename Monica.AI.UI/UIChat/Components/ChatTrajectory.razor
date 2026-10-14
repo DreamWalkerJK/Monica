@@ -1,7 +1,7 @@
 @using Monica.AI.UI.UIChat.Support
 @implements IAsyncDisposable
 
-<div class="trajectory-workspace" @ref="_root">
+<div class="trajectory-workspace @(Selected is not null ? "has-selection" : null)" data-row-height="@LedgerRowHeight" style="--trajectory-row-height: @(LedgerRowHeight)px" @ref="_root">
     <div class="trajectory-toolbar">
         <MudTextField T="string" Value="@_query" ValueChanged="Search" Placeholder="@L["Workbench:SearchTrajectory"]" Immediate="true" DebounceInterval="180" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true" />
         <MudButton Size="Size.Small" OnClick="ToggleAll">@(_folded.Count > 0 ? L["Workbench:ExpandAll"] : L["Workbench:FoldAll"])</MudButton>
@@ -15,9 +15,11 @@
     </div>
     <div class="trajectory-body @(Selected is not null ? "has-selection" : null)">
         <div class="trajectory-evidence">
+            <details @key="Session.SessionId" class="timeline-disclosure" open="@_timelineInitiallyOpen">
+            <summary>@L["Workbench:TimelineElapsed"]</summary>
             <div class="timeline-toolbar">
                 <span class="timeline-heading">@L["Workbench:TimelineElapsed"]</span>
-                <span class="timeline-help">@L["Workbench:TimelineHelp"]</span>
+                <MudTooltip Text="@L["Workbench:TimelineHelp"]"><MudIconButton Icon="@Icons.Material.Outlined.HelpOutline" Size="Size.Small" aria-label="@L["Workbench:TimelineHelp"]" /></MudTooltip>
                 <div class="timeline-actions">
                     <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Pan(-.4)))" aria-label="@L["Workbench:PanEarlier"]" />
                     <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Pan(.4)))" aria-label="@L["Workbench:PanLater"]" />
@@ -36,7 +38,7 @@
                         @foreach (var mark in _marks)
                         {
                             var y = mark.Lane * 28 + 6;
-                            <g tabindex="0" role="button" aria-label="@TimelineLabel(mark)" class="timeline-mark role-@mark.First.RoleClass @(mark.Records.Any(record => record.Id == _selectedId) ? "selected" : null) @(mark.Records.Count > 1 ? "cluster" : null)"
+                            <g data-status="@mark.First.Step?.Status" tabindex="0" role="button" aria-label="@TimelineLabel(mark)" class="timeline-mark role-@mark.First.RoleClass @(mark.Records.Any(record => record.Id == _selectedId) ? "selected" : null) @(mark.Records.Count > 1 ? "cluster" : null)"
                                @onclick="@(() => SelectMarkAsync(mark))" @onkeydown="@(args => SelectMarkWithKeyboardAsync(args, mark))">
                                 @if (mark.IsEvent)
                                 {
@@ -55,15 +57,16 @@
                     </svg>
                 </div>
             </div>
-            <div class="trajectory-ledger" @ref="_ledgerRoot" aria-label="@L["Workbench:Trajectory"]">
+            </details>
+            <div class="trajectory-ledger" tabindex="-1" @ref="_ledgerRoot" aria-label="@L["Workbench:Trajectory"]">
                 @if (_rows.Count == 0)
                 {
                     <div class="trajectory-empty">@L[string.IsNullOrWhiteSpace(_query) ? "Workbench:EmptyTrajectory" : "Workbench:NoTrajectoryMatches"]</div>
                 }
-                <Virtualize Items="@_rows" Context="row" ItemSize="42" OverscanCount="8">
+                <Virtualize Items="@_rows" Context="row" ItemSize="@LedgerRowHeight" OverscanCount="8">
                     @if (row.Group is { } group)
                     {
-                        <button type="button" class="ledger-group" @onclick="@(() => ToggleTurn(group.Id))" aria-expanded="@(!_folded.Contains(group.Id) || !string.IsNullOrWhiteSpace(_query))">
+                        <button type="button" class="ledger-group" @onclick="@(() => ToggleTurn(group.Id))" aria-expanded="@(!_folded.Contains(group.Id) || !string.IsNullOrWhiteSpace(_query) ? "true" : "false")">
                             <MudIcon Icon="@(_folded.Contains(group.Id) && string.IsNullOrWhiteSpace(_query) ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" Size="Size.Small" />
                             <strong>@(group.TurnNumber is { } number ? L["Workbench:TrajectoryTurn", number] : L["Workbench:Compaction"])</strong>
                             <span>@L["Workbench:TrajectoryTurnCounts", group.ModelCalls, group.ToolCalls]</span>
@@ -71,7 +74,7 @@
                     }
                     else if (row.Record is { } record)
                     {
-                        <button type="button" @key="record.Id" data-record-id="@record.Id" data-role="@record.RoleClass"
+                        <button type="button" @key="record.Id" data-record-id="@record.Id" data-role="@record.RoleClass" data-status="@record.Step?.Status"
                                 class="ledger-row role-@record.RoleClass @(record.Id == _selectedId ? "selected" : null) @(record.IsFailure ? "failed" : null)" @onclick="@(() => SelectRecordAsync(record))">
                             <span class="record-role" title="@L[record.RoleKey]">@L[record.RoleKey]</span>
                             <span class="record-content">
@@ -87,7 +90,7 @@
                                 }
                             </span>
                             <span class="record-meta">
-                                @if (record.Step is { Status: not ChatExecutionStatus.Completed } step) { <span class="record-status">@ChatExecutionPresentation.Status(step.Status, L)</span> }
+                                @if (record.Step is { } step) { <span class="record-status">@ChatExecutionPresentation.Status(step.Status, L)</span> }
                                 @if (record.Step?.Duration is { } duration) { <time>@ChatExecutionPresentation.Duration(duration)</time> }
                             </span>
                         </button>
@@ -98,8 +101,8 @@
         @if (Selected is { } selected)
         {
             <aside class="trajectory-inspector">
-                <div class="inspector-navigation"><MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="ClearSelection">@L["Workbench:BackToLedger"]</MudButton></div>
-                <ChatExecutionInspector Step="@selected.Step" Message="@selected.Message" MessageHeading="@(selected.HeadingKey is { } heading ? L[heading].Value : L[selected.RoleKey].Value)" RecordedAt="@selected.StartedAt" SessionId="@Session.SessionId" />
+                <div class="inspector-navigation"><MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="ClearSelectionAsync">@L["Workbench:BackToLedger"]</MudButton></div>
+                <ChatExecutionInspector @key="selected.Id" Step="@selected.Step" Message="@selected.Message" MessageHeading="@(selected.HeadingKey is { } heading ? L[heading].Value : L[selected.RoleKey].Value)" RecordedAt="@selected.StartedAt" SessionId="@Session.SessionId" />
             </aside>
         }
     </div>

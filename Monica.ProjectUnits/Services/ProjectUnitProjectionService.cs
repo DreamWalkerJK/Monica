@@ -136,6 +136,7 @@ internal sealed class ProjectUnitProjectionService(
         return catalog.GetUnits<UnitDomainEvent>()
             .Select(unit => new ProjectUnitDomainEventInfo
             {
+                EventKey = unit.Key,
                 Info = CreateSummary(unit, dependedByCounts),
                 Structure = unit.GetStructure()
             })

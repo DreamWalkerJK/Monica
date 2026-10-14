@@ -6,7 +6,7 @@ namespace Monica.OpenTelemetry.InProcessCollector.Models;
 public sealed class HistogramBucketSnapshot
 {
     /// <summary>
-    /// Gets the inclusive lower bound of the bucket.
+    /// Gets the lower bound: inclusive for the first bucket and exclusive for subsequent buckets.
     /// </summary>
     public double LowerBound { get; init; }
 

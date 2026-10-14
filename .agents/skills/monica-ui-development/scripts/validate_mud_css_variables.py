@@ -252,7 +252,7 @@ def main() -> int:
     parser.add_argument(
         "--variables-file",
         type=str,
-        default=str(DEFAULT_VARIABLES_FILE),
+        default=str(DEFAULT_VARIABLES_FILE) if DEFAULT_VARIABLES_FILE else None,
         help="Path to generated MudBlazor CSS variables JSON file.",
     )
     parser.add_argument("--fix", action="store_true", help="Apply safe automatic replacements before validation.")
@@ -260,8 +260,11 @@ def main() -> int:
     parser.add_argument("--summary", action="store_true", help="Show summary only.")
     args = parser.parse_args()
 
+    if args.variables_file is None:
+        parser.error("No Monica repository default; pass --variables-file <catalog-path>.")
+
     root = Path(args.root).resolve()
-    variables_file = Path(args.variables_file).resolve()
+    variables_file = Path(args.variables_file).expanduser().resolve()
 
     if not root.exists():
         print(f"[ERROR] Root path does not exist: {root}", file=sys.stderr)

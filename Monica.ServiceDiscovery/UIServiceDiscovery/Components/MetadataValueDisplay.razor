@@ -8,7 +8,7 @@
 
 @if (urlItems.Any())
 {
-    <div class="d-flex flex-wrap align-center">
+    <div class="metadata-urls d-flex flex-wrap align-center">
         @if (IsCompactMode)
         {
             @if (shouldCollapse)
@@ -17,7 +17,7 @@
                 @for (int i = 0; i < visibleCount; i++)
                 {
                     var url = urlItems[i];
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
                         @GetDisplayText(url)
                         <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
                     </MudChip>
@@ -35,7 +35,7 @@
                         @for (int i = visibleCount; i < urlItems.Count; i++)
                         {
                             var url = urlItems[i];
-                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
                                 @GetDisplayText(url)
                                 <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
                             </MudChip>
@@ -48,7 +48,7 @@
                 @* Show all URLs *@
                 @foreach (var url in urlItems)
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
                         @GetDisplayText(url)
                         <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
                     </MudChip>
@@ -117,7 +117,7 @@ else
         {
             var uri = new Uri(url);
             // If the URL is too long, show a simplified host-and-port form.
-            if (url.Length > 50)
+            if (IsCompactMode && url.Length > 50)
             {
                 return $"{uri.Host}:{uri.Port}";
             }
@@ -132,6 +132,6 @@ else
     private async Task OpenUrl(string url)
     {
         // Open a new window via JavaScript.
-        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank", "noopener,noreferrer");
     }
 }

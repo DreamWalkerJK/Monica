@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using Monica.DevOps.Git.Abstractions;
 using Monica.DevOps.Git.Models;
 using Monica.Modules;
+using Monica.Tool.Extensions;
 
 namespace Monica.DevOps.Git.Services;
 
@@ -82,7 +83,7 @@ public sealed class GitCredentialManager(
                 ResolverId = x.ResolverId,
                 DisplayName = x.DisplayName,
                 Order = x.Order,
-                ImplementationType = x.GetType().FullName ?? x.GetType().Name
+                ImplementationType = x.GetType().GetCleanFullName()
             })
             .ToArray();
     }

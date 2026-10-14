@@ -1,0 +1,23 @@
+@using Monica.DevOps.Localization
+@using Monica.DevOps.Terminal.Models
+@inject IStringLocalizer<TerminalResource> L
+
+<div class="terminal-result">
+    <div class="terminal-result__identity"><span>@L["Labels:LatestResult"]</span><code title="@Result.Command">@Result.Command</code></div>
+    <div class="terminal-result__outcome"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@OutcomeColor" Class="@OutcomeClass">@Outcome</MudChip>
+        <span>@L["Labels:ExitCode"] <code>@Result.ExitCode</code></span><span>@L["Labels:Duration"] <code>@L["Labels:DurationValue", Result.Duration.TotalSeconds.ToString("0.00")]</code></span></div>
+    <MudButton @ref="_details" Size="Size.Small" Variant="Variant.Text" OnClick="DetailsAsync">@L["Actions:Details"]</MudButton>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TerminalCommandResultSnapshot Result { get; set; } = default!;
+    /// <summary>Requests result inspection and identifies its native opening control for focus restoration.</summary>
+    [Parameter] public EventCallback<MudButton> Details { get; set; }
+    private MudButton? _details;
+    internal bool IsDetailsOpener(MudButton opener) => ReferenceEquals(_details, opener);
+    private Color OutcomeColor => Result.TimedOut || Result.Canceled ? Color.Warning : Result.ExitCode == 0 ? Color.Success : Color.Error;
+    private string OutcomeClass => Result.TimedOut || Result.Canceled ? "terminal-result__status terminal-result__status--warning" :
+        Result.ExitCode == 0 ? "terminal-result__status terminal-result__status--success" : "terminal-result__status terminal-result__status--error";
+    private string Outcome => Result.TimedOut ? L["States:TimedOut"] : Result.Canceled ? L["States:Canceled"] : Result.ExitCode == 0 ? L["States:Completed"] : L["States:Exited", Result.ExitCode];
+    private Task DetailsAsync() => _details is null ? Task.CompletedTask : Details.InvokeAsync(_details);
+}

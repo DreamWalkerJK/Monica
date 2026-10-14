@@ -1,738 +1,551 @@
 /**
- * Project unit architecture visualization chart
- * Use modular D3.js components
- * 
- * @module projectUnitGraph
+ * One component-owned architecture graph. Data identities and links come from the
+ * real Project Units catalog; camera, observers, and callbacks share this lifetime.
  */
-
-// Import common D3.js modules
-import { GraphBase, getModernLinkStyle, getModernNodeStyle } from '../../Monica.UI/js/d3js/d3-graph-base.js';
+import { GraphBase } from '../../Monica.UI/js/d3js/d3-graph-base.js';
 import { ForceLayoutManager } from '../../Monica.UI/js/d3js/d3-force-layout.js';
-import { NodeInteractionHandler, createStaticDragBehavior } from '../../Monica.UI/js/d3js/d3-node-interaction.js';
+import { createStaticDragBehavior } from '../../Monica.UI/js/d3js/d3-node-interaction.js';
 import { createLayoutAlgorithms } from '../../Monica.UI/js/d3js/d3-layout-algorithms.js';
-
-// Import project unit-specific modules
 import { createProjectUnitCardRenderer } from './projectUnitCardRenderer.js';
 
-// ==================== Configuration ====================
+const ROLE_COLORS = Object.fromEntries(
+    ['primary', 'secondary', 'tertiary', 'info', 'success', 'warning', 'error', 'dark']
+        .map(role => [role, 'var(--mud-palette-' + role + ')']));
+ROLE_COLORS.default = 'var(--mud-palette-text-secondary)';
+const MUTED_INK = 'var(--project-units-muted-ink, color-mix(in srgb, var(--mud-palette-text-secondary) 85%, var(--mud-palette-text-primary)))';
+const LINK_INK = 'color-mix(in srgb, var(--mud-palette-text-secondary) 70%, var(--mud-palette-text-primary))';
 
-// Node configuration is now provided by the C# layer and is no longer hardcoded in the JS layer
-
-/**
- * Node size configuration
- */
-const NODE_SIZE = {
-    circle: { 
-        radius: 32,
-        textOffset: 45  // 文字在圆形下方的偏移距离
-    },
-    // Complex node sizes are now dynamically calculated by the card renderer
-    complex: {
-        minWidth: 200,
-        maxWidth: 500
-    }
-};
-
-/**
- * layout type
- */
-const LAYOUT_TYPES = {
-    FORCE: 'force',
-    HIERARCHY: 'hierarchy',
-    CIRCULAR: 'circular',
-    MULTI_CIRCULAR: 'multi_circular'
-};
-
-const DEFAULT_ARROW_SIZE = 12;
-
-const ROLE_COLOR_MAP = {
-    primary: 'var(--mud-palette-primary)',
-    secondary: 'var(--mud-palette-secondary)',
-    tertiary: 'var(--mud-palette-tertiary)',
-    info: 'var(--mud-palette-info)',
-    success: 'var(--mud-palette-success)',
-    warning: 'var(--mud-palette-warning)',
-    error: 'var(--mud-palette-error)',
-    dark: 'var(--mud-palette-dark)',
-    default: 'var(--mud-palette-text-secondary)'
-};
-
-const ALERT_GLOW_COLOR_MAP = {
-    error: 'var(--mud-palette-error)',
-    warning: 'var(--mud-palette-warning)',
-    info: 'var(--mud-palette-info)'
-};
-
-function resolveRoleColor(role, fallback = ROLE_COLOR_MAP.default) {
-    return ROLE_COLOR_MAP[role] || fallback;
-}
-
-// ==================== Main class ====================
-
-/**
- * Project unit chart class
- */
 class ProjectUnitGraph {
-    constructor(containerId, isDarkMode, dotNetRef) {
+    constructor(containerId, fallbackDarkMode, dotNetRef) {
         this.containerId = containerId;
-        this.isDarkMode = isDarkMode;
         this.dotNetRef = dotNetRef;
         this.pendingCallbacks = new Set();
-        this.currentLayout = LAYOUT_TYPES.FORCE;
         this.nodes = [];
         this.links = [];
-        
-        // Initialize base graphics
+        this.currentLayout = 'force';
+        this.forceDistance = 500;
+        this.forceStrength = -300;
+        this.selectedId = null;
+        this.disposed = false;
+        this.isDarkMode = fallbackDarkMode;
+        this.frame = null;
+        this.autoFitPending = false;
+        this.motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        this.reducedMotion = this.motion.matches;
         this.graphBase = new GraphBase(containerId, {
-            isDarkMode,
+            isDarkMode: this.readDarkMode(),
             showArrows: true,
-            arrowSize: DEFAULT_ARROW_SIZE,
-            onBackgroundClick: () => this.handleBackgroundClick()
+            arrowSize: 9,
+            scaleExtent: [0.002, 4],
+            onBackgroundClick: () => this.invokeDotNet('OnSvgBackgroundClick'),
+            onZoom: event => this.handleZoom(event)
         });
-        
-        // Initialize force-directed layout manager
-        this.forceManager = new ForceLayoutManager(
-            this.graphBase.width,
-            this.graphBase.height,
-            {
-                linkDistance: 150,
-                chargeStrength: -300,
-                keepFixed: false // 默认不保持固定，支持双击释放
+        this.container = this.graphBase.container;
+        this.isDarkMode = this.readDarkMode();
+        this.forceManager = new ForceLayoutManager(this.graphBase.width, this.graphBase.height, {
+            linkDistance: this.forceDistance, chargeStrength: this.forceStrength, keepFixed: false,
+            onDragEnd: () => {
+                if (!this.disposed && this.reducedMotion) this.settleForce();
             }
-        );
-        
-        // Initialize interaction handler
-        this.interactionHandler = new NodeInteractionHandler({
-            onClick: (event, d) => this.handleNodeClick(d),
-            onRightClick: (event, d, position) => this.handleNodeRightClick(d, position),
-            onDoubleClick: (event, d) => this.handleNodeDoubleClick(d),
-            highlightOptions: {
-                fadeOpacity: 0.2,
-                normalOpacity: 1
-            },
-            isDarkMode: isDarkMode,
-            markerIds: this.graphBase.markerIds // 传递marker IDs
         });
-        
-        // Initializing project unit card renderer - passing size configuration
-        this.cardRenderer = createProjectUnitCardRenderer(isDarkMode, NODE_SIZE.complex);
-        
-        // Get modern node styles
-        this.nodeStyle = getModernNodeStyle(isDarkMode, 'simple');
-        
-        // Initialize layout algorithm manager
-        this.layoutAlgorithms = createLayoutAlgorithms(
-            this.graphBase.width,
-            this.graphBase.height
-        );
-        
-        // Static layout dragging behavior
-        this.staticDragBehavior = null;
+        this.layoutAlgorithms = createLayoutAlgorithms(this.graphBase.width, this.graphBase.height);
+        this.cardRenderer = createProjectUnitCardRenderer(this.isDarkMode, { minWidth: 220, maxWidth: 360 });
+        this.graphBase.svg.attr('aria-hidden', 'true');
+        this.graphBase.zoom.on('start.project-unit-owner', event => {
+            if (event.sourceEvent) this.cancelPendingFit();
+        });
+        this.applyTypography();
+        this.installObservers();
     }
-    
-    /**
-     * Update chart data
-     */
-    updateGraph(data) {
-        this.nodes = data.nodes;
+
+    readDarkMode() {
+        const container = document.getElementById(this.containerId);
+        const theme = container?.closest('[data-theme]')?.getAttribute('data-theme')
+            || document.documentElement.getAttribute('data-theme');
+        return theme ? theme.endsWith('-dark') : Boolean(this.isDarkMode);
+    }
+
+    installObservers() {
+        this.resizeObserver = new ResizeObserver(() => this.scheduleMeasure());
+        this.resizeObserver.observe(this.container);
+        this.themeObserver = new MutationObserver(() => this.scheduleMeasure(true));
+        this.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        const owner = this.container.closest('[data-theme]');
+        if (owner && owner !== document.documentElement) {
+            this.themeObserver.observe(owner, { attributes: true, attributeFilter: ['data-theme'] });
+        }
+        this.onMotionChange = event => {
+            if (this.disposed) return;
+            this.reducedMotion = event.matches;
+            this.cancelPendingFit();
+            this.interruptTransitions();
+            if (this.currentLayout === 'force' && this.nodes.length) this.settleForce();
+            else this.renderPositions();
+        };
+        this.motion.addEventListener('change', this.onMotionChange);
+        this.onFontsReady = () => this.scheduleMeasure(true);
+        document.fonts?.addEventListener('loadingdone', this.onFontsReady);
+        document.fonts?.ready.then(() => {
+            if (!this.disposed) this.scheduleMeasure(true);
+        }).catch(() => {});
+        this.removalObserver = new MutationObserver(() => {
+            if (!this.container.isConnected) {
+                this.dispose().catch(error => console.error('Project unit graph resource shutdown failed.', error));
+            }
+        });
+        this.removalObserver.observe(document.body, { childList: true, subtree: true });
+        this.scheduleMeasure();
+    }
+
+    scheduleMeasure(paint = false) {
+        if (this.disposed) return;
+        this.paintPending ||= paint;
+        if (this.frame !== null) return;
+        this.frame = requestAnimationFrame(() => {
+            this.frame = null;
+            if (this.disposed || !this.container.isConnected) return;
+            const width = this.container.clientWidth;
+            const height = this.container.clientHeight;
+            if (width > 0 && height > 0) {
+                const changed = width !== this.graphBase.width || height !== this.graphBase.height;
+                this.graphBase.width = width;
+                this.graphBase.height = height;
+                this.graphBase.svg.attr('width', width).attr('height', height).attr('viewBox', [0, 0, width, height]);
+                this.layoutAlgorithms.updateDimensions(width, height);
+                this.forceManager.width = width;
+                this.forceManager.height = height;
+                this.forceManager.config.centerX = width / 2;
+                this.forceManager.config.centerY = height / 2;
+                this.forceManager.simulation.force('center').x(width / 2).y(height / 2);
+                if (changed && this.autoFitPending && this.nodes.length) this.fitView(false);
+            }
+            if (this.paintPending) {
+                this.paintPending = false;
+                this.isDarkMode = this.readDarkMode();
+                this.cardRenderer.updateTheme(this.isDarkMode);
+                this.applyTypography();
+                this.drawNodes();
+                this.renderPositions();
+                this.restoreHighlight();
+            }
+        });
+    }
+
+    applyTypography() {
+        const family = getComputedStyle(this.graphBase.container).fontFamily;
+        this.cardRenderer.setFontFamily(family);
+        this.graphBase.svg.style('font-family', family);
+    }
+
+    updateGraph(data, options = {}) {
+        if (this.disposed) return;
+        this.cancelPendingFit();
+        this.interruptTransitions();
+        this.forceManager.stop();
+        const previous = new Map(this.nodes.map(node => [node.id, node]));
+        this.nodes = data.nodes.map(node => {
+            const old = previous.get(node.id);
+            if (old) for (const name of ['x', 'y', 'vx', 'vy', 'fx', 'fy']) node[name] = old[name];
+            return node;
+        });
         this.links = data.links;
-        
-        // Clear existing content
-        this.graphBase.mainGroup.selectAll('.links').remove();
-        this.graphBase.mainGroup.selectAll('.nodes').remove();
-        
-        // Create a connection line group
-        const linkGroup = this.graphBase.mainGroup.append('g')
-            .attr('class', 'links');
-        
-        // Create node group
-        const nodeGroup = this.graphBase.mainGroup.append('g')
-            .attr('class', 'nodes');
-        
-        // Draw modern connecting lines - using the MudBlazor color system and rounded styles
-        const linkStyle = getModernLinkStyle(this.isDarkMode, false, this.graphBase.markerIds);
-        this.linkSelection = linkGroup.selectAll('path')
-            .data(this.links)
-            .enter().append('path')
-            .attr('class', 'link modern-link')
-            .attr('stroke', linkStyle.stroke)
-            .attr('stroke-opacity', linkStyle.strokeOpacity)
-            .attr('stroke-width', linkStyle.strokeWidth)
-            .attr('stroke-linecap', linkStyle.strokeLinecap)
-            .attr('stroke-linejoin', linkStyle.strokeLinejoin)
-            .attr('fill', 'none')
-            .attr('marker-end', linkStyle.markerEnd)
-            .style('filter', linkStyle.filter)
-            .style('pointer-events', 'none'); // 现代化过渡动画
-        
-        // Create node
-        this.nodeSelection = nodeGroup.selectAll('g')
-            .data(this.nodes)
-            .enter().append('g')
-            .attr('class', 'node');
-        
-        // Draw node graph
-        this.nodeSelection.each((d, i, nodes) => {
-            const nodeElement = d3.select(nodes[i]);
-            this.drawNode(nodeElement, d);
-        });
-        
-        // Bind interaction events
-        this.interactionHandler.bindNodeEvents(this.nodeSelection, {
-            nodes: this.nodes,
-            links: this.links,
-            linkSelection: this.linkSelection
-        });
-        
-        // Add tooltip
-        this.nodeSelection.append('title')
-            .text(d => d.tooltip || d.title);
-        
-        // Apply current layout
+        this.currentLayout = options.layout || this.currentLayout;
+        this.forceDistance = options.forceDistance ?? this.forceDistance;
+        this.forceStrength = options.forceStrength ?? this.forceStrength;
+        this.selectedId = options.selectedId ?? null;
+        this.graphBase.mainGroup.selectAll('.links, .nodes').remove();
+        this.linkSelection = this.graphBase.mainGroup.append('g').attr('class', 'links').selectAll('path')
+            .data(this.links).join('path').attr('class', 'link modern-link')
+            .attr('data-source-id', link => link.source).attr('data-target-id', link => link.target)
+            .attr('stroke', LINK_INK).attr('stroke-width', 0.8).attr('stroke-opacity', 1)
+            .attr('vector-effect', 'non-scaling-stroke')
+            .attr('fill', 'none').attr('marker-end', 'url(#' + this.graphBase.markerIds.markerId + ')')
+            .style('pointer-events', 'none');
+        this.nodeSelection = this.graphBase.mainGroup.append('g').attr('class', 'nodes').selectAll('g')
+            .data(this.nodes, node => node.id).join('g').attr('class', 'node')
+            .attr('data-node-id', node => node.id).style('cursor', 'pointer');
+        // Large catalogs start with an overview; no identities or edges are discarded.
+        this.drawNodes(this.nodes.length < 25 ? 1 : 0.14);
+        this.bindNodeEvents();
+        this.autoFitPending = this.nodes.length > 0;
         this.applyLayout(this.currentLayout);
     }
-    
-    /**
-     * draw node
-     */
-    drawNode(nodeElement, nodeData) {
-        // Add alarm level attribute
-        nodeElement.attr('data-alert-level', nodeData.alertLevel || 'none');
-        
-        // Determine node type using configuration from C# layer
-        if (nodeData.isComplex) {
-            this.drawComplexNode(nodeElement, nodeData);
-        } else {
-            this.drawSimpleNode(nodeElement, nodeData);
-        }
-        
-        // Add alert visual effects
-        this.addAlertEffects(nodeElement, nodeData);
+
+    drawNodes(scale = d3.zoomTransform(this.graphBase.svg.node()).k) {
+        if (this.disposed || !this.nodeSelection) return;
+        const detail = scale >= 0.55 && this.nodes.length <= 80 || scale >= 0.85 || this.nodes.length < 25;
+        this.detail = detail;
+        this.labelsVisible = detail || scale >= 0.14;
+        this.nodeSelection.each((node, index, elements) => {
+            const element = d3.select(elements[index]);
+            element.selectAll('*').remove();
+            element.attr('data-alert-level', node.alertLevel || 'none')
+                .attr('data-selected', node.id === this.selectedId ? 'true' : 'false')
+                .attr('data-detail', detail ? 'full' : 'overview');
+            if (detail && node.isComplex) {
+                this.cardRenderer.drawCard(element, node);
+            } else {
+                const role = ROLE_COLORS[node.colorRole] || ROLE_COLORS.default;
+                const shape = node.isComplex
+                    ? element.append('rect').attr('class', 'node-core').attr('x', -25).attr('y', -17).attr('width', 50).attr('height', 34).attr('rx', 5)
+                    : element.append('circle').attr('class', 'node-core').attr('r', detail ? 25 : 16);
+                shape.attr('fill', 'color-mix(in srgb, ' + role + (detail ? ' 12%' : ' 32%') + ', var(--mud-palette-surface))')
+                    .attr('stroke', 'color-mix(in srgb, ' + role + ' 40%, var(--mud-palette-text-primary))')
+                    .attr('vector-effect', detail ? null : 'non-scaling-stroke')
+                    .attr('stroke-width', node.id === this.selectedId ? detail ? 3 : 2 : detail ? 1.8 : 1);
+                node._cardSize = node.isComplex ? { width: 50, height: 34 } : null;
+                if (detail || scale >= 0.14) {
+                    element.append('text').attr('class', 'node-title').attr('y', node.isComplex ? 34 : detail ? 43 : 33)
+                        .attr('text-anchor', 'middle').attr('fill', 'var(--mud-palette-text-primary)')
+                        .style('font-size', '12px').style('font-weight', '500').style('pointer-events', 'none').text(node.title);
+                    if (detail && node.summary) {
+                        element.append('text').attr('y', 61).attr('text-anchor', 'middle').attr('fill', MUTED_INK)
+                            .style('font-size', '11px').style('pointer-events', 'none').text(node.summary);
+                    }
+                }
+            }
+            if (node.alertLevel) {
+                const size = node._cardSize;
+                element.append('circle').attr('class', 'node-alert')
+                    .attr('cx', size ? size.width / 2 : detail ? 22 : 14)
+                    .attr('cy', size ? -size.height / 2 : detail ? -22 : -14).attr('r', 4)
+                    .attr('fill', ROLE_COLORS[node.alertLevel] || ROLE_COLORS.info)
+                    .attr('stroke', 'var(--mud-palette-surface)').attr('stroke-width', 1.5);
+            }
+            element.append('title').text(node.tooltip || node.title);
+        });
+        this.updateOverviewGeometry(scale);
+        this.updateCollisionRadius();
     }
-    
-    /**
-     * Draw complex nodes (card style)
-     */
-    drawComplexNode(nodeElement, nodeData) {
-        // Draw using card renderer
-        this.cardRenderer.drawCard(nodeElement, nodeData);
+
+    updateOverviewGeometry(scale) {
+        const cameraScale = Math.max(0.002, scale);
+        this.overviewScale = cameraScale;
+        const markerSize = this.detail ? 9 : Math.max(9, 3.5 / cameraScale);
+        this.graphBase.svg.selectAll('defs marker').attr('markerWidth', markerSize).attr('markerHeight', markerSize);
+        if (this.detail || !this.nodeSelection) return;
+        // Preserve the complete atlas and its class shapes at fitted device scale.
+        this.nodeSelection.each((node, index, elements) => {
+            const element = d3.select(elements[index]);
+            const halfWidth = Math.max(25, 3 / cameraScale);
+            const halfHeight = Math.max(17, 2 / cameraScale);
+            const radius = Math.max(16, 2.5 / cameraScale);
+            node._overviewRadius = radius;
+            if (node.isComplex) {
+                element.select('.node-core').attr('x', -halfWidth).attr('y', -halfHeight)
+                    .attr('width', halfWidth * 2).attr('height', halfHeight * 2);
+                node._cardSize = { width: halfWidth * 2, height: halfHeight * 2 };
+            } else element.select('.node-core').attr('r', radius);
+            element.select('.node-alert').attr('cx', node.isComplex ? halfWidth : radius * 0.875)
+                .attr('cy', node.isComplex ? -halfHeight : -radius * 0.875)
+                .attr('r', Math.max(4, 1.5 / cameraScale)).attr('vector-effect', 'non-scaling-stroke');
+        });
     }
-    
-    /**
-     * Draw a simple node (circle, text below)
-     */
-    drawSimpleNode(nodeElement, nodeData) {
-        const { radius, textOffset } = NODE_SIZE.circle;
-        const color = resolveRoleColor(nodeData.colorRole);
-        
-        // Draw a circle
-        nodeElement.append('circle')
-            .attr('class', 'node-circle')
-            .attr('r', radius)
-            .attr('fill', color)
-            .attr('stroke', this.nodeStyle.strokeColor)
-            .attr('stroke-width', this.nodeStyle.strokeWidth)
-            .attr('opacity', 1)
-            .style('filter', this.nodeStyle.filter)
-            .style('cursor', 'pointer');
-        
-        // Draw text below circle - no truncation, full display
-        nodeElement.append('text')
-            .attr('y', textOffset)
-            .attr('text-anchor', 'middle')
-            .attr('fill', this.nodeStyle.textColor)
-            .style('font-size', '13px')
-            .style('font-weight', '500')
-            .style('pointer-events', 'none')
-            .text(nodeData.title);
-        
-        if (nodeData.summary) {
-            nodeElement.append('text')
-                .attr('y', textOffset + 16)
-                .attr('text-anchor', 'middle')
-                .attr('fill', this.nodeStyle.textColor)
-                .style('font-size', '11px')
-                .style('opacity', 0.7)
-                .style('pointer-events', 'none')
-                .text(nodeData.summary);
-        }
+
+    bindNodeEvents() {
+        this.nodeSelection.on('click', (event, node) => {
+            event.stopPropagation();
+            if (this.disposed) return;
+            if (event.detail === 2 && this.currentLayout === 'force') {
+                node.fx = null;
+                node.fy = null;
+                if (this.reducedMotion) this.settleForce();
+                else this.forceManager.simulation.alpha(0.3).restart();
+                return;
+            }
+            this.selectNode(node.id);
+            this.invokeDotNet('OnNodeClick', node.id);
+        }).on('contextmenu', (event, node) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (this.disposed) return;
+            this.selectNode(node.id);
+            this.invokeDotNet('OnNodeRightClick', node.id, event.clientX, event.clientY);
+        }).on('mouseenter', (event, node) => {
+            if (!this.disposed) this.highlightNode(node.id);
+        }).on('mouseleave', () => {
+            if (!this.disposed) this.restoreHighlight();
+        });
     }
-    
-    /**
-     * Add alert visual effects
-     */
-    addAlertEffects(nodeElement, nodeData) {
-        if (!nodeData.alertLevel || nodeData.alertLevel === 'none') {
+
+    applyLayout(layout) {
+        if (this.disposed || !this.nodeSelection) return;
+        this.currentLayout = layout;
+        this.nodeSelection.on('.drag', null);
+        if (layout === 'force') {
+            this.forceManager.releaseAllFixed(this.nodes);
+            this.forceManager.setData(this.nodes, this.links);
+            this.forceManager.simulation.force('link').distance(this.forceDistance);
+            this.forceManager.simulation.force('charge').strength(this.forceStrength);
+            this.updateCollisionRadius();
+            this.nodeSelection.call(this.guardDragBehavior(this.forceManager.getDragBehavior()));
+            if (this.reducedMotion) {
+                this.settleForce();
+                if (this.autoFitPending) this.fitView(false);
+            } else {
+                this.forceManager.start(() => this.renderPositions());
+                this.forceManager.simulation.tick(60);
+                this.renderPositions();
+                if (this.autoFitPending) this.fitView(false, true);
+                this.forceManager.simulation.on('end.project-unit-fit', () => {
+                    if (!this.disposed && this.autoFitPending) this.fitView(false);
+                });
+            }
             return;
         }
-        
-        // Add an alarm glowing effect to the node
-        const alertId = `alert-${nodeData.id || Math.random().toString(36).substr(2, 9)}`;
-        
-        // Create an alert filter
-        const defs = this.graphBase.svg.select('defs').empty() 
-            ? this.graphBase.svg.append('defs') 
-            : this.graphBase.svg.select('defs');
-        
-        // Remove old alert filter (if present)
-        defs.select(`#${alertId}`).remove();
-        
-        const filter = defs.append('filter')
-            .attr('id', alertId)
-            .attr('x', '-100%')
-            .attr('y', '-100%')
-            .attr('width', '300%')
-            .attr('height', '300%');
-        
-        // Set different lighting effects according to alarm levels
-        let glowColor, glowStdDeviation, animationClass;
-        
-        switch (nodeData.alertLevel) {
-            case 'error':
-                glowColor = ALERT_GLOW_COLOR_MAP.error;
-                glowStdDeviation = 8;
-                animationClass = 'alert-glow-error';
-                break;
-            case 'warning':
-                glowColor = ALERT_GLOW_COLOR_MAP.warning;
-                glowStdDeviation = 6;
-                animationClass = 'alert-glow-warning';
-                break;
-            case 'info':
-                glowColor = ALERT_GLOW_COLOR_MAP.info;
-                glowStdDeviation = 4;
-                animationClass = 'alert-glow-info';
-                break;
-            default:
-                return;
-        }
-        
-        // Add Gaussian Blur
-        const gaussianBlur = filter.append('feGaussianBlur')
-            .attr('stdDeviation', glowStdDeviation)
-            .attr('result', 'coloredBlur');
-        
-        // Add glow color
-        filter.append('feFlood')
-            .attr('flood-color', glowColor)
-            .attr('flood-opacity', 0.6)
-            .attr('result', 'glowColor');
-        
-        filter.append('feComposite')
-            .attr('in', 'glowColor')
-            .attr('in2', 'coloredBlur')
-            .attr('operator', 'in')
-            .attr('result', 'softGlow');
-        
-        // Merge original image and glow
-        const merge = filter.append('feMerge');
-        merge.append('feMergeNode')
-            .attr('in', 'softGlow');
-        merge.append('feMergeNode')
-            .attr('in', 'SourceGraphic');
-        
-        // Apply a filter to the main element of the node
-        const mainElement = nodeData.isComplex 
-            ? nodeElement.select('.card-background')
-            : nodeElement.select('.node-circle');
-            
-        if (!mainElement.empty()) {
-            mainElement.style('filter', `url(#${alertId})`);
-            
-            // Add flash animation for warning and error levels
-            if (nodeData.alertLevel === 'warning' || nodeData.alertLevel === 'error') {
-                this.addPulseAnimation(gaussianBlur, nodeData.alertLevel);
-            }
-        }
-    }
-    
-    /**
-     * Add pulse animation
-     */
-    addPulseAnimation(element, alertLevel) {
-        const duration = alertLevel === 'error' ? 800 : 1200; // error闪烁更快
-        const minStd = alertLevel === 'error' ? 6 : 4;
-        const maxStd = alertLevel === 'error' ? 12 : 8;
-        
-        // Create animation
-        const animate = () => {
-            element
-                .transition()
-                .duration(duration / 2)
-                .attr('stdDeviation', maxStd)
-                .transition()
-                .duration(duration / 2)
-                .attr('stdDeviation', minStd)
-                .on('end', animate);
-        };
-        
-        animate();
-    }
-
-    buildLinkPath(source, target) {
-        if (!source || !target) {
-            return '';
-        }
-
-        const dx = target.x - source.x;
-        const dy = target.y - source.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance === 0) {
-            return '';
-        }
-
-        const normX = dx / distance;
-        const normY = dy / distance;
-        const arrowOffset = this.getTargetArrowOffset(target, dx, dy);
-        const endX = target.x - normX * arrowOffset;
-        const endY = target.y - normY * arrowOffset;
-
-        return `M${source.x},${source.y} L${endX},${endY}`;
-    }
-
-    getTargetArrowOffset(targetNode, dx, dy) {
-        if (!targetNode?.isComplex || !targetNode._cardSize) {
-            return NODE_SIZE.circle.radius + this.graphBase.arrowSize;
-        }
-
-        const halfWidth = targetNode._cardSize.width / 2;
-        const halfHeight = targetNode._cardSize.height / 2;
-        const angle = Math.atan2(dy, dx);
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        let t = Infinity;
-
-        if (Math.abs(cos) > 0.001) {
-            const signX = cos > 0 ? 1 : -1;
-            const tVertical = (signX * halfWidth) / cos;
-            if (Math.abs(tVertical * sin) <= halfHeight) {
-                t = Math.min(t, Math.abs(tVertical));
-            }
-        }
-
-        if (Math.abs(sin) > 0.001) {
-            const signY = sin > 0 ? 1 : -1;
-            const tHorizontal = (signY * halfHeight) / sin;
-            if (Math.abs(tHorizontal * cos) <= halfWidth) {
-                t = Math.min(t, Math.abs(tHorizontal));
-            }
-        }
-
-        const arrowOffset = t + this.graphBase.arrowSize;
-        if (!isFinite(arrowOffset) || arrowOffset > 200) {
-            return halfWidth + halfHeight + this.graphBase.arrowSize;
-        }
-
-        return arrowOffset;
-    }
-
-    findNodeByLinkRef(linkNode) {
-        const nodeId = linkNode?.id || linkNode;
-        return this.nodes.find(node => node.id === nodeId);
-    }
-    
-    /**
-     * Apply layout
-     */
-    applyLayout(layoutType) {
-        this.currentLayout = layoutType;
-        
-        // Remove previous dragging behavior
-        this.nodeSelection.on('.drag', null);
-        
-        switch (layoutType) {
-            case LAYOUT_TYPES.FORCE:
-                this.applyForceLayout();
-                break;
-            case LAYOUT_TYPES.HIERARCHY:
-                this.applyHierarchyLayout();
-                break;
-            case LAYOUT_TYPES.CIRCULAR:
-                this.applyCircularLayout();
-                break;
-            case LAYOUT_TYPES.MULTI_CIRCULAR:
-                this.applyMultiCircularLayout();
-                break;
-        }
-    }
-    
-    /**
-     * Apply force-directed layout
-     */
-    applyForceLayout() {
-        // Release all pinned nodes
-        this.forceManager.releaseAllFixed(this.nodes);
-        
-        // Set data
-        this.forceManager.setData(this.nodes, this.links);
-        
-        // Apply drag behavior
-        this.nodeSelection.call(this.forceManager.getDragBehavior());
-        
-        // Start simulation
-        this.forceManager.start(() => {
-            this.linkSelection
-                .attr('d', d => this.buildLinkPath(d.source, d.target));
-            
-            this.nodeSelection
-                .attr('transform', d => `translate(${d.x},${d.y})`);
-        });
-    }
-    
-    /**
-     * Apply hierarchical layout
-     */
-    applyHierarchyLayout() {
         this.forceManager.stop();
-        
-        // Compute hierarchical layout
-        this.calculateHierarchyLayout();
-        
-        // Apply static drag
-        this.applyStaticDrag();
-        
-        // Update location
-        this.updateStaticPositions();
-    }
-    
-    /**
-     * Apply ring layout
-     */
-    applyCircularLayout() {
-        this.forceManager.stop();
-        
-        // Calculate ring layout
-        this.calculateCircularLayout();
-        
-        // Apply static drag
-        this.applyStaticDrag();
-        
-        // Update location
-        this.updateStaticPositions();
-    }
-    
-    /**
-     * Compute hierarchical layout - using a common layout algorithm
-     */
-    calculateHierarchyLayout() {
-        this.layoutAlgorithms.hierarchicalLayout(this.nodes, this.links);
-    }
-    
-    /**
-     * Calculate ring layout - using universal layout algorithm
-     */
-    calculateCircularLayout() {
-        const complexNodeCount = this.nodes.filter(n => n.isComplex).length;
-        this.layoutAlgorithms.circularLayout(this.nodes, {
-            avgNodeSize: 60,
-            complexNodeCount: complexNodeCount
+        if (layout === 'hierarchy') this.layoutAlgorithms.hierarchicalLayout(this.nodes, this.links);
+        else if (layout === 'circular') this.layoutAlgorithms.circularLayout(this.nodes, {
+            avgNodeSize: this.detail ? 100 : 45, complexNodeCount: this.nodes.filter(node => node.isComplex).length
         });
+        else this.layoutAlgorithms.multiCircularLayout(this.nodes, { nodesPerRing: 15 });
+        this.nodeSelection.call(this.guardDragBehavior(createStaticDragBehavior({ updateLinks: () => this.renderLinks() })));
+        this.renderPositions();
+        if (this.autoFitPending) this.fitView(false);
     }
-    
-    /**
-     * Calculate multi-level ring layout - using universal layout algorithm
-     */
-    calculateMultiCircularLayout() {
-        this.layoutAlgorithms.multiCircularLayout(this.nodes, {
-            nodesPerRing: 15
-        });
-    }
-    
-    /**
-     * Apply a multi-layered ring layout
-     */
-    applyMultiCircularLayout() {
-        this.forceManager.stop();
-        
-        // Compute multi-level ring layout
-        this.calculateMultiCircularLayout();
-        
-        // Apply static drag
-        this.applyStaticDrag();
-        
-        // Update location
-        this.updateStaticPositions();
-    }
-    
-    /**
-     * Apply static drag
-     */
-    applyStaticDrag() {
-        const self = this;
-        
-        this.staticDragBehavior = createStaticDragBehavior({
-            updateLinks: (draggedNode) => {
-                // Live update of connecting lines - use path's d attribute instead of x1,y1,x2,y2
-                self.linkSelection
-                    .attr('d', d => {
-                        const sourceId = d.source.id || d.source;
-                        const targetId = d.target.id || d.target;
-                        
-                        const source = sourceId === draggedNode.id ? draggedNode : 
-                                       self.findNodeByLinkRef(sourceId);
-                        const target = targetId === draggedNode.id ? draggedNode : 
-                                       self.findNodeByLinkRef(targetId);
 
-                        return self.buildLinkPath(source, target);
-                    });
-            }
+    updateCollisionRadius() {
+        this.forceManager?.simulation?.force('collision')?.radius(node => {
+            if (this.detail && node._cardSize) return Math.hypot(node._cardSize.width, node._cardSize.height) / 2 + 12;
+            return this.detail ? 42 : 26;
         });
-        
-        this.nodeSelection.call(this.staticDragBehavior);
     }
-    
-    /**
-     * Update static location
-     */
-    updateStaticPositions() {
-        this.nodeSelection
-            .transition()
-            .duration(750)
-            .attr('transform', d => `translate(${d.x},${d.y})`);
-        
-        this.linkSelection
-            .transition()
-            .duration(750)
-            .attr('d', d => {
-                const source = this.findNodeByLinkRef(d.source);
-                const target = this.findNodeByLinkRef(d.target);
 
-                return this.buildLinkPath(source, target);
+    guardDragBehavior(behavior) {
+        const owner = this;
+        for (const name of ['start', 'drag', 'end']) {
+            const handler = behavior.on(name);
+            if (handler) behavior.on(name, function (event, node) {
+                if (!owner.disposed) return handler.call(this, event, node);
             });
+        }
+        return behavior;
     }
-    
-    /**
-     * Set layout
-     */
-    setLayout(layoutType) {
-        this.applyLayout(layoutType);
+
+    settleForce() {
+        if (this.disposed || !this.forceManager.simulation) return;
+        this.forceManager.simulation.stop().alpha(0.6).tick(90);
+        this.renderPositions();
     }
-    
-    /**
-     * Set force guide distance
-     */
-    setForceDistance(distance) {
-        this.forceManager.updateLinkDistance(distance);
+
+    renderPositions() {
+        if (this.disposed || !this.nodeSelection) return;
+        this.nodeSelection.attr('transform', node => 'translate(' + (node.x || 0) + ',' + (node.y || 0) + ')');
+        this.renderLinks();
     }
-    
-    /**
-     * Set repulsion strength
-     */
-    setForceStrength(strength) {
-        this.forceManager.updateChargeStrength(strength);
+
+    renderLinks() {
+        if (this.disposed || !this.linkSelection) return;
+        const nodes = new Map(this.nodes.map(node => [node.id, node]));
+        this.linkSelection.attr('d', link => {
+            const source = nodes.get(link.source.id || link.source);
+            const target = nodes.get(link.target.id || link.target);
+            if (!source || !target) return '';
+            const dx = target.x - source.x, dy = target.y - source.y;
+            const length = Math.hypot(dx, dy);
+            if (!length) return '';
+            const halfWidth = target._cardSize?.width / 2 || (this.detail ? 25 : target._overviewRadius || 16);
+            const halfHeight = target._cardSize?.height / 2 || halfWidth;
+            const arrowLength = this.detail ? 9 : Math.max(9, 3.5 / (this.overviewScale || 1));
+            const offset = target.isComplex
+                ? Math.min(Math.abs(dx) > 0.001 ? halfWidth * length / Math.abs(dx) : Infinity,
+                    Math.abs(dy) > 0.001 ? halfHeight * length / Math.abs(dy) : Infinity) + arrowLength
+                : halfWidth + arrowLength;
+            return 'M' + source.x + ',' + source.y + ' L' + (target.x - dx / length * offset) + ',' + (target.y - dy / length * offset);
+        });
     }
-    
-    /**
-     * reset view
-     */
+
+    handleZoom(event) {
+        if (this.disposed || !this.nodeSelection) return;
+        const scale = event.transform.k;
+        const detail = scale >= 0.55 && this.nodes.length <= 80 || scale >= 0.85 || this.nodes.length < 25;
+        const labels = detail || scale >= 0.14;
+        if (detail !== this.detail || labels !== this.labelsVisible) {
+            this.labelsVisible = labels;
+            this.drawNodes();
+            this.renderLinks();
+            this.restoreHighlight();
+        }
+        if (!this.detail) {
+            this.updateOverviewGeometry(scale);
+            this.renderLinks();
+        }
+        this.graphBase.svg.attr('data-zoom-scale', scale);
+    }
+
+    fitView(animate = true, keepPending = false) {
+        if (this.disposed || !this.nodes.length || this.graphBase.width <= 0 || this.graphBase.height <= 0) return;
+        this.interruptTransitions();
+        const group = this.graphBase.mainGroup.node();
+        const padding = Math.min(32, this.graphBase.width / 10, this.graphBase.height / 10);
+        const range = this.graphBase.zoom.scaleExtent();
+        // Keep the fit presentation stable while measuring actual rendered geometry.
+        // Zooming or focusing still reveals every card's complete metadata.
+        const fitMaximum = this.nodes.length < 25 ? range[1] : this.nodes.length <= 80 ? 0.549 : 0.849;
+        const scaleFor = bounds => Math.max(range[0], Math.min(fitMaximum,
+            (this.graphBase.width - padding * 2) / Math.max(bounds.width, 1),
+            (this.graphBase.height - padding * 2) / Math.max(bounds.height, 1)));
+        this.drawNodes(fitMaximum);
+        this.renderPositions();
+        let bounds = group.getBBox();
+        if (![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)) return;
+        let scale = scaleFor(bounds);
+        if (this.nodes.length >= 25 && scale < 0.14) {
+            this.drawNodes(scale);
+            this.renderPositions();
+            bounds = group.getBBox();
+            // Hidden labels must not cause a fit that immediately reveals them again.
+            scale = Math.min(0.139, scaleFor(bounds));
+        }
+        if (!this.detail) {
+            // Minimum device-size marks affect real bounds; converge before fitting.
+            for (let pass = 0; pass < 6; pass++) {
+                this.updateOverviewGeometry(scale);
+                this.renderLinks();
+                bounds = group.getBBox();
+                const nextScale = Math.min(this.labelsVisible ? fitMaximum : 0.139, scaleFor(bounds));
+                if (Math.abs(nextScale - scale) < 0.000001) break;
+                scale = nextScale;
+            }
+        }
+        const transform = d3.zoomIdentity.translate(this.graphBase.width / 2, this.graphBase.height / 2)
+            .scale(scale).translate(-bounds.x - bounds.width / 2, -bounds.y - bounds.height / 2);
+        this.graphBase.svg.attr('data-fit-width', bounds.width).attr('data-fit-height', bounds.height);
+        this.camera(transform, animate ? 220 : 0);
+        if (!keepPending) this.autoFitPending = false;
+    }
+
+    camera(transform, duration = 220) {
+        const svg = this.graphBase.svg.interrupt();
+        if (this.reducedMotion || duration === 0) svg.call(this.graphBase.zoom.transform, transform);
+        else svg.transition().duration(duration).call(this.graphBase.zoom.transform, transform);
+    }
+
+    cancelPendingFit() {
+        this.autoFitPending = false;
+    }
+
     resetView() {
-        this.graphBase.resetView();
+        if (this.disposed) return;
+        this.cancelPendingFit();
+        this.camera(d3.zoomIdentity);
     }
-    
-    /**
-     * focus node
-     */
-    focusOnNode(nodeId) {
-        const node = this.nodes.find(n => n.id === nodeId);
-        if (node) {
-            this.graphBase.focusOnPosition({ x: node.x, y: node.y });
-            
-            // Highlight node
-            const nodeElement = this.nodeSelection.filter(d => d.id === nodeId);
-            nodeElement.select('circle, rect')
-                .transition()
-                .duration(300)
-                .attr('stroke-width', 4)
-                .transition()
-                .delay(300)
-                .duration(300)
-                .attr('stroke-width', 2);
+
+    zoomIn() { this.zoomBy(1.2); }
+    zoomOut() { this.zoomBy(1 / 1.2); }
+    zoomBy(amount) {
+        if (this.disposed) return;
+        this.cancelPendingFit();
+        const svg = this.graphBase.svg.interrupt();
+        if (this.reducedMotion) svg.call(this.graphBase.zoom.scaleBy, amount);
+        else svg.transition().duration(160).call(this.graphBase.zoom.scaleBy, amount);
+    }
+
+    setLayout(layout) {
+        if (this.disposed) return;
+        this.cancelPendingFit();
+        this.autoFitPending = this.nodes.length > 0;
+        this.applyLayout(layout);
+    }
+
+    setForceDistance(distance) {
+        if (this.disposed) return;
+        this.forceDistance = distance;
+        if (this.currentLayout !== 'force') return;
+        this.forceManager.updateLinkDistance(distance);
+        if (this.reducedMotion && this.currentLayout === 'force') this.settleForce();
+    }
+
+    setForceStrength(strength) {
+        if (this.disposed) return;
+        this.forceStrength = strength;
+        if (this.currentLayout !== 'force') return;
+        this.forceManager.updateChargeStrength(strength);
+        if (this.reducedMotion && this.currentLayout === 'force') this.settleForce();
+    }
+
+    selectNode(id) {
+        if (this.disposed) return;
+        this.selectedId = id;
+        this.nodeSelection?.attr('data-selected', node => node.id === id ? 'true' : 'false');
+        this.restoreHighlight();
+    }
+
+    focusOnNode(id) {
+        if (this.disposed) return;
+        const node = this.nodes.find(candidate => candidate.id === id);
+        if (!node || !Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+        this.cancelPendingFit();
+        this.selectNode(id);
+        this.camera(d3.zoomIdentity.translate(this.graphBase.width / 2, this.graphBase.height / 2)
+            .scale(1.5).translate(-node.x, -node.y));
+    }
+
+    highlightNode(id) {
+        const related = new Set([id]);
+        for (const link of this.links) {
+            const source = link.source.id || link.source, target = link.target.id || link.target;
+            if (source === id) related.add(target);
+            if (target === id) related.add(source);
         }
+        this.nodeSelection.interrupt().attr('opacity', node => related.has(node.id) ? 1 : 0.25);
+        this.linkSelection.interrupt().attr('stroke', link => (link.source.id || link.source) === id
+            ? 'var(--mud-palette-info)' : (link.target.id || link.target) === id ? 'var(--mud-palette-success)' : LINK_INK)
+            .attr('stroke-width', link => (link.source.id || link.source) === id || (link.target.id || link.target) === id ? 1.8 : 0.8)
+            .attr('stroke-opacity', link => related.has(link.source.id || link.source) && related.has(link.target.id || link.target) ? 1 : 0.25)
+            .attr('marker-end', link => 'url(#' + ((link.source.id || link.source) === id ? this.graphBase.markerIds.outgoingMarkerId
+                : (link.target.id || link.target) === id ? this.graphBase.markerIds.incomingMarkerId : this.graphBase.markerIds.markerId) + ')');
     }
-    
-    // Method to get cell color removed - color configuration is now provided by C# layer
-    
-    /**
-     * Handle node clicks
-     */
-    handleNodeClick(nodeData) {
-        this.invokeDotNet('OnNodeClick', nodeData.id);
+
+    restoreHighlight() {
+        if (!this.nodeSelection || !this.linkSelection) return;
+        this.nodeSelection.interrupt().attr('opacity', 1).each((node, index, elements) => {
+            d3.select(elements[index]).select('.node-core, .card-background').attr('stroke-width', node.id === this.selectedId ? this.detail ? 3 : 2 : this.detail ? 1.8 : 1);
+        });
+        this.linkSelection.interrupt().attr('stroke', LINK_INK).attr('stroke-width', 0.8).attr('stroke-opacity', 1)
+            .attr('marker-end', 'url(#' + this.graphBase.markerIds.markerId + ')');
     }
-    
-    /**
-     * Process node right click
-     */
-    handleNodeRightClick(nodeData, position) {
-        if (this.dotNetRef) {
-            // Prefer clientX/clientY (relative to the viewport), use pageX/pageY if not present
-            const x = position.clientX !== undefined ? position.clientX : position.pageX;
-            const y = position.clientY !== undefined ? position.clientY : position.pageY;
-            
-            this.invokeDotNet('OnNodeRightClick', nodeData.id, x, y);
-        }
-    }
-    
-    /**
-     * Handle node double click (release pinned)
-     */
-    handleNodeDoubleClick(nodeData) {
-        if (this.currentLayout === LAYOUT_TYPES.FORCE) {
-            nodeData.fx = null;
-            nodeData.fy = null;
-            this.forceManager.simulation.alpha(0.3).restart();
-        }
-    }
-    
-    /**
-     * Handling background clicks
-     */
-    handleBackgroundClick() {
-        // Close right-click menu
-        this.invokeDotNet('OnSvgBackgroundClick');
+
+    interruptTransitions() {
+        this.graphBase?.svg.interrupt();
+        this.graphBase?.mainGroup.selectAll('*').interrupt();
     }
 
     invokeDotNet(methodName, ...args) {
         const reference = this.dotNetRef;
-        if (!reference) {
-            return;
-        }
-
-        const callback = reference.invokeMethodAsync(methodName, ...args)
-            .catch(error => {
-                if (this.dotNetRef) {
-                    console.error(`Project unit graph callback '${methodName}' failed.`, error);
-                }
-            })
-            .finally(() => this.pendingCallbacks.delete(callback));
-
+        if (this.disposed || !reference) return;
+        const callback = reference.invokeMethodAsync(methodName, ...args).catch(error => {
+            if (!this.disposed && this.dotNetRef) console.error('Project unit graph callback ' + methodName + ' failed.', error);
+        }).finally(() => this.pendingCallbacks.delete(callback));
         this.pendingCallbacks.add(callback);
     }
-    
-    /**
-     * destroy
-     */
-    async dispose() {
+
+    dispose() {
+        if (this.disposal) return this.disposal;
+        this.disposed = true;
         this.dotNetRef = null;
-
-        if (this.forceManager) {
-            this.forceManager.dispose();
-        }
-        if (this.graphBase) {
-            this.graphBase.dispose();
-        }
-
-        await Promise.allSettled([...this.pendingCallbacks]);
-        this.pendingCallbacks.clear();
+        this.cancelPendingFit();
+        this.resizeObserver?.disconnect();
+        this.themeObserver?.disconnect();
+        this.removalObserver?.disconnect();
+        this.motion.removeEventListener('change', this.onMotionChange);
+        document.fonts?.removeEventListener('loadingdone', this.onFontsReady);
+        if (this.frame !== null) cancelAnimationFrame(this.frame);
+        this.frame = null;
+        this.interruptTransitions();
+        this.nodeSelection?.on('.drag', null).on('click', null).on('contextmenu', null)
+            .on('mouseenter', null).on('mouseleave', null);
+        this.graphBase.svg.on('.zoom', null).on('click', null);
+        this.graphBase.zoom.on('start.project-unit-owner', null);
+        this.forceManager.simulation?.on('end.project-unit-fit', null);
+        this.forceManager.dispose();
+        // Stop resources only. Blazor owns removal of the graph DOM; GraphBase.dispose clears it.
+        this.disposal = Promise.allSettled([...this.pendingCallbacks]).then(() => this.pendingCallbacks.clear());
+        return this.disposal;
     }
 }
 
-// ==================== Exported controller factory ====================
-
-/**
- * Creates an independently owned graph controller for one component mount.
- * The caller must invoke dispose() on the returned controller.
- */
+/** Creates an independently owned controller; callers must await its dispose(). */
 export function createGraph(containerId, isDarkMode, dotNetRef) {
     return new ProjectUnitGraph(containerId, isDarkMode, dotNetRef);
 }

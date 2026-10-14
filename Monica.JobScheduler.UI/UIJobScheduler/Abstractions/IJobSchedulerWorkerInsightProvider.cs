@@ -1,9 +1,9 @@
 namespace Monica.JobScheduler.UI.UIJobScheduler.Abstractions;
 
 /// <summary>
-/// One observed worker instance from an optional infrastructure-integration provider, typically a service
-/// discovery registry with heartbeats. Correlation with scheduler owners relies on both sides resolving the
-/// same application-level project name.
+/// One service-registry observation from an optional infrastructure-integration provider. The built-in
+/// ServiceDiscovery provider includes all registered services; it does not verify a scheduler role, scheduler
+/// scope membership, owner correlation, or replica capacity. The legacy type name does not establish those facts.
 /// </summary>
 public sealed record JobSchedulerWorkerInstanceView
 {
@@ -13,7 +13,7 @@ public sealed record JobSchedulerWorkerInstanceView
     /// <summary>Gets the display name of the registered service.</summary>
     public required string AppName { get; init; }
 
-    /// <summary>Gets the project name the instance reports; scheduler owners with this key own its jobs.</summary>
+    /// <summary>Gets the project name reported by the registry; no scheduler-owner correlation is verified.</summary>
     public required string ProjectName { get; init; }
 
     /// <summary>Gets the registry's unique instance identifier for one running process.</summary>
@@ -41,7 +41,7 @@ public sealed record JobSchedulerWorkerInstanceView
 /// </summary>
 public enum JobSchedulerWorkerInstanceStatus
 {
-    /// <summary>The heartbeat is fresher than 1.5 heartbeat periods.</summary>
+    /// <summary>The heartbeat age is at or below 1.5 heartbeat periods in the built-in provider.</summary>
     Online,
 
     /// <summary>The heartbeat missed the healthy boundary but has not crossed the registration TTL.</summary>
@@ -52,15 +52,16 @@ public enum JobSchedulerWorkerInstanceStatus
 }
 
 /// <summary>
-/// Optionally enriches the JobScheduler runtime view with worker-instance heartbeats from an infrastructure
-/// provider. The runtime page resolves this from the service provider and degrades to a setup hint when absent,
+/// Optionally enriches the JobScheduler runtime view with separately sourced registry observations. The
+/// runtime page resolves this from the service provider and degrades to a setup hint when absent,
 /// so hosts that do not adopt the integration keep the rest of the runtime tab.
 /// </summary>
 public interface IJobSchedulerWorkerInsightProvider
 {
     /// <summary>
-    /// Loads every worker instance the backing registry currently observes, flattened across services and
-    /// ordered by project name then instance identifier.
+    /// Loads the backing registry's observations. The built-in provider flattens all service instances and
+    /// orders them by exact project name then instance identifier. Classifications are producer-owned; the
+    /// consumer accepts the list with its own observation time and does not infer a classification instant.
     /// </summary>
     /// <param name="cancellationToken">Cancels the registry read.</param>
     /// <returns>The registry's instance list; empty when nothing has registered yet.</returns>

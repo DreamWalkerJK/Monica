@@ -13,7 +13,32 @@
 }
 
 .configuration-pending-review-change-table {
-    overflow-x: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    overflow: clip;
+}
+
+.configuration-pending-review-definition-key {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 11px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.configuration-pending-review-definition-header ::deep .configuration-pending-review-definition-identity,
+.configuration-pending-review-definition-header ::deep .mud-button-label {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.configuration-pending-review-change-table ::deep .mud-table {
+    border-radius: 0;
+}
+
+.configuration-pending-review-change-table ::deep .mud-table-container {
+    border-radius: 0;
 }
 
 .configuration-pending-review-change-table ::deep .mud-table-cell {
@@ -33,5 +58,19 @@
     .configuration-pending-review-definition-header {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .configuration-pending-review-change-table ::deep .mud-table-cell {
+        flex-wrap: wrap;
+        gap: 6px;
+        min-width: 0;
+        padding-inline: 16px;
+        width: 100%;
+        text-align: start;
+    }
+
+    .configuration-pending-review-change-table ::deep .mud-table-cell > * {
+        min-width: 0;
+        max-width: 100%;
     }
 }

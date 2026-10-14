@@ -27,8 +27,7 @@ public sealed class KafkaPerformanceService(
         var snapshot = new KafkaPerformanceSnapshot
         {
             ClusterId = cluster.ClusterId,
-            CapturedAt = DateTimeOffset.UtcNow,
-            IncludesJmxMetrics = !string.IsNullOrWhiteSpace(cluster.JmxEndpoint)
+            CapturedAt = DateTimeOffset.UtcNow
         };
 
         if (!cluster.HasDirectKafkaAccess)
@@ -52,6 +51,7 @@ public sealed class KafkaPerformanceService(
             snapshot.BrokerCount = brokers.Count;
             snapshot.TopicCount = topics.Count;
             snapshot.ConsumerGroupCount = groups.Count;
+            snapshot.HasMetadataSnapshot = true;
 
             var consumerMetrics = await consumerMetricsService.CaptureForPerformanceAsync(
                 cluster,

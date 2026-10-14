@@ -1,66 +1,35 @@
-@using Monica.Configuration.UI.Localization
+@using Monica.UI.Shared.Components.Dialogs
+@implements IAsyncDisposable
 @inject ConfigurationFacade Facade
 @inject IStringLocalizer<ConfigurationUIResource> L
 
-<MudDialog>
+<MudDialog ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent><MoDialogHeading Text="@L["Sources:File:Title", _fileView?.Source.DisplayName ?? SourceKey]" /></TitleContent>
     <DialogContent>
-        @if (_loading)
-        {
-            <MudProgressLinear Indeterminate="true" />
-        }
-        else if (_error is not null)
-        {
-            <MudAlert Severity="Severity.Error">@_error</MudAlert>
-        }
-        else if (_fileView is not null)
-        {
-            <MudStack Spacing="2">
-                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
-                    <MudChip T="string" Color="@(_fileView.Source.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined" Size="Size.Small">
-                        @(_fileView.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
-                    </MudChip>
-                    @if (_fileView.HasRedactions)
-                    {
-                        <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" Size="Size.Small">@L["Sources:File:Redacted"]</MudChip>
-                    }
-                </MudStack>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@_fileView.Source.PhysicalPath</MudText>
-                <MudPaper Outlined="true" Class="pa-3">
-                    <pre class="configuration-source-json">@_fileView.Content</pre>
-                </MudPaper>
-            </MudStack>
-        }
+        <div class="configuration-source-file" aria-busy="@(_loading ? "true" : "false")">
+            @if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Info" /> }
+            @if (_error is not null) { <MudAlert Severity="Severity.Error">@_error</MudAlert> }
+            @if (_fileView is not null)
+            {
+                <header class="configuration-source-file-target">
+                    <MudIcon Icon="@Icons.Material.Outlined.Description" />
+                    <div><h3>@_fileView.Source.DisplayName</h3><code>@_fileView.Source.SourceKey</code><div class="configuration-source-file-badges"><span data-tone="@(_fileView.Source.IsWritable ? "info" : "secondary")">@(_fileView.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])</span>@if (_fileView.HasRedactions) { <span data-tone="warning">@L["Sources:File:Redacted"]</span> }</div></div>
+                </header>
+                <dl class="configuration-source-file-facts">
+                    <div><dt>@L["Sources:File:SourceKey"]</dt><dd><code>@_fileView.Source.SourceKey</code></dd></div>
+                    <div><dt>@L["Sources:File:ProviderType"]</dt><dd><code>@_fileView.Source.ProviderType</code></dd></div>
+                    @if (_fileView.Source.PhysicalPath is not null) { <div class="configuration-source-file-fact-wide"><dt>@L["Sources:File:PhysicalPath"]</dt><dd><code>@_fileView.Source.PhysicalPath</code></dd></div> }
+                    @if (_fileView.Source.SourcePath is not null) { <div class="configuration-source-file-fact-wide"><dt>@L["Sources:File:DeclaredPath"]</dt><dd><code>@_fileView.Source.SourcePath</code></dd></div> }
+                </dl>
+                <p class="configuration-source-file-redaction">@L["Sources:File:RedactionHelp"]</p>
+                <section class="configuration-source-file-content"><header><h4>@L["Sources:File:Content"]</h4></header><pre class="configuration-source-json">@_fileView.Content</pre></section>
+            }
+            else
+            {
+                <dl class="configuration-source-file-facts"><div class="configuration-source-file-fact-wide"><dt>@L["Sources:File:SourceKey"]</dt><dd><code>@SourceKey</code></dd></div></dl>
+                @if (_loading) { <p class="configuration-source-file-loading">@L["Common:States:Loading"]</p> }
+            }
+        </div>
     </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
-    </DialogActions>
+    <DialogActions><div class="configuration-source-file-actions"><MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton></div></DialogActions>
 </MudDialog>
-
-@code {
-    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
-    [Parameter, EditorRequired] public string SourceKey { get; set; } = "";
-
-    private ConfigurationSourceFileView? _fileView;
-    private string? _error;
-    private bool _loading = true;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var result = await Facade.GetSourceFileViewAsync(SourceKey);
-        if (result.IsFailed(out var error, out var view))
-        {
-            _error = error.Message;
-        }
-        else
-        {
-            _fileView = view;
-        }
-
-        _loading = false;
-    }
-
-    private void Close()
-    {
-        MudDialog.Close();
-    }
-}

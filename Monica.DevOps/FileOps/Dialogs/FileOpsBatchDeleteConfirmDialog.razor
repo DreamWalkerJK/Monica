@@ -1,56 +1,34 @@
-@using Monica.DevOps.FileOps.Models
+@using Monica.DevOps.FileOps.State
 @using Monica.DevOps.Localization
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<FileOpsResource> L
-
-<MudDialog>
-    <DialogContent>
-        <MudStack Spacing="2">
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                @L["BatchDeleteDialog:Summary", Entries.Count]
-            </MudAlert>
-
-            @if (DirectoryCount > 0)
-            {
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                    @L["BatchDeleteDialog:DirectoryWarning", DirectoryCount]
-                </MudAlert>
-
-                <MudSwitch T="bool" @bind-Value="_recursive" Color="Color.Warning">
-                    @L["BatchDeleteDialog:Recursive"]
-                </MudSwitch>
-            }
-        </MudStack>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">
-            @L["Common:Cancel"]
-        </MudButton>
-        <MudButton OnClick="Confirm" Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep">
-            @L["BatchDeleteDialog:Confirm"]
-        </MudButton>
-    </DialogActions>
+<MudDialog DefaultFocus="DefaultFocus.LastChild" Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px">
+    <TitleContent><MoDialogHeading Text="@L[Context.Entries.Count == 1 ? "DeleteDialog:Title" : "BatchDeleteDialog:Title"]" /></TitleContent>
+    <DialogContent><div class="decision-content">
+        <p>@(Context.Entries.Count == 1 ? L["DeleteDialog:Summary"] : L["BatchDeleteDialog:Summary", Context.Entries.Count])</p>
+        <dl><dt>@L["DeleteDialog:Origin"]</dt><dd><code>@OriginPath</code></dd></dl>
+        <ol class="target-list">
+            @foreach (var entry in Context.Entries)
+            { <li><span>@L[entry.IsDirectory ? "Labels:Directory" : "Labels:File"]</span><code>@entry.FullPath</code></li> }
+        </ol>
+        @if (Context.AffectsDirtyDraft)
+        { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["DeleteDialog:DirtyLoss"]<code>@Context.InspectedPath</code></MudAlert> }
+        @if (HasDirectories)
+        { <MudSwitch T="bool" @bind-Value="_recursive" Color="Color.Warning" Label="@L["BatchDeleteDialog:Recursive"]" /><p>@L["DeleteDialog:DirectoryWarning"]</p> }
+        @if (Context.Entries.Count > 1) { <p class="effect">@L["BatchDeleteDialog:NoRollback"]</p> }
+    </div></DialogContent>
+    <DialogActions><div class="decision-actions">
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="@(() => Dialog.Close(DialogResult.Ok(HasDirectories && _recursive)))">@ConfirmText</MudButton>
+        <MudButton OnClick="@(() => Dialog.Cancel())">@L["Common:Cancel"]</MudButton>
+    </div></DialogActions>
 </MudDialog>
-
 @code {
-    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
-
-    [Parameter] public IReadOnlyList<FileOpsEntrySummary> Entries { get; set; } = [];
-
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    /// <summary>Frozen operation-order targets and the admitted dirty-descendant relationship.</summary>
+    [Parameter, EditorRequired] public FileOpsDeleteConfirmation Context { get; set; } = new([], false, null);
+    /// <summary>The accepted originating directory captured when opening this native decision.</summary>
+    [Parameter] public string OriginPath { get; set; } = "";
     private bool _recursive = true;
-
-    private int DirectoryCount => Entries.Count(static entry => entry.IsDirectory);
-
-    private void Cancel()
-    {
-        MudDialog?.Cancel();
-    }
-
-    private void Confirm()
-    {
-        MudDialog?.Close(DialogResult.Ok(new FileOpsBatchDeleteRequest
-        {
-            Paths = Entries.Select(static entry => entry.FullPath).ToList(),
-            Recursive = DirectoryCount > 0 && _recursive
-        }));
-    }
+    private bool HasDirectories => Context.Entries.Any(entry => entry.IsDirectory);
+    private string ConfirmText => Context.Entries.Count == 1 ? L[Context.Entries[0].IsDirectory ? "DeleteDialog:DeleteFolder" : "DeleteDialog:DeleteFile"] : L["BatchDeleteDialog:Confirm", Context.Entries.Count];
 }

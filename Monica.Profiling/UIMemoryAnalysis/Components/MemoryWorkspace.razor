@@ -1,0 +1,45 @@
+@using Monica.Modules
+@using Microsoft.AspNetCore.Components.Routing
+@using Monica.Profiling.Pages
+@inject IServiceProvider ServiceProvider
+@inject IStringLocalizer<MemoryAnalysisResource> L
+@inject IStringLocalizer<ProfilingResource> ProfilingL
+
+<PageTitle>@(Available ? L[TitleKey] : ProfilingL["Unavailable:MemoryAnalysis:PageTitle"])</PageTitle>
+<div class="memory-workspace" data-memory-route="@Section">
+    @if (!Available)
+    {
+        <ProfilingModuleUnavailable HeadingId="memory-analysis-unavailable-title" Icon="@Icons.Material.Outlined.Memory"
+            Eyebrow="@ProfilingL["Unavailable:Eyebrow"]" Title="@ProfilingL["Unavailable:MemoryAnalysis:Title"]"
+            Description="@ProfilingL["Unavailable:MemoryAnalysis:Description"]" />
+    }
+    else
+    {
+        <header class="memory-workspace-header">
+            <div><span class="memory-workspace-eyebrow"><MudIcon Icon="@Icons.Material.Outlined.Memory" Size="Size.Small" /> @L["Page:Eyebrow"]</span>
+                <h1>@L[TitleKey]</h1><p>@L[DescriptionKey]</p></div>
+            @if (Actions is not null) { <div class="memory-workspace-actions">@Actions</div> }
+        </header>
+        <nav class="memory-route-navigation" aria-label="@L["Page:Navigation"]">
+            <MudNavLink Href="@UIMemoryAnalysisPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Memory">@L["Tabs:Overview"]</MudNavLink>
+            <MudNavLink Href="@UIMemoryGcPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Analytics">@L["Tabs:GcStatistics"]</MudNavLink>
+            <MudNavLink Href="@UIMemoryHistoryPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Timeline">@L["Tabs:Trend"]</MudNavLink>
+            @if (AllocationEnabled)
+            {
+                <MudNavLink Href="@UIMemoryAllocationsPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Category">@L["Tabs:Allocation"]</MudNavLink>
+            }
+            <MudNavLink Href="@UIMemoryDiagnosticsPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Build">@L["Tabs:Diagnostics"]</MudNavLink>
+        </nav>
+        <div class="memory-workspace-content">@ChildContent</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Section { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string TitleKey { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string DescriptionKey { get; set; } = string.Empty;
+    [Parameter] public bool Available { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    private bool AllocationEnabled => ServiceProvider.GetService<IOptions<ModuleMemoryAnalysisUIOption>>()?.Value.EnableTypeAllocationTab == true;
+}

@@ -63,6 +63,12 @@ internal sealed class JobDefinitionDetailPageStateFactory(
 /// <summary>
 /// Owns one job-definition detail snapshot, authorization boundary, refresh serialization, and async lifetime.
 /// </summary>
+/// <remarks>
+/// Authorization provider faults clear inaccessible evidence and become a local error. Mutations return a failed
+/// result without calling the facade; authorization cancellation remains cancellation.
+/// The rendered route owns this session. Retirement rejects new operations with canceled tasks and drains
+/// admitted work before releasing its resources; repeated disposal shares that completion.
+/// </remarks>
 public sealed class JobDefinitionDetailPageState : IAsyncDisposable
 {
     private readonly JobSchedulerFacade _facade;
@@ -70,10 +76,9 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
     private readonly TimeProvider _timeProvider;
     private readonly SchedulerTimePresentation _timePresentation;
     private readonly IStringLocalizer<JobSchedulerResource> _localizer;
-    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SchedulerOperationLifetime _lifetime = new();
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly SemaphoreSlim _mutationGate = new(1, 1);
-    private int _disposed;
 
     internal JobDefinitionDetailPageState(
         JobSchedulerFacade facade,
@@ -158,7 +163,7 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
     public string? AnalyticsError { get; private set; }
 
     /// <summary>
-    /// Gets whether the authorized lookup completed without finding an active definition.
+    /// Gets whether the authorized lookup completed without finding a persisted definition.
     /// </summary>
     public bool IsNotFound { get; private set; }
 
@@ -175,40 +180,31 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
     /// <summary>
     /// Re-evaluates authorization and replaces the operational snapshot when the read succeeds.
     /// </summary>
-    public async Task RefreshAsync()
+    /// <remarks>
+    /// Every admitted refresh is drained on retirement. A retired owner rejects new calls with cancellation;
+    /// load failures retain earlier accepted evidence and never adopt a result after retirement.
+    /// </remarks>
+    public Task RefreshAsync() => _lifetime.RunAsync(RefreshCoreAsync);
+
+    private async Task RefreshCoreAsync(CancellationToken cancellationToken)
     {
-        var cancellationToken = _lifetimeCancellation.Token;
         await _refreshGate.WaitAsync(cancellationToken);
         try
         {
-            ThrowIfDisposed();
-            IsLoading = true;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_lifetime.TryApply(() => IsLoading = true)) return;
             await NotifyChangedAsync();
 
-            IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            AccessChecked = true;
-            if (!IsAuthorized)
-            {
-                Summary = null;
-                Analytics = null;
-                RunningActivity = JobExecutionActivitySlice.Empty;
-                RecentFailureActivity = JobExecutionActivitySlice.Empty;
-                IsNotFound = false;
-                Error = null;
-                AnalyticsError = null;
-                ObservedAtUtc = null;
-                return;
-            }
+            if (!(await EnsureAuthorizedAsync(cancellationToken)).IsAuthorized) return;
 
             var now = _timeProvider.GetUtcNow();
-            var summaryTask = _facade.GetOperationalSummaryAsync(JobId, cancellationToken);
             var analyticsQuery = SchedulerStatisticsPageState.CreateQuery(
                 SchedulerAnalyticsTimeRange.Last30Days,
                 now,
                 _timePresentation,
                 JobKey,
                 JobId.OwnerKey);
+            var summaryTask = _facade.GetOperationalSummaryAsync(JobId, cancellationToken);
             var analyticsTask = _facade.GetExecutionAnalyticsAsync(analyticsQuery, cancellationToken);
             var runningTask = QueryExecutionsAsync(
                 JobExecutionState.Running,
@@ -229,67 +225,88 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
             var summaryResult = await summaryTask;
             if (summaryResult.IsFailed(out var error, out var summary))
             {
-                Error = error.Message;
+                _lifetime.TryApply(() => Error = error.Message);
                 return;
             }
 
-            Summary = summary;
-            IsNotFound = summary is null;
-            Error = null;
             var analyticsResult = await analyticsTask;
-            if (analyticsResult.IsFailed(out var analyticsError, out var analytics))
+            var runningResult = await runningTask;
+            var failureResult = await failuresTask;
+            _lifetime.TryApply(() =>
             {
-                AnalyticsError = analyticsError.Message;
-            }
-            else
-            {
-                Analytics = analytics;
-                AnalyticsError = null;
-            }
-
-            RunningActivity = AcceptExecutionEvidence(await runningTask, RunningActivity);
-            RecentFailureActivity = AcceptExecutionEvidence(await failuresTask, RecentFailureActivity);
-
-            ObservedAtUtc = now;
+                Summary = summary;
+                IsNotFound = summary is null;
+                Error = null;
+                if (analyticsResult.IsFailed(out var analyticsError, out var analytics))
+                    AnalyticsError = analyticsError.Message;
+                else
+                {
+                    Analytics = analytics;
+                    AnalyticsError = null;
+                }
+                RunningActivity = AcceptExecutionEvidence(runningResult, RunningActivity);
+                RecentFailureActivity = AcceptExecutionEvidence(failureResult, RecentFailureActivity);
+                ObservedAtUtc = now;
+            });
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             // Expected during route changes, page navigation, or host shutdown.
         }
+        catch (Exception exception)
+        {
+            _lifetime.TryApply(() =>
+            {
+                if (!AccessChecked)
+                {
+                    ClearEvidence();
+                    AccessChecked = true;
+                    IsAuthorized = false;
+                }
+                Error = exception.Message;
+            });
+        }
         finally
         {
-            if (!IsDisposed)
+            try
             {
-                IsLoading = false;
-                await NotifyChangedAsync();
+                if (_lifetime.TryApply(() => IsLoading = false)) await NotifyChangedAsync();
             }
-
-            _refreshGate.Release();
+            finally { _refreshGate.Release(); }
         }
     }
 
     /// <summary>
-    /// Reauthorizes the circuit and replaces only the disabled policy override for the current active definition.
+    /// Reauthorizes the circuit and replaces only the disabled policy override for the current persisted definition.
     /// </summary>
-    public async Task<Res<JobPolicy>> SetDisabledAsync(bool disabled)
+    /// <remarks>
+    /// The clicked definition and policy revision are captured before asynchronous authorization.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">The session has retired or the admitted operation is canceled.</exception>
+    public Task<Res<JobPolicy>> SetDisabledAsync(bool disabled)
     {
-        var cancellationToken = _lifetimeCancellation.Token;
+        var summary = Summary;
+        return _lifetime.RunAsync(token => SetDisabledCoreAsync(summary, disabled, token));
+    }
+
+    private async Task<Res<JobPolicy>> SetDisabledCoreAsync(
+        JobOperationalSummary? summary, bool disabled, CancellationToken cancellationToken)
+    {
         await _mutationGate.WaitAsync(cancellationToken);
         try
         {
-            ThrowIfDisposed();
-            IsMutating = true;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_lifetime.TryApply(() => IsMutating = true))
+                throw new OperationCanceledException(cancellationToken);
             await NotifyChangedAsync();
 
-            IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            AccessChecked = true;
-            if (!IsAuthorized)
+            var access = await EnsureAuthorizedAsync(cancellationToken);
+            if (!access.IsAuthorized)
             {
-                return _localizer["Access:DeniedDescription"].Value;
+                return access.Error ?? _localizer["Access:DeniedDescription"].Value;
             }
 
-            if (Summary is not { } summary)
+            if (summary is null)
             {
                 return _localizer["JobDetail:NotFound", JobKey].Value;
             }
@@ -318,56 +335,64 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
                         summary.SuspensionReasons,
                         disabled)
                     : JobRecurringScheduleSuspensionReason.None;
-                Summary = summary with
+                var observedAtUtc = _timeProvider.GetUtcNow();
+                _lifetime.TryApply(() =>
                 {
-                    Definition = definition with { Policy = policy },
-                    RecurringScheduleStatus = isRecurring
-                        ? suspensionReasons != JobRecurringScheduleSuspensionReason.None
-                            ? JobRecurringScheduleStatus.Suspended
-                            : JobRecurringScheduleStatus.AwaitingSynchronization
-                        : JobRecurringScheduleStatus.NotRecurring,
-                    SuspensionReasons = suspensionReasons,
-                    NextOccurrenceUtc = isRecurring ? null : summary.NextOccurrenceUtc
-                };
-                ObservedAtUtc = _timeProvider.GetUtcNow();
+                    Summary = summary with
+                    {
+                        Definition = definition with { Policy = policy },
+                        RecurringScheduleStatus = isRecurring
+                            ? suspensionReasons != JobRecurringScheduleSuspensionReason.None
+                                ? JobRecurringScheduleStatus.Suspended
+                                : JobRecurringScheduleStatus.AwaitingSynchronization
+                            : JobRecurringScheduleStatus.NotRecurring,
+                        SuspensionReasons = suspensionReasons,
+                        NextOccurrenceUtc = isRecurring ? null : summary.NextOccurrenceUtc
+                    };
+                    ObservedAtUtc = observedAtUtc;
+                });
             }
 
             return result;
         }
         finally
         {
-            if (!IsDisposed)
+            try
             {
-                IsMutating = false;
-                await NotifyChangedAsync();
+                if (_lifetime.TryApply(() => IsMutating = false)) await NotifyChangedAsync();
             }
-
-            _mutationGate.Release();
+            finally { _mutationGate.Release(); }
         }
     }
 
     /// <summary>
-    /// Reauthorizes the circuit and admits an immediate operator occurrence without advancing the recurring cursor.
+    /// Reauthorizes the circuit and admits an immediate occurrence for a present recurring definition without advancing its cursor.
     /// </summary>
-    public async Task<Res<JobExecutionInstance>> RunRecurringNowAsync()
+    /// <exception cref="OperationCanceledException">The session has retired or the admitted operation is canceled.</exception>
+    public Task<Res<JobExecutionInstance>> RunRecurringNowAsync()
     {
-        var cancellationToken = _lifetimeCancellation.Token;
+        var summary = Summary;
+        return _lifetime.RunAsync(token => RunRecurringNowCoreAsync(summary, token));
+    }
+
+    private async Task<Res<JobExecutionInstance>> RunRecurringNowCoreAsync(
+        JobOperationalSummary? summary, CancellationToken cancellationToken)
+    {
         await _mutationGate.WaitAsync(cancellationToken);
         try
         {
-            ThrowIfDisposed();
-            IsMutating = true;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_lifetime.TryApply(() => IsMutating = true))
+                throw new OperationCanceledException(cancellationToken);
             await NotifyChangedAsync();
 
-            IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            AccessChecked = true;
-            if (!IsAuthorized)
+            var access = await EnsureAuthorizedAsync(cancellationToken);
+            if (!access.IsAuthorized)
             {
-                return _localizer["Access:DeniedDescription"].Value;
+                return access.Error ?? _localizer["Access:DeniedDescription"].Value;
             }
 
-            if (Summary is not { } summary)
+            if (summary is null)
             {
                 return _localizer["JobDetail:NotFound", JobKey].Value;
             }
@@ -383,48 +408,91 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
             cancellationToken.ThrowIfCancellationRequested();
             if (!result.IsFailed(out _, out var execution))
             {
-                Summary = summary with
+                var observedAtUtc = _timeProvider.GetUtcNow();
+                _lifetime.TryApply(() =>
                 {
-                    LatestExecution = execution,
-                    QueuedExecutionCount = summary.QueuedExecutionCount + 1
-                };
-                ObservedAtUtc = _timeProvider.GetUtcNow();
+                    Summary = summary with
+                    {
+                        LatestExecution = execution,
+                        QueuedExecutionCount = summary.QueuedExecutionCount + 1
+                    };
+                    ObservedAtUtc = observedAtUtc;
+                });
             }
 
             return result;
         }
         finally
         {
-            if (!IsDisposed)
+            try
             {
-                IsMutating = false;
-                await NotifyChangedAsync();
+                if (_lifetime.TryApply(() => IsMutating = false)) await NotifyChangedAsync();
             }
-
-            _mutationGate.Release();
+            finally { _mutationGate.Release(); }
         }
     }
 
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    /// <summary>
+    /// Cancels and drains admitted work before releasing the session's serialization resources.
+    /// </summary>
+    /// <remarks>Repeated calls share the same completion, including any failure.</remarks>
+    /// <exception cref="AggregateException">
+    /// Cancellation callbacks, admitted operations, or resource cleanup failed unexpectedly.
+    /// </exception>
+    public ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
-        {
-            return;
-        }
-
         Changed = null;
-        await _lifetimeCancellation.CancelAsync();
-        await _refreshGate.WaitAsync();
-        _refreshGate.Release();
-        await _mutationGate.WaitAsync();
-        _mutationGate.Release();
-        _refreshGate.Dispose();
-        _mutationGate.Dispose();
-        _lifetimeCancellation.Dispose();
+        return _lifetime.RetireAsync(() =>
+        {
+            _refreshGate.Dispose();
+            _mutationGate.Dispose();
+        });
     }
 
-    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+    internal bool IsDisposed => _lifetime.IsRetired;
+
+    private async Task<(bool IsAuthorized, string? Error)> EnsureAuthorizedAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var authorized = await _access.IsAuthorizedAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            var accepted = _lifetime.TryApply(() =>
+            {
+                IsAuthorized = authorized;
+                AccessChecked = true;
+                if (!authorized) ClearEvidence();
+            });
+            return (accepted && authorized, null);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var error = string.IsNullOrWhiteSpace(exception.Message)
+                ? _localizer["Access:DeniedDescription"].Value : exception.Message;
+            _lifetime.TryApply(() =>
+            {
+                ClearEvidence();
+                IsAuthorized = false;
+                AccessChecked = true;
+                Error = error;
+            });
+            return (false, error);
+        }
+    }
+
+    private void ClearEvidence()
+    {
+        Summary = null;
+        Analytics = null;
+        RunningActivity = JobExecutionActivitySlice.Empty;
+        RecentFailureActivity = JobExecutionActivitySlice.Empty;
+        IsNotFound = false;
+        Error = null;
+        AnalyticsError = null;
+        ObservedAtUtc = null;
+    }
 
     private Task<Res<QueryResult<JobExecutionInstance>>> QueryExecutionsAsync(
         JobExecutionState state,
@@ -466,12 +534,11 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
 
     private async Task NotifyChangedAsync()
     {
-        var handlers = Changed?.GetInvocationList().Cast<Func<Task>>().ToArray() ?? [];
+        var handlers = _lifetime.SnapshotHandlers(Changed);
         foreach (var handler in handlers)
         {
             await handler();
         }
     }
 
-    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(IsDisposed, this);
 }

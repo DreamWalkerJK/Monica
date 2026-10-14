@@ -1,0 +1,38 @@
+.utilities-page {
+    display: grid;
+    gap: 24px;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mud-typography-default-family, var(--mo-font-family-body));
+}
+
+.utilities-heading { min-width: 0; }
+.utilities-family {
+    display: block;
+    margin-bottom: 10px;
+    color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary));
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .1em;
+}
+
+.utilities-heading h1 {
+    margin: 0;
+    font-family: var(--mud-typography-h1-family, var(--mo-font-family-display));
+    font-size: 32px;
+    line-height: 1.15;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.utilities-heading p {
+    margin: 10px 0 0;
+    max-width: 75ch;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 75%, var(--mud-palette-text-primary));
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+@media (max-width: 600px) {
+    .utilities-page { gap: 18px; }
+    .utilities-heading h1 { font-size: 28px; }
+}

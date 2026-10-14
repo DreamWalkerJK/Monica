@@ -33,17 +33,14 @@ public sealed class FluentDesignTheme : ThemeDefinitionBase
             LayoutProperties = new LayoutProperties
             {
                 DefaultBorderRadius = "4px",
-                AppbarHeight = "48px",
+                AppbarHeight = "56px",
                 DrawerWidthLeft = "272px",
                 DrawerWidthRight = "272px",
-                DrawerMiniWidthLeft = "56px",
-                DrawerMiniWidthRight = "56px"
+                DrawerMiniWidthLeft = "64px",
+                DrawerMiniWidthRight = "64px"
             },
             Typography = CreateTypography(),
-            Shadows = new Shadow
-            {
-                Elevation = CreateElevation()
-            }
+            Shadows = MonicaShadowDefaults.Create()
         };
     }
 
@@ -66,7 +63,7 @@ public sealed class FluentDesignTheme : ThemeDefinitionBase
             TertiaryDarken = "#5f5f5f",
             TertiaryContrastText = "#ffffff",
 
-            Info = "#0078d4",
+            Info = "#006dbe",
             InfoLighten = "#2b9fed",
             InfoDarken = "#005a9e",
             InfoContrastText = "#ffffff",
@@ -248,44 +245,4 @@ public sealed class FluentDesignTheme : ThemeDefinitionBase
         };
     }
 
-    private static string[] CreateElevation()
-    {
-        const string level0 = "none";
-        const string level1 = "0 1px 2px rgba(0, 0, 0, 0.12)";
-        const string level2 = "0 2px 4px rgba(0, 0, 0, 0.14)";
-        const string level3 = "0 4px 8px rgba(0, 0, 0, 0.18)";
-        const string level4 = "0 8px 16px rgba(0, 0, 0, 0.22)";
-        const string level5 = "0 16px 32px rgba(0, 0, 0, 0.26)";
-        const string level6 = "0 32px 64px rgba(0, 0, 0, 0.30)";
-
-        return
-        [
-            level0,
-            level1,
-            level1,
-            level2,
-            level2,
-            level2,
-            level3,
-            level3,
-            level3,
-            level4,
-            level4,
-            level4,
-            level4,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5,
-            level6,
-            level6,
-            level6,
-            level6,
-            level6,
-            level6,
-            level6
-        ];
-    }
 }

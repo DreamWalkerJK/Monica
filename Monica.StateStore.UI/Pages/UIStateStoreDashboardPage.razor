@@ -4,133 +4,92 @@
 @using Monica.StateStore.UI.Models
 @using Monica.StateStore.UI.Services
 @using Monica.StateStore.UI.UIStateStore.Components
-@using Monica.Core.Results;
+@using Monica.Core.Results
 @inject StateStoreUIService StateStoreService
 @inject IOptions<ModuleStateStoreUIOption> Options
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<StateStoreResource> L
 @implements IDisposable
 
 <PageTitle>@L["Dashboard:PageTitle"]</PageTitle>
 
 <div class="state-store-dashboard-page">
-    <MudPaper Class="dashboard-banner" Elevation="0">
-        <div class="dashboard-banner__identity">
-            <span class="dashboard-banner__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Storage" /></span>
-            <div class="dashboard-banner__copy">
-                <MudText Typo="Typo.overline" Class="dashboard-eyebrow">@L["Dashboard:Eyebrow"]</MudText>
-                <MudText Typo="Typo.h4">@L["Dashboard:Title"]</MudText>
-                <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Dashboard:Subtitle"]</MudText>
-            </div>
+    @if (_providerError is not null)
+    {
+        <div class="provider-discovery-error">
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                @_providerError
+                <MudButton Color="Color.Error" Variant="Variant.Text" OnClick="LoadProvidersAsync">
+                    @L["Dashboard:Actions:Retry"]
+                </MudButton>
+            </MudAlert>
         </div>
+    }
 
-        <div class="dashboard-banner__metrics">
-            <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Storage">
-                @L["Dashboard:Summary:RegisteredProviders", providers.Count]
-            </MudChip>
-
-            @if (PatternProviderCount > 0)
-            {
-                <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Search">
-                    @L["Dashboard:Summary:PatternProviders", PatternProviderCount]
-                </MudChip>
-            }
-
-            @if (ExactOnlyProviderCount > 0)
-            {
-                <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Key">
-                    @L["Dashboard:Summary:ExactOnlyProviders", ExactOnlyProviderCount]
-                </MudChip>
-            }
-
-            @if (DefaultProvider is not null)
-            {
-                <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Star">
-                    @L["Dashboard:Summary:DefaultProvider", L.GetProviderDisplayName(DefaultProvider)]
-                </MudChip>
-            }
-        </div>
-    </MudPaper>
-
-    <div class="dashboard-content">
-        @if (isLoading)
+    @if (_providers.Count > 0)
+    {
+        <StateStoreKeyExplorer Providers="_providers"
+                               Options="Options.Value"
+                               OnRefreshProviders="LoadProvidersAsync">
+            <HeaderContent>@PageIdentity</HeaderContent>
+        </StateStoreKeyExplorer>
+    }
+    else
+    {
+        @PageIdentity
+        @if (_providerError is null)
         {
-            <MudPaper Class="dashboard-state" Elevation="0">
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                <MudText Typo="Typo.h6">@L["Dashboard:Messages:LoadingProviders"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:Messages:LoadingProvidersDescription"]</MudText>
-            </MudPaper>
+            <section class="provider-empty-state" role="status">
+                <MudIcon Icon="@Icons.Material.Outlined.Storage" Color="Color.Primary" />
+                <div>
+                    <h2>@L["Dashboard:Messages:NoProviders"]</h2>
+                    <p>@L["Dashboard:Messages:NoProvidersDescription"]</p>
+                </div>
+                <MudButton Color="Color.Primary" Variant="Variant.Outlined" OnClick="LoadProvidersAsync">
+                    @L["KeyExplorer:Actions:RefreshProviders"]
+                </MudButton>
+            </section>
         }
-        else if (!providers.Any())
-        {
-            <MudPaper Class="dashboard-state" Elevation="0">
-                <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Secondary" />
-                <MudText Typo="Typo.h6">@L["Dashboard:Messages:NoProviders"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:Messages:NoProvidersDescription"]</MudText>
-            </MudPaper>
-        }
-        else
-        {
-            <StateStoreKeyExplorer Providers="providers"
-                                   Options="Options.Value"
-                                   OnRefreshProviders="LoadProvidersAsync" />
-        }
-    </div>
+    }
 </div>
 
 @code {
     public const string PAGE_URL = "/state-store-dashboard";
 
-    private List<StateStoreProviderInfo> providers = [];
-    private bool isLoading;
-    private bool isDisposed;
+    private List<StateStoreProviderInfo> _providers = [];
+    private string? _providerError;
+    private bool _disposed;
 
-    private StateStoreProviderInfo? DefaultProvider => providers.FirstOrDefault(provider => provider.IsDefaultStateStore);
+    private RenderFragment PageIdentity => @<header class="state-page-identity">
+        <h1>@L["Dashboard:Title"]</h1>
+        @if (_providers.Count > 0 || _providerError is null)
+        {
+            <p>@(_providers.Count == 1 ? L["Dashboard:Summary:RegisteredProvider"] : L["Dashboard:Summary:RegisteredProviders", _providers.Count])</p>
+        }
+    </header>;
 
-    private int ExactOnlyProviderCount => providers.Count(provider => provider.SupportsExactLookup && !provider.SupportsKeyScanning);
+    protected override Task OnInitializedAsync() => LoadProvidersAsync();
 
-    private int PatternProviderCount => providers.Count(provider => provider.SupportsKeyScanning);
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private Task LoadProvidersAsync()
     {
-        if (firstRender && !isDisposed)
+        if (_disposed)
         {
-            await LoadProvidersAsync();
-        }
-    }
-
-    private async Task LoadProvidersAsync()
-    {
-        if (isDisposed)
-        {
-            return;
+            return Task.CompletedTask;
         }
 
-        isLoading = true;
-        StateHasChanged();
-
-        await Task.Yield();
-
-        if (isDisposed)
-        {
-            return;
-        }
-
+        // Discovery is synchronous. Keep the mounted explorer and its accepted query
+        // alive while replacing only a successfully retrieved registration snapshot.
         if (StateStoreService.GetRegisteredProviders().IsFailed(out var error, out var data))
         {
-            Snackbar.Add(L["Dashboard:Messages:LoadProviderFailed", error], Severity.Error);
+            _providerError = L["Dashboard:Messages:LoadProviderFailed", error];
         }
         else
         {
-            providers = data;
+            _providers = data;
+            _providerError = null;
         }
 
-        isLoading = false;
-        if (!isDisposed)
-        {
-            StateHasChanged();
-        }
+        return Task.CompletedTask;
     }
 
-    public void Dispose() => isDisposed = true;
+    public void Dispose() => _disposed = true;
 }

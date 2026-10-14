@@ -1,9 +1,18 @@
-.configuration-versions-page {
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
-    min-height: 100%;
-    padding-block: clamp(1rem, 2vw, 1.5rem);
-}
+.configuration-versions-page { --configuration-versions-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary)); display: grid; gap: 24px; width: 100%; min-width: 0; padding: clamp(20px, 3vw, 36px); color: var(--mud-palette-text-primary); }
+.configuration-versions-eyebrow { display: block; margin-bottom: 10px; color: color-mix(in srgb, var(--mud-palette-primary) 60%, var(--mud-palette-text-primary)); font-size: 11px; font-weight: 600; letter-spacing: .09em; }
+.configuration-versions-comparison header p { margin: 12px 0 0; color: var(--configuration-versions-muted); line-height: 1.6; }
+.configuration-versions-tabs, .configuration-versions-comparison { min-width: 0; }
+.configuration-versions-tabs ::deep .mud-tabs-toolbar { margin-bottom: 20px; background: transparent; border-bottom: 1px solid var(--mud-palette-lines-default); }
+.configuration-versions-tabs ::deep .mud-tab { text-transform: none; color: var(--configuration-versions-muted); }
+.configuration-versions-tabs ::deep .mud-tab-active { color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-text-primary)); background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface)); }
+.configuration-versions-comparison { border: 1px solid var(--mud-palette-lines-default); border-radius: var(--mud-default-borderradius); background: var(--mud-palette-surface); }
+.configuration-versions-comparison header { padding: 24px 28px 0; }
+.configuration-versions-comparison header h2 { margin: 0; font-size: 20px; font-weight: 600; }
+.configuration-versions-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 20px 28px 24px; border-bottom: 1px solid var(--mud-palette-lines-default); }
+.configuration-versions-pair > div { min-width: 0; }
+.configuration-versions-pair ::deep .mud-select-input { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.configuration-versions-pair ::deep .mud-button-filled-primary:not(:disabled) { background: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)) !important; color: var(--mud-palette-surface) !important; --mud-ripple-color: var(--mud-palette-surface); }
+.configuration-versions-empty { display: grid; justify-items: center; gap: 16px; padding: 56px 24px; border: 1px solid var(--mud-palette-lines-default); border-radius: var(--mud-default-borderradius); background: var(--mud-palette-surface); text-align: center; }
+.configuration-versions-empty h2, .configuration-versions-empty p { margin: 0; }
+.configuration-versions-empty p { color: var(--configuration-versions-muted); line-height: 1.7; }
+@media (max-width: 800px) { .configuration-versions-page { padding: 20px; gap: 20px; } .configuration-versions-pair { grid-template-columns: minmax(0, 1fr); padding: 20px; } .configuration-versions-pair ::deep .mud-button-root { justify-self: start; } .configuration-versions-comparison header { padding: 20px 20px 0; } }

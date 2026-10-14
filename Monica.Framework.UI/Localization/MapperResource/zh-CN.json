@@ -1,53 +1,58 @@
 {
-  "Pages": {
-    "MapperDebug": {
-      "Title": "Mapper 调试"
-    }
-  },
+  "Pages": { "MapperDebug": { "Title": "对象映射调试" } },
   "Page": {
-    "PageTitle": "Mapper 注册表",
+    "PageTitle": "对象映射注册表",
     "Header": {
-      "Eyebrow": "Monica / 转换注册表",
-      "Title": "Mapper 注册表",
-      "Description": "检查已注册的源类型到目标类型转换，并查看其编译后的映射表达式。"
+      "Eyebrow": "对象映射",
+      "Title": "映射注册表",
+      "Description": "查找已注册的类型对，查看其生成的 C# 映射表达式。"
     },
     "Actions": {
-      "Close": "关闭",
-      "InspectExpression": "查看表达式",
-      "Loading": "加载中...",
-      "Refresh": "刷新注册表"
+      "Refresh": "刷新注册表",
+      "RefreshShort": "刷新",
+      "Retry": "重试",
+      "Choose": "选择类型对",
+      "ChooseAnother": "选择其他类型对",
+      "ClosePicker": "收起类型对选择器",
+      "ClearSearch": "清除搜索"
     },
-    "Summary": {
-      "AriaLabel": "Mapper 注册表摘要",
-      "Ready": "注册表就绪",
-      "RegisteredMappings": "已注册映射",
-      "Scanning": "正在扫描注册表"
+    "Read": {
+      "LastSuccess": "本页上次成功读取时间：{0}",
+      "ExpressionReceipt": "本页读取完成于 {0}",
+      "Retained": "当前显示的是本页于 {0} 完成的读取结果。",
+      "Diagnostic": "技术诊断信息"
     },
     "Registry": {
-      "Title": "转换清单",
-      "Description": "每一行代表对象映射器当前可用的一条转换路径。",
-      "Count": "{0} 个映射",
-      "Columns": {
-        "Actions": "操作",
-        "DestinationType": "目标类型",
-        "SourceType": "源类型"
-      }
+      "Title": "已注册类型对",
+      "Count": "{0} 个已注册类型对",
+      "FilteredCount": "匹配 {0} 个，共 {1} 个类型对",
+      "Search": "搜索源类型或目标类型"
+    },
+    "Reader": {
+      "Title": "生成的表达式",
+      "Source": "源类型",
+      "Destination": "目标类型",
+      "Wrap": "自动换行"
     },
     "States": {
-      "EmptyDescription": "当前宿主没有注册源类型到目标类型的映射表达式。",
-      "EmptyTitle": "没有注册映射",
-      "Loading": "正在读取 Mapper 注册信息..."
-    },
-    "Dialog": {
-      "DestinationType": "目标类型",
-      "NoExpression": "此注册项没有可用的映射表达式。",
-      "SourceType": "源类型",
-      "Title": "映射表达式"
+      "Reading": "正在读取已注册类型对…",
+      "Refreshing": "正在刷新注册表…",
+      "FirstFailed": "无法读取注册表",
+      "FirstFailedDescription": "当前无法获取已注册类型对。请重试读取或查看技术诊断信息。",
+      "LatestFailed": "最近一次读取失败",
+      "EmptyTitle": "暂无已注册类型对",
+      "EmptyDescription": "此视图列出当前宿主中显式注册的类型对，仅依约定生成的映射可能不会出现在此处。",
+      "NoMatches": "没有匹配搜索的类型对",
+      "NoMatchesDescription": "可搜索源类型或目标类型的完整名称，或清除搜索以恢复注册表列表。",
+      "SelectTitle": "选择一个已注册类型对",
+      "SelectDescription": "选择源类型与目标类型对，查看其完整的生成表达式。",
+      "SelectAfterRefresh": "注册表已刷新。请选择类型对，查看其当前表达式。",
+      "OutsideFilter": "当前选择的类型对不在筛选结果中。",
+      "MissingExpression": "此类型对未提供表达式。"
     },
     "Messages": {
-      "LoadException": "加载 Mapper 数据时发生异常：{0}",
-      "LoadFailed": "加载 Mapper 数据失败：{0}",
-      "LoadSucceeded": "已加载 {0} 个映射注册项。"
+      "LoadSucceeded": "已读取 {0} 个已注册类型对。",
+      "LoadFailed": "读取注册表失败：{0}"
     }
   }
 }

@@ -5,49 +5,69 @@
     <section class="seeder-configuration" aria-labelledby="seeder-configuration-title">
         <div class="seeder-configuration-heading">
             <div>
-                <MudText Typo="Typo.overline">@L["Configuration:Eyebrow"]</MudText>
-                <MudText Typo="Typo.h6" id="seeder-configuration-title">@L["Configuration:Title"]</MudText>
+                <span class="seeder-configuration-eyebrow">@L["Configuration:Eyebrow"]</span>
+                <h2 id="seeder-configuration-title">@L["Configuration:Title"]</h2>
             </div>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Configuration:Subtitle"]</MudText>
+            <span class="seeder-configuration-symbol" aria-hidden="true">
+                <MudIcon Icon="@Icons.Material.Outlined.Tune" />
+            </span>
         </div>
 
-        <dl class="seeder-configuration-facts">
-            <div>
-                <dt>@L["Configuration:MaxConcurrency"]</dt>
-                <dd>@configuration.MaxConcurrency</dd>
-            </div>
-            <div>
-                <dt>@L["Configuration:ExecutionMode"]</dt>
-                <dd>@L.GetText(configuration.DefaultExecutionMode)</dd>
-            </div>
-            <div>
-                <dt>@L["Configuration:Criticality"]</dt>
-                <dd>@L.GetText(configuration.DefaultCriticality)</dd>
-            </div>
-            <div>
-                <dt>@L["Configuration:MaxAttempts"]</dt>
-                <dd>@configuration.DefaultMaxAttempts</dd>
-            </div>
-            <div>
-                <dt>@L["Configuration:RetryBaseDelay"]</dt>
-                <dd>@L.FormatSeederDuration(configuration.RetryBaseDelay)</dd>
-            </div>
-            <div>
-                <dt>@L["Configuration:RetryMaxDelay"]</dt>
-                <dd>@L.FormatSeederDuration(configuration.RetryMaxDelay)</dd>
-            </div>
-            <div>
-                <dt>@L["Configuration:FailureBehavior"]</dt>
-                <dd>
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Variant="Variant.Outlined"
-                             Color="@SeederDisplay.Color(configuration.DefaultFailureBehavior)">
-                        @L.GetText(configuration.DefaultFailureBehavior)
-                    </MudChip>
-                </dd>
-            </div>
-        </dl>
+        <div class="seeder-policy-groups">
+            <section class="seeder-policy-group" aria-labelledby="seeder-scheduling-policy-title">
+                <h3 id="seeder-scheduling-policy-title">@L["Configuration:Groups:Scheduling"]</h3>
+                <dl class="seeder-configuration-facts">
+                    <div>
+                        <dt>@L["Configuration:ExecutionMode"]</dt>
+                        <dd>@L.GetText(configuration.DefaultExecutionMode)</dd>
+                    </div>
+                    <div>
+                        <dt>@L["Configuration:MaxConcurrency"]</dt>
+                        <dd class="seeder-policy-number">@configuration.MaxConcurrency</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="seeder-policy-group" aria-labelledby="seeder-readiness-policy-title">
+                <h3 id="seeder-readiness-policy-title">@L["Configuration:Groups:Readiness"]</h3>
+                <dl class="seeder-configuration-facts">
+                    <div>
+                        <dt>@L["Configuration:Criticality"]</dt>
+                        <dd>@L.GetText(configuration.DefaultCriticality)</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="seeder-policy-group seeder-policy-retries" aria-labelledby="seeder-retry-policy-title">
+                <h3 id="seeder-retry-policy-title">@L["Configuration:Groups:Retries"]</h3>
+                <dl class="seeder-configuration-facts">
+                    <div>
+                        <dt>@L["Configuration:MaxAttempts"]</dt>
+                        <dd class="seeder-policy-number">@configuration.DefaultMaxAttempts</dd>
+                    </div>
+                    <div>
+                        <dt>@L["Configuration:RetryBaseDelay"]</dt>
+                        <dd class="seeder-policy-number">@L.FormatSeederDuration(configuration.RetryBaseDelay)</dd>
+                    </div>
+                    <div>
+                        <dt>@L["Configuration:RetryMaxDelay"]</dt>
+                        <dd class="seeder-policy-number">@L.FormatSeederDuration(configuration.RetryMaxDelay)</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="seeder-policy-group" aria-labelledby="seeder-failure-policy-title">
+                <h3 id="seeder-failure-policy-title">@L["Configuration:Groups:Failure"]</h3>
+                <dl class="seeder-configuration-facts">
+                    <div>
+                        <dt>@L["Configuration:FailureBehavior"]</dt>
+                        <dd>@L.GetText(configuration.DefaultFailureBehavior)</dd>
+                    </div>
+                </dl>
+            </section>
+        </div>
+
+        <p class="seeder-configuration-context">@L["Configuration:Subtitle"]</p>
     </section>
 }
 

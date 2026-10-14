@@ -1,0 +1,67 @@
+.kafka-status-filter {
+    --filter-accent: var(--mud-palette-text-secondary);
+    min-width: 0;
+}
+
+.kafka-status-filter--primary {
+    --filter-accent: var(--mud-palette-primary);
+}
+
+.kafka-status-filter--success {
+    --filter-accent: var(--mud-palette-success);
+}
+
+.kafka-status-filter--warning {
+    --filter-accent: var(--mud-palette-warning);
+}
+
+.kafka-status-filter--error {
+    --filter-accent: var(--mud-palette-error);
+}
+
+.kafka-status-filter--info {
+    --filter-accent: var(--mud-palette-info);
+}
+
+.kafka-status-filter--secondary {
+    --filter-accent: var(--mud-palette-secondary);
+}
+
+.kafka-status-filter ::deep .mud-button-root {
+    max-width: 100%;
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
+    /* Optional themes normalize outlined borders; this filter owns its semantic cue. */
+    border: 1px solid color-mix(in srgb, var(--filter-accent) 48%, var(--mud-palette-text-primary)) !important;
+    background: color-mix(in srgb, var(--filter-accent) 6%, var(--mud-palette-surface)) !important;
+}
+
+.kafka-status-filter ::deep .mud-button-root:hover {
+    background: color-mix(in srgb, var(--filter-accent) 12%, var(--mud-palette-surface)) !important;
+}
+
+.kafka-status-filter--selected ::deep .mud-button-root, .kafka-status-filter--selected ::deep .mud-button-label, .kafka-status-filter--selected ::deep .mud-icon-root {
+    color: var(--mud-palette-text-primary);
+}
+
+.kafka-status-filter--selected ::deep .mud-button-root {
+    background: color-mix(in srgb, var(--filter-accent) 18%, var(--mud-palette-surface)) !important;
+}
+
+.kafka-status-filter--selected ::deep .mud-button-root:hover {
+    background: color-mix(in srgb, var(--filter-accent) 24%, var(--mud-palette-surface)) !important;
+}
+
+.kafka-status-filter ::deep .mud-button-root:focus-visible {
+    outline: 2px solid var(--mud-palette-text-primary);
+    outline-offset: 3px;
+}
+
+.filter-label {
+    overflow-wrap: anywhere;
+}
+
+.filter-count {
+    padding-inline-start: 8px;
+    font-variant-numeric: tabular-nums;
+}

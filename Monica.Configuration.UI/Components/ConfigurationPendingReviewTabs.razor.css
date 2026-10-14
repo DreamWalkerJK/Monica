@@ -1,19 +1,7 @@
-.configuration-pending-review-tabs {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    min-height: 0;
-    min-width: 0;
-    width: 100%;
-}
-
-.configuration-pending-review-tabs ::deep .mud-tabs {
-    min-width: 0;
-    width: 100%;
-}
-
-.configuration-pending-review-tabs ::deep .mud-tabs-panels,
-.configuration-pending-review-tabs ::deep .mud-tabs-panels > .mud-tab-panel {
-    min-width: 0;
-    width: 100%;
+.configuration-pending-review-tabs { min-width: 0; }
+.configuration-pending-review-tabs ::deep .mud-tabs, .configuration-pending-review-tabs ::deep .mud-tabs-panels { min-width: 0; }
+.configuration-pending-review-tabs ::deep .mud-tab { white-space: normal; line-height: 1.5; padding: 12px; font-size: 12px; }
+@media (max-width: 600px) {
+    .configuration-pending-review-tabs ::deep .mud-tabs-tabbar-wrapper { width: 100%; }
+    .configuration-pending-review-tabs ::deep .mud-tab { flex: 1 1 0; }
 }

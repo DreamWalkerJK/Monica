@@ -2,10 +2,10 @@
 @using Monica.AI.Chat.Facades
 @using Monica.AI.UI.Localization
 @using Monica.Core.Results
-@implements IDisposable
+@implements IAsyncDisposable
 @inject ChatAttachmentFacade AttachmentFacade
 @inject IStringLocalizer<AIResource> L
-<MudDialog>
+<MudDialog ContentClass="pa-0" Style="max-height:calc(100dvh - 24px);margin:12px">
     <DialogContent>
         <div class="attachment-preview">
             @if (_loading) { <MudProgressLinear Indeterminate="true" /> }
@@ -16,17 +16,22 @@
             @if (Attachment.Kind == ChatAttachmentKind.Document) { <MudAlert Severity="Severity.Info" Dense="true">@L["Workbench:DocumentDelivery"]</MudAlert> }
         </div>
     </DialogContent>
+    <DialogActions><MudButton OnClick="@(() => Dialog.Close())">@L["Common:Actions:Close"]</MudButton></DialogActions>
 </MudDialog>
 @code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
     [Parameter, EditorRequired] public required ChatAttachmentReference Attachment { get; set; }
     [Parameter, EditorRequired] public required string SessionId { get; set; }
     private readonly CancellationTokenSource _lifetime = new();
+    private Task? _read;
+    private Task? _retirement;
     private bool _loading = true;
     private bool _disposed;
     private string? _error;
     private string? _imageSource;
     private string? _text;
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => _read = ReadAsync();
+    private async Task ReadAsync()
     {
         try
         {
@@ -37,7 +42,17 @@
             else _text = data.ExtractedText;
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception) { if (!_disposed) _error = exception.Message; }
         finally { if (!_disposed) _loading = false; }
     }
-    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
+    public ValueTask DisposeAsync() => new(_retirement ??= RetireAsync());
+    private async Task RetireAsync()
+    {
+        _disposed = true;
+        try
+        {
+            await Task.WhenAll(_lifetime.CancelAsync(), _read ?? Task.CompletedTask);
+        }
+        finally { _lifetime.Dispose(); }
+    }
 }

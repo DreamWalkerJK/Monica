@@ -220,3 +220,28 @@ test("connection stop failure is reported only after callbacks drain", async () 
     assert.equal(connection.stopCalls, 1);
     assert.equal(shutdownSettled, true);
 });
+
+test("listener receipts carry exact route and connection generation and disappear after disconnect", async () => {
+    const startGate = deferred();
+    startGate.resolve();
+    const connection = new FakeConnection(startGate);
+    installSignalRFake(connection);
+    const callback = createCallback();
+    const { createSession } = await import(`${moduleUrl.href}?listenerIdentity=${Date.now()}`);
+    const session = await createSession(callback);
+
+    const result = await session.connect("/first", "", 7);
+    assert.deepEqual(result, { success: true, connectionId: "connection-1" });
+    assert.equal(session.registerListener("Echo", "Old display", "/first").success, true);
+    connection.handlers.get("Echo")?.(42);
+    assert.ok(callback.invocations.some(entry => JSON.stringify(entry)
+        === JSON.stringify(["OnMethodReceived", "Echo", "[42]", "/first", 7])));
+    assert.ok(callback.invocations.some(entry => JSON.stringify(entry)
+        === JSON.stringify(["OnConnectionStatusChangedForSession", "Connected", 7])));
+
+    await session.disconnect(8);
+    assert.equal(connection.handlers.size, 0);
+    assert.ok(callback.invocations.some(entry => JSON.stringify(entry)
+        === JSON.stringify(["OnConnectionStatusChangedForSession", "Disconnected", 8])));
+    await session.shutdown();
+});

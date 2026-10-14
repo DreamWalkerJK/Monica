@@ -5,6 +5,12 @@ using Monica.DevOps.K8S.Services.Support;
 
 namespace Monica.DevOps.K8S.Services;
 
+/// <summary>
+/// Previews and restarts workloads using one detached runtime configuration snapshot per operation.
+/// </summary>
+/// <remarks>
+/// Execution rebuilds discovery and restrictions using its own current snapshot; a previous preview does not freeze configuration or targets.
+/// </remarks>
 public class K8SRestartService(
     K8SResourceDiscoveryService discoveryService,
     IK8SRuntimeConfigStore runtimeConfigStore,
@@ -35,7 +41,16 @@ public class K8SRestartService(
         IReadOnlyCollection<string> resourceNames,
         CancellationToken cancellationToken = default)
     {
-        var runtimeConfig = runtimeConfigStore.GetCurrent();
+        return await BuildBatchRestartPreviewAsync(runtimeConfigStore.GetCurrent(), namespaceName, resourceType, resourceNames, cancellationToken);
+    }
+
+    private async Task<K8SRestartPreview> BuildBatchRestartPreviewAsync(
+        K8SRuntimeConfig runtimeConfig,
+        string namespaceName,
+        K8SResourceType resourceType,
+        IReadOnlyCollection<string> resourceNames,
+        CancellationToken cancellationToken)
+    {
         runtimeConfig.EnsureNamespaceAllowed(namespaceName);
 
         var normalizedNames = KubectlCommandBuilder.NormalizeRequestedNames(resourceNames);
@@ -59,7 +74,15 @@ public class K8SRestartService(
         K8SResourceType resourceType,
         CancellationToken cancellationToken = default)
     {
-        var runtimeConfig = runtimeConfigStore.GetCurrent();
+        return await BuildNamespaceRestartPreviewAsync(runtimeConfigStore.GetCurrent(), namespaceName, resourceType, cancellationToken);
+    }
+
+    private async Task<K8SRestartPreview> BuildNamespaceRestartPreviewAsync(
+        K8SRuntimeConfig runtimeConfig,
+        string namespaceName,
+        K8SResourceType resourceType,
+        CancellationToken cancellationToken)
+    {
         runtimeConfig.EnsureNamespaceAllowed(namespaceName);
 
         var names = resourceType == K8SResourceType.Service
@@ -92,23 +115,8 @@ public class K8SRestartService(
         CancellationToken cancellationToken = default)
     {
         var runtimeConfig = runtimeConfigStore.GetCurrent();
-        runtimeConfig.EnsureNamespaceAllowed(namespaceName);
-
-        var preview = await GetBatchRestartPreviewAsync(namespaceName, resourceType, resourceNames, cancellationToken);
-        EnsurePreviewHasRestartableTargets(preview);
-
-        var commands = await ExecuteRestartCommandsAsync(runtimeConfig, namespaceName, preview.Workloads, cancellationToken);
-        return new K8SRestartResult
-        {
-            Namespace = namespaceName,
-            ScopeName = preview.ScopeName,
-            ResourceType = resourceType,
-            AffectedTargets = preview.EligibleTargets.Select(item => item.Name).ToList(),
-            Workloads = preview.Workloads,
-            ExecutedCommands = commands,
-            IgnoredTargets = preview.IgnoredTargets,
-            CompletedAtUtc = DateTimeOffset.UtcNow
-        };
+        var preview = await BuildBatchRestartPreviewAsync(runtimeConfig, namespaceName, resourceType, resourceNames, cancellationToken);
+        return await ExecuteRestartPreviewAsync(runtimeConfig, preview, cancellationToken);
     }
 
     public Task<K8SRestartResult> RestartNamespaceAsync(string namespaceName, CancellationToken cancellationToken = default)
@@ -121,14 +129,30 @@ public class K8SRestartService(
         K8SResourceType resourceType,
         CancellationToken cancellationToken = default)
     {
-        var preview = await GetNamespaceRestartPreviewAsync(namespaceName, resourceType, cancellationToken);
+        var runtimeConfig = runtimeConfigStore.GetCurrent();
+        var preview = await BuildNamespaceRestartPreviewAsync(runtimeConfig, namespaceName, resourceType, cancellationToken);
+        return await ExecuteRestartPreviewAsync(runtimeConfig, preview, cancellationToken);
+    }
+
+    private async Task<K8SRestartResult> ExecuteRestartPreviewAsync(
+        K8SRuntimeConfig runtimeConfig,
+        K8SRestartPreview preview,
+        CancellationToken cancellationToken)
+    {
         EnsurePreviewHasRestartableTargets(preview);
 
-        return await RestartResourcesAsync(
-            namespaceName,
-            resourceType,
-            preview.RequestedTargets.Select(item => item.Name).ToList(),
-            cancellationToken);
+        var commands = await ExecuteRestartCommandsAsync(runtimeConfig, preview.Namespace, preview.Workloads, cancellationToken);
+        return new K8SRestartResult
+        {
+            Namespace = preview.Namespace,
+            ScopeName = preview.ScopeName,
+            ResourceType = preview.ResourceType,
+            AffectedTargets = preview.EligibleTargets.Select(item => item.Name).ToList(),
+            Workloads = preview.Workloads,
+            ExecutedCommands = commands,
+            IgnoredTargets = preview.IgnoredTargets,
+            CompletedAtUtc = DateTimeOffset.UtcNow
+        };
     }
 
     private async Task<K8SRestartPreview> BuildServiceRestartPreviewAsync(

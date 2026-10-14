@@ -1,14 +1,117 @@
 {
-  "Pages": { "RuntimeMetrics": { "Title": "Runtime Metrics" } },
-  "Page": {
-    "Eyebrow": "RUNTIME INSTRUMENTATION",
-    "Subtitle": "Follow process pressure and managed runtime evidence from one continuously sampled view.",
-    "Status": { "Live": "Live sampling", "Paused": "Sampling paused" },
-    "Actions": { "AutoRefresh": "Auto refresh", "Refresh": "Refresh evidence" },
-    "Messages": { "RefreshFailed": "Failed to refresh runtime metrics." }
+  "Pages": {
+    "RuntimeMetrics": {
+      "Title": "Runtime Metrics",
+      "Description": "Inspect process CPU, memory, ThreadPool and GC evidence in a bounded sample window."
+    }
   },
-  "Vitals": { "AriaLabel": "Current runtime vitals", "Cpu": "CPU", "WorkingSet": "Working set", "Threads": "Threads", "GcTime": "GC time", "AllocationRate": "Allocation rate", "GcHeap": "GC heap", "Delta": "{0} from previous" },
-  "Trend": { "Eyebrow": "LIVE WINDOW", "Title": "Runtime pressure trend", "ChartAriaLabel": "CPU and working-set trend", "Waiting": "Waiting for enough samples to draw the trend.", "Metrics": { "Cpu": "CPU now", "Memory": "Working set now" }, "Series": { "Cpu": "CPU", "WorkingSet": "Working set" } },
-  "Recent": { "Eyebrow": "SAMPLE EVIDENCE", "Title": "Recent observations", "Count": "{0} samples", "Empty": "No runtime observations have been captured.", "Columns": { "Time": "Captured", "Cpu": "CPU", "WorkingSet": "Working set", "GcHeap": "GC heap", "Threads": "Threads", "GcTime": "GC time", "AllocationRate": "Allocation rate" } },
-  "Common": { "LoadingValue": "Collecting…" }
+  "Page": {
+    "Eyebrow": "PROCESS OBSERVATORY",
+    "Subtitle": "See the runtime at work. Compare current measurements with the observations retained by this host.",
+    "Captured": "View read",
+    "Status": {
+      "Live": "View refresh every {0:0.##} s",
+      "Paused": "View paused · collection continues",
+      "Manual": "Manual view · collection continues"
+    },
+    "Actions": {
+      "AutoRefresh": "Auto refresh",
+      "Refresh": "Refresh view"
+    },
+    "Messages": {
+      "RefreshFailed": "The view could not be refreshed.",
+      "Retained": "The last successful view is retained below. Its capture time has not advanced.",
+      "NoSnapshot": "There is no successful view to display yet."
+    }
+  },
+  "Vitals": {
+    "AriaLabel": "Latest retained runtime sample",
+    "Eyebrow": "LATEST OBSERVATION",
+    "Sampled": "Sampled at {0}",
+    "Waiting": "No retained sample yet",
+    "Cpu": "Process CPU",
+    "WorkingSet": "Working set",
+    "Threads": "ThreadPool threads",
+    "GcTime": "Time in GC",
+    "AllocationRate": "Reported allocation rate",
+    "GcHeap": "Managed GC heap",
+    "Delta": "{0} since previous view read"
+  },
+  "Trend": {
+    "Eyebrow": "RETAINED WINDOW",
+    "Title": "The recent shape of this process",
+    "Scope": "Separate scales, actual sample times. Older observations leave this window when capacity is reached.",
+    "Retained": "Samples retained",
+    "Capacity": "{0} / {1}",
+    "Window": "Observed span",
+    "CollectorInterval": "Snapshot interval",
+    "Seconds": "{0:0.##} s",
+    "CpuChart": "Process CPU history, percent, UTC time axis",
+    "MemoryChart": "Working-set history, decimal megabytes, UTC time axis",
+    "UtcPercent": "% · UTC",
+    "UtcMegabytes": "decimal MB · UTC",
+    "Metrics": {
+      "Cpu": "CPU",
+      "Memory": "Working set"
+    },
+    "Series": {
+      "Cpu": "CPU",
+      "WorkingSet": "Working set"
+    },
+    "NoSelectionTitle": "Choose a measurement",
+    "NoSelection": "Select CPU or working set above to show its history. All samples remain available below.",
+    "NoRetentionTitle": "History retention is off",
+    "NoRetention": "This host retains zero samples. Collection can continue, but this view cannot show a latest retained point or a trend.",
+    "SingleTitle": "One observation",
+    "SingleRetention": "This host retains one sample. The latest values are available, but a line needs at least two retained observations.",
+    "SingleWaiting": "A second retained observation will make the time series available.",
+    "WaitingTitle": "Waiting for observations",
+    "Waiting": "The collector has not provided retained samples to this view yet. Refresh to read the current window.",
+    "MeasurementHelp": "MB uses 1,000,000 bytes. Snapshots contain cached runtime counters; a zero does not prove a counter was reported. Allocation preserves the collector’s reported value, and repeated GC increments are not lifetime totals."
+  },
+  "Recent": {
+    "Eyebrow": "SAMPLE LEDGER",
+    "Title": "Observations behind the curves",
+    "Scope": "Newest first · inspect exact values from this view",
+    "Empty": "No retained observations in this view.",
+    "Range": "{0}–{1} of {2} retained samples",
+    "Pagination": "Retained sample pages",
+    "Inspect": "Inspect sample {0}",
+    "Columns": {
+      "Time": "Sample time",
+      "Cpu": "CPU",
+      "WorkingSet": "Working set",
+      "GcHeap": "GC heap",
+      "Threads": "ThreadPool",
+      "GcTime": "Time in GC",
+      "AllocationRate": "Allocation",
+      "Inspect": "Inspect sample"
+    }
+  },
+  "Details": {
+    "Title": "Runtime sample",
+    "OpenFailed": "The sample inspector could not be opened.",
+    "Frozen": "This sample stays fixed while the page and host continue to update. Values below preserve the recorded precision.",
+    "Timestamp": "Sample timestamp · UTC",
+    "ViewCapture": "Successful view read · local offset",
+    "RecordedValues": "Recorded counter values",
+    "Bytes": "bytes",
+    "BytesPerSecond": "bytes/s · reported",
+    "Increment": "cached increment",
+    "Gen0Size": "Gen 0 size",
+    "Gen1Size": "Gen 1 size",
+    "Gen2Size": "Gen 2 size",
+    "LohSize": "Large object heap",
+    "PohSize": "Pinned object heap",
+    "Fragmentation": "GC fragmentation",
+    "Gen0Increment": "Gen 0 GC increment",
+    "Gen1Increment": "Gen 1 GC increment",
+    "Gen2Increment": "Gen 2 GC increment",
+    "CounterHelp": "Counters may repeat across snapshots. Allocation is shown without interval rescaling; GC increments must not be summed as lifetime counts. Unreported counters can appear as zero."
+  },
+  "Common": {
+    "LoadingValue": "Reading observations…",
+    "Unavailable": "—",
+    "Close": "Close"
+  }
 }

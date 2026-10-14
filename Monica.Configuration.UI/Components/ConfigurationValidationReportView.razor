@@ -1,20 +1,21 @@
 @inject IStringLocalizer<ConfigurationUIResource> L
 
-<MudPaper Outlined="true" Class="pa-3">
-    <MudStack Spacing="2">
-        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+<div class="configuration-validation-report">
+<MudPaper Outlined="true" Class="configuration-validation-report__surface pa-3">
+    <MudStack Spacing="2" Class="configuration-validation-report__body">
+        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-validation-report__heading">
             @if (!string.IsNullOrWhiteSpace(Title))
             {
-                <MudText Typo="Typo.subtitle2">@Title</MudText>
+                <MudText Typo="Typo.subtitle2" Class="configuration-validation-report__text">@Title</MudText>
             }
             <MudTooltip Text="@L["Validation:Coverage"].Value">
                 <MudChip T="string" Size="Size.Small" Color="@StatusColor" Variant="Variant.Outlined">@CoverageText</MudChip>
             </MudTooltip>
         </MudStack>
-        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Validation:Scope", ScopeText]</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="configuration-validation-report__text">@L["Validation:Scope", ScopeText]</MudText>
         @if (Scope == ConfigurationValidationScope.CompleteAggregate && Target is not null)
         {
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="configuration-validation-report__text">
                 @(Target == ConfigurationCandidateValidationTarget.StoredDocument
                     ? L["Validation:StoredDocument"] : L["Validation:EffectiveAggregate"])
             </MudText>
@@ -23,7 +24,7 @@
                 <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:MaskedChange"]</MudAlert>
             }
         }
-        <MudText Typo="Typo.caption" Color="Color.Secondary">
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="configuration-validation-report__text configuration-validation-report__revision">
             @(string.IsNullOrWhiteSpace(ValidationRevision) ? L["Validation:RevisionUnavailable"] : L["Validation:Revision", ValidationRevision])
         </MudText>
         @ChildContent
@@ -37,6 +38,7 @@
                                           SourceChainRequested="SourceChainRequested" />
     </MudStack>
 </MudPaper>
+</div>
 
 @code {
     [Parameter] public string? Title { get; set; }

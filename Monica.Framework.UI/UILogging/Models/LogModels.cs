@@ -34,13 +34,17 @@ public sealed class LogFilterState
     {
     }
 
-    public string? Keyword { get; private set; }
+    public string? Keyword { get; private init; }
 
-    public bool OnlyCapture { get; private set; }
+    public bool OnlyCapture { get; private init; }
 
-    public DateTimeOffset LastUpdated { get; private set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset LastUpdated { get; private init; } = DateTimeOffset.UtcNow;
 
-    public bool IsActive => !string.IsNullOrWhiteSpace(Keyword);
+    public LogSeverity? Severity { get; private init; }
+
+    public bool HasKeyword => !string.IsNullOrWhiteSpace(Keyword);
+
+    public bool IsActive => HasKeyword || Severity.HasValue;
 
     public static LogFilterState Disabled => new()
     {
@@ -48,33 +52,37 @@ public sealed class LogFilterState
         OnlyCapture = false
     };
 
-    public static LogFilterState Create(string? keyword, bool onlyCapture)
+    public static LogFilterState Create(string? keyword, bool onlyCapture, LogSeverity? severity = null)
     {
         return new LogFilterState
         {
             Keyword = string.IsNullOrWhiteSpace(keyword) ? null : keyword,
             OnlyCapture = onlyCapture,
+            Severity = severity,
             LastUpdated = DateTimeOffset.UtcNow
         };
     }
 
     public LogFilterState WithToggleOnlyCapture(bool onlyCapture)
     {
-        return Create(Keyword, onlyCapture);
+        return Create(Keyword, onlyCapture, Severity);
     }
 
     public override string ToString()
     {
-        return IsActive ? $"Keyword={Keyword}, OnlyCapture={OnlyCapture}" : "Disabled";
+        return IsActive ? $"Keyword={Keyword}, OnlyCapture={OnlyCapture}, Severity={Severity}" : "Disabled";
     }
 }
 
 /// <summary>
 /// Screen log snapshot
 /// </summary>
-public sealed class ScreenLogSnapshot
+public sealed record ScreenLogSnapshot
 {
     public required IReadOnlyList<LogLineViewModel> Lines { get; init; }
+
+    /// <summary>All retained raw evidence, independent of display limits and filters.</summary>
+    public IReadOnlyList<LogLineViewModel> RetainedLines { get; init; } = [];
 
     public required long Version { get; init; }
 
@@ -83,12 +91,32 @@ public sealed class ScreenLogSnapshot
     public required LogFilterState Filter { get; init; }
 
     public required DateTimeOffset GeneratedAt { get; init; }
+
+    /// <summary>The file and observed content generation; absent only on standalone legacy buffers.</summary>
+    public LogSourceIdentity? Source { get; init; }
+
+    /// <summary>Whether the owning reader is following appended complete physical lines.</summary>
+    public bool IsRunning { get; init; }
+
+    /// <summary>Whether the source existed at the last successful read.</summary>
+    public bool FileExists { get; init; }
+
+    /// <summary>Complete physical lines observed in this file generation, including discarded history.</summary>
+    public long TotalFileLineCount { get; init; }
+
+    /// <summary>Absolute number of the first retained physical line; retention may contain gaps after earlier-history loading.</summary>
+    public long? FirstRetainedLineNumber { get; init; }
+    /// <summary>Absolute number of the last retained physical line.</summary>
+    public long? LastRetainedLineNumber { get; init; }
+
+    /// <summary>The latest read failure, without discarding the last successful evidence.</summary>
+    public string? Error { get; init; }
 }
 
 /// <summary>
 /// Log lines for interface display
 /// </summary>
-public sealed class LogLineViewModel
+public sealed record LogLineViewModel
 {
     private LogLineViewModel(
         string raw,
@@ -122,35 +150,36 @@ public sealed class LogLineViewModel
 
     public DateTimeOffset? Timestamp { get; }
 
-    public IReadOnlyList<LogMatchSegment>? MatchSegments { get; private set; }
+    public IReadOnlyList<LogMatchSegment>? MatchSegments { get; private init; }
 
-    public bool IsMatch { get; private set; }
+    public bool IsMatch { get; private init; }
 
     /// <summary>
     /// Absolute line number (line number in the original log file)
     /// </summary>
-    public long? AbsoluteLineNumber { get; private set; }
+    public long? AbsoluteLineNumber { get; private init; }
 
     /// <summary>
     /// Buffer index (position in unfiltered buffer, starting from 1)
     /// </summary>
-    public int? BufferIndex { get; private set; }
+    public int? BufferIndex { get; private init; }
 
     /// <summary>
     /// Index after filtering (position in filtered view, starting from 1, only has value when filtering)
     /// </summary>
-    public int? FilteredIndex { get; private set; }
+    public int? FilteredIndex { get; private init; }
 
     /// <summary>
     /// Whether it is the target line of the context jump
     /// </summary>
-    public bool IsContextTarget { get; private set; }
+    public bool IsContextTarget { get; private init; }
 
     public static LogLineViewModel FromRaw(string rawLine)
     {
+        ArgumentNullException.ThrowIfNull(rawLine);
         if (string.IsNullOrWhiteSpace(rawLine))
         {
-            return new LogLineViewModel(string.Empty, string.Empty, string.Empty, string.Empty, LogSeverity.Unknown, string.Empty, null);
+            return new LogLineViewModel(rawLine, rawLine, string.Empty, string.Empty, LogSeverity.Unknown, string.Empty, null);
         }
 
         var parsed = LogLineParser.Parse(rawLine);
@@ -164,20 +193,15 @@ public sealed class LogLineViewModel
             parsed.Timestamp);
     }
 
+    /// <summary>Returns an immutable copy with keyword match state. Keyword matching uses the verbatim physical line.</summary>
     public LogLineViewModel WithFilter(LogFilterState filter)
     {
-        if (!filter.IsActive)
+        var segments = filter.HasKeyword ? Highlight(Message, filter.Keyword!) : null;
+        return this with
         {
-            MatchSegments = null;
-            IsMatch = false;
-            return this;
-        }
-
-        var keyword = filter.Keyword!;
-        var segments = Highlight(Message, keyword);
-        MatchSegments = segments;
-        IsMatch = segments is { Count: > 0 };
-        return this;
+            MatchSegments = segments,
+            IsMatch = filter.HasKeyword && Raw.Contains(filter.Keyword!, StringComparison.OrdinalIgnoreCase)
+        };
     }
 
     private static IReadOnlyList<LogMatchSegment>? Highlight(string message, string keyword)
@@ -188,11 +212,11 @@ public sealed class LogLineViewModel
         }
 
         var list = ImmutableArray.CreateBuilder<LogMatchSegment>();
-        var comparison = CultureInfo.InvariantCulture.CompareInfo;
+
         var index = 0;
         while (index < message.Length)
         {
-            var matchIndex = comparison.IndexOf(message, keyword, index, CompareOptions.IgnoreCase);
+            var matchIndex = message.IndexOf(keyword, index, StringComparison.OrdinalIgnoreCase);
             if (matchIndex < 0)
             {
                 break;
@@ -210,10 +234,7 @@ public sealed class LogLineViewModel
     /// </summary>
     public LogLineViewModel WithPosition(long? absoluteLineNumber, int? bufferIndex, int? filteredIndex = null)
     {
-        AbsoluteLineNumber = absoluteLineNumber;
-        BufferIndex = bufferIndex;
-        FilteredIndex = filteredIndex;
-        return this;
+        return this with { AbsoluteLineNumber = absoluteLineNumber, BufferIndex = bufferIndex, FilteredIndex = filteredIndex };
     }
 
     /// <summary>
@@ -221,8 +242,7 @@ public sealed class LogLineViewModel
     /// </summary>
     public LogLineViewModel WithContextTarget(bool isTarget)
     {
-        IsContextTarget = isTarget;
-        return this;
+        return this with { IsContextTarget = isTarget };
     }
 
     /// <summary>
@@ -284,7 +304,7 @@ public enum LogCopyFormat
 /// </summary>
 /// <param name="FileName">File name</param>
 /// <param name="Size">File size</param>
-/// <param name="LastModified">Last modified time</param>
+/// <param name="LastModified">Last modified time in UTC</param>
 /// <param name="RelativePath">Relative path</param>
 public sealed record class LogFileDescriptor(string FileName, long Size, DateTime LastModified, string RelativePath);
 
@@ -307,7 +327,17 @@ public readonly record struct ContextLogResult(
     IReadOnlyList<LogLineViewModel> Lines,
     long TargetLineNumber,
     long StartLineNumber,
-    long EndLineNumber);
+    long EndLineNumber)
+{
+    public LogSourceIdentity? Source { get; init; }
+    public DateTimeOffset ReadAt { get; init; }
+}
+
+/// <summary>Identifies an observed file generation. It is not an operating-system file identity or archive guarantee.</summary>
+public sealed record LogSourceIdentity(string FilePath, string RelativePath, string Generation);
+
+/// <summary>A frozen physical-line request bound to an observed source generation and verbatim target text.</summary>
+public sealed record LogLineRequest(LogSourceIdentity Source, long AbsoluteLineNumber, string Raw);
 
 internal static class LogLineParser
 {

@@ -1,0 +1,23 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.Profiling.UIMemoryAnalysis.Components
+@inject IServiceProvider ServiceProvider
+@inject IStringLocalizer<MemoryAnalysisResource> L
+
+<MemoryWorkspace Section="allocations" TitleKey="Pages:MemoryAnalysis:Allocations:Title" DescriptionKey="Pages:MemoryAnalysis:Allocations:Description" Available="MemoryEnabled">
+    <ChildContent>
+        @if (ServiceProvider.GetService<TypeAllocationPanelStateFactory>() is not null)
+        {
+            <TypeAllocationCard />
+        }
+        else
+        {
+            <section class="memory-allocation-unavailable" role="status"><MudIcon Icon="@Icons.Material.Outlined.Category" /><h2>@L["Page:AllocationUnavailableTitle"]</h2><p>@L["Page:AllocationUnavailableDescription"]</p></section>
+        }
+    </ChildContent>
+</MemoryWorkspace>
+
+@code {
+    public const string PAGE_URL = "/memory-analysis/allocations";
+    private bool MemoryEnabled => ServiceProvider.GetService<MemoryAnalysisPageStateFactory>() is not null;
+}
+

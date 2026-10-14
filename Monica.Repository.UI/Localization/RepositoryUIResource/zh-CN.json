@@ -1,19 +1,5 @@
 {
-  "Pages": {
-    "RepositoryDashboard": {
-      "Title": "Repository 诊断"
-    }
-  },
   "Dashboard": {
-    "PageTitle": "Repository 诊断",
-    "Eyebrow": "Repository",
-    "Title": "Repository 诊断",
-    "Subtitle": "检查已注册的 DbContext、连接状态、数据库活动和 EF Core 迁移。",
-    "Summary": {
-      "RegisteredContexts": "已注册 {0} 个上下文",
-      "ConnectedContexts": "{0} 个已连接",
-      "PendingMigrations": "{0} 个待应用迁移"
-    },
     "Messages": {
       "LoadingContexts": "正在加载已注册的 DbContext...",
       "LoadingContextsDescription": "正在读取 Repository 注册、连接状态和迁移元数据。",
@@ -22,12 +8,6 @@
     },
     "Detail": {
       "SelectedContext": "当前上下文"
-    },
-    "Tabs": {
-      "Overview": "概览",
-      "Activity": "活动",
-      "Migrations": "迁移",
-      "Options": "选项"
     }
   },
   "Common": {
@@ -56,8 +36,6 @@
   "Overview": {
     "Empty": "选择一个 DbContext 以查看运行时详情。",
     "Metrics": {
-      "Connection": "连接",
-      "Pool": "连接池",
       "Pending": "待迁移",
       "ProviderType": "Provider 类型",
       "MigrationAssembly": "迁移程序集"
@@ -68,7 +46,6 @@
       "Unknown": "未知"
     },
     "Connection": {
-      "Title": "连接",
       "Hide": "隐藏",
       "Reveal": "显示",
       "DataSource": "数据源",
@@ -109,25 +86,17 @@
   "Activity": {
     "Loading": "正在加载活动",
     "Empty": "尚未加载活动结果。",
-    "NoRows": "Provider 未返回活动会话。",
     "NoMatches": "没有会话匹配当前筛选条件。",
     "Stats": {
-      "Total": "{0} 个会话",
-      "Active": "{0} 个活跃",
-      "Idle": "{0} 个空闲",
-      "Waiting": "{0} 个等待",
-      "Clients": "{0} 个客户端",
-      "Filtered": "显示 {0} 个"
+      "Total": "{0} 个会话"
     },
     "Controls": {
-      "SearchPlaceholder": "搜索用户、客户端、应用、状态或查询",
       "SortBy": "排序",
       "GroupBy": "分组",
       "Ascending": "升序",
       "Descending": "降序"
     },
     "Sort": {
-      "Runtime": "运行时间",
       "State": "状态",
       "User": "用户",
       "Application": "应用",
@@ -143,7 +112,6 @@
       "Count": "{0} 条"
     },
     "Columns": {
-      "Runtime": "运行时间",
       "State": "状态",
       "User": "用户",
       "Application": "应用",
@@ -176,7 +144,6 @@
         }
       },
       "Columns": {
-        "Runtime": "当前查询已经运行的时间。",
         "Datname": "会话所在数据库名称。",
         "Usename": "数据库用户名。",
         "ApplicationName": "客户端连接上报的应用名称。",
@@ -194,7 +161,6 @@
         "Pid": "PostgreSQL 后端进程标识。",
         "BackendStart": "后端进程启动时间。",
         "XactStart": "当前事务开始时间。",
-        "QueryStart": "当前查询开始时间。",
         "StateChange": "会话状态最近一次变化时间。",
         "ProviderSpecific": "Provider 特定活动值。"
       }
@@ -202,7 +168,6 @@
   },
   "Migrations": {
     "Title": "迁移管理",
-    "Subtitle": "查看迁移清单，并为当前或全部上下文应用待迁移项。",
     "DisabledInProduction": "Production 环境默认禁用迁移更新，除非在模块选项中显式启用。",
     "Actions": {
       "UpdateSelected": "更新当前",
@@ -210,10 +175,6 @@
     },
     "Empty": "尚未加载迁移状态。",
     "Summary": {
-      "CurrentAssembly": "当前程序集 {0}",
-      "AppliedCurrent": "当前已应用 {0}",
-      "PendingCurrent": "当前待应用 {0}",
-      "ExternalApplied": "外部历史 {0}",
       "HistoryRows": "历史记录 {0}"
     },
     "ContextNote": "统计以迁移程序集 {0} 为范围。外部历史记录已存在于数据库迁移历史表中，但不属于当前 DbContext 的迁移程序集。",
@@ -224,7 +185,6 @@
     },
     "Lists": {
       "CurrentAssembly": "当前程序集",
-      "CurrentAssemblyDescription": "当前 DbContext 已知的全部迁移，并标记其数据库状态。",
       "ExternalApplied": "外部已应用历史",
       "ExternalAppliedDescription": "数据库迁移历史表中存在，但不属于当前迁移程序集的记录。",
       "Count": "{0} 条",
@@ -248,16 +208,206 @@
     },
     "Confirm": {
       "SelectedTitle": "更新当前 DbContext?",
-      "SelectedMessage": "为 {0} 应用待迁移项。",
-      "AllTitle": "更新全部待迁移项?",
-      "AllMessage": "为所有已注册 DbContext 应用 {0} 个待迁移项。"
+      "AllTitle": "更新全部待迁移项?"
     },
     "Messages": {
-      "BulkUpdateSucceeded": "已完成 {0} 个上下文的迁移更新。",
-      "BulkUpdateCompletedWithFailures": "迁移更新完成，但有 {0} 个失败。",
       "NoPending": "没有待应用迁移。",
       "UpdateSucceeded": "{0} 的迁移更新已完成。",
       "UpdateFailed": "迁移更新失败。"
     }
+  },
+  "Workbench": {
+    "Eyebrow": "持久化诊断",
+    "CapturedAt": "注册快照时间",
+    "Navigation": "仓储工作区",
+    "RegistryScope": "仓储注册范围",
+    "Connected": "连接检查通过",
+    "Pending": "已知待应用迁移",
+    "Incomplete": "读取不完整",
+    "ContextScope": "当前数据库上下文",
+    "ChooseContext": "数据库上下文",
+    "ManualSnapshot": "手动快照 · 刷新以读取最新信息",
+    "ContextCount": "{0} 个已注册上下文",
+    "PartialPending": "{0} · 部分上下文不可读取",
+    "ContextSearch": "搜索上下文或数据库",
+    "ContextNoMatches": "没有匹配的上下文。",
+    "RowsPerPage": "每页行数",
+    "PageInfo": "{first_item}–{last_item} / {all_items}",
+    "Views": {
+      "Overview": {
+        "Title": "仓储连接",
+        "Description": "查看已注册上下文、连接检查结果及提供程序实际解析的配置。",
+        "Label": "仓储连接"
+      },
+      "Activity": {
+        "Title": "数据库活动",
+        "Description": "查看提供程序会话快照、等待状态及每个可见后台进程的完整查询。",
+        "Label": "数据库活动"
+      },
+      "Migrations": {
+        "Title": "架构迁移",
+        "Description": "核对当前程序集迁移与数据库历史，并在应用更改前确认操作范围。",
+        "Label": "架构迁移"
+      },
+      "Options": {
+        "Title": "仓储配置选项",
+        "Description": "搜索当前上下文解析后的选项，查看完整路径与配置值。",
+        "Label": "仓储配置选项"
+      }
+    },
+    "Messages": {
+      "NoCapture": "尚无注册快照",
+      "Retry": "刷新以重试读取，目前尚未获得成功的快照。",
+      "ContextMissing": "未找到上下文",
+      "ChooseAvailable": "请求的注册项不可用，请选择现有上下文继续。"
+    },
+    "ConfirmAll": "是否为全部 {0} 个已注册上下文应用待执行迁移？各上下文依次处理，某个上下文失败不会回滚其他数据库已应用的更改。",
+    "ConfirmContext": "是否为程序集 {1} 中的 {0} 应用待执行迁移？本次命令仅操作此注册项。",
+    "Overview": {
+      "Probe": "连接检查",
+      "ProbeNote": "连接检查通过表示可访问此数据库，并不代表主机已就绪。",
+      "Incomplete": "信息不完整",
+      "Resolution": "提供程序解析",
+      "Configuration": "配置上限",
+      "PoolNote": "这些值来自连接设置或已知的提供程序默认值，不代表本地连接池实时使用量。",
+      "ProviderDefault": "提供程序默认值 · 未指定",
+      "DatabaseScope": "当前数据库 · 服务端快照",
+      "SessionsFailed": "提供程序会话读取失败，此快照中没有可用的会话数量。",
+      "InspectActivity": "查看会话信息",
+      "Schema": "架构清单",
+      "InspectMigrations": "查看迁移历史"
+    },
+    "Options": {
+      "ReadFailed": "无法捕获仓储配置选项",
+      "Eyebrow": "解析后的配置",
+      "Title": "配置选项清单",
+      "Description": "从已注册上下文捕获的只读配置选项。",
+      "Count": "{0} 项配置",
+      "Search": "搜索名称、路径或值",
+      "Group": "配置分组",
+      "All": "全部分组",
+      "NoMatches": "没有匹配当前搜索和分组的选项。"
+    },
+    "Migrations": {
+      "Eyebrow": "架构变更操作",
+      "CommandScope": "可应用当前上下文或全部待执行上下文的迁移。批量更新依次执行，不构成跨数据库事务。",
+      "AssemblyCount": "当前程序集",
+      "AppliedCount": "当前程序集已应用",
+      "PendingCount": "待应用",
+      "ExternalCount": "外部历史记录",
+      "AssemblyEyebrow": "本地迁移清单",
+      "Search": "搜索迁移标识符",
+      "Identifier": "迁移标识符",
+      "State": "应用状态",
+      "NoMatches": "没有匹配当前状态和搜索的迁移。",
+      "HistoryEyebrow": "数据库历史",
+      "ResultsEyebrow": "最近命令结果",
+      "ResultsScope": "当前会话中最近命令的实际逐上下文结果，展开数量可查看全部尝试应用的迁移标识符。"
+    },
+    "Activity": {
+      "Eyebrow": "Provider 快照",
+      "Title": "会话活动",
+      "Description": "检查 Provider 可见的会话、客户端，以及当前或最近的 SQL。",
+      "RetainedSnapshot": "正在刷新活动，继续显示上一次快照。",
+      "NotLoadedDescription": "刷新当前上下文以读取 Provider 的活动视图。也可以单独查看手动查询指引。",
+      "ReadFailed": "活动查询失败",
+      "ReadUnavailableDescription": "无法读取 Provider 活动视图。请查看手动查询指引中的 Provider 要求。",
+      "NoCountsOnFailure": "结果不可用时，不会推断会话数量。",
+      "VisibleScope": "服务端可见会话",
+      "Sessions": "个会话",
+      "VisibleScopeDescription": "包含该连接从 Provider 视图中读取到的所有会话，可能来自不同数据库和客户端。",
+      "Captured": "采集时间",
+      "DatabaseScope": "当前数据库",
+      "DatabaseScopeUnknown": "Provider 汇总 · 数据库不可用",
+      "DatabaseScopeDescription": "这些数量包含连接该数据库的其他客户端。等待可能与会话状态重叠，并不代表本应用连接池的占用。",
+      "DatabaseScopeUnknownDescription": "数据库名称不可用，无法在此确认 Provider 汇总的数据库范围；这些数量并不代表本应用连接池的占用。",
+      "Active": "活跃",
+      "Idle": "空闲",
+      "IdleInTransaction": "事务中空闲",
+      "Waiting": "等待中",
+      "NotWaiting": "未等待",
+      "WaitUnknown": "等待状态未知",
+      "LedgerTitle": "会话清单",
+      "LedgerDescription": "比较 Provider 返回的全部会话，打开会话可检查完整的采集证据。",
+      "MatchingCount": "显示 {0} / {1} 个会话",
+      "SearchLabel": "搜索会话",
+      "SearchPlaceholder": "SQL、会话 ID、数据库、客户端、用户、应用、状态或等待",
+      "QueryAge": "查询起始距今",
+      "QueryAgeDescription": "此时间从 query_start 开始计算。空闲会话显示的是上次查询起始距今，并非执行耗时。",
+      "SwitchAscending": "切换为升序排列",
+      "SwitchDescending": "切换为降序排列",
+      "ClearSearch": "清除搜索",
+      "NoRowsTitle": "未返回会话",
+      "NoRowsDescription": "Provider 查询已成功完成，但未返回可见会话。",
+      "NoMatchesDescription": "快照中仍有会话，清除搜索可恢复完整清单。",
+      "DialogFailed": "无法打开活动对话框，请重试。",
+      "TableLabel": "服务端可见的数据库会话证据",
+      "Session": "会话 / 数据库",
+      "Inspect": "检查会话",
+      "InspectLabel": "检查数据库 {1} 中的会话 {0}",
+      "PageSize": "每页会话数",
+      "PageInfo": "{first_item}–{last_item} / {all_items}",
+      "Guide": {
+        "ScopeDescription": "此 SQL 返回数据库登录身份可见的跨数据库服务端会话，包括其他客户端和当前检查会话。SQL 可用仅表示存在内置模板，不代表活动查询已经成功。",
+        "ColumnName": "字段",
+        "ColumnMeaning": "含义",
+        "RuntimeDescription": "自 query_start 起经过的时间；空闲会话可能对应最近一次查询，并不总是正在执行的耗时。",
+        "QueryStartDescription": "当前或最近一次查询的开始时间。"
+      },
+      "Inspector": {
+        "Title": "数据库会话详情",
+        "CapturedSession": "已捕获会话",
+        "SessionHeading": "后端 / 会话 {0}",
+        "SnapshotDescription": "查看 Provider 返回的完整查询文本和归一化证据。",
+        "ProvenanceTitle": "查询来源",
+        "ContextName": "当前 DbContext",
+        "ContextType": "上下文类型",
+        "ContextDatabase": "当前上下文数据库",
+        "Provider": "EF Provider",
+        "CapturedAt": "观察时间",
+        "ScopeDescription": "此服务端可见会话通过当前 DbContext 捕获，可能属于其他数据库或客户端。当前上下文仅表示查询来源，不表示会话或其连接池归属于该上下文。",
+        "QueryTitle": "完整查询",
+        "QueryDescription": "Provider 返回的当前或最近一次 SQL 文本，不截断为预览内容。",
+        "CopyQuery": "复制完整查询",
+        "NoQuery": "Provider 未返回此会话的查询文本。",
+        "EvidenceTitle": "会话证据",
+        "RuntimeDescription": "自查询开始经过的时间以捕获时刻为准。对于空闲会话，该值可能对应最近一次查询，而非当前正在执行的耗时。",
+        "TimestampDescription": "时间戳按 Provider 返回值显示。原始时区偏移可能不可用；缺失的时间戳仍显示为不可用。",
+        "Field": "字段",
+        "Value": "捕获值",
+        "CopyEvidence": "复制会话证据",
+        "Waiting": "等待中",
+        "NotWaiting": "未等待",
+        "UnknownWaiting": "未知",
+        "QueryCopied": "完整查询已复制。",
+        "EvidenceCopied": "会话证据已复制。",
+        "CopyFailed": "剪贴板复制失败。请手动选择文本复制。",
+        "Fields": {
+          "BackendId": "后端 / 会话 ID",
+          "DatabaseName": "会话数据库",
+          "State": "Provider 状态",
+          "UserName": "数据库用户",
+          "ApplicationName": "应用",
+          "ClientAddress": "客户端地址",
+          "ClientHostname": "客户端主机名",
+          "ClientPort": "客户端端口",
+          "Waiting": "等待状态",
+          "Runtime": "自查询开始经过的时间",
+          "BackendStart": "后端开始时间",
+          "TransactionStart": "事务开始时间",
+          "QueryStart": "当前 / 最近查询开始时间",
+          "StateChange": "最近状态变化时间",
+          "Detail": "Provider 详情 / 资源池"
+        }
+      },
+      "ClientEndpoints": "{0} 个不同的客户端端点",
+      "LockWait": "锁等待",
+      "NoLockWait": "无锁等待",
+      "LockWaitUnknown": "锁等待状态未知",
+      "LockWaitCount": "锁等待",
+      "PostgreSqlWaitNote": "PostgreSQL 此处仅报告锁等待；无锁等待不代表没有其他类型的等待。",
+      "PostgreSqlWaitDescription": "仅当 wait_event_type 为 Lock 时返回 true；false 不排除其他 PostgreSQL 等待类型。"
+    },
+    "BulkOutcome": "迁移命令完成 · {0} 个已应用，{1} 个已跳过，{2} 个失败"
   }
 }

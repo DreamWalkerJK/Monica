@@ -5,7 +5,7 @@
         <div class="schedule-editor__cadence-heading">
             <div>
                 <MudText Typo="Typo.subtitle1" HtmlTag="h4">@L["Policy:Schedule:CronTitle"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                <MudText Typo="Typo.body2">
                     @L["Policy:Schedule:CronDescription"]
                 </MudText>
             </div>
@@ -34,7 +34,7 @@
             <div class="schedule-editor__column schedule-editor__column--operator">
                 <div class="schedule-editor__column-heading">
                     <span>@L["Policy:Provenance:Override"]</span>
-                    <MudIconButton Icon="@Icons.Material.Filled.Restore"
+                    <MudIconButton Icon="@Icons.Material.Outlined.Restore"
                                    Size="Size.Small"
                                    Disabled="@(Disabled || Draft.OverrideExpression is null)"
                                    OnClick="ResetExpressionAsync"
@@ -82,7 +82,7 @@
         <MudAlert Severity="@(IsDraftValid ? Severity.Success : Severity.Error)"
                   Variant="Variant.Outlined"
                   Dense="true"
-                  Icon="@(IsDraftValid ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)">
+                  Icon="@(IsDraftValid ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Error)">
             @if (!IsDraftValid)
             {
                 @ValidationError
@@ -99,11 +99,11 @@
     </div>
 
     <div class="schedule-editor__timezone">
-        <MudIcon Icon="@Icons.Material.Filled.LockClock" Color="Color.Info" />
+        <MudIcon Icon="@Icons.Material.Outlined.LockClock" Color="Color.Info" />
         <div>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Policy:Schedule:ConfiguredTimeZone"]</MudText>
+            <MudText Typo="Typo.caption">@L["Policy:Schedule:ConfiguredTimeZone"]</MudText>
             <code>@Draft.TimeZoneId</code>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Policy:Schedule:TimeZoneLockedHelp"]</MudText>
+            <MudText Typo="Typo.caption">@L["Policy:Schedule:TimeZoneLockedHelp"]</MudText>
         </div>
     </div>
 
@@ -210,11 +210,10 @@
                     </div>
                 }
 
-                <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.AutoFixHigh"
-                           OnClick="ApplySimpleSettingsAsync" Disabled="@Disabled">
-                    @L["Policy:Schedule:SimpleSettings:Apply"]
-                </MudButton>
+                <span class="schedule-editor__primary-action">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.AutoFixHigh"
+                               OnClick="ApplySimpleSettingsAsync" Disabled="@Disabled">@L["Policy:Schedule:SimpleSettings:Apply"]</MudButton>
+                </span>
             </div>
         </MudExpansionPanel>
 
@@ -283,7 +282,7 @@
             <code>@FormatUtc(Draft.AuthoritativeNextOccurrenceUtc)</code>
             <small>@L["Policy:Schedule:AuthoritativeObservedAt", FormatUtc(Draft.ObservedAtUtc)]</small>
         </div>
-        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Warning" />
+        <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Color="Color.Warning" />
         <div>
             <span>@L["Policy:Schedule:ProposedNext"]</span>
             @if (IsPaused)
@@ -299,7 +298,7 @@
         </div>
     </div>
     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true"
-              Icon="@Icons.Material.Filled.Update">
+              Icon="@Icons.Material.Outlined.Update">
         @L["Policy:Schedule:ProspectiveWarning"]
     </MudAlert>
 
@@ -318,6 +317,14 @@
                     <tr>
                         <td colspan="3">@L["Policy:Schedule:PreviewSuspendedDescription"]</td>
                     </tr>
+                }
+                else if (!IsDraftValid)
+                {
+                    <tr><td colspan="3">@L["Policy:Schedule:Preview:Invalid"]</td></tr>
+                }
+                else if (Draft.Evaluation.Occurrences.Count == 0)
+                {
+                    <tr><td colspan="3">@L["Policy:Schedule:Preview:Empty"]</td></tr>
                 }
                 else
                 {

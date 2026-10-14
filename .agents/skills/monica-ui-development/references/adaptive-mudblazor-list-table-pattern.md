@@ -19,11 +19,47 @@ Prefer a smaller fix for ordinary card/content overflow. For example, a System I
 ## Non-Negotiable Rules
 
 1. Do not hard-code visible substrings such as `InstanceId[..8] + "..."` for layout. Render the full value and let CSS ellipsis control the visible text.
-2. Put full values in `MudTooltip` when clipping is possible.
+2. Provide full-value access when clipping is possible. Use `MudTooltip` for concise values, or an explicitly named, keyboard-accessible native inspector for long technical identities. Keep the exact encoded value in the rendered data and search contract.
 3. Use scoped `.razor.css`; do not add broad/global CSS for one table.
 4. Keep visuals theme-first. Use MudBlazor defaults and `var(--mud-palette-*)`; do not introduce gradients, custom colors, fonts, or decorative effects for a layout fix.
 5. Avoid new shared copy components or broad copy affordances unless the user explicitly asks. If copy is requested, keep it targeted and MudBlazor-native.
 6. Verify in the browser. Builds do not catch overlap, baseline drift, or empty-row centering issues.
+
+For a full page redesign, use the shared [working-interface language](monica-workbench-design-language.md) to choose between a compact column table and readable multi-line evidence rows before applying this CSS-grid technique. This reference addresses adaptive column sizing rather than prescribing a single registry composition.
+
+## Scroll only when the content requires it
+
+Do not give every table an unconditional `min-width` or fixed-width column contract. First fit the actual headers, values and native sort/filter/action controls with natural or fractional columns, wrapping, shrinkable value owners, or the component's responsive rows. Enable local `overflow: auto` only when useful content still cannot fit after that adaptation; a width chosen for a dense example does not justify a scrollbar for empty or sparse results.
+
+Render a padded, dedicated empty or no-match state at the available width instead of inheriting a populated table's wide column contract. If retaining native `NoRecordsContent`, reset populated-only minimum widths for that state and preserve its full-width message and usable native controls. Keep one owner per scrollable region: do not put independently scrolling wrappers around a native table container that already owns the same overflow. A dialog can own vertical scrolling while a genuinely wide table owns horizontal scrolling, but its table wrapper must not create a second unnecessary vertical scroll area.
+
+With `table-layout: fixed`, check actual header and cell widths for both an empty registry and zero search matches. MudBlazor v9's native `NoRecordsContent` uses a `th` with `colspan="1000"`; the resulting grid can collapse real header columns even when the table itself fills its owner. A component-owned padded empty branch outside the native table is appropriate when no visible records remain. Preserve its toolbar, search, counts and localized empty/no-match distinction, and render the populated table unchanged when records return. A full-width table measurement alone does not establish readable column geometry.
+
+Inspect the actual empty-row span and visible native headings when using fixed table layout or a `colgroup`. A mix of percentage widths and pixel-subtracting calculations can collapse a column in the empty state while populated rows appear correct. Check each visible heading's allocated width, label and native control fit, and the complete column boundary against the available table width. No scrollbar is not proof that the columns remain usable. Adapt to the table owner's width rather than the outer viewport.
+
+Treat the native pager as part of this width contract. Its toolbar can wrap inside a narrow dialog even at a desktop viewport width. Adapt to the table's available width, allow the toolbar's height to grow, and reset native action margins with matching selector specificity when they push controls beyond the surface. Verify the complete rows-per-page group, result range and navigation actions after reflow. A fixed toolbar height can overlap the final row or bottom corner without producing document overflow.
+
+Measure `clientWidth`/`scrollWidth` and `clientHeight`/`scrollHeight` on the native container, its wrapper and the containing page or dialog; also inspect the actual scrollbar in screenshots. Check empty, sparse and populated data at phone, intermediate and desktop widths, including every dialog tab, the final row and pager, and after native sorting, filtering or focusing the last action. Titles, Close actions and keyboard focus must stay accessible. Repair the column or owner geometry rather than using `overflow: hidden`, hidden scrollbar paint or clipped content to make the check pass. Rounded-corner paint containment must preserve necessary scrolling and focus visibility.
+
+## Preserve selection across refreshed objects
+
+When a native grid receives recreated reference models, use its public `Comparer` with the real stable item identity, and construct the supplied selected-row set with the same comparer. MudBlazor v9 cleans stale selection during `Items` parameter adoption and can emit `SelectedItemsChanged` without an operator checkbox action. Reference equality can therefore remove a still-present logical row after refresh. Validate incoming selection against current captured identities and project current row objects; retain real empty-selection, missing-item pruning and context-reset semantics. Do not ignore every empty callback or add a second selection cache. Verify actual selected count and checked rows after manual refresh and automatic command reread, alongside explicit Clear and hidden selection under filters; a pure reconciliation test alone does not exercise native parameter adoption.
+
+## Verify the actual responsive threshold
+
+Read `MudTableBase.cs`, `Styles/components/_table.scss`, and `Styles/abstracts/_variables.scss` in the installed MudBlazor source before aligning local cell CSS with `Breakpoint`. In v9.0.0, `Breakpoint.Xs` emits `mud-xs-table`, which stacks at `max-width: 600px`; `Breakpoint.Sm` emits `mud-sm-table`, which stacks at `960px`. Match stacked spacing, `DataLabel` behavior, and first-cell treatment to that actual threshold, and verify immediately above and below it. Selecting `Sm` does not mean the table will remain a column table until 600px.
+
+Keep long-value wrapping separate from generated stacked labels. A cell's `overflow-wrap: anywhere` is inherited by its native `DataLabel` `::before` flex item and can split an ordinary short label within a word. At that table's actual stacked breakpoint, give the label normal word wrapping and retain its native automatic minimum size while values remain shrinkable. Measure the pseudo-label and inspect the rendered words before adding fixed widths or flex overrides; normal multiword label wrapping is preferable to breaking individual words.
+
+When converting column rows to a stacked grid, reset the wide cell-width contract with matching selector specificity. A class-specific `width: 37%` can beat a generic narrow `tbody td { width: auto; }`, leaving the identity inside a thin strip even when its grid cell spans the full row. Inspect computed cell widths and the actual text-to-row insets after reflow; a page with no overflow can still waste most of its usable width. Retain visible measurement-group labels when hiding the wide header, especially when several groups reuse captions such as Mean/Latest or contain unavailable values.
+
+Changing only a `td` to flex or grid does not remove the enclosing table's column allocation. A retained desktop `colgroup` and `table-layout: fixed` can constrain every stacked cell to the first column while `tbody` still fills its owner. At the same installed native breakpoint, clear the desktop column widths and choose a consistent narrow formatting context for the table, body rows and cells. For a component-owned block reflow, this can mean hiding the `colgroup`, making the table, `tbody` and body `tr` block containers, and giving stacked cells `width: 100%`; keep these resets scoped to that table and its responsive state.
+
+Measure the painted row, cell and value widths against the available body width after padding, labels and actions. Full identities should use that available width instead of wrapping a few characters per line inside a leftover desktop column. Check 959px, 960px and 961px for the installed v9 `Sm` threshold, including the actual narrower parent in both Topbar and Sidebar layouts. Native stacking hides the header `tr`; `thead` can retain `display: table-header-group` with zero painted height. Verify the visible header row and its paint rather than requiring the ancestor's computed display to be `none`.
+
+Native XS cells are flex rows: a reserved `DataLabel` width, cell padding and the value's or action group's minimum content width can still widen the table inside a narrow dialog. When that combination cannot fit, stack the native label and value locally at the affected width, allow values and action groups to shrink or wrap, and retain the real `DataLabel` and native controls. Check the container's width and scroll position both before and after focusing or clicking the last action. Browser scrolling to reveal that action can clip previously inset labels; an initial padding check alone misses the defect.
+
+Bound opaque machine-key previews with CSS when their provenance would dominate working rows; preserve the full searchable value and expose exact identity in the inspector. Do not cap meaningful descriptions or replace identities with shortened string data. Inspect populated host records rather than assuming friendly fixture keys represent real metadata density.
 
 ## MudTable CSS-Grid Layout
 
@@ -133,6 +169,8 @@ MudTable empty rows can become left-aligned or span only one grid column after c
 
 Verify this visually for every tab/filter that can be empty.
 
+Spanning the empty row fixes its alignment, not the width of its scroll owner. Apply the [content-driven scrolling contract](#scroll-only-when-the-content-requires-it) before accepting an empty table with a horizontal scrollbar.
+
 ## Alignment for Badges, Icons, and Plain Text
 
 - Keep cells as flex containers with `align-items: center` so badges, icon buttons, and plain text share a consistent vertical line.
@@ -145,11 +183,11 @@ Verify this visually for every tab/filter that can be empty.
 Before acceptance or PR:
 
 1. Build affected projects with zero warnings.
-2. Open the page at normal width and confirm there is no initial unwanted horizontal scrollbar.
-3. Resize narrower and confirm true overflow scroll appears only when necessary.
+2. Inspect the native container and its wrapper at desktop, intermediate and phone widths. Check both scroll dimensions and the actual visible bars with empty, sparse and populated results; confirm overflow exists only when useful content needs it.
+3. Resize immediately above, at and below the actual table breakpoint, open every relevant dialog tab, and confirm each needed scroll direction has one designated owner. Compare painted row/cell/value widths with the actual parent width in both shell layouts; no overflow is not proof of readable reflow. Check title/Close availability and keyboard focus after sorting, filtering and the last action.
 4. Confirm long key/name/ID values show ellipsis, not overlap.
-5. Hover clipped values and confirm the full value appears in `MudTooltip`.
-6. Confirm operational columns remain readable: cron, next/last time, status, duration, actions.
+5. Confirm clipped values have full-value access through `MudTooltip` or the named keyboard-accessible inspector; verify actual technical identities, not only short fixture values.
+6. Confirm operational columns remain readable: cron, next/last time, status, duration, actions. Inspect native filter/order controls too: the actual selected value must retain its meaning and direction at the narrowest owner in each theme, rather than merely fitting the outer control. A theme's larger input type can require a scoped compact font or a shorter localized label.
 7. Confirm badges, icons, plain text, and actions align on one visual row.
 8. Check empty states for centered full-width messages.
 9. Save screenshots for populated and empty/narrow cases when the task is UI-facing.

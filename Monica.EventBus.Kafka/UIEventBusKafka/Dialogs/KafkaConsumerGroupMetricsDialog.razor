@@ -1,20 +1,25 @@
+@using Monica.UI.Shared.Components.Dialogs
 @inject KafkaConsumerMetricsPollingStateFactory PollingStateFactory
 @inject IStringLocalizer<EventBusKafkaResource> L
+@using Microsoft.Extensions.Logging
+@inject ILogger<KafkaConsumerGroupMetricsDialog> Logger
 @implements IAsyncDisposable
 
-<MudDialog>
+<MudDialog Gutters="false">
+    <TitleContent><MoDialogHeading Text="@(string.IsNullOrWhiteSpace(TopicName) ? L["ConsumerGroups:MetricsDialog:Title"] : L["ConsumerGroups:MetricsDialog:TopicTitle"])" /></TitleContent>
     <DialogContent>
         @{
             var metrics = KafkaConsumerGroupMetricsView.Create(PollingState.Snapshot, GroupId, TopicName);
         }
         <div class="consumer-metrics-dialog">
+            <KafkaDialogContext ClusterId="@ClusterId" TopicName="@TopicName" />
             <section class="consumer-metrics-overview" aria-labelledby="consumer-metrics-group-heading">
                 <div class="consumer-metrics-identity">
                     <span class="consumer-metrics-identity__icon" aria-hidden="true">
                         <MudIcon Icon="@Icons.Material.Filled.Groups" />
                     </span>
                     <div class="consumer-metrics-identity__copy">
-                        <MudText Typo="Typo.overline" Color="Color.Primary">
+                        <MudText Typo="Typo.overline" Class="consumer-metrics-eyebrow">
                             @L["ConsumerGroups:Columns:GroupId"]
                         </MudText>
                         <MudText Typo="Typo.h6"
@@ -96,8 +101,13 @@
                     <MudText Typo="Typo.body2">@L["ConsumerGroups:MetricsDialog:Loading"]</MudText>
                 </div>
             }
+            else if (PollingState.Snapshot is null)
+            {
+                <KafkaWorkspaceState Icon="@Icons.Material.Outlined.QueryStats" Title="@L["ConsumerGroups:MetricsDialog:Title"]" Description="@L["ConsumerGroups:MetricsDialog:Unavailable"]" />
+            }
             else
             {
+                @if (!string.IsNullOrWhiteSpace(PollingState.Snapshot.Message)) { <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@PollingState.Snapshot.Message</MudAlert> }
                 <section class="consumer-detail-section consumer-summary-section"
                          aria-labelledby="consumer-summary-heading">
                     <div class="consumer-section-title">
@@ -112,12 +122,12 @@
                     <div class="consumer-group-summary">
                         <KafkaMetricCard Icon="@Icons.Material.Filled.Groups"
                                          Label="@L["ConsumerGroups:Columns:Members"]"
-                                         Value="@metrics.MemberCount.ToString()"
-                                         AccentColor="@metrics.MemberCountAccentColor" />
+                                         Value="@(HasGroupDescription ? metrics.MemberCount.ToString() : L["Common:Values:Unavailable"].Value)"
+                                         AccentColor="Color.Secondary" />
                         <KafkaMetricCard Icon="@Icons.Material.Filled.AccountTree"
                                          Label="@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]"
-                                         Value="@metrics.AssignmentCount.ToString()"
-                                         AccentColor="@metrics.AssignmentCountAccentColor" />
+                                         Value="@(HasGroupDescription ? metrics.AssignmentCount.ToString() : L["Common:Values:Unavailable"].Value)"
+                                         AccentColor="Color.Info" />
                         <KafkaMetricCard Icon="@Icons.Material.Filled.HourglassBottom"
                                          Label="@L["Performance:Columns:Lag"]"
                                          Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(metrics.TotalLag, L["Performance:Values:LagUnknown"])"
@@ -125,7 +135,7 @@
                         <KafkaMetricCard Icon="@Icons.Material.Filled.SouthWest"
                                          Label="@L["Performance:Columns:ConsumeRate"]"
                                          Value="@KafkaMetricDisplayFormatter.FormatRate(metrics.ConsumeRatePerSecond, L)"
-                                         AccentColor="@metrics.ConsumeRateAccentColor" />
+                                         AccentColor="Color.Primary" />
                     </div>
                 </section>
 
@@ -136,20 +146,24 @@
                             <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" />
                         </span>
                         <MudText Typo="Typo.subtitle1" id="consumer-members-heading">
-                            @L["ConsumerGroups:MetricsDialog:MembersTitle", metrics.MemberCount]
+                            @L["ConsumerGroups:MetricsDialog:MembersTitle", HasGroupDescription ? metrics.MemberCount.ToString() : L["Common:Values:Unavailable"].Value]
                         </MudText>
                     </div>
 
-                    @if (!metrics.HasMembers)
+                    @if (!HasGroupDescription)
+                    {
+                        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Groups" Title="@L["ConsumerGroups:Columns:Members"]" Description="@L["ConsumerGroups:MetricsDialog:Unavailable"]" />
+                    }
+                    else if (!metrics.HasMembers)
                     {
                         <KafkaWorkspaceState Icon="@Icons.Material.Filled.GroupOff"
-                                             Title="@L["ConsumerGroups:MetricsDialog:MembersTitle", metrics.MemberCount]"
+                                             Title="@L["ConsumerGroups:MetricsDialog:MembersTitle", HasGroupDescription ? metrics.MemberCount.ToString() : L["Common:Values:Unavailable"].Value]"
                                              Description="@L["ConsumerGroups:MetricsDialog:NoMembers"]"
                                              AccentColor="Color.Info" />
                     }
                     else
                     {
-                        <KafkaTableSurface AriaLabel="@L["ConsumerGroups:MetricsDialog:MembersTitle", metrics.MemberCount]"
+                        <KafkaTableSurface AriaLabel="@L["ConsumerGroups:MetricsDialog:MembersTitle", HasGroupDescription ? metrics.MemberCount.ToString() : L["Common:Values:Unavailable"].Value]"
                                            AccentColor="Color.Secondary"
                                            Size="KafkaTableSurfaceSize.Wide">
                             <MudTable T="KafkaConsumerMemberMetricsView"
@@ -157,7 +171,7 @@
                                       Dense="true"
                                       Hover="true"
                                       Striped="true"
-                                      Breakpoint="Breakpoint.None"
+                                      Breakpoint="Breakpoint.Xs" Square="true" Elevation="0"
                                       @bind-RowsPerPage="_memberRowsPerPage">
                                 <HeaderContent>
                                     <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:ConsumerId"]</MudTh>
@@ -195,7 +209,7 @@
                                     </MudTd>
                                 </RowTemplate>
                                 <PagerContent>
-                                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" />
+                                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" />
                                 </PagerContent>
                             </MudTable>
                         </KafkaTableSurface>
@@ -211,12 +225,16 @@
                         <MudText Typo="Typo.subtitle1" id="consumer-partitions-heading">
                             @L["ConsumerGroups:MetricsDialog:PartitionsTitle"]
                         </MudText>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary">
-                            @metrics.PartitionCount
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" Class="consumer-partition-count">
+                            @(HasGroupDescription ? metrics.PartitionCount.ToString() : L["Common:Values:Unavailable"].Value)
                         </MudChip>
                     </div>
 
-                    @if (!metrics.HasPartitions)
+                    @if (!HasGroupDescription)
+                    {
+                        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.TableRows" Title="@L["ConsumerGroups:MetricsDialog:PartitionsTitle"]" Description="@L["ConsumerGroups:MetricsDialog:Unavailable"]" />
+                    }
+                    else if (!metrics.HasPartitions)
                     {
                         <KafkaWorkspaceState Icon="@Icons.Material.Filled.TableRows"
                                              Title="@L["ConsumerGroups:MetricsDialog:PartitionsTitle"]"
@@ -233,7 +251,7 @@
                                       Dense="true"
                                       Hover="true"
                                       Striped="true"
-                                      Breakpoint="Breakpoint.None"
+                                      Breakpoint="Breakpoint.Xs" Square="true" Elevation="0"
                                       @bind-RowsPerPage="_partitionRowsPerPage">
                                 <HeaderContent>
                                     <MudTh>@L["Performance:Columns:Topic"]</MudTh>
@@ -248,7 +266,7 @@
                                     <MudTd DataLabel="@L["Performance:Columns:Topic"]">
                                         <div class="consumer-partition-context">
                                             <span class="consumer-partition-topic">@context.TopicName</span>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            <MudText Typo="Typo.caption">
                                                 @L["ConsumerGroups:MetricsDialog:Columns:Partition"] @context.Partition.Partition
                                             </MudText>
                                         </div>
@@ -256,10 +274,10 @@
                                     <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:ConsumerId"]">
                                         <div class="consumer-member-context">
                                             <span class="consumer-identifier">@FormatIdentity(context.Member.ConsumerId)</span>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            <MudText Typo="Typo.caption">
                                                 @(L["ConsumerGroups:MetricsDialog:Columns:Host"]): @FormatIdentity(context.Member.Host)
                                             </MudText>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            <MudText Typo="Typo.caption">
                                                 @(L["ConsumerGroups:MetricsDialog:Columns:ClientId"]): @FormatIdentity(context.Member.ClientId)
                                             </MudText>
                                         </div>
@@ -292,7 +310,7 @@
                                     </MudTd>
                                 </RowTemplate>
                                 <PagerContent>
-                                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" />
+                                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" />
                                 </PagerContent>
                             </MudTable>
                         </KafkaTableSurface>
@@ -302,7 +320,7 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">
+        <MudButton Variant="Variant.Outlined" OnClick="Close">
             @L["Common:Actions:Close"]
         </MudButton>
     </DialogActions>
@@ -310,88 +328,112 @@
 
 @code {
     private KafkaConsumerMetricsPollingState PollingState { get; set; } = null!;
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly object _operationGate = new();
+    private readonly HashSet<Task> _operations = [];
+    private Task? _disposeTask;
     private int _memberRowsPerPage = 10;
     private int _partitionRowsPerPage = 25;
-    private bool _isDisposed;
-
-    [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public string ClusterId { get; set; } = string.Empty;
-
-    [Parameter, EditorRequired]
-    public string GroupId { get; set; } = string.Empty;
-
-    [Parameter]
-    public string? TopicName { get; set; }
-
-    private string CaptureStatus => PollingState.IsSampling
-        ? L["Performance:Live:Sampling"]
-        : PollingState.Snapshot is { } snapshot
-            ? L["Performance:Live:LastCapturedAt", snapshot.CapturedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")]
-            : L["Performance:Live:WaitingForFirstSample"];
-
+    private volatile bool _isDisposed;
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    /// <summary>Gets or sets the exact cluster identity frozen by the opener.</summary>
+    [Parameter, EditorRequired] public string ClusterId { get; set; } = string.Empty;
+    /// <summary>Gets or sets the exact consumer-group identity frozen by the opener.</summary>
+    [Parameter, EditorRequired] public string GroupId { get; set; } = string.Empty;
+    /// <summary>Gets or sets the optional exact topic scope frozen by the opener.</summary>
+    [Parameter] public string? TopicName { get; set; }
+    private bool HasGroupDescription => PollingState.Snapshot?.ConsumerGroups.Any(group =>
+        string.Equals(group.GroupId, GroupId, StringComparison.Ordinal) && string.IsNullOrWhiteSpace(group.ErrorMessage)) == true;
+    private string CaptureStatus => PollingState.IsSampling ? L["Performance:Live:Sampling"] :
+        PollingState.Snapshot is { } snapshot ? L["Performance:Live:LastCapturedAt", snapshot.CapturedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")] :
+        !string.IsNullOrWhiteSpace(PollingState.LastError) ? L["Common:Values:Unavailable"] : L["Performance:Live:WaitingForFirstSample"];
     protected override void OnInitialized()
     {
         PollingState = PollingStateFactory.Create();
         PollingState.StateChanged += HandleStateChanged;
     }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnInitializedAsync() => RunOwnedAsync(() => PollingState.ActivateAsync(ClusterId, GroupId, TopicName, _lifetime.Token));
+    private Task CaptureAsync() => RunOwnedAsync(async () => { await PollingState.CaptureNowAsync(_lifetime.Token); });
+    private Task SetAutoRefreshAsync(bool enabled) => RunOwnedAsync(() => PollingState.SetAutomaticRefreshAsync(enabled, _lifetime.Token));
+    private Task SetIntervalAsync(int seconds) => RunOwnedAsync(() => PollingState.SetRefreshIntervalAsync(seconds));
+    private string FormatIdentity(string value) => string.IsNullOrWhiteSpace(value) ? L["ConsumerGroups:MetricsDialog:Values:Unassigned"] : value;
+    private Task RunOwnedAsync(Func<Task> action)
     {
-        if (!firstRender)
+        TaskCompletionSource completion;
+        lock (_operationGate)
         {
-            return;
+            if (_isDisposed) return Task.CompletedTask;
+            completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _operations.Add(completion.Task);
         }
-
-        await PollingState.ActivateAsync(ClusterId, GroupId, TopicName);
-        if (!_isDisposed)
+        // The sampler invokes notifications under its own lock; external work starts outside this gate.
+        _ = CompleteOwnedAsync(action, completion);
+        return completion.Task;
+    }
+    private async Task CompleteOwnedAsync(Func<Task> action, TaskCompletionSource completion)
+    {
+        try { await action(); completion.TrySetResult(); }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { completion.TrySetResult(); }
+        catch (Exception exception) { completion.TrySetException(exception); }
+        finally { lock (_operationGate) _operations.Remove(completion.Task); }
+    }
+    private void HandleStateChanged() => _ = RunOwnedAsync(RenderStateAsync);
+    private async Task RenderStateAsync()
+    {
+        try { await InvokeAsync(() => { if (!_isDisposed) StateHasChanged(); }); }
+        catch (Exception exception) { if (!_isDisposed) Logger.LogError(exception, "Kafka consumer metrics rendering failed."); }
+    }
+    private void Close() => MudDialog.Close();
+    /// <summary>Retires and drains owned work once, observing every cleanup failure before reporting it.</summary>
+    public ValueTask DisposeAsync()
+    {
+        TaskCompletionSource completion;
+        lock (_operationGate)
         {
-            StateHasChanged();
+            if (_disposeTask is not null) return new ValueTask(_disposeTask);
+            _isDisposed = true;
+            completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _disposeTask = completion.Task;
         }
+        _ = CompleteDisposalAsync(completion);
+        return new ValueTask(completion.Task);
     }
-
-    private Task CaptureAsync()
+    private async Task CompleteDisposalAsync(TaskCompletionSource completion)
     {
-        return PollingState.CaptureNowAsync();
-    }
-
-    private Task SetAutoRefreshAsync(bool enabled)
-    {
-        return PollingState.SetAutomaticRefreshAsync(enabled);
-    }
-
-    private Task SetIntervalAsync(int seconds)
-    {
-        return PollingState.SetRefreshIntervalAsync(seconds);
-    }
-
-    private string FormatIdentity(string value)
-    {
-        return string.IsNullOrWhiteSpace(value)
-            ? L["ConsumerGroups:MetricsDialog:Values:Unassigned"]
-            : value;
-    }
-
-    private void HandleStateChanged()
-    {
-        if (!_isDisposed)
+        try
         {
-            _ = InvokeAsync(StateHasChanged);
+            PollingState.StateChanged -= HandleStateChanged;
+            await DisposeCoreAsync();
+            completion.TrySetResult();
+        }
+        catch (Exception exception) { completion.TrySetException(exception); }
+    }
+    private async Task DisposeCoreAsync()
+    {
+        List<Exception> failures = [];
+        Task[] pending;
+        lock (_operationGate) pending = _operations.ToArray();
+        Observe(_lifetime.Cancel);
+        try { await PollingState.DisposeAsync(); }
+        catch (Exception exception) { Collect(exception); }
+        foreach (var task in pending) await DrainAsync(task);
+        Observe(_lifetime.Dispose);
+        if (failures.Count > 0) throw new AggregateException(failures);
+
+        void Observe(Action action)
+        {
+            try { action(); }
+            catch (Exception exception) { Collect(exception); }
+        }
+        async Task DrainAsync(Task task)
+        {
+            try { await task; }
+            catch (Exception exception) { Collect(task.Exception ?? exception); }
+        }
+        void Collect(Exception exception)
+        {
+            if (exception is AggregateException aggregate) failures.AddRange(aggregate.Flatten().InnerExceptions);
+            else failures.Add(exception);
         }
     }
-
-    private void Close()
-    {
-        MudDialog.Close();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _isDisposed = true;
-        PollingState.StateChanged -= HandleStateChanged;
-        await PollingState.DisposeAsync();
-    }
-
 }

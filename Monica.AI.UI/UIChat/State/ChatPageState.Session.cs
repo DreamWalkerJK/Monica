@@ -1,5 +1,7 @@
 using Monica.AI.Models;
 using Monica.Core.Results;
+using Monica.AI.UI.Shared.Components;
+using MudBlazor;
 
 namespace Monica.AI.UI.UIChat.State;
 
@@ -7,6 +9,7 @@ public sealed partial class ChatPageState
 {
     private async Task EnsureSessionExistsAsync()
     {
+        if (workspace.HasLoadFailure) return;
         if (workspace.CurrentSession is not null) return;
         if (workspace.Sessions.FirstOrDefault() is { } next)
             _ = await workspace.SelectSessionAsync(next.SessionId, _lifetime.Token);
@@ -17,8 +20,8 @@ public sealed partial class ChatPageState
     /// <summary>Creates and selects a durable conversation.</summary>
     public async Task CreateNewSessionAsync() => _ = await RunHistoryOperationAsync(async () =>
     {
-        await DiscardAttachmentsAsync();
-        _ = await TryCreateSessionAsync();
+        if (!await DiscardAttachmentsAsync()) return false;
+        if (await TryCreateSessionAsync() is null) return false;
         InspectedStep = null;
         return true;
     });
@@ -26,8 +29,8 @@ public sealed partial class ChatPageState
     /// <summary>Selects a conversation within the current identity partition.</summary>
     public async Task SelectSessionAsync(string id) => _ = await RunHistoryOperationAsync(async () =>
     {
-        await DiscardAttachmentsAsync();
-        _ = await workspace.SelectSessionAsync(id, _lifetime.Token);
+        if (!await DiscardAttachmentsAsync()) return false;
+        if (await workspace.SelectSessionAsync(id, _lifetime.Token) is null) return false;
         InspectedStep = null;
         ErrorMessage = null;
         return true;
@@ -43,7 +46,7 @@ public sealed partial class ChatPageState
     /// <summary>Archives a conversation while retaining its transcript and attachments.</summary>
     public async Task ArchiveSessionAsync(string id) => _ = await RunHistoryOperationAsync(async () =>
     {
-        if (id == CurrentSessionId) await DiscardAttachmentsAsync();
+        if (id == CurrentSessionId && !await DiscardAttachmentsAsync()) return false;
         if (!await workspace.SetArchivedAsync([id], true, _lifetime.Token)) return false;
         InspectedStep = null;
         return true;
@@ -58,27 +61,26 @@ public sealed partial class ChatPageState
         => RunHistoryOperationAsync(() => workspace.DeleteArchivedSessionsAsync(ids, _lifetime.Token));
 
     /// <summary>Explicitly discards conflicting in-memory edits and reloads durable history.</summary>
-    public async Task ReloadHistoryAsync()
+    public async Task ReloadHistoryAsync() => _ = await RunCommandAsync(async () =>
     {
-        if (IsHistoryBusy || _disposed) return;
-        var confirmed = await dialogService.ShowMessageBoxAsync(localizer["Workbench:ReloadHistory"],
-            localizer["Workbench:ReloadHistoryConfirm"], yesText: localizer["Workbench:ReloadHistory"],
-            noText: localizer["Common:Actions:Cancel"]);
-        if (_disposed || IsHistoryBusy || confirmed != true) return;
-        _ = await RunHistoryOperationAsync(async () =>
+        var confirmed = await ShowDialogAsync<AIAdministrationConfirmation>(localizer["Workbench:ReloadHistory"], new()
         {
-            await DiscardAttachmentsAsync();
-            await workspace.ReloadAsync(_lifetime.Token);
-            InspectedStep = null;
-            return true;
-        }, allowConflict: true);
-    }
+            [nameof(AIAdministrationConfirmation.Title)] = localizer["Workbench:ReloadHistory"].Value,
+            [nameof(AIAdministrationConfirmation.Description)] = localizer["Workbench:ReloadHistoryConfirm"].Value,
+            [nameof(AIAdministrationConfirmation.ConfirmText)] = localizer["Workbench:ReloadHistory"].Value
+        }, new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true }, _lifetime.Token);
+        if (_disposed || confirmed is not { Canceled: false, Data: true }) return false;
+        if (!await DiscardAttachmentsAsync()) return false;
+        await workspace.ReloadAsync(_lifetime.Token);
+        InspectedStep = null;
+        return true;
+    }, allowConflict: true);
 
     private Task<bool> RunHistoryOperationAsync(Func<Task<bool>> action, bool allowConflict = false)
     {
-        if (_disposed || IsHistoryBusy || HasHistoryConflict && !allowConflict) return Task.FromResult(false);
-        _historyOperation = RunHistoryOperationCoreAsync(action);
-        return _historyOperation;
+        if (_disposed || IsHistoryBusy || (HasHistoryConflict || HasHistoryLoadFailure) && !allowConflict) return Task.FromResult(false);
+        IsHistoryUpdating = true;
+        return _operations.RunAsync(_ => RunHistoryOperationCoreAsync(action));
     }
 
     private async Task<bool> RunHistoryOperationCoreAsync(Func<Task<bool>> action)
@@ -93,6 +95,7 @@ public sealed partial class ChatPageState
 
     private async Task<ChatSession?> TryCreateSessionAsync()
     {
+        if (_disposed || workspace.HasLoadFailure) return null;
         RefreshProviders();
         if (string.IsNullOrWhiteSpace(CurrentProviderId))
         {

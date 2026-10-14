@@ -1,0 +1,56 @@
+@using System.Globalization
+@using Monica.OpenTelemetry.UI.UIOpenTelemetry.Support
+@inject IStringLocalizer<OpenTelemetryUIResource> L
+
+<div class="telemetry-plot" data-omitted-values="@_geometry.OmittedValueCount">
+    @if (_geometry.HasValues)
+    {
+        <div class="plot-caption"><span>@L["Series:RecordedValue"] · @(string.IsNullOrEmpty(Unit) ? L["Series:Unitless"].Value : Unit)</span><span>UTC</span></div>
+        <div class="plot-grid">
+            <div class="plot-values" aria-hidden="true">@foreach (var tick in _geometry.ValueTicks) { <span title="@Raw(tick.Value)">@AxisValue(tick.Value)</span> }</div>
+            <svg class="plot-canvas" viewBox="0 0 1000 240" preserveAspectRatio="none" role="img" aria-labelledby="@_titleId" aria-describedby="@_descriptionId">
+                <title id="@_titleId">@Label</title><desc id="@_descriptionId">@L["Series:PlotHelp"]</desc>
+                @foreach (var tick in _geometry.ValueTicks) { <line class="plot-gridline" x1="24" x2="976" y1="@Raw(tick.Y)" y2="@Raw(tick.Y)" vector-effect="non-scaling-stroke" /> }
+                @foreach (var segment in _geometry.Segments.Where(segment => segment.Count > 1)) { <path class="plot-line" d="@Path(segment)" fill="none" vector-effect="non-scaling-stroke" /> }
+                @foreach (var point in _geometry.Points)
+                {
+                    <circle class="plot-point" cx="@Raw(point.X)" cy="@Raw(point.Y)" r="4" data-source-index="@point.SourceIndex" data-sample-timestamp="@point.TimestampUtc.ToString("O")" data-raw-value="@Raw(point.RawValue)"><title>@point.TimestampUtc.ToString("O") · @Raw(point.RawValue) @Unit</title></circle>
+                }
+            </svg>
+            <div class="plot-times" aria-hidden="true">
+                @for (var index = 0; index < _geometry.TimeTicks.Count; index++)
+                {
+                    var tick = _geometry.TimeTicks[index]; var anchor = _geometry.TimeTicks.Count == 1 ? "middle" : index == 0 ? "start" : index == _geometry.TimeTicks.Count - 1 ? "end" : "middle";
+                    <time data-anchor="@anchor" style="left:@Percent(tick.X / OpenTelemetrySeriesPlotGeometry.Width)" datetime="@tick.TimestampUtc.ToString("O")" title="@tick.TimestampUtc.ToString("O")">@AxisTime(tick.TimestampUtc)</time>
+                }
+            </div>
+        </div>
+        @if (_geometry.OmittedValueCount > 0) { <p class="plot-note">@L["Series:Omitted", _geometry.OmittedValueCount]</p> }
+    }
+    else { <p class="plot-empty" role="status">@L[Samples.Count == 0 ? "Series:NoSamples" : "Series:NoFiniteSamples"]</p> }
+</div>
+
+@code {
+    /// <summary>Gets or sets every actual retained raw sample in one exact tag series.</summary>
+    [Parameter] public IReadOnlyList<MetricPointSnapshot> Samples { get; set; } = [];
+    /// <summary>Gets or sets the instrument's unchanged declared unit.</summary>
+    [Parameter] public string? Unit { get; set; }
+    /// <summary>Gets or sets the selected-series identity used to name the native plot.</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    private readonly string _titleId = $"telemetry-plot-{Guid.NewGuid():N}";
+    private readonly string _descriptionId = $"telemetry-plot-description-{Guid.NewGuid():N}";
+    private OpenTelemetrySeriesPlotGeometry _geometry = OpenTelemetrySeriesPlotGeometry.Create(null);
+    protected override void OnParametersSet() => _geometry = OpenTelemetrySeriesPlotGeometry.Create(Samples);
+    private static string Raw(double value) => value.ToString("G17", CultureInfo.InvariantCulture);
+    private static string Percent(double value) => $"{(value * 100).ToString("0.####", CultureInfo.InvariantCulture)}%";
+    private string AxisTime(DateTimeOffset value)
+    {
+        var duration = _geometry.TimeTicks.Count > 1
+            ? _geometry.TimeTicks[^1].TimestampUtc - _geometry.TimeTicks[0].TimestampUtc
+            : TimeSpan.Zero;
+        return value.ToString(duration < TimeSpan.FromMilliseconds(10) ? "HH:mm:ss.ffffff" :
+            duration < TimeSpan.FromSeconds(2) ? "HH:mm:ss.fff" : "HH:mm:ss", CultureInfo.InvariantCulture);
+    }
+    private static string AxisValue(double value) => value.ToString(value != 0 && (Math.Abs(value) >= 100000 || Math.Abs(value) < .01) ? "0.##E+0" : "0.##", CultureInfo.CurrentCulture);
+    private static string Path(IReadOnlyList<OpenTelemetrySeriesPlotPoint> points) => string.Join(" ", points.Select((point, index) => $"{(index == 0 ? "M" : "L")} {Raw(point.X)} {Raw(point.Y)}"));
+}

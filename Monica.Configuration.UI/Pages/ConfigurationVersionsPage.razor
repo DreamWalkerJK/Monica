@@ -1,125 +1,55 @@
 @attribute [Route(PAGE_URL)]
-@inject ConfigurationVersionsPageState State
+@implements IAsyncDisposable
+@inject ConfigurationFacade Facade
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <PageTitle>@L["Pages:ConfigurationVersions:Title"]</PageTitle>
-
-<div class="configuration-versions-page">
-    <MudContainer MaxWidth="MaxWidth.False">
-        <MudStack Spacing="3">
-            <ConfigurationPageHeader Title="@L["Pages:ConfigurationVersions:Title"]"
-                                     Subtitle="@L["Versions:Subtitle"]"
-                                     Icon="@Icons.Material.Filled.HistoryToggleOff">
-                <Actions>
-                    <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                       Variant="Variant.Outlined"
-                                       Disabled="@State.Loading"
-                                       OnClick="State.LoadAsync"
-                                       aria-label="@L["Common:Actions:Refresh"]" />
-                    </MudTooltip>
-                </Actions>
-            </ConfigurationPageHeader>
-
-            @if (State.Loading)
-            {
-                <MudProgressLinear Indeterminate="true" />
-            }
-            else if (!State.HasVersions)
-            {
-                <MudAlert Severity="Severity.Info">@L["Versions:Empty"]</MudAlert>
-            }
-            else
-            {
-                <MudGrid Spacing="3">
-                    <MudItem xs="12" md="5" lg="4">
-                        <MudStack Spacing="3">
-                            @if (State.CurrentVersion is { } currentVersion)
-                            {
-                                <ConfigurationUnifiedVersionCurrentPanel Version="currentVersion" />
-                            }
-
-                            <ConfigurationUnifiedVersionHistoryPanel Versions="State.HistoryVersions"
-                                                                     CurrentVersionLabel="@State.CurrentVersionLabel"
-                                                                     SelectedVersion="@State.SelectedHistoryVersion"
-                                                                     PreviousComparisonVersion="@State.PreviousComparisonVersion"
-                                                                     OnVersionSelected="State.SelectVersionAsync"
-                                                                     OnComparePrevious="State.CompareWithPreviousAsync"
-                                                                     OnRollback="RollbackAsync"
-                                                                     OnDeleted="State.LoadAsync" />
-                        </MudStack>
-                    </MudItem>
-
-                    <MudItem xs="12" md="7" lg="8">
-                        <ConfigurationUnifiedVersionComparisonPanel Title="@State.ComparisonTitle"
-                                                                    Subtitle="@State.ComparisonSubtitle"
-                                                                    HasSelection="@State.HasSelectedHistoryVersion"
-                                                                    Loading="@State.ComparisonLoading"
-                                                                    Comparison="@State.SelectedComparison" />
-                    </MudItem>
-                </MudGrid>
-            }
-        </MudStack>
-    </MudContainer>
+<div class="configuration-versions-page" aria-busy="@(State.Loading ? "true" : "false")">
+    <ConfigurationPageHeader Title="@L["Pages:ConfigurationVersions:Title"]" Subtitle="@L["Versions:Subtitle"]">
+        <Actions>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@State.Loading" OnClick="ReloadAsync">@L["Common:Actions:Refresh"]</MudButton>
+        </Actions>
+    </ConfigurationPageHeader>
+    <ConfigurationWorkbenchNavigation ActiveRoute="@PAGE_URL" />
+    @if (State.Loading && !State.HasLoadedVersions)
+    {
+        <section class="configuration-versions-empty" aria-busy="true"><MudProgressCircular Indeterminate="true" Color="Color.Primary" /><p>@L["Common:States:Loading"]</p></section>
+    }
+    else if (State.HasLoadFailure)
+    {
+        <section class="configuration-versions-empty"><MudAlert Severity="Severity.Error">@State.ErrorText</MudAlert></section>
+    }
+    else if (State.HasLoadedVersions && !State.HasVersions)
+    {
+        <section class="configuration-versions-empty"><MudIcon Icon="@Icons.Material.Outlined.Layers" /><h2>@L["Versions:Empty"]</h2><p>@L["Versions:Workbench:EmptyHelp"]</p></section>
+    }
+    else if (State.CurrentVersion is { } latest)
+    {
+        @if (State.Loading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
+        <ConfigurationUnifiedVersionCurrentPanel Version="latest" />
+        <div class="configuration-versions-tabs">
+            <MudTabs @bind-ActivePanelIndex="_selectedTab" MinimumTabWidth="120px" Elevation="0" Rounded="false" KeepPanelsAlive="false">
+                <MudTabPanel Text="@L["Versions:List:Title"]" Icon="@Icons.Material.Outlined.Layers">
+                    <ConfigurationUnifiedVersionHistoryPanel Versions="State.Versions" Loading="State.Loading" CurrentVersionLabel="@State.CurrentVersionLabel" LatestVersion="@latest.Version" SelectedVersion="@State.SelectedHistoryVersion" PreviousComparisonVersion="@State.PreviousComparisonVersion" OnVersionSelected="SelectSnapshotAsync" OnComparePrevious="ComparePreviousAsync" OnRollback="RollbackAsync" OnDeleted="ReloadAsync" />
+                </MudTabPanel>
+                <MudTabPanel Text="@L["Versions:Workbench:Comparison"]" Icon="@Icons.Material.Outlined.CompareArrows">
+                    <section class="configuration-versions-comparison" aria-label="@L["Versions:Workbench:Comparison"]">
+                        <header><span class="configuration-versions-eyebrow">@L["Versions:Workbench:SavedEvidence"]</span><h2>@L["Versions:Workbench:Comparison"]</h2><p>@L["Versions:Workbench:ComparisonHelp"]</p></header>
+                        <div class="configuration-versions-pair">
+                            <div><MudSelect T="long?" @bind-Value="_originVersion" Label="@L["Versions:Diff:Origin"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@State.ComparisonLoading">
+                                @foreach (var snapshot in State.Versions) { <MudSelectItem T="long?" Value="@((long?)snapshot.Version)">@SnapshotOption(snapshot)</MudSelectItem> }
+                            </MudSelect></div>
+                            <div><MudSelect T="long?" @bind-Value="_targetVersion" Label="@L["Versions:Diff:Target"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@State.ComparisonLoading">
+                                @foreach (var snapshot in State.Versions) { <MudSelectItem T="long?" Value="@((long?)snapshot.Version)">@SnapshotOption(snapshot)</MudSelectItem> }
+                            </MudSelect></div>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.CompareArrows" Disabled="@(State.ComparisonLoading || _originVersion is null || _targetVersion is null)" OnClick="CompareAsync">@L["Versions:Workbench:Compare"]</MudButton>
+                        </div>
+                        <ConfigurationUnifiedVersionComparisonPanel Title="@State.ComparisonTitle" Subtitle="@L["Versions:Workbench:PairHelp"]" HasSelection="@(State.OriginVersion is not null && State.TargetVersion is not null)" Loading="@State.ComparisonLoading" ErrorText="@State.ComparisonError" Comparison="@State.SelectedComparison" />
+                    </section>
+                </MudTabPanel>
+            </MudTabs>
+        </div>
+    }
 </div>
-
-@code {
-    public const string PAGE_URL = ConfigurationUiRoutes.VERSIONS_ROUTE;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await State.LoadAsync();
-    }
-
-    private async Task RollbackAsync(ConfigurationUnifiedVersionSummary version)
-    {
-        var parameters = new DialogParameters<ConfigurationUnifiedVersionRollbackDialog>();
-        parameters.Add(dialog => dialog.Version, version.Version);
-        var dialog = await DialogService.ShowAsync<ConfigurationUnifiedVersionRollbackDialog>(
-            L["Versions:Rollback:Title", ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version.Version)],
-            parameters,
-            new DialogOptions
-            {
-                MaxWidth = MaxWidth.ExtraLarge,
-                FullWidth = true
-            });
-        var result = await dialog.Result;
-        if (result is { Canceled: false, Data: ConfigurationUnifiedVersionRollbackResult rollback })
-        {
-            if (rollback.ApplyResult.Status == ConfigurationMutationGroupApplyStatus.PartiallyApplied)
-            {
-                Snackbar.Add(
-                    L["Versions:Rollback:Messages:PartiallyApplied", rollback.MutationGroup.GroupId],
-                    Severity.Error);
-            }
-            else if (rollback.ApplyResult.PostCommitIssues.Count > 0)
-            {
-                Snackbar.Add(
-                    L["Versions:Rollback:Messages:AppliedWithIssues", rollback.MutationGroup.GroupId],
-                    Severity.Warning);
-            }
-            else
-            {
-                Snackbar.Add(L["Rollback:Success"], Severity.Success);
-            }
-
-            if (rollback.ApplyResult.PostCommitIssues.Count > 0)
-            {
-                var issueParameters = new DialogParameters<ConfigurationPostCommitIssuesDialog>();
-                issueParameters.Add(issueDialog => issueDialog.Issues, rollback.ApplyResult.PostCommitIssues);
-                issueParameters.Add(
-                    issueDialog => issueDialog.SummaryText,
-                    L["Versions:Rollback:Messages:AppliedWithIssues", rollback.MutationGroup.GroupId].Value);
-                var issuesDialog = await DialogService.ShowAsync<ConfigurationPostCommitIssuesDialog>(
-                    L["Dialogs:PostCommitIssues:Title"],
-                    issueParameters,
-                    ConfigurationPostCommitIssuesDialog.DefaultOptions);
-                await issuesDialog.Result;
-            }
-
-            await State.LoadAsync();
-        }
-    }
-}

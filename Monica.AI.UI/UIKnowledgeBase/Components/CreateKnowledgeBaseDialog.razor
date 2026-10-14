@@ -1,55 +1,61 @@
+@using Monica.UI.Shared.Components.Dialogs
 @using Monica.AI.KnowledgeBase.Models
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
 @inject IStringLocalizer<AIResource> L
 
-<MudDialog>
+<div class="knowledge-dialog-owner">
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" ContentClass="pa-0 knowledge-dialog-content" ActionsClass="pa-0" Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px;overflow:hidden">
+    <TitleContent><MoDialogHeading Text="@(IsIdReadOnly ? L["RAG:Manage:EditDialog:Title"] : L["RAG:Manage:CreateDialog:Title"])" /></TitleContent>
     <DialogContent>
-        <MudTextField T="string"
-                      Value="@Name"
-                      ValueChanged="OnNameChangedAsync"
-                      Label="@L["RAG:Manage:CreateDialog:Name"]"
-                      Placeholder="@L["RAG:Manage:CreateDialog:NamePlaceholder"]"
-                      Variant="Variant.Outlined"
-                      Margin="Margin.Dense"
-                      Immediate="true"
-                      Error="@(!string.IsNullOrWhiteSpace(NameValidationMessage))"
-                      ErrorText="@NameValidationMessage"
-                      Class="mb-4" />
+        <div class="knowledge-base-fields">
+            <MudTextField T="string"
+                          Value="@Name"
+                          ValueChanged="OnNameChangedAsync"
+                          Label="@L["RAG:Manage:CreateDialog:Name"]"
+                          Placeholder="@L["RAG:Manage:CreateDialog:NamePlaceholder"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Error="@(!string.IsNullOrWhiteSpace(NameValidationMessage))"
+                          ErrorText="@NameValidationMessage" />
 
-        <MudTextField T="string"
-                      Value="@Id"
-                      ValueChanged="OnIdChangedAsync"
-                      Label="@L["RAG:Manage:CreateDialog:Id"]"
-                      Placeholder="@L["RAG:Manage:CreateDialog:IdPlaceholder"]"
-                      HelperText="@IdHelperText"
-                      Variant="Variant.Outlined"
-                      Margin="Margin.Dense"
-                      Immediate="true"
-                      MaxLength="@KnowledgeBaseIdPolicy.MaxLength"
-                      Disabled="@IsIdReadOnly"
-                      Error="@(!string.IsNullOrWhiteSpace(IdValidationMessage))"
-                      ErrorText="@IdValidationMessage"
-                      Class="mb-4" />
+            <MudTextField T="string"
+                          Value="@Id"
+                          ValueChanged="OnIdChangedAsync"
+                          Label="@L["RAG:Manage:CreateDialog:Id"]"
+                          Placeholder="@L["RAG:Manage:CreateDialog:IdPlaceholder"]"
+                          HelperText="@IdHelperText"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          MaxLength="@KnowledgeBaseIdPolicy.MaxLength"
+                          Disabled="@IsIdReadOnly"
+                          Error="@(!string.IsNullOrWhiteSpace(IdValidationMessage))"
+                          ErrorText="@IdValidationMessage" />
 
-        <MudTextField T="string"
-                      @bind-Value="@Description"
-                      Label="@L["RAG:Manage:CreateDialog:Description"]"
-                      Placeholder="@L["RAG:Manage:CreateDialog:DescPlaceholder"]"
-                      Variant="Variant.Outlined"
-                      Margin="Margin.Dense"
-                      Lines="3" />
+            <MudTextField T="string"
+                          @bind-Value="@Description"
+                          Label="@L["RAG:Manage:CreateDialog:Description"]"
+                          Placeholder="@L["RAG:Manage:CreateDialog:DescPlaceholder"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="3" />
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
-        <MudButton Color="Color.Primary"
-                   Variant="Variant.Filled"
-                   OnClick="Submit"
-                   Disabled="@(!CanSubmit)">
-            @(SubmitText ?? L["Common:Create"].Value)
-        </MudButton>
+        <div class="dialog-actions">
+            <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       OnClick="Submit"
+                       Disabled="@(!CanSubmit)">
+                @(SubmitText ?? L["Common:Create"].Value)
+            </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
+</div>
 
 @code {
     [CascadingParameter]

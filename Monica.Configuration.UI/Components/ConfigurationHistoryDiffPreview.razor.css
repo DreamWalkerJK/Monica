@@ -1,11 +1,111 @@
 .configuration-history-diff-preview {
+    container-type: inline-size;
     min-width: 0;
 }
-
-.configuration-history-diff-preview ::deep .diff-viewer {
-    width: 100%;
+.configuration-history-diff-direction {
+    margin: 0 0 12px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary));
+    overflow-wrap: anywhere;
 }
-
-.configuration-history-diff-preview ::deep .diff-content {
-    max-height: min(58vh, 680px);
+.configuration-history-diff-paint-owner {
+    min-width: 0;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    overflow: clip;
+    background: var(--mud-palette-surface);
+}
+.configuration-history-diff-paint-owner ::deep .diff-viewer {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    font-size: 13px;
+    color: var(--mud-palette-text-primary);
+}
+.configuration-history-diff-paint-owner ::deep .diff-header {
+    padding: 16px 20px;
+    gap: 8px;
+}
+.configuration-history-diff-paint-owner ::deep .diff-header .mud-spacer {
+    display: none;
+}
+.configuration-history-diff-paint-owner ::deep .diff-header .mud-chip {
+    margin: 0;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 24px;
+    height: auto;
+    white-space: normal;
+}
+.configuration-history-diff-paint-owner ::deep .mud-chip-content,
+.configuration-history-diff-paint-owner ::deep .mud-button-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.configuration-history-diff-paint-owner ::deep .diff-header .mud-chip-filled.mud-chip-color-success {
+    color: var(--mud-palette-surface);
+    background: color-mix(in srgb, var(--mud-palette-success) 45%, var(--mud-palette-text-primary));
+}
+.configuration-history-diff-paint-owner ::deep .diff-header .mud-chip-filled.mud-chip-color-error {
+    color: var(--mud-palette-surface);
+    background: color-mix(in srgb, var(--mud-palette-error) 45%, var(--mud-palette-text-primary));
+}
+.configuration-history-diff-paint-owner ::deep .diff-header .mud-chip-filled.mud-chip-color-warning {
+    color: var(--mud-palette-surface);
+    background: color-mix(in srgb, var(--mud-palette-warning) 45%, var(--mud-palette-text-primary));
+}
+.configuration-history-diff-paint-owner ::deep .diff-content {
+    min-width: 0;
+    max-height: none;
+    overflow: visible;
+}
+.configuration-history-diff-paint-owner ::deep .line,
+.configuration-history-diff-paint-owner ::deep .split-view-panel {
+    min-width: 0;
+}
+.configuration-history-diff-paint-owner ::deep .line-content,
+.configuration-history-diff-paint-owner ::deep .split-line-content {
+    min-width: 0;
+    padding: 4px 20px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow: visible;
+    font-size: 13px;
+    line-height: 1.6;
+}
+.configuration-history-diff-paint-owner ::deep .line-numbers,
+.configuration-history-diff-paint-owner ::deep .line-number,
+.configuration-history-diff-paint-owner ::deep .line-marker {
+    flex-shrink: 0;
+}
+.configuration-history-diff-paint-owner ::deep .line-old-number,
+.configuration-history-diff-paint-owner ::deep .line-new-number,
+.configuration-history-diff-paint-owner ::deep .line-number,
+.configuration-history-diff-paint-owner ::deep .diff-header .mud-typography-caption {
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary));
+}
+.configuration-history-diff-paint-owner ::deep .line-added .line-marker {
+    color: color-mix(in srgb, var(--mud-palette-success) 25%, var(--mud-palette-text-primary));
+}
+.configuration-history-diff-paint-owner ::deep .line-deleted .line-marker {
+    color: color-mix(in srgb, var(--mud-palette-error) 25%, var(--mud-palette-text-primary));
+}
+.configuration-history-diff-paint-owner ::deep .line-modified .line-marker {
+    color: color-mix(in srgb, var(--mud-palette-warning) 25%, var(--mud-palette-text-primary));
+}
+@container (max-width: 680px) {
+    .configuration-history-diff-paint-owner ::deep .split-view-container { flex-direction: column; }
+    .configuration-history-diff-paint-owner ::deep .split-view-panel-left {
+        border-right: 0;
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+    }
+}
+@container (max-width: 480px) {
+    .configuration-history-diff-paint-owner ::deep .diff-header { padding: 16px; }
+    .configuration-history-diff-paint-owner ::deep .line-content,
+    .configuration-history-diff-paint-owner ::deep .split-line-content { padding: 4px 16px; }
 }

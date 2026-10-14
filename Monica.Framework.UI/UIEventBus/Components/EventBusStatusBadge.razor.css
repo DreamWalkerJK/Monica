@@ -1,0 +1,8 @@
+.eventbus-status { --status-color: var(--mud-palette-text-secondary); display: inline-flex; align-items: center; gap: .45rem; padding: .28rem .55rem; border-radius: 5px; font-size: .75rem; font-weight: 600; line-height: 1.45; color: color-mix(in srgb, var(--status-color) 45%, var(--mud-palette-text-primary)); background: color-mix(in srgb, var(--status-color) 8%, var(--mud-palette-surface)); white-space: nowrap; }
+.eventbus-status::before { content: ""; width: 5px; height: 5px; flex: 0 0 5px; border-radius: 50%; background: color-mix(in srgb, var(--status-color) 45%, var(--mud-palette-text-primary)); }
+.eventbus-status[data-tone="Success"] { --status-color: var(--mud-palette-success); }
+.eventbus-status[data-tone="Warning"] { --status-color: var(--mud-palette-warning); }
+.eventbus-status[data-tone="Error"] { --status-color: var(--mud-palette-error); }
+.eventbus-status[data-tone="Info"] { --status-color: var(--mud-palette-info); }
+.eventbus-status[data-tone="Primary"] { --status-color: var(--mud-palette-primary); }
+.eventbus-status[data-tone="Secondary"] { --status-color: var(--mud-palette-secondary); }

@@ -1,187 +1,165 @@
+@using System.Globalization
 @using Monica.SignalR.Models
 @inject IStringLocalizer<SignalRResource> L
 
-<MudPaper Class="signalr-connection-config" Elevation="0">
-    <div class="signalr-component-heading">
-        <MudIcon Icon="@Icons.Material.Outlined.Cable" Color="Color.Primary" />
-        <MudText Typo="Typo.h6">@L["UISignalR:ConnectionConfig:Title"]</MudText>
-    </div>
-    <MudGrid>
-        <MudItem xs="12" md="6">
-            <MudTextField T="string"
-                        Value="@AccessToken"
-                        ValueChanged="@((string value) => OnAccessTokenChangedInternal(value))"
-                        Label="@L["UISignalR:ConnectionConfig:AccessTokenLabel"]"
-                        Variant="Variant.Outlined"
-                        HelperText="@L["UISignalR:ConnectionConfig:AccessTokenHelper"]" />
-        </MudItem>
-        <MudItem xs="12" md="6">
-            <MudSelect T="string"
-                     Value="@SelectedHubRoute"
-                     ValueChanged="@((string value) => OnSelectedHubRouteChangedInternal(value))"
-                     Label="@L["UISignalR:ConnectionConfig:HubUrlLabel"]"
-                     Variant="Variant.Outlined"
-                     HelperText="@L["UISignalR:ConnectionConfig:HubUrlHelper"]">
-                @foreach (var hub in AvailableHubs)
+<section class="signalr-connection-config" aria-labelledby="@_headingId" aria-busy="@(IsLoading ? "true" : "false")">
+    <MudPaper Square="true" Elevation="0" Class="connection-config-surface">
+        <header class="connection-config-heading">
+            <span class="connection-config-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Cable" /></span>
+            <div>
+                <h2 id="@_headingId">@L["UISignalR:ConnectionConfig:Title"]</h2>
+                <p>@L["UISignalR:ConnectionConfig:Intro"]</p>
+            </div>
+        </header>
+
+        <div class="connection-config-body">
+            @if (LoadFailed)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true">@L[DataLoaded ? "UISignalR:ConnectionConfig:LoadFailedRetained" : "UISignalR:ConnectionConfig:LoadFailed"]</MudAlert>
+            }
+            @if (IsLoading)
+            {
+                <div class="connection-config-loading" role="status"><MudProgressCircular Size="Size.Small" Indeterminate="true" /><span>@L["UISignalR:ConnectionConfig:Loading"]</span></div>
+            }
+            else if (!DataLoaded && !LoadFailed)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">@L["UISignalR:ConnectionConfig:NotLoaded"]</MudAlert>
+            }
+            else if (DataLoaded && AvailableHubs.Count == 0 && !LoadFailed)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">@L["UISignalR:ConnectionConfig:NoHubs"]</MudAlert>
+            }
+
+            <div class="connection-config-fields">
+                <MudSelect T="string" Value="@SelectedHubRoute" ValueChanged="ChangeSelectedRouteAsync"
+                           Label="@L[IsConnected ? "UISignalR:ConnectionConfig:DraftHubLabel" : "UISignalR:ConnectionConfig:HubUrlLabel"]"
+                           HelperText="@L[IsConnected ? "UISignalR:ConnectionConfig:DraftHubHelper" : "UISignalR:ConnectionConfig:HubUrlHelper"]"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(IsConnecting || IsLoading || !DataLoaded || AvailableHubs.Count == 0)">
+                    @foreach (var hub in AvailableHubs)
+                    {
+                        <MudSelectItem Value="@hub.Route">@hub.HubName (@hub.Route)</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudTextField T="string" Value="@AccessToken" ValueChanged="ChangeAccessTokenAsync" Immediate="true"
+                              Label="@L["UISignalR:ConnectionConfig:AccessTokenLabel"]"
+                              HelperText="@L["UISignalR:ConnectionConfig:AccessTokenHelper"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="connection-token-field" Disabled="IsConnecting" />
+            </div>
+
+            <div class="connection-config-primary-actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ConnectAsync" Disabled="@ConnectionActionsDisabled" Class="connection-config-action">
+                    @if (IsConnecting)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        <span>@L["UISignalR:ConnectionConfig:Connecting"]</span>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Outlined.Cable" Size="Size.Small" />
+                        <span>@L[IsConnected ? "UISignalR:ConnectionConfig:Reconnect" : "UISignalR:ConnectionConfig:Connect"]</span>
+                    }
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.PowerOff"
+                           OnClick="DisconnectAsync" Disabled="@(!IsConnected || IsConnecting)" Class="connection-config-action">
+                    @L["UISignalR:ConnectionConfig:Disconnect"]
+                </MudButton>
+            </div>
+
+            <div class="connection-config-test-user">
+                @if (CanGenerateTestToken)
                 {
-                    <MudSelectItem Value="@hub.Route">@hub.HubName (@hub.Route)</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-        <MudItem xs="12" Class="signalr-connection-actions">
-            <MudButton Variant="Variant.Filled"
-                     Color="Color.Primary"
-                     OnClick="ConnectAsync"
-                     Disabled="IsConnecting || string.IsNullOrEmpty(SelectedHubRoute)">
-                @if (IsConnecting)
-                {
-                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                    <MudText Class="ms-2">@L["UISignalR:ConnectionConfig:Connecting"]</MudText>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Science"
+                               OnClick="TestUserConnectAsync" Disabled="@ConnectionActionsDisabled" Class="connection-config-action">
+                        @L["UISignalR:ConnectionConfig:TestUserConnect"]
+                    </MudButton>
+                    <p>@L["UISignalR:ConnectionConfig:TestUserConnectHelper"]</p>
                 }
                 else
                 {
-                    <MudIcon Icon="@Icons.Material.Filled.Cable" />
-                    <MudText Class="ms-2">
-                        @(IsConnected
-                            ? L["UISignalR:ConnectionConfig:Reconnect"]
-                            : L["UISignalR:ConnectionConfig:Connect"])
-                    </MudText>
+                    <p>@L["UISignalR:ConnectionConfig:TestUserUnavailable"]</p>
                 }
-            </MudButton>
-            @if (CanGenerateTestToken)
+            </div>
+        </div>
+
+        <footer class="connection-config-footer">
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Refresh"
+                       OnClick="RefreshHubsAsync" Disabled="@(IsLoading || IsConnecting)">@L["UISignalR:ConnectionConfig:RefreshHubInfo"]</MudButton>
+            @if (CapturedAtUtc is { } capturedAt)
             {
-                <MudTooltip Text="@L["UISignalR:ConnectionConfig:TestUserConnectHelper"]">
-                    <MudButton Variant="Variant.Outlined"
-                             Color="Color.Tertiary"
-                             OnClick="TestUserConnectAsync"
-                             Disabled="IsConnecting || string.IsNullOrEmpty(SelectedHubRoute)"
-                             Class="ms-2">
-                        <MudIcon Icon="@Icons.Material.Filled.Science" />
-                        <MudText Class="ms-2">@L["UISignalR:ConnectionConfig:TestUserConnect"]</MudText>
-                    </MudButton>
-                </MudTooltip>
+                <span>@L["UISignalR:ConnectionConfig:CapturedAt", FormatUtc(capturedAt)]</span>
             }
-            <MudButton Variant="Variant.Outlined"
-                     Color="Color.Secondary"
-                     OnClick="DisconnectAsync"
-                     Disabled="!IsConnected"
-                     Class="ms-2">
-                <MudIcon Icon="@Icons.Material.Filled.PowerOff" />
-                <MudText Class="ms-2">@L["UISignalR:ConnectionConfig:Disconnect"]</MudText>
-            </MudButton>
-            <MudButton Variant="Variant.Outlined"
-                     Color="Color.Info"
-                     OnClick="RefreshHubsAsync"
-                     Class="ms-2">
-                <MudIcon Icon="@Icons.Material.Filled.Refresh" />
-                <MudText Class="ms-2">@L["UISignalR:ConnectionConfig:RefreshHubInfo"]</MudText>
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-</MudPaper>
+        </footer>
+    </MudPaper>
+</section>
 
 @code {
-    /// <summary>
-    /// access token
-    /// </summary>
-    [Parameter] public string AccessToken { get; set; } = "";
+    /// <summary>Gets or sets the visible, copyable access token used for the next browser connection.</summary>
+    [Parameter] public string AccessToken { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Access token change callback
-    /// </summary>
+    /// <summary>Gets or sets the awaited callback for access-token edits.</summary>
     [Parameter] public EventCallback<string> AccessTokenChanged { get; set; }
 
-    /// <summary>
-    /// Selected Hub route
-    /// </summary>
-    [Parameter] public string SelectedHubRoute { get; set; } = "";
+    /// <summary>Gets or sets the draft hub route used by the next connect or reconnect action.</summary>
+    [Parameter] public string SelectedHubRoute { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Selected Hub routing change callback
-    /// </summary>
+    /// <summary>Gets or sets the awaited callback for draft route edits.</summary>
     [Parameter] public EventCallback<string> SelectedHubRouteChanged { get; set; }
 
-    /// <summary>
-    /// Available Hub List
-    /// </summary>
+    /// <summary>Gets or sets mapped hub metadata from the host's current captured catalog.</summary>
     [Parameter] public List<SignalRHubInfo> AvailableHubs { get; set; } = [];
 
-    /// <summary>
-    /// Is connecting
-    /// </summary>
+    /// <summary>Gets or sets whether a browser connection attempt is in progress.</summary>
     [Parameter] public bool IsConnecting { get; set; }
 
-    /// <summary>
-    /// Is it connected?
-    /// </summary>
+    /// <summary>Gets or sets whether the browser currently reports an established connection.</summary>
     [Parameter] public bool IsConnected { get; set; }
 
-    /// <summary>
-    /// Whether the host allows generating a random test-user token for local debugging.
-    /// </summary>
+    /// <summary>Gets or sets whether the host currently permits native test-user token generation.</summary>
     [Parameter] public bool CanGenerateTestToken { get; set; }
 
-    /// <summary>
-    /// Connection callback
-    /// </summary>
+    /// <summary>Gets or sets whether a hub catalog has been captured. Defaults to true for existing consumers.</summary>
+    [Parameter] public bool DataLoaded { get; set; } = true;
+
+    /// <summary>Gets or sets whether the owning state is loading hub metadata.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>Gets or sets whether the latest hub metadata read failed.</summary>
+    [Parameter] public bool LoadFailed { get; set; }
+
+    /// <summary>Gets or sets the UTC time of the latest successful hub metadata capture.</summary>
+    [Parameter] public DateTime? CapturedAtUtc { get; set; }
+
+    /// <summary>Gets or sets the awaited callback for connecting with the current draft.</summary>
     [Parameter] public EventCallback OnConnect { get; set; }
 
-    /// <summary>
-    /// Test-user connection callback that generates a random token first and then connects
-    /// </summary>
+    /// <summary>Gets or sets the callback that generates a test-user token and connects with it.</summary>
     [Parameter] public EventCallback OnTestUserConnect { get; set; }
 
-    /// <summary>
-    /// Disconnect callback
-    /// </summary>
+    /// <summary>Gets or sets the awaited callback for disconnecting the browser.</summary>
     [Parameter] public EventCallback OnDisconnect { get; set; }
 
-    /// <summary>
-    /// Refresh Hub information callback
-    /// </summary>
+    /// <summary>Gets or sets the awaited callback for refreshing mapped hub metadata.</summary>
     [Parameter] public EventCallback OnRefreshHubs { get; set; }
 
-    /// <summary>
-    /// Connection asynchronous
-    /// </summary>
-    private async Task ConnectAsync()
-    {
-        await OnConnect.InvokeAsync();
-    }
+    private readonly string _headingId = $"signalr-connection-config-{Guid.NewGuid():N}";
+    private bool ConnectionActionsDisabled => IsConnecting || IsLoading || !DataLoaded || AvailableHubs.Count == 0 || string.IsNullOrWhiteSpace(SelectedHubRoute);
 
-    /// <summary>
-    /// Generates a random test-user token, fills the token field, and connects.
-    /// </summary>
-    private async Task TestUserConnectAsync()
-    {
-        await OnTestUserConnect.InvokeAsync();
-    }
+    private Task ConnectAsync() => OnConnect.InvokeAsync();
+    private Task TestUserConnectAsync() => OnTestUserConnect.InvokeAsync();
+    private Task DisconnectAsync() => OnDisconnect.InvokeAsync();
+    private Task RefreshHubsAsync() => OnRefreshHubs.InvokeAsync();
 
-    /// <summary>
-    /// Disconnect async
-    /// </summary>
-    private async Task DisconnectAsync()
-    {
-        await OnDisconnect.InvokeAsync();
-    }
-
-    /// <summary>
-    /// Refresh Hub information asynchronously
-    /// </summary>
-    private async Task RefreshHubsAsync()
-    {
-        await OnRefreshHubs.InvokeAsync();
-    }
-
-    private void OnAccessTokenChangedInternal(string value)
+    private async Task ChangeAccessTokenAsync(string value)
     {
         AccessToken = value;
-        AccessTokenChanged.InvokeAsync(value);
+        await AccessTokenChanged.InvokeAsync(value);
     }
 
-    private void OnSelectedHubRouteChangedInternal(string value)
+    private async Task ChangeSelectedRouteAsync(string value)
     {
         SelectedHubRoute = value;
-        SelectedHubRouteChanged.InvokeAsync(value);
+        await SelectedHubRouteChanged.InvokeAsync(value);
     }
+
+    private static string FormatUtc(DateTime value) => value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.CurrentCulture);
 }

@@ -4,17 +4,15 @@
 
 <section class="execution-pipeline-plan-list" aria-label="@L["Page:Plans:Title"]">
     <header>
-        <ExecutionPipelineHelpLabel Text="@L["Page:Plans:Title"]"
-                                    HelpText="@L["Page:Help:Plans:OperationName"]" />
-        <MudChip T="int" Value="@Plans.Count" Size="Size.Small" Variant="Variant.Outlined">@Plans.Count</MudChip>
+        <h2><ExecutionPipelineHelpLabel Text="@L["Page:Plans:Title"]" HelpText="@L["Page:Help:Plans:OperationName"]" /></h2>
+        <span class="execution-pipeline-plan-list__count">@Plans.Count</span>
     </header>
-
     <div class="execution-pipeline-plan-list__scroll">
         @if (Plans.Count == 0)
         {
             <div class="execution-pipeline-plan-list__empty" data-testid="execution-pipeline-filter-empty">
-                <MudIcon Icon="@Icons.Material.Filled.FilterAltOff" Color="Color.Secondary" Size="Size.Large" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:States:NoFilteredPlans"]</MudText>
+                <MudIcon Icon="@Icons.Material.Outlined.FilterAltOff" />
+                <p>@L["Page:States:NoFilteredPlans"]</p>
             </div>
         }
         else
@@ -24,33 +22,28 @@
                 <button type="button"
                         class="@PlanClass(plan)"
                         data-plan-id="@plan.Id.Value"
+                        aria-pressed="@(SelectedPlan?.Id == plan.Id ? "true" : "false")"
                         @onclick="() => PlanSelected.InvokeAsync(plan)">
-                    <span class="execution-pipeline-plan-list__icon">
-                        <MudIcon Icon="@ExecutionPipelinePresentation.GetStatusIcon(plan.Status)"
-                                 Size="Size.Small"
-                                 Color="@ExecutionPipelinePresentation.GetStatusColor(plan.Status)" />
+                    <span class="execution-pipeline-plan-list__icon" aria-hidden="true">
+                        <MudIcon Icon="@ExecutionPipelinePresentation.GetStatusIcon(plan.Status)" Size="Size.Small" />
                     </span>
                     <span class="execution-pipeline-plan-list__content">
-                        <MudTooltip Text="@plan.Descriptor.FullName" Arrow="true" Placement="Placement.Top">
-                            <strong>@plan.Descriptor.Name</strong>
-                        </MudTooltip>
+                        <strong title="@plan.Descriptor.FullName">@plan.Descriptor.Name</strong>
                         <small>@plan.Descriptor.ComponentType.AssemblyName</small>
                         <span class="execution-pipeline-plan-list__badges">
                             <MudTooltip Text="@L["Page:Help:Concepts:ExecutionPoint"]" Arrow="true" Placement="Placement.Top">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@plan.Descriptor.Point.Value</MudChip>
+                                <code>@plan.Descriptor.Point.Value</code>
                             </MudTooltip>
                             <MudTooltip Text="@L["Page:Help:Concepts:PlanStatus"]" Arrow="true" Placement="Placement.Top">
                                 <ExecutionPipelineStatusBadge Status="@plan.Status" Size="Size.Small" />
                             </MudTooltip>
-                            <MudTooltip Text="@L["Page:Help:Plans:BehaviorCount"]" Arrow="true" Placement="Placement.Top">
-                                <MudChip T="int" Value="@plan.Behaviors.Length" Size="Size.Small" Variant="Variant.Outlined">
-                                    @L["Page:Plans:Behaviors"]: @plan.Behaviors.Length
-                                </MudChip>
-                            </MudTooltip>
+                        </span>
+                        <span class="execution-pipeline-plan-list__behavior-count" title="@L["Page:Help:Plans:BehaviorCount"]">
+                            @L["Page:Plans:AppliedCount", plan.Behaviors.Length]
                         </span>
                     </span>
                     <span class="execution-pipeline-plan-list__chevron" aria-hidden="true">
-                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Secondary" />
+                        <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" />
                     </span>
                 </button>
             }

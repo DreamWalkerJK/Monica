@@ -1,77 +1,126 @@
+@using System.Globalization
 @inject IStringLocalizer<SeederResource> L
 
 @if (Session.Snapshot is { } snapshot)
 {
     var run = snapshot.Run;
+    var counts = new[]
+    {
+        (Status: SeederStatus.Pending, Count: run.PendingCount),
+        (Status: SeederStatus.Running, Count: run.RunningCount),
+        (Status: SeederStatus.Succeeded, Count: run.SucceededCount),
+        (Status: SeederStatus.Failed, Count: run.FailedCount),
+        (Status: SeederStatus.Blocked, Count: run.BlockedCount),
+        (Status: SeederStatus.Cancelled, Count: run.CancelledCount)
+    };
+
     <section class="seeder-run-overview" aria-labelledby="seeder-run-status-title">
-        <div class="seeder-run-signature">
-            <MudAlert Severity="@SeederDisplay.Severity(run.Status)"
-                      Variant="Variant.Filled"
-                      Icon="@SeederDisplay.Icon(run.Status)">
-                <div class="seeder-run-alert-content">
-                    <div class="seeder-run-identity">
-                        <MudText Typo="Typo.overline">@L["Overview:RunLabel"]</MudText>
-                        <div class="seeder-run-title">
-                            <MudText Typo="Typo.h5" id="seeder-run-status-title">@L.GetText(run.Status)</MudText>
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Variant="Variant.Filled"
-                                     Color="@SeederDisplay.Color(run.ReadinessStatus)"
-                                     Icon="@SeederDisplay.Icon(run.ReadinessStatus)">
-                                @L["Overview:Readiness", L.GetText(run.ReadinessStatus)]
-                            </MudChip>
-                        </div>
-                        <MudText Typo="Typo.body2" id="seeder-run-progress-summary">
-                            @L.FormatSeederRunProgress(run.CompletedCount, run.TotalCount)
-                        </MudText>
-                    </div>
-                    <div class="seeder-run-evidence">
-                        <span>@L["Overview:Duration", L.FormatSeederDuration(run.Duration)]</span>
-                        <span>@L["Overview:CapturedAt", L.FormatSeederTimestamp(run.CapturedAtUtc)]</span>
-                    </div>
+        <div class="seeder-run-feature">
+            <div class="seeder-run-feature-heading">
+                <span class="seeder-run-eyebrow">@L["Overview:RunLabel"]</span>
+                <span class="seeder-run-refresh-mode">
+                    @if (SeederDisplay.IsActive(run.Status))
+                    {
+                        <span class="seeder-run-live-dot" aria-hidden="true"></span>
+                    }
+                    @L[SeederDisplay.IsActive(run.Status) ? "Overview:ActiveRefresh" : "Overview:CompletedRefresh"]
+                </span>
+            </div>
+
+            <div class="seeder-run-identity">
+                <span class="seeder-run-symbol" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Outlined.AccountTree" />
+                </span>
+                <div class="seeder-run-state">
+                    <h2 id="seeder-run-status-title">@L.GetText(run.Status)</h2>
+                    <span class="seeder-run-readiness" data-readiness="@run.ReadinessStatus.ToString().ToLowerInvariant()">
+                        <MudIcon Icon="@SeederDisplay.Icon(run.ReadinessStatus)" />
+                        @L["Overview:Readiness", L.GetText(run.ReadinessStatus)]
+                    </span>
                 </div>
-                <MudProgressLinear Value="@Session.ProgressPercent"
-                                   Max="100"
-                                   Indeterminate="@(run.Status == SeederRunStatus.Waiting && run.TotalCount == 0)"
-                                   Color="Color.Inherit"
-                                   Rounded="true"
-                                   Class="seeder-run-progress"
-                                   aria-labelledby="seeder-run-status-title seeder-run-progress-summary" />
-                @if (!string.IsNullOrWhiteSpace(run.FailFastTriggerSeederTypeName))
+            </div>
+
+            <div class="seeder-run-completion">
+                <div class="seeder-run-completion-heading">
+                    <span>@L["Overview:TerminalCompletion"]</span>
+                    <strong><span>@run.CompletedCount</span><span class="seeder-run-completion-divider">/</span>@run.TotalCount</strong>
+                </div>
+                <p id="seeder-run-progress-summary">
+                    @(run.TotalCount == 0
+                        ? L["Overview:EmptyRun"]
+                        : L.FormatSeederRunProgress(run.CompletedCount, run.TotalCount))
+                </p>
+                @if (run.TotalCount > 0)
                 {
-                    <div class="seeder-run-trigger">
-                        <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Size="Size.Small" />
-                        <span>@L["Overview:FailFastTrigger", run.FailFastTriggerSeederTypeName]</span>
-                    </div>
+                    <MudProgressLinear Value="@Session.ProgressPercent"
+                                       Max="100"
+                                       Color="Color.Inherit"
+                                       Rounded="false"
+                                       Class="seeder-run-progress"
+                                       aria-labelledby="seeder-run-progress-summary" />
                 }
-            </MudAlert>
+            </div>
+
+            <dl class="seeder-run-timing">
+                <div>
+                    <dt>@L["Details:Timing:StartedAt"]</dt>
+                    <dd>
+                        @if (run.StartedAtUtc is { } startedAt)
+                        {
+                            <time datetime="@startedAt.ToString("O")" title="@L.FormatSeederTimestamp(startedAt)">
+                                @L["Common:UtcTimestamp", startedAt.UtcDateTime.ToString("HH:mm:ss", CultureInfo.CurrentCulture)]
+                            </time>
+                        }
+                        else
+                        {
+                            @L["Common:NotAvailable"]
+                        }
+                    </dd>
+                </div>
+                <div>
+                    <dt>@L["Details:Timing:CompletedAt"]</dt>
+                    <dd>
+                        @if (run.CompletedAtUtc is { } completedAt)
+                        {
+                            <time datetime="@completedAt.ToString("O")" title="@L.FormatSeederTimestamp(completedAt)">
+                                @L["Common:UtcTimestamp", completedAt.UtcDateTime.ToString("HH:mm:ss", CultureInfo.CurrentCulture)]
+                            </time>
+                        }
+                        else
+                        {
+                            @L["Common:NotAvailable"]
+                        }
+                    </dd>
+                </div>
+                <div>
+                    <dt>@L["Details:Timing:Duration"]</dt>
+                    <dd title="@L["Overview:Duration", L.FormatSeederDuration(run.Duration)]">
+                        @L.FormatSeederDuration(run.Duration)
+                    </dd>
+                </div>
+            </dl>
+
+            @if (!string.IsNullOrWhiteSpace(run.FailFastTriggerSeederTypeName))
+            {
+                <div class="seeder-run-trigger">
+                    <MudIcon Icon="@Icons.Material.Outlined.ReportProblem" Size="Size.Small" />
+                    <span>@L["Overview:FailFastTrigger", run.FailFastTriggerSeederTypeName]</span>
+                </div>
+            }
+
+            <div class="seeder-run-captured">
+                @L["Overview:CapturedAt", L.FormatSeederTimestamp(run.CapturedAtUtc)]
+            </div>
         </div>
 
         <dl class="seeder-run-counts">
-            <div>
-                <dt>@L["SeederStatus:Pending"]</dt>
-                <dd>@run.PendingCount</dd>
-            </div>
-            <div>
-                <dt>@L["SeederStatus:Running"]</dt>
-                <dd>@run.RunningCount</dd>
-            </div>
-            <div>
-                <dt>@L["SeederStatus:Succeeded"]</dt>
-                <dd>@run.SucceededCount</dd>
-            </div>
-            <div>
-                <dt>@L["SeederStatus:Failed"]</dt>
-                <dd>@run.FailedCount</dd>
-            </div>
-            <div>
-                <dt>@L["SeederStatus:Blocked"]</dt>
-                <dd>@run.BlockedCount</dd>
-            </div>
-            <div>
-                <dt>@L["SeederStatus:Cancelled"]</dt>
-                <dd>@run.CancelledCount</dd>
-            </div>
+            @foreach (var count in counts)
+            {
+                <div class="seeder-run-count seeder-count-@count.Status.ToString().ToLowerInvariant() @(count.Count == 0 ? "is-zero" : null)">
+                    <dt>@L.GetText(count.Status)</dt>
+                    <dd>@count.Count</dd>
+                </div>
+            }
         </dl>
     </section>
 }

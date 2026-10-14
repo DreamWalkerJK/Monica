@@ -1,97 +1,161 @@
+@using Monica.EventBus.Models
 @using Monica.Framework.UI.UIEventBus.Models
+@using Monica.Framework.UI.UIEventBus.Support
+@implements IAsyncDisposable
+@inject IDialogService DialogService
 @inject IStringLocalizer<EventBusResource> L
 
-<MudGrid>
-    <MudItem xs="12">
-        <div class="d-flex justify-space-between align-center mb-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Primary" />
-                <MudText Typo="Typo.h6">@L["Providers:Title"]</MudText>
-                @if (Providers.Any())
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Info">@L["Providers:Count", Providers.Count]</MudChip>
-                }
-            </MudStack>
-            <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.Refresh"
-                       OnClick="OnRefresh"
-                       Disabled="IsLoading">
-                @L["Providers:Refresh"]
-            </MudButton>
-        </div>
-    </MudItem>
-
-    @if (IsLoading)
+<section class="provider-directory">
+    <header class="provider-directory-heading">
+        <div><span class="provider-directory-kicker">@L["ProviderDirectory:Eyebrow"]</span><h2>@L["Providers:Title"]</h2><p>@L["ProviderDirectory:Scope"]</p></div>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="OnRefresh" Disabled="@IsLoading">@L["Providers:Refresh"]</MudButton>
+    </header>
+    <div class="provider-directory-search">
+        <MudTextField T="string" @ref="_searchField" @bind-Value="_search" Label="@L["ProviderDirectory:Search"]" Immediate="true" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+        <span>@L["ProviderDirectory:Shown", FilteredProviders.Count, Providers.Count]</span>
+    </div>
+    @if (IsLoading && Providers.Count == 0)
     {
-        <MudItem xs="12">
-            <div class="d-flex justify-center pa-4">
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-            </div>
-        </MudItem>
+        <div class="provider-directory-empty" role="status"><MudProgressCircular Indeterminate="true" Size="Size.Small" /><p>@L["ProviderDirectory:Loading"]</p></div>
     }
-    else if (!Providers.Any())
+    else if (Providers.Count == 0)
     {
-        <MudItem xs="12">
-            <MudAlert Severity="Severity.Info">
-                @L["Providers:States:Empty"]
-            </MudAlert>
-        </MudItem>
+        <div class="provider-directory-empty"><MudIcon Icon="@Icons.Material.Outlined.Hub" /><h3>@L["Providers:States:Empty"]</h3><p>@L["ProviderDirectory:EmptyHelp"]</p></div>
+    }
+    else if (FilteredProviders.Count == 0)
+    {
+        <div class="provider-directory-empty"><MudIcon Icon="@Icons.Material.Outlined.SearchOff" /><h3>@L["ProviderDirectory:NoMatches"]</h3><MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearSearchAsync">@L["ProviderDirectory:ClearSearch"]</MudButton></div>
     }
     else
     {
-        @foreach (var provider in Providers)
-        {
-            <MudItem xs="12" md="6" lg="4">
-                <EventBusProviderCard Provider="provider"
-                                     OnViewDetailsClicked="HandleViewDetails" />
-            </MudItem>
-        }
+        <div class="provider-directory-surface" aria-busy="@(IsLoading ? "true" : "false")">
+            @foreach (var group in FilteredProviders.GroupBy(provider => provider.ServiceKey is not null).OrderBy(group => group.Key))
+            {
+                <header class="provider-directory-group"><h3>@L[group.Key ? "ProviderDirectory:Keyed" : "ProviderDirectory:Default"]</h3><span>@L["Providers:Count", group.Count()]</span></header>
+                @foreach (var provider in group.OrderBy(provider => provider.ServiceKey, StringComparer.Ordinal).ThenBy(provider => provider.IsDistributed))
+                {
+                    <article class="provider-directory-record" @key="provider.UniqueId">
+                        <div class="provider-directory-identity">
+                            <span class="provider-directory-icon" data-mode="@(provider.IsDistributed ? "distributed" : "local")"><MudIcon Icon="@(provider.IsDistributed ? Icons.Material.Outlined.CloudQueue : Icons.Material.Outlined.Memory)" /></span>
+                            <div><h4>@L.GetProviderKindText(provider.ProviderType)<span class="provider-mode">@L.GetProviderModeText(provider.IsDistributed)</span></h4><code>@ProviderKey(provider)</code><p>@provider.ImplementationType</p></div>
+                        </div>
+                        <dl class="provider-directory-counts">
+                            <div><dt>@L["ProviderDirectory:Registrations"]</dt><dd>@provider.SubscriptionCount</dd></div>
+                            <div><dt>@L["ProviderDirectory:Active"]</dt><dd>@provider.ActiveSubscriptionCount</dd></div>
+                            <div><dt>@L["ProviderDirectory:ReportedProblems"]</dt><dd data-attention="@(provider.UnhealthyTopicCount > 0 ? "true" : "false")">@provider.UnhealthyTopicCount</dd></div>
+                        </dl>
+                        <div class="provider-directory-actions"><MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Outlined.ArrowOutward" OnClick="() => ViewDetailsAsync(provider)" aria-label="@L["ProviderDirectory:Inspect", ProviderKey(provider), L.GetProviderModeText(provider.IsDistributed)]">@L["Providers:Card:ViewDetails"]</MudButton></div>
+                        <div class="provider-directory-capabilities">
+                            @if (provider.SupportsBulkPublish) { <span>@L["Providers:Capabilities:BulkPublish"]</span> }
+                            @if (provider.SupportsStreaming) { <span>@L["Providers:Capabilities:Streaming"]</span> }
+                            @if (provider.SupportsDeadLetterQueue) { <span>@L["Providers:Capabilities:DeadLetterQueue"]</span> }
+                            @if (provider.HasOptionDiagnostics) { <span>@L["Providers:Capabilities:HasOptions"]</span> }
+                            @if (!provider.SupportsBulkPublish && !provider.SupportsStreaming && !provider.SupportsDeadLetterQueue) { <span>@L["Providers:Capabilities:Basic"]</span> }
+                        </div>
+                    </article>
+                }
+            }
+        </div>
     }
-</MudGrid>
-
-<!-- Provider details dialog -->
-<EventBusProviderDetailDialog IsVisible="_showProviderDetail"
-                              IsVisibleChanged="OnProviderDetailVisibilityChanged"
-                              Provider="_selectedProvider"
-                              Subscriptions="_providerSubscriptions" />
+    <p class="provider-directory-note">@L["ProviderDirectory:CountsHelp"]</p>
+</section>
 
 @code {
+    /// <summary>Gets or sets the provider registrations to display.</summary>
     [Parameter] public List<EventBusProviderInfo> Providers { get; set; } = [];
+    /// <summary>Gets or sets the subscriptions available to the compatibility inspector path.</summary>
     [Parameter] public List<SubscriptionViewModel> AllSubscriptions { get; set; } = [];
+    /// <summary>Gets or sets the host-owned provider refresh action.</summary>
     [Parameter] public EventCallback OnRefresh { get; set; }
+    /// <summary>Gets or sets the host-owned provider inspection action.</summary>
+    [Parameter] public EventCallback<EventBusProviderInfo> OnProviderClick { get; set; }
+    /// <summary>Gets or sets whether the provider capture is refreshing.</summary>
     [Parameter] public bool IsLoading { get; set; }
 
-    private bool _showProviderDetail;
-    private EventBusProviderInfo? _selectedProvider;
-    private List<SubscriptionViewModel> _providerSubscriptions = [];
+    private string _search = string.Empty;
+    private MudTextField<string>? _searchField;
+    private Task? _clearTask;
+    private bool _clearing;
+    private bool _retired;
+    private bool _opening;
+    private Task? _openTask;
+    private Task? _disposeTask;
+    private IDialogReference? _dialog;
 
-    private void HandleViewDetails(EventBusProviderInfo provider)
+    private List<EventBusProviderInfo> FilteredProviders => Providers.Where(provider =>
+        string.IsNullOrWhiteSpace(_search) ||
+        ProviderKey(provider).Contains(_search, StringComparison.OrdinalIgnoreCase) ||
+        provider.ImplementationType.Contains(_search, StringComparison.OrdinalIgnoreCase) ||
+        L.GetProviderKindText(provider.ProviderType).Contains(_search, StringComparison.CurrentCultureIgnoreCase) ||
+        L.GetProviderModeText(provider.IsDistributed).Contains(_search, StringComparison.CurrentCultureIgnoreCase)).ToList();
+
+    private string ProviderKey(EventBusProviderInfo provider) => EventBusPresentation.KeyText(provider.ServiceKey, L);
+
+    private Task ClearSearchAsync()
     {
-        _selectedProvider = provider;
-
-        // Filter out subscriptions for this Provider
-        _providerSubscriptions = AllSubscriptions.Where(s =>
-        {
-            var keyMatches = s.ServiceKey == provider.ServiceKey;
-            var scopeMatches = provider.IsDistributed
-                ? s.Scope == EventBus.Models.EventSubscriptionScope.Distributed
-                : s.Scope == EventBus.Models.EventSubscriptionScope.Local;
-            return keyMatches && scopeMatches;
-        }).ToList();
-
-        _showProviderDetail = true;
+        if (_retired || _clearing) return Task.CompletedTask;
+        _clearing = true;
+        return _clearTask = ClearInputAsync();
     }
 
-    private Task OnProviderDetailVisibilityChanged(bool isVisible)
+    private async Task ClearInputAsync()
     {
-        _showProviderDetail = isVisible;
-
-        if (!isVisible)
+        try
         {
-            _selectedProvider = null;
-            _providerSubscriptions = [];
+            if (_searchField is { } field) await field.ClearAsync();
+            if (!_retired) _search = string.Empty;
         }
+        finally { _clearing = false; }
+    }
 
-        return Task.CompletedTask;
+    private Task ViewDetailsAsync(EventBusProviderInfo provider)
+    {
+        if (_retired) return Task.CompletedTask;
+        if (OnProviderClick.HasDelegate) return OnProviderClick.InvokeAsync(provider);
+        if (_opening) return Task.CompletedTask;
+        return _openTask = OpenCompatibilityInspectorAsync(provider);
+    }
+
+    private async Task OpenCompatibilityInspectorAsync(EventBusProviderInfo provider)
+    {
+        _opening = true;
+        try
+        {
+            var subscriptions = AllSubscriptions.Where(subscription =>
+                string.Equals(subscription.ServiceKey, provider.ServiceKey, StringComparison.Ordinal) &&
+                subscription.Scope == (provider.IsDistributed ? EventSubscriptionScope.Distributed : EventSubscriptionScope.Local)).ToList();
+            var reference = await DialogService.ShowAsync<EventBusProviderDetailDialog>(
+                ProviderKey(provider),
+                new DialogParameters { [nameof(EventBusProviderDetailDialog.Provider)] = provider, [nameof(EventBusProviderDetailDialog.Subscriptions)] = subscriptions },
+                new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true });
+            if (_retired)
+            {
+                var cancellation = DialogResult.Cancel();
+                reference.Close(cancellation);
+                reference.Dismiss(cancellation);
+                await reference.Result;
+                return;
+            }
+            _dialog = reference;
+            await reference.Result;
+            if (ReferenceEquals(_dialog, reference)) _dialog = null;
+        }
+        finally { _opening = false; }
+    }
+
+    public ValueTask DisposeAsync() => new(_disposeTask ??= RetireAsync());
+
+    private async Task RetireAsync()
+    {
+        _retired = true;
+        if (_dialog is { } reference)
+        {
+            var cancellation = DialogResult.Cancel();
+            reference.Close(cancellation);
+            reference.Dismiss(cancellation);
+        }
+        _dialog = null;
+        var tasks = new[] { _openTask, _clearTask }.OfType<Task>().ToArray();
+        await Task.WhenAll(tasks);
     }
 }

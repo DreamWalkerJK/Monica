@@ -5,6 +5,7 @@ using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Facades;
 using Monica.AI.RAG.Models;
 using Monica.AI.UI.Localization;
+using Monica.AI.UI.Shared.Support;
 using MudBlazor;
 using DocumentQueueItemModel = Monica.AI.KnowledgeBase.Models.DocumentQueueItem;
 using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
@@ -14,8 +15,11 @@ namespace Monica.AI.UI.UIRAG.State;
 /// <summary>
 /// Owns mutable page state and UI orchestration for the RAG management page.
 /// </summary>
-public sealed partial class RAGManagePageState : IDisposable
+/// <remarks>Create one instance per visit through <see cref="RAGManagePageStateFactory"/>.
+/// The page owns asynchronous retirement and its private poller; scoped facades remain container-owned.</remarks>
+public sealed partial class RAGManagePageState : IAsyncDisposable
 {
+    private readonly KnowledgePageSession _session;
     private readonly RAGIndexingFacade _indexingFacade;
     private readonly RAGVectorStoreFacade _vectorStoreFacade;
     private readonly EmbeddingModelFacade _embeddingFacade;
@@ -23,7 +27,6 @@ public sealed partial class RAGManagePageState : IDisposable
     private readonly KnowledgeDocumentFacade _knowledgeDocumentFacade;
     private readonly IAIProviderFactory _providerFactory;
     private readonly ISnackbar _snackbar;
-    private readonly IDialogService _dialogService;
     private readonly IStringLocalizer<AIResource> _localizer;
     private readonly RAGQueuePollingState _queuePollingState;
 
@@ -47,7 +50,8 @@ public sealed partial class RAGManagePageState : IDisposable
         ISnackbar snackbar,
         IDialogService dialogService,
         IStringLocalizer<AIResource> localizer,
-        RAGQueuePollingState queuePollingState)
+        RAGQueuePollingState queuePollingState,
+        Func<Action, Task> dispatch)
     {
         _indexingFacade = indexingFacade;
         _vectorStoreFacade = vectorStoreFacade;
@@ -56,7 +60,7 @@ public sealed partial class RAGManagePageState : IDisposable
         _knowledgeDocumentFacade = knowledgeDocumentFacade;
         _providerFactory = providerFactory;
         _snackbar = snackbar;
-        _dialogService = dialogService;
+        _session = new(() => SelectedKnowledgeBase?.Id, dialogService, dispatch);
         _localizer = localizer;
         _queuePollingState = queuePollingState;
     }
@@ -64,7 +68,19 @@ public sealed partial class RAGManagePageState : IDisposable
     /// <summary>
     /// Raised when the page should re-render.
     /// </summary>
-    public event Action? StateChanged;
+    public event Func<Task>? StateChanged;
+
+    /// <summary>Whether this visit has retired and rejects new state or renderer work.</summary>
+    public bool IsRetired => _session.IsRetired;
+    internal long SelectionGeneration => _session.Generation;
+    /// <summary>Last catalog read failure; empty after a successful read.</summary>
+    public string CatalogErrorMessage { get; private set; } = string.Empty;
+    /// <summary>Last selected queue read failure; empty after success or selection change.</summary>
+    public string QueueErrorMessage { get; private set; } = string.Empty;
+    /// <summary>Whether actual vector validation is running for the current selection.</summary>
+    public bool IsVectorValidationLoading { get; private set; }
+    /// <summary>Last selected vector validation failure; empty after success or selection change.</summary>
+    public string VectorValidationErrorMessage { get; private set; } = string.Empty;
 
     /// <summary>
     /// All knowledge bases shown in the sidebar.
@@ -294,6 +310,7 @@ public sealed partial class RAGManagePageState : IDisposable
 
         _queuePollingState.QueueRefreshed += OnQueueRefreshed;
         _queuePollingState.QueueRefreshFailed += OnQueueRefreshFailed;
+        _queuePollingState.QueueSettled += OnQueueSettled;
         _isAttached = true;
     }
 
@@ -343,23 +360,34 @@ public sealed partial class RAGManagePageState : IDisposable
 
     private void NotifyStateChanged()
     {
-        StateChanged?.Invoke();
+        _session.StartBackground(async () =>
+        {
+            if (StateChanged is not { } changed) return;
+            foreach (Func<Task> callback in changed.GetInvocationList())
+            {
+                _session.CheckCurrent();
+                await callback();
+            }
+        });
     }
 
     /// <inheritdoc />
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        var operations = _session.DisposeAsync().AsTask();
+        var polling = _queuePollingState.DisposeAsync().AsTask();
         ClearBatchStartInFlight();
         ClearSingleIndexInFlight();
         ClearRagSupportActionInFlight();
-        _queuePollingState.Stop();
 
         if (_isAttached)
         {
             _queuePollingState.QueueRefreshed -= OnQueueRefreshed;
             _queuePollingState.QueueRefreshFailed -= OnQueueRefreshFailed;
+            _queuePollingState.QueueSettled -= OnQueueSettled;
             _isAttached = false;
         }
+        await Task.WhenAll(operations, polling);
     }
 
     private enum RagSupportActionKind

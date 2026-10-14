@@ -106,7 +106,7 @@ internal sealed class JsModuleSession(
         await DisposeReferenceAsync(module);
     }
 
-    private static async ValueTask DisposeReferenceAsync(IJSObjectReference? reference)
+    private async ValueTask DisposeReferenceAsync(IJSObjectReference? reference)
     {
         if (reference is null)
         {
@@ -124,6 +124,10 @@ internal sealed class JsModuleSession(
         catch (JSException)
         {
             // A destroyed browser context cannot retain a usable module reference.
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+            // Circuit retirement can cancel reference release after all admitted users finish.
         }
     }
 }

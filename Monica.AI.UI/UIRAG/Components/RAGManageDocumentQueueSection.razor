@@ -1,169 +1,55 @@
-@using Microsoft.AspNetCore.Components
 @using Microsoft.Extensions.Localization
 @using Monica.AI.KnowledgeBase.Models
 @using Monica.AI.UI.Localization
 @using Monica.AI.UI.UIRAG.State
 @inject IStringLocalizer<AIResource> L
 
-<div class="document-queue-section">
-    <div class="queue-header">
-        <div class="queue-title-row">
-            <MudIcon Icon="@Icons.Material.Filled.QueuePlayNext" Size="Size.Small" Class="queue-title-icon" />
-            <div class="queue-title-copy">
-                <MudText Typo="Typo.subtitle1" Class="queue-title">@L["RAG:DocumentQueue:Title"]</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="queue-meta">
-                    @PageState.DocumentQueue.Count @L["RAG:KnowledgeBase:DocumentCount"]
-                </MudText>
-            </div>
-        </div>
-        <div class="queue-controls">
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Error"
-                       Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.ClearAll"
-                       OnClick="@PageState.ClearDocumentQueueAsync"
-                       Disabled="@(!PageState.CanClearDocumentQueue)">
-                @L["RAG:DocumentQueue:Actions:ClearQueue"]
-            </MudButton>
-            <MudButton Variant="Variant.Text"
-                       Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.SelectAll"
-                       OnClick="@PageState.SelectAllIndexableDocuments"
-                       Disabled="@(!PageState.HasIndexableDocuments || PageState.HasActiveQueueWork || PageState.HasRagSupportActionInFlight)">
-                @L["RAG:DocumentQueue:Actions:SelectAllIndexable"]
-            </MudButton>
-            <MudButton Variant="Variant.Text"
-                       Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.Deselect"
-                       OnClick="@PageState.ClearDocumentSelection"
-                       Disabled="@(PageState.SelectedDocumentIds.Count == 0 || PageState.HasActiveQueueWork || PageState.HasRagSupportActionInFlight)">
-                @L["RAG:DocumentQueue:Actions:ClearSelection"]
-            </MudButton>
-            <MudText Typo="Typo.caption" Class="parallel-label">
-                @L["RAG:ParallelIndexing:Label"]
-            </MudText>
-            <MudNumericField T="int"
-                             @bind-Value="@ParallelCount"
-                             Min="1"
-                             Max="10"
-                             Variant="Variant.Outlined"
-                             Margin="Margin.Dense"
-                             Class="parallel-input" />
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.PlayArrow"
-                       OnClick="@PageState.StartBatchIndexingAsync"
-                       Class="queue-start-button"
-                       Disabled="@(!PageState.CanStartBatchIndexing)">
-                @L["RAG:ParallelIndexing:Start"]
-            </MudButton>
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Warning"
-                       Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.StopCircle"
-                       OnClick="@PageState.CancelBatchIndexingAsync"
-                       Class="queue-cancel-button"
-                       Disabled="@(!PageState.CanCancelBatchIndexing)">
-                @L["Common:Cancel"]
-            </MudButton>
-        </div>
+<section class="queue-surface">
+    <header class="queue-heading">
+        <h3>@L["RAG:DocumentQueue:Title"]</h3>
+        <div class="queue-search"><MudTextField T="string" @bind-Value="_search" Immediate="true" Placeholder="@L["KnowledgeWorkbench:SearchDocuments"]" aria-label="@L["KnowledgeWorkbench:SearchDocuments"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" /></div>
+        <div class="queue-actions"><MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" AriaLabel="@L["KnowledgeWorkbench:DocumentActions"]"><MudMenuItem Icon="@Icons.Material.Outlined.DeleteSweep" IconColor="Color.Error" Disabled="@(!PageState.CanClearDocumentQueue)" OnClick="PageState.ClearDocumentQueueAsync">@L["KnowledgeWorkbench:RemovePendingSources"]</MudMenuItem></MudMenu></div>
+    </header>
+    <div class="queue-filters">
+        <div class="status-filter-row"><div class="status-filters" role="group" aria-label="@L["RAG:DocumentQueue:Column:Status"]"><button type="button" aria-pressed="@((_status is null).ToString().ToLowerInvariant())" @onclick="() => _status = null">@L["KnowledgeWorkbench:AllDocuments"] <span>@PageState.DocumentQueue.Count</span></button>@foreach (var status in Enum.GetValues<DocumentStatus>()) { <button type="button" class="status-@status.ToString().ToLowerInvariant()" aria-pressed="@((_status == status).ToString().ToLowerInvariant())" @onclick="() => _status = status"><i></i>@L[$"RAG:DocumentQueue:Status:{status}"] <span>@PageState.DocumentQueue.Count(item => item.Status == status)</span></button> }</div><span class="queue-count">@L["KnowledgeWorkbench:VisibleDocuments", VisibleItems.Count, PageState.DocumentQueue.Count]</span></div>
     </div>
-
-    <div class="queue-table-wrapper">
-        <MudTable T="DocumentQueueItem"
-                  Items="@PageState.DocumentQueue"
-                  Dense="true"
-                  Hover="true"
-                  Class="document-queue-table">
-            <HeaderContent>
-                <MudTh>@L["RAG:DocumentQueue:Column:Name"]</MudTh>
-                <MudTh>@L["RAG:DocumentQueue:Column:Select"]</MudTh>
-                <MudTh>@L["RAG:DocumentQueue:Column:Status"]</MudTh>
-                <MudTh>@L["RAG:DocumentQueue:Column:Chunks"]</MudTh>
-                <MudTh>@L["RAG:DocumentQueue:Column:Actions"]</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Name"]">@context.Name</MudTd>
-                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Select"]">
-                    <MudCheckBox T="bool"
-                                 Value="@PageState.SelectedDocumentIds.Contains(context.Id)"
-                                 ValueChanged="@((bool isChecked) => PageState.ToggleDocumentSelection(context, isChecked))"
-                                 Disabled="@(!CanSelectDocument(context))"
-                                 Dense="true"
-                                 Color="Color.Primary" />
-                </MudTd>
-                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Status"]">
-                    @switch (context.Status)
-                    {
-                        case DocumentStatus.Pending:
-                            <MudChip T="string" Size="Size.Small" Color="Color.Default">
-                                @L["RAG:DocumentQueue:Status:Pending"]
-                            </MudChip>
-                            break;
-                        case DocumentStatus.Indexing:
-                            <div class="indexing-status">
-                                <MudChip T="string" Size="Size.Small" Color="Color.Info">
-                                    @L["RAG:DocumentQueue:Status:Indexing"]
-                                </MudChip>
-                                <MudProgressLinear Value="@context.Progress" Color="Color.Info" Size="Size.Small" />
-                            </div>
-                            break;
-                        case DocumentStatus.Done:
-                            <MudChip T="string" Size="Size.Small" Color="Color.Success">
-                                @L["RAG:DocumentQueue:Status:Done"]
-                            </MudChip>
-                            break;
-                        case DocumentStatus.Error:
-                            <MudChip T="string" Size="Size.Small" Color="Color.Error" title="@context.ErrorMessage">
-                                @L["RAG:DocumentQueue:Status:Error"]
-                            </MudChip>
-                            break;
-                    }
-                </MudTd>
-                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Chunks"]">@context.ChunkCount</MudTd>
-                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Actions"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
-                                   Size="Size.Small"
-                                   OnClick="@(() => PageState.ShowChunkViewerAsync(context))"
-                                   title="@L["RAG:DocumentQueue:Actions:ViewChunks"]" />
-                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
-                                   Size="Size.Small"
-                                   Color="Color.Primary"
-                                   OnClick="@(() => PageState.StartDocumentIndexingAsync(context))"
-                                   Disabled="@(!PageState.CanStartDocumentIndexing(context))"
-                                   title="@L["RAG:DocumentQueue:Actions:StartIndex"]" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                   Size="Size.Small"
-                                   OnClick="@(() => PageState.ReindexDocumentAsync(context))"
-                                   Disabled="@(context.Status == DocumentStatus.Indexing || PageState.HasRagSupportActionInFlight)"
-                                   title="@L["RAG:DocumentQueue:Actions:Reindex"]" />
-                    @if (context.Status == DocumentStatus.Error && !string.IsNullOrWhiteSpace(context.ErrorMessage))
-                    {
-                        <MudIconButton Icon="@Icons.Material.Filled.ErrorOutline"
-                                       Size="Size.Small"
-                                       Color="Color.Warning"
-                                       OnClick="@(() => PageState.ShowIndexingErrorAsync(context))"
-                                       title="@L["Common:Error"]" />
-                    }
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
+    <div class="batch-toolbar">
+        <div class="batch-summary">
+        <div class="batch-selection"><strong>@L["KnowledgeWorkbench:SelectedDocuments", PageState.SelectedDocumentIds.Count]</strong><MudButton Variant="Variant.Text" Size="Size.Small" OnClick="PageState.SelectAllIndexableDocuments" Disabled="@(!PageState.HasIndexableDocuments || PageState.HasActiveQueueWork || PageState.HasRagSupportActionInFlight)">@L["KnowledgeWorkbench:SelectEligible"]</MudButton><MudButton Variant="Variant.Text" Size="Size.Small" OnClick="PageState.ClearDocumentSelection" Disabled="@(PageState.SelectedDocumentIds.Count == 0 || PageState.HasActiveQueueWork || PageState.HasRagSupportActionInFlight)">@L["RAG:DocumentQueue:Actions:ClearSelection"]</MudButton>@if (HiddenSelectedCount > 0) { <small>@L["KnowledgeWorkbench:HiddenSelection", HiddenSelectedCount]</small> }</div>
+        @if (!PageState.CanStartBatchIndexing && !PageState.HasActiveQueueWork && !PageState.HasRagSupportActionInFlight)
+        {
+            <p class="batch-hint">@(!RAGManagePageState.HasEmbeddingBinding(PageState.SelectedKnowledgeBase!) ? L["KnowledgeWorkbench:IndexNeedsBinding"] : !PageState.HasIndexableDocuments ? L["KnowledgeWorkbench:IndexNoEligible"] : L["KnowledgeWorkbench:IndexNeedsSelection"])</p>
+        }
+        </div>
+        <div class="batch-actions"><MudNumericField T="int" @bind-Value="ParallelCount" Min="1" Max="10" Label="@L["RAG:ParallelIndexing:Label"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="PageState.HasActiveQueueWork" Class="parallel-input" /><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.PlayArrow" OnClick="PageState.StartBatchIndexingAsync" Disabled="@(!PageState.CanStartBatchIndexing)">@L["KnowledgeWorkbench:IndexSelected"]</MudButton>@if (PageState.CanCancelBatchIndexing) { <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@Icons.Material.Outlined.StopCircle" OnClick="PageState.CancelBatchIndexingAsync">@L["KnowledgeWorkbench:CancelBatch"]</MudButton> }</div>
     </div>
-</div>
-
-@code {
-    [Parameter, EditorRequired]
-    public required RAGManagePageState PageState { get; set; }
-
-    private int ParallelCount
+    @if (!string.IsNullOrWhiteSpace(PageState.QueueErrorMessage)) { <div class="queue-message" role="alert"><p>@PageState.QueueErrorMessage</p><MudButton OnClick="PageState.ReloadSelectedQueueAsync">@L["KnowledgeWorkbench:Retry"]</MudButton></div> }
+    else
     {
-        get => PageState.ParallelCount;
-        set => PageState.ParallelCount = value;
+        <div class="queue-table-frame">
+            <MudTable T="DocumentQueueItem" Items="VisibleItems" Dense="false" Hover="true" Square="true" Elevation="0" RowsPerPage="10" Breakpoint="Breakpoint.Sm" Class="document-queue-table">
+                <HeaderContent><MudTh>@L["RAG:DocumentQueue:Column:Select"]</MudTh><MudTh>@L["RAG:DocumentQueue:Column:Name"]</MudTh><MudTh>@L["RAG:DocumentQueue:Column:Status"]</MudTh><MudTh>@L["RAG:DocumentQueue:Column:Chunks"]</MudTh><MudTh>@L["RAG:DocumentQueue:Column:Actions"]</MudTh></HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Select"]"><MudCheckBox T="bool" Value="@PageState.SelectedDocumentIds.Contains(context.Id)" ValueChanged="(bool selected) => PageState.ToggleDocumentSelection(context, selected)" Disabled="@(!CanSelectDocument(context))" Dense="true" Color="Color.Primary" aria-label="@L["KnowledgeWorkbench:SelectDocument", context.Name]" /></MudTd>
+                    <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Name"]"><div class="document-name-cell"><strong>@context.Name</strong>@if (context.Name != context.Id) { <code>@context.Id</code> }</div></MudTd>
+                    <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Status"]"><span class="document-status status-@context.Status.ToString().ToLowerInvariant()"><i></i>@L[$"RAG:DocumentQueue:Status:{context.Status}"]</span>@if (context.Status == DocumentStatus.Indexing) { <div class="row-progress"><MudProgressLinear Value="context.Progress" Color="Color.Info" /><span>@context.Progress.ToString("0")%</span></div> }</MudTd>
+                    <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Chunks"]"><span class="chunk-count">@context.ChunkCount</span></MudTd>
+                    <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Actions"]"><div class="row-actions"><MudIconButton Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small" OnClick="() => PageState.ShowChunkViewerAsync(context)" aria-label="@L["RAG:DocumentQueue:Actions:ViewChunks"]" /><MudIconButton Icon="@Icons.Material.Outlined.PlayArrow" Size="Size.Small" Color="Color.Primary" Disabled="@(!PageState.CanStartDocumentIndexing(context))" OnClick="() => PageState.StartDocumentIndexingAsync(context)" aria-label="@L["RAG:DocumentQueue:Actions:StartIndex"]" /><MudIconButton Icon="@Icons.Material.Outlined.Refresh" Size="Size.Small" Disabled="@(context.Status == DocumentStatus.Indexing || PageState.HasRagSupportActionInFlight)" OnClick="() => PageState.ReindexDocumentAsync(context)" aria-label="@L["RAG:DocumentQueue:Actions:Reindex"]" />@if (context.Status == DocumentStatus.Error && !string.IsNullOrWhiteSpace(context.ErrorMessage)) { <MudIconButton Icon="@Icons.Material.Outlined.ErrorOutline" Color="Color.Error" Size="Size.Small" OnClick="() => PageState.ShowIndexingErrorAsync(context)" aria-label="@L["Common:Error"]" /> }</div></MudTd>
+                </RowTemplate>
+                <NoRecordsContent><div class="queue-message"><p>@(PageState.DocumentQueue.Count == 0 ? L["KnowledgeWorkbench:NoQueueDocuments"] : L["KnowledgeWorkbench:NoDocumentsMatch"])</p>@if (PageState.DocumentQueue.Count > 0) { <MudButton OnClick="ClearFilters">@L["KnowledgeWorkbench:ClearFilters"]</MudButton> }</div></NoRecordsContent>
+                <PagerContent><MudTablePager PageSizeOptions="@(new[] { 10, 25, 50 })" /></PagerContent>
+            </MudTable>
+        </div>
     }
-
-    private bool CanSelectDocument(DocumentQueueItem document)
-        => document.Status is DocumentStatus.Pending or DocumentStatus.Error
-           && !PageState.HasActiveQueueWork
-           && !PageState.HasRagSupportActionInFlight;
+</section>
+@code {
+    /// <summary>Gets or sets the page-owned queue state; selection remains scoped to its entire collection.</summary>
+    [Parameter, EditorRequired] public required RAGManagePageState PageState { get; set; }
+    private string _search = string.Empty;
+    private DocumentStatus? _status;
+    private int ParallelCount { get => PageState.ParallelCount; set => PageState.ParallelCount = value; }
+    private IReadOnlyList<DocumentQueueItem> VisibleItems => PageState.DocumentQueue.Where(item => (_status is null || item.Status == _status) && (string.IsNullOrWhiteSpace(_search) || item.Name.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase) || item.Id.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+    private int HiddenSelectedCount => PageState.SelectedDocumentIds.Except(VisibleItems.Select(item => item.Id), StringComparer.OrdinalIgnoreCase).Count();
+    private bool CanSelectDocument(DocumentQueueItem document) => document.Status is DocumentStatus.Pending or DocumentStatus.Error && !PageState.HasActiveQueueWork && !PageState.HasRagSupportActionInFlight;
+    private void ClearFilters() { _search = string.Empty; _status = null; }
 }

@@ -1,0 +1,99 @@
+@using Monica.JobScheduler.UI.Localization
+@typeparam TRange where TRange : struct, Enum
+
+<section class="execution-filter" aria-label="@L["Executions:Filters:AriaLabel"]">
+    <div class="execution-filter__query">
+        <div class="execution-filter__field">
+            <MudTextField T="string"
+                          Value="@SearchText"
+                          ValueChanged="ChangeSearchTextAsync"
+                          Label="@L["Executions:Filters:Search"]"
+                          Placeholder="@L["Executions:Filters:SearchPlaceholder"]"
+                          Immediate="true"
+                          Clearable="true"
+                          Disabled="@IsLoading"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Outlined.Search"
+                          OnKeyDown="HandleSearchKeyDownAsync" />
+        </div>
+        <div class="execution-filter__field">
+            <MudSelect T="TRange"
+                       Value="@TimeRange"
+                       ValueChanged="ChangeTimeRangeAsync"
+                       ToStringFunc="TimeRangeLabel"
+                       Label="@L["Executions:Filters:TimeRange"]"
+                       Disabled="@IsLoading"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                @foreach (var range in TimeRanges)
+                {
+                    <MudSelectItem T="TRange" Value="@range">@TimeRangeLabel(range)</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+        <div class="execution-filter__actions">
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Outlined.FilterAltOff"
+                       Disabled="@IsLoading"
+                       OnClick="ResetAsync">@L["Executions:Actions:Reset"]</MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Outlined.Search"
+                       Disabled="@(IsLoading || HasInvalidCustomRange)"
+                       OnClick="ApplyAsync">@L["Executions:Actions:Apply"]</MudButton>
+        </div>
+    </div>
+
+    @if (ShowCustomDates)
+    {
+        <div class="execution-filter__dates">
+            <div class="execution-filter__field">
+                <MudDatePicker Date="@CustomStartDate"
+                               DateChanged="ChangeStartDateAsync"
+                               Label="@L["Executions:Filters:StartDate"]"
+                               Editable="true"
+                               Clearable="true"
+                               Disabled="@IsLoading"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense" />
+            </div>
+            <div class="execution-filter__field">
+                <MudDatePicker Date="@CustomEndDate"
+                               DateChanged="ChangeEndDateAsync"
+                               Label="@L["Executions:Filters:EndDate"]"
+                               Editable="true"
+                               Clearable="true"
+                               Disabled="@IsLoading"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense" />
+            </div>
+        </div>
+    }
+
+    <div class="execution-filter__states" role="group" aria-label="@L["Executions:Filters:States"]">
+        <span class="execution-filter__label">@L["Executions:Filters:States"]</span>
+        <button type="button"
+                class="execution-filter__state"
+                data-state="all"
+                aria-pressed="@((SelectedStates.Count == 0).ToString().ToLowerInvariant())"
+                disabled="@IsLoading"
+                @onclick="ClearStatesAsync">
+            <MudIcon Icon="@Icons.Material.Outlined.SelectAll" Size="Size.Small" />
+            <span>@L["Executions:Filters:AnyState"]</span>
+        </button>
+        @foreach (var state in Enum.GetValues<JobExecutionState>())
+        {
+            <button type="button"
+                    class="execution-filter__state"
+                    data-state="@state.ToString().ToLowerInvariant()"
+                    aria-pressed="@(SelectedStates.Contains(state).ToString().ToLowerInvariant())"
+                    disabled="@IsLoading"
+                    @onclick="@(() => ToggleStateAsync(state))">
+                <MudIcon Icon="@GetStateIcon(state)" Size="Size.Small" />
+                <span>@L[$"ExecutionStates:{state}"]</span>
+            </button>
+        }
+    </div>
+</section>

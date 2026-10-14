@@ -1,10 +1,13 @@
+@using Monica.UI.Shared.Components.Dialogs
 @using Microsoft.Extensions.Localization
 @using Monica.AI.KnowledgeBase.Models
 @using Monica.AI.UI.Localization
 @using Monica.UI.Shared.Components.Markdown
 @inject IStringLocalizer<AIResource> L
 
-<MudDialog>
+<div class="knowledge-dialog-owner">
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" ContentClass="pa-0 knowledge-dialog-content" ActionsClass="pa-0" Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px;overflow:hidden">
+    <TitleContent><MoDialogHeading Text="@L["KnowledgeBase:Documents:Preview:Title"]" /></TitleContent>
     <DialogContent>
         <div class="kb-document-preview-root">
             <div class="kb-document-preview-header">
@@ -16,6 +19,10 @@
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                         @L["KnowledgeBase:Documents:Preview:Source", GetSourceDisplay()]
                     </MudText>
+                    @if (!string.IsNullOrWhiteSpace(SourceGroupKey))
+                    {
+                        <p class="source-group">@L["KnowledgeDialogs:SourceGroup", SourceGroupKey]</p>
+                    }
                 </div>
             </div>
 
@@ -43,11 +50,14 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" OnClick="Close">
-            @L["Common:Actions:Close"]
-        </MudButton>
+        <div class="dialog-actions">
+            <MudButton Variant="Variant.Text" OnClick="Close">
+                @L["Common:Actions:Close"]
+            </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
+</div>
 
 @code {
     [CascadingParameter]

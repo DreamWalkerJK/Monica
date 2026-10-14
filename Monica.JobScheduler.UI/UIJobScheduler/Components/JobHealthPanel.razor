@@ -7,9 +7,9 @@
 <section class="job-health" aria-labelledby="job-health-heading">
     <header class="job-health__heading">
         <div>
-            <MudText Typo="Typo.overline" Color="Color.Primary">@L["JobDetail:Health:Eyebrow"]</MudText>
+            <MudText Typo="Typo.overline">@L["JobDetail:Health:Eyebrow"]</MudText>
             <MudText Typo="Typo.h6" HtmlTag="h2" id="job-health-heading">@L["JobDetail:Health:Title"]</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["JobDetail:Health:Description"]</MudText>
+            <MudText Typo="Typo.body2">@L["JobDetail:Health:Description"]</MudText>
         </div>
         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
             @L["JobDetail:Health:Window"]
@@ -19,7 +19,7 @@
     <div class="job-health__score-grid">
         <article class="job-health__score" data-tone="success">
             <span class="job-health__score-label">
-                <MudIcon Icon="@Icons.Material.Filled.Verified" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Outlined.FactCheck" Size="Size.Small" />
                 @L["Analytics:Metrics:Reliability"]
                 <MudTooltip Text="@L["JobDetail:Health:ReliabilityFormulaHelp"]" Placement="Placement.Top" Arrow="true">
                     <MudIconButton Icon="@Icons.Material.Outlined.Info"
@@ -36,7 +36,7 @@
         </article>
         <article class="job-health__score" data-tone="info">
             <span class="job-health__score-label">
-                <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Outlined.EventAvailable" Size="Size.Small" />
                 @L["Analytics:Metrics:ScheduleFulfillment"]
                 <MudTooltip Text="@L["JobDetail:Health:FulfillmentFormulaHelp"]" Placement="Placement.Top" Arrow="true">
                     <MudIconButton Icon="@Icons.Material.Outlined.Info"
@@ -60,7 +60,7 @@
         </article>
         <article class="job-health__score" data-tone="primary">
             <span class="job-health__score-label">
-                <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Outlined.Speed" Size="Size.Small" />
                 @L["Analytics:Metrics:Throughput"]
             </span>
             <strong>@Snapshot.ExecutedThroughputPerHour.ToString("N2", CultureInfo.CurrentCulture)</strong>
@@ -179,12 +179,12 @@
 
     private static string GetStateIcon(JobExecutionState state) => state switch
     {
-        JobExecutionState.Queued => Icons.Material.Filled.Schedule,
-        JobExecutionState.Running => Icons.Material.Filled.PlayCircle,
-        JobExecutionState.Succeeded => Icons.Material.Filled.CheckCircle,
-        JobExecutionState.Failed => Icons.Material.Filled.Error,
-        JobExecutionState.Cancelled => Icons.Material.Filled.Cancel,
-        JobExecutionState.Skipped => Icons.Material.Filled.SkipNext,
-        _ => Icons.Material.Filled.Help
+        JobExecutionState.Queued => Icons.Material.Outlined.Schedule,
+        JobExecutionState.Running => Icons.Material.Outlined.PlayCircle,
+        JobExecutionState.Succeeded => Icons.Material.Outlined.CheckCircle,
+        JobExecutionState.Failed => Icons.Material.Outlined.Error,
+        JobExecutionState.Cancelled => Icons.Material.Outlined.Cancel,
+        JobExecutionState.Skipped => Icons.Material.Outlined.SkipNext,
+        _ => Icons.Material.Outlined.Help
     };
 }

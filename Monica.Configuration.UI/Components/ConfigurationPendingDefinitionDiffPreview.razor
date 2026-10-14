@@ -30,7 +30,7 @@ else
                                    KeepContentAlive="false">
                     <TitleContent>
                         <div class="configuration-definition-diff-header">
-                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-definition-diff-identity">
                                 <MudText Typo="Typo.subtitle2">@group.DisplayName</MudText>
                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@group.DefinitionKey</MudChip>
                                 @if (group.ChangeCount > 0)
@@ -48,7 +48,7 @@ else
                             </MudStack>
                             @if (UndoRequested.HasDelegate)
                             {
-                                <div @onclick:stopPropagation="true">
+                                <div class="configuration-definition-diff-header-actions" @onclick:stopPropagation="true">
                                     <MudTooltip Text="@DefinitionRemovalText">
                                         <MudIconButton Icon="@RemovalIcon"
                                                        Size="Size.Small"

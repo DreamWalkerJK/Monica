@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Monica.AI.Chat.Models;
 using Monica.AI.Configuration.Models;
 using Monica.AI.Providers;
 using Monica.Core.Results;
+using Monica.AI.UI.Shared.Support;
 using MudBlazor;
 
 namespace Monica.AI.UI.UIProvider.Components;
@@ -14,17 +16,26 @@ public partial class ModelConfigurationDialog
     [CascadingParameter] public IMudDialogInstance Dialog { get; set; } = null!;
     /// <summary>Initial saved or discovered values; null creates an empty draft.</summary>
     [Parameter] public AIModelConfiguration? Model { get; set; }
+    /// <summary>Indicates that save changes only the containing unsaved provider draft.</summary>
+    [Parameter] public bool IsProviderDraft { get; set; }
     /// <summary>Controls provider-specific reasoning options.</summary>
     [Parameter] public EAIProviderType ProviderType { get; set; }
     /// <summary>Saves the draft; a safe diagnostic keeps the dialog open on failure.</summary>
     [Parameter, EditorRequired] public required Func<AIModelConfiguration, Task<string?>> OnSave { get; set; }
+    /// <summary>
+    /// Optional cancellation-aware save callback, preferred over <see cref="OnSave"/> when supplied. A diagnostic retains the draft.
+    /// Dialog retirement requests cancellation and drains the callback; cancellation cannot undo a completed durable write.
+    /// </summary>
+    [Parameter] public Func<AIModelConfiguration, CancellationToken, Task<string?>>? OnSaveWithCancellation { get; set; }
     /// <summary>Optional cancellable discovery using the owning provider's current connection. Does not persist edits.</summary>
     [Parameter] public Func<CancellationToken, Task<Res<IReadOnlyList<AIModelConfiguration>>>>? OnDiscover { get; set; }
 
-    private readonly CancellationTokenSource _lifetime = new();
-    private bool _saving, _fetching, _disposed;
+    private readonly AIAdministrationOperationLifetime _lifetime = new();
+    private bool _saving, _fetching;
+    private AIModelConfiguration _initialModel = new() { ModelName = string.Empty };
+    private MudTextField<string>? _nameField, _contextField, _outputField;
     private string _name = string.Empty, _contextText = string.Empty, _outputText = string.Empty;
-    private string? _display, _defaultReasoning, _error, _metadataMessage;
+    private string? _display, _description, _defaultReasoning, _error, _metadataMessage;
     private AIModelKind _kind;
     private int? _dimensions;
     private bool? _images, _documents, _tools, _reasoning;
@@ -38,18 +49,23 @@ public partial class ModelConfigurationDialog
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToArray();
 
-    protected override void OnInitialized() => Reset();
+    protected override void OnInitialized()
+    {
+        if (Model is { } model) _initialModel = model with { ReasoningLevels = model.ReasoningLevels.ToArray() };
+        Reset();
+    }
 
     private void Reset()
     {
-        Load(Model ?? new AIModelConfiguration { ModelName = string.Empty });
+        if (Busy || _lifetime.IsRetired) return;
+        Load(_initialModel);
         _error = null;
         _metadataMessage = null;
     }
 
     private void Load(AIModelConfiguration model)
     {
-        _name = model.ModelName; _display = model.DisplayName; _kind = model.Kind;
+        _name = model.ModelName; _display = model.DisplayName; _description = model.Description; _kind = model.Kind;
         _contextText = TokenQuantity.Format(model.ContextWindow); _outputText = TokenQuantity.Format(model.MaxOutputTokens);
         _dimensions = model.EmbeddingDimensions;
         _images = model.SupportsImage; _documents = model.SupportsDocuments; _tools = model.SupportsTools; _reasoning = model.SupportsReasoning;
@@ -66,12 +82,14 @@ public partial class ModelConfigurationDialog
 
     private void SetReasoning(bool? value)
     {
+        if (Busy || _lifetime.IsRetired) return;
         _reasoning = value;
         if (value == false) { _levels.Clear(); _defaultReasoning = null; }
     }
 
     private void SetLevels(IReadOnlyList<string> ids)
     {
+        if (Busy || _lifetime.IsRetired) return;
         // Retain custom mappings when the supported-level picker changes its selection.
         _levels = ids.Select(id => _levels.FirstOrDefault(level => level.Id.Trim().Equals(id, StringComparison.OrdinalIgnoreCase))
             ?? new ReasoningForm { Id = id, ProviderValue = id }).ToList();
@@ -79,16 +97,17 @@ public partial class ModelConfigurationDialog
         if (!_levels.Any(level => level.Id.Trim().Equals(_defaultReasoning, StringComparison.OrdinalIgnoreCase))) _defaultReasoning = null;
     }
 
-    private void AddLevel() { _levels.Add(new ReasoningForm()); _reasoning = true; }
+    private void AddLevel() { if (Busy || _lifetime.IsRetired) return; _levels.Add(new ReasoningForm()); _reasoning = true; }
     private void RemoveLevel(ReasoningForm level)
     {
+        if (Busy || _lifetime.IsRetired) return;
         _levels.Remove(level);
-        if (_defaultReasoning == level.Id) _defaultReasoning = null;
+        if (string.Equals(_defaultReasoning, level.Id, StringComparison.OrdinalIgnoreCase)) _defaultReasoning = null;
     }
 
-    private AIModelConfiguration Build(int? context, int? output) => (Model ?? new AIModelConfiguration { ModelName = _name.Trim() }) with
+    private AIModelConfiguration Build(int? context, int? output) => _initialModel with
     {
-        ModelName = _name.Trim(), DisplayName = string.IsNullOrWhiteSpace(_display) ? null : _display.Trim(), Kind = _kind,
+        ModelName = _name.Trim(), DisplayName = string.IsNullOrWhiteSpace(_display) ? null : _display.Trim(), Description = _description, Kind = _kind,
         ContextWindow = context, MaxOutputTokens = output, EmbeddingDimensions = _kind == AIModelKind.Embedding ? _dimensions : null,
         SupportsImage = _kind == AIModelKind.Chat ? _images : null, SupportsDocuments = _kind == AIModelKind.Chat ? _documents : null,
         SupportsTools = _kind == AIModelKind.Chat ? _tools : null, SupportsReasoning = _kind == AIModelKind.Chat ? _reasoning : null,
@@ -103,34 +122,49 @@ public partial class ModelConfigurationDialog
             : null
     };
 
-    private async Task FetchMetadataAsync()
+    private Task FetchMetadataAsync() => _lifetime.RunAsync(FetchMetadataCoreAsync);
+    private async Task FetchMetadataCoreAsync(CancellationToken cancellationToken)
     {
-        if (Busy || _disposed || OnDiscover is null) return;
-        if (!TokenQuantity.TryParse(_contextText, out var context) || !TokenQuantity.TryParse(_outputText, out var output))
-        { _error = L["Settings:InvalidTokenQuantity"]; return; }
+        if (Busy || _lifetime.IsRetired || OnDiscover is null || string.IsNullOrWhiteSpace(_name)) return;
+        if (!TokenQuantity.TryParse(_contextText, out var context))
+        { _error = L["Settings:InvalidTokenQuantity"]; await FocusFieldAsync(_contextField); return; }
+        if (!TokenQuantity.TryParse(_outputText, out var output))
+        { _error = L["Settings:InvalidTokenQuantity"]; await FocusFieldAsync(_outputField); return; }
         var draft = Build(context, output);
         _fetching = true; _error = null; _metadataMessage = null;
         try
         {
-            var result = await OnDiscover(_lifetime.Token);
-            if (_disposed) return;
+            var result = await OnDiscover(cancellationToken);
+            if (_lifetime.IsRetired) return;
+            if (!DraftMatches(draft)) { _metadataMessage = L["Settings:ModelDraftChanged"]; return; }
             if (result.IsFailed(out var error, out var models)) { _error = error.Message; return; }
             var evidence = models.FirstOrDefault(model => model.ModelName.Equals(draft.ModelName, StringComparison.OrdinalIgnoreCase));
             if (evidence is null) { _metadataMessage = L["Settings:MetadataNotFound"]; return; }
             Load(draft.WithDiscoveredMetadata(evidence));
             _metadataMessage = L["Settings:MetadataApplied"];
         }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
-        catch (Exception) { if (!_disposed) _error = L["Error:Generic"]; }
-        finally { if (!_disposed) _fetching = false; }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception) { if (!_lifetime.IsRetired) _error = L["Error:Generic"]; }
+        finally { if (!_lifetime.IsRetired) _fetching = false; }
     }
 
-    private async Task SaveAsync()
+    private bool DraftMatches(AIModelConfiguration draft)
     {
-        if (Busy || _disposed) return;
-        if (string.IsNullOrWhiteSpace(_name)) { _error = L["Settings:IdRequired"]; return; }
-        if (!TokenQuantity.TryParse(_contextText, out var context) || !TokenQuantity.TryParse(_outputText, out var output))
-        { _error = L["Settings:InvalidTokenQuantity"]; return; }
+        if (!TokenQuantity.TryParse(_contextText, out var context) || !TokenQuantity.TryParse(_outputText, out var output)) return false;
+        var current = Build(context, output);
+        return current.ReasoningLevels.SequenceEqual(draft.ReasoningLevels)
+            && (current with { ReasoningLevels = draft.ReasoningLevels }) == draft;
+    }
+
+    private Task SaveAsync() => _lifetime.RunAsync(SaveCoreAsync);
+    private async Task SaveCoreAsync(CancellationToken cancellationToken)
+    {
+        if (Busy || _lifetime.IsRetired) return;
+        if (string.IsNullOrWhiteSpace(_name)) { _error = L["Settings:IdRequired"]; await FocusFieldAsync(_nameField); return; }
+        if (!TokenQuantity.TryParse(_contextText, out var context))
+        { _error = L["Settings:InvalidTokenQuantity"]; await FocusFieldAsync(_contextField); return; }
+        if (!TokenQuantity.TryParse(_outputText, out var output))
+        { _error = L["Settings:InvalidTokenQuantity"]; await FocusFieldAsync(_outputField); return; }
         var capacity = _kind == AIModelKind.Chat ? ChatContextCapacity.Resolve(null, context).Tokens : context;
         if ((_kind == AIModelKind.Embedding && _dimensions is <= 0) || (capacity is { } limit && output >= limit))
         { _error = L["Settings:InvalidModelLimits"]; return; }
@@ -147,18 +181,35 @@ public partial class ModelConfigurationDialog
         _saving = true;
         try
         {
-            var error = await OnSave(Build(context, output));
-            if (_disposed) return;
+            var draft = Build(context, output);
+            var error = OnSaveWithCancellation is { } save
+                ? await save(draft, cancellationToken)
+                : await OnSave(draft);
+            if (_lifetime.IsRetired) return;
             _error = error;
             if (error is null) Dialog.Close(DialogResult.Ok(true));
         }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
-        catch (Exception exception) { if (!_disposed) _error = exception.Message; }
-        finally { if (!_disposed) _saving = false; }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception) { if (!_lifetime.IsRetired) _error = L["Error:Generic"]; }
+        finally { if (!_lifetime.IsRetired) _saving = false; }
     }
 
-    /// <summary>Cancels discovery and ignores callbacks after the dialog closes.</summary>
-    public void Dispose() { if (_disposed) return; _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
+    private async Task FocusFieldAsync(MudTextField<string>? field)
+    {
+        if (_lifetime.IsRetired || field is null) return;
+        try { await field.FocusAsync(); }
+        catch (JSDisconnectedException) { }
+    }
+
+    private async Task Cancel()
+    {
+        var retirement = DisposeAsync();
+        Dialog.Cancel();
+        await retirement;
+    }
+
+    /// <summary>Cancels and drains discovery and save callbacks after the dialog closes.</summary>
+    public ValueTask DisposeAsync() => _lifetime.RetireAsync();
 
     private sealed class ReasoningForm
     {

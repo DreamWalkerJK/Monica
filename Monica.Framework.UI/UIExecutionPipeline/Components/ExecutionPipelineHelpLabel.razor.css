@@ -1,29 +1,46 @@
 .execution-pipeline-help-label {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: 100%;
+    font: inherit;
+    line-height: inherit;
+    vertical-align: middle;
+}
+
+.execution-pipeline-help-label > span {
     min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .execution-pipeline-help-label__trigger {
-    display: inline-flex;
+    display: flex;
+    width: 18px;
+    height: 18px;
     align-items: center;
     justify-content: center;
-    flex: 0 0 auto;
     padding: 0;
-    color: var(--mud-palette-text-secondary);
-    cursor: help;
     border: 0;
     border-radius: 50%;
+    color: inherit;
     background: transparent;
-}
-
-.execution-pipeline-help-label__trigger:focus-visible {
-    color: var(--mud-palette-primary);
-    outline: 0.125rem solid var(--mud-palette-primary);
-    outline-offset: 0.1rem;
+    cursor: pointer;
+    opacity: .65;
 }
 
 .execution-pipeline-help-label__trigger ::deep .mud-icon-root {
-    font-size: 1rem;
+    width: 13px;
+    height: 13px;
+}
+
+.execution-pipeline-help-label__trigger:hover,
+.execution-pipeline-help-label__trigger:focus-visible {
+    color: var(--mud-palette-primary);
+    opacity: 1;
+}
+
+.execution-pipeline-help-label__trigger:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
 }

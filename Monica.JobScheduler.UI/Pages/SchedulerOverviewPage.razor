@@ -24,21 +24,33 @@
                 {
                     <div class="overview-page__loading" role="status">
                         <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
+                        <MudText Typo="Typo.body2">@L["Common:Loading"]</MudText>
                     </div>
                 }
                 else if (_state.Error is not null && _state.Overview is null)
                 {
                     <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
                         @_state.Error
-                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="_state.RefreshAsync">
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="RefreshAsync">
                             @L["Common:Retry"]
                         </MudButton>
                     </MudAlert>
                 }
                 else if (_state.Overview is { } overview)
                 {
-                    <SchedulerWorkloadSummary Overview="@overview" />
+                    <header class="overview-page__snapshot">
+                        <div class="overview-page__snapshot-time">
+                            <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" aria-hidden="true" />
+                            <time datetime="@((_state.LastRefreshedUtc ?? overview.CapturedAtUtc).ToString("O"))">
+                                @L["Overview:LastRefreshed", TimePresentation.FormatTimestamp(_state.LastRefreshedUtc ?? overview.CapturedAtUtc)]
+                            </time>
+                        </div>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Outlined.Refresh"
+                                   Disabled="@_state.IsLoading" OnClick="RefreshAsync">
+                            @L["Common:Refresh"]
+                        </MudButton>
+                    </header>
 
                     @if (_state.Error is not null)
                     {
@@ -47,42 +59,36 @@
                         </MudAlert>
                     }
 
-                    <div class="overview-page__pulse-grid">
-                        <ExecutionStateFlow Counts="@overview.ExecutionStateCounts" />
-                        <RecentExecutionsPanel Executions="@overview.RecentExecutions"
-                                               IsRefreshing="@_state.IsLoading"
-                                               OnRefresh="_state.RefreshAsync" />
-                    </div>
+                    <SchedulerWorkloadSummary Overview="@overview" />
 
-                    <div class="overview-page__attention-grid">
+                    <div class="overview-page__review">
                         <SchedulerAttentionPanel Overview="@overview" />
-                        <aside class="overview-page__insight" aria-labelledby="overview-insight-title">
-                            <span class="overview-page__insight-icon" aria-hidden="true">
-                                <MudIcon Icon="@Icons.Material.Filled.Insights" />
-                            </span>
-                            <div>
-                                <MudText id="overview-insight-title" Typo="Typo.h6" HtmlTag="h2">
-                                    @L["Overview:Analytics:Title"]
-                                </MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                    @L["Overview:Analytics:Description"]
-                                </MudText>
-                            </div>
-                            <MudButton Href="@SchedulerStatisticsPage.PAGE_URL"
-                                       Variant="Variant.Outlined"
-                                       Color="Color.Primary"
-                                       EndIcon="@Icons.Material.Filled.ArrowForward">
-                                @L["Overview:Analytics:Action"]
-                            </MudButton>
-                        </aside>
+                        <ExecutionStateFlow Counts="@overview.ExecutionStateCounts" />
                     </div>
 
-                    <footer class="overview-page__freshness">
-                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @L["Overview:LastRefreshed", TimePresentation.FormatTimestamp(_state.LastRefreshedUtc ?? overview.CapturedAtUtc)]
-                        </MudText>
-                    </footer>
+                    <RecentExecutionsPanel Executions="@overview.RecentExecutions"
+                                           IsRefreshing="@_state.IsLoading"
+                                           OnRefresh="RefreshAsync" />
+
+                    <aside class="overview-page__insight" aria-labelledby="overview-insight-title">
+                        <span class="overview-page__insight-icon" aria-hidden="true">
+                            <MudIcon Icon="@Icons.Material.Outlined.QueryStats" />
+                        </span>
+                        <div>
+                            <MudText id="overview-insight-title" Typo="Typo.h6" HtmlTag="h2">
+                                @L["Overview:Analytics:Title"]
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                @L["Overview:Analytics:Description"]
+                            </MudText>
+                        </div>
+                        <MudButton Href="@SchedulerStatisticsPage.PAGE_URL"
+                                   Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   EndIcon="@Icons.Material.Outlined.ArrowForward">
+                            @L["Overview:Analytics:Action"]
+                        </MudButton>
+                    </aside>
                 }
             </div>
         </SchedulerAccessBoundary>
@@ -93,7 +99,9 @@
     public const string PAGE_URL = "/job-scheduler";
 
     private SchedulerOverviewPageState? _state;
-    private bool _disposed;
+    private volatile bool _disposed;
+    private readonly object _lifetimeGate = new();
+    private TaskCompletionSource? _retirement;
 
     protected override async Task OnInitializedAsync()
     {
@@ -102,22 +110,51 @@
         await _state.InitializeAsync();
     }
 
-    private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
-
-    public async ValueTask DisposeAsync()
+    private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(() =>
     {
-        if (_disposed)
-        {
-            return;
-        }
+        if (!_disposed) StateHasChanged();
+    });
 
-        _disposed = true;
-        var state = _state;
-        _state = null;
-        if (state is not null)
+    private Task RefreshAsync()
+    {
+        SchedulerOverviewPageState? state;
+        lock (_lifetimeGate)
         {
-            state.Changed -= OnStateChangedAsync;
-            await state.DisposeAsync();
+            if (_disposed) return Task.CompletedTask;
+            state = _state;
         }
+        return state?.RefreshAsync() ?? Task.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        TaskCompletionSource completion;
+        SchedulerOverviewPageState? state;
+        lock (_lifetimeGate)
+        {
+            if (_retirement is not null) return new ValueTask(_retirement.Task);
+            _disposed = true;
+            completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _retirement = completion;
+            state = _state;
+            _state = null;
+        }
+        _ = CompleteRetirementAsync(state, completion);
+        return new ValueTask(completion.Task);
+    }
+
+    private async Task CompleteRetirementAsync(
+        SchedulerOverviewPageState? state, TaskCompletionSource completion)
+    {
+        try
+        {
+            if (state is not null)
+            {
+                state.Changed -= OnStateChangedAsync;
+                await state.DisposeAsync();
+            }
+            completion.TrySetResult();
+        }
+        catch (Exception exception) { completion.TrySetException(exception); }
     }
 }

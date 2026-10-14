@@ -8,17 +8,27 @@ namespace Monica.AI.UI.UIRAG.State;
 
 public sealed partial class RAGManagePageState
 {
+    private long _vectorValidationRevision;
+    private long _queueReadRevision;
+    private long _catalogReadRevision;
+    private long _selectedMetadataRevision;
     /// <summary>
     /// Initialize the page for the current visit.
     /// </summary>
-    public async Task InitializeAsync()
+    public Task InitializeAsync()
+        => _session.RunAsync(() => InitializeAsyncCore(), selectionBound: false);
+
+    private async Task InitializeAsyncCore()
     {
+        _session.CheckCurrent();
         Attach();
 
         IsInitialLoading = true;
         UpdateLoadingState(_localizer["RAG:KnowledgeBase:Title"].Value, 35);
         await LoadKnowledgeBasesAsync();
+        _session.CheckCurrent();
         await LoadEmbeddingModelsAsync();
+        _session.CheckCurrent();
         LoadingProgressValue = 100;
         IsInitialLoading = false;
         NotifyStateChanged();
@@ -27,8 +37,12 @@ public sealed partial class RAGManagePageState
     /// <summary>
     /// Change the current knowledge-base selection and load dependent data.
     /// </summary>
-    public async Task SelectKnowledgeBaseAsync(KnowledgeBaseModel? knowledgeBase)
+    public Task SelectKnowledgeBaseAsync(KnowledgeBaseModel? knowledgeBase)
+        => _session.RunAsync(() => SelectKnowledgeBaseAsyncCore(knowledgeBase), selectionBound: false);
+
+    private async Task SelectKnowledgeBaseAsyncCore(KnowledgeBaseModel? knowledgeBase)
     {
+        _session.CheckCurrent();
         if (!CanChangeKnowledgeBaseSelection)
         {
             return;
@@ -51,6 +65,14 @@ public sealed partial class RAGManagePageState
         }
 
         SelectedKnowledgeBase = knowledgeBase;
+        _session.AdvanceSelection();
+        _queuePollingState.Stop();
+        SelectedDocumentIds.Clear();
+        DocumentQueue = [];
+        IsSelectionLoading = false;
+        QueueErrorMessage = string.Empty;
+        VectorValidationErrorMessage = string.Empty;
+        IsVectorValidationLoading = false;
         SelectedKnowledgeBaseVectorValidation = null;
 
         if (knowledgeBase is null)
@@ -74,9 +96,11 @@ public sealed partial class RAGManagePageState
         if (!AreEmbeddingModelsLoaded)
         {
             await LoadEmbeddingModelsAsync();
+            _session.CheckCurrent();
         }
 
         await LoadDocumentQueueAsync();
+        _session.CheckCurrent();
         EnsureQueuePolling();
         IsSelectionLoading = false;
         LoadingProgressValue = 100;
@@ -86,20 +110,46 @@ public sealed partial class RAGManagePageState
 
     private async Task<bool> LoadKnowledgeBasesAsync()
     {
-        if ((await _knowledgeBaseFacade.GetAllAsync()).IsFailed(out var error, out var knowledgeBases))
+        _session.CheckCurrent();
+        var revision = ++_catalogReadRevision;
+        var metadataRevision = Interlocked.Increment(ref _selectedMetadataRevision);
+        var catalogResult = await _knowledgeBaseFacade.GetAllAsync();
+        _session.CheckCurrent();
+        if (revision != _catalogReadRevision) return false;
+        if (catalogResult.IsFailed(out var error, out var knowledgeBases))
         {
+            CatalogErrorMessage = error.Message ?? _localizer["Common:Error"].Value;
+            NotifyStateChanged();
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return false;
         }
 
+        CatalogErrorMessage = string.Empty;
         KnowledgeBases = knowledgeBases.ToList();
+        if (SelectedKnowledgeBase is { } selected)
+        {
+            if (metadataRevision == _selectedMetadataRevision)
+            {
+                SelectedKnowledgeBase = KnowledgeBases.FirstOrDefault(kb =>
+                    string.Equals(kb.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
+                if (SelectedKnowledgeBase is null) await SelectKnowledgeBaseAsyncCore(null);
+            }
+            else
+            {
+                KnowledgeBases = KnowledgeBases.Select(kb =>
+                    string.Equals(kb.Id, selected.Id, StringComparison.OrdinalIgnoreCase) ? selected : kb).ToList();
+            }
+        }
         NotifyStateChanged();
         return true;
     }
 
     private async Task<bool> LoadEmbeddingModelsAsync()
     {
-        if ((await _embeddingFacade.GetEmbeddingModelsAsync()).IsFailed(out var error, out var models))
+        _session.CheckCurrent();
+        var modelsResult = await _embeddingFacade.GetEmbeddingModelsAsync();
+        _session.CheckCurrent();
+        if (modelsResult.IsFailed(out var error, out var models))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return false;
@@ -116,21 +166,43 @@ public sealed partial class RAGManagePageState
         return true;
     }
 
+    /// <summary>Retries the selected queue, persisted base metadata, and vector validation through the current visit.</summary>
+    public Task ReloadSelectedQueueAsync()
+        => _session.RunAsync(async () =>
+        {
+            await LoadDocumentQueueAsync();
+            _session.CheckCurrent();
+            if (SelectedKnowledgeBase is { } selected) QueueSelectedKnowledgeBaseVectorValidation(selected.Id);
+        });
+
     private async Task LoadDocumentQueueAsync(bool ensurePolling = true)
     {
+        _session.CheckCurrent();
+        var revision = ++_queueReadRevision;
+        _queuePollingState.Stop();
         if (SelectedKnowledgeBase is null)
         {
             return;
         }
 
-        if ((await _knowledgeDocumentFacade.GetDocumentInventoryAsync(SelectedKnowledgeBase.Id)).IsFailed(out var error, out var queue))
+        var originKnowledgeBaseId = SelectedKnowledgeBase.Id;
+        var queueResult = await _knowledgeDocumentFacade.GetDocumentInventoryAsync(originKnowledgeBaseId);
+        _session.CheckCurrent();
+        if (revision != _queueReadRevision) return;
+
+        if (queueResult.IsFailed(out var error, out var queue))
         {
+            QueueErrorMessage = error.Message ?? _localizer["Common:Error"].Value;
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             DocumentQueue = [];
         }
         else
         {
+            QueueErrorMessage = string.Empty;
             DocumentQueue = queue.ToList();
+            await RefreshSelectedMetadataAsync(originKnowledgeBaseId);
+            _session.CheckCurrent();
+            if (revision != _queueReadRevision) return;
         }
 
         RemoveUnavailableDocumentSelections();
@@ -145,6 +217,7 @@ public sealed partial class RAGManagePageState
 
     private async Task RefreshSelectedKnowledgeBaseAsync()
     {
+        _session.CheckCurrent();
         if (SelectedKnowledgeBase is null)
         {
             SelectedKnowledgeBaseVectorValidation = null;
@@ -155,10 +228,8 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        var selectedKnowledgeBaseId = SelectedKnowledgeBase.Id;
-        await LoadKnowledgeBasesAsync();
-        SelectedKnowledgeBase = KnowledgeBases.FirstOrDefault(kb =>
-            string.Equals(kb.Id, selectedKnowledgeBaseId, StringComparison.OrdinalIgnoreCase));
+        if (!await LoadKnowledgeBasesAsync()) return;
+        _session.CheckCurrent();
 
         if (SelectedKnowledgeBase is null)
         {
@@ -176,8 +247,9 @@ public sealed partial class RAGManagePageState
         NotifyStateChanged();
     }
 
-    private async Task LoadSelectedKnowledgeBaseVectorValidationAsync(string knowledgeBaseId)
+    private async Task LoadSelectedKnowledgeBaseVectorValidationAsync(string knowledgeBaseId, long revision, long? pollingGeneration = null)
     {
+        _session.CheckCurrent();
         if (SelectedKnowledgeBase is null
             || !string.Equals(SelectedKnowledgeBase.Id, knowledgeBaseId, StringComparison.OrdinalIgnoreCase))
         {
@@ -187,6 +259,9 @@ public sealed partial class RAGManagePageState
         }
 
         var result = await _vectorStoreFacade.ValidateAsync(knowledgeBaseId);
+        _session.CheckCurrent();
+        if (revision != _vectorValidationRevision) return;
+        if (pollingGeneration is { } generation && !_queuePollingState.IsCurrentGeneration(generation)) return;
         if (SelectedKnowledgeBase is null
             || !string.Equals(SelectedKnowledgeBase.Id, knowledgeBaseId, StringComparison.OrdinalIgnoreCase))
         {
@@ -195,14 +270,17 @@ public sealed partial class RAGManagePageState
 
         if (result.IsFailed(out var error, out var validation))
         {
+            VectorValidationErrorMessage = error.Message ?? _localizer["Common:Error"].Value;
             SelectedKnowledgeBaseVectorValidation = null;
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
         }
         else
         {
+            VectorValidationErrorMessage = string.Empty;
             SelectedKnowledgeBaseVectorValidation = validation;
         }
 
+        IsVectorValidationLoading = false;
         NotifyStateChanged();
     }
 
@@ -213,22 +291,74 @@ public sealed partial class RAGManagePageState
         NotifyStateChanged();
     }
 
-    private void QueueSelectedKnowledgeBaseVectorValidation(string knowledgeBaseId)
+    private void QueueSelectedKnowledgeBaseVectorValidation(string knowledgeBaseId, long? pollingGeneration = null)
     {
-        _ = LoadSelectedKnowledgeBaseVectorValidationAsync(knowledgeBaseId);
-    }
-
-    private void OnQueueRefreshed(IReadOnlyList<DocumentQueueItemModel> queue)
-    {
-        DocumentQueue = queue.ToList();
-        RemoveUnavailableDocumentSelections();
+        if (_session.IsRetired) return;
+        IsVectorValidationLoading = true;
+        VectorValidationErrorMessage = string.Empty;
         NotifyStateChanged();
+        var revision = ++_vectorValidationRevision;
+        _session.StartBackground(() => LoadSelectedKnowledgeBaseVectorValidationAsync(knowledgeBaseId, revision, pollingGeneration));
     }
 
-    private void OnQueueRefreshFailed(string message)
+    private Task OnQueueSettled(string knowledgeBaseId, long generation) => _session.PublishAsync(() =>
     {
+        if (!_queuePollingState.IsCurrentGeneration(generation)
+            || !string.Equals(SelectedKnowledgeBase?.Id, knowledgeBaseId, StringComparison.OrdinalIgnoreCase)) return;
+        QueueSelectedKnowledgeBaseVectorValidation(knowledgeBaseId, generation);
+    });
+
+    private Task OnQueueRefreshed(string knowledgeBaseId, long generation, IReadOnlyList<DocumentQueueItemModel> queue)
+        => _session.RunAsync(async () =>
+    {
+        if (!string.Equals(SelectedKnowledgeBase?.Id, knowledgeBaseId, StringComparison.OrdinalIgnoreCase)) return;
+        if (!_queuePollingState.IsCurrentGeneration(generation)) return;
+        var revision = Interlocked.Increment(ref _selectedMetadataRevision);
+        var metadata = await _knowledgeBaseFacade.GetByIdAsync(knowledgeBaseId);
+        _session.CheckCurrent();
+        await _session.PublishAsync(() =>
+        {
+            if (!_queuePollingState.IsCurrentGeneration(generation)
+                || revision != _selectedMetadataRevision) return;
+            QueueErrorMessage = string.Empty;
+            DocumentQueue = queue.ToList();
+            ApplySelectedMetadata(knowledgeBaseId, metadata);
+            RemoveUnavailableDocumentSelections();
+            NotifyStateChanged();
+        });
+    });
+
+    private async Task RefreshSelectedMetadataAsync(string knowledgeBaseId)
+    {
+        var revision = Interlocked.Increment(ref _selectedMetadataRevision);
+        var result = await _knowledgeBaseFacade.GetByIdAsync(knowledgeBaseId);
+        _session.CheckCurrent();
+        if (revision != _selectedMetadataRevision) return;
+        ApplySelectedMetadata(knowledgeBaseId, result);
+    }
+
+    private void ApplySelectedMetadata(string knowledgeBaseId, Res<KnowledgeBaseModel> result)
+    {
+        if (!string.Equals(SelectedKnowledgeBase?.Id, knowledgeBaseId, StringComparison.OrdinalIgnoreCase)) return;
+        if (result.IsFailed(out var error, out var knowledgeBase))
+        {
+            CatalogErrorMessage = error.Message ?? _localizer["Common:Error"].Value;
+            return;
+        }
+
+        CatalogErrorMessage = string.Empty;
+        SelectedKnowledgeBase = knowledgeBase;
+        KnowledgeBases = KnowledgeBases.Select(kb =>
+            string.Equals(kb.Id, knowledgeBaseId, StringComparison.OrdinalIgnoreCase) ? knowledgeBase : kb).ToList();
+    }
+
+    private Task OnQueueRefreshFailed(string knowledgeBaseId, long generation, string message) => _session.PublishAsync(() =>
+    {
+        if (!string.Equals(SelectedKnowledgeBase?.Id, knowledgeBaseId, StringComparison.OrdinalIgnoreCase)) return;
+        if (!_queuePollingState.IsCurrentGeneration(generation)) return;
+        QueueErrorMessage = message;
         DocumentQueue = [];
         _snackbar.Add($"{_localizer["Common:Error"]}: {message}", Severity.Error);
         NotifyStateChanged();
-    }
+    });
 }

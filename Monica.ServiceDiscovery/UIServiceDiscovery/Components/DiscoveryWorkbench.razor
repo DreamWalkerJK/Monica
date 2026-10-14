@@ -1,0 +1,33 @@
+@using Monica.ServiceDiscovery.Localization
+@inject IStringLocalizer<ServiceDiscoveryResource> L
+
+<div class="discovery-workbench" data-view="@View">
+    <header class="discovery-heading">
+        <div class="discovery-heading-copy">
+            <span class="discovery-kicker"><MudIcon Icon="@Icons.Material.Outlined.Hub" Size="Size.Small" />@L["Workbench:Eyebrow"]</span>
+            <h1>@L[$"Workbench:Views:{View}:Title"]</h1>
+            <p>@L[$"Workbench:Views:{View}:Description"]</p>
+        </div>
+        <div class="discovery-heading-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+    </header>
+    <nav class="discovery-routes" aria-label="@L["Workbench:Navigation"]">
+        @foreach (var route in Routes)
+        {
+            <a href="@route.Url" aria-current="@(View == route.View ? "page" : null)"><MudIcon Icon="@route.Icon" Size="Size.Small" /><span>@L[$"Workbench:Views:{route.View}:Label"]</span></a>
+        }
+    </nav>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string View { get; set; } = "Registry";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    private static readonly (string View, string Url, string Icon)[] Routes =
+    [
+        ("Registry", "/service-discovery-manage", Icons.Material.Outlined.Dns),
+        ("Atlas", "/service-discovery-manage/service-map", Icons.Material.Outlined.ScatterPlot),
+        ("Dependencies", "/service-discovery-manage/dependencies", Icons.Material.Outlined.AccountTree),
+        ("Domains", "/service-discovery-manage/subdomains", Icons.Material.Outlined.Domain),
+        ("Host", "/service-discovery-manage/current-host", Icons.Material.Outlined.Computer)
+    ];
+}

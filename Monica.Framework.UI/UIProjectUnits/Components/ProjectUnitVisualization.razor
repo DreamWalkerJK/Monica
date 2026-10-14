@@ -9,120 +9,191 @@
 @inject IStringLocalizer<ProjectUnitsResource> L
 @implements IAsyncDisposable
 
-<div class="project-units-tab-section">
-    <MudStack Row="true"
-              Justify="Justify.SpaceBetween"
-              AlignItems="AlignItems.Center"
-              Class="project-units-tab-section__header">
-        <div class="project-units-tab-section__identity">
-            <div class="project-units-tab-section__icon">
-                <MudIcon Icon="@Icons.Material.Filled.Hub" />
-            </div>
-            <div class="project-units-tab-section__copy">
-                <MudText Typo="Typo.h6">@L["ProjectUnitVisualization:Header:Title"]</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="project-units-tab-section__description">
-                    @L["ProjectUnitVisualization:Header:Description"]
-                </MudText>
-            </div>
+<section class="unit-graph-workspace" aria-labelledby="@(_graphContainerId + "-title")" data-testid="project-unit-visualization">
+    <header class="graph-heading">
+        <div class="graph-heading__identity">
+            <span class="graph-eyebrow">@L["ProjectUnitVisualization:Workspace:Eyebrow"]</span>
+            <h1 id="@(_graphContainerId + "-title")">@L["ProjectUnitVisualization:Header:Title"]</h1>
+            <p>@L["ProjectUnitVisualization:Header:Description"]</p>
         </div>
-        <div class="project-units-tab-section__actions">
-            <MudTooltip Text="@L["ProjectUnitVisualization:Actions:RefreshTooltip"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                               Color="Color.Primary"
-                               OnClick="LoadProjectUnitsAsync"
-                               Disabled="@_loading" />
-            </MudTooltip>
-            <MudTooltip Text="@L["ProjectUnitVisualization:Actions:ResetViewTooltip"]">
-                <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
-                               Color="Color.Secondary"
-                               OnClick="ResetView"
-                               Disabled="@_loading" />
-            </MudTooltip>
-            <MudTooltip Text="@L["ProjectUnitVisualization:Actions:LayoutSettingsTooltip"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Dashboard"
-                               Color="Color.Info"
-                               OnClick="ToggleLayoutPanel" />
-            </MudTooltip>
-            <MudTooltip Text="@L["ProjectUnitVisualization:Actions:FilterSettingsTooltip"]">
-                <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
-                               Color="Color.Tertiary"
-                               OnClick="ToggleFilterPanel" />
-            </MudTooltip>
+        <div class="graph-heading__actions">
+            <button type="button" class="graph-action" disabled="@_loading" @onclick="LoadProjectUnitsAsync">
+                <MudIcon Icon="@Icons.Material.Outlined.Refresh" Size="Size.Small" />@L["ProjectUnitVisualization:Actions:RefreshTooltip"]
+            </button>
+            <button type="button" class="graph-action" aria-expanded="@(_showFilterPanel ? "true" : "false")" @onclick="ToggleFilterPanel">
+                <MudIcon Icon="@Icons.Material.Outlined.FilterAlt" Size="Size.Small" />@L["ProjectUnitVisualization:Actions:FilterSettingsTooltip"]
+            </button>
+            <button type="button" class="graph-action" aria-expanded="@(_showLayoutPanel ? "true" : "false")" @onclick="ToggleLayoutPanel">
+                <MudIcon Icon="@Icons.Material.Outlined.Dashboard" Size="Size.Small" />@L["ProjectUnitVisualization:Actions:LayoutSettingsTooltip"]
+            </button>
         </div>
-    </MudStack>
-    <div class="project-units-tab-section__body">
-        @if (_showLayoutPanel)
-        {
-            <ProjectUnitLayoutPanel CurrentLayout="_currentLayout"
-                                    ForceDistance="_forceDistance"
-                                    ForceStrength="_forceStrength"
-                                    CurrentLayoutChanged="OnLayoutChanged"
-                                    ForceDistanceChanged="OnForceDistanceChanged"
-                                    ForceStrengthChanged="OnForceStrengthChanged" />
-        }
+    </header>
 
-        @if (_showFilterPanel)
-        {
-            @if (!string.IsNullOrEmpty(_relatedToNodeId))
-            {
-                var relatedUnit = _allProjectUnits.FirstOrDefault(unit => unit.Key == _relatedToNodeId);
-                <MudAlert Severity="Severity.Info" Class="mb-2" CloseIconClicked="ClearRelatedFilterClick">
-                    @((MarkupString)L["ProjectUnitVisualization:States:RelatedNodesAlert", relatedUnit?.Title ?? _relatedToNodeId].Value)
-                </MudAlert>
-            }
+    @if (_showLayoutPanel)
+    {
+        <ProjectUnitLayoutPanel CurrentLayout="_currentLayout" ForceDistance="_forceDistance" ForceStrength="_forceStrength"
+                                CurrentLayoutChanged="OnLayoutChanged" ForceDistanceChanged="OnForceDistanceChanged" ForceStrengthChanged="OnForceStrengthChanged" />
+    }
+    @if (_showFilterPanel)
+    {
+        <ProjectUnitFilterPanel @ref="_filterPanel" Units="_allProjectUnits" @bind-FilterText="_filterText" @bind-SelectedUnitTypes="_selectedUnitTypes"
+                               @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies" @bind-ShowOnlyWithAlerts="_showOnlyWithAlerts" OnFiltersChanged="ApplyFilters" />
+    }
+    @if (!string.IsNullOrEmpty(_relatedToNodeId))
+    {
+        var relatedUnit = _allProjectUnits.FirstOrDefault(unit => unit.Key == _relatedToNodeId);
+        <div class="graph-related-scope" role="status">
+            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" />
+            <div><span>@L["ProjectUnitVisualization:Workspace:ConnectedScope"]</span><strong>@(relatedUnit?.Title ?? _relatedToNodeId)</strong><p>@L["ProjectUnitVisualization:Workspace:ConnectedScopeHint"]</p></div>
+            <button type="button" class="graph-text-action" @onclick="ClearRelatedFilterClick">@L["ProjectUnitVisualization:ContextMenu:ClearRelatedFilter"]</button>
+        </div>
+    }
 
-            <ProjectUnitFilterPanel Units="_allProjectUnits"
-                                    @bind-FilterText="_filterText"
-                                    @bind-SelectedUnitTypes="_selectedUnitTypes"
-                                    @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies"
-                                    @bind-ShowOnlyWithAlerts="_showOnlyWithAlerts"
-                                    OnFiltersChanged="ApplyFilters" />
-        }
-
-        <div class="visualization-shell">
-            <MudPaper Class="visualization-container" Elevation="0" Outlined="true">
+    <div class="graph-explorer">
+        <section class="graph-canvas-panel" aria-label="@L["ProjectUnitVisualization:Workspace:CanvasLabel"]">
+            <div class="graph-canvas-toolbar">
+                <div class="graph-scope"><strong>@_filteredUnits.Count</strong><span>@L["ProjectUnitVisualization:Workspace:VisibleUnits", _allProjectUnits.Count]</span><span class="graph-scope__divider" aria-hidden="true"></span><strong>@_visibleRelationships.Count</strong><span>@L["ProjectUnitVisualization:Workspace:DirectedEdges"]</span></div>
+                <div class="graph-camera-controls">
+                    <button type="button" class="graph-camera-button" disabled="@(_loading || _filteredUnits.Count == 0)" @onclick="FitView" title="@L["ProjectUnitVisualization:Workspace:Fit"]" aria-label="@L["ProjectUnitVisualization:Workspace:Fit"]"><MudIcon Icon="@Icons.Material.Outlined.FitScreen" Size="Size.Small" /></button>
+                    <button type="button" class="graph-camera-button" disabled="@_loading" @onclick="ZoomOut" title="@L["ProjectUnitVisualization:Workspace:ZoomOut"]" aria-label="@L["ProjectUnitVisualization:Workspace:ZoomOut"]"><MudIcon Icon="@Icons.Material.Outlined.Remove" Size="Size.Small" /></button>
+                    <button type="button" class="graph-camera-button" disabled="@_loading" @onclick="ZoomIn" title="@L["ProjectUnitVisualization:Workspace:ZoomIn"]" aria-label="@L["ProjectUnitVisualization:Workspace:ZoomIn"]"><MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /></button>
+                    <button type="button" class="graph-camera-button" disabled="@_loading" @onclick="ResetView" title="@L["ProjectUnitVisualization:Actions:ResetViewTooltip"]" aria-label="@L["ProjectUnitVisualization:Actions:ResetViewTooltip"]"><MudIcon Icon="@Icons.Material.Outlined.RestartAlt" Size="Size.Small" /></button>
+                </div>
+            </div>
+            <div class="graph-canvas-owner" aria-busy="@(_loading ? "true" : "false")">
+                <div id="@_graphContainerId" class="project-unit-graph" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
                 @if (_loading)
                 {
-                    <MudOverlay Visible="true" DarkBackground="false" Absolute="true">
-                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
-                    </MudOverlay>
+                    <div class="graph-canvas-state" role="status"><MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small" /><span>@L["ProjectUnitVisualization:Workspace:Loading"]</span></div>
                 }
-                <div id="@_graphContainerId" class="project-unit-graph" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
-            </MudPaper>
-        </div>
+                else if (!string.IsNullOrEmpty(_loadError))
+                {
+                    <div class="graph-canvas-state graph-canvas-state--error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" /><strong>@L["ProjectUnitVisualization:Workspace:LoadError"]</strong><p>@_loadError</p></div>
+                }
+                else if (_filteredUnits.Count == 0)
+                {
+                    <div class="graph-canvas-state"><MudIcon Icon="@Icons.Material.Outlined.Hub" /><strong>@L[_allProjectUnits.Count == 0 ? "ProjectUnitVisualization:Workspace:EmptyCatalog" : "ProjectUnitVisualization:Workspace:NoMatches"]</strong><p>@L[_allProjectUnits.Count == 0 ? "ProjectUnitVisualization:Workspace:EmptyCatalogHint" : "ProjectUnitVisualization:Workspace:NoMatchesHint"]</p>@if (_allProjectUnits.Count > 0){<button type="button" class="graph-action" @onclick="() => ClearAllFiltersAsync(null)">@L["ProjectUnitVisualization:ContextMenu:ClearAllFilters"]</button>}</div>
+                }
+            </div>
+            <footer class="graph-canvas-footer"><div class="graph-legend"><span><i class="graph-legend__simple" aria-hidden="true"></i>@L["ProjectUnitVisualization:Legend:SimpleUnit"]</span><span><i class="graph-legend__complex" aria-hidden="true"></i>@L["ProjectUnitVisualization:Legend:ComplexUnit"]</span></div><p>@L["ProjectUnitVisualization:Workspace:CanvasHint"]</p></footer>
+        </section>
 
-        <MudPaper Class="pa-2" Elevation="0" Outlined="true">
-            <MudGrid>
-                <MudItem xs="12" sm="8">
-                    <MudText Typo="Typo.caption">
-                        @L["ProjectUnitVisualization:Legend:VisibleCount", _filteredUnits.Count, _allProjectUnits.Count]
-                    </MudText>
-                </MudItem>
-                <MudItem xs="12" sm="4" Class="d-flex justify-end">
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Circle" Color="Color.Info">
-                        @L["ProjectUnitVisualization:Legend:SimpleUnit"]
-                    </MudChip>
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Square" Color="Color.Warning">
-                        @L["ProjectUnitVisualization:Legend:ComplexUnit"]
-                    </MudChip>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
+        <aside class="graph-selected-evidence" aria-label="@L["ProjectUnitVisualization:Workspace:SelectedLabel"]">
+            <div class="graph-evidence-heading"><span class="graph-eyebrow">@L["ProjectUnitVisualization:Workspace:SelectedLabel"]</span><MudIcon Icon="@Icons.Material.Outlined.TravelExplore" Size="Size.Small" /></div>
+            @if (GetEvidenceUnit() is { } evidenceUnit)
+            {
+                <span class="graph-unit-type">@L.GetProjectUnitTypeText(evidenceUnit.UnitType)</span>
+                <h3>@evidenceUnit.Title</h3><code class="graph-unit-key">@evidenceUnit.Key</code>
+                @if (!string.IsNullOrWhiteSpace(evidenceUnit.Description)){<p class="graph-unit-description">@evidenceUnit.Description</p>}
+                @if (!_filteredUnits.Any(unit => unit.Key == evidenceUnit.Key)){<p class="graph-scope-note">@L["ProjectUnitVisualization:Workspace:OutsideScope"]</p>}
+                <dl class="graph-unit-facts"><div><dt>@L["ProjectUnitVisualization:Workspace:Dependencies"]</dt><dd>@evidenceUnit.Dependencies.Count</dd></div><div><dt>@L["ProjectUnitVisualization:Workspace:Dependents"]</dt><dd>@evidenceUnit.DependedByCount</dd></div><div><dt>@L["ProjectUnitVisualization:Workspace:Methods"]</dt><dd>@evidenceUnit.MethodCount</dd></div></dl>
+                <div class="graph-selected-actions">
+                    <button type="button" class="graph-action graph-action--primary" @onclick="() => ShowContextDetailsAsync(evidenceUnit)"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />@L["ProjectUnitVisualization:ContextMenu:Details"]</button>
+                    <button type="button" class="graph-action" disabled="@(!_filteredUnits.Any(unit => unit.Key == evidenceUnit.Key))" @onclick="() => FocusOnNodeAsync(evidenceUnit)"><MudIcon Icon="@Icons.Material.Outlined.CenterFocusStrong" Size="Size.Small" />@L["ProjectUnitVisualization:ContextMenu:FocusNode"]</button>
+                    <button type="button" class="graph-text-action" @onclick="() => FilterByTypeAsync(evidenceUnit)">@L["ProjectUnitVisualization:ContextMenu:FilterByType"]</button>
+                    <button type="button" class="graph-text-action" @onclick="() => ShowRelatedNodesAsync(evidenceUnit)">@L["ProjectUnitVisualization:ContextMenu:ShowRelatedNodes"]</button>
+                    <button type="button" class="graph-text-action" @onclick="() => CopyFullNameAsync(evidenceUnit)"><MudIcon Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" />@L["ProjectUnitVisualization:ContextMenu:CopyFullName"]</button>
+                </div>
+                <div class="graph-selected-relations">
+                    <section><h4>@L["ProjectUnitVisualization:Workspace:Dependencies"] <span>@evidenceUnit.Dependencies.Count</span></h4><div class="graph-relation-list">@foreach(var reference in evidenceUnit.Dependencies){<button type="button" class="graph-relation" @onclick="() => SelectReference(reference.Key)"><span>@reference.Title</span><code>@reference.Key</code><MudIcon Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" /></button>}@if(evidenceUnit.Dependencies.Count == 0){<p>@L["ProjectUnitVisualization:Workspace:NoDependencies"]</p>}</div></section>
+                    <section><h4>@L["ProjectUnitVisualization:Workspace:Dependents"] <span>@evidenceUnit.DependedByCount</span></h4><div class="graph-relation-list">@foreach(var dependent in GetIncomingUnits(evidenceUnit)){<button type="button" class="graph-relation" @onclick="() => SelectReference(dependent.Key)"><span>@dependent.Title</span><code>@dependent.Key</code><MudIcon Icon="@Icons.Material.Outlined.ArrowDownward" Size="Size.Small" /></button>}@if(evidenceUnit.DependedByCount == 0){<p>@L["ProjectUnitVisualization:Workspace:NoDependents"]</p>}</div></section>
+                </div>
+            }
+            else
+            {
+                <div class="graph-selection-empty"><MudIcon Icon="@Icons.Material.Outlined.NearMe" /><h3>@L["ProjectUnitVisualization:Workspace:SelectUnit"]</h3><p>@L["ProjectUnitVisualization:Workspace:SelectUnitHint"]</p><button type="button" class="graph-action" @onclick="ToggleNativeEvidence">@L["ProjectUnitVisualization:Workspace:NativeEvidence"]</button></div>
+            }
+        </aside>
     </div>
-</div>
 
-<ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible"
-                         SelectedUnit="_selectedUnit"
-                         OnNodeFocus="HandleNodeFocusFromDialog" />
+    <section class="graph-native-evidence" aria-labelledby="@(_graphContainerId + "-native-title")">
+        <header><div><span class="graph-eyebrow">@L["ProjectUnitVisualization:Workspace:NativeEyebrow"]</span><h3 id="@(_graphContainerId + "-native-title")">@L["ProjectUnitVisualization:Workspace:NativeEvidence"]</h3><p>@L["ProjectUnitVisualization:Workspace:NativeHint"]</p></div><button type="button" class="graph-action" aria-expanded="@(_showNativeEvidence ? "true" : "false")" @onclick="ToggleNativeEvidence"><MudIcon Icon="@(_showNativeEvidence ? Icons.Material.Outlined.ExpandLess : Icons.Material.Outlined.ExpandMore)" Size="Size.Small" />@L[_showNativeEvidence ? "ProjectUnitVisualization:Workspace:HideEvidence" : "ProjectUnitVisualization:Workspace:ShowEvidence"]</button></header>
+        @if (_showNativeEvidence)
+        {
+            <div class="graph-native-tabs" role="group" aria-label="@L["ProjectUnitVisualization:Workspace:NativeEvidence"]"><button type="button" aria-pressed="@(!_showRelationships ? "true" : "false")" @onclick="() => SetEvidenceView(false)">@L["ProjectUnitVisualization:Workspace:UnitsTab", _filteredUnits.Count]</button><button type="button" aria-pressed="@(_showRelationships ? "true" : "false")" @onclick="() => SetEvidenceView(true)">@L["ProjectUnitVisualization:Workspace:RelationshipsTab", _visibleRelationships.Count]</button><button type="button" class="graph-text-action" @onclick="() => ClearAllFiltersAsync(null)">@L["ProjectUnitVisualization:ContextMenu:ClearAllFilters"]</button></div>
+            <div class="graph-evidence-table-owner">
+                @if (!_showRelationships)
+                {
+                    <table class="graph-evidence-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">@L["ProjectUnitVisualization:Workspace:UnitColumn"]</th>
+                                <th scope="col">@L["ProjectUnitVisualization:Workspace:Dependencies"]</th>
+                                <th scope="col">@L["ProjectUnitVisualization:Workspace:Dependents"]</th>
+                                <th scope="col">@L["ProjectUnitVisualization:Workspace:ActionsColumn"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var unit in _filteredUnits.Skip(_evidencePage * EVIDENCE_PAGE_SIZE).Take(EVIDENCE_PAGE_SIZE))
+                            {
+                                <tr @key="unit.Key" data-unit-id="@unit.Key" data-selected="@(_evidenceUnitKey == unit.Key ? "true" : "false")">
+                                    <td>
+                                        <button type="button" class="graph-ledger-unit" aria-pressed="@(_evidenceUnitKey == unit.Key ? "true" : "false")" @onclick="() => SelectEvidenceUnit(unit)">
+                                            <strong>@unit.Title</strong>
+                                            <span>@L.GetProjectUnitTypeText(unit.UnitType)</span>
+                                            <code>@unit.Key</code>
+                                        </button>
+                                    </td>
+                                    <td data-label="@L["ProjectUnitVisualization:Workspace:Dependencies"]">@unit.Dependencies.Count</td>
+                                    <td data-label="@L["ProjectUnitVisualization:Workspace:Dependents"]">@unit.DependedByCount</td>
+                                    <td>
+                                        <div class="graph-ledger-actions">
+                                            <button type="button" class="graph-text-action" @onclick="() => ShowContextDetailsAsync(unit)">@L["ProjectUnitVisualization:ContextMenu:Details"]</button>
+                                            <button type="button" class="graph-text-action" @onclick="() => FocusOnNodeAsync(unit)">@L["ProjectUnitVisualization:ContextMenu:FocusNode"]</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <table class="graph-evidence-table graph-evidence-table--relationships">
+                        <thead>
+                            <tr>
+                                <th scope="col">@L["ProjectUnitVisualization:Workspace:SourceColumn"]</th>
+                                <th scope="col" class="graph-direction-cell">
+                                    <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" />
+                                    <span class="graph-sr-only">@L["ProjectUnitVisualization:Workspace:DependencyDirection"]</span>
+                                </th>
+                                <th scope="col">@L["ProjectUnitVisualization:Workspace:TargetColumn"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var edge in _visibleRelationships.Skip(_evidencePage * EVIDENCE_PAGE_SIZE).Take(EVIDENCE_PAGE_SIZE))
+                            {
+                                <tr @key="edge" data-source-id="@edge.Source.Key" data-target-id="@edge.Target.Key">
+                                    <td>
+                                        <button type="button" class="graph-ledger-unit" aria-pressed="@(_evidenceUnitKey == edge.Source.Key ? "true" : "false")" @onclick="() => SelectEvidenceUnit(edge.Source)">
+                                            <strong>@edge.Source.Title</strong>
+                                            <code>@edge.Source.Key</code>
+                                        </button>
+                                    </td>
+                                    <td class="graph-direction-cell">
+                                        <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" />
+                                        <span class="graph-sr-only">@L["ProjectUnitVisualization:Workspace:DependencyDirection"]</span>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="graph-ledger-unit" aria-pressed="@(_evidenceUnitKey == edge.Target.Key ? "true" : "false")" @onclick="() => SelectEvidenceUnit(edge.Target)">
+                                            <strong>@edge.Target.Title</strong>
+                                            <code>@edge.Target.Key</code>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                @if (EvidenceCount == 0){<p class="graph-ledger-empty">@L["ProjectUnitVisualization:Workspace:NoEvidence"]</p>}
+            </div>
+            <footer class="graph-evidence-pager"><span>@L["ProjectUnitVisualization:Workspace:PageRange", EvidenceCount == 0 ? 0 : _evidencePage * EVIDENCE_PAGE_SIZE + 1, Math.Min((_evidencePage + 1) * EVIDENCE_PAGE_SIZE, EvidenceCount), EvidenceCount]</span><div><button type="button" class="graph-camera-button" aria-label="@L["ProjectUnitVisualization:Workspace:PreviousPage"]" disabled="@(_evidencePage == 0)" @onclick="() => ChangeEvidencePage(-1)"><MudIcon Icon="@Icons.Material.Outlined.ChevronLeft" Size="Size.Small" /></button><button type="button" class="graph-camera-button" aria-label="@L["ProjectUnitVisualization:Workspace:NextPage"]" disabled="@((_evidencePage + 1) * EVIDENCE_PAGE_SIZE >= EvidenceCount)" @onclick="() => ChangeEvidencePage(1)"><MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" /></button></div></footer>
+        }
+    </section>
+</section>
 
-<MoContextMenu TItem="ProjectUnitSummary"
-               Items="@_contextMenuItems"
-               Visible="@_contextMenuOpen"
-               InitialX="@_contextMenuX"
-               InitialY="@_contextMenuY"
-               ContextItem="@_contextMenuUnit"
-               OnItemClick="@OnContextMenuItemClick"
-               OnClose="@CloseContextMenu" />
+<ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible" SelectedUnit="_selectedUnit" OnNodeFocus="HandleNodeFocusFromDialog" />
+<MoContextMenu TItem="ProjectUnitSummary" Items="@_contextMenuItems" Visible="@_contextMenuOpen" InitialX="@_contextMenuX" InitialY="@_contextMenuY" ContextItem="@_contextMenuUnit" OnItemClick="@OnContextMenuItemClick" OnClose="@CloseContextMenu" />
 
 @code {
     private const string JS_MODULE_PATH = "./_content/Monica.Framework.UI/UIProjectUnits/projectUnitGraph.js";
@@ -134,7 +205,19 @@
     private DotNetObjectReference<ProjectUnitVisualization>? _dotNetReference;
     private Task? _disposeTask;
     private List<ProjectUnitSummary> _allProjectUnits = [];
+    private const int EVIDENCE_PAGE_SIZE = 10;
     private List<ProjectUnitSummary> _filteredUnits = [];
+    private List<VisibleRelationship> _visibleRelationships = [];
+    private ProjectUnitFilterPanel? _filterPanel;
+    private string? _evidenceUnitKey;
+    private string? _loadError;
+    private bool _showNativeEvidence;
+    private bool _showRelationships;
+    private int _evidencePage;
+    private long _loadRequestId;
+    private long _projectionRevision;
+    private int EvidenceCount => _showRelationships ? _visibleRelationships.Count : _filteredUnits.Count;
+    private sealed record VisibleRelationship(ProjectUnitSummary Source, ProjectUnitSummary Target);
     private bool _loading;
     private bool _detailDialogVisible;
     private ProjectUnitSummary? _selectedUnit;
@@ -197,16 +280,11 @@
                 return;
             }
 
-            var isDarkMode = await JSRuntime.InvokeAsync<bool>(
-                "eval",
-                _lifetimeCancellation.Token,
-                "document.documentElement.classList.contains('dark')");
-
             dotNetReference = DotNetObjectReference.Create(this);
             graphController = await module.InvokeAsync<IJSObjectReference>(
                 "createGraph",
                 _graphContainerId,
-                isDarkMode,
+                false,
                 dotNetReference);
 
             if (_disposed)
@@ -231,46 +309,70 @@
 
     private async Task LoadProjectUnitsAsync()
     {
-        _loading = true;
-        if (!_disposed)
+        if (_disposed)
         {
-            StateHasChanged();
+            return;
         }
 
+        var requestId = ++_loadRequestId;
+        _loading = true;
+        _loadError = null;
+        StateHasChanged();
         try
         {
             var result = await ProjectUnitsFacade.GetAllProjectUnitsAsync();
+            if (_disposed || requestId != _loadRequestId)
+            {
+                return;
+            }
+
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add(L["Shared:Messages:LoadFailed", error], Severity.Error);
+                _loadError = L["Shared:Messages:LoadFailed", error].Value;
+                Snackbar.Add(_loadError, Severity.Error);
                 return;
             }
 
             _allProjectUnits = data;
             var availableUnitTypes = GetAvailableUnitTypes();
-            if (!_unitTypeFilterInitialized)
+            _selectedUnitTypes = !_unitTypeFilterInitialized
+                ? availableUnitTypes
+                : new HashSet<EProjectUnitType>(_selectedUnitTypes.Where(availableUnitTypes.Contains));
+            _unitTypeFilterInitialized = true;
+            if (_selectedUnit is not null)
             {
-                _selectedUnitTypes = availableUnitTypes;
-                _unitTypeFilterInitialized = true;
-            }
-            else
-            {
-                _selectedUnitTypes = new HashSet<EProjectUnitType>(
-                    _selectedUnitTypes.Where(availableUnitTypes.Contains));
+                var selectedKey = _selectedUnit.Key;
+                _selectedUnit = _allProjectUnits.FirstOrDefault(unit => unit.Key == selectedKey);
+                _detailDialogVisible &= _selectedUnit is not null;
             }
 
-            _filteredUnits = new List<ProjectUnitSummary>(_allProjectUnits);
-            await UpdateGraph();
+            if (!_allProjectUnits.Any(unit => unit.Key == _evidenceUnitKey))
+            {
+                _evidenceUnitKey = null;
+            }
+
+            _contextMenuOpen = false;
+            await ApplyFilters();
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+        catch (JSDisconnectedException) when (_disposed)
+        {
         }
         catch (Exception ex)
         {
-            Snackbar.Add(L["Shared:Messages:LoadException", ex.Message], Severity.Error);
+            if (!_disposed && requestId == _loadRequestId)
+            {
+                _loadError = L["Shared:Messages:LoadException", ex.Message].Value;
+                Snackbar.Add(_loadError, Severity.Error);
+            }
         }
         finally
         {
-            _loading = false;
-            if (!_disposed)
+            if (!_disposed && requestId == _loadRequestId)
             {
+                _loading = false;
                 StateHasChanged();
             }
         }
@@ -278,13 +380,40 @@
 
     private async Task UpdateGraph()
     {
-        await InvokeGraphAsync("updateGraph", PrepareGraphData());
-        await SetLayout(_currentLayout);
-
-        if (_currentLayout == LayoutType.Force)
+        var revision = ++_projectionRevision;
+        if (_disposed)
         {
-            await InvokeGraphAsync("setForceDistance", _forceDistance);
-            await InvokeGraphAsync("setForceStrength", _forceStrength);
+            return;
+        }
+
+        try
+        {
+            await _interopGate.WaitAsync(_lifetimeCancellation.Token);
+            try
+            {
+                if (!_disposed && revision == _projectionRevision && _graphController is not null)
+                {
+                    // One admitted call publishes coherent data and its current layout configuration.
+                    await _graphController.InvokeVoidAsync("updateGraph", _lifetimeCancellation.Token,
+                        PrepareGraphData(), new
+                        {
+                            layout = GetLayoutName(_currentLayout),
+                            forceDistance = _forceDistance,
+                            forceStrength = _forceStrength,
+                            selectedId = _evidenceUnitKey
+                        });
+                }
+            }
+            finally
+            {
+                _interopGate.Release();
+            }
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+        catch (JSDisconnectedException) when (_disposed)
+        {
         }
     }
 
@@ -313,21 +442,11 @@
             noMetadataText = L["ProjectUnitVisualization:Graph:NoMetadata"].Value
         }).ToList();
 
-        var links = new List<object>();
-        foreach (var unit in _filteredUnits)
+        var links = _visibleRelationships.Select(edge => new
         {
-            foreach (var dependency in unit.Dependencies)
-            {
-                if (_filteredUnits.Any(item => item.Key == dependency.Key))
-                {
-                    links.Add(new
-                    {
-                        source = unit.Key,
-                        target = dependency.Key
-                    });
-                }
-            }
-        }
+            source = edge.Source.Key,
+            target = edge.Target.Key
+        }).ToList();
 
         return new { nodes, links };
     }
@@ -350,19 +469,19 @@
         }
     }
 
+    private static string GetLayoutName(LayoutType layoutType) => layoutType switch
+    {
+        LayoutType.Force => "force",
+        LayoutType.Hierarchy => "hierarchy",
+        LayoutType.Circular => "circular",
+        LayoutType.MultiCircular => "multi_circular",
+        _ => "force"
+    };
+
     private async Task SetLayout(LayoutType layoutType)
     {
         _currentLayout = layoutType;
-        var layoutName = layoutType switch
-        {
-            LayoutType.Force => "force",
-            LayoutType.Hierarchy => "hierarchy",
-            LayoutType.Circular => "circular",
-            LayoutType.MultiCircular => "multi_circular",
-            _ => "force"
-        };
-
-        await InvokeGraphAsync("setLayout", layoutName);
+        await InvokeGraphAsync("setLayout", GetLayoutName(layoutType));
     }
 
     private async Task OnForceDistanceChanged(int value)
@@ -379,11 +498,17 @@
 
     private async Task ApplyFilters()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var related = string.IsNullOrEmpty(_relatedToNodeId) ? null : GetAllRelatedNodes(_relatedToNodeId);
         _filteredUnits = _allProjectUnits.Where(unit =>
         {
-            if (!string.IsNullOrEmpty(_relatedToNodeId))
+            if (related is not null)
             {
-                return GetAllRelatedNodes(_relatedToNodeId).Contains(unit.Key);
+                return related.Contains(unit.Key);
             }
 
             var matchesText = string.IsNullOrWhiteSpace(_filterText)
@@ -392,21 +517,57 @@
                 || (!string.IsNullOrEmpty(unit.Owner) && unit.Owner.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
                 || unit.Tags.Any(tag => tag.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
                 || (!string.IsNullOrEmpty(unit.Description) && unit.Description.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
-
-            var matchesType = _selectedUnitTypes.Contains(unit.UnitType);
-            var matchesDependencies = !_showOnlyWithDependencies || unit.Dependencies.Any() || unit.DependedByCount > 0;
-            var matchesAlerts = !_showOnlyWithAlerts || unit.Alerts.Any();
-
-            return matchesText && matchesType && matchesDependencies && matchesAlerts;
+            return matchesText && _selectedUnitTypes.Contains(unit.UnitType)
+                && (!_showOnlyWithDependencies || unit.Dependencies.Count > 0 || unit.DependedByCount > 0)
+                && (!_showOnlyWithAlerts || unit.Alerts.Count > 0);
         }).ToList();
 
+        var visible = _filteredUnits.ToDictionary(unit => unit.Key, StringComparer.Ordinal);
+        _visibleRelationships = _filteredUnits.SelectMany(source => source.Dependencies
+            .Where(reference => visible.ContainsKey(reference.Key))
+            .Select(reference => new VisibleRelationship(source, visible[reference.Key]))).ToList();
+        _evidencePage = 0;
+        _contextMenuOpen = false;
         await UpdateGraph();
     }
 
-    private async Task ResetView()
+    private Task ResetView() => InvokeGraphAsync("resetView");
+    private Task FitView() => InvokeGraphAsync("fitView");
+    private Task ZoomIn() => InvokeGraphAsync("zoomIn");
+    private Task ZoomOut() => InvokeGraphAsync("zoomOut");
+
+    private ProjectUnitSummary? GetEvidenceUnit() => _allProjectUnits.FirstOrDefault(unit => unit.Key == _evidenceUnitKey);
+
+    private IEnumerable<ProjectUnitSummary> GetIncomingUnits(ProjectUnitSummary unit) =>
+        _allProjectUnits.Where(candidate => candidate.Dependencies.Any(reference => reference.Key == unit.Key));
+
+    private async Task SelectEvidenceUnit(ProjectUnitSummary unit)
     {
-        await InvokeGraphAsync("resetView");
+        if (_disposed)
+        {
+            return;
+        }
+
+        _evidenceUnitKey = unit.Key;
+        await InvokeGraphAsync("selectNode", unit.Key);
     }
+
+    private Task SelectReference(string key)
+    {
+        var unit = _allProjectUnits.FirstOrDefault(candidate => candidate.Key == key);
+        return unit is null ? Task.CompletedTask : SelectEvidenceUnit(unit);
+    }
+
+    private void ToggleNativeEvidence() => _showNativeEvidence = !_showNativeEvidence;
+
+    private void SetEvidenceView(bool relationships)
+    {
+        _showRelationships = relationships;
+        _evidencePage = 0;
+    }
+
+    private void ChangeEvidencePage(int delta) =>
+        _evidencePage = Math.Clamp(_evidencePage + delta, 0, Math.Max(0, (EvidenceCount - 1) / EVIDENCE_PAGE_SIZE));
 
     [JSInvokable]
     public void OnNodeClick(string nodeId)
@@ -422,6 +583,7 @@
             return;
         }
 
+        _evidenceUnitKey = nodeId;
         _detailDialogVisible = true;
         StateHasChanged();
     }
@@ -440,6 +602,7 @@
             return;
         }
 
+        _evidenceUnitKey = nodeId;
         _contextMenuX = x;
         _contextMenuY = y;
         _contextMenuItems = BuildContextMenuItems(_contextMenuUnit);
@@ -483,30 +646,30 @@
     private List<ContextMenuItem<ProjectUnitSummary>> BuildContextMenuItems(ProjectUnitSummary unit)
     {
         var builder = ContextMenuBuilder<ProjectUnitSummary>.Create()
-            .AddItem(L["ProjectUnitVisualization:ContextMenu:Details"], Icons.Material.Filled.Info, ShowContextDetailsAsync)
-            .AddItem(L["ProjectUnitVisualization:ContextMenu:FocusNode"], Icons.Material.Filled.CenterFocusStrong, FocusOnNodeAsync)
-            .AddItem(L["ProjectUnitVisualization:ContextMenu:FilterByType"], Icons.Material.Filled.FilterAlt, FilterByTypeAsync);
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:Details"], Icons.Material.Outlined.Info, ShowContextDetailsAsync)
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:FocusNode"], Icons.Material.Outlined.CenterFocusStrong, FocusOnNodeAsync)
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:FilterByType"], Icons.Material.Outlined.FilterAlt, FilterByTypeAsync);
 
         if (!string.IsNullOrEmpty(_relatedToNodeId))
         {
             if (_relatedToNodeId == unit.Key)
             {
-                builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ClearRelatedFilter"], Icons.Material.Filled.Clear, ClearRelatedFilterAsync);
+                builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ClearRelatedFilter"], Icons.Material.Outlined.Clear, ClearRelatedFilterAsync);
             }
             else
             {
-                builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ShowOtherRelatedNodes"], Icons.Material.Filled.AccountTree, ShowRelatedNodesAsync);
+                builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ShowOtherRelatedNodes"], Icons.Material.Outlined.AccountTree, ShowRelatedNodesAsync);
             }
         }
         else
         {
-            builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ShowRelatedNodes"], Icons.Material.Filled.AccountTree, ShowRelatedNodesAsync);
+            builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ShowRelatedNodes"], Icons.Material.Outlined.AccountTree, ShowRelatedNodesAsync);
         }
 
         builder
-            .AddItem(L["ProjectUnitVisualization:ContextMenu:ClearAllFilters"], Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:ClearAllFilters"], Icons.Material.Outlined.ClearAll, ClearAllFiltersAsync)
             .AddDivider()
-            .AddItem(L["ProjectUnitVisualization:ContextMenu:CopyFullName"], Icons.Material.Filled.ContentCopy, CopyFullNameAsync);
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:CopyFullName"], Icons.Material.Outlined.ContentCopy, CopyFullNameAsync);
 
         return builder.Build();
     }
@@ -520,16 +683,23 @@
 
     private Task ShowContextDetailsAsync(ProjectUnitSummary? unit)
     {
+        if (_disposed)
+        {
+            return Task.CompletedTask;
+        }
+
         _selectedUnit = unit ?? _contextMenuUnit;
-        _detailDialogVisible = true;
+        _evidenceUnitKey = _selectedUnit?.Key;
+        _detailDialogVisible = _selectedUnit is not null;
         return Task.CompletedTask;
     }
 
     private async Task FocusOnNodeAsync(ProjectUnitSummary? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
-        if (targetUnit is not null)
+        if (!_disposed && targetUnit is not null)
         {
+            _evidenceUnitKey = targetUnit.Key;
             await InvokeGraphAsync("focusOnNode", targetUnit.Key);
         }
     }
@@ -542,7 +712,7 @@
     private async Task FilterByTypeAsync(ProjectUnitSummary? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
-        if (targetUnit is null)
+        if (_disposed || targetUnit is null)
         {
             return;
         }
@@ -554,6 +724,21 @@
 
     private async Task ClearAllFiltersAsync(ProjectUnitSummary? unit)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (_showFilterPanel && _filterPanel is { } filterPanel)
+        {
+            await filterPanel.ClearQueryAsync();
+        }
+
+        if (_disposed)
+        {
+            return;
+        }
+
         _filterText = string.Empty;
         _selectedUnitTypes = GetAvailableUnitTypes();
         _showOnlyWithDependencies = false;
@@ -573,7 +758,7 @@
     private async Task ShowRelatedNodesAsync(ProjectUnitSummary? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
-        if (targetUnit is null)
+        if (_disposed || targetUnit is null)
         {
             return;
         }
@@ -581,7 +766,10 @@
         _relatedToNodeId = targetUnit.Key;
         _showFilterPanel = true;
         await ApplyFilters();
-        Snackbar.Add(L["ProjectUnitVisualization:Messages:ShowingRelatedNodes", targetUnit.Title], Severity.Info);
+        if (!_disposed)
+        {
+            Snackbar.Add(L["ProjectUnitVisualization:Messages:ShowingRelatedNodes", targetUnit.Title], Severity.Info);
+        }
     }
 
     private Task ClearRelatedFilterAsync(ProjectUnitSummary? unit)
@@ -624,23 +812,23 @@
         {
             return;
         }
-        Snackbar.Add(L["ProjectUnitVisualization:Messages:CopiedToClipboard"], Severity.Success);
+        if (!_disposed)
+        {
+            Snackbar.Add(L["ProjectUnitVisualization:Messages:CopiedToClipboard"], Severity.Success);
+        }
     }
 
     private HashSet<string> GetAllRelatedNodes(string nodeId)
     {
-        var related = new HashSet<string>();
+        var catalog = _allProjectUnits.ToDictionary(unit => unit.Key, StringComparer.Ordinal);
+        var incoming = _allProjectUnits.SelectMany(unit => unit.Dependencies.Select(reference => (reference.Key, Unit: unit)))
+            .ToLookup(edge => edge.Key, edge => edge.Unit, StringComparer.Ordinal);
+        var related = new HashSet<string>(StringComparer.Ordinal) { nodeId };
         var queue = new Queue<string>();
-
         queue.Enqueue(nodeId);
-        related.Add(nodeId);
-
-        while (queue.Count > 0)
+        while (queue.TryDequeue(out var currentId))
         {
-            var currentId = queue.Dequeue();
-            var currentUnit = _allProjectUnits.FirstOrDefault(unit => unit.Key == currentId);
-
-            if (currentUnit is not null)
+            if (catalog.TryGetValue(currentId, out var currentUnit))
             {
                 foreach (var dependency in currentUnit.Dependencies)
                 {
@@ -651,10 +839,7 @@
                 }
             }
 
-            var dependents = _allProjectUnits.Where(unit =>
-                unit.Dependencies.Any(dependency => dependency.Key == currentId));
-
-            foreach (var dependent in dependents)
+            foreach (var dependent in incoming[currentId])
             {
                 if (related.Add(dependent.Key))
                 {
@@ -668,6 +853,11 @@
 
     private async Task HandleNodeFocusFromDialog(string nodeKey)
     {
+        if (!_disposed)
+        {
+            _evidenceUnitKey = nodeKey;
+        }
+
         await InvokeGraphAsync("focusOnNode", nodeKey);
     }
 
@@ -682,6 +872,8 @@
     private async Task DisposeCoreAsync()
     {
         _disposed = true;
+        ++_loadRequestId;
+        ++_projectionRevision;
         await _lifetimeCancellation.CancelAsync();
 
         await _interopGate.WaitAsync();

@@ -1,18 +1,19 @@
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<EventBusKafkaResource> L
 
-<MudDialog>
+<MudDialog Gutters="false">
+    <TitleContent><MoDialogHeading Text="@L["Topics:Dialog:MessagesTitle", Batch.TopicName]" /></TitleContent>
     <DialogContent>
         <div class="message-dialog">
             <MudStack Spacing="3">
+                <KafkaDialogContext ClusterId="@(ClusterId ?? Batch.ClusterId)" TopicName="@Batch.TopicName" />
                 <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
                     @L["Topics:MessagesDialog:ReadHint", Batch.MaxMessages, FormatCapturedAt()]
                 </MudAlert>
 
                 @if (Batch.Messages.Count == 0)
                 {
-                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                        @L["Topics:MessagesDialog:Empty"]
-                    </MudAlert>
+                    <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Inbox" Title="@L["Topics:Actions:Messages"]" Description="@L["Topics:MessagesDialog:Empty"]" />
                 }
                 else
                 {
@@ -50,7 +51,7 @@
                                 </MudAlert>
                             }
 
-                            <pre class="message-body">@FormatValue(message)</pre>
+                            <pre class="message-body" aria-label="@L["Topics:MessagesDialog:Payload"]">@FormatValue(message)</pre>
                         </section>
                     }
                 }
@@ -58,9 +59,9 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">
+        <KafkaPrimaryButton OnClick="Close">
             @L["Common:Actions:Close"]
-        </MudButton>
+        </KafkaPrimaryButton>
     </DialogActions>
 </MudDialog>
 
@@ -68,6 +69,9 @@
     [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
 
     [Parameter, EditorRequired] public KafkaTopicMessageBatch Batch { get; set; } = new();
+
+    /// <summary>Gets or sets the exact frozen cluster identity, when supplied by the opener.</summary>
+    [Parameter] public string? ClusterId { get; set; }
 
     private string FormatCapturedAt()
     {

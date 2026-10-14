@@ -6,7 +6,9 @@ namespace Monica.JobScheduler.Models.Operations;
 /// </summary>
 /// <remarks>
 /// The configuration and local-plane sections describe the host that served the request; the owner section is
-/// read from the shared durable store and therefore spans every service publishing into the scope.
+    /// read from the shared durable store and contains definition-backed owners in the exact scope. An owner
+    /// with only execution records is not included. Neither definition presence nor observation freshness
+    /// establishes that owner's process or worker readiness.
 /// </remarks>
 public sealed record JobSchedulerRuntimeOverview
 {
@@ -26,14 +28,15 @@ public sealed record JobSchedulerRuntimeOverview
     public required JobSchedulerLocalPlaneSnapshot LocalPlane { get; init; }
 
     /// <summary>
-    /// Gets every owner's durable footprint in the configured scope, ordered by owner key.
+    /// Gets definition-backed owners' durable footprints in the configured scope, ordered by exact owner key.
     /// </summary>
     public required IReadOnlyList<JobOwnerSummary> Owners { get; init; }
 
     /// <summary>
-    /// Gets the staleness boundary for owner liveness: an owner whose <c>LastObservedAtUtc</c> is older than
-    /// this threshold is considered offline. The value is derived from <c>SnapshotSyncInterval</c> so the
-    /// contract travels with the data instead of being reinvented by each consumer.
+    /// Gets the definition-observation freshness threshold, derived as three times <c>SnapshotSyncInterval</c>.
+    /// Compare each owner's <c>LastObservedAtUtc</c> with <see cref="CapturedAtUtc"/>. An age equal to the
+    /// threshold is recent; an older observation is stale. The legacy property name does not imply heartbeat
+    /// evidence or verified process liveness. An observation after capture indicates a clock-order discrepancy.
     /// </summary>
     public required TimeSpan OwnerOnlineThreshold { get; init; }
 

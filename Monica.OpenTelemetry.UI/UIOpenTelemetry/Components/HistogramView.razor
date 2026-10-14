@@ -1,80 +1,31 @@
+@using System.Globalization
 @inject IStringLocalizer<OpenTelemetryUIResource> L
 
-@if (Histogram is not null)
+@if (Histogram is { } histogram)
 {
-    <MudPaper Class="histogram-panel mo-self-painted" Elevation="0">
-        <div class="histogram-summary">
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:Count"]</MudText>
-                <MudText Typo="Typo.subtitle1">@Histogram.Count</MudText>
-            </div>
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:Average"]</MudText>
-                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.Average)</MudText>
-            </div>
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:Min"]</MudText>
-                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.Min)</MudText>
-            </div>
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:Max"]</MudText>
-                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.Max)</MudText>
-            </div>
-        </div>
-
-        <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">@L["Histogram:Percentiles"]</MudText>
-        <div class="histogram-summary">
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:P50"]</MudText>
-                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.P50)</MudText>
-            </div>
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:P95"]</MudText>
-                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.P95)</MudText>
-            </div>
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:P99"]</MudText>
-                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.P99)</MudText>
-            </div>
-        </div>
-
-        <MudDivider Class="my-3" />
-
-        <MudText Typo="Typo.subtitle2" Class="mb-2">@L["Histogram:Distribution"]</MudText>
-        <div class="bucket-list">
-            @foreach (var bucket in Histogram.Buckets)
+    <section class="histogram-panel" aria-label="@L["Histogram:WindowTitle"]">
+        <header class="histogram-heading"><div><span>@L["Histogram:Percentiles"]</span><h3>@L["Histogram:WindowTitle"]</h3></div><span>@L["Histogram:FiniteCount", histogram.Count]</span></header>
+        <p class="histogram-help">@L["Histogram:WindowHelp"]</p>
+        @if (histogram.NonFiniteSampleCount > 0) { <p class="histogram-help">@L["Histogram:Excluded", histogram.NonFiniteSampleCount]</p> }
+        <div class="histogram-percentiles"><div><span>@L["Histogram:P50"]</span><strong>@Format(histogram.P50)</strong></div><div class="percentile-focus"><span>@L["Histogram:P95"]</span><strong>@Format(histogram.P95)</strong></div><div><span>@L["Histogram:P99"]</span><strong>@Format(histogram.P99)</strong></div></div>
+        <dl class="histogram-statistics"><div><dt>@L["Histogram:Average"]</dt><dd>@Format(histogram.Average)</dd></div><div><dt>@L["Histogram:Min"]</dt><dd>@Format(histogram.Min)</dd></div><div><dt>@L["Histogram:Max"]</dt><dd>@Format(histogram.Max)</dd></div></dl>
+        <h4>@L["Histogram:Distribution"]</h4><p class="histogram-help">@L["Histogram:BucketHelp"]</p>
+        <div class="histogram-buckets">
+            @foreach (var bucket in histogram.Buckets)
             {
-                <div class="bucket-row">
-                    <div class="bucket-label">@FormatValue(bucket.LowerBound) - @FormatValue(bucket.UpperBound)</div>
-                    <MudProgressLinear Class="bucket-bar"
-                                       Color="Color.Primary"
-                                       Value="@GetBucketPercentage(bucket.Count)" />
-                    <div class="bucket-count">@bucket.Count</div>
-                </div>
+                <div class="histogram-bucket" data-lower-bound="@Raw(bucket.LowerBound)" data-upper-bound="@Raw(bucket.UpperBound)" data-bucket-count="@bucket.Count"><span class="bucket-bounds" title="@(Raw(bucket.LowerBound) + " – " + Raw(bucket.UpperBound))">@Format(bucket.LowerBound) – @Format(bucket.UpperBound)</span><div class="bucket-track" aria-hidden="true"><div class="bucket-fill" style="width:@Percentage(bucket.Count)"></div></div><code>@bucket.Count</code></div>
             }
         </div>
-    </MudPaper>
+    </section>
 }
 
 @code {
-    /// <summary>
-    /// Gets or sets the histogram snapshot to render.
-    /// </summary>
-    [Parameter]
-    public HistogramSnapshot? Histogram { get; set; }
-
-    /// <summary>
-    /// Gets or sets the unit declared by the owning metric instrument.
-    /// </summary>
-    [Parameter]
-    public string? Unit { get; set; }
-
-    private long MaxBucketCount => Math.Max(1, Histogram?.Buckets.Max(static bucket => bucket.Count) ?? 1);
-
-    private double GetBucketPercentage(long count) => count * 100d / MaxBucketCount;
-
-    private string FormatValue(double value)
-    {
-        return MetricValueFormatter.Format(value, Unit, L);
-    }
+    /// <summary>Gets or sets finite-only statistics from one actual bounded retained series.</summary>
+    [Parameter] public HistogramSnapshot? Histogram { get; set; }
+    /// <summary>Gets or sets the instrument's unchanged declared unit.</summary>
+    [Parameter] public string? Unit { get; set; }
+    private long MaxBucketCount => Histogram is { Buckets.Count: > 0 } histogram ? Math.Max(1, histogram.Buckets.Max(bucket => bucket.Count)) : 1;
+    private string Format(double value) => MetricValueFormatter.Format(value, Unit, L);
+    private string Percentage(long count) => $"{(count * 100d / MaxBucketCount).ToString("0.####", CultureInfo.InvariantCulture)}%";
+    private static string Raw(double value) => value.ToString("G17", CultureInfo.InvariantCulture);
 }

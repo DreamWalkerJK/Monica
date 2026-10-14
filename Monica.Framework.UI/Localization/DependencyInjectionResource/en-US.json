@@ -1,7 +1,8 @@
 {
   "Pages": {
     "DependencyInjection": {
-      "Title": "Dependency Injection"
+      "Title": "Dependency Injection",
+      "Description": "Inspect registered services, lifetimes, and automatic registration issues."
     }
   },
   "Page": {
@@ -11,7 +12,18 @@
       "Description": "Inspect the finalized service collection and highlight descriptors created by Monica conventional registration.",
       "Eyebrow": "Monica / Runtime composition",
       "Refresh": "Refresh",
-      "GeneratedAt": "Snapshot captured at {0}"
+      "GeneratedAt": "Registry materialized · {0}"
+    },
+    "Composition": {
+      "RegistryLabel": "FINALIZED COLLECTION",
+      "CachedHint": "A cached snapshot of the host’s finalized registrations. Refresh re-reads this registry.",
+      "LifetimesTitle": "Registration lifetimes",
+      "CategoriesHint": "Registration categories may overlap.",
+      "Instances": "Instances"
+    },
+    "Registry": {
+      "Title": "Service registry",
+      "Description": "Inspect service identities, implementations, keys, and convention provenance."
     },
     "Summary": {
       "AriaLabel": "Dependency injection registration summary",
@@ -24,7 +36,13 @@
     },
     "Issues": {
       "Title": "Auto-registration issues",
-      "Description": "These warnings and errors come from Monica conventional registration diagnostics. Some errors are shown here because they never produced a final service descriptor."
+      "Description": "Convention diagnostics cover the whole host, independently of the registry filters. They also include issues that produced no final descriptor.",
+      "SearchLabel": "Find a convention issue",
+      "SearchPlaceholder": "Search source types, assemblies, lifetimes, or exposed services",
+      "Showing": "Showing {0} of {1} issues",
+      "Empty": "No convention issues in this evidence set.",
+      "NoMatches": "No issues match this search. Clear the search to view the full issue index.",
+      "NoExposures": "No exposed service identities."
     },
     "States": {
       "Loading": "Loading dependency injection diagnostics...",
@@ -44,9 +62,12 @@
       "LifetimeLabel": "Lifetime",
       "MarkersLabel": "Markers",
       "Showing": "Showing {0} of {1} descriptors",
+      "CombinationHint": "Match any selected option within each group, and match all groups.",
+      "StandardHint": "Standard means no key, warning, or error marker.",
       "Actions": {
         "SelectAll": "All",
-        "Clear": "Clear"
+        "Clear": "Clear",
+        "Reset": "Reset filters"
       },
       "SourceOptions": {
         "AutoRegistered": "Auto registered",
@@ -65,7 +86,7 @@
         "Lifetime": "Lifetime",
         "Implementation": "Implementation",
         "ServiceKey": "Key",
-        "Kind": "Kind",
+        "Kind": "Implementation kind",
         "Index": "Index",
         "Actions": "Actions"
       },
@@ -76,7 +97,11 @@
         "Keyed": "Keyed service"
       },
       "Actions": {
-        "ViewDetails": "Details"
+        "ViewDetails": "Details",
+        "ViewDetailsFor": "Inspect {0}"
+      },
+      "States": {
+        "Unkeyed": "Unkeyed"
       },
       "Kinds": {
         "Type": "Type",
@@ -90,7 +115,7 @@
       "Sections": {
         "Descriptor": "Descriptor",
         "Implementation": "Implementation",
-        "AutoRegistration": "Auto Registration"
+        "AutoRegistration": "Convention provenance"
       },
       "Fields": {
         "ServiceType": "Service type",
@@ -149,10 +174,12 @@
       "IssueKinds": {
         "MissingExposedServices": {
           "Title": "No exposed service types were found",
+          "Summary": "A discovered implementation had no exposed service identity, so no descriptor was registered.",
           "Description": "Monica resolved {0} as {1}, but it did not expose any service type, so nothing was registered."
         },
         "ConcreteTypeOnlyExposure": {
           "Title": "Only the concrete type was exposed",
+          "Summary": "These implementations expose their concrete type without an abstraction.",
           "Description": "Monica registered only the concrete type for {0}. Consider exposing an abstraction when other components should depend on it."
         }
       }

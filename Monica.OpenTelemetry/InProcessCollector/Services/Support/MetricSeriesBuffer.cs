@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Monica.OpenTelemetry.InProcessCollector.Models;
 
 namespace Monica.OpenTelemetry.InProcessCollector.Services.Support;
@@ -43,7 +44,7 @@ internal sealed class MetricSeriesBuffer(
             return new TagSetSamples
             {
                 Key = Key,
-                Tags = Tags,
+                Tags = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(Tags, StringComparer.Ordinal)),
                 CurrentValue = current,
                 Delta = delta,
                 LastUpdatedUtc = lastUpdated,

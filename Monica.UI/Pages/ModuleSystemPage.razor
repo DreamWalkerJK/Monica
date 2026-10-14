@@ -372,12 +372,12 @@
 
     private static string SectionIcon(ModuleSystemWorkbenchSection section) => section switch
     {
-        ModuleSystemWorkbenchSection.Overview => Icons.Material.Filled.Dashboard,
-        ModuleSystemWorkbenchSection.Performance => Icons.Material.Filled.Timeline,
-        ModuleSystemWorkbenchSection.Modules => Icons.Material.Filled.ViewModule,
-        ModuleSystemWorkbenchSection.Dependencies => Icons.Material.Filled.AccountTree,
-        ModuleSystemWorkbenchSection.Discovery => Icons.Material.Filled.FindInPage,
-        _ => Icons.Material.Filled.Dashboard
+        ModuleSystemWorkbenchSection.Overview => Icons.Material.Outlined.Dashboard,
+        ModuleSystemWorkbenchSection.Performance => Icons.Material.Outlined.Timeline,
+        ModuleSystemWorkbenchSection.Modules => Icons.Material.Outlined.ViewModule,
+        ModuleSystemWorkbenchSection.Dependencies => Icons.Material.Outlined.AccountTree,
+        ModuleSystemWorkbenchSection.Discovery => Icons.Material.Outlined.FindInPage,
+        _ => Icons.Material.Outlined.Dashboard
     };
 
     public async ValueTask DisposeAsync()

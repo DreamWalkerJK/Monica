@@ -1,63 +1,11 @@
 {
-  "Pages": {
-    "FileOps": {
-      "Title": "文件运维工作区"
-    }
-  },
-  "Page": {
-    "DocumentTitle": "文件运维工作区",
-    "Title": "文件运维工作区",
-    "Subtitle": "面向容器化或受限运行环境的应急文件操作面板，基于 .NET 跨平台文件 API 构建。",
-    "Eyebrow": "容器应急"
-  },
-  "Actions": {
-    "Refresh": "刷新",
-    "Browse": "浏览",
-    "RuntimeConfiguration": "运行时配置",
-    "GoUp": "返回上级",
-    "Open": "打开",
-    "Download": "下载",
-    "Delete": "删除",
-    "Save": "保存",
-    "CreateDirectory": "新建目录",
-    "DownloadSelected": "下载选中项",
-    "DeleteSelected": "删除选中项",
-    "ClearSelection": "清空选择"
-  },
   "Labels": {
-    "CurrentRoot": "当前根目录",
-    "CurrentPath": "当前路径",
     "Encoding": "编码",
     "LineCount": "行数",
     "Size": "大小",
     "LastModified": "最后修改",
-    "WriteModeEnabled": "允许写入",
-    "WriteModeDisabled": "只读模式",
-    "DeleteModeEnabled": "允许删除",
-    "DeleteModeDisabled": "禁止删除",
-    "HiddenVisible": "显示隐藏项",
-    "HiddenHidden": "隐藏隐藏项",
     "Directory": "目录",
-    "File": "文件",
-    "EditorWritable": "编辑器可写",
-    "EditorReadOnly": "编辑器只读"
-  },
-  "Workspace": {
-    "PathInput": "允许根目录内的绝对路径",
-    "PathHelper": "你可以直接粘贴完整路径。模块仍会强制执行允许根目录与只读路径策略。",
-    "EmptyDirectory": "当前目录下没有可见条目。",
-    "NoSelectionTitle": "选择一个文件或目录",
-    "NoSelectionSubtitle": "从左侧工作区浏览，并打开文本文件进行预览或编辑。",
-    "DirectorySelectionTitle": "已选择目录",
-    "DirectorySelectionSubtitle": "可以继续打开该目录，或在其中上传/创建内容。",
-    "EditorTitle": "文本编辑器",
-    "EditorSubtitle": "只有配置中的文本扩展名允许编辑；二进制文件仅支持下载。",
-    "UploadHelper": "单文件上传可以让受限环境下的应急流程更可控。",
-    "TruncatedEntries": "当前目录仅展示前 {0} 个条目。",
-    "Loading": "正在加载文件工作区...",
-    "ReadOnlyDirectory": "当前目录在现行运行时策略下是只读的。",
-    "DropZone": "点击选择一个文件",
-    "DropZoneHint": "上传会遵循当前的最大上传大小与允许根目录策略。"
+    "File": "文件"
   },
   "Columns": {
     "Name": "名称",
@@ -66,59 +14,13 @@
     "Modified": "修改时间",
     "Actions": "操作"
   },
-  "Batch": {
-    "SelectAll": "全选",
-    "SelectedCount": "已选择 {0} 项"
-  },
-  "RuntimeConfigDialog": {
-    "Title": "文件运维运行时配置",
-    "Intro": "请把范围收紧。这个模块定位是受限环境下的应急入口，不是通用文件管理器。",
-    "AllowedRoots": "允许根目录",
-    "AllowedRootsHelper": "每行一个路径。只有这些根目录及其子路径可访问。",
-    "ReadOnlyPaths": "只读路径",
-    "ReadOnlyPathsHelper": "每行一个路径。位于这些路径下的写入、上传、编辑、删除都会被阻止。",
-    "StartupPath": "启动路径",
-    "StartupPathHelper": "页面初始打开位置。无效时会回退到第一个允许根目录。",
-    "EditableExtensions": "可编辑扩展名",
-    "EditableExtensionsHelper": "支持逗号、分号或换行分隔。只有这些扩展名会在内置编辑器中开放编辑。",
-    "MaxTextSize": "文本编辑最大大小（字节）",
-    "MaxUploadSize": "上传最大大小（字节）",
-    "MaxDownloadSize": "下载最大大小（字节）",
-    "MaxDirectoryEntries": "目录展示上限",
-    "AllowWrite": "允许写入操作",
-    "AllowDelete": "允许删除操作",
-    "AllowHidden": "显示隐藏文件与目录",
-    "Save": "保存配置"
-  },
-  "CreateDirectoryDialog": {
-    "Title": "新建目录",
-    "CurrentPath": "父级路径",
-    "DirectoryName": "目录名称",
-    "DirectoryNameHelper": "只填写单个目录名，不允许路径分隔符。",
-    "Confirm": "创建"
-  },
-  "DeleteDialog": {
-    "Title": "删除条目",
-    "Summary": "确认删除{0}“{1}”？",
-    "DirectoryWarning": "目录删除可能会移除排障现场的重要文件。请只在你明确知道后果时使用。",
-    "Recursive": "递归删除",
-    "Confirm": "立即删除"
-  },
-  "BatchDeleteDialog": {
-    "Title": "删除选中条目",
-    "Summary": "确认删除选中的 {0} 个条目？",
-    "DirectoryWarning": "当前选择中包含 {0} 个目录。启用此选项时会递归删除这些目录。",
-    "Recursive": "递归删除选中目录",
-    "Confirm": "删除选中项"
-  },
   "Messages": {
     "RuntimeConfigSaved": "运行时配置已保存，当前生效的允许根目录共 {0} 个。",
     "TextFileSaved": "已保存 {0}。",
     "DirectoryCreated": "已创建目录 {0}。",
     "EntryDeleted": "已删除{0}“{1}”。",
     "EntriesDeleted": "已删除 {0} 个选中条目。",
-    "FilesUploaded": "已向 {1} 上传 {0} 个文件。",
-    "ArchiveDownloadStarted": "正在为 {0} 个选中条目准备 ZIP 压缩包。"
+    "FilesUploaded": "已向 {1} 上传 {0} 个文件。"
   },
   "ServiceMessages": {
     "LoadRuntimeConfigFailed": "加载文件运维运行时配置失败：{0}",
@@ -156,6 +58,208 @@
     "EditableExtensionRequired": "文件“{0}”不在当前可编辑扩展名策略中。",
     "SelectionRequired": "请至少选择一个文件系统条目。"
   },
-  "Common:Cancel": "取消",
-  "Common:Empty": "-"
+  "Pages": {
+    "FileOps": {
+      "Title": "文件操作"
+    },
+    "FileOpsPolicy": {
+      "Title": "文件操作运行时策略"
+    }
+  },
+  "Page": {
+    "DocumentTitle": "文件操作",
+    "Category": "文件系统 / 主机工作区",
+    "Title": "文件工作台",
+    "Introduction": "浏览目录、查看文件，并在主机策略允许的范围内编辑文本。"
+  },
+  "Actions": {
+    "Refresh": "刷新",
+    "Browse": "浏览",
+    "Download": "下载",
+    "Delete": "删除",
+    "Save": "保存文件",
+    "Reload": "重新读取",
+    "CloseFile": "关闭文件",
+    "CreateDirectory": "新建文件夹",
+    "Upload": "上传文件",
+    "DownloadSelected": "下载 ZIP",
+    "DeleteSelected": "删除",
+    "ClearSelection": "清除"
+  },
+  "Location": {
+    "Label": "当前文件位置",
+    "CurrentDirectory": "当前目录",
+    "Up": "转到父目录",
+    "Root": "根目录：{0}",
+    "Breadcrumbs": "当前目录路径导航",
+    "Ancestors": "中间目录",
+    "GoToPath": "转到路径",
+    "DismissPath": "收起路径输入",
+    "Shown": "显示 {0} 项",
+    "ReadOnly": "只读位置",
+    "Writable": "策略允许写入",
+    "WritableReason": "当前 FileOps 策略允许在此目录创建文件夹和上传文件。",
+    "WritesUnavailable": "此目录不可写入",
+    "UploadRule": "单个文件 · 最大 {0} · 替换同名文件",
+    "ReadOnlyReason": "配置的只读路径禁止在此位置创建、上传、编辑和删除。",
+    "WriteReason": "当前策略不允许在此位置创建或上传。删除权限单独控制。"
+  },
+  "Workspace": {
+    "PathInput": "允许根目录内的绝对路径",
+    "TruncatedEntries": "显示前 {0} 项。选择仅适用于这些已显示的项目。",
+    "Loading": "正在加载目录",
+    "EmptyDirectory": "此目录为空",
+    "Working": "正在执行文件操作",
+    "ReturnFallback": "原位置不可用，现已显示当前启动目录。",
+    "Picker": "{0} 中的文件 · 已显示 {1} 项",
+    "Uploading": "正在上传 {0}"
+  },
+  "Inventory": {
+    "Title": "目录内容",
+    "Shown": "已显示",
+    "Ascending": "升序",
+    "Descending": "降序",
+    "Sort": "排序：{0} · {1}",
+    "AdjustLimit": "调整上限",
+    "Retained": "保留的目录信息；最近一次刷新失败。",
+    "NoAccepted": "目录不可用",
+    "RetryHint": "浏览允许的路径，或刷新以重试。",
+    "Entries": "已显示的目录项目",
+    "NotReported": "未提供",
+    "Check": "选择 {0}",
+    "Actions": "{0} 的操作",
+    "Hidden": "隐藏项目",
+    "NoActions": "无可用操作"
+  },
+  "Batch": {
+    "SelectAll": "选择已显示的项目",
+    "SelectedCount": "已选择 {0} 项",
+    "SelectedShown": "已选择 {0} 个显示项目",
+    "ArchiveRule": "所选文件夹包含可见的子项目。下载大小上限针对每个文件。",
+    "DeleteRule": "当前策略必须允许删除所有选中目标。",
+    "Unavailable": "一个或多个选中项目不符合操作条件，相关操作不可用。"
+  },
+  "Inspector": {
+    "Title": "文件查看与编辑",
+    "Unsaved": "未保存的更改",
+    "Clean": "无未保存的文本更改",
+    "Actions": "当前文件操作",
+    "FullPath": "完整精确路径",
+    "DownloadDisk": "下载读取磁盘上的文件，不包含编辑器内未保存的文本。",
+    "RetainedMetadata": "无法刷新文件详情。以下元数据为保留信息，与已保存内容分开呈现。",
+    "DiskDiffers": "当前磁盘内容与编辑器基准不同。请明确重新读取以替换编辑器文本。",
+    "DiskEvidence": "磁盘信息",
+    "RetainedEvidence": "保留的磁盘元数据",
+    "Text": "文件文本",
+    "Unavailable": "文本预览不可用",
+    "UnavailableHint": "无法将此文件作为文本读取。符合条件的磁盘操作仍然可用。",
+    "ReadOnlyPath": "此文件位于配置的只读路径下；文本仍可选择。",
+    "WritesDisabled": "当前写入策略禁止保存文本。",
+    "ExtensionDenied": "此扩展名不允许保存；文本预览仍可阅读。",
+    "EditingUnavailable": "当前策略不允许编辑。",
+    "RetainedAfterAttempt": "尝试打开的文件无法预览；先前的编辑器与草稿已保留。",
+    "NoTextLoaded": "未加载文本",
+    "DiskModified": "磁盘修改时间"
+  },
+  "Outcome": {
+    "Failed": "操作失败",
+    "Saved": "文件已保存",
+    "PolicyApplied": "运行时策略已应用",
+    "Created": "文件夹已创建",
+    "Deleted": "删除已完成",
+    "Uploaded": "文件已上传",
+    "DownloadStarted": "下载已开始",
+    "Updated": "信息已更新",
+    "PartialDelete": "部分项目可能已经被删除。刷新后的目录展示当前实际信息。"
+  },
+  "CreateDirectoryDialog": {
+    "Title": "新建文件夹",
+    "CurrentPath": "创建位置",
+    "DirectoryName": "文件夹名称",
+    "DirectoryNameHelper": "请输入单个名称，不允许使用路径分隔符。",
+    "InvalidName": "请输入非空文件夹名称，且不包含路径分隔符。",
+    "Confirm": "创建"
+  },
+  "DeleteDialog": {
+    "Title": "删除项目",
+    "Summary": "要删除此已确认目标项目吗？",
+    "Origin": "操作来源目录",
+    "DirtyLoss": "以下当前文件的未保存更改将被丢弃：",
+    "DirectoryWarning": "包含文件夹内容时，将移除内部文件与子文件夹。",
+    "DeleteFolder": "删除文件夹",
+    "DeleteFile": "删除文件"
+  },
+  "BatchDeleteDialog": {
+    "Title": "删除所选项目",
+    "Summary": "要删除以下 {0} 个已确认目标项目吗？",
+    "Recursive": "包含文件夹内容",
+    "NoRollback": "删除在首次错误时停止，之前已完成的删除不会回滚。",
+    "Confirm": "删除 {0} 项"
+  },
+  "Discard": {
+    "Title": "未保存的文本更改",
+    "PolicyTitle": "未保存的策略更改",
+    "Effect": "要丢弃此文件的未保存更改吗？",
+    "PolicyEffect": "要丢弃此策略草稿吗？当前已应用的主机策略保持不变。",
+    "UploadEffect": "要替换此文件并丢弃其未保存更改吗？",
+    "KeepPolicy": "继续编辑策略",
+    "KeepEditing": "继续编辑",
+    "Confirm": "丢弃更改",
+    "Navigate": "继续前往目标目录。",
+    "Open": "继续打开目标文件。",
+    "Reload": "重新读取此文件当前的磁盘文本。",
+    "Upload": "继续执行已确认目标的替换上传。",
+    "Policy": "继续应用运行时策略。",
+    "Close": "关闭当前文件。",
+    "Leave": "继续前往目标页面。"
+  },
+  "Policy": {
+    "Title": "运行时策略",
+    "Scope": "更改应用于此运行主机中的所有 FileOps 操作，并仅保存在内存中；重启后恢复配置默认值。此表单不会更改主机配置文件。",
+    "Loading": "正在加载当前运行时策略",
+    "Form": "主机运行时策略编辑器",
+    "Locations": "位置",
+    "AllowedRoots": "允许的根目录",
+    "RootsHelper": "每行一个精确路径。默认来源为工作目录、应用基础目录和进程临时目录。",
+    "EmptyRoots": "空列表会恢复主机默认根目录，并不会阻止所有访问。",
+    "Startup": "启动目录",
+    "StartupHelper": "无效、不可用或超出范围的启动目录会回退到第一个允许的根目录。",
+    "ReadOnlyPaths": "只读路径",
+    "ReadOnlyHelper": "配置路径下禁止写入、上传、编辑和删除。规范化时会移除允许根目录之外的路径。",
+    "Operations": "操作",
+    "AllowWrite": "允许写入",
+    "WriteHelper": "允许创建文件夹、上传文件和保存文本。",
+    "AllowDelete": "允许删除",
+    "DeleteHelper": "删除权限独立于写入权限。",
+    "AllowHidden": "显示隐藏项目",
+    "HiddenHelper": "允许访问根目录内的隐藏文件与目录。",
+    "Limits": "限制",
+    "MaxText": "文本预览与编辑上限（字节）",
+    "TextLimitHelper": "{0} · 最小 4 KiB；默认 512 KiB。",
+    "TextMinimum": "文本大小上限必须至少为 4,096 字节。",
+    "MaxUpload": "单文件上传上限（字节）",
+    "UploadLimitHelper": "{0} · 最小 64 KiB；默认 20 MiB。",
+    "UploadMinimum": "上传大小上限必须至少为 65,536 字节。",
+    "MaxDownload": "每文件下载上限（字节）",
+    "DownloadLimitHelper": "{0} · 不小于上传上限；默认 100 MiB。",
+    "DownloadMinimum": "下载上限不得小于上传上限。",
+    "MaxEntries": "目录显示项目上限",
+    "EntriesHelper": "显示上限为 50–5,000；默认 500。这不是分页大小或总数量。",
+    "EntryRange": "请使用 50 至 5,000 项的显示上限。",
+    "TextEditing": "文本编辑",
+    "Extensions": "可编辑扩展名",
+    "ExtensionsHelper": "用逗号、分号或换行分隔。此项限制保存；预览还取决于文件大小与文本检查。",
+    "Reload": "重新加载当前策略",
+    "Apply": "应用运行时策略",
+    "NoChanges": "无更改",
+    "NewerEdits": "已应用或重新加载先前确认的策略。较新的编辑已保留，尚未应用。",
+    "ReadbackFailed": "策略更新已完成，但无法重新读取权威的规范化值。草稿仍然可用；请重新加载当前策略后再将这些字段视为已接受值。",
+    "HostMemory": "整个主机 · 内存中保存",
+    "Close": "关闭",
+    "NotLoaded": "策略尚未加载",
+    "AccessDenied": "此主机的页面访问配置不允许访问运行时策略。请返回文件页面，或在恢复访问权限后重试。"
+  },
+  "Common": {
+    "Cancel": "取消"
+  }
 }

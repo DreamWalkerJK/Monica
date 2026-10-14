@@ -17,7 +17,7 @@ public static class ModuleServiceDiscoveryUIBuilderExtensions
     extension(IMonicaBuilder builder)
     {
         /// <summary>
-        /// Registers the Service Discovery monitoring page and its UI state.
+        /// Registers the Service Discovery workspaces and their circuit-scoped UI state.
         /// </summary>
         public ModuleRegistration<ModuleServiceDiscoveryUI, ModuleServiceDiscoveryUIOption> AddServiceDiscoveryUI(
             Action<ModuleServiceDiscoveryUIOption>? configure = null)
@@ -36,13 +36,28 @@ public class ModuleServiceDiscoveryUI : MonicaModule<ModuleServiceDiscoveryUIOpt
             static option => option.AddResource<ServiceDiscoveryResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static navigation =>
+            {
                 navigation.RegisterLocalizedPage<UIServiceDiscoveryPage, ServiceDiscoveryResource>(
                     UIServiceDiscoveryPage.SERVICE_DISCOVERY_DEBUG_URL,
                     "Pages:ServiceDiscovery:Title",
                     Icons.Material.Filled.CloudQueue,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
-                    navOrder: 40)));
+                    navOrder: 40,
+                    descriptionKey: "Workbench:Views:Registry:Description");
+                navigation.RegisterLocalizedPage<UIServiceDiscoveryAtlasPage, ServiceDiscoveryResource>(
+                    UIServiceDiscoveryAtlasPage.PAGE_URL, "Workbench:Views:Atlas:Title", Icons.Material.Outlined.ScatterPlot,
+                    BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 41, descriptionKey: "Workbench:Views:Atlas:Description");
+                navigation.RegisterLocalizedPage<UIServiceDiscoveryDependenciesPage, ServiceDiscoveryResource>(
+                    UIServiceDiscoveryDependenciesPage.PAGE_URL, "Workbench:Views:Dependencies:Title", Icons.Material.Outlined.AccountTree,
+                    BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 42, descriptionKey: "Workbench:Views:Dependencies:Description");
+                navigation.RegisterLocalizedPage<UIServiceDiscoveryDomainsPage, ServiceDiscoveryResource>(
+                    UIServiceDiscoveryDomainsPage.PAGE_URL, "Workbench:Views:Domains:Title", Icons.Material.Outlined.Domain,
+                    BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 43, descriptionKey: "Workbench:Views:Domains:Description");
+                navigation.RegisterLocalizedPage<UIServiceDiscoveryHostPage, ServiceDiscoveryResource>(
+                    UIServiceDiscoveryHostPage.PAGE_URL, "Workbench:Views:Host:Title", Icons.Material.Outlined.Computer,
+                    BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 44, descriptionKey: "Workbench:Views:Host:Description");
+            }));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleServiceDiscoveryUIOption> context)

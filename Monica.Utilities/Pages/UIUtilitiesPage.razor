@@ -2,32 +2,15 @@
 @using Monica.Utilities.Localization
 @using Monica.Utilities.UIUtilities.Components
 @inject IStringLocalizer<UtilitiesResource> L
+@rendermode RenderMode.InteractiveServer
 
-<PageTitle>@L["Page:DocumentTitle"]</PageTitle>
+<PageTitle>@L["Connectivity:Title"]</PageTitle>
 
-<div class="utilities-page mo-page-shell mo-page-shell--full-width">
-    <MudContainer MaxWidth="MaxWidth.False" Gutters="false" Class="utilities-page__container">
-        <div class="utilities-page__content">
-            <MudPaper Elevation="0" Class="utilities-page__hero mo-self-painted">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.overline" Class="utilities-page__eyebrow">@L["Page:Eyebrow"]</MudText>
-                    <MudText Typo="Typo.h4">@L["Page:Title"]</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
-                </MudStack>
-            </MudPaper>
-
-            <MudTabs Rounded="true" ApplyEffectsToContainer="true" Class="utilities-page__tabs mo-self-painted">
-                <MudTabPanel Text="@L["Tabs:Connectivity"]" Icon="@Icons.Material.Filled.Link">
-                    <ConnectivityProbePanel />
-                </MudTabPanel>
-                <MudTabPanel Text="@L["Tabs:TextJson"]" Icon="@Icons.Material.Filled.Code">
-                    <TextTransformPanel />
-                </MudTabPanel>
-            </MudTabs>
-        </div>
-    </MudContainer>
-</div>
+<UtilitiesWorkspace>
+    <ConnectivityProbePanel />
+</UtilitiesWorkspace>
 
 @code {
+    /// <summary>Gets the original Utilities entry route, now the connectivity workspace.</summary>
     public const string PAGE_URL = "/ui/utilities";
 }

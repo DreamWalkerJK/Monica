@@ -13,19 +13,15 @@
             <MudText Typo="Typo.h6" HtmlTag="h2" id="job-schedule-heading">
                 @L["JobDetail:Schedule:Title"]
             </MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
+            <MudText Typo="Typo.body2">
                 @L["JobDetail:Schedule:Description"]
             </MudText>
         </div>
         @if (Declaration.JobType == JobType.Recurring)
         {
-            <MudChip T="string"
-                     Size="Size.Small"
-                     Variant="Variant.Outlined"
-                     Icon="@ScheduleStatusIcon"
-                     Color="@ScheduleStatusColor">
-                @ScheduleStatusLabel
-            </MudChip>
+            <span class="job-schedule-panel__status" data-tone="@ScheduleStatusColor.ToString().ToLowerInvariant()">
+                <MudIcon Icon="@ScheduleStatusIcon" />@ScheduleStatusLabel
+            </span>
         }
     </header>
 
@@ -33,20 +29,19 @@
     {
         <div class="job-schedule-panel__next">
             <div>
-                <MudText Typo="Typo.overline" Color="Color.Primary">
+                <MudText Typo="Typo.overline" >
                     @L["JobDetail:Schedule:NextOccurrence"]
                 </MudText>
-                <strong>@TimePresentation.FormatTimestamp(Summary.NextOccurrenceUtc)</strong>
+                <strong>@(Summary.NextOccurrenceUtc is { } next ? TimePresentation.FormatTimestamp(next) : L["JobDetail:Schedule:NoNextOccurrence"])</strong>
             </div>
             <MudButton Variant="Variant.Text"
-                       Color="Color.Primary"
-                       EndIcon="@Icons.Material.Filled.ArrowForward"
+                       EndIcon="@Icons.Material.Outlined.ArrowForward"
                        OnClick="OnInspectSchedule">
                 @L["JobDetail:Actions:InspectSchedule"]
             </MudButton>
         </div>
 
-        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="job-schedule-panel__status-note">
+        <MudText Typo="Typo.body2"  Class="job-schedule-panel__status-note">
             @ScheduleStatusDescription
         </MudText>
 
@@ -61,8 +56,10 @@
             <div class="job-schedule-panel__fact job-schedule-panel__fact--wide">
                 <dt>@L["JobDetail:Schedule:CronExpression"]</dt>
                 <dd>
-                    <CronDescriptionBadge Expression="@Schedule.CronExpression"
-                                          ResolveDescription="true" />
+                    <div class="job-schedule-panel__cron">
+                        <code>@Schedule.CronExpression</code>
+                        <CronDescriptionBadge Expression="@Schedule.CronExpression" ShowExpression="false" ResolveDescription="true" />
+                    </div>
                 </dd>
             </div>
             <div>
@@ -71,21 +68,21 @@
             </div>
             <div>
                 <dt>@L["JobDetail:Schedule:StartBoundary"]</dt>
-                <dd>@TimePresentation.FormatTimestamp(Schedule.StartTimeUtc)</dd>
+                <dd>@(Schedule.StartTimeUtc is { } start ? TimePresentation.FormatTimestamp(start) : L["Policy:BoundaryModes:None"])</dd>
             </div>
             <div>
                 <dt>@L["JobDetail:Schedule:EndBoundary"]</dt>
-                <dd>@TimePresentation.FormatTimestamp(Schedule.EndTimeUtc)</dd>
+                <dd>@(Schedule.EndTimeUtc is { } end ? TimePresentation.FormatTimestamp(end) : L["Policy:BoundaryModes:None"])</dd>
             </div>
         </dl>
     }
     else
     {
         <div class="job-schedule-panel__triggered">
-            <MudIcon Icon="@Icons.Material.Filled.Bolt" Color="Color.Primary" Size="Size.Large" />
+            <MudIcon Icon="@Icons.Material.Outlined.Bolt" Size="Size.Large" />
             <div>
                 <MudText Typo="Typo.subtitle1">@L["JobDetail:Schedule:TriggeredTitle"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                <MudText Typo="Typo.body2">
                     @L["JobDetail:Schedule:TriggeredDescription"]
                 </MudText>
             </div>
@@ -101,7 +98,7 @@
     public JobOperationalSummary Summary { get; set; } = null!;
 
     /// <summary>
-    /// Gets the callback that opens the read-only recurring schedule inspector.
+    /// Gets the callback that opens the complete editable recurring schedule and policy workbench.
     /// </summary>
     [Parameter]
     public EventCallback OnInspectSchedule { get; set; }
@@ -137,10 +134,10 @@
             : JobSchedulerUiPresentation.GetRecurringScheduleStatusColor(Summary.RecurringScheduleStatus);
 
     private string ScheduleStatusIcon => IsOperatorPaused
-        ? Icons.Material.Filled.PauseCircle
+        ? Icons.Material.Outlined.PauseCircle
         : IsDebugSuppressed
-            ? Icons.Material.Filled.BugReport
+            ? Icons.Material.Outlined.BugReport
             : Summary.RecurringScheduleStatus == JobRecurringScheduleStatus.Scheduled
-                ? Icons.Material.Filled.Schedule
-                : Icons.Material.Filled.Info;
+                ? Icons.Material.Outlined.Schedule
+                : Icons.Material.Outlined.Info;
 }

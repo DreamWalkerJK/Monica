@@ -1,0 +1,98 @@
+@using Monica.DevOps.Localization
+@using Monica.DevOps.Terminal.Models
+@using Monica.DevOps.Terminal.Support
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IStringLocalizer<TerminalResource> L
+@inject IJSRuntime JSRuntime
+
+<div class="terminal-transcript">
+    <div class="terminal-output" @ref="_output" tabindex="0" role="region" aria-label="@L["Labels:Transcript"]">
+        @if (Session.Output.Length == 0)
+        {
+            <p class="terminal-output__empty">@L["States:NoOutput"]</p>
+        }
+        else
+        {
+            @foreach (var line in Session.Output)
+            {
+                <div class="terminal-line terminal-line--@line.Stream">
+                    <span class="terminal-line__cue" aria-label="@StreamLabel(line.Stream)">@Prefix(line.Stream)</span>
+                    <span class="terminal-line__text">@line.Text</span>
+                </div>
+            }
+        }
+    </div>
+    @if (_failure is not null)
+    {
+        <div class="terminal-transcript__failure"><MudAlert Severity="Severity.Error" Dense="true">@L["Messages:BrowserFailure", _failure]</MudAlert></div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TerminalSessionSnapshot Session { get; set; } = default!;
+    [Parameter] public EventCallback<bool> CompactChanged { get; set; }
+    [Parameter] public EventCallback<bool> FlowChanged { get; set; }
+    /// <summary>Publishes whether this session has retained output outside the reader's paused view.</summary>
+    [Parameter] public EventCallback<(string SessionId, bool Unseen)> UnseenChanged { get; set; }
+    private ElementReference _output;
+    private TerminalScrollInteropSession? _interop;
+    private bool _retired;
+    private string? _failure;
+    private long _revision = -1;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_retired) return;
+        _interop ??= new(JSRuntime, StateChangedAsync);
+        if (_revision == Session.Revision) return;
+        _revision = Session.Revision;
+        await UpdateAsync(firstRender);
+    }
+
+    private Task StateChangedAsync(bool compact, bool unseen, bool flow) => InvokeAsync(async () =>
+    {
+        if (_retired) return;
+        var sessionId = Session.Id;
+        await UnseenChanged.InvokeAsync((sessionId, unseen));
+        if (_retired) return;
+        await CompactChanged.InvokeAsync(compact);
+        if (_retired) return;
+        await FlowChanged.InvokeAsync(flow);
+        if (!_retired) StateHasChanged();
+    });
+
+    /// <summary>Reveals this transcript's latest retained output and resumes following while its interop is active.</summary>
+    public Task RevealLatestAsync() => UpdateAsync(true);
+    private async Task UpdateAsync(bool reveal)
+    {
+        if (_retired || _interop is null) return;
+        try { await _interop.UpdateAsync(_output, reveal); }
+        catch (Exception exception)
+        {
+            if (_retired) return;
+            _failure = exception.Message;
+            StateHasChanged();
+        }
+    }
+
+    private string StreamLabel(string stream) => stream switch
+    {
+        TerminalOutputStreams.Input => L["Streams:Input"],
+        TerminalOutputStreams.Stderr => L["Streams:Error"],
+        TerminalOutputStreams.Stdout => L["Streams:Output"],
+        _ => L["Streams:System"]
+    };
+    private static string Prefix(string stream) => stream switch
+    {
+        TerminalOutputStreams.Input => ">",
+        TerminalOutputStreams.Stderr => "!",
+        TerminalOutputStreams.System => "·",
+        _ => " "
+    };
+    public async ValueTask DisposeAsync()
+    {
+        _retired = true;
+        if (_interop is not null) await _interop.DisposeAsync();
+    }
+}

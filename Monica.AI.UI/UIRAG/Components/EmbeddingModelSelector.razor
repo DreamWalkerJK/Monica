@@ -4,72 +4,60 @@
 @inject IStringLocalizer<AIResource> L
 
 <div class="embedding-model-selector-wrapper">
-    <div class="selector-header">
-        <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Class="selector-icon" />
-        <MudText Typo="Typo.body2" Class="selector-label">@L["RAG:EmbeddingModel:Label"]</MudText>
-    </div>
-
-    <MudSelect T="string"
-               Value="@SelectedModelKey"
-               ValueChanged="@OnModelChanged"
-               Variant="Variant.Outlined"
-               Margin="Margin.Dense"
-               Dense="true"
-               Disabled="@(!HasAvailableModels || IsDisabled)"
-               Class="model-select">
+    <MudSelect T="string" Value="@SelectedModelKey" ValueChanged="OnModelChanged" Label="@L["RAG:EmbeddingModel:Label"]"
+               ToStringFunc="FormatSelection" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
+               Disabled="@(!HasAvailableModels || IsDisabled)" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Memory" Class="model-select">
         @foreach (var model in AvailableModels)
         {
-            <MudSelectItem T="string" Value="@model.ModelKey">
-                <div class="model-option">
+            <MudSelectItem T="string" Value="@model.ModelKey" aria-label="@GetOptionDescription(model)">
+                <div class="model-option" title="@GetOptionDescription(model)">
                     <span class="model-name">@model.ModelName</span>
                     <span class="model-provider">@model.ProviderDisplayName</span>
                     <span class="model-dimensions">@L["RAG:EmbeddingModel:Dimensions", FormatDimensions(model.Dimensions)]</span>
+                    @if (!string.IsNullOrWhiteSpace(model.Description)) { <span class="model-description">@model.Description</span> }
                 </div>
             </MudSelectItem>
         }
     </MudSelect>
-
-    @if (CurrentModel is not null)
+    @if (CurrentModel is { } current)
     {
-        <MudText Typo="Typo.caption" Class="model-info">
-            @(CurrentModel.Description ?? CurrentModel.ModelName) - @CurrentModel.ProviderDisplayName - @L["RAG:EmbeddingModel:Dimensions", FormatDimensions(CurrentModel.Dimensions)]
-        </MudText>
+        <p class="model-info">@current.ProviderDisplayName · @L["RAG:EmbeddingModel:Dimensions", FormatDimensions(current.Dimensions)]
+            @if (!string.IsNullOrWhiteSpace(current.Description)) { <span>@current.Description</span> }
+        </p>
+    }
+    else if (!string.IsNullOrWhiteSpace(SelectedModelKey))
+    {
+        <p class="model-unavailable">@L["KnowledgeDialogs:ModelUnavailable", FormatSelection(SelectedModelKey)]</p>
     }
     else if (!HasAvailableModels)
     {
-        <MudText Typo="Typo.caption" Class="model-empty">
-            @L["RAG:EmbeddingModel:NotConfigured"]
-        </MudText>
+        <p class="model-empty">@L["RAG:EmbeddingModel:NotConfigured"]</p>
     }
 </div>
 
 @code {
-    [Parameter]
-    public IReadOnlyList<EmbeddingModelOption> AvailableModels { get; set; } = [];
-
-    [Parameter]
-    public string? SelectedModelKey { get; set; }
-
-    [Parameter]
-    public EventCallback<string> SelectedModelKeyChanged { get; set; }
-
-    [Parameter]
-    public bool IsDisabled { get; set; }
+    /// <summary>Available model metadata supplied by the owner; the selector does not probe providers.</summary>
+    [Parameter] public IReadOnlyList<EmbeddingModelOption> AvailableModels { get; set; } = [];
+    /// <summary>The selected provider/model key, or null when no model is selected.</summary>
+    [Parameter] public string? SelectedModelKey { get; set; }
+    /// <summary>Requests a selection change; persistent binding remains the caller's responsibility.</summary>
+    [Parameter] public EventCallback<string> SelectedModelKeyChanged { get; set; }
+    /// <summary>Disables selection while the owner cannot admit a change.</summary>
+    [Parameter] public bool IsDisabled { get; set; }
 
     private bool HasAvailableModels => AvailableModels.Count > 0;
-
-    private EmbeddingModelOption? CurrentModel =>
-        AvailableModels.FirstOrDefault(m =>
-            string.Equals(m.ModelKey, SelectedModelKey, StringComparison.OrdinalIgnoreCase));
-
-    private static string FormatDimensions(int? dimensions)
-        => dimensions.HasValue ? dimensions.Value.ToString() : "?";
-
-    private async Task OnModelChanged(string? modelKey)
+    private EmbeddingModelOption? CurrentModel => AvailableModels.FirstOrDefault(model =>
+        string.Equals(model.ModelKey, SelectedModelKey, StringComparison.OrdinalIgnoreCase));
+    private string FormatDimensions(int? dimensions) => dimensions?.ToString() ?? L["KnowledgeDialogs:UnknownDimensions"].Value;
+    private string FormatSelection(string? key)
     {
-        if (modelKey is not null)
-        {
-            await SelectedModelKeyChanged.InvokeAsync(modelKey);
-        }
+        var model = AvailableModels.FirstOrDefault(option => string.Equals(option.ModelKey, key, StringComparison.OrdinalIgnoreCase));
+        if (model is not null) return $"{model.ModelName} · {model.ProviderDisplayName}";
+        return EmbeddingModelOption.TryParseModelKey(key, out var providerId, out var modelName)
+            ? $"{modelName} · {providerId}" : key ?? string.Empty;
     }
+    private string GetOptionDescription(EmbeddingModelOption model)
+        => $"{model.ModelName} · {model.ProviderDisplayName} · {L["RAG:EmbeddingModel:Dimensions", FormatDimensions(model.Dimensions)]} · {model.Description}";
+    private Task OnModelChanged(string? key) => !IsDisabled && HasAvailableModels && key is not null
+        ? SelectedModelKeyChanged.InvokeAsync(key) : Task.CompletedTask;
 }

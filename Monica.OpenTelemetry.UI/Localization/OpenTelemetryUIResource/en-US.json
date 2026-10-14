@@ -1,17 +1,15 @@
 {
   "Pages": {
     "OpenTelemetryMetrics": {
-      "Title": "OpenTelemetry Metrics"
+      "Title": "OpenTelemetry Metrics",
+      "Description": "Explore this host’s instrument registry, exact tag series, retained samples and diagnostic exports."
     }
   },
   "Page": {
-    "Title": "OpenTelemetry Metrics",
-    "Subtitle": "In-process snapshot for debugging and offline use"
+    "Title": "OpenTelemetry observatory"
   },
   "Banner": {
     "PerInstanceHint": "Per-instance, in-memory only. For production retention, configure OTLP or Prometheus.",
-    "Service": "Service",
-    "CapturedAt": "Captured",
     "Meters": "Meters",
     "Instruments": "Instruments"
   },
@@ -20,19 +18,17 @@
     "AllMeters": "All meters",
     "InstrumentName": "Instrument name contains",
     "AutoRefresh": "Auto refresh",
-    "RefreshOff": "Off",
     "Refresh1s": "1 second",
     "Refresh5s": "5 seconds"
   },
   "Action": {
     "Refresh": "Refresh",
-    "CopyAsPrometheus": "Copy as Prometheus text",
+    "CopyAsPrometheus": "Copy diagnostic text",
     "CopyAsJson": "Copy as JSON"
   },
   "Status": {
     "Loading": "Loading metrics...",
     "LoadFailed": "Failed to load the metrics snapshot.",
-    "Empty": "No metric samples have been collected yet.",
     "Copied": "Copied to clipboard.",
     "CopyFailed": "Copy failed."
   },
@@ -91,11 +87,113 @@
     "Max": "Max",
     "P50": "P50",
     "P95": "P95",
-    "P99": "P99"
+    "P99": "P99",
+    "WindowTitle": "Retained distribution",
+    "WindowHelp": "Percentiles, range and bucket counts describe only finite observations in the selected series’ retained window. They are not lifetime totals or service-level thresholds.",
+    "FiniteCount": "{0} finite observations",
+    "Excluded": "{0} retained nonfinite observations are excluded from these statistics.",
+    "BucketHelp": "Counts belong to individual intervals. The first includes its lower bound; later intervals exclude the lower bound and include the upper bound. Bar lengths compare counts within this window.",
+    "LowerBound": "Lower bound",
+    "UpperBound": "Upper bound",
+    "BucketCount": "Count"
   },
   "Overflow": {
     "Title": "Overflow",
     "Message": "Tag-set count exceeded MaxTagSetsPerInstrument; some series are not displayed.",
     "DroppedSamples": "{0} samples dropped"
+  },
+  "Workbench": {
+    "Eyebrow": "OBSERVABILITY / INSTRUMENTS",
+    "Intro": "Explore a published instrument, choose its exact tag series, and inspect the measurements behind it.",
+    "Manual": "Manual reads",
+    "ReadingPaused": "View reads paused · host collection continues",
+    "ReadingActive": "Reading retained evidence · host collection is independent",
+    "ViewRead": "View read",
+    "UnavailableTitle": "OpenTelemetry UI is unavailable",
+    "Unavailable": "This host has not registered the OpenTelemetry UI module and its in-process collector dependency.",
+    "RetainedAfterFailure": "The previous successful view remains available. Its capture times have not advanced.",
+    "NoSnapshot": "No successful snapshot is available yet.",
+    "Scope": "Current host resource and whole-registry coverage",
+    "Resource": "CURRENT HOST / RESOURCE",
+    "WholeRegistry": "Whole adopted registry",
+    "SourceCapture": "Snapshot built",
+    "SamplesPerSeries": "Retained sample capacity / series",
+    "SeriesPerInstrument": "Tag-set capacity / instrument",
+    "ExportTitle": "Take this evidence with you",
+    "ExportHelp": "Copies the whole adopted snapshot, independent of filters. JSON omits sample history; diagnostic Prometheus text describes retained-window gauges. These are not SDK scrape results.",
+    "WorkspaceNavigation": "Metrics workspace",
+    "BrowseInstruments": "Browse instruments",
+    "ViewEvidence": "Instrument evidence"
+  },
+  "Registry": {
+    "Title": "Instrument registry",
+    "Eyebrow": "DISCOVER",
+    "Search": "Find an instrument…",
+    "Series": "series",
+    "Dropped": "{0} new-tag observations dropped",
+    "Shown": "{0}–{1} of {2}",
+    "EmptyTitle": "No instruments published",
+    "Empty": "No matching instruments have been published to this collector. Check the host’s selected meter patterns and instrumentation.",
+    "NoMatchesTitle": "No matching instruments",
+    "NoMatches": "Try another name or choose a different meter. The resource summary still describes the whole snapshot."
+  },
+  "Dossier": {
+    "Title": "Selected instrument",
+    "Eyebrow": "INSTRUMENT DOSSIER",
+    "ChooseTitle": "Choose an instrument",
+    "Choose": "Select a published instrument from the registry to explore its exact series and retained measurements.",
+    "Kind": "Kind",
+    "Collection": "Measurement source",
+    "Observable": "Observable callback",
+    "Recorded": "Recorded measurement",
+    "Overflow": "{0} observations for additional tag sets were dropped after reaching the bound. Retained series continue collecting; this is not total transport loss.",
+    "UnmeasuredTitle": "Published, awaiting measurements",
+    "Unmeasured": "This instrument exists, but has no retained tag series. A missing observation is not a measured zero."
+  },
+  "Series": {
+    "Eyebrow": "EXACT TAG SERIES",
+    "Title": "Choose a series",
+    "Available": "{0} retained tag sets",
+    "Untagged": "Untagged series",
+    "Selected": "SELECTED SERIES",
+    "LatestReading": "Latest retained value",
+    "AdjacentDelta": "Adjacent observation delta",
+    "DeltaHelp": "Delta compares the last two retained observations. It is not a per-second rate or the change since the previous view read; one point cannot establish a delta.",
+    "LastObservation": "Last observation",
+    "Retention": "{0} retained / {1} capacity",
+    "HistoryTitle": "Retained observations",
+    "Finite": "{0} finite / {1} retained",
+    "RecordedValue": "Recorded value",
+    "Unitless": "No declared unit",
+    "PlotHelp": "Every finite retained value is positioned by its actual UTC observation time. Nonfinite values remain in the ledger and break the line; the plot does not invent missing samples.",
+    "Omitted": "{0} nonfinite values are retained in the ledger and omitted from plotting.",
+    "NoSamples": "No retained observations are available for this series.",
+    "NoFiniteSamples": "The retained values are all nonfinite. Inspect the raw ledger; there is no finite plot or distribution.",
+    "HistogramBasis": "Histogram samples are raw recorded values. Distribution statistics use finite values in this bounded retained window, not lifetime SDK aggregates.",
+    "CounterBasis": "For this direct counter, recorded increments accumulate into the retained values. Eviction bounds the observation history, not the cumulative value.",
+    "MeasurementBasis": "Values preserve each recorded or observable callback measurement in the declared unit. No page-refresh normalization is applied.",
+    "Choose": "Choose a retained tag series to open its measurement evidence."
+  },
+  "Ledger": {
+    "Title": "Sample ledger",
+    "Help": "All retained samples remain inspectable, including nonfinite values. Raw values preserve the original declared unit.",
+    "Timestamp": "Observed",
+    "Raw": "Raw value",
+    "Value": "Display value"
+  },
+  "Inspector": {
+    "Title": "Sample evidence",
+    "Frozen": "This inspector is frozen from one successful view read. Host collection and later refreshes do not replace its values.",
+    "Open": "Inspect",
+    "OpenSample": "Inspect sample observed at {0}",
+    "OpenFailed": "The sample inspector could not be opened.",
+    "Close": "Close",
+    "InstrumentIdentity": "Collector-local instrument identity",
+    "MeterVersion": "Meter version",
+    "SeriesContext": "Series at this view read",
+    "SourceIndex": "Retained source index · zero-based",
+    "SeriesKey": "Exact series key",
+    "FiniteCount": "Finite retained samples",
+    "NonFiniteCount": "Nonfinite retained samples"
   }
 }

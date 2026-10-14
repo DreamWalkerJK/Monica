@@ -11,33 +11,27 @@ public class DefaultServiceDiscoveryCatalogProvider(IRegistrationStateManager? s
 {
     /// <summary>
     /// Gets all discovery domains by reading registered instance state from the state store.
+    /// Provider read failures propagate; an empty catalog is not an error fallback.
     /// </summary>
     public virtual async Task<List<DomainInfo>> GetAllDomainsAsync()
     {
         if (stateManager == null)
             return [];
 
-        try
-        {
-            var instances = await stateManager.GetAllInstancesAsync();
+        var instances = await stateManager.GetAllInstancesAsync();
 
-            var domainNames = instances
-                .Where(s => !string.IsNullOrWhiteSpace(s.DomainName))
-                .Select(s => s.DomainName!)
-                .Distinct()
-                .ToList();
+        var domainNames = instances
+            .Where(s => !string.IsNullOrWhiteSpace(s.DomainName))
+            .Select(s => s.DomainName!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-            return domainNames.Select(name => new DomainInfo
-            {
-                Name = name,
-                DisplayName = name,
-                Description = $"Domain: {name}"
-            }).ToList();
-        }
-        catch
+        return domainNames.Select(name => new DomainInfo
         {
-            return [];
-        }
+            Name = name,
+            DisplayName = name,
+            Description = $"Domain: {name}"
+        }).ToList();
     }
 
     /// <summary>

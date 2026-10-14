@@ -1,106 +1,158 @@
 {
   "Pages": {
     "DataChannelManage": {
-      "Title": "数据通道运维"
+      "Title": "通道目录"
+    },
+    "DataChannelExceptions": {
+      "Title": "数据通道异常证据"
     }
   },
   "Common": {
     "Actions": {
       "Refresh": "刷新",
-      "Clear": "清空",
-      "Close": "关闭",
+      "Cancel": "取消",
       "Details": "详情"
     },
     "Columns": {
       "Actions": "操作"
     },
     "Values": {
-      "Yes": "是",
-      "No": "否",
-      "Empty": "空",
-      "None": "无",
-      "Unknown": "未知"
+      "None": "无"
     }
   },
-  "Console": {
-    "Eyebrow": "实时传输 / 消息运维",
-    "Title": "数据通道运维",
-    "Subtitle": "在同一控制台追踪端点流向、管线组成、实时消息证据与通道故障。",
-    "Actions": {
-      "ExceptionEvidence": "异常证据"
+  "Workbench": {
+    "Eyebrow": "DataChannel / 主机管道",
+    "Title": "通道目录",
+    "Description": "查找已注册管道，检查端点与有序中间件，并操作其真实主机状态。",
+    "DirectoryDescription": "检查已注册通道管道、端点元数据、中间件证据与消息捕获。",
+    "ExceptionsDescription": "检查通道保留异常与累计计数，或清除通道保留的可观察历史。",
+    "Captured": "采集时间",
+    "NoCapture": "尚未采集",
+    "Navigation": "数据通道工具",
+    "Routes": {
+      "Channels": "通道目录",
+      "Exceptions": "异常证据"
     },
-    "Summary": {
-      "AriaLabel": "数据通道运行摘要",
-      "TotalChannels": "已注册通道",
-      "HealthyChannels": "就绪且健康",
-      "ChannelsWithExceptions": "存在故障的通道",
-      "ExceptionHistory": "历史异常"
-    },
-    "Directory": {
-      "Eyebrow": "传输目录",
-      "Title": "通道管线",
-      "Description": "沿入口到出口查看每条消息路径，并检查转换或观测消息的中间件。",
-      "ChannelCount": "{0} 条通道"
-    },
-    "States": {
-      "Loading": "正在加载数据通道证据",
-      "LoadingDescription": "正在解析通道状态、端点元数据与异常历史。",
-      "Empty": "尚未注册数据通道",
-      "EmptyDescription": "注册通道管线后，这里将显示传输与消息证据。"
-    },
-    "Messages": {
-      "LoadChannelsFailed": "无法加载通道状态：{0}",
-      "LoadSummaryFailed": "无法加载异常摘要：{0}",
-      "LoadSummaryException": "加载异常摘要时发生错误：{0}",
-      "LoadFailed": "加载数据通道证据时发生错误：{0}",
-      "Refreshed": "数据通道证据已刷新。",
-      "ReinitializeFailed": "重新初始化通道失败：{0}",
-      "ReinitializeException": "重新初始化通道时发生错误：{0}",
-      "ReinitializeSucceeded": "通道 {0} 已重新初始化。",
-      "LoadExceptionsFailed": "无法加载通道异常：{0}",
-      "LoadExceptionsException": "加载通道异常证据时发生错误：{0}",
-      "ClearExceptionsFailed": "无法清空通道异常：{0}",
-      "ClearExceptionsException": "清空通道异常时发生错误：{0}",
-      "ClearExceptionsSucceeded": "通道 {0} 的异常已清空。"
-    }
+    "ReadFailed": "最新采集失败。",
+    "UnavailableHelp": "暂无完整管理采集数据。请刷新重试。",
+    "PreviousCaptureHelp": "继续显示上一次完整采集，其时间戳未更新。",
+    "Loading": "正在采集通道证据",
+    "LoadingDescription": "正在读取已注册通道、组件元数据与保留的可观察历史。",
+    "SummaryLabel": "采集时的全部已注册通道",
+    "Registered": "已注册通道",
+    "RetainedExceptions": "保留异常",
+    "ScopeHelp": "初始化表示本地端点设置情况，并不证明远程传输可用或消息成功送达。保留异常属于独立证据维度。",
+    "Ungrouped": "未分组",
+    "OperationFailed": "操作失败。",
+    "OperationFailedDetail": "操作失败：{0}",
+    "ReinitializeSucceeded": "通道 {0} 已完成初始化。",
+    "HistoryCleared": "已清除通道 {0} 保留的可观察历史，累计计数保持不变。",
+    "PipelineDialogTitle": "通道管道检查器",
+    "DebuggerDialogTitle": "消息调试器",
+    "ClearHistoryTitle": "清除保留历史？"
   },
   "Channel": {
-    "IdentityLabel": "通道管线",
-    "ExceptionCount": "{0} 个活动故障",
+    "States": {
+      "Initialized": "已初始化",
+      "Initializing": "正在初始化",
+      "Unavailable": "不可用",
+      "NotInitialized": "未初始化"
+    },
     "Actions": {
-      "OpenMenu": "打开通道 {0} 的操作菜单",
+      "Inspect": "检查",
+      "OpenMenu": "打开通道 {0} 的操作",
       "Reinitialize": "重新初始化",
       "ViewExceptions": "查看异常",
-      "ClearExceptions": "清空异常",
-      "Inspect": "检查"
-    },
-    "States": {
-      "Ready": "已就绪",
-      "Initializing": "初始化中",
-      "NotInitialized": "未初始化",
-      "Unavailable": "不可用",
-      "Degraded": "已降级",
-      "Reinitializing": "正在重新初始化通道",
-      "ReinitializingDescription": "正在重建端点与中间件状态。"
-    },
-    "Flow": {
-      "AriaLabel": "通道 {0} 的端点流向",
-      "Ingress": "入口端点",
-      "Egress": "出口端点",
-      "MiddlewareCount": "{0} 个阶段"
-    },
-    "Sections": {
-      "EndpointConfiguration": "端点配置",
-      "Pipeline": "管线中间件（{0}）"
-    },
-    "Info": {
-      "ItemCount": "{0} 项信号"
-    },
-    "Exceptions": {
-      "AriaLabel": "通道异常证据",
-      "Active": "{0} 个活动异常",
-      "Historical": "历史累计记录 {0} 个异常"
+      "ClearHistory": "清除保留历史"
     }
+  },
+  "Directory": {
+    "Eyebrow": "已注册管道",
+    "Title": "查找通道",
+    "Shown": "范围内 {0} / 已注册 {1}",
+    "ExactChannel": "精确通道选择",
+    "ShowAllChannels": "显示全部通道",
+    "Search": "搜索通道",
+    "SearchPlaceholder": "通道 ID、分组或端点类型",
+    "Group": "分组",
+    "AllGroups": "全部分组",
+    "Reset": "重置筛选",
+    "InitializationFilters": "按初始化状态筛选",
+    "AllStates": "全部状态",
+    "Columns": {
+      "Channel": "通道 / 分组",
+      "Endpoints": "端点",
+      "Middleware": "中间件",
+      "Initialization": "初始化",
+      "Exceptions": "保留异常"
+    },
+    "InspectPipelineFor": "检查管道 · {0}",
+    "InspectExceptionsFor": "检查异常 · {0}",
+    "Empty": "尚未注册通道",
+    "EmptyHelp": "注册通道管道后，可在此查看其本地设置与采集证据。",
+    "NoMatches": "没有符合筛选条件的通道",
+    "NoMatchesHelp": "调整搜索或筛选条件以查看其他已注册通道。",
+    "MissingChannel": "所选通道尚未注册",
+    "MissingChannelHelp": "上方精确标识不在本次采集中。请显示全部通道以选择可用注册项。"
+  },
+  "ExceptionWorkbench": {
+    "Title": "异常证据",
+    "Description": "结合上下文阅读保留故障，与累计计数比较，并管理各通道的有界历史。",
+    "SummaryLabel": "全部通道的已采集异常证据",
+    "Retained": "保留异常",
+    "AffectedChannels": "具有保留异常的通道",
+    "Lifetime": "累计异常",
+    "RetentionHelp": "历史有容量限制。清除或裁剪保留记录不会重置累计异常计数。"
+  },
+  "ExceptionDirectory": {
+    "Eyebrow": "可观察历史",
+    "Title": "通道异常账本",
+    "Description": "检查各通道的保留子集、精确管道标识与共享历史容量。",
+    "Search": "搜索异常通道",
+    "FiltersLabel": "筛选保留异常证据",
+    "Filters": {
+      "All": "全部通道",
+      "Retained": "保留异常",
+      "None": "无保留异常"
+    },
+    "Evidence": "保留证据",
+    "Retained": "保留异常",
+    "None": "无保留异常",
+    "ClearFor": "清除保留历史 · {0}",
+    "CapacityHelp": "历史容量由普通记录和异常共享。无保留异常的通道仍可能包含普通记录；清除历史会删除两者。"
+  },
+  "PipelineInspector": {
+    "Eyebrow": "已采集管道",
+    "FrozenHelp": "本检查器显示打开时的采集证据。",
+    "Tabs": {
+      "Pipeline": "管道",
+      "Endpoints": "端点",
+      "Middleware": "中间件"
+    },
+    "MessagePath": "两个来源方向，同一转换顺序",
+    "DirectionHelp": "两个来源方向均执行下方转换序列，再发送至对侧端点。外侧来源不会反转转换顺序。",
+    "Inner": "内侧",
+    "Outer": "外侧",
+    "FromInner": "来源：内侧端点",
+    "FromOuter": "来源：外侧端点",
+    "ToOuter": "目标：外侧端点",
+    "ToInner": "目标：内侧端点",
+    "TransformChain": "消息转换序列",
+    "NoTransforms": "无转换中间件。消息直接发送至对侧端点。",
+    "EndpointConfiguration": "端点配置中间件",
+    "EndpointConfigurationHelp": "这些条目用于配置端点，与逐消息转换序列独立。",
+    "NoEndpointConfiguration": "尚未注册端点配置中间件。",
+    "Transient": "瞬态：每次操作创建新组件。",
+    "MiddlewareTitle": "中间件证据与操作",
+    "MiddlewareHelp": "先显示配置条目，再按实际顺序显示转换组件。操作会独立于此冻结证据解析精确注册组件。",
+    "NoMiddleware": "此通道尚未注册中间件。",
+    "Component": "组件",
+    "Stage": "阶段 / 顺序",
+    "Kind": "类别",
+    "TransformStage": "转换",
+    "ConfigurationStage": "配置",
+    "InspectComponent": "检查 {0} · 阶段位置 {1}",
+    "Metadata": "已采集元数据"
   },
   "Pipeline": {
     "ComponentKinds": {
@@ -108,99 +160,111 @@
       "Transform": "转换中间件",
       "Monitor": "监控中间件",
       "EndpointMiddleware": "端点中间件",
-      "Information": "证据提供器",
+      "Information": "信息中间件",
       "Base": "中间件",
       "Unknown": "未知组件"
     }
   },
   "Metadata": {
+    "CaptureFailed": "无法采集此值。",
     "ComplexValue": "结构化值",
-    "Empty": "暂无配置元数据",
-    "RawData": "原始数据",
-    "Unreadable": "无法读取",
-    "ArrayData": "数组数据",
-    "Value": "值"
+    "Empty": "无已采集元数据条目。",
+    "Value": "值",
+    "RawData": "序列化值"
+  },
+  "ClearHistory": {
+    "Description": "删除此通道当前保留的可观察记录。",
+    "Scope": "这会清除全部保留记录，包括普通记录和异常。删除的证据无法从此历史中恢复。",
+    "LifetimeHelp": "累计计数保持不变。此操作不会重新初始化端点、恢复通道或解决故障。",
+    "Confirm": "清除保留历史"
+  },
+  "Exceptions": {
+    "Columns": {
+      "ChannelId": "通道 ID",
+      "PipelineId": "管道 ID",
+      "CurrentCount": "保留数量",
+      "HistoricalCount": "累计数量",
+      "PoolSize": "共享历史容量",
+      "Latest": "最新保留异常",
+      "Timestamp": "时间戳",
+      "SourceType": "来源组件",
+      "ExceptionType": "异常类型",
+      "Message": "消息",
+      "Description": "记录上下文"
+    },
+    "Details": {
+      "Title": "异常详情",
+      "Eyebrow": "冻结异常证据",
+      "Captured": "采集于 {0}",
+      "SummaryAriaLabel": "所选通道异常采集",
+      "Shown": "采集数量 / 请求上限",
+      "SubsetHelp": "保留数量涵盖当前全部历史。下方列表为请求的最近子集；累计计数包含证据已清除或裁剪的异常。",
+      "SourceUnavailable": "未记录",
+      "InspectRecord": "检查异常记录 {0}",
+      "InspectorEyebrow": "所选记录",
+      "CloseSelection": "关闭所选异常",
+      "CaptureFailed": "部分异常证据无法采集。",
+      "Tabs": {
+        "Evidence": "证据",
+        "StackTrace": "堆栈跟踪"
+      },
+      "Sequence": "记录序号",
+      "SourceDescription": "来源描述",
+      "MessageTitle": "异常消息",
+      "StackTraceTitle": "已采集堆栈跟踪",
+      "NoStackTrace": "此记录未采集堆栈跟踪。",
+      "Empty": "本次采集中无保留异常详情。",
+      "NoMatches": "没有符合表格筛选条件的异常记录。"
+    }
   },
   "Debugger": {
-    "DialogTitle": "消息调试器 · {0}",
+    "Eyebrow": "主机拥有的消息捕获",
+    "CaptureScope": "消息在发送至目标端点之前捕获。已捕获载荷不证明下游已接收。",
     "Controls": {
       "AriaLabel": "消息捕获控制"
     },
     "Fields": {
-      "FilterKeyword": "过滤关键字",
-      "FilterPlaceholder": "匹配消息内容",
-      "QueueLength": "捕获深度"
+      "FilterKeyword": "筛选关键字",
+      "FilterPlaceholder": "匹配格式化消息内容",
+      "QueueLength": "捕获容量"
     },
+    "SettingsHelp": "关键字匹配不区分大小写。设置在开始捕获时生效；暂停捕获后可修改。",
+    "DraftHelp": "您编辑的设置将在下次开始时生效。主机当前使用关键字 {0}，捕获容量为 {1}。",
+    "NoKeyword": "（任何内容）",
     "Actions": {
       "Open": "打开消息调试器",
       "Start": "开始捕获",
-      "Stop": "停止捕获"
+      "Stop": "停止捕获",
+      "Clear": "清除已捕获消息"
     },
     "States": {
       "Listening": "正在捕获",
       "Paused": "捕获已暂停",
-      "NoMessages": "尚未捕获消息",
-      "NoMessagesDescription": "开始捕获并等待符合当前过滤条件的流量。"
+      "NoMessages": "无保留的捕获消息",
+      "NoMessagesDescription": "开始捕获并发送匹配关键字的消息。有界队列也可能已被清除。"
     },
-    "CapturedMessages": "消息流",
-    "MessageCount": "已捕获 {0} 条",
-    "MetadataAvailable": "消息包含元数据",
-    "Sources": {
-      "Ingress": "入口",
-      "Egress": "出口"
-    },
+    "CapturedMessages": "已捕获消息流",
+    "MessageCount": "保留 {0} 条",
+    "InspectMessage": "检查捕获消息 {0}",
+    "SelectedEvidence": "所选消息 · 序号 {0}",
+    "CloseSelection": "关闭所选消息",
+    "DetachedSelection": "队列条目被裁剪或清除后，此所选快照仍可查看。",
     "Tabs": {
       "FormattedContent": "格式化载荷",
+      "PayloadSnapshot": "载荷快照",
       "Metadata": "元数据"
     },
+    "Sources": {
+      "Ingress": "内侧来源",
+      "Egress": "外侧来源"
+    },
+    "NoMetadata": "此消息未采集元数据。",
+    "CloseHelp": "关闭本检查器会停止其轮询。主机捕获会持续至选择停止捕获，包括其他检查器使用的捕获。",
     "Values": {
       "EmptyMessage": "（空消息）"
     },
     "Messages": {
-      "LoadFailed": "无法解析消息调试器：{0}",
-      "LoadException": "打开消息调试器时发生错误：{0}"
-    }
-  },
-  "Exceptions": {
-    "States": {
-      "Active": "存在活动故障",
-      "Healthy": "健康"
-    },
-    "Columns": {
-      "ChannelId": "通道 ID",
-      "PipelineId": "管线 ID",
-      "Status": "状态",
-      "CurrentCount": "活动异常",
-      "HistoricalCount": "历史异常",
-      "PoolSize": "异常池容量",
-      "Latest": "最新异常",
-      "PoolUsage": "异常池占用",
-      "Timestamp": "时间",
-      "SourceType": "异常源类型",
-      "ExceptionType": "异常类型",
-      "Message": "异常消息",
-      "Description": "运维上下文"
-    },
-    "Summary": {
-      "Title": "异常证据",
-      "Subtitle": "对比活动故障、历史深度与各通道的异常池压力。",
-      "AriaLabel": "异常证据摘要",
-      "ActiveExceptions": "活动异常",
-      "DirectoryEyebrow": "故障清单",
-      "DirectoryTitle": "通道异常压力",
-      "DirectoryCount": "{0} 条通道",
-      "NoChannels": "暂无通道异常证据。"
-    },
-    "Details": {
-      "DialogTitle": "异常详情 · {0}",
-      "Title": "异常详情",
-      "SummaryAriaLabel": "所选通道的异常摘要",
-      "InspectorEyebrow": "所选证据",
-      "InspectorTitle": "异常检查器",
-      "SourceDescription": "异常源描述",
-      "MessageTitle": "异常消息",
-      "StackTraceTitle": "异常堆栈",
-      "Empty": "此通道没有保留的异常详情。"
+      "ReadFailed": "最新队列读取失败：{0}。继续显示先前捕获消息。"
     }
   }
 }

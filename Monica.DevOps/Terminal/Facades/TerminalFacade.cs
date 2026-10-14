@@ -20,7 +20,7 @@ public sealed class TerminalFacade(
     /// Gets the local terminal environment.
     /// </summary>
     /// <returns>The detected environment information.</returns>
-    public Task<Res<TerminalEnvironmentInfo>> GetEnvironmentAsync()
+    public Task<Res<TerminalEnvironmentSnapshot>> GetEnvironmentAsync()
         => ExecuteAsync(
             () => Task.FromResult(sessionService.GetEnvironment()),
             localizer["Messages:LoadEnvironmentFailed"].Value);
@@ -30,10 +30,10 @@ public sealed class TerminalFacade(
     /// </summary>
     /// <param name="ownerKey">Stable owner key that isolates browser or user terminal sessions.</param>
     /// <returns>The active sessions.</returns>
-    public Task<Res<IReadOnlyList<TerminalSession>>> GetSessionsAsync(string ownerKey)
+    public Task<Res<IReadOnlyList<TerminalSessionSnapshot>>> GetSessionsAsync(string ownerKey)
         => ExecuteAsync(
             () => Task.FromResult(sessionService.GetSessions(ownerKey)),
-            "Failed to load terminal sessions.");
+            localizer["Messages:LoadSessionsFailed"].Value);
 
     /// <summary>
     /// Creates a terminal session for the requested owner.
@@ -41,7 +41,7 @@ public sealed class TerminalFacade(
     /// <param name="ownerKey">Stable owner key that isolates browser or user terminal sessions.</param>
     /// <param name="request">Session creation request.</param>
     /// <returns>The created session.</returns>
-    public Task<Res<TerminalSession>> CreateSessionAsync(string ownerKey, TerminalSessionCreateRequest? request = null)
+    public Task<Res<TerminalSessionSnapshot>> CreateSessionAsync(string ownerKey, TerminalSessionCreateRequest? request = null)
         => ExecuteAsync(
             () => Task.FromResult(sessionService.CreateSession(ownerKey, request)),
             localizer["Messages:CreateSessionFailed"].Value);
@@ -51,16 +51,12 @@ public sealed class TerminalFacade(
     /// </summary>
     /// <param name="ownerKey">Stable owner key that isolates browser or user terminal sessions.</param>
     /// <param name="sessionId">Session identifier.</param>
-    /// <returns>Operation result.</returns>
+    /// <returns>Removal and cancellation-request receipt; this does not prove process drainage.</returns>
     public Task<Res> CloseSessionAsync(string ownerKey, string sessionId)
         => ExecuteAsync(
-            () =>
-            {
-                sessionService.CloseSession(ownerKey, sessionId);
-                return Task.CompletedTask;
-            },
-            "Terminal session closed.",
-            "Failed to close terminal session.");
+            () => sessionService.CloseSessionAsync(ownerKey, sessionId),
+            localizer["Messages:SessionClosed"].Value,
+            localizer["Messages:CloseSessionFailed"].Value);
 
     /// <summary>
     /// Cancels the current command in an owner-scoped terminal session.
@@ -68,15 +64,20 @@ public sealed class TerminalFacade(
     /// <param name="ownerKey">Stable owner key that isolates browser or user terminal sessions.</param>
     /// <param name="sessionId">Session identifier.</param>
     /// <returns>Operation result.</returns>
-    public Task<Res> CancelCommandAsync(string ownerKey, string sessionId)
+    /// <param name="expectedCommandId">Frozen active command identity; stale targets fail without canceling a newer run.</param>
+    /// <remarks>Request completion does not prove command termination. Observe IsRunning in later snapshots.</remarks>
+    public Task<Res<TerminalSessionSnapshot>> CancelCommandAsync(string ownerKey, string sessionId, string expectedCommandId)
         => ExecuteAsync(
-            () =>
-            {
-                sessionService.CancelCommand(ownerKey, sessionId);
-                return Task.CompletedTask;
-            },
-            "Terminal command cancellation requested.",
+            () => sessionService.CancelCommandAsync(ownerKey, sessionId, expectedCommandId),
             localizer["Messages:CancelFailed"].Value);
+
+    /// <summary>Accepts host-owned execution independently of the calling UI visit.</summary>
+    /// <remarks>Success means admitted, not successful process completion. Observe session snapshots by
+    /// the receipt's CommandId. No visit token cancels the admitted command.</remarks>
+    public Task<Res<TerminalCommandAcceptance>> StartCommandAsync(string ownerKey, string sessionId, TerminalCommandRequest request)
+        => ExecuteAsync(
+            () => Task.FromResult(sessionService.StartCommand(ownerKey, sessionId, request)),
+            localizer["Messages:RunCommandFailed"].Value);
 
     /// <summary>
     /// Clears retained output for an owner-scoped terminal session.
@@ -91,8 +92,8 @@ public sealed class TerminalFacade(
                 sessionService.ClearOutput(ownerKey, sessionId);
                 return Task.CompletedTask;
             },
-            "Terminal output cleared.",
-            "Failed to clear terminal output.");
+            localizer["Messages:OutputCleared"].Value,
+            localizer["Messages:ClearOutputFailed"].Value);
 
     /// <summary>
     /// Executes a command in an owner-scoped terminal session.
@@ -100,9 +101,9 @@ public sealed class TerminalFacade(
     /// <param name="ownerKey">Stable owner key that isolates browser or user terminal sessions.</param>
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="request">Command request.</param>
-    /// <param name="outputCallback">Optional callback invoked when a command output line is captured.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>The command result.</returns>
+    /// <param name="outputCallback">Optional serial observer; actual async callbacks are joined and failures observed.</param>
+    /// <param name="ct">Explicit execution cancellation; do not pass a route-lifetime token for continued commands.</param>
+    /// <returns>The command result after actual process, output and callback drainage.</returns>
     public Task<Res<TerminalCommandResult>> ExecuteCommandAsync(
         string ownerKey,
         string sessionId,

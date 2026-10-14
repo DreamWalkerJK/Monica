@@ -48,10 +48,11 @@ public class ModuleOpenTelemetryUI : MonicaModule<ModuleOpenTelemetryUIOption>, 
                 registry.RegisterLocalizedPage<UIOpenTelemetryDashboardPage, OpenTelemetryUIResource>(
                     UIOpenTelemetryDashboardPage.PAGE_URL,
                     "Pages:OpenTelemetryMetrics:Title",
-                    Icons.Material.Filled.MonitorHeart,
+                    Icons.Material.Outlined.Sensors,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
-                    navOrder: 12)));
+                    navOrder: 12,
+                    descriptionKey: "Pages:OpenTelemetryMetrics:Description")));
     }
 
     /// <inheritdoc />

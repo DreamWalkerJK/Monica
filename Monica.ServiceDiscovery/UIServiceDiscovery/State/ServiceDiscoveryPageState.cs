@@ -1,180 +1,87 @@
+using Monica.Core.Results;
 using Monica.ServiceDiscovery.Facades;
 using Monica.ServiceDiscovery.Models;
 using Monica.ServiceDiscovery.UIServiceDiscovery.Support;
-using Monica.Core.Results;
 
 namespace Monica.ServiceDiscovery.UIServiceDiscovery.State;
 
-public sealed class ServiceDiscoveryPageState(
-    ServiceDiscoveryFacade serviceDiscoveryFacade,
-    ServiceInstanceEvictionTracker evictionTracker)
-    : IDisposable
+/// <summary>
+/// Circuit-owned registry evidence and filters. Components own their polling loops and cancellation;
+/// this state serializes captures and never retains a component callback or timer.
+/// </summary>
+public sealed class ServiceDiscoveryPageState(ServiceDiscoveryFacade facade, ServiceInstanceEvictionTracker evictionTracker)
 {
-    private Func<Task>? _refreshCallback;
-    private Timer? _refreshTimer;
-
+    private readonly SemaphoreSlim _captureGate = new(1, 1);
+    private bool _allDomainsSelected = true;
     public string UnknownDomainLabel { get; set; } = "Unknown";
-
     public bool IsLoading { get; private set; }
-
+    public string? ErrorMessage { get; private set; }
+    public DateTime? CapturedAt { get; private set; }
     public List<RegisteredServiceStatus> Services { get; private set; } = [];
-
     public List<RegisteredServiceStatus> FilteredServices { get; private set; } = [];
-
     public bool AutoRefreshEnabled { get; set; } = true;
-
     public int RefreshInterval { get; set; } = 3;
-
-    public DomainInfo? SelectedDomain { get; set; }
-
-    public int ActiveTabIndex { get; set; }
-
     public string FilterText { get; set; } = string.Empty;
-
-    public HashSet<ServiceStatus> SelectedStatuses { get; set; } = [];
-
-    public HashSet<string> SelectedDomains { get; set; } = [];
-
+    public HashSet<ServiceStatus> SelectedStatuses { get; set; } = Enum.GetValues<ServiceStatus>().ToHashSet();
+    public HashSet<string> SelectedDomains { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public bool ShowOnlyWithInstances { get; set; }
 
-    public void Initialize(string unknownDomainLabel, Func<Task> refreshCallback)
+    /// <summary>Captures one complete registry, retaining prior evidence on failure and rejecting canceled work.</summary>
+    public async Task<Res<List<RegisteredServiceStatus>>> RefreshServicesAsync(bool showLoading = true, CancellationToken cancellationToken = default)
     {
-        UnknownDomainLabel = unknownDomainLabel;
-        _refreshCallback = refreshCallback;
-        UpdateAutoRefresh();
-    }
-
-    public void UpdateAutoRefresh()
-    {
-        RefreshInterval = Math.Clamp(RefreshInterval, 1, 60);
-
-        _refreshTimer?.Dispose();
-        _refreshTimer = null;
-
-        if (!AutoRefreshEnabled || _refreshCallback is null)
-        {
-            return;
-        }
-
-        _refreshTimer = new Timer(
-            async _ => await _refreshCallback(),
-            null,
-            TimeSpan.FromSeconds(RefreshInterval),
-            TimeSpan.FromSeconds(RefreshInterval));
-    }
-
-    public async Task<Res<List<RegisteredServiceStatus>>> RefreshServicesAsync(bool showLoading = true)
-    {
-        if (showLoading)
-        {
-            IsLoading = true;
-        }
-
+        await _captureGate.WaitAsync(cancellationToken);
         try
         {
-            var result = await serviceDiscoveryFacade.GetMergedServicesStatusAsync();
-            if (result.IsFailed(out _, out var services))
+            IsLoading = showLoading;
+            var result = await facade.CaptureServicesAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (result.IsFailed(out var error, out var services))
             {
-                Services = [];
-                ApplyFilters();
+                ErrorMessage = error.Message;
                 return result;
             }
 
             Services = evictionTracker.Apply(services ?? []);
+            CapturedAt = DateTime.UtcNow;
+            ErrorMessage = null;
+            if (_allDomainsSelected)
+                SelectedDomains = Services.Select(GetServiceDomainName).ToHashSet(StringComparer.OrdinalIgnoreCase);
             ApplyFilters();
             return result;
         }
         finally
         {
-            if (showLoading)
-            {
-                IsLoading = false;
-            }
+            IsLoading = false;
+            _captureGate.Release();
         }
     }
 
-    public void SetFilterText(string text)
-    {
-        FilterText = text;
-    }
-
-    public void SetSelectedStatuses(IEnumerable<ServiceStatus> statuses)
-    {
-        SelectedStatuses = statuses.ToHashSet();
-    }
-
-    public void SetSelectedDomains(IEnumerable<string> domains)
+    /// <summary>Updates a deliberate domain selection, including an empty selection that means none.</summary>
+    public void SetSelectedDomains(IEnumerable<string> domains, bool selectAll = false)
     {
         SelectedDomains = domains.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _allDomainsSelected = selectAll;
     }
 
-    public void SetShowOnlyWithInstances(bool value)
+    /// <summary>Restores all-domain matching, including domains arriving in later successful captures.</summary>
+    public void SelectAllDomains()
     {
-        ShowOnlyWithInstances = value;
-    }
-
-    public void SelectDomain(DomainInfo domain)
-    {
-        SelectedDomain = domain;
-    }
-
-    public void ClearSelectedDomain()
-    {
-        SelectedDomain = null;
-    }
-
-    public void OpenDomainManagement(DomainInfo domain, int tabIndex)
-    {
-        SelectedDomain = domain;
-        ActiveTabIndex = tabIndex;
+        _allDomainsSelected = true;
+        SelectedDomains = Services.Select(GetServiceDomainName).ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     public void ApplyFilters()
     {
-        FilteredServices = Services
-            .Where(service =>
-            {
-                if (!string.IsNullOrWhiteSpace(FilterText))
-                {
-                    var searchText = FilterText.Trim();
-                    var matchesText =
-                        service.AppName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                        service.AppId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                        (!string.IsNullOrWhiteSpace(service.ProjectName) &&
-                         service.ProjectName.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
-                        GetServiceDomainName(service).Contains(searchText, StringComparison.OrdinalIgnoreCase);
-
-                    if (!matchesText)
-                    {
-                        return false;
-                    }
-                }
-
-                if (SelectedStatuses.Count > 0 && !SelectedStatuses.Contains(service.OverallStatus))
-                {
-                    return false;
-                }
-
-                if (SelectedDomains.Count > 0 && !SelectedDomains.Contains(GetServiceDomainName(service)))
-                {
-                    return false;
-                }
-
-                if (ShowOnlyWithInstances && service.TotalInstanceCount == 0)
-                {
-                    return false;
-                }
-
-                return true;
-            })
-            .ToList();
+        var query = FilterText.Trim();
+        FilteredServices = Services.Where(service =>
+            SelectedStatuses.Contains(service.OverallStatus) &&
+            SelectedDomains.Contains(GetServiceDomainName(service)) &&
+            (!ShowOnlyWithInstances || service.TotalInstanceCount > 0) &&
+            (query.Length == 0 || service.AppName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+             service.AppId.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+             service.ProjectName?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
+             GetServiceDomainName(service).Contains(query, StringComparison.OrdinalIgnoreCase))).ToList();
     }
 
-    public void Dispose()
-    {
-        _refreshTimer?.Dispose();
-    }
-
-    private string GetServiceDomainName(RegisteredServiceStatus service)
-        => service.DomainName ?? UnknownDomainLabel;
+    private string GetServiceDomainName(RegisteredServiceStatus service) => string.IsNullOrWhiteSpace(service.DomainName) ? UnknownDomainLabel : service.DomainName;
 }

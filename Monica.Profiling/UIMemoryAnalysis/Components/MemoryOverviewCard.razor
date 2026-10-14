@@ -1,81 +1,128 @@
+@using System.Globalization
+@using System.Runtime
 @using Monica.Profiling.MemoryDiagnostics.Models
+@using Monica.Profiling.UIMemoryAnalysis.Support
 @inject IStringLocalizer<MemoryAnalysisResource> L
 
-<section class="memory-overview">
-    <div class="memory-overview__metrics" aria-label="@L["Overview:MetricsAriaLabel"]">
-        <article class="memory-metric memory-metric--primary">
-            <span class="memory-metric__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Storage" /></span>
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:WorkingSet"]</MudText>
-                <MudText Typo="Typo.h5" Color="Color.Primary">@LoadingOr(ProfilingDisplayFormatter.FormatBytes(Snapshot?.WorkingSetBytes ?? 0))</MudText>
+<section class="memory-overview" aria-label="@L["Overview:MetricsAriaLabel"]" aria-busy="@(IsLoading && Snapshot is null)">
+    <div class="memory-lens">
+        <div class="memory-lens__sources">
+            <article class="memory-lens__immediate">
+                <header class="memory-lens__source">
+                    <span>@L["Overview:Sources:Immediate"]</span>
+                    <MudIcon Icon="@Icons.Material.Outlined.Memory" Size="Size.Small" aria-hidden="true" />
+                </header>
+                <div class="memory-lens__primary" data-memory-fact="working-set">
+                    <h2>@L["Overview:WorkingSet"]</h2>
+                    <strong>@MemoryAnalysisDisplayFormatter.Bytes(Snapshot?.WorkingSetBytes)</strong>
+                </div>
+                <div class="memory-lens__secondary" data-memory-fact="managed-memory">
+                    <span>@L["Overview:ManagedMemory"]</span>
+                    <strong>@MemoryAnalysisDisplayFormatter.Bytes(Snapshot?.TotalManagedMemory)</strong>
+                </div>
+                <p>@L["Overview:Sources:ImmediateHelp"]</p>
+            </article>
+            <article class="memory-lens__last-gc">
+                <header class="memory-lens__source">
+                    <span>@L["Overview:Sources:LastGc"]</span>
+                    <MudIcon Icon="@Icons.Material.Outlined.Layers" Size="Size.Small" aria-hidden="true" />
+                </header>
+                <div class="memory-lens__primary" data-memory-fact="gc-heap">
+                    <h2>@L["Overview:ManagedHeap"]</h2>
+                    <strong>@MemoryAnalysisDisplayFormatter.Bytes(Snapshot?.GcHeapSizeBytes)</strong>
+                </div>
+                <div class="memory-lens__secondary" data-memory-fact="committed">
+                    <span>@L["Overview:Committed"]</span>
+                    <strong>@MemoryAnalysisDisplayFormatter.Bytes(Snapshot?.CommittedBytes)</strong>
+                </div>
+                <p>@L["Overview:Sources:LastGcHelp"]</p>
+            </article>
+        </div>
+        <footer class="memory-lens__context">
+            <p>@L["Overview:Sources:Independent"]</p>
+            <div class="memory-lens__read-times">
+                <div>
+                    <span>@L["Overview:Snapshot:CapturedAt"]</span>
+                    @if (Snapshot is not null)
+                    {
+                        <time data-field="SnapshotTimestamp" datetime="@MemoryAnalysisDisplayFormatter.MachineTime(Snapshot.Timestamp)"
+                              title="@MemoryAnalysisDisplayFormatter.MachineTime(Snapshot.Timestamp)">@MemoryAnalysisDisplayFormatter.LocalSnapshotTime(Snapshot.Timestamp)</time>
+                    }
+                    else
+                    {
+                        <span>@(IsLoading ? L["Common:LoadingValue"] : L["Common:Unavailable"])</span>
+                    }
+                </div>
+                @if (CapturedAt is { } capturedAt)
+                {
+                    <div><span>@L["Overview:Snapshot:ViewRead"]</span>
+                        <time data-field="CapturedAt" datetime="@capturedAt.ToString("O")">@MemoryAnalysisDisplayFormatter.LocalDateTime(capturedAt)</time>
+                    </div>
+                }
             </div>
-        </article>
-        <article class="memory-metric memory-metric--info">
-            <span class="memory-metric__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Memory" /></span>
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:ManagedHeap"]</MudText>
-                <MudText Typo="Typo.h5" Color="Color.Info">@LoadingOr(ProfilingDisplayFormatter.FormatBytes(Snapshot?.GcHeapSizeBytes ?? 0))</MudText>
-            </div>
-        </article>
-        <article class="memory-metric memory-metric--success">
-            <span class="memory-metric__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Commit" /></span>
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:Committed"]</MudText>
-                <MudText Typo="Typo.h5" Color="Color.Success">@LoadingOr(ProfilingDisplayFormatter.FormatBytes(Snapshot?.CommittedBytes ?? 0))</MudText>
-            </div>
-        </article>
-        <article class="memory-metric memory-metric--warning">
-            <span class="memory-metric__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DataUsage" /></span>
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:ManagedMemory"]</MudText>
-                <MudText Typo="Typo.h5" Color="Color.Warning">@LoadingOr(ProfilingDisplayFormatter.FormatBytes(Snapshot?.TotalManagedMemory ?? 0))</MudText>
-            </div>
-        </article>
+        </footer>
     </div>
 
-    <div class="memory-overview__detail-grid">
-        <article class="memory-evidence-panel">
-            <header class="memory-evidence-panel__header">
-                <MudText Typo="Typo.overline" Class="memory-section-eyebrow">@L["Overview:Collections:Eyebrow"]</MudText>
-                <MudText Typo="Typo.h6">@L["Overview:Collections:Title"]</MudText>
+    <div class="memory-overview__support">
+        <article class="memory-collections">
+            <header class="memory-overview__section-heading">
+                <span>@L["Overview:Collections:Eyebrow"]</span>
+                <h2>@L["Overview:Collections:Title"]</h2>
             </header>
-            <div class="generation-strip">
-                <div><strong>@(Snapshot?.Gen0Collections ?? 0)</strong><span>Gen 0</span></div>
-                <div><strong>@(Snapshot?.Gen1Collections ?? 0)</strong><span>Gen 1</span></div>
-                <div><strong>@(Snapshot?.Gen2Collections ?? 0)</strong><span>Gen 2</span></div>
-            </div>
+            <dl class="memory-collections__values">
+                <div data-memory-fact="gen0-collections"><dt>@L["Common:Generation", 0]</dt><dd>@MemoryAnalysisDisplayFormatter.Count(Snapshot?.Gen0Collections)</dd></div>
+                <div data-memory-fact="gen1-collections"><dt>@L["Common:Generation", 1]</dt><dd>@MemoryAnalysisDisplayFormatter.Count(Snapshot?.Gen1Collections)</dd></div>
+                <div data-memory-fact="gen2-collections"><dt>@L["Common:Generation", 2]</dt><dd>@MemoryAnalysisDisplayFormatter.Count(Snapshot?.Gen2Collections)</dd></div>
+            </dl>
+            <p>@L["Overview:Collections:Help"]</p>
         </article>
-
-        <article class="memory-evidence-panel">
-            <header class="memory-evidence-panel__header">
-                <MudText Typo="Typo.overline" Class="memory-section-eyebrow">@L["Overview:Configuration:Eyebrow"]</MudText>
-                <MudText Typo="Typo.h6">@L["Overview:Configuration:Title"]</MudText>
+        <article class="memory-configuration">
+            <header class="memory-overview__section-heading">
+                <span>@L["Overview:Configuration:Eyebrow"]</span>
+                <h2>@L["Overview:Configuration:Title"]</h2>
             </header>
-            <dl class="memory-definition-list">
-                <div>
-                    <dt>@L["Overview:Configuration:GcType"]</dt>
-                    <dd><MudChip T="string" Size="Size.Small" Color="@(Snapshot?.IsServerGC == true ? Color.Success : Color.Info)">@(Snapshot?.IsServerGC == true ? L["Overview:Configuration:ServerGc"] : L["Overview:Configuration:WorkstationGc"])</MudChip></dd>
+            <dl class="memory-configuration__values">
+                <div><dt>@L["Overview:Configuration:GcType"]</dt>
+                    <dd data-memory-fact="gc-mode">@(Snapshot is null ? L["Common:Unavailable"] : Snapshot.IsServerGC ? L["Overview:Configuration:ServerGc"] : L["Overview:Configuration:WorkstationGc"])</dd>
                 </div>
-                <div>
-                    <dt>@L["Overview:Configuration:LatencyMode"]</dt>
-                    <dd>@(Snapshot?.LatencyModeDisplayName ?? L["Common:Unavailable"])</dd>
-                </div>
-                <div>
-                    <dt>@L["Overview:Snapshot:CapturedAt"]</dt>
-                    <dd class="diagnostic-value">@(Snapshot is null ? L["Common:Unavailable"] : ProfilingDisplayFormatter.FormatLocalTime(Snapshot.Timestamp))</dd>
-                </div>
-                <div>
-                    <dt>@L["Overview:Snapshot:MaxGeneration"]</dt>
-                    <dd>@GC.MaxGeneration</dd>
-                </div>
+                <div><dt>@L["Overview:Configuration:LatencyMode"]</dt><dd data-memory-fact="latency-mode">@LatencyMode</dd></div>
+                <div><dt>@L["Overview:Snapshot:MaxGeneration"]</dt><dd>@GC.MaxGeneration.ToString(CultureInfo.CurrentCulture)</dd></div>
             </dl>
         </article>
     </div>
+
+    @if (Snapshot is not null)
+    {
+        <details class="memory-overview__raw">
+            <summary>@L["Overview:Raw:Title"]</summary>
+            <dl>
+                <div><dt>@L["Overview:WorkingSet"] <small>@L["Common:RawBytes"]</small></dt><dd data-raw-field="WorkingSetBytes">@MemoryAnalysisDisplayFormatter.Raw(Snapshot.WorkingSetBytes)</dd></div>
+                <div><dt>@L["Overview:ManagedMemory"] <small>@L["Common:RawBytes"]</small></dt><dd data-raw-field="TotalManagedMemory">@MemoryAnalysisDisplayFormatter.Raw(Snapshot.TotalManagedMemory)</dd></div>
+                <div><dt>@L["Overview:ManagedHeap"] <small>@L["Common:RawBytes"]</small></dt><dd data-raw-field="GcHeapSizeBytes">@MemoryAnalysisDisplayFormatter.Raw(Snapshot.GcHeapSizeBytes)</dd></div>
+                <div><dt>@L["Overview:Committed"] <small>@L["Common:RawBytes"]</small></dt><dd data-raw-field="CommittedBytes">@MemoryAnalysisDisplayFormatter.Raw(Snapshot.CommittedBytes)</dd></div>
+                <div><dt>@L["Overview:Snapshot:CapturedAt"]</dt><dd><time datetime="@MemoryAnalysisDisplayFormatter.MachineTime(Snapshot.Timestamp)">@MemoryAnalysisDisplayFormatter.MachineTime(Snapshot.Timestamp)</time></dd></div>
+            </dl>
+        </details>
+    }
 </section>
 
 @code {
+    /// <summary>Gets or sets the process memory read and its independently GC-reported heap context.</summary>
     [Parameter] public MemorySnapshot? Snapshot { get; set; }
+
+    /// <summary>Gets or sets whether a read is in progress. Captured evidence remains visible.</summary>
     [Parameter] public bool IsLoading { get; set; }
 
-    private string LoadingOr(string value) => IsLoading ? L["Common:LoadingValue"] : value;
+    /// <summary>Gets or sets the successful view read time; this is different from the snapshot timestamp.</summary>
+    [Parameter] public DateTimeOffset? CapturedAt { get; set; }
+
+    private string LatencyMode => Snapshot is null ? L["Common:Unavailable"] : Snapshot.LatencyMode switch
+    {
+        GCLatencyMode.Batch => L["Overview:Configuration:LatencyModes:Batch"],
+        GCLatencyMode.Interactive => L["Overview:Configuration:LatencyModes:Interactive"],
+        GCLatencyMode.LowLatency => L["Overview:Configuration:LatencyModes:LowLatency"],
+        GCLatencyMode.SustainedLowLatency => L["Overview:Configuration:LatencyModes:SustainedLowLatency"],
+        GCLatencyMode.NoGCRegion => L["Overview:Configuration:LatencyModes:NoGCRegion"],
+        _ => L["Common:Unknown"]
+    };
 }

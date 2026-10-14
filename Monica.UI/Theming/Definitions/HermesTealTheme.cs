@@ -27,17 +27,14 @@ public sealed class HermesTealTheme : ThemeDefinitionBase
             LayoutProperties = new LayoutProperties
             {
                 DefaultBorderRadius = "0px",
-                AppbarHeight = "48px",
+                AppbarHeight = "56px",
                 DrawerWidthLeft = "280px",
                 DrawerWidthRight = "280px",
-                DrawerMiniWidthLeft = "72px",
-                DrawerMiniWidthRight = "72px"
+                DrawerMiniWidthLeft = "64px",
+                DrawerMiniWidthRight = "64px"
             },
             Typography = CreateTypography(),
-            Shadows = new Shadow
-            {
-                Elevation = CreateFlatShadows()
-            }
+            Shadows = MonicaShadowDefaults.Create()
         };
     }
 
@@ -50,7 +47,7 @@ public sealed class HermesTealTheme : ThemeDefinitionBase
             PrimaryDarken = "#0d221f",
             PrimaryContrastText = "#f7ecd8",
 
-            Secondary = "#5e756c",
+            Secondary = "#566b63",
             SecondaryLighten = "#7c9188",
             SecondaryDarken = "#465a53",
             SecondaryContrastText = "#f7ecd8",
@@ -65,14 +62,14 @@ public sealed class HermesTealTheme : ThemeDefinitionBase
             InfoDarken = "#25514d",
             InfoContrastText = "#f7ecd8",
 
-            Success = "#2f855a",
-            SuccessLighten = "#48bb78",
-            SuccessDarken = "#276749",
+            Success = "#2d7750",
+            SuccessLighten = "#469469",
+            SuccessDarken = "#215d3d",
             SuccessContrastText = "#f7ecd8",
 
-            Warning = "#b7791f",
-            WarningLighten = "#d69e2e",
-            WarningDarken = "#975a16",
+            Warning = "#95621a",
+            WarningLighten = "#b78331",
+            WarningDarken = "#754b11",
             WarningContrastText = "#fff8e8",
 
             Error = "#c53030",
@@ -336,11 +333,4 @@ public sealed class HermesTealTheme : ThemeDefinitionBase
         };
     }
 
-    private static string[] CreateFlatShadows()
-    {
-        // MudBlazor generates CSS variables for elevations 0 through 25 inclusive.
-        var elevations = new string[26];
-        Array.Fill(elevations, "none");
-        return elevations;
-    }
 }
