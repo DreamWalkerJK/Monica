@@ -1,5 +1,5 @@
 @* Renders one inline stroke icon from the shared setup icon set. *@
-<svg class="icon icon-@(Size) @(Class)" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+<svg class="icon icon-@(Size) @(Class)" width="@Size" height="@Size" viewBox="0 0 24 24" fill="none" stroke="currentColor"
      stroke-width="@(Stroke)" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     @((MarkupString)Paths[Name])
 </svg>
@@ -60,6 +60,7 @@
     [Parameter]
     public string Name { get; set; } = "info";
 
+    /// <summary>The requested square dimensions in CSS pixels; defaults to 18.</summary>
     [Parameter]
     public int Size { get; set; } = 18;
 
