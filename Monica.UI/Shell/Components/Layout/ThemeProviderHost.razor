@@ -38,7 +38,7 @@
             return;
         }
 
-        var themeData = await BrowserStorage.GetAsync<ThemeData?>("theme:data", null);
+        var themeData = await BrowserStorage.GetAsync<ThemePreference?>(ThemePreference.StorageKey, null);
         if (_disposed)
         {
             return;
@@ -135,7 +135,7 @@
 
     private Task PersistCurrentThemeAsync()
     {
-        return BrowserStorage.SetAsync("theme:data", new ThemeData(
+        return BrowserStorage.SetAsync(ThemePreference.StorageKey, new ThemePreference(
             ThemeService.CurrentThemeKind, ThemeService.IsDarkMode));
     }
 
@@ -183,5 +183,4 @@
         }
     }
 
-    private record ThemeData(MonicaThemeKind ThemeKind, bool IsDarkMode);
 }

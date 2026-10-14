@@ -1,10 +1,14 @@
-using System.Text.Json;
-using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.UI.Pages;
+using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UISwagger.Models;
+using Monica.Framework.UI.UISwagger.Support;
+using Monica.UI.Theming;
+using Monica.WebApi.Swagger.Abstractions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -14,8 +18,13 @@ public static class ModuleSwaggerUIBuilderExtensions
     extension(IMonicaBuilder builder)
     {
         /// <summary>
-        /// Configure the SwaggerUI module
+        /// Adds the standalone Swagger workbench, shared Monica themes, and localized native control labels.
         /// </summary>
+        /// <remarks>
+        /// Requires a Web host and composes Swagger generation and localization. It does not compose the Blazor shell.
+        /// Hosts without the shell must expose Razor class library static assets at <c>/_content</c>.
+        /// Existing Swagger UI options, middleware, authorization, and request execution remain native.
+        /// </remarks>
         public ModuleRegistration<ModuleSwaggerUI, ModuleSwaggerUIOption> AddSwaggerUI(
             Action<ModuleSwaggerUIOption>? action = null)
         {
@@ -26,8 +35,12 @@ public static class ModuleSwaggerUIBuilderExtensions
     extension(ModuleRegistration<ModuleSwaggerUI, ModuleSwaggerUIOption> registration)
     {
         /// <summary>
-        /// Redirects the application root route to the Swagger UI page.
+        /// Redirects the application root route to the default <c>/swagger</c> UI path through the shell.
         /// </summary>
+        /// <remarks>
+        /// This helper assumes the default Swagger route prefix. Hosts using another prefix should configure
+        /// their root destination explicitly through the shell's route redirects.
+        /// </remarks>
         /// <returns>The same host-bound registration.</returns>
         public ModuleRegistration<ModuleSwaggerUI, ModuleSwaggerUIOption> SetAsRootRoute()
         {
@@ -37,8 +50,12 @@ public static class ModuleSwaggerUIBuilderExtensions
         }
 
         /// <summary>
-        /// Adds a custom navigation button to Swagger UI.
+        /// Adds a caller-named destination to the standalone Swagger toolbar.
         /// </summary>
+        /// <param name="name">Caller-owned literal link text.</param>
+        /// <param name="path">Application-root path or absolute HTTP/HTTPS URL.</param>
+        /// <param name="description">Optional caller-owned tooltip.</param>
+        /// <param name="order">Display order; smaller values appear first. Defaults to zero.</param>
         public ModuleRegistration<ModuleSwaggerUI, ModuleSwaggerUIOption> AddNavigationButton(
             string name,
             string path,
@@ -57,71 +74,46 @@ public static class ModuleSwaggerUIBuilderExtensions
 }
 
 /// <summary>
-/// Swagger UI enhancement module - provides UI extension functions such as custom navigation buttons
+/// Extends the native Swagger index with theme preferences, localized labels, and optional application navigation.
 /// </summary>
 public class ModuleSwaggerUI : MonicaModule<ModuleSwaggerUIOption>, IUIModule
 {
-    private IReadOnlyList<SwaggerNavigationButton> _navigationButtons = [];
-
     public override void Describe(ModuleDescriptor module)
     {
-        // Depend on ModuleSwagger and configure its SwaggerUI extensibility hook
-        module.Require<ModuleSwagger, ModuleSwaggerOption>(swaggerOption =>
-        {
-            var existingAction = swaggerOption.ExtendSwaggerUIAction;
-
-            swaggerOption.ExtendSwaggerUIAction = c =>
-            {
-                existingAction?.Invoke(c);
-
-                // Only inject if there are navigation buttons configured
-                if (_navigationButtons.Count == 0)
-                {
-                    return;
-                }
-
-                // Serialize enabled buttons and inject configuration
-                var buttonsJson = JsonSerializer.Serialize(
-                    _navigationButtons,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    });
-
-                // Append button configuration without clobbering any existing head injections.
-                c.HeadContent += $$"""
-
-                                  <script>
-                                      window.MoSwagger = window.MoSwagger || {};
-                                      window.MoSwagger.config = { buttons: {{buttonsJson}} };
-                                  </script>
-                                  """;
-
-                // Inject custom JavaScript for navigation buttons
-                c.InjectJavascript("../_content/Monica.Framework.UI/UISwagger/custom.js");
-
-                // Inject custom CSS for navigation buttons
-                c.InjectStylesheet("../_content/Monica.Framework.UI/UISwagger/custom.css");
-            };
-        });
+        module.AfterIfPresent<ModuleShellUI, ModuleShellUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static options => options.AddResource<SwaggerUiResource>());
+        module.Require<ModuleSwagger, ModuleSwaggerOption>();
     }
 
     public override void ConfigureServices(ModuleContext<ModuleSwaggerUIOption> context)
     {
-        _navigationButtons = Option.NavigationButtons
+        var buttons = Array.AsReadOnly(Option.NavigationButtons
             .Where(static button => button.Enabled)
             .OrderBy(static button => button.Order)
-            .ToArray();
+            .ToArray());
+        var defaults = TryGetOptions<ModuleShellUI, ModuleShellUIOption>(out var shellOptions)
+            && shellOptions is not null
+                ? new ThemePreference(shellOptions.DefaultTheme, shellOptions.DefaultDarkMode).Normalize()
+                : new ThemePreference(MonicaThemeKind.Default, false);
+
+        context.Services.AddSingleton<ISwaggerUIOptionsEnhancer>(provider => new SwaggerUiIndexRenderer(
+            provider.GetRequiredService<IHttpContextAccessor>(),
+            provider.GetRequiredService<IStringLocalizer<SwaggerUiResource>>(),
+            defaults,
+            buttons));
     }
 }
 
 /// <summary>
-/// SwaggerUI module options
+/// Configures optional destinations in the standalone Swagger workbench.
 /// </summary>
 public class ModuleSwaggerUIOption : ModuleOptions<ModuleSwaggerUI>
 {
     /// <summary>
-    /// Custom navigation buttons that appear on the right side of the Swagger UI top toolbar.
+    /// Caller-owned navigation destinations in the Swagger toolbar. Defaults to an empty list.
+    /// Disabled entries are omitted, and enabled entries are ordered by <see cref="SwaggerNavigationButton.Order"/>.
+    /// The complete themed Swagger workbench is enabled even when this list is empty.
     /// </summary>
     public List<SwaggerNavigationButton> NavigationButtons { get; set; } = new();
 }

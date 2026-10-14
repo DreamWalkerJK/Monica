@@ -46,6 +46,7 @@ For an icon-only `MudMenu`, use its `AriaLabel` parameter to name the native act
 ### P2 — Broken layout containment, sizing, or scroll ownership
 
 Indicators:
+- The outer page has no horizontal overflow, but nested schema names, media types or source endings clip, or native response/parameter columns leave working evidence too narrow; inspect each immediate text/control owner rather than accepting the document width alone
 - An operational dashboard, workbench, administration page, or diagnostics page uses an arbitrary page-shell `width` or `max-width`, leaving usable shell width empty
 - A `FullWidth` dialog, drawer, tab panel, or preview has a descendant `width`, `max-width`, grid track, or intrinsic `inline`/`fit-content` size that leaves usable space empty
 - A flex/grid child that must shrink omits `min-width: 0`, or a grid uses `1fr` where `minmax(0, 1fr)` is required
