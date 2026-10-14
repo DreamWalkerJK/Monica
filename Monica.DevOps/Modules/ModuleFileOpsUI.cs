@@ -12,7 +12,7 @@ using MudBlazor;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-/// <summary>Composes the Files and host runtime-policy routes with localized shell navigation.</summary>
+/// <summary>Composes Files with a same-visit host policy dialog and a hidden compatibility route.</summary>
 /// <remarks>Requires FileOps infrastructure, localization and the shell. The scoped return context contains
 /// passive identities only; each routed workspace owns and retires its controller and native resources.</remarks>
 public class ModuleFileOpsUI : MonicaModule<ModuleFileOpsUIOption>, IUIModule
@@ -44,7 +44,7 @@ public class ModuleFileOpsUI : MonicaModule<ModuleFileOpsUIOption>, IUIModule
                     "Pages:FileOpsPolicy:Title",
                     Icons.Material.Filled.Tune,
                     BuiltInNavigationCategoryIds.Infrastructure,
-                    addToNav: true,
+                    addToNav: false,
                     navOrder: 37);
             }));
     }

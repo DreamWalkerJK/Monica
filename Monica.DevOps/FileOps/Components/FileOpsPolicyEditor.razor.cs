@@ -1,48 +1,55 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Localization;
-using Monica.DevOps.FileOps.Dialogs;
 using Monica.DevOps.FileOps.Facades;
 using Monica.DevOps.FileOps.Models;
+using Monica.DevOps.FileOps.Pages;
 using Monica.DevOps.FileOps.State;
-using Monica.DevOps.FileOps.Support;
 using Monica.DevOps.Localization;
+using Monica.UI.Shell.Support;
 using MudBlazor;
 
 namespace Monica.DevOps.FileOps.Components;
 
-/// <summary>Owns the runtime-policy form's cloned draft, revisions, native decisions and routed visit.</summary>
+/// <summary>Owns a native policy dialog's detached form, revisions and reads, borrowing the Files visit.</summary>
 public partial class FileOpsPolicyEditor
 {
     [Inject] private FileOpsFacade Facade { get; set; } = null!;
-    [Inject] private IDialogService Dialogs { get; set; } = null!;
     [Inject] private IStringLocalizer<FileOpsResource> L { get; set; } = null!;
-    private FileOpsWorkspaceController _controller = null!;
-    private FileOpsDialogOwner _dialogs = null!;
+    [Inject] private PageAccessEvaluator PageAccess { get; set; } = null!;
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    /// <summary>The Files visit's controller; this form never disposes or reinitializes it.</summary>
+    [Parameter, EditorRequired] public FileOpsWorkspaceController Controller { get; set; } = null!;
+    /// <summary>Admits a captured policy through the existing Files controller and returns detached evidence.</summary>
+    [Parameter, EditorRequired] public Func<FileOpsRuntimeConfig, Task<FileOpsPolicyApplyReceipt>> Apply { get; set; } = null!;
+    /// <summary>Uses the visit's inner native decision owner for an unapplied policy draft.</summary>
+    [Parameter, EditorRequired] public Func<Task<bool>> ConfirmDiscard { get; set; } = null!;
+    /// <summary>Registers this form with the visit for coordinated route departure and teardown.</summary>
+    [Parameter, EditorRequired] public Action<FileOpsPolicyEditor> Attach { get; set; } = null!;
     private FileOpsRuntimeConfig _draft = new();
     private string _roots = "", _readOnly = "", _extensions = "", _baseline = "";
     private long _revision;
-    private bool _initialized, _pending, _retired, _newerEdits;
+    private bool _initialized, _pending, _reloadActive, _dismissPending, _retired, _newerEdits, _readbackFailed;
+    private bool _accessDenied;
+    private FileOpsOutcome? _command, _read;
+    private MudButton? _closeButton;
     private Task? _retirement;
+    private readonly CancellationTokenSource _reads = new();
     private readonly HashSet<Task> _users = [];
     private readonly object _sync = new();
-    private bool Busy => _pending || _controller?.IsBusy == true;
+    private bool Busy => _pending || _dismissPending || Controller.IsBusy;
     private bool Dirty => _initialized && Fingerprint() != _baseline;
     private bool Valid => _draft.MaxTextFileSizeBytes >= 4096 && _draft.MaxUploadFileSizeBytes >= 65536 &&
         _draft.MaxDownloadFileSizeBytes >= _draft.MaxUploadFileSizeBytes && _draft.MaxDirectoryEntries is >= 50 and <= 5000;
 
     protected override async Task OnInitializedAsync()
     {
-        _dialogs = new(Dialogs, action => InvokeAsync(action));
-        _controller = new(Facade, ChangedAsync, () => _dialogs.DisposeAsync().AsTask());
-        await Track(async () =>
-        {
-            await _controller.InitializeAsync(browseWorkspace: false);
-            if (!_retired && _controller.RuntimeConfig is { } policy) Accept(policy);
-        });
+        Attach(this);
+        _pending = true;
+        try { await Track(() => ReadAsync(_revision)); }
+        finally { _pending = false; }
     }
-    private Task ChangedAsync() => Track(() => InvokeAsync(() => { if (!_retired) StateHasChanged(); }));
     private void Edit(Action action) { if (_retired) return; action(); _revision++; }
     private void SetRoots(string value) => Edit(() => _roots = value);
     private void SetReadOnly(string value) => Edit(() => _readOnly = value);
@@ -80,9 +87,14 @@ public partial class FileOpsPolicyEditor
         _extensions = FileOpsRuntimeConfig.ToMultilineText(policy.EditableExtensions);
         _baseline = Fingerprint(); _revision++; _initialized = true; _newerEdits = false;
     }
+    private void Adopt(FileOpsRuntimeConfig policy, long capturedRevision)
+    {
+        if (_revision == capturedRevision) Accept(policy);
+        else { _baseline = AcceptedFingerprint(policy); _newerEdits = true; }
+    }
     private Task ApplyAsync()
     {
-        if (_retired || Busy || !Dirty || !Valid) return Task.CompletedTask;
+        if (_retired || Busy || _accessDenied || !Dirty || !Valid) return Task.CompletedTask;
         _pending = true;
         var revision = _revision;
         var captured = Capture();
@@ -90,15 +102,15 @@ public partial class FileOpsPolicyEditor
         {
             try
             {
-                await _controller.SavePolicyAsync(captured);
+                if (!await AuthorizeAsync() || _retired) return;
+                var receipt = await Apply(captured);
                 if (_retired) return;
-                if (_controller.LastCommand is { Kind: FileOpsOperationKind.SavePolicy, Succeeded: true } &&
-                    _controller.LastRead is { Kind: FileOpsOperationKind.LoadPolicy, Succeeded: true } &&
-                    _controller.RuntimeConfig is { } accepted)
-                {
-                    if (_revision == revision) Accept(accepted);
-                    else { _baseline = AcceptedFingerprint(accepted); _newerEdits = true; }
-                }
+                if (receipt.AccessDenied) { _accessDenied = true; return; }
+                // Refusal cannot reuse an earlier successful command as acceptance of this draft.
+                if (receipt.Disposition != FileOpsOperationDisposition.Completed || receipt.Command is null) return;
+                _command = receipt.Command; _read = receipt.Read;
+                _readbackFailed = receipt.Command.Succeeded && receipt.AcceptedPolicy is null;
+                if (receipt.AcceptedPolicy is { } accepted) Adopt(accepted, revision);
             }
             finally { _pending = false; }
         });
@@ -106,40 +118,76 @@ public partial class FileOpsPolicyEditor
     private Task ReloadAsync()
     {
         if (_retired || Busy) return Task.CompletedTask;
-        _pending = true;
+        _pending = true; _reloadActive = true;
         var revision = _revision;
         return Track(async () =>
         {
             try
             {
-                if (Dirty && !await ConfirmDiscardAsync(revision)) return;
+                if (!await AuthorizeAsync() || _retired) return;
+                if (Dirty && !await ConfirmDiscard()) return;
                 if (_retired || _revision != revision) return;
-                await _controller.InitializeAsync(browseWorkspace: false);
-                if (!_retired && _controller.LastRead is { Kind: FileOpsOperationKind.LoadPolicy, Succeeded: true } && _controller.RuntimeConfig is { } accepted)
-                {
-                    if (_revision == revision) Accept(accepted);
-                    else { _baseline = AcceptedFingerprint(accepted); _newerEdits = true; }
-                }
+                await ReadAsync(revision);
             }
-            finally { _pending = false; }
+            finally { _pending = false; _reloadActive = false; }
         });
     }
-    private async Task<bool> ConfirmDiscardAsync(long revision)
+    private async Task ReadAsync(long revision)
     {
-        var result = await _dialogs.ShowAsync<FileOpsDiscardDialog>(L["Discard:PolicyTitle"],
-            new() { [nameof(FileOpsDiscardDialog.IsPolicy)] = true },
-            new() { FullWidth = true, MaxWidth = MaxWidth.Small, CloseOnEscapeKey = true });
-        return !_retired && revision == _revision && result is { Canceled: false, Data: true };
-    }
-    private async Task BeforeNavigationAsync(LocationChangingContext context)
-    {
+        if (!await AuthorizeAsync() || _retired) return;
+        var result = await Facade.GetRuntimeConfigAsync(_reads.Token);
         if (_retired) return;
-        if (!Dirty) return;
-        if (Busy) { context.PreventNavigation(); return; }
-        _pending = true;
+        _read = FileOpsOutcome.From(FileOpsOperationKind.LoadPolicy, result, result.Data is not null);
+        if (_read.Succeeded && result.Data is { } accepted)
+        { Adopt(accepted, revision); _readbackFailed = false; }
+    }
+    private async Task<bool> AuthorizeAsync()
+    {
+        bool allowed;
+        try { allowed = await PageAccess.IsAuthorizedAsync(UIFileOpsPolicyPage.PAGE_URL, _reads.Token); }
+        catch { allowed = false; }
+        if (_retired) return false;
+        _accessDenied = !allowed;
+        return allowed;
+    }
+    private Task KeyUpAsync(KeyboardEventArgs args) => args.Key == "Escape" ? RequestDismissAsync() : Task.CompletedTask;
+    private Task RequestDismissAsync() => Track(async () =>
+    {
+        var consent = await PrepareLeaveAsync();
+        if (consent is not null) FinishLeave(consent.Value, leave: true);
+    });
+    /// <summary>Reserves dismissal and obtains consent without clearing either the policy or file draft.</summary>
+    public async Task<long?> PrepareLeaveAsync()
+    {
+        if (_retired || Busy) return null;
+        _dismissPending = true;
+        StateHasChanged();
         var revision = _revision;
-        try { await Track(async () => { if (!await ConfirmDiscardAsync(revision)) context.PreventNavigation(); }); }
-        finally { _pending = false; }
+        try
+        {
+            if (Dirty)
+            {
+                // Backdrop and title-bar Close are outside the native focus trap. Reserve a
+                // connected inner opener so a refused nested decision restores modal focus.
+                if (_closeButton is null) { _dismissPending = false; return null; }
+                await _closeButton.FocusAsync();
+                if (_retired || revision != _revision || !await ConfirmDiscard())
+                { _dismissPending = false; if (!_retired) StateHasChanged(); return null; }
+            }
+            if (_retired || revision != _revision || _pending || Controller.IsBusy)
+            { _dismissPending = false; if (!_retired) StateHasChanged(); return null; }
+            return revision;
+        }
+        catch { _dismissPending = false; throw; }
+    }
+    /// <summary>Rechecks captured policy consent after the Files draft's separate leave decision.</summary>
+    public bool IsLeaveCurrent(long revision) => !_retired && _dismissPending && !_pending && !Controller.IsBusy && revision == _revision;
+    /// <summary>Releases refused leave or closes the still-current native form after both decisions agree.</summary>
+    public void FinishLeave(long revision, bool leave)
+    {
+        if (leave && IsLeaveCurrent(revision)) Dialog.Cancel();
+        _dismissPending = false;
+        if (!_retired) StateHasChanged();
     }
     private Task Track(Func<Task> action)
     {
@@ -158,7 +206,7 @@ public partial class FileOpsPolicyEditor
             finally { lock (_sync) _users.Remove(completion.Task); }
         }
     }
-    /// <summary>Closes native decisions before draining policy/controller work and renderer callbacks.</summary>
+    /// <summary>Retires only form-owned reads and users; the Files visit owns its controller and native leases.</summary>
     public ValueTask DisposeAsync()
     {
         TaskCompletionSource completion;
@@ -173,13 +221,20 @@ public partial class FileOpsPolicyEditor
         return new(_retirement);
         async Task DrainAsync()
         {
-            try
-            {
-                var dialogs = _dialogs?.DisposeAsync().AsTask() ?? Task.CompletedTask;
-                var controller = _controller?.DisposeAsync().AsTask() ?? Task.CompletedTask;
-                await Task.WhenAll(dialogs, controller, Task.WhenAll(users)); completion.TrySetResult();
-            }
-            catch (Exception exception) { completion.TrySetException(exception); }
+            Exception? failure = null;
+            try { await _reads.CancelAsync(); } catch (Exception exception) { failure = exception; }
+            try { await Task.WhenAll(users); } catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
+            _reads.Dispose();
+            if (failure is null) completion.TrySetResult(); else completion.TrySetException(failure);
         }
     }
 }
+
+/// <summary>UI-only detached receipt of this Files visit's admitted policy command and subsequent evidence.</summary>
+/// <param name="Disposition">Admission/confirmation disposition, independent of backend success.</param>
+/// <param name="Command">The new SavePolicy outcome, or null when this request never wrote.</param>
+/// <param name="Read">The admitted scope's last evidence read; browse/text failure does not undo confirmed policy.</param>
+/// <param name="AcceptedPolicy">Confirmed normalized policy, or null when persistence/readback did not succeed.</param>
+/// <param name="AccessDenied">The existing policy route's host-owned authority denied mutation admission.</param>
+public sealed record FileOpsPolicyApplyReceipt(FileOpsOperationDisposition Disposition, FileOpsOutcome? Command,
+    FileOpsOutcome? Read, FileOpsRuntimeConfig? AcceptedPolicy, bool AccessDenied = false);

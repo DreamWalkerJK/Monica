@@ -1,3 +1,4 @@
-.file-ops-page { width: 100%; min-width: 0; padding: 24px; box-sizing: border-box; color: var(--mud-palette-text-primary); }
-@media (max-width: 1000px) { .file-ops-page { padding: 20px; } }
-@media (max-width: 600px) { .file-ops-page { padding: 12px; } }
+.file-ops-page { width: 100%; min-width: 0; box-sizing: border-box; color: var(--mud-palette-text-primary); container: file-ops-page / inline-size; }
+.file-ops-page ::deep .file-workspace { padding: 32px; }
+@container file-ops-page (max-width: 1200px) { .file-ops-page ::deep .file-workspace { padding: 24px; } }
+@container file-ops-page (max-width: 600px) { .file-ops-page ::deep .file-workspace { padding: 20px 16px; } }

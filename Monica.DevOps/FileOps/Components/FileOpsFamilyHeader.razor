@@ -1,15 +1,21 @@
-@using Monica.DevOps.FileOps.Pages
 @using Monica.DevOps.Localization
-@using Monica.UI.Shared.Components.Navigation
 @inject IStringLocalizer<FileOpsResource> L
 <div class="family-header">
-    <header><h1>@L[IsPolicy ? "Policy:Title" : "Page:Title"]</h1><p>@L[IsPolicy ? "Policy:Subtitle" : "Page:Subtitle"]</p></header>
-    <MoWorkbenchNavigation Label="@L["Navigation:Label"]">
-        <a href="@UIFileOpsPage.PAGE_URL" aria-current="@(!IsPolicy ? "page" : null)"><MudIcon Icon="@Icons.Material.Outlined.Folder" />@L["Navigation:Files"]</a>
-        <a href="@UIFileOpsPolicyPage.PAGE_URL" aria-current="@(IsPolicy ? "page" : null)"><MudIcon Icon="@Icons.Material.Outlined.Tune" />@L["Navigation:Policy"]</a>
-    </MoWorkbenchNavigation>
+    <header>
+        <p class="page-category"><MudIcon Icon="@Icons.Material.Outlined.Folder" Color="Color.Primary" /><span>@L["Page:Category"]</span></p>
+        <h1>@L["Page:Title"]</h1>
+        <p class="page-introduction">@L["Page:Introduction"]</p>
+    </header>
+    <div class="policy-trigger">
+        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Tune" data-policy-open="true" Disabled="@(Busy && !PolicyOpen)" aria-disabled="@(Busy || PolicyOpen ? "true" : "false")" OnClick="OpenAsync">@L["Policy:Title"]</MudButton>
+    </div>
 </div>
 @code {
-    /// <summary>Identifies the exact active sibling route.</summary>
-    [Parameter] public bool IsPolicy { get; set; }
+    /// <summary>Opens the policy dialog in the current Files visit.</summary>
+    [Parameter] public EventCallback OpenPolicy { get; set; }
+    /// <summary>Whether the Files controller has an admitted operation.</summary>
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>Keeps the native policy opener focusable until its own dialog result drains.</summary>
+    [Parameter] public bool PolicyOpen { get; set; }
+    private Task OpenAsync() => Busy || PolicyOpen ? Task.CompletedTask : OpenPolicy.InvokeAsync();
 }

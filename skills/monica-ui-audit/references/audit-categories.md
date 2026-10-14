@@ -65,6 +65,7 @@ Indicators:
 - A compact provenance caption becomes an implicit grid item beside its field, squeezing the value column or moving a native reset action onto another row
 - Text, controls, table cells or empty-state messages touch an ordinary panel edge because the wrapper supplies a background but no content inset; a dialog's padded outer shell is mistaken for an inset within each nested painted tab body
 - Native stacked table `DataLabel` pseudo-labels touch the phone surface edge although value wrappers are inset; ineffective row padding is mistaken for actual cell padding, or the empty row inherits a two-column label layout
+- Selection or row-action glyphs and focus bounds touch the surface edge despite a declared column width; native checkbox negative margins or compressed inner padding undo the intended inset, or selection replaces the focused input
 - A full-width table's header, last row, hover/selected paint or pager covers its owner's rounded corners; only the outer border is rounded while descendant backgrounds remain square
 - A flush table has competing outer/inner radii, does not declare whether its owner clips painted corners or the table is inset, or broad overflow clipping hides focus indicators, required local scrolling or overlay content
 - Distinct tools with independent tasks and lifetimes remain hidden in one local tab route, preventing direct links, browser history and meaningful shell search entries without a deliberate navigation reason

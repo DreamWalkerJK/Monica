@@ -48,6 +48,48 @@ public sealed partial class FileOpsWorkspaceControllerTests
     }
 
     [Fact]
+    public async Task DisposeAsync_WhenFinalPublicationIsPending_ShouldPublishSettledBusyRejectReentryAndDrainItsActualTask()
+    {
+        var service = new ControlledFileOpsServices();
+        var publication = Signal<bool>();
+        var publicationEntered = Signal<bool>();
+        var busyAtPublication = new List<bool>();
+        FileOpsOperationDisposition? reentrantDisposition = null;
+        FileOpsWorkspaceController? state = null;
+        state = new FileOpsWorkspaceController(service.CreateFacade(), async () =>
+        {
+            busyAtPublication.Add(state!.IsBusy);
+            if (busyAtPublication.Count != 2) return;
+            reentrantDisposition = await state.RefreshAsync();
+            publicationEntered.SetResult(true);
+            await publication.Task;
+        });
+        var initialization = state.InitializeAsync();
+        try
+        {
+            await ObserveAsync(publicationEntered.Task);
+            Assert.Equal(new[] { true, false }, busyAtPublication);
+            Assert.Equal(FileOpsOperationDisposition.Rejected, reentrantDisposition);
+            Assert.False(initialization.IsCompleted);
+
+            var retirement = state.DisposeAsync().AsTask();
+            Assert.False(retirement.IsCompleted);
+            Assert.False(initialization.IsCompleted);
+            publication.SetResult(true);
+            await ObserveAsync(retirement);
+            Assert.Equal(FileOpsOperationDisposition.Retired, await ObserveAsync(initialization));
+            Assert.Equal(2, busyAtPublication.Count);
+            Assert.Equal(1, service.ConfigReads);
+            Assert.Single(service.Browses);
+        }
+        finally
+        {
+            publication.TrySetResult(true);
+            await ObserveAsync(state.DisposeAsync().AsTask());
+        }
+    }
+
+    [Fact]
     public async Task DisposeAsync_WhenNativeRetirementFails_ShouldStillDrainActualReadAndKeepFailureObservable()
     {
         var service = new ControlledFileOpsServices();

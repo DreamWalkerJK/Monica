@@ -6,9 +6,11 @@ using Microsoft.JSInterop;
 using Monica.DevOps.FileOps.Dialogs;
 using Monica.DevOps.FileOps.Facades;
 using Monica.DevOps.FileOps.Models;
+using Monica.DevOps.FileOps.Pages;
 using Monica.DevOps.FileOps.State;
 using Monica.DevOps.FileOps.Support;
 using Monica.DevOps.Localization;
+using Monica.UI.Shell.Support;
 using MudBlazor;
 
 namespace Monica.DevOps.FileOps.Components;
@@ -21,8 +23,17 @@ public partial class FileOpsWorkspace
     [Inject] private IDialogService Dialogs { get; set; } = null!;
     [Inject] private IJSRuntime JS { get; set; } = null!;
     [Inject] private IStringLocalizer<FileOpsResource> L { get; set; } = null!;
+    [Inject] private NavigationManager Navigation { get; set; } = null!;
+    [Inject] private PageAccessEvaluator PageAccess { get; set; } = null!;
+    /// <summary>Opens the same native policy dialog once after the compatibility query becomes interactive.</summary>
+    [Parameter] public bool OpenPolicy { get; set; }
     private FileOpsWorkspaceController _controller = null!;
     private FileOpsDialogOwner _dialogs = null!;
+    private FileOpsDialogOwner _policyDialogs = null!;
+    private FileOpsPolicyEditor? _policyEditor;
+    private bool _policyOpen, _policyWriting, _policyRequestConsumed;
+    private bool _policyAccessDenied;
+    private readonly CancellationTokenSource _policyAccess = new();
     private FileOpsTransferInteropSession _transfer = null!;
     private readonly object _sync = new();
     private readonly HashSet<Task> _users = [];
@@ -47,6 +58,7 @@ public partial class FileOpsWorkspace
     protected override async Task OnInitializedAsync()
     {
         _dialogs = new(Dialogs, action => InvokeAsync(action));
+        _policyDialogs = new(Dialogs, action => InvokeAsync(action));
         _transfer = new(JS);
         _controller = new(Facade, ChangedAsync, RetireNativeAsync);
         await Track(async () =>
@@ -86,6 +98,12 @@ public partial class FileOpsWorkspace
     }
     private void CancelFocus() { _focusVersion++; _focusIntent = null; }
     private void InventoryChanged() { CancelFocus(); Remember(); }
+    private void SelectionCleared()
+    {
+        if (_retired) return;
+        CancelFocus(); Remember();
+        _focusIntent = new(_focusVersion, "selection-clear", SelectedPath, _controller.Browse?.CurrentPath);
+    }
     private void DraftChanged(string value) { _controller.SetDraft(value); Remember(); }
     private void ToggleCatalog()
     {
@@ -188,11 +206,96 @@ public partial class FileOpsWorkspace
     private async Task BeforeNavigationAsync(LocationChangingContext context)
     {
         if (_retired) return;
-        if (!_controller.IsDirty) { Remember(); return; }
-        if (_controller.IsBusy) { context.PreventNavigation(); return; }
-        var disposition = await _controller.ConfirmLeaveAsync(ConfirmDiscardAsync);
-        if (_retired || disposition != FileOpsOperationDisposition.Completed) context.PreventNavigation();
-        else Remember();
+        // Policy-query housekeeping is the same Files visit, not draft abandonment.
+        if (new Uri(context.TargetLocation).AbsolutePath == new Uri(Navigation.Uri).AbsolutePath) return;
+        if (_controller.IsBusy || _policyWriting || _policyOpen && _policyEditor is null) { context.PreventNavigation(); return; }
+        await Track(async () =>
+        {
+            var form = _policyEditor;
+            long? consent = null;
+            var leave = false;
+            try
+            {
+                consent = form is null ? null : await form.PrepareLeaveAsync();
+                if (form is not null && consent is null) { context.PreventNavigation(); return; }
+                var fileRevision = _controller.DraftRevision;
+                var filePath = SelectedPath;
+                var disposition = await _controller.ConfirmLeaveAsync(ConfirmDiscardAsync);
+                leave = !_retired && disposition == FileOpsOperationDisposition.Completed &&
+                    fileRevision == _controller.DraftRevision && Same(filePath, SelectedPath) &&
+                    (form is null || consent is { } revision && form.IsLeaveCurrent(revision));
+                if (!leave) context.PreventNavigation(); else Remember();
+            }
+            catch { context.PreventNavigation(); throw; }
+            finally { if (form is not null && consent is { } revision) form.FinishLeave(revision, leave); }
+        });
+    }
+
+    private Task OpenPolicyAsync() => Track(async () =>
+    {
+        if (_retired || _policyOpen || _controller.IsBusy) return;
+        _policyOpen = true; CancelFocus(); StateHasChanged();
+        try
+        {
+            if (!await AuthorizePolicyAsync()) return;
+            if (_retired) return;
+            await _policyDialogs.ShowAsync<FileOpsPolicyEditor>(L["Policy:Title"], new()
+            {
+                [nameof(FileOpsPolicyEditor.Controller)] = _controller,
+                [nameof(FileOpsPolicyEditor.Apply)] = (Func<FileOpsRuntimeConfig, Task<FileOpsPolicyApplyReceipt>>)ApplyPolicyAsync,
+                [nameof(FileOpsPolicyEditor.ConfirmDiscard)] = (Func<Task<bool>>)ConfirmPolicyDiscardAsync,
+                [nameof(FileOpsPolicyEditor.Attach)] = (Action<FileOpsPolicyEditor>)(form => _policyEditor = form)
+            }, new() { FullWidth = true, MaxWidth = MaxWidth.Large, CloseButton = false,
+                CloseOnEscapeKey = false, CloseOnNavigation = false, BackdropClick = true });
+        }
+        finally
+        {
+            try { if (_policyEditor is { } form) await form.DisposeAsync(); }
+            finally { _policyEditor = null; _policyOpen = false; if (!_retired) StateHasChanged(); }
+        }
+    });
+    private async Task<bool> ConfirmPolicyDiscardAsync()
+    {
+        if (_retired) return false;
+        var result = await _dialogs.ShowAsync<FileOpsDiscardDialog>(L["Discard:PolicyTitle"],
+            new() { [nameof(FileOpsDiscardDialog.IsPolicy)] = true }, DecisionOptions);
+        return !_retired && result is { Canceled: false, Data: true };
+    }
+    private async Task<FileOpsPolicyApplyReceipt> ApplyPolicyAsync(FileOpsRuntimeConfig draft)
+    {
+        if (_retired || !_policyOpen || _policyWriting || _controller.IsBusy)
+            return new(FileOpsOperationDisposition.Rejected, null, null, null);
+        _policyWriting = true;
+        var captured = draft.Clone();
+        var previous = _controller.LastCommand;
+        try
+        {
+            if (!await AuthorizePolicyAsync())
+                return new(FileOpsOperationDisposition.Rejected, null, null, null, AccessDenied: !_retired);
+            if (_retired) return new(FileOpsOperationDisposition.Retired, null, null, null);
+            var disposition = await _controller.SavePolicyAsync(captured, ConfirmDiscardAsync);
+            var command = _controller.LastCommand;
+            var read = _controller.LastRead;
+            var current = !ReferenceEquals(previous, command) && command?.Kind == FileOpsOperationKind.SavePolicy;
+            // SavePolicy reads policy before browse/text reconciliation. A failed LoadPolicy is
+            // unconfirmed; a later browse/text failure is separate evidence after confirmed readback.
+            var confirmed = current && command!.Succeeded && read is not null &&
+                (read.Kind == FileOpsOperationKind.LoadPolicy && read.Succeeded || read.Kind is FileOpsOperationKind.Browse or FileOpsOperationKind.ReadText);
+            if (!_retired) Remember();
+            return new(disposition, current ? command : null, current ? read : null,
+                confirmed ? _controller.RuntimeConfig : null);
+        }
+        finally { _policyWriting = false; }
+    }
+    private async Task<bool> AuthorizePolicyAsync()
+    {
+        bool allowed;
+        try { allowed = await PageAccess.IsAuthorizedAsync(UIFileOpsPolicyPage.PAGE_URL, _policyAccess.Token); }
+        catch { allowed = false; }
+        if (_retired) return false;
+        _policyAccessDenied = !allowed;
+        StateHasChanged();
+        return allowed;
     }
 
     /// <summary>Receives actual owner dimensions; browser viewport width is not an interaction breakpoint.</summary>
@@ -233,9 +336,14 @@ public partial class FileOpsWorkspace
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_retired || _controller is null) return;
+        var openPolicy = OpenPolicy && !_policyRequestConsumed && !_controller.IsBusy;
         var initialize = !_sizingAdmitted;
         var intent = _focusIntent;
-        if (!initialize && intent is null) return;
+        if (!initialize && intent is null)
+        {
+            if (openPolicy) await AdmitPolicyRequestAsync();
+            return;
+        }
         _sizingAdmitted = true; _focusIntent = null;
         await Track(async () =>
         {
@@ -255,11 +363,28 @@ public partial class FileOpsWorkspace
                     if (_retired) { await StopSizingAsync(); return; }
                 }
                 if (!_retired && intent is not null && intent.Version == _focusVersion && Same(intent.Path, SelectedPath))
-                    await module.InvokeVoidAsync("reveal", _root, _visit, intent.Version, intent.Kind, intent.Path);
+                    await module.InvokeVoidAsync("reveal", _root, _visit, intent.Version, intent.Kind, intent.Path, intent.DirectoryPath);
             }
             catch (JSDisconnectedException) { }
         });
+        if (openPolicy && !_retired && !_controller.IsBusy)
+            await AdmitPolicyRequestAsync();
     }
+
+    private Task AdmitPolicyRequestAsync() => Track(async () =>
+    {
+        if (_retired || _policyRequestConsumed || _controller.IsBusy || _moduleImport is null) return;
+        _policyRequestConsumed = true;
+        try
+        {
+            var module = await _moduleImport;
+            if (_retired) return;
+            // Give the native focus trap a real connected opener for automatic compatibility entry.
+            await module.InvokeVoidAsync("focusPolicyOpener", _root, _visit, _focusVersion);
+            if (!_retired) await OpenPolicyAsync();
+        }
+        catch (JSDisconnectedException) { }
+    });
 
     private Task Track(Func<Task> action)
     {
@@ -307,7 +432,10 @@ public partial class FileOpsWorkspace
         }
     }
     private Task RetireNativeAsync() => _nativeRetirement ??= Task.WhenAll(
+        _policyAccess.CancelAsync(),
+        _policyDialogs?.DisposeAsync().AsTask() ?? Task.CompletedTask,
         _dialogs?.DisposeAsync().AsTask() ?? Task.CompletedTask,
+        _policyEditor?.DisposeAsync().AsTask() ?? Task.CompletedTask,
         _transfer?.DisposeAsync().AsTask() ?? Task.CompletedTask,
         StopSizingAsync());
     /// <summary>Stops native owners before joining controller work and all actual import/render/focus users.</summary>
@@ -338,9 +466,10 @@ public partial class FileOpsWorkspace
                 if (_moduleImport is not null) { try { await (await _moduleImport).DisposeAsync(); } catch (JSDisconnectedException) { } }
             }
             catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
+            _policyAccess.Dispose();
             if (failure is null) completion.TrySetResult(); else completion.TrySetException(failure);
         }
     }
     private static bool Same(string? left, string? right) => string.Equals(left, right, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
-    private sealed record FocusIntent(long Version, string Kind, string Path);
+    private sealed record FocusIntent(long Version, string Kind, string Path, string? DirectoryPath = null);
 }

@@ -1,5 +1,11 @@
 // The Files visit owns this callback target, all users, and observer retirement.
 const workspaceFocus = new WeakMap();
+export function focusPolicyOpener(root, visit, version) {
+    if (!root?.isConnected || root.dataset.visit !== visit || root.dataset.focusVersion !== String(version)) return;
+    if ([...root.ownerDocument.querySelectorAll(".mud-dialog, .mud-popover-open")].some(value => value.getClientRects().length)) return;
+    const opener = root.querySelector("button[data-policy-open='true']:not(:disabled)");
+    if (opener?.getClientRects().length) opener.focus({ preventScroll: true });
+}
 export function createWorkspaceSizer(root, visit, callback) {
     let disposed = false, frame = 0, last = "";
     const pending = new Set(), failures = [];
@@ -35,6 +41,10 @@ export function createWorkspaceSizer(root, visit, callback) {
     }
     function measure() {
         if (!connected() || !shell) return;
+        // Mud's nullable value supplies the mixed SVG, but native accessibility uses this IDL property.
+        for (const input of root.querySelectorAll("input[type='checkbox'][data-select-all-state]")) {
+            input.indeterminate = input.dataset.selectAllState === "mixed";
+        }
         const work = root.querySelector(".work-area");
         const inventory = root.querySelector(".inventory-owner");
         if (!work || !inventory) return;
@@ -48,9 +58,19 @@ export function createWorkspaceSizer(root, visit, callback) {
         root.dataset.workWidth = String(width);
         root.dataset.usableHeight = String(height);
         root.dataset.inventoryWidth = String(inventoryWidth);
-        const toolbar = inventory.querySelector(".inventory-toolbar");
-        const chrome = (toolbar?.getBoundingClientRect().height ?? 0) + 48;
-        const cap = Math.max(160, Math.min(root.dataset.split === "true" ? 512 : 600, height - chrome));
+        const list = inventory.querySelector(".inventory-list");
+        // Directory commands are above work. Subtract the pane's actual disclosure,
+        // count/sort header, selection/cap notices and visible footer from its opening.
+        // An inspector-free inventory uses the available opening rather than the split-list cap.
+        const chrome = list ? Math.max(0, list.getBoundingClientRect().top - workBounds.top) : 0;
+        const footer = inventory.querySelector(".inventory-footer")?.getBoundingClientRect().height ?? 0;
+        // The page's container query supplies its gutter on this reachable workspace root.
+        // Preserve any additional inset supplied by the containing page.
+        const page = root.closest(".file-ops-page");
+        const pageBottom = (parseFloat(getComputedStyle(root).paddingBottom) || 0) +
+            (page ? parseFloat(getComputedStyle(page).paddingBottom) || 0 : 0);
+        const splitInspector = root.dataset.split === "true" && root.dataset.hasInspector === "true";
+        const cap = Math.max(132, Math.min(splitInspector ? 512 : Infinity, height - chrome - footer - pageBottom - 1));
         const current = root.style.getPropertyValue("--file-inventory-height");
         if (current !== cap + "px") root.style.setProperty("--file-inventory-height", cap + "px");
         const active = root.ownerDocument.activeElement;
@@ -90,7 +110,7 @@ export function createWorkspaceSizer(root, visit, callback) {
     if (connected() && shell) {
         sizes.observe(root);
         sizes.observe(shell);
-        mutations.observe(root, { childList: true, subtree: true });
+        mutations.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-select-all-state"] });
         window.addEventListener("resize", schedule, { passive: true });
         root.ownerDocument.addEventListener("focusin", onFocus, true);
         root.ownerDocument.addEventListener("pointerdown", onPointer, true);
@@ -99,7 +119,7 @@ export function createWorkspaceSizer(root, visit, callback) {
     return { dispose };
 }
 
-export function reveal(root, visit, version, kind, path) {
+export function reveal(root, visit, version, kind, path, directoryPath = null) {
     if (!root?.isConnected || root.dataset.visit !== visit || root.dataset.focusVersion !== String(version) || root.dataset.selectedPath !== path) return;
     const shell = root.closest(".mo-body-content");
     const receipt = workspaceFocus.get(root);
@@ -110,6 +130,16 @@ export function reveal(root, visit, version, kind, path) {
     const bodyFocus = [root.ownerDocument.body, root.ownerDocument.documentElement].includes(active);
     const overlayOpen = [...root.ownerDocument.querySelectorAll(".mud-dialog, .mud-popover-open")].some(value => value.getClientRects().length);
     if (overlayOpen) return;
+    if (kind === "selection-clear") {
+        if (!bodyFocus || !directoryPath || root.dataset.directoryPath !== directoryPath || root.querySelector(".selection-band")) return;
+        const target = [...root.querySelectorAll(".select-all input:not(:disabled), .entry-open, .inventory-list")]
+            .find(value => value.getClientRects().length);
+        if (!target) return;
+        target.focus({ preventScroll: true });
+        if (target.closest(".inventory-list")) revealInventoryRow(target);
+        revealInShell(shell, root.ownerDocument, target);
+        return;
+    }
     if (kind === "inventory-return") {
         // A completed close returns to an owner which survives table/list child replacement.
         if (path !== "" || root.querySelector(".file-inspector") || !bodyFocus) return;

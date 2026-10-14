@@ -68,13 +68,9 @@
   },
   "Page": {
     "DocumentTitle": "文件操作",
-    "Title": "文件操作",
-    "Subtitle": "浏览允许访问的位置、传输文件，并编辑此主机上的文本。"
-  },
-  "Navigation": {
-    "Label": "文件操作导航",
-    "Files": "文件",
-    "Policy": "运行时策略"
+    "Category": "文件系统 / 主机工作区",
+    "Title": "文件工作台",
+    "Introduction": "浏览目录、查看文件，并在主机策略允许的范围内编辑文本。"
   },
   "Actions": {
     "Refresh": "刷新",
@@ -91,7 +87,8 @@
     "ClearSelection": "清除"
   },
   "Location": {
-    "Label": "位置与目录操作",
+    "Label": "当前文件位置",
+    "CurrentDirectory": "当前目录",
     "Up": "转到父目录",
     "Root": "根目录：{0}",
     "Breadcrumbs": "当前目录路径导航",
@@ -100,7 +97,8 @@
     "DismissPath": "收起路径输入",
     "Shown": "显示 {0} 项",
     "ReadOnly": "只读位置",
-    "Writable": "策略允许在此目录写入",
+    "Writable": "策略允许写入",
+    "WritableReason": "当前 FileOps 策略允许在此目录创建文件夹和上传文件。",
     "WritesUnavailable": "此目录不可写入",
     "UploadRule": "单个文件 · 最大 {0} · 替换同名文件",
     "ReadOnlyReason": "配置的只读路径禁止在此位置创建、上传、编辑和删除。",
@@ -113,11 +111,12 @@
     "EmptyDirectory": "此目录为空",
     "Working": "正在执行文件操作",
     "ReturnFallback": "原位置不可用，现已显示当前启动目录。",
-    "Picker": "文件 · {0}",
+    "Picker": "{0} 中的文件 · 已显示 {1} 项",
     "Uploading": "正在上传 {0}"
   },
   "Inventory": {
     "Title": "目录内容",
+    "Shown": "已显示",
     "Ascending": "升序",
     "Descending": "降序",
     "Sort": "排序：{0} · {1}",
@@ -125,7 +124,6 @@
     "Retained": "保留的目录信息；最近一次刷新失败。",
     "NoAccepted": "目录不可用",
     "RetryHint": "浏览允许的路径，或刷新以重试。",
-    "OpenHint": "打开文件以查看其内容。",
     "Entries": "已显示的目录项目",
     "NotReported": "未提供",
     "Check": "选择 {0}",
@@ -160,7 +158,8 @@
     "ExtensionDenied": "此扩展名不允许保存；文本预览仍可阅读。",
     "EditingUnavailable": "当前策略不允许编辑。",
     "RetainedAfterAttempt": "尝试打开的文件无法预览；先前的编辑器与草稿已保留。",
-    "NoTextLoaded": "未加载文本"
+    "NoTextLoaded": "未加载文本",
+    "DiskModified": "磁盘修改时间"
   },
   "Outcome": {
     "Failed": "操作失败",
@@ -215,9 +214,8 @@
     "Leave": "继续前往目标页面。"
   },
   "Policy": {
-    "Title": "文件操作运行时策略",
-    "Subtitle": "此运行中主机的路径、权限与限制。",
-    "Scope": "更改应用于此运行中主机的文件操作。运行时更改保存在内存中；此表单不更新主机配置文件。",
+    "Title": "运行时策略",
+    "Scope": "更改应用于此运行主机中的所有 FileOps 操作，并仅保存在内存中；重启后恢复配置默认值。此表单不会更改主机配置文件。",
     "Loading": "正在加载当前运行时策略",
     "Form": "主机运行时策略编辑器",
     "Locations": "位置",
@@ -255,7 +253,11 @@
     "Apply": "应用运行时策略",
     "NoChanges": "无更改",
     "NewerEdits": "已应用或重新加载先前确认的策略。较新的编辑已保留，尚未应用。",
-    "ReadbackFailed": "策略更新已完成，但无法重新读取权威的规范化值。草稿仍然可用；请重新加载当前策略后再将这些字段视为已接受值。"
+    "ReadbackFailed": "策略更新已完成，但无法重新读取权威的规范化值。草稿仍然可用；请重新加载当前策略后再将这些字段视为已接受值。",
+    "HostMemory": "整个主机 · 内存中保存",
+    "Close": "关闭",
+    "NotLoaded": "策略尚未加载",
+    "AccessDenied": "此主机的页面访问配置不允许访问运行时策略。请返回文件页面，或在恢复访问权限后重试。"
   },
   "Common": {
     "Cancel": "取消"

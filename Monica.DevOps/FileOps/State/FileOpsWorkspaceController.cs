@@ -66,7 +66,8 @@ public sealed partial class FileOpsWorkspaceController : IAsyncDisposable
     public long DraftRevision => _draftRevision;
     /// <summary>Gets whether the user text differs from the retained accepted or persisted baseline.</summary>
     public bool IsDirty => _file is not null && !string.Equals(_draft, _baseline, StringComparison.Ordinal);
-    /// <summary>Gets whether confirmation, production, reconciliation or notification is admitted.</summary>
+    /// <summary>Gets whether confirmation, production or reconciliation is in progress.</summary>
+    /// <remarks>The settled notification observes false while the operation's admission/drain lease remains held.</remarks>
     public bool IsBusy => _busy;
     /// <summary>Gets whether this visit has stopped new admission and presentation.</summary>
     public bool IsRetired => Volatile.Read(ref _retired);
@@ -126,7 +127,7 @@ public sealed partial class FileOpsWorkspaceController : IAsyncDisposable
     public bool IsSelected(FileOpsEntrySummary entry) => _selected.Contains(entry.FullPath);
 
     /// <summary>Loads authoritative policy first, optionally browsing a remembered directory or startup.</summary>
-    /// <remarks>Policy-only initialization serves the sibling administrative route. An unavailable remembered
+    /// <remarks>Policy-only initialization permits evidence reads without browsing. An unavailable remembered
     /// directory keeps its typed failure notice while attempting the normalized actual startup directory.</remarks>
     public Task<FileOpsOperationDisposition> InitializeAsync(bool browseWorkspace = true, string? rememberedDirectory = null) => Admit(() => async () =>
     {
@@ -383,8 +384,9 @@ public sealed partial class FileOpsWorkspaceController : IAsyncDisposable
         try { await NotifyAsync(); if (!IsRetired) disposition = await work(); }
         catch (OperationCanceledException exception) when (_token.IsCancellationRequested && exception.CancellationToken == _token) { }
         catch (Exception exception) { failures.Add(exception); }
-        try { await NotifyAsync(); } catch (Exception exception) { failures.Add(exception); }
         _busy = false;
+        // Publish settled state while retaining the admission/drain lease through the actual callback.
+        try { await NotifyAsync(); } catch (Exception exception) { failures.Add(exception); }
         lock (_gate) { if (ReferenceEquals(_active, completion)) _active = null; }
         if (failures.Count > 0) completion.TrySetException(failures.Count == 1 ? failures[0] : new AggregateException(failures));
         else completion.TrySetResult(IsRetired ? FileOpsOperationDisposition.Retired : disposition);

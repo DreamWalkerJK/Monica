@@ -2,9 +2,17 @@
 @using Monica.DevOps.Localization
 @attribute [Route(PAGE_URL)]
 @inject IStringLocalizer<FileOpsResource> L
+@inject NavigationManager Navigation
 <PageTitle>@L["Policy:Title"]</PageTitle>
-<div class="file-ops-policy-page"><FileOpsFamilyHeader IsPolicy="true" /><FileOpsPolicyEditor /></div>
+<div class="file-ops-policy-page" role="status">@L["Policy:Loading"]</div>
 @code {
-    /// <summary>The sibling host-wide in-memory FileOps policy destination.</summary>
+    /// <summary>The hidden compatibility entry for the Files visit's host-wide policy dialog.</summary>
     public const string PAGE_URL = "/ui/file-ops/policy";
+    private bool _redirected;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (_redirected) return;
+        _redirected = true;
+        Navigation.NavigateTo(UIFileOpsPage.PAGE_URL + "?policy=edit", replace: true);
+    }
 }

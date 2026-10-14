@@ -68,13 +68,9 @@
   },
   "Page": {
     "DocumentTitle": "File operations",
-    "Title": "File operations",
-    "Subtitle": "Browse allowed locations, transfer files, and edit text on this host."
-  },
-  "Navigation": {
-    "Label": "FileOps navigation",
-    "Files": "Files",
-    "Policy": "Runtime policy"
+    "Category": "Filesystem / Host workspace",
+    "Title": "File workspace",
+    "Introduction": "Browse directories, inspect files and edit text within this host's policy."
   },
   "Actions": {
     "Refresh": "Refresh",
@@ -91,7 +87,8 @@
     "ClearSelection": "Clear"
   },
   "Location": {
-    "Label": "Location and directory operations",
+    "Label": "Current file location",
+    "CurrentDirectory": "Current directory",
     "Up": "Go to parent directory",
     "Root": "Root: {0}",
     "Breadcrumbs": "Accepted directory breadcrumbs",
@@ -100,7 +97,8 @@
     "DismissPath": "Dismiss path input",
     "Shown": "{0} entries shown",
     "ReadOnly": "Read-only location",
-    "Writable": "Directory writes permitted by policy",
+    "Writable": "Policy permits writes",
+    "WritableReason": "The current FileOps policy permits creating folders and uploading files in this directory.",
     "WritesUnavailable": "Directory writes unavailable",
     "UploadRule": "One file · Up to {0} · Replaces the same name",
     "ReadOnlyReason": "Configured read-only paths prevent creation, upload, editing, and deletion here.",
@@ -113,11 +111,12 @@
     "EmptyDirectory": "This directory is empty",
     "Working": "File operation in progress",
     "ReturnFallback": "The previous location is unavailable. Showing the current startup directory.",
-    "Picker": "Files · {0}",
+    "Picker": "Files in {0} · {1} shown",
     "Uploading": "Uploading {0}"
   },
   "Inventory": {
-    "Title": "Contents",
+    "Title": "Directory contents",
+    "Shown": "shown",
     "Ascending": "Ascending",
     "Descending": "Descending",
     "Sort": "Sort: {0} · {1}",
@@ -125,7 +124,6 @@
     "Retained": "Retained directory evidence. The latest refresh failed.",
     "NoAccepted": "Directory unavailable",
     "RetryHint": "Browse an allowed path or refresh to try again.",
-    "OpenHint": "Open a file to inspect its contents.",
     "Entries": "Displayed directory entries",
     "NotReported": "Not reported",
     "Check": "Select {0}",
@@ -160,7 +158,8 @@
     "ExtensionDenied": "This extension is not enabled for saving. Text preview remains readable.",
     "EditingUnavailable": "Editing is unavailable under the current policy.",
     "RetainedAfterAttempt": "The attempted file could not be previewed. The previous editor and its draft are retained.",
-    "NoTextLoaded": "No text loaded"
+    "NoTextLoaded": "No text loaded",
+    "DiskModified": "Disk modified"
   },
   "Outcome": {
     "Failed": "Operation failed",
@@ -215,9 +214,8 @@
     "Leave": "Continue to the requested destination."
   },
   "Policy": {
-    "Title": "FileOps runtime policy",
-    "Subtitle": "Paths, permissions, and limits for this running host.",
-    "Scope": "Changes apply to FileOps on this running host. Runtime changes are kept in memory; this form does not update host configuration files.",
+    "Title": "Runtime policy",
+    "Scope": "Changes apply to FileOps across this running host. They are kept in memory; restarting restores configured defaults. This form does not update host configuration files.",
     "Loading": "Loading current runtime policy",
     "Form": "Host runtime policy editor",
     "Locations": "Locations",
@@ -255,7 +253,11 @@
     "Apply": "Apply runtime policy",
     "NoChanges": "No changes",
     "NewerEdits": "The captured policy was applied or reloaded. Your newer edits are retained and have not been applied.",
-    "ReadbackFailed": "The policy update completed, but authoritative normalized values could not be reread. The draft remains available; reload current policy before treating these fields as accepted."
+    "ReadbackFailed": "The policy update completed, but authoritative normalized values could not be reread. The draft remains available; reload current policy before treating these fields as accepted.",
+    "HostMemory": "Host-wide · In memory",
+    "Close": "Close",
+    "NotLoaded": "Policy not loaded",
+    "AccessDenied": "Runtime policy access is unavailable under this host’s page access configuration. Return to Files or retry after access is restored."
   },
   "Common": {
     "Cancel": "Cancel"
