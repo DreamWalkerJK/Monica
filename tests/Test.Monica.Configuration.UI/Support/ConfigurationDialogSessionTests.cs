@@ -53,7 +53,8 @@ public sealed class ConfigurationDialogSessionTests
         var retirement = session.DisposeAsync().AsTask();
         Assert.False(retirement.IsCompleted);
         boundary.Result.SetResult(DialogResult.Cancel());
-        await ObserveAsync(operation);
+        var operationFailure = await Assert.ThrowsAsync<InvalidOperationException>(() => ObserveAsync(operation));
+        Assert.Equal("native close", operationFailure.Message);
         var failure = await Assert.ThrowsAsync<AggregateException>(() => ObserveAsync(retirement));
         Assert.Contains(failure.InnerExceptions, exception => exception.Message == "native close");
         Assert.Same(retirement, session.DisposeAsync().AsTask());

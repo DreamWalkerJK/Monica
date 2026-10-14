@@ -1398,8 +1398,10 @@ public partial class ConfigurationStatePage
         await route.ShowDialogAsync(() => DialogService.ShowAsync<ConfigurationDefinitionSourcesDialog>(L["Sources:Definition:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true
-        }));
+            FullWidth = true,
+            CloseButton = true,
+            CloseOnEscapeKey = true
+        }), action => InvokeAsync(action));
     }
 
     private Task OpenRuntimeIssueSourceChainAsync(ConfigurationValidationIssue issue) =>

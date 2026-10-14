@@ -60,9 +60,9 @@ internal sealed class ConfigurationOperationLifetime
     /// The actual result is returned even after retirement. A caller must reject late UI adoption, but can reconcile
     /// a completed persistence outcome against its captured drafts. A cancelled dialog result is never a saved result.
     /// </remarks>
-    internal Task<DialogResult?> ShowDialogAsync(Func<Task<IDialogReference>> producer) => RunAsync(async token =>
+    internal Task<DialogResult?> ShowDialogAsync(Func<Task<IDialogReference>> producer, Func<Action, Task>? dispatch = null) => RunAsync(async token =>
     {
-        await using var session = new ConfigurationDialogSession(producer, token);
+        await using var session = new ConfigurationDialogSession(producer, token, dispatch);
         return await session.OpenAsync();
     });
 
