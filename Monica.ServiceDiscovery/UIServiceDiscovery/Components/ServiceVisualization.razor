@@ -123,6 +123,7 @@
                InitialX="@_contextMenuX" 
                InitialY="@_contextMenuY"
                ContextItem="@_contextMenuService"
+               OpeningRevision="@_contextMenuOpeningRevision"
                OnItemClick="@OnContextMenuItemClick"
                OnClose="@CloseContextMenu" />
 
@@ -130,6 +131,7 @@
     [Parameter] public EventCallback<RegisteredServiceStatus> OnServiceClick { get; set; }
 
     private const string JS_MODULE_PATH = "./_content/Monica.ServiceDiscovery/UIServiceDiscovery/serviceGraph.js";
+    private long _contextMenuOpeningRevision;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly SemaphoreSlim _captureGate = new(1, 1);
     private readonly SemaphoreSlim _interopGate = new(1, 1);
@@ -442,6 +444,7 @@
             _contextMenuX = x;
             _contextMenuY = y;
             _contextMenuItems = BuildContextMenuItems(_contextMenuService);
+            ++_contextMenuOpeningRevision;
             _contextMenuOpen = true;
             StateHasChanged();
         }
@@ -473,6 +476,7 @@
     
     private void CloseContextMenu()
     {
+        if (_disposed) return;
         _contextMenuOpen = false;
     }
     
@@ -495,6 +499,7 @@
     
     private Task OnContextMenuItemClick(ContextMenuItem<RegisteredServiceStatus> item)
     {
+        if (_disposed) return Task.CompletedTask;
         _contextMenuOpen = false;
         StateHasChanged();
         return Task.CompletedTask;
@@ -502,7 +507,7 @@
     
     private async Task ViewServiceDetailsAsync(RegisteredServiceStatus? service)
     {
-        if (service != null && OnServiceClick.HasDelegate)
+        if (!_disposed && service != null && OnServiceClick.HasDelegate)
         {
             await OnServiceClick.InvokeAsync(service);
         }
@@ -518,25 +523,25 @@
     
     private async Task FilterByStatusAsync(RegisteredServiceStatus? service)
     {
-        if (service != null)
+        if (!_disposed && service != null)
         {
             _selectedStatuses = new HashSet<ServiceStatus> { service.OverallStatus };
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add(L["ServiceGraph:Messages:FilteredStatus", service.OverallStatus.GetText(L)].Value, Severity.Info);
+            if (!_disposed) Snackbar.Add(L["ServiceGraph:Messages:FilteredStatus", service.OverallStatus.GetText(L)].Value, Severity.Info);
         }
     }
     
     private async Task FilterByDomainAsync(RegisteredServiceStatus? service)
     {
-        if (service != null)
+        if (!_disposed && service != null)
         {
             var domainName = GetServiceDomainName(service);
             _allDomainsSelected = false;
             _selectedDomains = new HashSet<string> { domainName };
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add(L["ServiceGraph:Messages:FilteredDomain", domainName].Value, Severity.Info);
+            if (!_disposed) Snackbar.Add(L["ServiceGraph:Messages:FilteredDomain", domainName].Value, Severity.Info);
         }
     }
     

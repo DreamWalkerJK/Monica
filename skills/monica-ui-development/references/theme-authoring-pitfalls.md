@@ -332,6 +332,8 @@ The common failure mode is:
 3. never add layout-changing properties such as `position`, `inset`, or width rules to overlays through a broad shared selector unless you have verified MudBlazor source and live DOM behavior
 4. verify overlay size and placement on a real hover or click path, not only by reading CSS
 
+An overlay-specific selector must also preserve MudBlazor's positioning ownership. Native `.mud-popover-fixed` uses viewport coordinates; a more specific theme rule that forces `position: absolute` can subtract genuine document scroll a second time, detach the menu, and make focus scroll the document unexpectedly. Remove the theme's `position` declaration rather than forcing every popover to be fixed: normal anchored popovers still use their native absolute mode. Check computed positioning, page coordinates, document scroll and viewport bounds on an actual opening after scrolling; a shell with only an internal scroll host does not exercise this contract.
+
 ## 11. Decorative textures can overwhelm data-heavy pages
 
 ### What happens

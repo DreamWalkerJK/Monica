@@ -24,6 +24,16 @@
     padding-block: 4px;
 }
 
+.mud-popover.mo-context-menu-popover .mo-context-menu-list .mud-menu {
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.mud-popover.mo-context-menu-popover .mo-context-menu-item {
+    width: calc(100% - 8px);
+}
+
 .mud-popover.mo-context-menu-popover .mo-context-menu-item,
 .mud-popover.mo-context-menu-popover .mud-menu-sub-menu-activator {
     min-height: 38px;
@@ -51,7 +61,7 @@
     flex: 0 0 auto;
     padding: 0;
     border: 0;
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-primary);
     background: transparent;
     font-family: var(--mo-font-family-mono);
     font-size: 0.6875rem;
@@ -59,4 +69,26 @@
 
 .mud-popover.mo-context-menu-popover .mo-context-menu-divider {
     margin-block: 4px;
+}
+
+.mud-popover.mo-context-menu-popover .mo-context-menu-item[aria-disabled="true"] {
+    /* Keep pointer focus in the native menu. MudMenuItem still rejects disabled activation. */
+    pointer-events: auto !important;
+}
+
+.mud-popover.mo-context-menu-popover .mo-context-menu-item[aria-disabled="true"] .mo-context-menu-label,
+.mud-popover.mo-context-menu-popover .mo-context-menu-item[aria-disabled="true"] .mo-context-menu-shortcut {
+    color: var(--mud-palette-action-disabled);
+}
+
+@media (max-width: 600px) {
+    .mud-popover.mo-context-menu-root-popover {
+        /* Native cursor flipping cannot fit a wide menu on either side of a central phone target. */
+        /* Keep native vertical placement and child-menu anchors; inset only the root's horizontal bounds. */
+        left: 10px !important;
+        right: 10px !important;
+        width: calc(100vw - 20px);
+        min-width: 0 !important;
+        max-width: calc(100vw - 20px) !important;
+    }
 }

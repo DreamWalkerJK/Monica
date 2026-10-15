@@ -112,7 +112,7 @@ class DomainDependencyGraph extends GraphBase {
             })
             .on('contextmenu.atlas', (event, node) => {
                 event.preventDefault(); event.stopPropagation(); this.hideTooltip();
-                this.invokeDotNet('OnDomainRightClick', node.id, event.clientX, event.clientY);
+                this.invokeDotNet('OnDomainRightClick', node.id, event.pageX, event.pageY);
             });
     }
 

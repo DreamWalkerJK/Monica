@@ -15,6 +15,7 @@ Indicators:
 - A component-owned callback/render delegate, event subscription, timer, or cancellation source remains attached after disposal begins
 - A disposable transient service is injected into a component at all, or a scoped disposable intended to match component lifetime is resolved from the longer-lived app/circuit scope; manual disposal adds a second conflicting owner
 - Multiple render/event paths can initialize, invoke, replace, or dispose the same JS module without explicit single ownership, serialization, or idempotent teardown
+- A suspended menu action reads replacement context/callbacks, closes a newer opening, or overlaps native open/close work; same-record/same-coordinate reopening has no explicit admission identity, or a coalesced close/reopen reuses children after the primitive clears their native registrations
 - `DotNetObjectReference.Create(...)` is passed inline to JavaScript or otherwise not retained and deterministically disposed by its .NET owner; JavaScript retaining the reference does not transfer disposal ownership unless an explicit, verified ownership contract says so
 - `DotNetObjectReference` is disposed before every JS observer, event listener, animation-frame callback, or other callback producer that can invoke it has been stopped
 - Per-component JavaScript state is stored in module globals or located with document-global selectors, so overlapping old/new component instances can mutate or tear down each other's state; queued animation frames, timers, or observers survive the JS session's cleanup
@@ -32,6 +33,7 @@ Indicators:
 - Manual `_isOpen`, `_isHovered`, delayed-close `CancellationTokenSource` patterns
 - Custom `<div class="dropdown-menu">` / `<div class="flyout-menu">` / `<div class="popover-panel">` instead of `MudMenu`, `MudPopover`, `MudDialog`, `MudDrawer`
 - A temporary details overlay has no accessible identity, leaks keyboard focus, cannot close with Escape, or fails to restore focus; choosing `MudDrawer` alone does not establish dialog behavior
+- Clicking a disabled native menu leaf moves focus to the document and strands Escape, or a custom label overrides its disabled appearance; verify inert activation and dismissal after the actual pointer click
 
 Fix: use MudBlazor overlay primitives and inspect their exact source and runtime keyboard behavior. Add the missing focus/dismissal contract at the owning component where required, with trapping mounted only while open. Simple native buttons, links, and status-filter controls are valid; this category concerns overlay behavior, not all native interactive markup. Reference implementation: `NavBarDropdown.razor`, `NavBarMore.razor` in `Monica.UI/Shell/Components/Layout/`. See the shared [interaction guidance](../../monica-ui-development/references/monica-workbench-design-language.md#preserve-interaction-and-runtime-state).
 
@@ -54,6 +56,8 @@ Indicators:
 - Long hashes, identifiers, JSON, tables, or code stretch an ancestor instead of wrapping or scrolling inside the intended local surface
 - The page or dialog becomes the horizontal scroll owner when only a table, diff, or code surface should scroll
 - Document or body scroll dimensions diverge from the intended owner after resize or native tooltip/popover open-close, although the page root itself remains contained
+- A cursor menu clips near the middle of a compact viewport because neither side has enough space; native flipping alone does not prove containment, and a contained root does not establish that its child menus fit
+- A native menu row keeps `width: 100%` while adding horizontal margins, extending its border box and focus outline past the clipped popover; verify every outline edge and the actual row bounds, not just the outer menu
 - An unconditional table `min-width` or column-width sum forces a scrollbar on empty/sparse results or on content that could fit with adaptive columns or native responsive rows
 - An empty table has no overflow but a visible header collapses, clips its label or leaves the declared columns short of the table's available width
 - A wrapper and native table container duplicate the same scroll ownership, or a table adds an unnecessary vertical bar inside an already scrolling dialog
