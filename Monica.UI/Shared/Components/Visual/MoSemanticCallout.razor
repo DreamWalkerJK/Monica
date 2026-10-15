@@ -1,0 +1,35 @@
+@* Semantic callout: soft state fill, a tinted icon tile, a title, and a body that links the responsible record. *@
+<div class="mo-vl-callout @Severity.ToCssClass() @Class" role="note">
+    <span class="mo-vl-callout-mark" aria-hidden="true">
+        <MudIcon Icon="@ResolvedIcon" Size="Size.Small" />
+    </span>
+    <div>
+        <p class="mo-vl-callout-title">@Title</p>
+        <div class="mo-vl-callout-body">@ChildContent</div>
+    </div>
+</div>
+
+@code {
+    /// <summary>Gets or sets the state severity; use Info, Success, Warning, or Error so the fill stays semantic.</summary>
+    [Parameter, EditorRequired] public MoVisualRole Severity { get; set; } = MoVisualRole.Info;
+
+    /// <summary>Gets or sets the callout title.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the body; link the responsible record with a mo-vl-link control.</summary>
+    [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
+
+    /// <summary>Gets or sets an icon override; by default the severity picks a matching outlined icon.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Gets or sets an optional identification class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private string ResolvedIcon => Icon ?? Severity switch
+    {
+        MoVisualRole.Success => Icons.Material.Outlined.CheckCircleOutline,
+        MoVisualRole.Warning => Icons.Material.Outlined.WarningAmber,
+        MoVisualRole.Error => Icons.Material.Outlined.ErrorOutline,
+        _ => Icons.Material.Outlined.Info,
+    };
+}

@@ -1,0 +1,46 @@
+@* Filter chip: a pill toggle whose pressed state keeps the option's semantic hue rather than repainting Primary. *@
+<button type="button"
+        class="mo-vl-chip @Role.ToCssClass() @Class"
+        aria-pressed="@PressedText"
+        aria-label="@AriaLabel"
+        @onclick="ToggleAsync">
+    @if (ShowDot)
+    {
+        <span class="mo-vl-chip-dot" aria-hidden="true"></span>
+    }
+    <span>@Label</span>
+    @if (Count is { } count)
+    {
+        <span class="mo-vl-chip-count">@count</span>
+    }
+</button>
+
+@code {
+    /// <summary>Gets or sets the visible filter label.</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets whether the filter is applied.</summary>
+    [Parameter] public bool Selected { get; set; }
+
+    /// <summary>Gets or sets the callback raised with the new selection state.</summary>
+    [Parameter] public EventCallback<bool> SelectedChanged { get; set; }
+
+    /// <summary>Gets or sets the semantic palette role; the pressed fill and dot keep this hue.</summary>
+    [Parameter] public MoVisualRole Role { get; set; } = MoVisualRole.Neutral;
+
+    /// <summary>Gets or sets a value indicating whether a semantic dot renders inside the chip.</summary>
+    [Parameter] public bool ShowDot { get; set; }
+
+    /// <summary>Gets or sets the exact record count for this option; a true zero stays readable and operable.</summary>
+    [Parameter] public int? Count { get; set; }
+
+    /// <summary>Gets or sets an accessible name overriding the composed label.</summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>Gets or sets an optional identification class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private string PressedText => Selected ? "true" : "false";
+
+    private Task ToggleAsync() => SelectedChanged.InvokeAsync(!Selected);
+}

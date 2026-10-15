@@ -1,0 +1,638 @@
+/* Monica shared visual language.
+   Implements the component vocabulary and CSS roles defined by
+   skills/monica-ui-development/references/monica-visual-language.md:
+   masthead, display value with value marks, fact grid, two-role meter,
+   ranked ledger, spine, dot distribution, semantic callout, filter chips,
+   and inspector content roles.
+   Every color resolves through MudBlazor palette variables or the approved
+   --mo-color-* contract; themes own the paint through those variables. */
+
+/* ---------- Shared role derivation ---------- */
+/* Modifier classes set --mo-vl-role to one palette color; fills and inks are
+   derived from it so a theme only needs its palette to restyle a page. */
+.mo-vl-role--primary { --mo-vl-role: var(--mud-palette-primary); }
+.mo-vl-role--info { --mo-vl-role: var(--mud-palette-info); }
+.mo-vl-role--secondary { --mo-vl-role: var(--mud-palette-secondary); }
+.mo-vl-role--success { --mo-vl-role: var(--mud-palette-success); }
+.mo-vl-role--warning { --mo-vl-role: var(--mud-palette-warning); }
+.mo-vl-role--error { --mo-vl-role: var(--mud-palette-error); }
+.mo-vl-role--neutral { --mo-vl-role: var(--mud-palette-lines-inputs); }
+
+:is(.mo-vl-mark, .mo-vl-callout, .mo-vl-chip, .mo-vl-swatch, .mo-vl-spine-node, .mo-vl-dots) {
+    --mo-vl-role: var(--mud-palette-primary);
+}
+
+/* ---------- Diagnostic family ---------- */
+.mo-vl-mono {
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.92em;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Record link inside evidence text: mono, quiet underline, role ink on hover. */
+.mo-vl-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.92em;
+    color: var(--mud-palette-text-primary);
+    text-decoration: underline;
+    text-decoration-color: var(--mud-palette-lines-inputs);
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+.mo-vl-link:hover { text-decoration-color: var(--mud-palette-primary); color: var(--mud-palette-primary); }
+
+/* ---------- Masthead ---------- */
+.mo-vl-masthead {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 24px;
+    flex-wrap: wrap;
+}
+.mo-vl-masthead__identity { min-width: 0; }
+.mo-vl-crumb {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    letter-spacing: 0.01em;
+}
+.mo-vl-title {
+    margin: 4px 0 0;
+    font-size: 1.875rem;
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--mud-palette-text-primary);
+}
+.mo-vl-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin-top: 10px;
+    font-size: 0.8125rem;
+    color: var(--mud-palette-text-secondary);
+}
+.mo-vl-sep {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--mud-palette-lines-inputs);
+    flex: none;
+}
+.mo-vl-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 500;
+    color: var(--mo-vl-role);
+}
+.mo-vl-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent);
+    flex: none;
+}
+/* Copyable identity chip: callers wire the copy action and title tooltip. */
+.mo-vl-id-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--mud-palette-divider);
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8125rem;
+}
+.mo-vl-id-chip:hover { border-color: var(--mud-palette-lines-inputs); color: var(--mud-palette-text-primary); }
+.mo-vl-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* ---------- Feature value and lede ---------- */
+.mo-vl-eyebrow {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+    letter-spacing: 0.02em;
+}
+.mo-vl-display {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 6px 0 0;
+    font-family: var(--mo-font-family-body);
+    font-variant-numeric: tabular-nums;
+}
+.mo-vl-display__value {
+    font-size: clamp(3.5rem, 6vw, 5.25rem);
+    line-height: 0.95;
+    font-weight: 250;
+    letter-spacing: -0.045em;
+    color: var(--mud-palette-text-primary);
+}
+.mo-vl-display__unit {
+    font-size: 1.75rem;
+    font-weight: 300;
+    color: var(--mud-palette-text-secondary);
+}
+.mo-vl-lede {
+    margin: 14px 0 0;
+    max-width: 54ch;
+    font-size: 0.875rem;
+    line-height: 1.75;
+    color: var(--mud-palette-text-secondary);
+}
+/* Inline value mark: compact soft-fill chip with role ink around key numbers. */
+.mo-vl-mark {
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-weight: 500;
+    color: color-mix(in srgb, var(--mo-vl-role) 70%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mo-vl-role) 14%, var(--mud-palette-surface));
+}
+/* Single-hue tonal wash behind a feature region or identity masthead. */
+.mo-vl-wash {
+    background:
+        radial-gradient(120% 140% at 0% 0%,
+            color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface)), transparent 55%),
+        var(--mud-palette-surface);
+}
+
+/* ---------- Fact grid ---------- */
+/* Contiguous facts share one border with hairline internal separators. */
+.mo-vl-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+    margin: 0;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--mud-palette-surface) 80%, transparent);
+}
+.mo-vl-fact { padding: 14px 20px; min-width: 0; }
+.mo-vl-fact + .mo-vl-fact { border-left: 1px solid var(--mud-palette-divider); }
+.mo-vl-fact dt {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mo-vl-fact dd {
+    margin: 2px 0 0;
+    font-size: 1.5rem;
+    font-weight: 350;
+    letter-spacing: -0.02em;
+    color: var(--mud-palette-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+.mo-vl-fact dd small {
+    margin-left: 3px;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---------- Two-role meter ---------- */
+/* A 6px stacked bar against one stated shared scale, with optional role
+   values captioned beneath in the diagnostic family. */
+.mo-vl-meter {
+    position: relative;
+    display: flex;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--mud-palette-table-striped);
+    overflow: hidden;
+}
+.mo-vl-meter__seg { display: block; height: 100%; }
+.mo-vl-meter__seg--primary { background: var(--mud-palette-primary); }
+.mo-vl-meter__seg--info { background: var(--mud-palette-info); }
+.mo-vl-meter__seg--secondary { background: var(--mud-palette-secondary); }
+.mo-vl-meter-cap {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.6875rem;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+.mo-vl-meter-cap i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    display: inline-block;
+    margin-right: 5px;
+    vertical-align: -1px;
+}
+.mo-vl-meter-cap .mo-vl-meter-cap--primary i { background: var(--mud-palette-primary); }
+.mo-vl-meter-cap .mo-vl-meter-cap--info i { background: var(--mud-palette-info); }
+.mo-vl-meter-cap .mo-vl-meter-cap--secondary i { background: var(--mud-palette-secondary); }
+
+/* ---------- Evidence panel ---------- */
+.mo-vl-panel {
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--mud-palette-text-primary) 4%, transparent);
+}
+.mo-vl-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px 14px;
+}
+.mo-vl-panel-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--mud-palette-text-primary);
+}
+.mo-vl-panel-sub {
+    margin: 3px 0 0;
+    font-size: 0.78125rem;
+    color: var(--mud-palette-text-secondary);
+}
+.mo-vl-legend {
+    display: flex;
+    gap: 14px;
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    padding-top: 3px;
+    flex-wrap: wrap;
+}
+.mo-vl-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.mo-vl-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--mo-vl-role);
+}
+
+/* ---------- Ranked ledger ---------- */
+.mo-vl-ledger { container-type: inline-size; }
+.mo-vl-ledger-head,
+.mo-vl-ledger-row {
+    display: grid;
+    grid-template-columns: 36px minmax(200px, 1.1fr) minmax(160px, 1fr) 92px 20px;
+    align-items: center;
+    gap: 16px;
+    padding: 0 24px;
+}
+.mo-vl-ledger-head {
+    height: 34px;
+    font-size: 0.71875rem;
+    color: var(--mud-palette-text-secondary);
+    letter-spacing: 0.02em;
+    border-top: 1px solid var(--mud-palette-divider);
+    border-bottom: 1px solid var(--mud-palette-divider);
+    background: var(--mud-palette-table-striped);
+}
+.mo-vl-ledger-head [data-align="end"] { text-align: right; }
+.mo-vl-ledger-row {
+    min-height: 58px;
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    background: none;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    transition: background-color 120ms ease-out;
+}
+.mo-vl-ledger-row:is(button):not(:disabled) { cursor: pointer; }
+.mo-vl-ledger-row:last-of-type { border-bottom: 0; }
+.mo-vl-ledger-row:is(button):not(:disabled):hover { background: var(--mud-palette-action-default-hover); }
+.mo-vl-ledger-row:is(button):disabled { cursor: default; }
+.mo-vl-ledger-row:is(button):disabled:hover { background: none; }
+.mo-vl-ledger-rank {
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+.mo-vl-ledger-name {
+    display: block;
+    font-size: 0.84375rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+.mo-vl-ledger-row:disabled .mo-vl-ledger-name { color: var(--mud-palette-text-secondary); }
+.mo-vl-ledger-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    min-width: 0;
+}
+.mo-vl-ledger-meta > .mo-vl-ledger-meta-text {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mo-vl-badge {
+    flex: none;
+    padding: 0 6px;
+    border-radius: 5px;
+    line-height: 18px;
+    font-size: 0.65625rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--mud-palette-text-secondary);
+    background: var(--mud-palette-table-striped);
+    border: 1px solid var(--mud-palette-divider);
+}
+.mo-vl-badge--warn {
+    color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mud-palette-warning) 16%, var(--mud-palette-surface));
+    border-color: transparent;
+}
+.mo-vl-ledger-total {
+    text-align: right;
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.8125rem;
+    color: var(--mud-palette-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+.mo-vl-ledger-total--warn {
+    color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
+}
+.mo-vl-ledger-chevron {
+    color: var(--mud-palette-text-secondary);
+    display: inline-flex;
+    transition: transform 150ms ease-out, color 150ms ease-out;
+}
+.mo-vl-ledger-row:hover .mo-vl-ledger-chevron { color: var(--mud-palette-text-primary); transform: translateX(2px); }
+.mo-vl-ledger-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 24px 18px;
+    font-size: 0.78125rem;
+    color: var(--mud-palette-text-secondary);
+    border-top: 1px solid var(--mud-palette-divider);
+}
+.mo-vl-ledger-empty {
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8125rem;
+}
+@container (max-width: 760px) {
+    .mo-vl-ledger-head { display: none; }
+    .mo-vl-ledger-row {
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+        grid-template-areas:
+            "rank id total"
+            "rank meter meter";
+        gap: 8px 10px;
+        padding: 12px 16px;
+        min-height: 0;
+    }
+    .mo-vl-ledger-rank { grid-area: rank; align-self: start; padding-top: 2px; }
+    .mo-vl-ledger-id { grid-area: id; min-width: 0; }
+    .mo-vl-ledger-metercell { grid-area: meter; }
+    .mo-vl-ledger-total { grid-area: total; align-self: start; }
+    .mo-vl-ledger-chevron { display: none; }
+}
+
+/* ---------- Spine ---------- */
+/* Ordered nodes colored by role, joined by a 1.5px connector. */
+.mo-vl-spine {
+    display: grid;
+    gap: 0;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+.mo-vl-spine-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 7px 0;
+}
+.mo-vl-spine-item::before {
+    content: "";
+    position: absolute;
+    left: 8.25px;
+    top: 26px;
+    bottom: -8px;
+    width: 1.5px;
+    background: var(--mud-palette-lines-inputs);
+}
+.mo-vl-spine-item:last-child::before { display: none; }
+.mo-vl-spine-node {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1.5px solid color-mix(in srgb, var(--mo-vl-role) 40%, transparent);
+    background: var(--mud-palette-surface);
+    display: grid;
+    place-items: center;
+    z-index: 1;
+}
+.mo-vl-spine-node:is(button) { cursor: pointer; }
+.mo-vl-spine-node::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mo-vl-role);
+}
+.mo-vl-spine-name {
+    font-size: 0.8125rem;
+    color: var(--mud-palette-text-primary);
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mo-vl-spine-name small {
+    display: block;
+    font-size: 0.71875rem;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mo-vl-spine-detail {
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.78125rem;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Dot distribution ---------- */
+.mo-vl-dots { display: grid; gap: 9px; }
+.mo-vl-dots-row {
+    display: grid;
+    grid-template-columns: minmax(28px, auto) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+}
+.mo-vl-dots-key {
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.71875rem;
+    color: var(--mud-palette-text-secondary);
+}
+.mo-vl-dots-strip { display: flex; flex-wrap: wrap; gap: 4px; }
+.mo-vl-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 2.5px;
+    background: color-mix(in srgb, var(--mo-vl-role) calc(var(--mo-vl-intensity, 1) * 100%), var(--mud-palette-table-striped));
+}
+.mo-vl-dots-count {
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-primary);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+/* ---------- Semantic callout ---------- */
+.mo-vl-callout {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--mo-vl-role) 12%, var(--mud-palette-surface));
+}
+.mo-vl-callout-mark {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    color: color-mix(in srgb, var(--mo-vl-role) 70%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mo-vl-role) 16%, var(--mud-palette-surface));
+}
+.mo-vl-callout-title {
+    margin: 0;
+    font-size: 0.84375rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+}
+.mo-vl-callout-body {
+    margin-top: 3px;
+    font-size: 0.78125rem;
+    line-height: 1.6;
+    color: var(--mud-palette-text-secondary);
+}
+.mo-vl-callout-body :is(button, a).mo-vl-link { font-size: 0.92em; }
+
+/* ---------- Filter chips ---------- */
+.mo-vl-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.mo-vl-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--mud-palette-lines-inputs);
+    background: var(--mud-palette-surface);
+    font-size: 0.78125rem;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+    transition: border-color 150ms ease-out, color 150ms ease-out, background-color 150ms ease-out;
+}
+.mo-vl-chip:hover { color: var(--mud-palette-text-primary); border-color: var(--mud-palette-text-secondary); }
+/* Selected keeps the option's semantic hue instead of repainting Primary. */
+.mo-vl-chip[aria-pressed="true"] {
+    color: color-mix(in srgb, var(--mo-vl-role) 70%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mo-vl-role) 14%, var(--mud-palette-surface));
+    border-color: transparent;
+    font-weight: 500;
+}
+.mo-vl-chip[aria-pressed="true"].mo-vl-role--neutral {
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-action-default-hover);
+}
+.mo-vl-chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mo-vl-role);
+    flex: none;
+}
+.mo-vl-chip-count {
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.6875rem;
+    color: inherit;
+    opacity: 0.8;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Inspector content roles ---------- */
+/* The overlay geometry (inset, scrim, focus) belongs to the MudBlazor drawer
+   or dialog primitive; these roles style the content inside it. */
+.mo-vl-inspector-heading {
+    margin: 0;
+    font-size: 1.1875rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--mud-palette-text-primary);
+    word-break: break-all;
+}
+.mo-vl-kv {
+    display: grid;
+    grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
+    gap: 8px 12px;
+    font-size: 0.8125rem;
+    margin: 0;
+}
+.mo-vl-kv dt { color: var(--mud-palette-text-secondary); }
+.mo-vl-kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.mo-vl-rel-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mo-vl-rel-chips > button,
+.mo-vl-rel-chips > a {
+    padding: 4px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--mud-palette-lines-inputs);
+    background: var(--mud-palette-surface);
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-primary);
+    text-decoration: none;
+    cursor: pointer;
+}
+.mo-vl-rel-chips > button:hover,
+.mo-vl-rel-chips > a:hover { border-color: var(--mud-palette-primary); color: var(--mud-palette-primary); }
+
+/* ---------- Section title ---------- */
+.mo-vl-section-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+    letter-spacing: 0.03em;
+}

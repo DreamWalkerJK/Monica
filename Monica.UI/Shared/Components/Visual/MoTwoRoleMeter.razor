@@ -1,0 +1,73 @@
+@* Two-role meter: a 6px stacked bar against one stated shared scale, with role values captioned beneath in the diagnostic family. *@
+<div class="mo-vl-meter @Class"
+     role="meter"
+     tabindex="0"
+     aria-label="@AccessibleDescription"
+     aria-valuemin="0"
+     aria-valuemax="100"
+     aria-valuenow="@SvgPercent(TotalPercent)"
+     aria-valuetext="@AccessibleDescription">
+    @if (PrimaryWidth > 0)
+    {
+        <span class="mo-vl-meter__seg mo-vl-meter__seg--primary" style="@WidthStyle(PrimaryWidth)"></span>
+    }
+    @if (SecondaryWidth > 0)
+    {
+        <span class="mo-vl-meter__seg mo-vl-meter__seg--@SecondarySegmentClass" style="@WidthStyle(SecondaryWidth)"></span>
+    }
+</div>
+@if (PrimaryCaption is not null || SecondaryCaption is not null)
+{
+    <p class="mo-vl-meter-cap">
+        @if (PrimaryCaption is not null)
+        {
+            <span class="mo-vl-meter-cap--primary"><i aria-hidden="true"></i>@PrimaryCaption</span>
+        }
+        @if (SecondaryCaption is not null)
+        {
+            <span class="mo-vl-meter-cap--@SecondarySegmentClass"><i aria-hidden="true"></i>@SecondaryCaption</span>
+        }
+    </p>
+}
+
+@code {
+    /// <summary>Gets or sets the value carried by the primary role, in the meter's own unit.</summary>
+    [Parameter] public double PrimaryValue { get; set; }
+
+    /// <summary>Gets or sets the value carried by the secondary role, in the meter's own unit.</summary>
+    [Parameter] public double SecondaryValue { get; set; }
+
+    /// <summary>Gets or sets the stated shared scale both values are measured against; non-positive disables the bar.</summary>
+    [Parameter] public double ScaleMaximum { get; set; }
+
+    /// <summary>Gets or sets the palette role of the second segment when Info is already used by the page's role map.</summary>
+    [Parameter] public MoVisualRole SecondaryRole { get; set; } = MoVisualRole.Info;
+
+    /// <summary>Gets or sets the caption under the bar for the primary value, such as "3.06 s".</summary>
+    [Parameter] public string? PrimaryCaption { get; set; }
+
+    /// <summary>Gets or sets the caption under the bar for the secondary value.</summary>
+    [Parameter] public string? SecondaryCaption { get; set; }
+
+    /// <summary>Gets or sets the accessible reading of the meter, including both role values and the shared scale.</summary>
+    [Parameter, EditorRequired] public string AccessibleDescription { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets an optional identification class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private double PrimaryWidth => PercentOf(PrimaryValue);
+    private double SecondaryWidth => PercentOf(SecondaryValue);
+    private double TotalPercent => Math.Min(100, PrimaryWidth + SecondaryWidth);
+
+    private string SecondarySegmentClass => SecondaryRole == MoVisualRole.Secondary ? "secondary" : "info";
+
+    private double PercentOf(double value) => ScaleMaximum <= 0
+        ? 0
+        : Math.Clamp(value / ScaleMaximum * 100, 0, 100);
+
+    private static string WidthStyle(double percent) =>
+        FormattableString.Invariant($"width:{percent.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}%");
+
+    private static string SvgPercent(double percent) =>
+        percent.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+}
