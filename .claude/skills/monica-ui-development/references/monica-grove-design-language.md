@@ -9,7 +9,7 @@ Use the shared [working-interface language](monica-workbench-design-language.md)
 - Use a warm stone canvas, a light ordinary surface, a distinct contextual navigation surface, and forest primary/focus accents. Keep the inverse forest identity surface distinct from ordinary working panels.
 - Dark mode uses distinguishable green-black canvas and structural surfaces with a softer light primary accent. Retain separate information, success, warning, and error roles and reinforce their meaning with labels or icons.
 - Source all component paint from MudBlazor palettes or approved semantic tokens. Grove-specific colors belong in its C# palette and theme-owned CSS.
-- Grove can express its identity through inverse forest surfaces, editorial typography, botanical/vector detail, or a richer feature composition where the page's visual direction benefits from it. Choose the prominence and depth of each region according to its role. The health workbench's restrained palette treatment is one accepted example, not a requirement that every Grove working page omit a forest feature region or remain understated.
+- Grove paints the shared [visual language](monica-visual-language.md) with forest Primary, its info and secondary roles, and warm stone surfaces. It may add inverse forest identity surfaces, an editorial display face for page titles, and botanical or vector detail. The signature region, role map, and scale tiers stay the same as in every other theme.
 
 ## Typography and identity
 
