@@ -17,7 +17,7 @@
     <MoWorkbenchNavigation Class="eventbus-workbench-nav" Label="@L["Workbench:Navigation"]">
         @foreach (var section in Enum.GetValues<EventBusWorkbenchView>())
         {
-            <a href="@Route(section)" aria-current="@(View == section ? "page" : null)" data-view="@section"><MudIcon Icon="@SectionIcon(section)" Size="Size.Small" /><span>@SectionTitle(section)</span>
+            <a href="@Route(section)" aria-current="@(View == section ? "page" : null)" data-view="@(section)"><MudIcon Icon="@SectionIcon(section)" Size="Size.Small" /><span>@SectionTitle(section)</span>
                 @if (capture is { } navigationCapture && section == EventBusWorkbenchView.Subscriptions) { <span class="eventbus-nav-count">@navigationCapture.Subscriptions.Count</span> }
             </a>
         }
