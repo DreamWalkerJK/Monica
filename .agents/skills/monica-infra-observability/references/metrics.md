@@ -40,6 +40,12 @@ The collector snapshots cached `System.Runtime` counter payloads on its own time
 
 The Runtime Metrics page reads only `GetTrend()`. Each successful read detaches the retained list and records a UTC view capture time. Its current point is the last retained sample; its previous point is the latest point from the previous successful **view read**, even when both reads return the same sample. A failed refresh retains the previous trend, points, and capture time while surfacing the read failure. An empty successful history remains distinct from an initial failure. Manual refresh and pausing affect view refresh only; host sampling and eviction continue, and resuming reads whatever is still retained. Do not label a per-view difference as the change between adjacent collector samples.
 
+### Browse retained observations
+
+The CPU and working-set plots use elapsed UTC time and the complete retained observations, with physical-size labels outside the SVG. Hover previews an observation; each plot's native sample browser provides Arrow/Home/End access and a touch selection path. Its accessible text includes the retained ordinal, exact UTC timestamp, value and unit. Escape dismisses the preview without moving focus. The paged ledger remains the path to every retained sample's frozen raw inspector and successful view-capture time.
+
+Automatic reads preserve a browsed observation while its original collector object remains retained, even when its ordinal changes. If it leaves the window, the browser selects the first remaining observation without moving focus. A visible focused preview explains that fallback; Escape keeps a dismissed preview hidden through refreshes until further deliberate interaction. Pausing keeps the displayed history fixed while collection continues. Plot selection does not pause collection or change frozen inspector evidence. Plots, page refresh, and inspector dismissal have separate lifetimes; the Runtime plots add no JavaScript measurement or resize-observer work.
+
 ### Units and counter limits
 
 `GcHeapSizeBytes`, `WorkingSetBytes`, generation sizes, and allocation values are byte-based fields. The compatibility `GcHeapSizeMB`, `WorkingSetMB`, `AverageHeapSizeMB`, and `MaxHeapSizeMB` values use decimal MB (`bytes / 1_000_000`), not MiB. If a display scales a byte rate by `1024` or `1_048_576`, label it KiB/s or MiB/s. CPU usage, time in GC, and fragmentation are percentages; `ThreadCount` is the ThreadPool thread count.

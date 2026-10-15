@@ -74,12 +74,69 @@ internal static class RuntimeMetricsDisplayFormatter
     public static string MachineTime(DateTime timestamp) =>
         AsUtc(timestamp).ToString("O", CultureInfo.InvariantCulture);
 
+    /// <summary>Formats a sample's UTC date and millisecond time for the exact plot readout.</summary>
+    public static string UtcDateTime(DateTime timestamp) =>
+        AsUtc(timestamp).ToString("yyyy-MM-dd HH:mm:ss.fff 'UTC'", CultureInfo.InvariantCulture);
+
+    /// <summary>Formats a UTC axis time with fractional seconds when a short span needs them.</summary>
+    public static string UtcAxisTime(DateTime timestamp, TimeSpan span) =>
+        AsUtc(timestamp).ToString(span.Ticks is > 0 and < 4 * TimeSpan.TicksPerMillisecond
+            ? "HH:mm:ss.fffffff"
+            : span.Ticks is > 0 and < 4 * TimeSpan.TicksPerSecond ? "HH:mm:ss.fff" : "HH:mm:ss",
+            CultureInfo.InvariantCulture);
+
+    /// <summary>Formats the UTC date shown at endpoints when the plotted window crosses midnight.</summary>
+    public static string UtcDate(DateTime timestamp) =>
+        AsUtc(timestamp).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    /// <summary>Preserves general numeric precision in the current culture and appends the metric's unit.</summary>
+    public static string PlotValue(double value, RuntimeTrendMetric metric) =>
+        $"{value.ToString("G", CultureInfo.CurrentCulture)} {RuntimeTrendPlotProjection.UnitFor(metric)}";
+
+    /// <summary>
+    /// Formats a complete finite tick domain using one culture-aware notation and precision.
+    /// Ordinary axes use decimals; magnitudes below 0.000001 or at least 1,000,000 use scientific notation.
+    /// Precision retains three significant digits of the smallest interval without changing the tick values.
+    /// </summary>
+    public static IReadOnlyList<string> AxisLabels(IReadOnlyList<double> values)
+    {
+        if (values.Count == 0) return [];
+        var magnitude = values.Max(value => Math.Abs(value));
+        if (magnitude == 0) return values.Select(_ => "0").ToArray();
+
+        // Scale before subtracting so an extreme signed domain cannot overflow its interval.
+        var scaledValues = values.Select(value => value / magnitude).Distinct().Order().ToArray();
+        var spacing = scaledValues.Zip(scaledValues.Skip(1), (left, right) => right - left)
+            .DefaultIfEmpty(1).Min();
+        var scientific = magnitude is < .000001 or >= 1_000_000;
+        var precision = scientific
+            ? Math.Min(16, Math.Max(0, 2 - (int)Math.Floor(Math.Log10(spacing))))
+            : Math.Max(0, 2 - (int)Math.Floor(Math.Log10(magnitude) + Math.Log10(spacing)));
+
+        string[] FormatLabels()
+        {
+            var format = (precision == 0 ? "0" : "0." + new string('0', precision))
+                + (scientific ? "E+0" : string.Empty);
+            return values.Select(value => value == 0 ? "0" : value.ToString(format, CultureInfo.CurrentCulture)).ToArray();
+        }
+
+        var labels = FormatLabels();
+        // Remove only precision that is redundant for the whole ordinary axis, never for one tick alone.
+        while (!scientific && precision > 0 && labels.Where((_, index) => values[index] != 0).All(label => label.EndsWith('0')))
+        {
+            precision--;
+            labels = FormatLabels();
+        }
+        return labels;
+    }
+
     /// <summary>
     /// Formats an unscaled measurement as culture-independent, round-trip numeric evidence.
     /// </summary>
     public static string Raw(double value) => value.ToString("R", CultureInfo.InvariantCulture);
 
-    private static DateTime AsUtc(DateTime timestamp) =>
+    /// <summary>Normalizes an instant to UTC; unspecified collector timestamps are already UTC.</summary>
+    public static DateTime AsUtc(DateTime timestamp) =>
         timestamp.Kind == DateTimeKind.Unspecified
             ? DateTime.SpecifyKind(timestamp, DateTimeKind.Utc)
             : timestamp.ToUniversalTime();

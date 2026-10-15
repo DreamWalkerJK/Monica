@@ -10,6 +10,11 @@ internal static class ConfigurationHistoryMapper
     internal static ConfigurationDefinitionPublishHistory ToPublishHistory(
         ConfigurationDefinitionPublishHistoryEntity entity)
     {
+        var changeKind = Enum.Parse<ConfigurationDefinitionPublishChangeKind>(entity.ChangeKind);
+        var isInitialPublication = changeKind == ConfigurationDefinitionPublishChangeKind.Created
+            && entity.PreviousSchemaVersion is null;
+
+        // Relational insert defaults can persist absent initial schema strings as empty values.
         return new ConfigurationDefinitionPublishHistory
         {
             HistoryId = entity.HistoryId,
@@ -19,13 +24,17 @@ internal static class ConfigurationHistoryMapper
             Description = entity.Description,
             FromProject = entity.FromProject,
             Category = entity.Category,
-            ChangeKind = Enum.Parse<ConfigurationDefinitionPublishChangeKind>(entity.ChangeKind),
+            ChangeKind = changeKind,
             DefinitionRevision = entity.DefinitionRevision,
             PreviousSchemaVersion = entity.PreviousSchemaVersion,
             NewSchemaVersion = entity.NewSchemaVersion,
-            PreviousSchemaHash = entity.PreviousSchemaHash,
+            PreviousSchemaHash = isInitialPublication && entity.PreviousSchemaHash is ""
+                ? null
+                : entity.PreviousSchemaHash,
             NewSchemaHash = entity.NewSchemaHash,
-            PreviousSchemaJson = entity.PreviousSchemaJson,
+            PreviousSchemaJson = isInitialPublication && entity.PreviousSchemaJson is ""
+                ? null
+                : entity.PreviousSchemaJson,
             NewSchemaJson = entity.NewSchemaJson,
             ChangeSummaryJson = entity.ChangeSummaryJson,
             PublisherId = entity.PublisherId,

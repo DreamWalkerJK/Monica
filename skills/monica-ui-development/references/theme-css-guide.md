@@ -114,6 +114,8 @@ Do not rely on page-only classes when the intent is a reusable theme behavior. I
 
 Native dialog title actions are rendered by the dialog provider outside the feature's isolated content wrapper. Style a shared title action through its stable native selector in shared theme CSS; keep feature content and layout in isolated CSS. An absolutely positioned native Close must anchor to the actual title or dialog rather than rely on an animation transform to establish its containing block. Verify its bounds in ordinary and reduced-motion settings, including themes that remove animation. Do not assume `ActionDefault` provides readable contrast for an enabled icon on every surface. Check the actual icon color against its normal, hovered and selected backgrounds across themes; preserve explicit semantic colors and disabled states.
 
+Native floating field captions remain ordinary text while focused. MudBlazor 9's focus rule uses raw Primary; the shared `themes/mo-theme-components.css` rule instead uses TextPrimary for enabled, non-error captions. Keep theme scope and state exclusions in `:where()` so the selector retains the native focus rule's specificity, and use stylesheet order rather than `!important`. Preserve native disabled/error treatment, stronger component-owned caption roles, and field-local inverse text roles. Keep palette Primary, accent borders/rings, action/icon colors, typography, and geometry independent of this caption correction. Measure the visible focused glyphs against their composed background at the rendered scale; ordinary text needs 4.5:1. Verify native focus and popup return, intentional local roles, and every selectable theme in both modes.
+
 ### 5. Keep theme CSS component-oriented
 
 A good theme file usually looks like:

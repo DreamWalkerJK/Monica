@@ -3,25 +3,170 @@
 @using Monica.UI.Shell.Support
 @inject IDialogService DialogService
 @inject IStringLocalizer<SharedResource> L
+@implements IAsyncDisposable
 
 <MudIconButton Icon="@ShellIcons.Palette"
                Color="Color.Inherit"
                Size="Size.Medium"
                Class="action-button"
                OnClick="OpenThemeDialog"
+               aria-label="@L["Theme:Settings"]"
+               aria-disabled="@(_retired || DialogBusy ? "true" : "false")"
                title="@L["Theme:Settings"]" />
 
 @code {
-    private async Task OpenThemeDialog()
+    private readonly object _lifetimeGate = new();
+    private TaskCompletionSource? _dialogOperation;
+    private TaskCompletionSource? _closeCompletion;
+    private TaskCompletionSource? _retirement;
+    private IDialogReference? _dialog;
+    private bool _retired;
+    private bool DialogBusy => _dialogOperation?.Task.IsCompleted == false;
+
+    private Task OpenThemeDialog()
     {
-        var options = new DialogOptions
+        TaskCompletionSource completion;
+        lock (_lifetimeGate)
         {
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseButton = true
-        };
-        
-        await DialogService.ShowAsync<ThemeDialog>(string.Empty, options);
+            if (_retired)
+                return Task.CompletedTask;
+            if (_dialogOperation is { Task.IsCompleted: false } current)
+                return current.Task;
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _dialogOperation = completion;
+            _closeCompletion = null;
+        }
+
+        _ = CompleteDialogAsync(completion);
+        return completion.Task;
+    }
+
+    private async Task CompleteDialogAsync(TaskCompletionSource completion)
+    {
+        IDialogReference? reference = null;
+        ThemeDialog? content = null;
+        Exception? failure = null;
+        try
+        {
+            reference = await DialogService.ShowAsync<ThemeDialog>(string.Empty, new DialogOptions
+            {
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true
+            });
+            content = reference.Dialog as ThemeDialog;
+            content?.AttachDialogResult(reference.Result);
+            bool retired;
+            lock (_lifetimeGate)
+            {
+                _dialog = reference;
+                retired = _retired;
+            }
+
+            if (retired || content is null)
+                await CloseDialogAsync(reference);
+            await reference.Result;
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+        }
+        finally
+        {
+            // Retain the acquired component: the native result can precede renderer disposal.
+            if (content is not null)
+            {
+                try { await content.DisposeAsync(); }
+                catch (Exception exception)
+                {
+                    failure = failure is null ? exception : new AggregateException(failure, exception);
+                }
+            }
+            lock (_lifetimeGate)
+            {
+                if (_dialog == reference)
+                    _dialog = null;
+            }
+        }
+
+        if (failure is null) completion.TrySetResult();
+        else completion.TrySetException(failure);
+    }
+
+    private Task CloseDialogAsync(IDialogReference reference)
+    {
+        TaskCompletionSource completion;
+        lock (_lifetimeGate)
+        {
+            if (_closeCompletion is not null)
+                return _closeCompletion.Task;
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _closeCompletion = completion;
+        }
+
+        _ = CompleteCloseAsync(reference, completion);
+        return completion.Task;
+    }
+
+    private async Task CompleteCloseAsync(IDialogReference reference, TaskCompletionSource completion)
+    {
+        try
+        {
+            try
+            {
+                await InvokeAsync(() =>
+                {
+                    if (!reference.Result.IsCompleted)
+                        DialogService.Close(reference, DialogResult.Cancel());
+                });
+            }
+            finally
+            {
+                // A retired native provider no longer handles Close or completes its references.
+                if (!reference.Result.IsCompleted)
+                    reference.Dismiss(DialogResult.Cancel());
+            }
+            completion.TrySetResult();
+        }
+        catch (Exception exception)
+        {
+            completion.TrySetException(exception);
+        }
+    }
+
+    /// <summary>Stops admission, closes a current or late native reference, and drains the owned dialog chain.</summary>
+    public ValueTask DisposeAsync()
+    {
+        TaskCompletionSource completion;
+        IDialogReference? reference;
+        Task? operation;
+        lock (_lifetimeGate)
+        {
+            if (_retirement is not null)
+                return new(_retirement.Task);
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _retirement = completion;
+            _retired = true;
+            reference = _dialog;
+            operation = _dialogOperation?.Task;
+        }
+
+        _ = CompleteRetirementAsync(reference, operation, completion);
+        return new(completion.Task);
+    }
+
+    private async Task CompleteRetirementAsync(IDialogReference? reference, Task? operation, TaskCompletionSource completion)
+    {
+        try
+        {
+            var close = reference is null ? Task.CompletedTask : CloseDialogAsync(reference);
+            await Task.WhenAll(close, operation ?? Task.CompletedTask);
+            completion.TrySetResult();
+        }
+        catch (Exception exception)
+        {
+            completion.TrySetException(exception);
+        }
     }
 }

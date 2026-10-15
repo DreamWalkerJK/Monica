@@ -1,4 +1,4 @@
-// The heading is mounted by the native dialog's TitleContent. Naming its nearest
+// The heading is mounted inside the native dialog. Naming its nearest
 // dialog preserves MudBlazor's focus, Escape, backdrop, and result ownership.
 export function labelDialog(heading, headingId) {
     if (!heading?.isConnected || heading.id !== headingId) return;

@@ -20,6 +20,8 @@ The shell hosts pages; feature UI modules add operational views, while Markdown 
 | Execute host-local commands and inspect session, output, history and cancellation evidence | [Terminal workspace](references/terminal-workspace.md) |
 | Inspect Kubernetes resources or review and execute Service-backed restart and replica operations | [K8S operations](references/k8s-workspace.md) |
 | Compare text or embed a Diff viewer with source-faithful line evidence | [Text comparison](references/diff.md) |
+| Read and copy captured exception or diagnostic text inside an existing UI | [Embedded diagnostic text](references/stack-trace.md) |
+| Theme the standalone Swagger reference or add application destinations to its toolbar | [Swagger workbench](references/swagger-ui.md) |
 | Set theme/language defaults or integrate custom page localization | [Theme and localization](references/theme-and-localization.md) |
 
 For building components, use `$monica-ui-development`; for authoring translation resources, use `$monica-ui-localization`; configure each feature's underlying service through its owning infrastructure skill.

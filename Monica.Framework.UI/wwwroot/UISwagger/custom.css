@@ -1,104 +1,1651 @@
 /**
- * Monica Swagger UI - Custom Navigation Buttons Styles
- * Matches Swagger UI design with green/teal accents
+ * Monica's native Swagger API reference workbench.
+ * Palette and font values are supplied by the selected C# theme; native controls own behavior.
  */
-
-/* Button Container */
-.mo-swagger-nav-buttons {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-left: auto; /* Push to right side */
-    padding: 0 16px;
+html.mo-swagger-workbench[data-mo-swagger-theme] {
+    --mo-swagger-gutter: 28px;
+    --mo-swagger-content-inset: 24px;
+    --mo-swagger-reader-surface: color-mix(in srgb, var(--mo-swagger-surface-muted) 70%, var(--mo-swagger-surface));
+    --mo-swagger-secondary-ink: color-mix(in srgb, var(--mo-swagger-text-secondary) 90%, var(--mo-swagger-text));
+    --mo-swagger-link-ink: color-mix(in srgb, var(--mo-swagger-primary) 30%, var(--mo-swagger-text));
+    --mo-swagger-required-ink: color-mix(in srgb, var(--mo-swagger-danger) 28%, var(--mo-swagger-text));
+    --mo-swagger-reader-key: color-mix(in srgb, var(--mo-swagger-primary) 28%, var(--mo-swagger-text));
+    background: var(--mo-swagger-background);
+    color: var(--mo-swagger-text);
+    color-scheme: light;
 }
 
-/* Individual Button */
-.mo-swagger-nav-btn {
-    --mo-swagger-button-background: #49cc90;
-    --mo-swagger-button-background-hover: #3cb878;
-    --mo-swagger-button-background-dark: #4a9d76;
-    --mo-swagger-button-background-dark-hover: #3f8863;
-    --mo-swagger-button-text: #fff;
+html.mo-swagger-workbench[data-mo-swagger-mode="dark"] {
+    color-scheme: dark;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] body {
+    margin: 0;
+    background: var(--mo-swagger-background);
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-body);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui {
+    min-width: 0;
+    max-width: none;
+    background: var(--mo-swagger-background);
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-body);
+    font-size: var(--mo-swagger-font-body-size);
+    font-weight: var(--mo-swagger-font-body-weight);
+    line-height: var(--mo-swagger-font-body-line-height);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(button, input, select, textarea) {
+    box-sizing: border-box;
+    max-width: 100%;
+    font-family: var(--mo-swagger-font-body);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(h1, h2, h3, h4, h5, h6, p, li, label, small) {
+    color: inherit;
+    font-family: var(--mo-swagger-font-body);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui a {
+    color: var(--mo-swagger-link-ink);
+    text-underline-offset: 3px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--mo-swagger-link-ink);
+    outline-offset: 3px;
+}
+
+/* Only document-level wrappers own working gutters; the auth form's wrappers remain local. */
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui > .wrapper,
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .wrapper:has(> .block),
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar > .wrapper,
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .scheme-container > .schemes.wrapper {
+    width: 100%;
+    max-width: none;
+    padding-inline: var(--mo-swagger-gutter);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar {
+    margin: 0;
+    padding-block: 10px;
+    border-bottom: 1px solid var(--mo-swagger-border);
+    background: var(--mo-swagger-surface);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar-wrapper {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar .link {
+    flex: 0 0 auto;
+    min-width: 0;
+    margin: 0 auto 0 0;
+    padding: 0;
+    color: var(--mo-swagger-text);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar .link svg {
+    width: auto;
+    height: 36px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar .link svg [class$="cls-2"] {
+    fill: var(--mo-swagger-text);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar .download-url-wrapper {
+    display: flex;
+    flex: 1 1 340px;
+    min-width: 0;
+    max-width: 620px;
+    margin: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar .select-label {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+    color: var(--mo-swagger-secondary-ink);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar .select-label > span {
+    flex: 0 0 auto;
+    max-width: none;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+    white-space: nowrap;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar .select-label select {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 38px;
+    margin: 0;
+    border: 1px solid var(--mo-swagger-border-strong);
+    background-color: var(--mo-swagger-surface);
+    color: var(--mo-swagger-text);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .dark-mode-toggle {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .dark-mode-toggle > button {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+    place-items: center;
+    border: 1px solid var(--mo-swagger-border);
+    border-radius: 6px;
+    background: var(--mo-swagger-surface);
+    color: var(--mo-swagger-text-secondary);
+    cursor: pointer;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .dark-mode-toggle svg {
+    fill: currentColor;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .mo-swagger-nav-buttons {
+    display: flex;
+    flex: 0 0 auto;
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .mo-swagger-nav-btn {
+    display: inline-flex;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 11px;
+    border: 1px solid var(--mo-swagger-border);
+    border-radius: 6px;
+    background: var(--mo-swagger-surface);
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.mo-swagger-nav-btn, .dark-mode-toggle > button):hover {
+    border-color: var(--mo-swagger-border-strong);
+    background: var(--mo-swagger-surface-muted);
+}
+
+/* API identity is a solid, deliberately prominent theme field. */
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .information-container.wrapper {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 24px var(--mo-swagger-gutter);
+    background: var(--mo-swagger-primary);
+    color: var(--mo-swagger-primary-text);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .information-container .info {
+    margin: 0;
+    color: var(--mo-swagger-primary-text);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .information-container .info .title {
+    margin: 0 0 6px;
+    color: var(--mo-swagger-primary-text);
+    font-family: var(--mo-swagger-font-display);
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .information-container .info .title > span {
     display: inline-flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
-    padding: 8px 16px;
+    margin-inline-start: 10px;
+    vertical-align: middle;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .information-container .info :is(.version, .version-stamp, .title small) {
+    display: inline-flex;
+    margin: 0;
+    padding: 0;
     border-radius: 4px;
-    background-color: var(--mo-swagger-button-background);
-    color: var(--mo-swagger-button-text);
-    text-decoration: none;
-    font-family: sans-serif;
+    background: none;
+    color: var(--mo-swagger-primary-text);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .information-container .info pre.version {
+    padding: 2px 7px;
+    border: 1px solid color-mix(in srgb, var(--mo-swagger-primary-text) 35%, var(--mo-swagger-primary));
+    background: color-mix(in srgb, var(--mo-swagger-primary-text) 8%, var(--mo-swagger-primary));
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .information-container .info :is(a, .url, .description, .description p) {
+    color: var(--mo-swagger-primary-text);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .information-container .info .url {
+    font-family: var(--mo-swagger-font-code);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .information-container .info .description {
+    max-width: 85ch;
+    margin-top: 14px;
+    line-height: 1.6;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .information-container .info .description p {
+    margin-block: 6px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .scheme-container {
+    margin: 0 0 24px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--mo-swagger-border);
+    background: var(--mo-swagger-surface);
+    box-shadow: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .schemes {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .auth-wrapper {
+    margin: 0 0 0 auto;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.servers, .schemes > div) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* Method paint describes a verb. Expanded contract and response bodies remain ordinary surfaces. */
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock {
+    --mo-swagger-method: var(--mo-swagger-text-secondary);
+    --mo-swagger-method-ink: color-mix(in srgb, var(--mo-swagger-method) 18%, var(--mo-swagger-text));
+    container-name: mo-swagger-operation;
+    container-type: inline-size;
+    margin: 0 0 8px;
+    border: 1px solid var(--mo-swagger-border-strong);
+    border-radius: 10px;
+    background: var(--mo-swagger-surface);
+    box-shadow: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock.opblock-get { --mo-swagger-method: var(--mo-swagger-info); }
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock.opblock-post { --mo-swagger-method: var(--mo-swagger-success); }
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock.opblock-put { --mo-swagger-method: var(--mo-swagger-warning); }
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock.opblock-patch { --mo-swagger-method: var(--mo-swagger-primary); }
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock.opblock-delete { --mo-swagger-method: var(--mo-swagger-danger); }
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock.opblock-options { --mo-swagger-method: var(--mo-swagger-secondary); }
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-tag-section {
+    margin-bottom: 24px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-tag {
+    min-height: 44px;
+    margin: 0 0 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--mo-swagger-border);
+    color: var(--mo-swagger-text);
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 1.5;
+    transition: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-tag :is(a, small) {
+    color: inherit;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-tag small {
+    margin-inline-start: 12px;
+    color: var(--mo-swagger-secondary-ink);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-summary {
+    display: flex;
+    min-height: 54px;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-color: var(--mo-swagger-border);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--mo-swagger-method) 5%, var(--mo-swagger-surface));
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock.is-open .opblock-summary {
+    border-bottom: 1px solid var(--mo-swagger-border);
+    border-radius: 9px 9px 0 0;
+    background: color-mix(in srgb, var(--mo-swagger-method) 9%, var(--mo-swagger-surface));
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-summary-control {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 36px;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-summary-method {
+    display: inline-flex;
+    flex: 0 0 64px;
+    min-width: 64px;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 6px;
+    border: 1px solid color-mix(in srgb, var(--mo-swagger-method) 28%, var(--mo-swagger-border));
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--mo-swagger-method) 19%, var(--mo-swagger-surface));
+    color: var(--mo-swagger-method-ink);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    text-shadow: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-summary-path-description-wrapper {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 3px 12px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-summary-path {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-code);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-summary-path a {
+    color: inherit;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-summary-description {
+    flex: 1 1 220px;
+    min-width: 0;
+    color: var(--mo-swagger-secondary-ink);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.authorization__btn, .opblock-control-arrow, .expand-operation) {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: 32px;
+    min-height: 32px;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 5px;
+    border-radius: 5px;
+    color: var(--mo-swagger-text-secondary);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.authorization__btn, .opblock-control-arrow, .expand-operation, .models-control, .close-modal) svg {
+    fill: currentColor;
+    opacity: 1;
+    transition: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.authorization__btn, .opblock-control-arrow, .expand-operation, .models-control, .close-modal) svg path {
+    fill: currentColor;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-summary .view-line-link.copy-to-clipboard {
+    box-sizing: border-box;
+    flex: 0 0 32px;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    margin: 0;
+    padding: 5px;
+    border: 1px solid var(--mo-swagger-border-strong);
+    background: var(--mo-swagger-surface);
+    color: var(--mo-swagger-text-secondary);
+    transition: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-summary .view-line-link.copy-to-clipboard :is(svg, path) {
+    fill: currentColor;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-body {
+    min-width: 0;
+    border-radius: 0 0 9px 9px;
+    background: var(--mo-swagger-surface);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.opblock-description-wrapper, .opblock-external-docs-wrapper, .opblock-title_normal) {
+    padding: 20px var(--mo-swagger-content-inset);
+    color: var(--mo-swagger-text);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-description-wrapper .renderedMarkdown {
+    max-width: 85ch;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-section-header {
+    min-height: 56px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px var(--mo-swagger-content-inset);
+    border-block: 1px solid var(--mo-swagger-border);
+    background: color-mix(in srgb, var(--mo-swagger-surface-muted) 55%, var(--mo-swagger-surface));
+    box-shadow: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-section-header h4 {
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-section-header > label {
+    min-width: 0;
+    margin-left: auto;
+}
+
+/* Native forms retain disabled state and execution behavior. */
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(input[type="text"], input[type="password"], input[type="email"], input[type="number"], select) {
+    box-sizing: border-box;
+    min-height: 40px;
+    margin-block: 5px;
+    padding: 8px 12px;
+    border: 1px solid var(--mo-swagger-border-strong);
+    border-radius: 6px;
+    background-color: var(--mo-swagger-surface);
+    color: var(--mo-swagger-text);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    box-shadow: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(input, textarea)::placeholder {
+    color: var(--mo-swagger-secondary-ink);
+    opacity: 1;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(input, select, textarea, button):disabled {
+    border-color: var(--mo-swagger-border);
+    background-color: var(--mo-swagger-surface-muted);
+    color: color-mix(in srgb, var(--mo-swagger-text-secondary) 75%, var(--mo-swagger-text));
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .parameters-container {
+    padding: 0 var(--mo-swagger-content-inset);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .parameters-container > .table-container {
+    padding: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .parameters {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .parameters :is(th, td) {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--mo-swagger-border);
+    color: var(--mo-swagger-text);
+    vertical-align: top;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .parameters .parameters-col_name {
+    width: 22%;
+    padding-right: 24px;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .parameters .parameters-col_description {
+    min-width: 0;
+    width: auto;
+    padding-left: 0;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .parameters-col_description :is(input, select, textarea) {
+    width: 100%;
+    max-width: 560px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .parameter__name {
+    margin: 0 0 5px;
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 14px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.parameter__type, .parameter__in, .prop-format) {
+    color: var(--mo-swagger-secondary-ink);
+    font-family: var(--mo-swagger-font-code);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .parameter__name.required::after,
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .star {
+    color: var(--mo-swagger-required-ink);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .renderedMarkdown p {
+    margin: 0 0 10px;
+    color: inherit;
+    font-family: var(--mo-swagger-font-body);
+    font-size: inherit;
+    font-weight: 400;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .btn {
+    min-height: 38px;
+    padding: 8px 14px;
+    border: 1px solid var(--mo-swagger-border-strong);
+    border-radius: 6px;
+    background: var(--mo-swagger-surface);
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    box-shadow: none;
+    transition: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .btn:hover:not(:disabled) {
+    background: var(--mo-swagger-surface-muted);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.btn.execute, .btn.authorize) {
+    border-color: var(--mo-swagger-primary);
+    background: var(--mo-swagger-primary);
+    color: var(--mo-swagger-primary-text);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.btn.execute, .btn.authorize):hover:not(:disabled) {
+    border-color: var(--mo-swagger-primary-hover);
+    background: var(--mo-swagger-primary-hover);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .btn.authorize :is(svg, path) {
+    fill: currentColor;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .btn.cancel,
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-section-header .try-out__btn.cancel {
+    border-color: var(--mo-swagger-required-ink);
+    color: var(--mo-swagger-required-ink);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-body > :is(.execute-wrapper, .btn-group) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 18px var(--mo-swagger-content-inset);
+    text-align: left;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .execute-wrapper:empty {
+    display: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-body > :is(.execute-wrapper, .btn-group) > .btn {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 120px;
+    margin: 0;
+    border-radius: 6px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-section-request-body > .opblock-description-wrapper {
+    max-width: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-section-request-body .opblock-section-header > label {
+    width: min(280px, 100%);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .content-type-wrapper {
+    width: 100%;
+    min-width: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui select.content-type {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding-right: 34px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 180px;
+    padding: 16px;
+    border: 1px solid var(--mo-swagger-border-strong);
+    border-radius: 6px;
+    background: var(--mo-swagger-reader-surface);
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-code);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.55;
+    resize: vertical;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.model-example, [role="tabpanel"]) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .tab {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 10px 0;
+    padding: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .tab li {
+    flex: 0 0 auto;
+    padding: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .tab li::after {
+    display: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .tab .tablinks {
+    min-height: 34px;
+    padding: 7px 12px;
+    border: 1px solid var(--mo-swagger-border);
+    border-radius: 5px;
+    background: var(--mo-swagger-surface);
+    color: var(--mo-swagger-secondary-ink);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .tab .tablinks[aria-selected="true"] {
+    border-color: var(--mo-swagger-link-ink);
+    background: var(--mo-swagger-primary-surface);
+    color: var(--mo-swagger-link-ink);
+    font-weight: 500;
+}
+
+/* Keep actual server evidence and declared response contracts in their original order. */
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .responses-inner {
+    padding: 20px var(--mo-swagger-content-inset);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .responses-inner :is(h4, h5) {
+    margin: 14px 0 8px;
+    color: var(--mo-swagger-text);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .responses-inner > .live-responses-table + h4 {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--mo-swagger-border);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .responses-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .responses-table :is(th, td) {
+    min-width: 0;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--mo-swagger-border);
+    color: var(--mo-swagger-text);
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .responses-table .response-col_status {
+    width: 76px;
+    padding-right: 16px;
+    font-family: var(--mo-swagger-font-code);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .responses-table .response-col_description {
+    width: auto;
+    min-width: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .responses-table .response-col_links {
+    width: 110px;
+    padding-left: 16px;
+    color: var(--mo-swagger-secondary-ink);
+    font-size: 12px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .response-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 12px 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .response-control-media-type {
+    flex: 0 1 280px;
+    width: min(280px, 100%);
+    min-width: 0;
+    max-width: 100%;
+    margin-right: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .response-control-media-type__title {
+    color: var(--mo-swagger-secondary-ink);
+    font-size: 12px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .response-control-media-type__accept-message {
+    color: var(--mo-swagger-secondary-ink);
+    font-size: 12px;
+}
+
+/* Original Copy/Download siblings occupy a normal-flow strip above the one native code reader. */
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .highlight-code {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    min-width: 0;
+    max-width: 100%;
+    gap: 0 8px;
+    border: 1px solid var(--mo-swagger-border);
+    border-radius: 6px;
+    background: var(--mo-swagger-reader-surface);
+    overflow: visible;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .highlight-code > .copy-to-clipboard {
+    grid-column: 2;
+    align-self: center;
+    margin: 8px 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .highlight-code > .download-contents {
+    grid-column: 3;
+    align-self: center;
+    margin: 8px 8px 8px 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .highlight-code > pre {
+    grid-column: 1 / -1;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .highlight-code:has(> .copy-to-clipboard, > .download-contents) > pre {
+    border-top: 1px solid var(--mo-swagger-border);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .curl-command {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+    gap: 0 8px;
+    margin-bottom: 16px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .curl-command > h4 {
+    grid-column: 1;
+    align-self: center;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .curl-command > .copy-to-clipboard {
+    grid-column: 2;
+    align-self: center;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .curl-command > div:not(.copy-to-clipboard) {
+    grid-column: 1 / -1;
+    min-width: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .copy-to-clipboard {
+    position: static;
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    background: none;
+    opacity: 1;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .copy-to-clipboard > button {
+    position: relative;
+    display: grid;
+    width: 32px;
+    height: 32px;
+    padding: 5px;
+    place-items: center;
+    border: 1px solid var(--mo-swagger-border-strong);
+    border-radius: 5px;
+    background: var(--mo-swagger-surface);
+    color: var(--mo-swagger-text-secondary);
+    cursor: pointer;
+}
+
+/* Paint the original icon-only control with currentColor, independent of its fixed native image. */
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .copy-to-clipboard > button::before {
+    content: "";
+    width: 12px;
+    height: 14px;
+    border: 1.5px solid currentColor;
+    border-radius: 2px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .copy-to-clipboard > button::after {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: calc(50% - 4px);
+    width: 8px;
+    height: 4px;
+    border: 1.5px solid currentColor;
+    border-radius: 1px;
+    background: var(--mo-swagger-surface);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .download-contents {
+    position: static;
+    width: auto;
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 1px solid var(--mo-swagger-border-strong);
+    border-radius: 5px;
+    background: var(--mo-swagger-surface);
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock pre.microlight,
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .highlight-code pre {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 0;
+    max-height: 480px;
+    margin: 0;
+    padding: 16px !important;
+    border-radius: 6px;
+    background: var(--mo-swagger-reader-surface) !important;
+    color: var(--mo-swagger-text) !important;
+    font-family: var(--mo-swagger-font-code);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.55;
+    tab-size: 2;
+    white-space: pre-wrap;
+    overflow-x: auto !important;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    scrollbar-color: var(--mo-swagger-text-secondary) var(--mo-swagger-reader-surface);
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .highlight-code pre,
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .curl-command pre {
+    border: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .request-url pre {
+    border: 1px solid var(--mo-swagger-border);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui pre.microlight code {
+    padding: 0;
+    border: 0;
+    background: none !important;
+    color: inherit !important;
+    font: inherit;
+    white-space: inherit !important;
+    overflow-wrap: inherit;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui pre.microlight code span {
+    background: none !important;
+    color: inherit !important;
+    font: inherit;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui pre.microlight code .hljs-attr {
+    color: var(--mo-swagger-reader-key) !important;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(code, .prop-type) {
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-code);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+/* One divided schema section retains full native model identities and disclosures. */
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui section.models {
+    margin: 24px 0;
+    padding: 0;
+    border: 1px solid var(--mo-swagger-border);
+    border-radius: 10px;
+    background: var(--mo-swagger-surface);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui section.models > h4 {
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid var(--mo-swagger-border);
+    color: var(--mo-swagger-text);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .models-control {
+    display: flex;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui section.models .model-container {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid var(--mo-swagger-border);
+    border-radius: 0;
+    background: var(--mo-swagger-surface);
+    overflow: visible;
+    transition: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui section.models .model-container:last-child {
+    border-bottom: 0;
+    border-radius: 0 0 9px 9px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.model, .model-box, .model-title, .model-title__text, .model-box-control .pointer) {
+    min-width: 0;
+    max-width: 100%;
+    color: var(--mo-swagger-text);
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .model-box {
+    display: block;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .model-box-control {
+    display: inline-flex;
+    min-width: 0;
+    max-width: 100%;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+    color: var(--mo-swagger-text);
+    text-align: left;
+    white-space: normal;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .models .model-container > .model-box > .model-box-control {
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    align-items: center;
+    padding: 12px 16px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .models .model-container:has(.inner-object) > .model-box {
+    padding: 16px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.model-title, .model-title__text) {
+    font-family: var(--mo-swagger-font-body);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .model-toggle {
+    flex: 0 0 auto;
+    color: var(--mo-swagger-text);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .model-toggle::after {
+    border-color: var(--mo-swagger-text);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .inner-object {
+    display: block;
+    min-width: 0;
+    padding-inline-start: 14px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui table.model {
+    width: 100%;
+    table-layout: fixed;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui table.model td {
+    min-width: 0;
+    padding: 4px 8px 4px 0;
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-code);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.55;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui table.model td:first-child {
+    width: 18%;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .model-hint {
+    max-width: 100%;
+    color: var(--mo-swagger-secondary-ink);
+    font-size: 12px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Authorization remains the native dialog and form, with one bounded content scroller. */
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .dialog-ux {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .dialog-ux .backdrop-ux {
+    position: absolute;
+    inset: 0;
+    background: var(--mo-swagger-overlay);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .dialog-ux .modal-ux {
+    position: relative;
+    inset: auto;
+    z-index: 1;
+    width: 100%;
+    max-width: 640px;
+    max-height: calc(100dvh - 32px);
+    margin: 0;
+    border: 0;
+    transform: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .modal-dialog-ux {
+    position: static;
+    inset: auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    transform: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .modal-ux-inner {
+    display: flex;
+    max-height: calc(100dvh - 32px);
+    flex-direction: column;
+    border: 1px solid var(--mo-swagger-border);
+    border-radius: 12px;
+    background: var(--mo-swagger-surface);
+    color: var(--mo-swagger-text);
+    overflow: hidden;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .modal-ux-header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--mo-swagger-border);
+    background: var(--mo-swagger-surface);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .modal-ux-header h3 {
+    margin: 0;
+    padding: 0;
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .close-modal {
+    position: static;
+    display: grid;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    margin: 0;
+    padding: 8px;
+    place-items: center;
+    border-radius: 6px;
+    background: var(--mo-swagger-surface);
+    color: var(--mo-swagger-text-secondary);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .modal-ux-content {
+    min-height: 0;
+    padding: 24px;
+    background: var(--mo-swagger-surface);
+    overflow-y: auto;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .auth-container {
+    margin: 0;
+    padding: 0;
+    border-color: var(--mo-swagger-border);
+    color: var(--mo-swagger-text);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .auth-container + .auth-container {
+    margin-top: 20px;
+    padding-top: 20px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .auth-container .wrapper {
+    width: 100%;
+    max-width: none;
+    margin: 12px 0;
+    padding: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .auth-container :is(h4, h4 code) {
+    margin: 0 0 12px;
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-body);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .auth-container :is(p, label) {
+    color: var(--mo-swagger-text);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .auth-container :is(input[type="text"], input[type="password"]) {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    height: 40px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .auth-btn-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 0;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .auth-btn-wrapper .btn {
+    width: auto;
+    min-width: 100px;
+    margin: 0;
+}
+
+/* Failed loads and native validation keep their original content and recovery controls. */
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.errors-wrapper, .error-container) {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    margin: 24px var(--mo-swagger-gutter);
+    padding: 20px var(--mo-swagger-content-inset);
+    border: 1px solid var(--mo-swagger-required-ink);
+    border-radius: 10px;
+    background: var(--mo-swagger-danger-surface);
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-body);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    opacity: 1;
+    animation: none;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.errors-wrapper, .error-container) :is(h4, h5, p, pre, small, span) {
+    color: var(--mo-swagger-text);
+    opacity: 1;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .errors-wrapper .errors {
+    min-width: 0;
+    max-width: 100%;
+    padding: 0;
+    color: var(--mo-swagger-text);
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .errors-wrapper hgroup {
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .errors-wrapper hgroup h4 {
+    min-width: 0;
+    margin: 0;
+    font-family: var(--mo-swagger-font-body);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .errors-wrapper .errors h4 {
+    margin: 0 0 8px;
+    font-family: var(--mo-swagger-font-body);
     font-size: 14px;
     font-weight: 500;
     line-height: 1.5;
-    cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
-    border: none;
-    white-space: nowrap;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Button Hover State */
-.mo-swagger-nav-btn:hover {
-    background-color: var(--mo-swagger-button-background-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .errors-wrapper .btn.errors__clear-btn {
+    border-color: var(--mo-swagger-border-strong);
+    background: var(--mo-swagger-surface);
+    color: var(--mo-swagger-text);
 }
 
-/* Button Active State */
-.mo-swagger-nav-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.errors__message, .errors__text),
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .errors-wrapper .message {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-code);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
-/* Button Text */
-.mo-btn-text {
-    line-height: 1;
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .loading-container {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 28px var(--mo-swagger-gutter);
+    color: var(--mo-swagger-text);
 }
 
-/* Focus state for accessibility */
-.mo-swagger-nav-btn:focus {
-    outline: 2px solid var(--mo-swagger-button-background);
-    outline-offset: 2px;
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .loading-container > .info {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    color: var(--mo-swagger-text);
 }
 
-.mo-swagger-nav-btn:focus:not(:focus-visible) {
-    outline: none;
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .loading-container > .info > .loading-container {
+    margin: 0;
+    padding: 0;
 }
 
-.mo-swagger-nav-btn:focus-visible {
-    outline: 2px solid var(--mo-swagger-button-background);
-    outline-offset: 2px;
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .loading-container .errors-wrapper {
+    width: 100%;
+    margin: 24px 0;
 }
 
-/* Responsive Design - Stack buttons on small screens */
-@media (max-width: 768px) {
-    .mo-swagger-nav-buttons {
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .loading-container > h4 {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin-block: 24px;
+    color: var(--mo-swagger-text);
+    font-family: var(--mo-swagger-font-display);
+    font-size: 28px;
+    font-weight: 500;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.validation-errors, .error) {
+    color: var(--mo-swagger-required-ink);
+}
+
+@media (max-width: 1100px) {
+    html.mo-swagger-workbench[data-mo-swagger-theme] {
+        --mo-swagger-gutter: 20px;
+        --mo-swagger-content-inset: 20px;
+    }
+}
+
+@media (max-width: 760px) {
+    html.mo-swagger-workbench[data-mo-swagger-theme] {
+        --mo-swagger-gutter: 16px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar-wrapper {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px 12px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar .link {
+        grid-column: 1;
+        grid-row: 1;
+        margin: 0;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .dark-mode-toggle {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar .download-url-wrapper {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: 100%;
+        max-width: none;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar .select-label {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .topbar .select-label > span {
+        max-width: none;
+        font-size: 11px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .mo-swagger-nav-buttons {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        gap: 8px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .mo-swagger-nav-btn {
+        flex: 1 0 auto;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .information-container .info .title {
+        font-size: 28px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .modal-ux-header {
+        padding: 16px 20px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .modal-ux-content {
+        padding: 20px;
+    }
+}
+
+/* Operation-owner width handles both phone viewports and narrow consumer layouts. */
+@container mo-swagger-operation (max-width: 640px) {
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-summary-control {
+        gap: 10px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-summary-method {
+        flex-basis: 56px;
+        min-width: 56px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-summary-path-description-wrapper {
+        display: block;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-summary-description {
+        margin-top: 3px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.parameters, .responses-table) {
+        display: block;
+        width: 100%;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.parameters, .responses-table) thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.parameters, .responses-table) tbody {
+        display: block;
+        width: 100%;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.parameters, .responses-table) tbody > tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+        padding-block: 16px;
+        border-bottom: 1px solid var(--mo-swagger-border);
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.parameters, .responses-table) tbody > tr > td {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: none;
+        padding: 0;
+        border: 0;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .parameters :is(.parameters-col_name, .parameters-col_description),
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .responses-table :is(.response-col_status, .response-col_description, .response-col_links) {
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .parameters-col_description :is(input, select, textarea) {
+        width: 100%;
+        max-width: none;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .response-col_description {
+        min-width: 0;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .response-col_links {
+        text-align: left;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.body-param-content-type, .content-type, .content-type-wrapper) {
+        width: 100%;
+        max-width: none;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .response-controls {
+        display: block;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .response-control-media-type {
+        width: 100%;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-section-header > label {
+        width: 100%;
+        margin: 0;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock pre.microlight {
+        padding: 12px !important;
+    }
+}
+
+@container mo-swagger-operation (max-width: 360px) {
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock .opblock-summary {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-summary-control {
+        flex: 1 0 100%;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.model-box-control, .model-title, .model-title__text, .model-box-control .pointer) {
+        min-width: 0;
+        max-width: 100%;
+        white-space: normal;
+        overflow: visible;
+        overflow-wrap: anywhere;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui table.model,
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui table.model tbody {
+        display: block;
+        width: 100%;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui table.model tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 3px;
+        padding-block: 8px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui table.model td,
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui table.model td:first-child {
+        display: block;
+        width: 100%;
+        padding: 0;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .inner-object {
+        padding-inline-start: 12px;
+    }
+
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui .opblock-tag {
+        align-items: center;
         flex-wrap: wrap;
         gap: 8px;
-        padding: 8px;
-    }
-
-    .mo-swagger-nav-btn {
-        padding: 6px 12px;
-        font-size: 13px;
     }
 }
 
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .mo-swagger-nav-btn {
-        border: 2px solid currentColor;
-    }
-}
-
-/* Dark mode support (if Swagger UI has dark theme) */
-@media (prefers-color-scheme: dark) {
-    .mo-swagger-nav-btn {
-        background-color: var(--mo-swagger-button-background-dark);
-    }
-
-    .mo-swagger-nav-btn:hover {
-        background-color: var(--mo-swagger-button-background-dark-hover);
+@media (prefers-contrast: more) {
+    html.mo-swagger-workbench[data-mo-swagger-theme] .swagger-ui :is(.btn, .mo-swagger-nav-btn, input, select, textarea) {
+        border-color: var(--mo-swagger-text-secondary);
     }
 }

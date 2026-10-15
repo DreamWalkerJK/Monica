@@ -27,8 +27,12 @@ public interface IBrowserStorage : IAsyncDisposable
     Task<T> GetAsync<T>(string key, T defaultValue,
         BrowserStorageType storageType = BrowserStorageType.Local);
 
-    // Set a value (serialized as JSON)
+    // Best-effort write; completion does not report whether persistence succeeded
     Task SetAsync<T>(string key, T value,
+        BrowserStorageType storageType = BrowserStorageType.Local);
+
+    // Write a value and inspect Succeeded / FailureKind
+    Task<BrowserStorageWriteResult> TrySetAsync<T>(string key, T value,
         BrowserStorageType storageType = BrowserStorageType.Local);
 
     // Remove a single key
@@ -46,6 +50,8 @@ public interface IBrowserStorage : IAsyncDisposable
 ```
 
 **Storage types**: `BrowserStorageType.Local` (default, persists across sessions) or `BrowserStorageType.Session` (cleared when tab closes).
+
+`SetAsync` preserves best-effort behavior and discards write failures. Use `TrySetAsync` when the interface must report whether a preference was saved; inspect `Succeeded` before claiming persistence. Serialization, unavailable-storage, quota, and unclassified failures are returned through `FailureKind`.
 
 ## Table State Persistence Pattern
 
@@ -145,41 +151,17 @@ Task<int> ClearAllTableStatesAsync()
 
 ## Theme Persistence Pattern
 
-```razor
-@inject IBrowserStorage BrowserStorage
+The standard shell's `ThemeProviderHost` restores and persists the active theme and color mode after interactive rendering. Reuse the shared `ThemePreference` contract in a standalone integration rather than introducing a duplicate record or another shell persistence subscriber. Pass `ThemePreference.StorageKey` (`theme:data`) to `IBrowserStorage`; its actual browser key is `ThemePreference.BrowserStorageKey` (`mo:theme:data`).
 
-@code {
-    private record ThemeData(MonicaThemeKind ThemeKind, bool IsDarkMode);
+Theme storage uses camelCase property names and the numeric `MonicaThemeKind` identity. For example, Grove (`MonicaThemeKind.Grove = 11`) in dark mode is stored as:
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // Load persisted theme
-            var themeData = await BrowserStorage.GetAsync<ThemeData?>("theme:data", null);
-
-            await InvokeAsync(() =>
-            {
-                if (themeData != null)
-                {
-                    ThemeService.SetTheme(themeData.ThemeKind, themeData.IsDarkMode);
-                }
-            });
-        }
-    }
-
-    private async void OnThemeChanged()
-    {
-        // Save theme preference
-        await BrowserStorage.SetAsync("theme:data", new ThemeData(
-            ThemeService.CurrentThemeKind, ThemeService.IsDarkMode));
-
-        await InvokeAsync(StateHasChanged);
-    }
-}
+```json
+{"themeKind":11,"isDarkMode":true}
 ```
 
-Theme storage uses `MonicaThemeKind` enum names in JSON, for example `{"themeKind":"VibeUsageMatrix","isDarkMode":true}`. CSS classes and `data-theme` use the derived CSS token, for example `vibe-usage-matrix-dark`.
+CSS classes and `data-theme` use the derived token, such as `grove-dark`; that token does not replace the numeric stored identity. `ShellState` independently owns navigation layout and sidebar collapse under `mo:shell:preferences`. See [theme and localization](../../monica-infra-ui/references/theme-and-localization.md) for shell setup and Appearance behavior.
+
+For custom persistence driven by synchronous service events, keep the event handler synchronous: admit and retain renderer-owned `Task` operations, serialize writes, stop admission and unsubscribe during retirement, and drain the actual operations before releasing owned resources. The injected `ThemeState` and `IBrowserStorage` remain borrowed. Follow [async lifecycle ownership](blazor-best-practices.md#22-bound-async-work-to-the-component-lifetime) rather than using an untracked `async void` handler.
 
 ## Adding Custom State Persistence
 
@@ -223,7 +205,7 @@ Follow the same deferred rendering pattern as table state persistence.
 1. **Always use `IBrowserStorage`** — never use raw `IJSRuntime` calls for localStorage/sessionStorage
 2. **Always load state in `OnAfterRenderAsync`** — JS interop is not available during static rendering
 3. **Use deferred rendering** — wrap state-dependent UI in `@if (_stateLoaded)` to prevent flash of default values
-4. **Handle `JSDisconnectedException`** — the service handles this internally, but if you use `OnThemeChanged`-style `async void` handlers, wrap calls in try/catch
+4. **Observe write outcomes** — the service handles storage and circuit failures; use `TrySetAsync` when reporting persistence success, and retain/drain event-driven tasks through the lifecycle owner
 5. **Use category-based keys** — follow the `{category}:{id}` convention for organized storage
 6. **Manual debugging uses prefixed keys** — application code passes `theme:data`, but Playwright or DevTools must write `mo:theme:data` because the service adds the prefix automatically
 7. **`ThemeState` is Scoped** — not Singleton, because it needs per-circuit state in Blazor Server

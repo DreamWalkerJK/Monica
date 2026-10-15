@@ -1,32 +1,35 @@
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
 @using Monica.UI.Shared.Components.Branding
+@using Monica.UI.Shared.Components.Dialogs
 @using Monica.UI.Shell.Models
 @using Monica.UI.Shell.State
 @using Monica.UI.Theming
 @inject ThemeState ThemeService
 @inject ShellState Shell
 @inject IStringLocalizer<SharedResource> L
+@implements IAsyncDisposable
 
 <MudDialog>
+    <TitleContent>
+        <header class="theme-dialog__header">
+            <span class="theme-dialog__mark" aria-hidden="true"><MonicaIcon Size="46px" /></span>
+            <div>
+                <MoDialogHeading Text="@L["Theme:Settings"]" />
+                <MudText Typo="Typo.body2" Class="theme-dialog__intro">@L["Theme:Introduction"]</MudText>
+            </div>
+        </header>
+    </TitleContent>
     <DialogContent>
         <div class="theme-dialog">
-            <header class="theme-dialog__header">
-                <span class="theme-dialog__mark" aria-hidden="true"><MonicaIcon Size="46px" /></span>
-                <div>
-                    <MudText Typo="Typo.h5" HtmlTag="h2">@L["Theme:Settings"]</MudText>
-                    <MudText Typo="Typo.body2" Class="theme-dialog__intro">@L["Theme:Introduction"]</MudText>
-                </div>
-            </header>
-
             <section class="theme-dialog__section" aria-labelledby="appearance-mode-heading">
                 <div class="theme-dialog__section-heading">
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="appearance-mode-heading">@L["Theme:ColorMode"]</MudText>
                     <div class="theme-dialog__modes" aria-labelledby="appearance-mode-heading">
                         <MudButton Variant="Variant.Text" Class="@GetModeClass(false)" StartIcon="@Icons.Material.Outlined.LightMode"
-                                   aria-pressed="@(!_isDarkMode ? "true" : "false")" OnClick="() => _isDarkMode = false">@L["Theme:Light"]</MudButton>
+                                   Disabled="@SelectionDisabled" aria-pressed="@(!_isDarkMode ? "true" : "false")" OnClick="() => SetMode(false)">@L["Theme:Light"]</MudButton>
                         <MudButton Variant="Variant.Text" Class="@GetModeClass(true)" StartIcon="@Icons.Material.Outlined.DarkMode"
-                                   aria-pressed="@(_isDarkMode ? "true" : "false")" OnClick="() => _isDarkMode = true">@L["Theme:Dark"]</MudButton>
+                                   Disabled="@SelectionDisabled" aria-pressed="@(_isDarkMode ? "true" : "false")" OnClick="() => SetMode(true)">@L["Theme:Dark"]</MudButton>
                     </div>
                 </div>
             </section>
@@ -36,8 +39,9 @@
                 <div class="theme-dialog__layouts" aria-labelledby="appearance-navigation-heading">
                     <div class="theme-dialog__layout-wrapper">
                         <MudButton Variant="Variant.Text" Class="@GetLayoutClass(ShellNavigationLayout.Sidebar)"
+                                   Disabled="@SelectionDisabled"
                                    aria-pressed="@(_layout == ShellNavigationLayout.Sidebar ? "true" : "false")"
-                                   OnClick="() => _layout = ShellNavigationLayout.Sidebar">
+                                   OnClick="() => SetLayout(ShellNavigationLayout.Sidebar)">
                             <span class="theme-dialog__layout-illustration theme-dialog__layout-illustration--sidebar" aria-hidden="true">
                                 <span class="theme-dialog__layout-header"></span><span class="theme-dialog__layout-navigation"></span><span class="theme-dialog__layout-body"></span>
                             </span>
@@ -50,8 +54,9 @@
                     </div>
                     <div class="theme-dialog__layout-wrapper">
                         <MudButton Variant="Variant.Text" Class="@GetLayoutClass(ShellNavigationLayout.Topbar)"
+                                   Disabled="@SelectionDisabled"
                                    aria-pressed="@(_layout == ShellNavigationLayout.Topbar ? "true" : "false")"
-                                   OnClick="() => _layout = ShellNavigationLayout.Topbar">
+                                   OnClick="() => SetLayout(ShellNavigationLayout.Topbar)">
                             <span class="theme-dialog__layout-illustration theme-dialog__layout-illustration--topbar" aria-hidden="true">
                                 <span class="theme-dialog__layout-header"></span><span class="theme-dialog__layout-navigation"></span><span class="theme-dialog__layout-body"></span>
                             </span>
@@ -65,7 +70,7 @@
                 </div>
             </section>
 
-            <section class="theme-dialog__section" aria-labelledby="appearance-theme-heading">
+            <section class="theme-dialog__section theme-dialog__section--catalog" aria-labelledby="appearance-theme-heading">
                 <div class="theme-dialog__section-heading">
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="appearance-theme-heading">@L["Theme:SelectStyle"]</MudText>
                     <MudText Typo="Typo.caption" Class="theme-dialog__selection">@ThemeDisplayTextProvider.GetCurrentThemeSummary(L, _themeKind, _isDarkMode)</MudText>
@@ -76,7 +81,7 @@
                         var selected = _themeKind == option.Kind;
                         <div class="theme-dialog__theme-wrapper">
                             <MudButton Variant="Variant.Text" Class="@(selected ? "theme-dialog__theme is-selected" : "theme-dialog__theme")"
-                                       aria-pressed="@(selected ? "true" : "false")" OnClick="() => _themeKind = option.Kind">
+                                       Disabled="@SelectionDisabled" aria-pressed="@(selected ? "true" : "false")" OnClick="() => SetTheme(option.Kind)">
                                 <span class="theme-dialog__preview" style="@GetPreviewStyle(option.Kind)" aria-hidden="true">
                                     <span class="theme-dialog__preview-top">
                                         <MonicaIcon ThemeKind="@option.Kind" IsDarkMode="@_isDarkMode" Size="18px" />
@@ -105,8 +110,8 @@
     </DialogContent>
     <DialogActions>
         <div class="theme-dialog__actions">
-            <MudButton OnClick="Cancel" Disabled="@_applying" Variant="Variant.Text">@L["Theme:Cancel"]</MudButton>
-            <MudButton OnClick="ApplyAsync" Disabled="@(_applying || !HasChanges)" Color="Color.Primary" Variant="Variant.Filled">@L["Theme:Apply"]</MudButton>
+            <MudButton OnClick="Cancel" Disabled="@_retired" Variant="Variant.Text">@L["Theme:Cancel"]</MudButton>
+            <MudButton OnClick="ApplyAsync" Disabled="@(!_applying && !HasChanges)" aria-disabled="@(_applying || _retired || !HasChanges ? "true" : "false")" Color="Color.Primary" Variant="Variant.Filled">@L["Theme:Apply"]</MudButton>
         </div>
     </DialogActions>
 </MudDialog>
@@ -118,11 +123,19 @@
     private ShellNavigationLayout _layout;
     private bool _isDarkMode;
     private bool _applying;
+    private bool _retired;
+    private readonly object _lifetimeGate = new();
+    private Task<DialogResult?>? _dialogResult;
+    private TaskCompletionSource? _applyCompletion;
 
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = null!;
 
     private bool HasChanges => _themeKind != ThemeService.CurrentThemeKind || _isDarkMode != ThemeService.IsDarkMode || _layout != Shell.Layout;
+    private bool SelectionDisabled => _applying || _retired || _dialogResult?.IsCompleted == true;
+
+    // Native Escape, X and backdrop dismissal can finish this task before renderer disposal.
+    internal void AttachDialogResult(Task<DialogResult?> result) => _dialogResult = result;
 
     protected override void OnInitialized()
     {
@@ -148,25 +161,87 @@
         return $"--mud-palette-primary:{palette.Primary};--mud-palette-background:{palette.Background};--mud-palette-surface:{palette.Surface};--mud-palette-text-primary:{palette.TextPrimary};--mud-palette-lines-default:{palette.LinesDefault};--mud-palette-drawer-background:{palette.DrawerBackground};";
     }
 
-    private void Cancel() => MudDialog.Cancel();
-
-    private async Task ApplyAsync()
+    private void SetMode(bool dark)
     {
-        if (_applying || !HasChanges)
-        {
-            return;
-        }
+        if (!SelectionDisabled)
+            _isDarkMode = dark;
+    }
 
-        _applying = true;
+    private void SetLayout(ShellNavigationLayout layout)
+    {
+        if (!SelectionDisabled)
+            _layout = layout;
+    }
+
+    private void SetTheme(MonicaThemeKind theme)
+    {
+        if (!SelectionDisabled)
+            _themeKind = theme;
+    }
+
+    private void Cancel()
+    {
+        lock (_lifetimeGate)
+        {
+            if (_retired || _dialogResult?.IsCompleted == true)
+                return;
+            _retired = true;
+        }
+        MudDialog.Cancel();
+    }
+
+    private Task ApplyAsync()
+    {
+        TaskCompletionSource completion;
+        (MonicaThemeKind Theme, bool Dark, ShellNavigationLayout Layout) submitted;
+        lock (_lifetimeGate)
+        {
+            if (SelectionDisabled || !HasChanges)
+                return Task.CompletedTask;
+            submitted = (_themeKind, _isDarkMode, _layout);
+            _applying = true;
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _applyCompletion = completion;
+        }
+        return ApplyCoreAsync(submitted, completion);
+    }
+
+    private async Task ApplyCoreAsync(
+        (MonicaThemeKind Theme, bool Dark, ShellNavigationLayout Layout) submitted,
+        TaskCompletionSource completion)
+    {
         try
         {
-            ThemeService.SetTheme(_themeKind, _isDarkMode);
-            await Shell.SetLayoutAsync(_layout);
+            ThemeService.SetTheme(submitted.Theme, submitted.Dark);
+            await Shell.SetLayoutAsync(submitted.Layout);
+            // Drain the admitted mutation, not this handler: native Close can resume its owner inline.
+            completion.TrySetResult();
+            lock (_lifetimeGate)
+            {
+                if (_retired || _dialogResult?.IsCompleted == true)
+                    return;
+                _retired = true;
+            }
             MudDialog.Close();
+        }
+        catch (Exception exception)
+        {
+            completion.TrySetException(exception);
+            throw;
         }
         finally
         {
             _applying = false;
+        }
+    }
+
+    /// <summary>Stops draft admission and drains an already admitted layout update without canceling its storage write.</summary>
+    public ValueTask DisposeAsync()
+    {
+        lock (_lifetimeGate)
+        {
+            _retired = true;
+            return new(_applyCompletion?.Task ?? Task.CompletedTask);
         }
     }
 }

@@ -109,7 +109,7 @@ class ServiceGraph extends GraphBase {
             })
             .on('contextmenu.atlas', (event, node) => {
                 event.preventDefault(); event.stopPropagation(); this.hideTooltip();
-                this.invokeDotNet('OnNodeRightClick', node.id, event.clientX, event.clientY);
+                this.invokeDotNet('OnNodeRightClick', node.id, event.pageX, event.pageY);
             });
     }
 
