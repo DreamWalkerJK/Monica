@@ -1,0 +1,10 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.AI.AgentCapabilities.Models
+@rendermode InteractiveServer
+
+<AgentCapabilityManagePage CatalogKind="AgentCapabilityKind.Mcp" />
+
+@code {
+    /// <summary>The routed destination for MCP administration.</summary>
+    public const string PAGE_URL = "/ai/capabilities/mcp";
+}

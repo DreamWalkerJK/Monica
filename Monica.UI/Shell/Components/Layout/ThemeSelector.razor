@@ -1,12 +1,11 @@
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
-@using Monica.UI.Shell.State
-@inject ThemeState ThemeService
+@using Monica.UI.Shell.Support
 @inject IDialogService DialogService
 @inject IStringLocalizer<SharedResource> L
 
-<MudIconButton Icon="@Icons.Material.Filled.Palette"
-               Color="Color.Primary"
+<MudIconButton Icon="@ShellIcons.Palette"
+               Color="Color.Inherit"
                Size="Size.Medium"
                Class="action-button"
                OnClick="OpenThemeDialog"
@@ -18,7 +17,7 @@
         var options = new DialogOptions
         {
             CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
+            MaxWidth = MaxWidth.Medium,
             FullWidth = true,
             CloseButton = true
         };

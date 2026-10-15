@@ -9,28 +9,24 @@
 @if (Session.Snapshot is { } snapshot)
 {
     <div class="performance-layout">
+        <ModuleCompositionWaterfall Session="@Session" ModuleSelected="@ModuleSelected" />
+
         @if (snapshot.Summary.PerformanceBudgets.Length > 0)
         {
-            <section class="performance-panel" aria-labelledby="performance-budgets-title">
-                <div class="performance-heading">
+            <section class="performance-panel performance-budgets" aria-labelledby="performance-budgets-title">
+                <header class="performance-heading">
                     <div>
-                        <MudText Typo="Typo.overline">@L["Performance:Budgets:Eyebrow"]</MudText>
-                        <MudText Typo="Typo.h6" HtmlTag="h2" id="performance-budgets-title">@L["Performance:Budgets:Title"]</MudText>
+                        <span class="performance-eyebrow">@L["Performance:Budgets:Eyebrow"]</span>
+                        <h2 id="performance-budgets-title">@L["Performance:Budgets:Title"]</h2>
                     </div>
-                </div>
+                </header>
                 <div class="budget-grid">
                     @foreach (var budget in snapshot.Summary.PerformanceBudgets)
                     {
-                        <article class="mo-card-surface" data-mo-card-tone="@BudgetTone(budget.IsExceeded)">
-                            <div>
-                                <strong>@L[$"Enums:Budget:{budget.Kind}"]</strong>
-                                <span>@L["Performance:Budgets:Measurement",
-                                    ModuleDiagnosticsDisplay.Duration(budget.ActualDurationMs),
-                                    ModuleDiagnosticsDisplay.Duration(budget.LimitDurationMs)]</span>
-                            </div>
-                            <MudProgressLinear Value="@Math.Min(100, budget.Utilization * 100)"
-                                               Color="@(budget.IsExceeded ? Color.Warning : Color.Success)"
-                                               Rounded="true" />
+                        <article data-budget-tone="@BudgetTone(budget.IsExceeded)">
+                            <strong>@L[$"Enums:Budget:{budget.Kind}"]</strong>
+                            <span>@L["Performance:Budgets:Measurement", ModuleDiagnosticsDisplay.Duration(budget.ActualDurationMs), ModuleDiagnosticsDisplay.Duration(budget.LimitDurationMs)]</span>
+                            <MudProgressLinear Value="@Math.Min(100, budget.Utilization * 100)" Color="@(budget.IsExceeded ? Color.Warning : Color.Success)" Rounded="true" />
                             <small>@L["Performance:Budgets:Utilization", budget.Utilization.ToString("P0")]</small>
                         </article>
                     }
@@ -38,87 +34,32 @@
             </section>
         }
 
-        <ModuleCompositionWaterfall Session="@Session" ModuleSelected="@ModuleSelected" />
-
-        @if (Session.Comparison is { } comparison)
-        {
-            <section class="performance-panel comparison-evidence" aria-labelledby="comparison-evidence-title">
-                <div class="performance-heading">
+        <div class="performance-grid @(!snapshot.BlockingChain.IsEmpty ? "performance-grid--causal" : null)">
+            <section class="performance-panel performance-contributors" aria-labelledby="contributors-title">
+                <header class="performance-heading">
                     <div>
-                        <MudText Typo="Typo.overline">@L["Comparison:Eyebrow"]</MudText>
-                        <MudText Typo="Typo.h6" HtmlTag="h2" id="comparison-evidence-title">@L["Comparison:EvidenceTitle"]</MudText>
+                        <span class="performance-eyebrow">@L["Performance:Contributors:Eyebrow"]</span>
+                        <h2 id="contributors-title">@L["Performance:Contributors:Title"] <span class="performance-record-count">@Session.PerformanceContributors.Count</span></h2>
                     </div>
-                </div>
-                <div class="comparison-kpis">
-                    <article class="mo-card-surface" data-mo-card-tone="primary">
-                        <span>@L["Overview:Kpis:Composition"]</span>
-                        <strong>@SignedDuration(comparison.TotalDurationDeltaMs)</strong>
-                    </article>
-                    <article class="mo-card-surface" data-mo-card-tone="info">
-                        <span>@L["Overview:Kpis:TypeDiscovery"]</span>
-                        <strong>@SignedDuration(comparison.TypeDiscoveryDurationDeltaMs)</strong>
-                    </article>
-                    <article class="mo-card-surface" data-mo-card-tone="success">
-                        <span>@L["Comparison:ModulesChanged"]</span>
-                        <strong>+@comparison.AddedModules.Count / -@comparison.RemovedModules.Count</strong>
-                    </article>
-                    <article class="mo-card-surface" data-mo-card-tone="secondary">
-                        <span>@L["Comparison:EdgesChanged"]</span>
-                        <strong>+@comparison.AddedEdges.Count / -@comparison.RemovedEdges.Count</strong>
-                    </article>
-                </div>
-                <div class="comparison-changes">
-                    <MudExpansionPanels MultiExpansion="true">
-                        <MudExpansionPanel Text="@L["Comparison:AddedModules", comparison.AddedModules.Count]">
-                            <ChangeList Values="@comparison.AddedModules" EmptyText="@L["Comparison:NoChanges"]" />
-                        </MudExpansionPanel>
-                        <MudExpansionPanel Text="@L["Comparison:RemovedModules", comparison.RemovedModules.Count]">
-                            <ChangeList Values="@comparison.RemovedModules" EmptyText="@L["Comparison:NoChanges"]" />
-                        </MudExpansionPanel>
-                        <MudExpansionPanel Text="@L["Comparison:AddedEdges", comparison.AddedEdges.Count]">
-                            <ChangeList Values="@comparison.AddedEdges" EmptyText="@L["Comparison:NoChanges"]" />
-                        </MudExpansionPanel>
-                        <MudExpansionPanel Text="@L["Comparison:RemovedEdges", comparison.RemovedEdges.Count]">
-                            <ChangeList Values="@comparison.RemovedEdges" EmptyText="@L["Comparison:NoChanges"]" />
-                        </MudExpansionPanel>
-                    </MudExpansionPanels>
-                </div>
-            </section>
-        }
-
-        <div class="performance-grid">
-            <section class="performance-panel" aria-labelledby="contributors-title">
-                <div class="performance-heading contributors-heading">
-                    <div>
-                        <MudText Typo="Typo.overline">@L["Performance:Contributors:Eyebrow"]</MudText>
-                        <MudText Typo="Typo.h6" HtmlTag="h2" id="contributors-title">@L["Performance:Contributors:Title"]</MudText>
-                    </div>
-                    <div class="contributor-filters">
-                        <MudSelect T="int"
-                                   Label="@L["Performance:Filters:Limit"]"
-                                   Value="@Session.PerformanceContributorLimit"
-                                   ValueChanged="@SetContributorLimit"
-                                   Dense="true">
+                </header>
+                <div class="contributor-filters">
+                    <div class="performance-field">
+                        <MudSelect T="int" Label="@L["Performance:Filters:Limit"]" Value="@Session.PerformanceContributorLimit" ValueChanged="@SetContributorLimit" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense">
                             <MudSelectItem T="int" Value="10">10</MudSelectItem>
                             <MudSelectItem T="int" Value="25">25</MudSelectItem>
                             <MudSelectItem T="int" Value="50">50</MudSelectItem>
                             <MudSelectItem T="int" Value="0">@L["Common:All"]</MudSelectItem>
                         </MudSelect>
-                        <MudNumericField T="double"
-                                         Label="@L["Performance:Filters:MinimumMs"]"
-                                         Value="@Session.PerformanceMinimumDurationMs"
-                                         ValueChanged="@SetMinimumDuration"
-                                         Min="0"
-                                         Margin="Margin.Dense" />
-                        <MudSwitch T="bool"
-                                   Label="@L["Performance:Filters:HideZero"]"
-                                   Value="@Session.HideZeroDurationContributors"
-                                   ValueChanged="@SetHideZero"
-                                   Color="Color.Primary" />
+                    </div>
+                    <div class="performance-field">
+                        <MudNumericField T="double" Label="@L["Performance:Filters:MinimumMs"]" Value="@Session.PerformanceMinimumDurationMs" ValueChanged="@SetMinimumDuration" Min="0" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </div>
+                    <div class="performance-field performance-field--switch">
+                        <MudSwitch T="bool" Label="@L["Performance:Filters:HideZero"]" Value="@Session.HideZeroDurationContributors" ValueChanged="@SetHideZero" Color="Color.Primary" />
                     </div>
                 </div>
                 <div class="contributors-table-wrapper" role="region" aria-labelledby="contributors-title" tabindex="0">
-                    <MudTable T="ModuleDiagnosticsModule" Items="@Session.PerformanceContributors" Dense="true" Hover="true">
+                    <MudTable T="ModuleDiagnosticsModule" Items="@Session.PerformanceContributors" Dense="true" Hover="true" Breakpoint="Breakpoint.None">
                         <HeaderContent>
                             <MudTh>@L["Modules:Columns:Module"]</MudTh>
                             <MudTh>@L["Performance:Columns:Callbacks"]</MudTh>
@@ -127,105 +68,91 @@
                         </HeaderContent>
                         <RowTemplate Context="module">
                             <MudTd DataLabel="@L["Modules:Columns:Module"]">
-                                <MudButton Variant="Variant.Text" OnClick="@(() => ModuleSelected.InvokeAsync(module))">
-                                    @module.TypeName
-                                </MudButton>
+                                <button type="button" class="performance-module-button" title="@module.FullTypeName" @onclick="@(() => ModuleSelected.InvokeAsync(module))">@module.TypeName</button>
                             </MudTd>
-                            <MudTd DataLabel="@L["Performance:Columns:Callbacks"]">@ModuleDiagnosticsDisplay.Duration(module.SerialCallbackDurationMs)</MudTd>
-                            <MudTd DataLabel="@L["Performance:Columns:StartupWork"]">@ModuleDiagnosticsDisplay.Duration(module.StartupWorkDurationMs)</MudTd>
+                            <MudTd DataLabel="@L["Performance:Columns:Callbacks"]"><code>@ModuleDiagnosticsDisplay.Duration(module.SerialCallbackDurationMs)</code></MudTd>
+                            <MudTd DataLabel="@L["Performance:Columns:StartupWork"]"><code>@ModuleDiagnosticsDisplay.Duration(module.StartupWorkDurationMs)</code></MudTd>
                             <MudTd DataLabel="@L["Performance:Columns:Total"]">
-                                <ModuleCostBreakdownBar ModuleName="@module.TypeName"
-                                                        CallbackDurationMs="@module.SerialCallbackDurationMs"
-                                                        StartupWorkDurationMs="@module.StartupWorkDurationMs"
-                                                        MaximumDurationMs="@MaximumModuleCost" />
+                                <ModuleCostBreakdownBar ModuleName="@module.TypeName" CallbackDurationMs="@module.SerialCallbackDurationMs" StartupWorkDurationMs="@module.StartupWorkDurationMs" MaximumDurationMs="@MaximumModuleCost" />
                             </MudTd>
                         </RowTemplate>
+                        <NoRecordsContent><p class="performance-empty">@L["Performance:Contributors:Empty"]</p></NoRecordsContent>
                     </MudTable>
                 </div>
             </section>
 
-            <section class="performance-panel" aria-labelledby="blocking-title">
-                <div class="performance-heading">
-                    <div>
-                        <MudText Typo="Typo.overline">@L["Performance:Blocking:Eyebrow"]</MudText>
-                        <MudText Typo="Typo.h6" HtmlTag="h2" id="blocking-title">@L["Performance:Blocking:Title"]</MudText>
-                    </div>
-                </div>
-                @if (snapshot.BlockingChain.IsEmpty)
-                {
-                    <div class="performance-empty">@L["Performance:Blocking:Empty"]</div>
-                }
-                else
-                {
+            @if (snapshot.BlockingChain.IsEmpty)
+            {
+                <section class="performance-blocking-summary" aria-labelledby="blocking-title">
+                    <MudIcon Icon="@Icons.Material.Outlined.LinkOff" Size="Size.Small" />
+                    <div><h2 id="blocking-title">@L["Performance:Blocking:Title"]</h2><p>@L["Performance:Blocking:Empty"]</p></div>
+                </section>
+            }
+            else
+            {
+                <section class="performance-panel performance-blocking" aria-labelledby="blocking-title">
+                    <header class="performance-heading">
+                        <div><span class="performance-eyebrow">@L["Performance:Blocking:Eyebrow"]</span><h2 id="blocking-title">@L["Performance:Blocking:Title"]</h2></div>
+                    </header>
                     <div class="blocking-list">
                         @foreach (var segment in snapshot.BlockingChain.OrderByDescending(static segment => segment.BlockingDurationMs))
                         {
                             var module = snapshot.Modules.FirstOrDefault(candidate => candidate.ModuleKey == segment.ModuleKey);
                             <article>
                                 <button type="button" disabled="@(module is null)" @onclick="@(() => SelectModuleAsync(module))">
-                                    <span>
-                                        <strong>@(module?.TypeName ?? segment.ModuleKey.Value)</strong>
-                                        <small>@L[$"Enums:Barrier:{segment.Barrier}"] · @segment.WorkItemId</small>
-                                    </span>
+                                    <span><strong>@(module?.TypeName ?? segment.ModuleKey.Value)</strong><small>@L[$"Enums:Barrier:{segment.Barrier}"] · @segment.WorkItemId</small></span>
                                     <code>@ModuleDiagnosticsDisplay.Duration(segment.BlockingDurationMs)</code>
                                 </button>
                                 <div class="blocking-linkage">
-                                    <div>
-                                        <span>@L["Performance:Blocking:BarrierSpan"]</span>
-                                        <IdentifierValue Value="@segment.BarrierSpanId" />
-                                    </div>
-                                    <div>
-                                        <span>@L["Performance:Blocking:WorkSpan"]</span>
-                                        <IdentifierValue Value="@segment.WorkSpanId" />
-                                    </div>
+                                    <div><span>@L["Performance:Blocking:BarrierSpan"]</span><IdentifierValue Value="@segment.BarrierSpanId" /></div>
+                                    <div><span>@L["Performance:Blocking:WorkSpan"]</span><IdentifierValue Value="@segment.WorkSpanId" /></div>
                                     @if (!string.IsNullOrWhiteSpace(segment.CommitSpanId))
                                     {
-                                        <div>
-                                            <span>@L["Performance:Blocking:CommitSpan",
-                                                ModuleDiagnosticsDisplay.Duration(segment.CommitDurationMs)]</span>
-                                            <IdentifierValue Value="@(segment.CommitSpanId!)" />
-                                        </div>
+                                        <div><span>@L["Performance:Blocking:CommitSpan", ModuleDiagnosticsDisplay.Duration(segment.CommitDurationMs)]</span><IdentifierValue Value="@(segment.CommitSpanId!)" /></div>
                                     }
                                 </div>
                             </article>
                         }
                     </div>
-                }
-            </section>
+                </section>
+            }
         </div>
 
-        <section class="performance-panel" aria-labelledby="discovery-stages-title">
-            <div class="performance-heading">
-                <div>
-                    <MudText Typo="Typo.overline">@L["Performance:Discovery:Eyebrow"]</MudText>
-                    <MudText Typo="Typo.h6" HtmlTag="h2" id="discovery-stages-title">@L["Performance:Discovery:Title"]</MudText>
+        @if (Session.Comparison is { } comparison)
+        {
+            <section class="performance-panel comparison-evidence" aria-labelledby="comparison-evidence-title">
+                <header class="performance-heading"><div><span class="performance-eyebrow">@L["Comparison:Eyebrow"]</span><h2 id="comparison-evidence-title">@L["Comparison:EvidenceTitle"]</h2></div></header>
+                <dl class="comparison-kpis">
+                    <div><dt>@L["Overview:Kpis:Composition"]</dt><dd>@SignedDuration(comparison.TotalDurationDeltaMs)</dd></div>
+                    <div><dt>@L["Overview:Kpis:TypeDiscovery"]</dt><dd>@SignedDuration(comparison.TypeDiscoveryDurationDeltaMs)</dd></div>
+                    <div><dt>@L["Comparison:ModulesChanged"]</dt><dd>+@comparison.AddedModules.Count / -@comparison.RemovedModules.Count</dd></div>
+                    <div><dt>@L["Comparison:EdgesChanged"]</dt><dd>+@comparison.AddedEdges.Count / -@comparison.RemovedEdges.Count</dd></div>
+                </dl>
+                <div class="comparison-changes">
+                    <MudExpansionPanels MultiExpansion="true">
+                        <MudExpansionPanel Text="@L["Comparison:AddedModules", comparison.AddedModules.Count]"><ChangeList Values="@comparison.AddedModules" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
+                        <MudExpansionPanel Text="@L["Comparison:RemovedModules", comparison.RemovedModules.Count]"><ChangeList Values="@comparison.RemovedModules" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
+                        <MudExpansionPanel Text="@L["Comparison:AddedEdges", comparison.AddedEdges.Count]"><ChangeList Values="@comparison.AddedEdges" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
+                        <MudExpansionPanel Text="@L["Comparison:RemovedEdges", comparison.RemovedEdges.Count]"><ChangeList Values="@comparison.RemovedEdges" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
+                    </MudExpansionPanels>
                 </div>
-            </div>
-            <div class="stage-strip" role="region" aria-labelledby="discovery-stages-title" tabindex="0">
+            </section>
+        }
+
+        <section class="performance-panel performance-discovery" aria-labelledby="discovery-stages-title">
+            <header class="performance-heading"><div><span class="performance-eyebrow">@L["Performance:Discovery:Eyebrow"]</span><h2 id="discovery-stages-title">@L["Performance:Discovery:Title"]</h2></div></header>
+            <ol class="stage-strip" role="region" aria-labelledby="discovery-stages-title" tabindex="0">
                 @foreach (var stage in snapshot.TypeDiscovery.Stages)
                 {
-                    <article class="mo-card-surface" data-mo-card-tone="primary">
-                        <span>@ModuleDiagnosticsDisplay.Stage(stage.Stage, L)</span>
-                        <strong>@ModuleDiagnosticsDisplay.Duration(stage.DurationMs)</strong>
-                    </article>
+                    <li><span>@ModuleDiagnosticsDisplay.Stage(stage.Stage, L)</span><strong title="@ModuleDiagnosticsDisplay.ExactMilliseconds(stage.DurationMs)">@ModuleDiagnosticsDisplay.Duration(stage.DurationMs)</strong></li>
                 }
-            </div>
+            </ol>
         </section>
 
-        <section class="performance-panel" aria-labelledby="startup-work-title">
-            <div class="performance-heading">
-                <div>
-                    <MudText Typo="Typo.overline">@L["Performance:StartupWork:Eyebrow"]</MudText>
-                    <MudText Typo="Typo.h6" HtmlTag="h2" id="startup-work-title">@L["Performance:StartupWork:Title"]</MudText>
-                </div>
-            </div>
+        <section class="performance-panel performance-startup-work" aria-labelledby="startup-work-title">
+            <header class="performance-heading"><div><span class="performance-eyebrow">@L["Performance:StartupWork:Eyebrow"]</span><h2 id="startup-work-title">@L["Performance:StartupWork:Title"]</h2></div></header>
             <div class="startup-work-table-wrapper" role="region" aria-labelledby="startup-work-title" tabindex="0">
-                <MudTable T="ModuleDiagnosticsTraceSpan"
-                          Items="@StartupWorkSpans"
-                          RowsPerPage="10"
-                          Dense="true"
-                          Hover="true"
-                          Breakpoint="Breakpoint.Sm">
+                <MudTable T="ModuleDiagnosticsTraceSpan" Items="@StartupWorkSpans" RowsPerPage="10" Dense="true" Hover="true" Breakpoint="Breakpoint.None">
                     <HeaderContent>
                         <MudTh>@L["Performance:Columns:Module"]</MudTh>
                         <MudTh>@L["Performance:Columns:WorkItem"]</MudTh>
@@ -236,16 +163,16 @@
                     <RowTemplate Context="work">
                         <MudTd DataLabel="@L["Performance:Columns:Module"]">@TracePrimaryLabel(work)</MudTd>
                         <MudTd DataLabel="@L["Performance:Columns:WorkItem"]"><code>@(work.WorkItemId ?? work.Name ?? L["Common:NotAvailable"])</code></MudTd>
-                        <MudTd DataLabel="@L["Performance:Columns:Queue"]">@ModuleDiagnosticsDisplay.Duration(work.QueueDurationMs ?? 0)</MudTd>
-                        <MudTd DataLabel="@L["Performance:Columns:Duration"]">@ModuleDiagnosticsDisplay.Duration(work.DurationMs)</MudTd>
+                        <MudTd DataLabel="@L["Performance:Columns:Queue"]"><code>@ModuleDiagnosticsDisplay.Duration(work.QueueDurationMs ?? 0)</code></MudTd>
+                        <MudTd DataLabel="@L["Performance:Columns:Duration"]"><code>@ModuleDiagnosticsDisplay.Duration(work.DurationMs)</code></MudTd>
                         <MudTd DataLabel="@L["Performance:Columns:State"]">
-                            @(work.IsFailed ? L["Enums:SpanState:Failed"] : work.IsComplete ? L["Enums:SpanState:Complete"] : L["Enums:SpanState:Running"])
+                            <span class="performance-work-state @(work.IsFailed ? "performance-work-state--failed" : work.IsComplete ? "performance-work-state--complete" : "performance-work-state--running")">
+                                @(work.IsFailed ? L["Enums:SpanState:Failed"] : work.IsComplete ? L["Enums:SpanState:Complete"] : L["Enums:SpanState:Running"])
+                            </span>
                         </MudTd>
                     </RowTemplate>
-                    <NoRecordsContent><MudText Typo="Typo.body2">@L["Performance:StartupWork:Empty"]</MudText></NoRecordsContent>
-                    <PagerContent>
-                        <MudTablePager PageSizeOptions="@(new[] { 10, 25, 50 })" />
-                    </PagerContent>
+                    <NoRecordsContent><p class="performance-empty">@L["Performance:StartupWork:Empty"]</p></NoRecordsContent>
+                    <PagerContent><MudTablePager PageSizeOptions="@(new[] { 10, 25, 50 })" /></PagerContent>
                 </MudTable>
             </div>
         </section>

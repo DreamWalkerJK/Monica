@@ -27,11 +27,19 @@ EXCLUDED_DIR_NAMES = {
 THEME_DEFINITION_DIRS = {
     REPO_ROOT / "Monica.UI" / "wwwroot" / "css" / "themes",
     REPO_ROOT / "Monica.UI" / "wwwroot" / "css" / "markdown",
+    # Guide is a standalone wizard with its own two-mode theme and no Monica.UI dependency.
+    REPO_ROOT / "Monica.Guide.App" / "wwwroot" / "css" / "themes" / "guide",
 }
 THEME_DEFINITION_FILES = {
     REPO_ROOT / "Monica.UI" / "wwwroot" / "css" / "mo-theme-main.css",
 }
 ALLOWED_SEMANTIC_TOKENS = {
+    "--mo-color-brand-background",
+    "--mo-color-brand-foreground",
+    "--mo-color-brand-accent",
+    "--mo-color-navigation-rail-background",
+    "--mo-color-navigation-rail-text",
+    "--mo-color-navigation-context-background",
     "--mo-color-page-hero-background",
     "--mo-color-page-hero-text",
     "--mo-color-page-hero-action",
@@ -64,7 +72,7 @@ FUNCTION_COLOR_PATTERN = re.compile(
     re.IGNORECASE,
 )
 NAMED_COLOR_PATTERN = re.compile(
-    r"(?:color|background(?:-color)?|border(?:-color)?|fill|stroke|outline(?:-color)?).*?\b(?:white|black)\b",
+    r"(?:color|background(?:-color)?|border(?:-color)?|fill|stroke|outline(?:-color)?).*?(?<![\w-])(?:white|black)(?![\w-])",
     re.IGNORECASE,
 )
 COMMENT_ONLY_PATTERN = re.compile(r"^\s*(?://|/\*|\*|\*/|<!--)")

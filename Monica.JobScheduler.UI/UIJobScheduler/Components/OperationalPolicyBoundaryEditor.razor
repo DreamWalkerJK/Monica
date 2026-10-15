@@ -7,7 +7,7 @@
 <article class="boundary-editor">
     <div class="boundary-editor__heading">
         <MudText Typo="Typo.subtitle2" HtmlTag="h5">@Label</MudText>
-        <MudIconButton Icon="@Icons.Material.Filled.Restore"
+        <MudIconButton Icon="@Icons.Material.Outlined.Restore"
                        Size="Size.Small"
                        Disabled="@(Disabled || !Draft.HasOverride)"
                        OnClick="ResetAsync"
@@ -77,21 +77,27 @@
 </article>
 
 @code {
+    /// <summary>Gets or sets the localized start or end boundary label.</summary>
     [Parameter, EditorRequired]
     public string Label { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the optional declaration boundary in UTC; null means no declaration boundary.</summary>
     [Parameter]
     public DateTimeOffset? DeclaredUtc { get; set; }
 
+    /// <summary>Gets or sets the caller-owned prospective boundary, preserving inherit, no boundary and explicit time modes.</summary>
     [Parameter, EditorRequired]
     public CronBoundaryDraft Draft { get; set; } = null!;
 
+    /// <summary>Gets or sets the immutable configured timezone used to display and validate local draft times.</summary>
     [Parameter, EditorRequired]
     public string TimeZoneId { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets whether native boundary controls are disabled during an admitted save.</summary>
     [Parameter]
     public bool Disabled { get; set; }
 
+    /// <summary>Raised after a complete boundary mode, date, time or reset change.</summary>
     [Parameter]
     public EventCallback Changed { get; set; }
 

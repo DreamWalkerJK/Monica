@@ -1,0 +1,22 @@
+.terminal-context { display: flex; flex-direction: column; min-height: 0; height: 100%; min-width: 0; background: var(--mud-palette-surface); color: var(--mud-palette-text-primary); }
+.terminal-context header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--mud-palette-lines-default); flex-shrink: 0; }
+.terminal-context header ::deep .mud-icon-button { order: 1; margin-inline-start: auto; }
+.terminal-context h2 { font-family: var(--mud-typography-default-family); font-size: 1rem; font-weight: 500; margin: 0; }
+.terminal-context__body { padding: 16px; flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.terminal-context__intro, .terminal-context__empty { font-size: .78rem; line-height: 1.6; color: var(--mud-palette-text-secondary); margin: 0 0 16px; }
+.terminal-history { display: flex; flex-direction: column; }
+.terminal-history ::deep .mud-button { width: 100%; padding: 12px 8px; border-bottom: 1px solid var(--mud-palette-lines-default); }
+.terminal-history ::deep .mud-button-label { width: 100%; }
+.terminal-history__row { width: 100%; display: flex; align-items: flex-start; gap: 12px; text-align: start; }
+.terminal-history__row code { flex: 1; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; font-family: var(--mo-font-family-mono); font-size: .8rem; }
+.terminal-facts { padding: 16px; border: 1px solid var(--mud-palette-lines-default); background: var(--mud-palette-surface); margin-bottom: 16px; }
+.terminal-facts:last-child { margin-bottom: 0; }
+.terminal-facts h3 { margin: 0 0 14px; font-size: .88rem; font-weight: 500; }
+.terminal-facts dl { display: grid; gap: 4px; margin: 0; }
+.terminal-facts dt { font-size: .72rem; color: var(--mud-palette-text-secondary); }
+.terminal-facts dd { margin: 0 0 12px; font-size: .8rem; overflow-wrap: anywhere; }
+.terminal-facts dd:last-child { margin-bottom: 0; }
+.terminal-facts code { font-family: var(--mo-font-family-mono); font-size: .77rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.terminal-facts p { font-size: .78rem; line-height: 1.65; margin: 0 0 12px; color: var(--mud-palette-text-secondary); }
+.terminal-facts p:last-child { margin-bottom: 0; }
+.terminal-context__session { display: block; margin-top: 4px; font-size: .73rem; color: var(--mud-palette-text-secondary); overflow-wrap: anywhere; }

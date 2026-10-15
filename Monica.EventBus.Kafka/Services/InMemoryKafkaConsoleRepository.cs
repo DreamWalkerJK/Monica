@@ -67,6 +67,7 @@ internal sealed class InMemoryKafkaConsoleRepository : IKafkaConsoleRepository
         {
             ClusterId = snapshot.ClusterId,
             CapturedAt = snapshot.CapturedAt,
+            HasMetadataSnapshot = snapshot.HasMetadataSnapshot,
             BrokerCount = snapshot.BrokerCount,
             TopicCount = snapshot.TopicCount,
             ConsumerGroupCount = snapshot.ConsumerGroupCount,

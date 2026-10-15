@@ -1,0 +1,7 @@
+.memory-observation-controls { display:flex; justify-content:flex-end; align-items:center; gap:14px; flex-wrap:wrap; }
+.memory-observation-controls ::deep .mud-button-outlined-primary { color:var(--memory-accent-ink); }
+.memory-observation-freshness { display:flex; justify-content:flex-end; gap:6px; flex-direction:column; align-items:flex-end; margin-top:10px; color:var(--memory-ink-muted); font-size:11px; line-height:1.7; }
+.memory-observation-freshness time { font-variant-numeric:tabular-nums; }
+.memory-read-error { display:flex; align-items:flex-start; gap:12px; padding:18px 20px; margin-bottom:20px; border:1px solid var(--mud-palette-error); border-radius:10px; background:var(--mud-palette-surface); color:var(--mud-palette-text-primary); }
+.memory-read-error p { margin:4px 0 0; font-size:13px; overflow-wrap:anywhere; }
+@container (max-width:900px) { .memory-observation-controls { justify-content:flex-start; } .memory-observation-freshness { align-items:flex-start; } }

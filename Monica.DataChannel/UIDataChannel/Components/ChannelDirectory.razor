@@ -1,0 +1,201 @@
+@using Monica.DataChannel.UIDataChannel.Models
+@using Monica.DataChannel.UIDataChannel.Support
+@inject IStringLocalizer<DataChannelResource> L
+@implements IDisposable
+
+<section class="channel-directory" aria-labelledby="channel-directory-title">
+    <header class="directory-heading">
+        <div>
+            <span>@L["Directory:Eyebrow"]</span>
+            <h2 id="channel-directory-title">@L["Directory:Title"]</h2>
+        </div>
+        <p>@L["Directory:Shown", FilteredRows.Count, Channels.Count]</p>
+    </header>
+    @if (!string.IsNullOrEmpty(ChannelId))
+    {
+        <div class="directory-exact">
+            <span>@L["Directory:ExactChannel"]</span>
+            <code>@ChannelId</code>
+            <a href="/datachannel-manage">@L["Directory:ShowAllChannels"]</a>
+        </div>
+    }
+    <div class="directory-query">
+        <div class="directory-query__search">
+            <MudTextField T="string" @ref="_searchField" @bind-Value="_query" Immediate="true" Label="@L["Directory:Search"]" Placeholder="@L["Directory:SearchPlaceholder"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Clearable="true" />
+        </div>
+        <div class="directory-query__group">
+            <MudSelect T="string" @bind-Value="_group" Label="@L["Directory:Group"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="@("all")">@L["Directory:AllGroups"]</MudSelectItem>
+                <MudSelectItem Value="@("ungrouped")">@L["Workbench:Ungrouped"]</MudSelectItem>
+                @foreach (var group in Groups)
+                {
+                    <MudSelectItem Value="@("group:" + group)">@group</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ClearFiltersAsync">@L["Directory:Reset"]</MudButton>
+    </div>
+    <div class="directory-state-filters" aria-label="@L["Directory:InitializationFilters"]">
+        @foreach (var state in InitializationStates)
+        {
+            <MudButton data-state="@state" aria-pressed="@(_state == state ? "true" : "false")" OnClick="() => _state = state">
+                <span class="directory-state-dot" aria-hidden="true">
+                </span>
+                <span>@L[state == "All" ? "Directory:AllStates" : $"Channel:States:{state}"]</span>
+                <span class="directory-state-count">@StateCount(state)</span>
+            </MudButton>
+        }
+    </div>
+    <div class="directory-table">
+        <MudTable T="DirectoryRow" Items="FilteredRows" Square="true" Elevation="0" Hover="true" Dense="true" Breakpoint="Breakpoint.Xs" RowsPerPage="10">
+            <HeaderContent>
+                <MudTh>@L["Directory:Columns:Channel"]</MudTh>
+                <MudTh>@L["Directory:Columns:Endpoints"]</MudTh>
+                <MudTh>@L["Directory:Columns:Middleware"]</MudTh>
+                <MudTh>@L["Directory:Columns:Initialization"]</MudTh>
+                <MudTh>@L["Directory:Columns:Exceptions"]</MudTh>
+                <MudTh>@L["Common:Columns:Actions"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                @{
+                    var channel = context.Capture;
+                }
+                <MudTd DataLabel="@L["Directory:Columns:Channel"]">
+                    <div class="channel-cell">
+                        <code>@channel.Id</code>
+                        <span>@DataChannelPresentation.Group(channel.GroupId, L)</span>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["Directory:Columns:Endpoints"]">
+                    <div class="endpoint-cell">
+                        <span>
+                            <small>@L["PipelineInspector:Inner"]</small>
+                            <code title="@channel.InnerEndpoint.TypeName">@channel.InnerEndpoint.Name</code>
+                        </span>
+                        <span>
+                            <small>@L["PipelineInspector:Outer"]</small>
+                            <code title="@channel.OuterEndpoint.TypeName">@channel.OuterEndpoint.Name</code>
+                        </span>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["Directory:Columns:Middleware"]">
+                    <span class="directory-number">@channel.Middlewares.Count</span>
+                </MudTd>
+                <MudTd DataLabel="@L["Directory:Columns:Initialization"]">
+                    <span class="channel-state" data-state="@DataChannelPresentation.Initialization(channel)">
+                        <MudIcon Icon="@DataChannelPresentation.InitializationIcon(channel)" Size="Size.Small" />@L[$"Channel:States:{DataChannelPresentation.Initialization(channel)}"]</span>
+                </MudTd>
+                <MudTd DataLabel="@L["Directory:Columns:Exceptions"]">
+                    <MudButton Class="retained-count" data-attention="@(channel.ExceptionCount > 0 ? "true" : "false")" Disabled="@IsBusy(channel.Id)" OnClick="() => OnViewExceptions.InvokeAsync(channel.Id)" aria-label="@L["Directory:InspectExceptionsFor", channel.Id]">@channel.ExceptionCount</MudButton>
+                </MudTd>
+                <MudTd DataLabel="@L["Common:Columns:Actions"]">
+                    <div class="directory-actions">
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="() => OnInspect.InvokeAsync(channel)" aria-label="@L["Directory:InspectPipelineFor", channel.Id]">@L["Channel:Actions:Inspect"]</MudButton>
+                        <MudMenu Icon="@Icons.Material.Outlined.MoreVert" Size="Size.Small" AriaLabel="@L["Channel:Actions:OpenMenu", channel.Id]">
+                            <MudMenuItem Icon="@Icons.Material.Outlined.Refresh" Disabled="@IsBusy(channel.Id)" OnClick="() => OnReinitialize.InvokeAsync(channel.Id)">@L["Channel:Actions:Reinitialize"]</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.ErrorOutline" Disabled="@IsBusy(channel.Id)" OnClick="() => OnViewExceptions.InvokeAsync(channel.Id)">@L["Channel:Actions:ViewExceptions"]</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.ClearAll" Disabled="@IsBusy(channel.Id)" OnClick="() => OnClear.InvokeAsync(channel.Id)">@L["Channel:Actions:ClearHistory"]</MudMenuItem>
+                        </MudMenu>
+                    </div>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <div class="directory-empty">
+                    <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Large" />
+                    <h3>@L[MissingChannel ? "Directory:MissingChannel" : Channels.Count == 0 ? "Directory:Empty" : "Directory:NoMatches"]</h3>
+                    <p>@L[MissingChannel ? "Directory:MissingChannelHelp" : Channels.Count == 0 ? "Directory:EmptyHelp" : "Directory:NoMatchesHelp"]</p>
+                </div>
+            </NoRecordsContent>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    </div>
+</section>
+
+@code {
+    /// <summary>Gets or sets the detached channel captures in their host registration order.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<DataChannelStatusInfo> Channels { get; set; } = [];
+
+    /// <summary>Gets or sets an optional exact, ordinal channel identity supplied by the route.</summary>
+    [Parameter]
+    public string? ChannelId { get; set; }
+
+    /// <summary>Gets or sets the owning workflow admission check for channel operations.</summary>
+    [Parameter, EditorRequired]
+    public Func<string, bool> IsBusy { get; set; } = _ => false;
+
+    /// <summary>Gets or sets the callback that opens a native inspector for this captured channel.</summary>
+    [Parameter, EditorRequired]
+    public EventCallback<DataChannelStatusInfo> OnInspect { get; set; }
+
+    /// <summary>Gets or sets the owning workflow callback for real endpoint initialization.</summary>
+    [Parameter, EditorRequired]
+    public EventCallback<string> OnReinitialize { get; set; }
+
+    /// <summary>Gets or sets the callback that captures and inspects retained exception evidence.</summary>
+    [Parameter, EditorRequired]
+    public EventCallback<string> OnViewExceptions { get; set; }
+
+    /// <summary>Gets or sets the owning workflow callback for confirming and clearing retained observable history.</summary>
+    [Parameter, EditorRequired]
+    public EventCallback<string> OnClear { get; set; }
+
+    private static readonly string[] InitializationStates = ["All", "Initialized", "Initializing", "Unavailable", "NotInitialized"];
+    private readonly Dictionary<string, DirectoryRow> _rowsById = new(StringComparer.Ordinal);
+    private IReadOnlyList<DirectoryRow> _rows = [];
+    private MudTextField<string>? _searchField;
+    private string _query = string.Empty;
+    private string _group = "all";
+    private string _state = "All";
+    private bool _retired;
+    private bool MissingChannel => !string.IsNullOrEmpty(ChannelId) && !Channels.Any(channel => string.Equals(channel.Id, ChannelId, StringComparison.Ordinal));
+    private IEnumerable<string> Groups => Channels.Select(channel => channel.GroupId).Where(group => !string.IsNullOrEmpty(group)).Select(group => group!).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
+    private List<DirectoryRow> FilteredRows => _rows.Where(row => Matches(row.Capture)).ToList();
+    private bool Matches(DataChannelStatusInfo channel) =>
+        (string.IsNullOrEmpty(ChannelId) || string.Equals(channel.Id, ChannelId, StringComparison.Ordinal)) &&
+        (_state == "All" || DataChannelPresentation.Initialization(channel) == _state) &&
+        (_group == "all" || (_group == "ungrouped" ? string.IsNullOrEmpty(channel.GroupId) : string.Equals(channel.GroupId, _group[6..], StringComparison.Ordinal))) &&
+        (string.IsNullOrWhiteSpace(_query) || new[] { channel.Id, channel.GroupId, channel.InnerEndpoint.TypeName, channel.OuterEndpoint.TypeName }.Any(value => value?.Contains(_query, StringComparison.OrdinalIgnoreCase) == true));
+    private int StateCount(string state) => state == "All" ? Channels.Count : Channels.Count(channel => DataChannelPresentation.Initialization(channel) == state);
+
+    protected override void OnParametersSet()
+    {
+        var retainedIds = new HashSet<string>(StringComparer.Ordinal);
+        var rows = new List<DirectoryRow>(Channels.Count);
+        foreach (var capture in Channels)
+        {
+            retainedIds.Add(capture.Id);
+            if (!_rowsById.TryGetValue(capture.Id, out var row))
+            {
+                row = new DirectoryRow(capture);
+                _rowsById.Add(capture.Id, row);
+            }
+            else
+            {
+                row.Capture = capture;
+            }
+            rows.Add(row);
+        }
+        foreach (var id in _rowsById.Keys.Where(id => !retainedIds.Contains(id)).ToArray())
+        {
+            _rowsById.Remove(id);
+        }
+        _rows = rows;
+    }
+
+    /// <summary>Retains MudTable's row identity across detached captures without changing host DTO equality.</summary>
+    private sealed class DirectoryRow(DataChannelStatusInfo capture)
+    {
+        /// <summary>Gets or sets the newest detached evidence for this exact channel identity.</summary>
+        public DataChannelStatusInfo Capture { get; set; } = capture;
+    }
+    private async Task ClearFiltersAsync()
+    {
+        if (_searchField is { } field) { await field.ClearAsync(); }
+        if (_retired) { return; }
+        _query = string.Empty; _group = "all"; _state = "All";
+    }
+    public void Dispose() => _retired = true;
+}

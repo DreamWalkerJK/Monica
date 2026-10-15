@@ -26,6 +26,7 @@ public sealed class KafkaConsumerGroupService(
     /// <param name="topicName">Target topic name.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Consumer groups associated with the topic.</returns>
+    /// <remarks>Known associations retain per-group capture diagnostics; failed descriptions do not establish a zero member count.</remarks>
     public async Task<IReadOnlyList<KafkaConsumerGroupSummary>> ListTopicConsumerGroupsAsync(
         string clusterId,
         string topicName,
@@ -33,14 +34,27 @@ public sealed class KafkaConsumerGroupService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(topicName);
         var snapshot = await metricsService.CaptureAsync(clusterId, topicName, cancellationToken: cancellationToken);
+        return ProjectTopicConsumerGroups(snapshot);
+    }
+
+    internal static IReadOnlyList<KafkaConsumerGroupSummary> ProjectTopicConsumerGroups(KafkaConsumerMetricsSnapshot snapshot)
+    {
         return snapshot.GroupMetrics
-            .Select(metric => new KafkaConsumerGroupSummary
+            .Select(metric =>
             {
-                GroupId = metric.GroupId,
-                TopicName = metric.TopicName,
-                State = metric.State,
-                MemberCount = metric.Members.Count(member => !string.IsNullOrWhiteSpace(member.ConsumerId)),
-                TotalLag = metric.TotalLag
+                var description = snapshot.ConsumerGroups.FirstOrDefault(group =>
+                    string.Equals(group.GroupId, metric.GroupId, StringComparison.Ordinal));
+                return new KafkaConsumerGroupSummary
+                {
+                    GroupId = metric.GroupId,
+                    TopicName = metric.TopicName,
+                    State = metric.State,
+                    MemberCount = metric.Members.Count(member => !string.IsNullOrWhiteSpace(member.ConsumerId)),
+                    ErrorMessage = description?.ErrorMessage ?? (description is null
+                        ? $"Kafka consumer group '{metric.GroupId}' has no matching description in this capture."
+                        : null),
+                    TotalLag = metric.TotalLag
+                };
             })
             .OrderBy(group => group.GroupId, StringComparer.OrdinalIgnoreCase)
             .ToList();

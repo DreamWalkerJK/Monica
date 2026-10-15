@@ -5,59 +5,35 @@
 @inject IStringLocalizer<MarkdownResource> L
 
 <div class="sidebar">
-    <div class="sidebar-group-switcher">
-        <button type="button"
-                class="knowledge-base-switcher"
-                @onclick="OpenGroupSwitcher"
-                title="@GetCurrentGroupTooltip()">
-            <span class="knowledge-base-switcher-leading">
-                <span class="knowledge-base-switcher-icon-shell">
-                    <MudIcon Icon="@Icons.Material.Filled.MenuBook"
-                             Size="Size.Small"
-                             Class="knowledge-base-switcher-icon" />
-                </span>
-
-                <span class="knowledge-base-switcher-copy">
-                    <span class="knowledge-base-switcher-label">@GetCurrentGroupTitle()</span>
-                    <span class="knowledge-base-switcher-description">@GetCurrentGroupSummary()</span>
-                </span>
-            </span>
-
-            @if (CurrentGroup is { HasConfigurationError: true })
-            {
-                <MudIcon Icon="@Icons.Material.Filled.Warning"
-                         Size="Size.Small"
-                         Color="Color.Warning"
-                         Class="knowledge-base-switcher-warning" />
-            }
-
-            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
-                     Size="Size.Small"
-                     Class="knowledge-base-switcher-chevron" />
-        </button>
-    </div>
-
     <div class="sidebar-pane-header">
-        <span class="sidebar-pane-label">@L["MarkdownViewer:Toolbar:DocumentTree"]</span>
-        <span class="sidebar-pane-rule"></span>
+        <div class="sidebar-pane-copy">
+            <h2 class="sidebar-pane-label">@L["MarkdownViewer:Toolbar:DocumentTree"]</h2>
+            <span class="sidebar-pane-count">@L["MarkdownViewer:Navbar:KnowledgeBaseDocumentCount", ResolveVisibleDocumentCount()]</span>
+        </div>
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                       Size="Size.Small"
+                       OnClick="OnCollapseRequested"
+                       title="@L["MarkdownViewer:Navbar:HideSidebar"]"
+                       aria-label="@L["MarkdownViewer:Navbar:HideSidebar"]"
+                       Class="sidebar-collapse-button" />
     </div>
 
     <div class="sidebar-tree">
-        @if (CurrentTree is not null)
+        @if (!string.IsNullOrWhiteSpace(TreeError))
+        {
+            <div class="sidebar-error" role="status">
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                    <MudText Typo="Typo.body2">@L["MarkdownViewer:States:TreeFailed"]</MudText>
+                    <div class="sidebar-error-detail">@TreeError</div>
+                </MudAlert>
+            </div>
+        }
+        else if (CurrentTree is not null)
         {
             <DocumentTreePanel TreeRoot="CurrentTree"
                                SelectedDocument="SelectedDocument"
                                SelectedDocumentChanged="SelectedDocumentChanged" />
         }
-    </div>
-
-    <div class="sidebar-footer">
-        <span class="footer-value" title="@GetFooterValue()">@GetFooterValue()</span>
-        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
-                       Size="Size.Small"
-                       OnClick="OnCollapseRequested"
-                       title="@L["MarkdownViewer:Navbar:HideSidebar"]"
-                       Class="sidebar-collapse-button" />
     </div>
 </div>
 
@@ -71,6 +47,13 @@
     [Parameter]
     public string? CurrentCulture { get; set; }
 
+    /// <summary>
+    /// Gets or sets the page-owned tree load error. Defaults to null.
+    /// A nonempty error replaces the tree with encoded diagnostic text; loading and retry remain page-owned.
+    /// </summary>
+    [Parameter]
+    public string? TreeError { get; set; }
+
     [Parameter]
     public MarkdownDocument? SelectedDocument { get; set; }
 
@@ -80,39 +63,5 @@
     [Parameter]
     public EventCallback OnCollapseRequested { get; set; }
 
-    [Parameter]
-    public EventCallback OnOpenGroupSwitcher { get; set; }
-
-    private Task OpenGroupSwitcher()
-    {
-        return OnOpenGroupSwitcher.InvokeAsync();
-    }
-
-    private string GetCurrentGroupTitle() =>
-        CurrentGroup?.Title ?? L["MarkdownViewer:Navbar:UnknownKnowledgeBase"].Value;
-
-    private string GetCurrentGroupTooltip() =>
-        CurrentGroup?.Description
-        ?? CurrentGroup?.BasePath
-        ?? L["MarkdownViewer:Navbar:OpenKnowledgeBaseSwitcher"].Value;
-
-    private string GetCurrentGroupSummary() =>
-        CurrentGroup is null
-            ? L["MarkdownViewer:Navbar:OpenKnowledgeBaseSwitcher"].Value
-            : L["MarkdownViewer:Navbar:KnowledgeBaseDocumentCount", ResolveVisibleDocumentCount()].Value;
-
-    private string GetFooterValue() =>
-        !string.IsNullOrWhiteSpace(CurrentGroup?.Key)
-            ? CurrentGroup.Key
-            : GetCurrentGroupTitle();
-
-    private int ResolveVisibleDocumentCount()
-    {
-        if (CurrentGroup is null)
-        {
-            return 0;
-        }
-
-        return CurrentGroup.GetDocuments(CurrentCulture).Count;
-    }
+    private int ResolveVisibleDocumentCount() => CurrentGroup?.GetDocuments(CurrentCulture).Count ?? 0;
 }

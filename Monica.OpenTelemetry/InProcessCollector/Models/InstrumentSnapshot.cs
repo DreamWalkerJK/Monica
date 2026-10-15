@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Monica.OpenTelemetry.InProcessCollector.Models;
 
 /// <summary>
@@ -6,9 +8,18 @@ namespace Monica.OpenTelemetry.InProcessCollector.Models;
 public sealed class InstrumentSnapshot
 {
     /// <summary>
+    /// Gets an opaque identity stable only for this published instrument in one collector lifetime.
+    /// Null denotes a legacy snapshot without identity; this is not a durable or cross-host key.
+    /// </summary>
+    public string? InstrumentId { get; init; }
+
+    /// <summary>
     /// Gets the meter name that owns the instrument.
     /// </summary>
     public required string MeterName { get; init; }
+
+    /// <summary>Gets the version declared by the owning meter, when supplied.</summary>
+    public string? MeterVersion { get; init; }
 
     /// <summary>
     /// Gets the instrument name.
@@ -51,12 +62,15 @@ public sealed class InstrumentSnapshot
     public IReadOnlyList<TagSetSamples> TagSets { get; init; } = [];
 
     /// <summary>
-    /// Gets the latest numeric value across all retained tag sets.
+    /// Gets the sum of the latest binary64 values across retained tag sets.
+    /// This is not a meaningful physical aggregate for every gauge or histogram; non-finite values propagate.
     /// </summary>
+    [JsonNumberHandling(JsonNumberHandling.AllowNamedFloatingPointLiterals)]
     public double CurrentValue => TagSets.Sum(static tagSet => tagSet.CurrentValue);
 
     /// <summary>
-    /// Gets the latest delta across all retained tag sets.
+    /// Gets the sum of the latest per-series deltas, without aligning their observation timestamps.
     /// </summary>
+    [JsonNumberHandling(JsonNumberHandling.AllowNamedFloatingPointLiterals)]
     public double Delta => TagSets.Sum(static tagSet => tagSet.Delta);
 }

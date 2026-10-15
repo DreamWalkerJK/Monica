@@ -1,0 +1,138 @@
+@using Monica.Profiling.UIRuntimeMetrics.Components
+@using Monica.Profiling.UIMemoryAnalysis.Support
+@inject IServiceProvider ServiceProvider
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<MemoryAnalysisResource> L
+@inject IStringLocalizer<RuntimeMetricsResource> RuntimeL
+@inject ILogger<MemoryObservationWorkspace> Logger
+@implements IAsyncDisposable
+
+<MemoryWorkspace Section="@Section" TitleKey="@TitleKey" DescriptionKey="@DescriptionKey" Available="@(_state is not null)">
+    <Actions>
+        @if (_state is not null)
+        {
+            <div class="memory-observation-controls"><MudSwitch T="bool" Value="_state.AutoRefresh" ValueChanged="SetAutoRefresh" Disabled="@(!_state.CanAutoRefresh)" Color="Color.Primary" Label="@L["Page:Actions:AutoRefresh"]" />
+                <MudButton @ref="_refreshButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="RefreshAsync" Disabled="_state.IsLoading">@L["Page:Actions:Refresh"]</MudButton></div>
+            <div class="memory-observation-freshness"><span>@PollingLabel</span>
+                @if (_state.SnapshotCapturedAt is { } capturedAt) { <span>@L["Page:Captured"] <time data-memory-view-capture datetime="@capturedAt.ToString("O")">@MemoryAnalysisDisplayFormatter.LocalDateTime(capturedAt)</time></span> }
+            </div>
+        }
+    </Actions>
+    <ChildContent>
+        @if (_state is not null)
+        {
+            @if (_state.LoadError is not null)
+            {
+                <div class="memory-read-error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" /><div><strong>@L["Page:Messages:RefreshFailed"]</strong><p>@(_state.HasSnapshot ? L["Page:Messages:Retained"] : L["Page:Messages:NoSnapshot"])</p>@if (!string.IsNullOrEmpty(_state.LoadError)) { <p>@_state.LoadError</p> }</div></div>
+            }
+            @if (Section == "gc")
+            {
+                <GCStatisticsCard GCInfo="_state.CurrentGcDetails" CapturedAt="_state.SnapshotCapturedAt" IsLoading="_state.IsLoading" />
+            }
+            else if (Section == "history")
+            {
+                <MemoryTrendChart TrendData="_state.TrendData" CapturedAt="_state.SnapshotCapturedAt" IsLoading="_state.IsLoading" OnInspect="InspectAsync" OnInspectTriggerRemoved="FocusRefreshAsync" />
+            }
+            else
+            {
+                <MemoryOverviewCard Snapshot="_state.CurrentSnapshot" CapturedAt="_state.SnapshotCapturedAt" IsLoading="_state.IsLoading" />
+            }
+        }
+    </ChildContent>
+</MemoryWorkspace>
+
+@code {
+    [Parameter, EditorRequired] public string Section { get; set; } = "overview";
+    [Parameter, EditorRequired] public string TitleKey { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string DescriptionKey { get; set; } = string.Empty;
+    private MemoryAnalysisPageState? _state;
+    private MudButton? _refreshButton;
+    private IDialogReference? _dialog;
+    private Task<IDialogReference?> _opening = Task.FromResult<IDialogReference?>(null);
+    private Task _closing = Task.CompletedTask;
+    private readonly HashSet<Task> _renders = [];
+    private readonly object _renderLock = new();
+    private readonly object _disposeLock = new();
+    private Task? _disposeTask;
+    private bool _disposed;
+    private bool _openingDialog;
+    private string PollingLabel => _state is not { CanAutoRefresh: true } ? L["Page:Status:Manual"] : _state.AutoRefresh ? L["Page:Status:Live", _state.RefreshIntervalMs / 1000d] : L["Page:Status:Paused"];
+    protected override async Task OnInitializedAsync()
+    {
+        _state = ServiceProvider.GetService<MemoryAnalysisPageStateFactory>()?.Create();
+        if (_state is null) return;
+        _state.StateChanged += StateChanged;
+        await _state.InitializeAsync();
+    }
+    private Task SetAutoRefresh(bool value) => _state?.SetAutoRefreshAsync(value) ?? Task.CompletedTask;
+    private async Task RefreshAsync() { if (!_disposed && _state is not null) await _state.RefreshAsync(); }
+    private Task InspectAsync(RuntimeSampleEvidence evidence)
+    {
+        if (_disposed || _openingDialog) return Task.CompletedTask;
+        _openingDialog = true;
+        _opening = OpenAsync(evidence);
+        return _closing = ObserveCloseAsync(_opening);
+    }
+    private async Task<IDialogReference?> OpenAsync(RuntimeSampleEvidence evidence)
+    {
+        try
+        {
+            var reference = await DialogService.ShowAsync<RuntimeSampleDetailDialog>(RuntimeL["Details:Title"],
+                new DialogParameters<RuntimeSampleDetailDialog> { { dialog => dialog.Point, evidence.Point }, { dialog => dialog.CapturedAt, evidence.CapturedAt } },
+                new DialogOptions { FullWidth=true, MaxWidth=MaxWidth.Medium, CloseOnEscapeKey=true, BackdropClick=true });
+            if (_disposed) { Retire(reference); return null; }
+            _dialog = reference;
+            return reference;
+        }
+        catch (Exception exception) { Logger.LogError(exception,"Memory history inspector could not be opened."); if (!_disposed) Snackbar.Add(RuntimeL["Details:OpenFailed"],Severity.Error); return null; }
+    }
+    private async Task ObserveCloseAsync(Task<IDialogReference?> opening)
+    {
+        try
+        {
+            if (await opening is not { } reference) return;
+            await reference.Result;
+            if (ReferenceEquals(_dialog, reference)) _dialog = null;
+        }
+        finally
+        {
+            _openingDialog = false;
+        }
+    }
+    private static void Retire(IDialogReference? reference) { if (reference is null) return; reference.Close(DialogResult.Cancel()); reference.Dismiss(DialogResult.Cancel()); }
+    private Task FocusRefreshAsync() => _disposed || _refreshButton is null ? Task.CompletedTask : _refreshButton.FocusAsync().AsTask();
+    private void StateChanged()
+    {
+        if (_disposed) return;
+        var task=ObserveRenderAsync(InvokeAsync(() => { if (!_disposed) StateHasChanged(); }));
+        lock (_renderLock) _renders.Add(task);
+        _=ReleaseRenderAsync(task);
+    }
+    private async Task ObserveRenderAsync(Task task) { try { await task; } catch (Exception exception) { Logger.LogError(exception,"Memory observation rendering failed."); } }
+    private async Task ReleaseRenderAsync(Task task) { await task; lock (_renderLock) _renders.Remove(task); }
+    public ValueTask DisposeAsync() { lock (_disposeLock) { _disposed=true; return new ValueTask(_disposeTask ??= DisposeCoreAsync()); } }
+    private async Task DisposeCoreAsync()
+    {
+        if (_state is null) return;
+        _state.StateChanged-=StateChanged;
+        var stateDrain = _state.DisposeAsync().AsTask();
+        try
+        {
+            Retire(_dialog);
+            await _opening;
+            Retire(_dialog);
+            await _closing;
+        }
+        finally
+        {
+            try { await stateDrain; }
+            finally
+            {
+                Task[] renders;
+                lock (_renderLock) renders = _renders.ToArray();
+                await Task.WhenAll(renders);
+            }
+        }
+    }
+}

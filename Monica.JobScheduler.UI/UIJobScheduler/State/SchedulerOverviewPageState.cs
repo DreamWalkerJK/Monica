@@ -23,6 +23,11 @@ internal sealed class SchedulerOverviewPageStateFactory(
 /// <summary>
 /// Owns one scheduler overview snapshot, authorization boundary, refresh loop, and async lifetime.
 /// </summary>
+/// <remarks>
+/// Initialization creates at most one refresh loop. Concurrent refresh requests join the same actual load.
+/// Retirement rejects new work, cancels and drains admitted initialization, refresh, and loop operations,
+/// then releases their resources. Delegates and timer work run outside the admission gate.
+/// </remarks>
 public sealed class SchedulerOverviewPageState : IAsyncDisposable
 {
     private readonly Func<CancellationToken, Task<Res<JobSchedulerOverview>>> _loadOverview;
@@ -30,10 +35,14 @@ public sealed class SchedulerOverviewPageState : IAsyncDisposable
     private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _refreshInterval;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
-    private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private readonly CancellationToken _lifetimeToken;
+    private readonly object _admissionGate = new();
     private PeriodicTimer? _timer;
-    private Task? _refreshLoop;
-    private int _disposed;
+    private TaskCompletionSource? _initialization;
+    private TaskCompletionSource? _refresh;
+    private TaskCompletionSource? _refreshLoop;
+    private TaskCompletionSource? _retirement;
+    private bool _retired;
 
     internal SchedulerOverviewPageState(
         Func<CancellationToken, Task<Res<JobSchedulerOverview>>> loadOverview,
@@ -45,11 +54,16 @@ public sealed class SchedulerOverviewPageState : IAsyncDisposable
         _authorize = authorize;
         _timeProvider = timeProvider;
         _refreshInterval = refreshInterval;
+        _lifetimeToken = _lifetimeCancellation.Token;
     }
 
     /// <summary>
     /// Raised after an accepted state transition.
     /// </summary>
+    /// <remarks>
+    /// Handlers run outside the admission gate and must reject callbacks on retired UI owners.
+    /// A handler must not await this state's current refresh or retirement, which await handler completion.
+    /// </remarks>
     public event Func<Task>? Changed;
 
     /// <summary>
@@ -83,116 +97,240 @@ public sealed class SchedulerOverviewPageState : IAsyncDisposable
     public DateTimeOffset? LastRefreshedUtc { get; private set; }
 
     /// <summary>
-    /// Performs the first access-checked load and starts automatic refresh when enabled.
+    /// Performs the first access-checked load and starts one automatic refresh loop when enabled.
     /// </summary>
-    public async Task InitializeAsync()
+    /// <remarks>Repeated calls share initialization completion. A retired state admits no new work.</remarks>
+    public Task InitializeAsync()
     {
-        ThrowIfDisposed();
-        await RefreshAsync();
-        if (_refreshInterval > TimeSpan.Zero && !IsDisposed)
+        TaskCompletionSource completion;
+        lock (_admissionGate)
         {
-            _timer = new PeriodicTimer(_refreshInterval, _timeProvider);
-            _refreshLoop = RunRefreshLoopAsync(_timer, _lifetimeCancellation.Token);
+            if (_retired) return Task.CompletedTask;
+            if (_initialization is not null) return _initialization.Task;
+            completion = NewCompletion();
+            _initialization = completion;
         }
+
+        _ = CompleteInitializationAsync(completion);
+        return completion.Task;
     }
 
     /// <summary>
     /// Re-evaluates authorization and refreshes the operational snapshot.
     /// </summary>
-    public async Task RefreshAsync()
+    /// <remarks>
+    /// Concurrent callers share one load and its completion. A failed refresh preserves earlier evidence;
+    /// a retired state returns without accessing released resources or starting another load.
+    /// </remarks>
+    public Task RefreshAsync()
     {
-        var cancellationToken = _lifetimeCancellation.Token;
-        await _refreshGate.WaitAsync(cancellationToken);
+        TaskCompletionSource completion;
+        lock (_admissionGate)
+        {
+            if (_retired) return Task.CompletedTask;
+            if (_refresh is not null) return _refresh.Task;
+            completion = NewCompletion();
+            _refresh = completion;
+        }
+
+        _ = CompleteRefreshAsync(completion);
+        return completion.Task;
+    }
+
+    private async Task CompleteInitializationAsync(TaskCompletionSource completion)
+    {
+        Exception? failure = null;
         try
         {
-            ThrowIfDisposed();
-            IsLoading = true;
-            await NotifyChangedAsync();
-
-            IsAuthorized = await _authorize(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            AccessChecked = true;
-            if (!IsAuthorized)
+            await RefreshAsync();
+            if (_refreshInterval > TimeSpan.Zero)
             {
-                Overview = null;
-                Error = null;
-                return;
-            }
+                lock (_admissionGate)
+                {
+                    if (_retired) return;
+                }
 
-            var result = await _loadOverview(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (result.IsFailed(out var error, out var overview))
-            {
-                Error = error.Message;
-                return;
-            }
+                var timer = new PeriodicTimer(_refreshInterval, _timeProvider);
+                TaskCompletionSource? loopCompletion = null;
+                lock (_admissionGate)
+                {
+                    if (!_retired)
+                    {
+                        _timer = timer;
+                        loopCompletion = NewCompletion();
+                        _refreshLoop = loopCompletion;
+                    }
+                }
 
-            Overview = overview;
-            Error = null;
-            LastRefreshedUtc = _timeProvider.GetUtcNow();
+                if (loopCompletion is null) timer.Dispose();
+                else _ = CompleteRefreshLoopAsync(timer, loopCompletion);
+            }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
+        catch (Exception exception) { failure = exception; }
         finally
         {
-            if (!IsDisposed)
+            Complete(completion, failure);
+        }
+    }
+
+    private async Task CompleteRefreshAsync(TaskCompletionSource completion)
+    {
+        Exception? failure = null;
+        try
+        {
+            _lifetimeToken.ThrowIfCancellationRequested();
+            lock (_admissionGate)
             {
-                IsLoading = false;
-                await NotifyChangedAsync();
+                if (_retired) return;
+                IsLoading = true;
+            }
+            await NotifyChangedAsync();
+
+            var isAuthorized = await _authorize(_lifetimeToken);
+            _lifetimeToken.ThrowIfCancellationRequested();
+            lock (_admissionGate)
+            {
+                if (_retired) return;
+                IsAuthorized = isAuthorized;
+                AccessChecked = true;
+                if (!isAuthorized)
+                {
+                    Overview = null;
+                    Error = null;
+                    return;
+                }
             }
 
-            _refreshGate.Release();
+            var result = await _loadOverview(_lifetimeToken);
+            _lifetimeToken.ThrowIfCancellationRequested();
+            if (result.IsFailed(out var error, out var overview))
+            {
+                lock (_admissionGate)
+                {
+                    if (!_retired) Error = error.Message;
+                }
+                return;
+            }
+
+            var refreshedAtUtc = _timeProvider.GetUtcNow();
+            lock (_admissionGate)
+            {
+                if (_retired) return;
+                Overview = overview;
+                Error = null;
+                LastRefreshedUtc = refreshedAtUtc;
+            }
+        }
+        catch (OperationCanceledException) when (_lifetimeToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception) { failure = exception; }
+        finally
+        {
+            bool notify;
+            lock (_admissionGate)
+            {
+                IsLoading = false;
+                notify = !_retired;
+            }
+            if (notify)
+            {
+                try { await NotifyChangedAsync(); }
+                catch (Exception exception)
+                {
+                    failure = failure is null ? exception : new AggregateException(failure, exception);
+                }
+            }
+
+            lock (_admissionGate)
+            {
+                Complete(completion, failure);
+                _refresh = null;
+            }
         }
     }
 
     /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        TaskCompletionSource completion;
+        PeriodicTimer? timer;
+        Task[] operations;
+        lock (_admissionGate)
         {
-            return;
+            if (_retirement is not null) return new ValueTask(_retirement.Task);
+            _retired = true;
+            Changed = null;
+            completion = NewCompletion();
+            _retirement = completion;
+            timer = _timer;
+            operations = new[] { _initialization?.Task, _refresh?.Task, _refreshLoop?.Task }
+                .OfType<Task>().ToArray();
         }
 
-        Changed = null;
-        await _lifetimeCancellation.CancelAsync();
-        _timer?.Dispose();
-        if (_refreshLoop is not null)
-        {
-            await _refreshLoop;
-        }
-
-        await _refreshGate.WaitAsync();
-        _refreshGate.Release();
-        _refreshGate.Dispose();
-        _lifetimeCancellation.Dispose();
+        _ = CompleteRetirementAsync(timer, operations, completion);
+        return new ValueTask(completion.Task);
     }
 
-    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
-
-    private async Task RunRefreshLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
+    private async Task CompleteRetirementAsync(
+        PeriodicTimer? timer, Task[] operations, TaskCompletionSource completion)
     {
+        var failures = new List<Exception>();
+        try { await _lifetimeCancellation.CancelAsync(); }
+        catch (Exception exception) { failures.Add(exception); }
+        try { timer?.Dispose(); }
+        catch (Exception exception) { failures.Add(exception); }
+        foreach (var operation in operations)
+        {
+            try { await operation; }
+            catch (Exception exception) { failures.Add(exception); }
+        }
+        try { _lifetimeCancellation.Dispose(); }
+        catch (Exception exception) { failures.Add(exception); }
+
+        Complete(completion, failures.Count == 0
+            ? null
+            : new AggregateException("Scheduler overview retirement failed.", failures));
+    }
+
+    private async Task CompleteRefreshLoopAsync(PeriodicTimer timer, TaskCompletionSource completion)
+    {
+        Exception? failure = null;
         try
         {
-            while (await timer.WaitForNextTickAsync(cancellationToken))
+            _lifetimeToken.ThrowIfCancellationRequested();
+            while (await timer.WaitForNextTickAsync(_lifetimeToken))
             {
                 await RefreshAsync();
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (_lifetimeToken.IsCancellationRequested)
         {
             // Expected during page navigation or host shutdown.
         }
+        catch (Exception exception) { failure = exception; }
+        finally { Complete(completion, failure); }
     }
 
     private async Task NotifyChangedAsync()
     {
-        var handlers = Changed?.GetInvocationList().Cast<Func<Task>>().ToArray() ?? [];
+        Func<Task>[] handlers;
+        lock (_admissionGate)
+        {
+            handlers = _retired ? [] : Changed?.GetInvocationList().Cast<Func<Task>>().ToArray() ?? [];
+        }
         foreach (var handler in handlers)
         {
             await handler();
         }
     }
 
-    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(IsDisposed, this);
+    private static TaskCompletionSource NewCompletion() =>
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    private static void Complete(TaskCompletionSource completion, Exception? failure)
+    {
+        if (failure is null) completion.TrySetResult();
+        else completion.TrySetException(failure);
+    }
 }

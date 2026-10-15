@@ -70,6 +70,7 @@ public sealed class ModuleEventBusKafka : MonicaModule<ModuleEventBusKafkaOption
     {
         module.Require<ModuleEventBus, ModuleEventBusOption>();
         module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
+        module.Require<ModuleResultEnvelope, ModuleResultEnvelopeOption>();
         module.Require<ModuleLocalization, ModuleLocalizationOption>();
     }
 

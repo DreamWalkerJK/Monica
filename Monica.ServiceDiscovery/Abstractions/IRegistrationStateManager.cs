@@ -23,7 +23,8 @@ public interface IRegistrationStateManager
     Task<bool> LeaderExistsAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Get the current Leader status
+    /// Reads the querying application's leader lease. A successful absent key returns null.
+    /// Provider failures and cancellation propagate; they must not be represented as an absent lease.
     /// </summary>
     Task<LeaderState?> GetLeaderStateAsync(CancellationToken ct = default);
 
@@ -50,7 +51,8 @@ public interface IRegistrationStateManager
     Task DeleteLeaderKeyAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Get the status of all registered instances
+    /// Reads all unexpired registration records in the selected store. An empty result means a
+    /// successful read found no registrations. Provider enumeration/read failures and cancellation propagate.
     /// </summary>
     Task<List<InstanceState>> GetAllInstancesAsync(CancellationToken ct = default);
     /// <summary>

@@ -1,11 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <RootNamespace>Test.Monica.EventBus</RootNamespace>
     <IsTestProject>true</IsTestProject>
+    <!-- Host-owned EventBus workbench scenarios exercise the real shell endpoint/static-asset pipeline. -->
+    <OutputType>Library</OutputType>
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Monica.EventBus\Monica.EventBus.csproj" />
+    <ProjectReference Include="..\..\Monica.Framework.UI\Monica.Framework.UI.csproj" />
+    <ProjectReference Include="..\..\Monica.Testing\Monica.Testing.csproj" />
   </ItemGroup>
 
   <ItemGroup>

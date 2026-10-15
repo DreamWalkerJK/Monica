@@ -15,6 +15,59 @@ public sealed class ObservableInstanceFacade(
     private const string InstanceNotFoundMessage = "Observable instance was not found.";
     private readonly IObservableInstanceRegistry _registry = observableInstanceRegistry;
 
+    /// <summary>
+    /// Reads the current registry membership once and captures every tracker independently.
+    /// A concurrent unregister is omitted; this is not a globally atomic multi-tracker transaction.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels before the read and between tracker captures.</param>
+    /// <returns>Detached instance evidence, or a read failure.</returns>
+    public Task<Res<IReadOnlyList<ObservableInstanceSnapshot>>> CaptureAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        try
+        {
+            var snapshots = new List<ObservableInstanceSnapshot>();
+            foreach (var tracker in _registry.GetAllInstances())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try { snapshots.Add(tracker.CaptureSnapshot(cancellationToken)); }
+                catch (ObjectDisposedException) { /* A registration was retired after the membership read. */ }
+            }
+            return Task.FromResult<Res<IReadOnlyList<ObservableInstanceSnapshot>>>(Res.Ok<IReadOnlyList<ObservableInstanceSnapshot>>(snapshots.AsReadOnly()));
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Failed to capture observable instances.");
+            return Task.FromResult<Res<IReadOnlyList<ObservableInstanceSnapshot>>>(Res.Fail(exception.Message));
+        }
+    }
+
+    /// <summary>Clears retained history only when the original registration still owns the ID.</summary>
+    /// <param name="identity">The registration identity captured by the caller.</param>
+    /// <param name="cancellationToken">Cancels before the clear operation.</param>
+    /// <returns>A failure for a missing, retired, or replacement registration.</returns>
+    public Task<Res> ClearInstanceHistoryAsync(ObservableInstanceReference identity, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        try
+        {
+            var tracker = _registry.GetById(identity.InstanceId);
+            if (tracker is null || tracker.RegistrationId != identity.RegistrationId)
+                return Task.FromResult<Res>(Res.Fail("The captured registration is no longer available. Refresh before clearing history."));
+            cancellationToken.ThrowIfCancellationRequested();
+            tracker.ClearHistory();
+            return Task.FromResult<Res>(Res.Ok());
+        }
+        catch (ObjectDisposedException) { return Task.FromResult<Res>(Res.Fail("The captured registration was retired.")); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Failed to clear retained history for captured registration {InstanceId}.", identity.InstanceId);
+            return Task.FromResult<Res>(Res.Fail(exception.Message));
+        }
+    }
+
     public Task<Res<IReadOnlyList<ObservableInstanceTracker>>> GetAllInstancesAsync()
     {
         try

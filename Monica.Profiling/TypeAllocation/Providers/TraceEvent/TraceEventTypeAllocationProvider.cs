@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
@@ -6,77 +5,72 @@ using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using Microsoft.Diagnostics.Tracing.Session;
 using Microsoft.Extensions.Logging;
 using Monica.Profiling.TypeAllocation.Models;
-using Monica.Tool.Extensions;
 
 namespace Monica.Profiling.TypeAllocation.Providers.TraceEvent;
 
 /// <summary>
-/// Type Allocation Collector - Collect type-level allocation information using the GCAllocationTick event of TraceEvent/ETW
+/// Owns current-process CLR allocation-tick collection and bounded snapshot history.
 /// </summary>
 /// <remarks>
-/// Use the GCAllocationTick event instead of GCSampledObjectAllocation because:
-/// 1. GCAllocationTick directly provides the TypeName property without the need for TypeBulkType lookup
-/// 2. GCSampledObjectAllocation relies on the TypeBulkType event to provide TypeID → TypeName mapping.
-/// But in the self-monitoring scenario, TypeBulkType.TypeName may be empty (timing issue)
-/// 3. GCAllocationTick triggers every ~100KB allocation, providing reliable sampling
+/// ETW requires Windows and an identity permitted to create the session and enable the CLR provider.
+/// Ticks represent sampled allocation volume attributed to the type crossing the allocation threshold;
+/// they do not count allocated objects. Low and High are legacy aliases for the same event stream.
+/// Totals and history survive stop/start until ResetData; duration describes the current or last session
+/// window, or the window since its last reset. Synchronous notification callbacks must not initiate
+/// lifecycle operations: such re-entry is rejected rather than waiting on the callback's own worker.
 /// </remarks>
-internal sealed class TraceEventTypeAllocationProvider : IDisposable
+internal sealed class TraceEventTypeAllocationProvider : IDisposable, IAsyncDisposable
 {
+    private const long MAX_TIMER_MILLISECONDS = uint.MaxValue - 1;
+
+    [ThreadStatic]
+    private static TraceEventTypeAllocationProvider? _notifyingProvider;
+
     private readonly ILogger<TraceEventTypeAllocationProvider> _logger;
-
-    /// <summary>
-    /// TypeName -> AllocationInfo allocation statistics
-    /// </summary>
-    private readonly ConcurrentDictionary<string, TypeAllocationInfo> _typeAllocations = new();
-
-    /// <summary>
-    /// Snapshot history
-    /// </summary>
-    private readonly ConcurrentQueue<TypeAllocationSnapshot> _history = new();
-
-    /// <summary>
-    /// Exclusion patterns (compiled regular expressions)
-    /// </summary>
+    private readonly object _stateGate = new();
+    private readonly object _notificationGate = new();
+    private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
+    private readonly Dictionary<string, TypeAllocationInfo> _typeAllocations = new(StringComparer.Ordinal);
+    private readonly Queue<TypeAllocationSnapshot> _history = new();
+    private readonly List<Task> _monitorTasks = [];
     private readonly List<Regex> _excludePatterns;
-
-    // ETW session related
-    private TraceEventSession? _session;
-    private ETWTraceEventSource? _source;
-    private Task? _processingTask;
-    private CancellationTokenSource? _cts;
-
-    // state
-    private volatile bool _isCollecting;
-    private AllocationSamplingMode _currentMode = AllocationSamplingMode.Disabled;
-    private DateTime _collectionStartTime;
-    private long _totalAllocationCount;
-    private long _totalBytes;
-    private long _droppedEventCount;
-
-    // snapshot timer
-    private Timer? _snapshotTimer;
-
-    // Configuration
     private readonly int _maxTrackedTypes;
     private readonly TimeSpan _snapshotInterval;
     private readonly int _maxHistorySnapshots;
     private readonly int _etwBufferSizeMB;
     private readonly TimeSpan? _autoStopAfter;
 
+    private CollectionSession? _activeSession;
+    private bool _disposed;
+    private bool _hasEvidence;
+    private long _evidenceGeneration;
+    private AllocationSamplingMode _recordedMode = AllocationSamplingMode.Disabled;
+    private DateTime _windowStartedUtc;
+    private DateTime _stoppedAtUtc;
+    private TimeSpan _stoppedDuration;
+    private long _totalAllocationCount;
+    private long _totalBytes;
+    private long _droppedEventCount;
+    private string? _errorMessage;
+    private Task? _disposeTask;
+
     /// <summary>
-    /// Triggered when a new snapshot is available
+    /// Receives copied evidence on a provider worker. Subscribers must marshal their own UI work,
+    /// remove their subscription when retired, and avoid synchronous lifecycle re-entry.
+    /// Each subscriber receives detached type rows. Subscriber failures are logged independently
+    /// and do not end collection.
     /// </summary>
     public event Action<TypeAllocationSnapshot>? OnSnapshotUpdated;
 
-    /// <summary>
-    /// Is collecting
-    /// </summary>
-    public bool IsCollecting => _isCollecting;
+    public bool IsCollecting
+    {
+        get { lock (_stateGate) return _activeSession != null; }
+    }
 
-    /// <summary>
-    /// Current sampling mode
-    /// </summary>
-    public AllocationSamplingMode CurrentMode => _currentMode;
+    public AllocationSamplingMode CurrentMode
+    {
+        get { lock (_stateGate) return _activeSession?.Mode ?? AllocationSamplingMode.Disabled; }
+    }
 
     public TraceEventTypeAllocationProvider(
         ILogger<TraceEventTypeAllocationProvider> logger,
@@ -87,308 +81,504 @@ internal sealed class TraceEventTypeAllocationProvider : IDisposable
         TimeSpan? autoStopAfter = null,
         IEnumerable<string>? excludeTypePatterns = null)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(maxTrackedTypes);
+        ArgumentOutOfRangeException.ThrowIfNegative(maxHistorySnapshots);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(etwBufferSizeMB);
+        var interval = snapshotInterval ?? TimeSpan.FromSeconds(2);
+        if (interval.TotalMilliseconds is < 1 or > MAX_TIMER_MILLISECONDS)
+            throw new ArgumentOutOfRangeException(nameof(snapshotInterval), "Snapshot interval must fit the timer range and be at least one millisecond.");
+        if (autoStopAfter is { } duration && duration.TotalMilliseconds is < 1 or > MAX_TIMER_MILLISECONDS)
+            throw new ArgumentOutOfRangeException(nameof(autoStopAfter), "Auto-stop duration must fit the timer range and be at least one millisecond, or null for manual stop.");
+
         _logger = logger;
         _maxTrackedTypes = maxTrackedTypes;
-        _snapshotInterval = snapshotInterval ?? TimeSpan.FromSeconds(2);
+        _snapshotInterval = interval;
         _maxHistorySnapshots = maxHistorySnapshots;
         _etwBufferSizeMB = etwBufferSizeMB;
-        _autoStopAfter = autoStopAfter ?? TimeSpan.FromMinutes(10);
-
-        // compile exclude mode
-        var patterns = excludeTypePatterns ?? ["^System\\.Runtime\\."];
-        _excludePatterns = patterns
-            .Select(p => new Regex(p, RegexOptions.Compiled | RegexOptions.IgnoreCase))
+        _autoStopAfter = autoStopAfter;
+        _excludePatterns = (excludeTypePatterns ?? ["^System\\.Runtime\\."])
+            .Select(pattern => new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase,
+                TimeSpan.FromMilliseconds(250)))
             .ToList();
     }
 
     /// <summary>
-    /// Start collecting distribution events
+    /// Starts one current-process ETW session. Cumulative counters/history are retained until reset.
+    /// Null auto-stop is preserved; the module option owns the ten-minute configuration default.
     /// </summary>
-    /// <param name="mode">Sampling mode</param>
     public void StartCollection(AllocationSamplingMode mode)
     {
-        if (_isCollecting)
-        {
-            _logger.LogWarning("分配收集已在进行中");
-            return;
-        }
-
-        // Check platform support
+        RejectNotificationReentry();
+        if (mode is not AllocationSamplingMode.Low and not AllocationSamplingMode.High)
+            throw new ArgumentOutOfRangeException(nameof(mode), "Select an enabled allocation-tick mode.");
         if (!OperatingSystem.IsWindows())
-        {
-            _logger.LogWarning("ETW 分配跟踪仅在 Windows 上完全支持，当前平台可能功能受限");
-        }
+            throw new PlatformNotSupportedException("CLR allocation-tick collection requires the Windows ETW provider.");
 
+        _lifecycleGate.Wait();
+        CollectionSession? collection = null;
+        TraceEventSession? session = null;
+        (TypeAllocationSnapshot Snapshot, long Generation)? initialEvidence = null;
         try
         {
-            _currentMode = mode;
-            _collectionStartTime = DateTime.UtcNow;
-            _cts = new CancellationTokenSource();
+            lock (_stateGate)
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                if (_activeSession != null)
+                    throw new InvalidOperationException("Type allocation collection is already running.");
+            }
 
-            // Create an ETW session
-            var sessionName = $"Monica_TypeAllocation_{Guid.NewGuid():N}"[..50];
-            _session = new TraceEventSession(sessionName, TraceEventSessionOptions.Create)
+            var startedUtc = DateTime.UtcNow;
+            var processId = Environment.ProcessId;
+            session = new TraceEventSession($"Monica_TypeAllocation_{Guid.NewGuid():N}", TraceEventSessionOptions.Create)
             {
                 BufferSizeMB = _etwBufferSizeMB
             };
+            session.EnableProvider(ClrTraceEventParser.ProviderGuid, TraceEventLevel.Verbose,
+                (ulong)ClrTraceEventParser.Keywords.GC,
+                new TraceEventProviderOptions { ProcessIDFilter = [processId] });
 
-            // Enable the GCAllocationTick event using the GC keyword
-            // GCAllocationTick provides TypeName directly, no TypeBulkType lookup required
-            var keywords = ClrTraceEventParser.Keywords.GC;
+            var ownedCollection = new CollectionSession(session, session.Source, mode, processId);
+            collection = ownedCollection;
+            ownedCollection.AllocationHandler = data => OnAllocationTick(ownedCollection, data);
+            ownedCollection.Source.Clr.GCAllocationTick += ownedCollection.AllocationHandler;
 
-            // Enable CLR Provider
-            _session.EnableProvider(
-                ClrTraceEventParser.ProviderGuid,
-                TraceEventLevel.Verbose,
-                (ulong)keywords);
-
-            // Get the event source and subscribe to the GCAllocationTick event
-            _source = _session.Source;
-            _source.Clr.GCAllocationTick += OnAllocationTick;
-
-            // Handling events on a background thread
-            _processingTask = Task.Run(() =>
+            lock (_stateGate)
             {
-                try
-                {
-                    _source.Process();
-                }
-                catch (Exception ex) when (!_cts.Token.IsCancellationRequested)
-                {
-                    _logger.LogError(ex, "处理 ETW 事件时出错");
-                }
-            }, _cts.Token);
-
-            // Start snapshot timer
-            _snapshotTimer = new Timer(
-                CaptureSnapshot,
-                null,
-                _snapshotInterval,
-                _snapshotInterval);
-
-            // Auto stop timer
-            if (_autoStopAfter.HasValue)
-            {
-                _ = Task.Delay(_autoStopAfter.Value, _cts.Token)
-                    .ContinueWith(_ =>
-                    {
-                        _logger.LogInformation("达到自动停止时间，正在停止收集");
-                        StopCollection();
-                    }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                _activeSession = ownedCollection;
+                _hasEvidence = true;
+                _recordedMode = mode;
+                _windowStartedUtc = startedUtc;
+                _stoppedDuration = TimeSpan.Zero;
+                _errorMessage = null;
+                _evidenceGeneration++;
+                _monitorTasks.RemoveAll(task => task.IsCompleted);
+                initialEvidence = (BuildSnapshot(startedUtc), _evidenceGeneration);
             }
 
-            _isCollecting = true;
-            _logger.LogInformation("类型分配收集已启动，模式: {Mode}", mode);
+            // The worker captures its session/source/token; retirement never nulls a worker's inputs.
+            ownedCollection.ProcessingTask = Task.Run(() => ProcessEvents(ownedCollection));
+            ownedCollection.SnapshotTask = CaptureSnapshotsAsync(ownedCollection);
+            ownedCollection.MonitorTask = MonitorSessionAsync(ownedCollection);
+            lock (_stateGate) _monitorTasks.Add(ownedCollection.MonitorTask);
+            _logger.LogInformation("Current-process CLR allocation-tick collection started with legacy mode {Mode}.", mode);
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.LogError(ex, "启动类型分配收集失败");
-            Cleanup();
+            try
+            {
+                if (collection != null)
+                    RetireSessionAsync(collection, "Allocation collection failed during startup.").GetAwaiter().GetResult();
+                else
+                    session?.Dispose();
+            }
+            catch (Exception cleanupError)
+            {
+                _logger.LogError(cleanupError, "Failed to clean up partial CLR allocation startup.");
+            }
             throw;
         }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
+
+        if (initialEvidence is { } evidence)
+            Notify(evidence.Snapshot, evidence.Generation);
     }
 
     /// <summary>
-    /// Stop collection
+    /// Stops mutation, closes the real-time source, and drains event/snapshot workers and expiry ownership.
+    /// Final copied evidence retains its recorded mode, stop timestamp, and elapsed window duration.
     /// </summary>
     public void StopCollection()
     {
-        if (!_isCollecting) return;
-
-        _isCollecting = false;
-        _currentMode = AllocationSamplingMode.Disabled;
-
-        Cleanup();
-
-        _logger.LogInformation("类型分配收集已停止");
+        RejectNotificationReentry();
+        StopCollectionAsync().GetAwaiter().GetResult();
     }
 
-    private void Cleanup()
+    private async Task StopCollectionAsync()
     {
-        _snapshotTimer?.Dispose();
-        _snapshotTimer = null;
-
-        _cts.SafeCancelAndDispose();
-        _cts = null;
-
+        (TypeAllocationSnapshot Snapshot, long Generation)? evidence = null;
+        Task[] monitors;
+        await _lifecycleGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            _session?.Stop();
+            CollectionSession? collection;
+            lock (_stateGate) collection = _activeSession;
+            if (collection != null)
+                evidence = await RetireSessionAsync(collection, null).ConfigureAwait(false);
+            lock (_stateGate) monitors = _monitorTasks.ToArray();
+        }
+        finally { _lifecycleGate.Release(); }
+
+        // A monitor may have been waiting for the same lifecycle gate. Drain only after releasing it.
+        await Task.WhenAll(monitors).ConfigureAwait(false);
+        if (evidence is { } finalEvidence)
+            Notify(finalEvidence.Snapshot, finalEvidence.Generation);
+    }
+
+    private void ProcessEvents(CollectionSession collection)
+    {
+        try { collection.Source.Process(); }
+        catch (Exception) when (collection.Token.IsCancellationRequested) { }
+    }
+
+    private async Task CaptureSnapshotsAsync(CollectionSession collection)
+    {
+        using var timer = new PeriodicTimer(_snapshotInterval);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(collection.Token).ConfigureAwait(false))
+            {
+                TypeAllocationSnapshot snapshot;
+                long generation;
+                lock (_stateGate)
+                {
+                    if (!ReferenceEquals(_activeSession, collection)) return;
+                    snapshot = BuildSnapshot(DateTime.UtcNow);
+                    generation = _evidenceGeneration;
+                    AddHistory(snapshot);
+                }
+                Notify(snapshot, generation);
+            }
+        }
+        catch (OperationCanceledException) when (collection.Token.IsCancellationRequested) { }
+    }
+
+    private async Task MonitorSessionAsync(CollectionSession collection)
+    {
+        var expiry = Task.Delay(_autoStopAfter ?? Timeout.InfiniteTimeSpan, collection.Token);
+        try
+        {
+            var completed = await Task.WhenAny(collection.ProcessingTask, collection.SnapshotTask, expiry)
+                .ConfigureAwait(false);
+            if (collection.Token.IsCancellationRequested) return;
+
+            string? error = null;
+            if (!ReferenceEquals(completed, expiry))
+            {
+                error = completed.Exception?.GetBaseException().Message
+                    ?? "The CLR allocation event stream ended unexpectedly.";
+                _logger.LogError("CLR allocation collection ended: {Error}", error);
+            }
+
+            (TypeAllocationSnapshot Snapshot, long Generation)? evidence = null;
+            await _lifecycleGate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                lock (_stateGate)
+                {
+                    if (!ReferenceEquals(_activeSession, collection)) return;
+                }
+                evidence = await RetireSessionAsync(collection, error).ConfigureAwait(false);
+            }
+            finally { _lifecycleGate.Release(); }
+
+            if (evidence is { } finalEvidence)
+                Notify(finalEvidence.Snapshot, finalEvidence.Generation);
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "停止 ETW 会话时出错");
+            _logger.LogError(ex, "Failed to retire CLR allocation collection.");
         }
-
-        _session?.Dispose();
-        _session = null;
-        _source = null;
-    }
-
-    /// <summary>
-    /// Handle GCAllocationTick event - get TypeName directly
-    /// </summary>
-    /// <remarks>
-    /// GCAllocationTick fires every ~100KB allocation, providing:
-    /// - TypeName: Directly available type name
-    /// - AllocationAmount: the size of this allocation
-    ///     - AllocationKind: SOH(0)/LOH(1)/POH(2)
-    /// </remarks>
-    private void OnAllocationTick(GCAllocationTickTraceData data)
-    {
-        var typeName = data.TypeName;
-
-        // Skip empty type names
-        if (string.IsNullOrEmpty(typeName))
+        finally
         {
-            Interlocked.Increment(ref _droppedEventCount);
-            return;
-        }
-
-        // Check exclusion patterns
-        if (ShouldExcludeType(typeName))
-            return;
-
-        // Update aggregated data
-        var info = _typeAllocations.GetOrAdd(typeName, name => new TypeAllocationInfo
-        {
-            TypeName = name,
-            LastSeenUtc = DateTime.UtcNow
-        });
-
-        // Thread safety updates
-        // AllocationTick: Each event represents an allocation, AllocationAmount is the allocation size
-        info.AddAllocationCount(1);
-        info.AddTotalBytes(data.AllocationAmount);
-        info.LastSeenUtc = DateTime.UtcNow;
-
-        Interlocked.Add(ref _totalAllocationCount, 1);
-        Interlocked.Add(ref _totalBytes, data.AllocationAmount);
-
-        // Enforce a maximum number of trace types
-        if (_typeAllocations.Count > _maxTrackedTypes)
-        {
-            PruneSmallestTypes();
+            // Retirement also cancels the delay; observing it owns both expiry and manual-stop paths.
+            try { await expiry.ConfigureAwait(false); }
+            catch (OperationCanceledException) when (collection.Token.IsCancellationRequested) { }
         }
     }
 
-    /// <summary>
-    /// Check if the type should be excluded
-    /// </summary>
-    private bool ShouldExcludeType(string typeName)
+    // Called while lifecycle admission is held; worker callbacks never acquire that semaphore.
+    private async Task<(TypeAllocationSnapshot Snapshot, long Generation)> RetireSessionAsync(
+        CollectionSession collection, string? error)
     {
-        foreach (var pattern in _excludePatterns)
+        bool ownedActiveEvidence;
+        lock (_stateGate)
         {
-            if (pattern.IsMatch(typeName))
-                return true;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Prune smallest types to stay within limits
-    /// </summary>
-    private void PruneSmallestTypes()
-    {
-        var toRemove = _typeAllocations
-            .OrderBy(kvp => kvp.Value.TotalBytes)
-            .Take(_typeAllocations.Count - _maxTrackedTypes + 50)
-            .Select(kvp => kvp.Key)
-            .ToList();
-
-        foreach (var key in toRemove)
-        {
-            _typeAllocations.TryRemove(key, out _);
-        }
-    }
-
-    /// <summary>
-    /// capture snapshot
-    /// </summary>
-    private void CaptureSnapshot(object? state)
-    {
-        if (!_isCollecting) return;
-
-        var snapshot = BuildSnapshot();
-
-        _history.Enqueue(snapshot);
-        while (_history.Count > _maxHistorySnapshots)
-        {
-            _history.TryDequeue(out _);
-        }
-
-        OnSnapshotUpdated?.Invoke(snapshot);
-    }
-
-    /// <summary>
-    /// Build current snapshot
-    /// </summary>
-    private TypeAllocationSnapshot BuildSnapshot()
-    {
-        var totalCount = Interlocked.Read(ref _totalAllocationCount);
-        var totalBytes = Interlocked.Read(ref _totalBytes);
-
-        var types = _typeAllocations.Values
-            .Select(t => new TypeAllocationInfo
+            ownedActiveEvidence = ReferenceEquals(_activeSession, collection);
+            if (ownedActiveEvidence)
             {
-                TypeName = t.TypeName,
-                AllocationCount = t.AllocationCount,
-                TotalBytes = t.TotalBytes,
-                AllocationPercentage = totalCount > 0 ? (double)t.AllocationCount / totalCount * 100 : 0,
-                BytesPercentage = totalBytes > 0 ? (double)t.TotalBytes / totalBytes * 100 : 0,
-                LastSeenUtc = t.LastSeenUtc
-            })
-            .OrderByDescending(t => t.TotalBytes)
-            .Take(_maxTrackedTypes)
-            .ToList();
+                _activeSession = null;
+                _stoppedAtUtc = DateTime.UtcNow;
+                _stoppedDuration = _stoppedAtUtc - _windowStartedUtc;
+                _errorMessage = error;
+                _evidenceGeneration++;
+            }
+        }
+
+        collection.Cancellation.Cancel();
+        if (collection.AllocationHandler != null)
+            collection.Source.Clr.GCAllocationTick -= collection.AllocationHandler;
+        try { collection.Session.Dispose(); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to dispose the CLR ETW session; closing its source.");
+            try { collection.Source.Dispose(); }
+            catch (Exception sourceError) { _logger.LogError(sourceError, "Failed to close the CLR ETW source."); }
+        }
+
+        await ObserveWorkerAsync(collection.ProcessingTask).ConfigureAwait(false);
+        await ObserveWorkerAsync(collection.SnapshotTask).ConfigureAwait(false);
+        // Token is a captured value; the monitor can still safely observe its canceled delay.
+        collection.Cancellation.Dispose();
+
+        lock (_stateGate)
+        {
+            var snapshot = BuildSnapshot(_hasEvidence ? _stoppedAtUtc : DateTime.UtcNow);
+            if (ownedActiveEvidence) AddHistory(snapshot);
+            return (snapshot, _evidenceGeneration);
+        }
+    }
+
+    private async Task ObserveWorkerAsync(Task worker)
+    {
+        try { await worker.ConfigureAwait(false); }
+        catch (Exception ex) { _logger.LogDebug(ex, "Retired CLR allocation worker finished with an error."); }
+    }
+
+    private void OnAllocationTick(CollectionSession collection, GCAllocationTickTraceData data)
+    {
+        // Scope filtering is omitted by TraceEvent on unsupported Windows versions; keep this guard.
+        if (data.ProcessID != collection.ProcessId) return;
+        var typeName = data.TypeName;
+        var seenUtc = data.TimeStamp.ToUniversalTime();
+        var hasBytes = TryReadAllocationBytes(data.Version, data.AllocationAmount64, data.AllocationAmount, out var bytes);
+        lock (_stateGate)
+        {
+            if (!ReferenceEquals(_activeSession, collection) || seenUtc < _windowStartedUtc) return;
+            if (string.IsNullOrWhiteSpace(typeName) || !hasBytes)
+            {
+                _droppedEventCount++;
+                return;
+            }
+            if (_excludePatterns.Any(pattern => pattern.IsMatch(typeName))) return;
+
+            if (!_typeAllocations.TryGetValue(typeName, out var info))
+            {
+                info = new TypeAllocationInfo { TypeName = typeName };
+            }
+            long typeCount, typeBytes, totalCount, totalBytes;
+            checked
+            {
+                typeCount = info.AllocationCount + 1;
+                typeBytes = info.TotalBytes + bytes;
+                totalCount = _totalAllocationCount + 1;
+                totalBytes = _totalBytes + bytes;
+            }
+            info.AllocationCount = typeCount;
+            info.TotalBytes = typeBytes;
+            _totalAllocationCount = totalCount;
+            _totalBytes = totalBytes;
+            info.LastSeenUtc = seenUtc;
+            _typeAllocations[typeName] = info;
+            while (_typeAllocations.Count > _maxTrackedTypes)
+            {
+                var smallest = _typeAllocations.MinBy(pair => pair.Value.TotalBytes);
+                _typeAllocations.Remove(smallest.Key);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads unaltered payload bytes. Version 2+ owns a 64-bit value; legacy payloads own an unsigned
+    /// 32-bit value despite TraceEvent exposing an int. Invalid modern values are not clamped or guessed.
+    /// </summary>
+    internal static bool TryReadAllocationBytes(int version, long amount64, int amount32, out long bytes)
+    {
+        bytes = version >= 2 ? amount64 : (uint)amount32;
+        return bytes > 0;
+    }
+
+    private TypeAllocationSnapshot BuildSnapshot(DateTime capturedAtUtc)
+    {
+        var types = _typeAllocations.Values.Select(type => new TypeAllocationInfo
+        {
+            TypeName = type.TypeName,
+            AllocationCount = type.AllocationCount,
+            TotalBytes = type.TotalBytes,
+            AllocationPercentage = _totalAllocationCount > 0 ? 100d * type.AllocationCount / _totalAllocationCount : 0,
+            BytesPercentage = _totalBytes > 0 ? 100d * type.TotalBytes / _totalBytes : 0,
+            LastSeenUtc = type.LastSeenUtc
+        }).OrderByDescending(type => type.TotalBytes).ThenBy(type => type.TypeName, StringComparer.Ordinal).ToArray();
 
         return new TypeAllocationSnapshot
         {
-            Timestamp = DateTime.UtcNow,
-            Duration = _isCollecting ? DateTime.UtcNow - _collectionStartTime : TimeSpan.Zero,
+            Timestamp = capturedAtUtc,
+            Duration = _activeSession != null ? capturedAtUtc - _windowStartedUtc : _stoppedDuration,
             Types = types,
-            TotalAllocationCount = totalCount,
-            TotalBytes = totalBytes,
-            IsCollecting = _isCollecting,
-            SamplingMode = _currentMode,
-            DroppedEventCount = Interlocked.Read(ref _droppedEventCount),
-            DataSource = TypeAllocationDataSource.AllocationTracking
+            TotalAllocationCount = _totalAllocationCount,
+            TotalBytes = _totalBytes,
+            IsCollecting = _activeSession != null,
+            SamplingMode = _recordedMode,
+            DroppedEventCount = _droppedEventCount,
+            DataSource = _hasEvidence ? TypeAllocationDataSource.AllocationTracking : TypeAllocationDataSource.None,
+            ErrorMessage = _errorMessage
         };
     }
 
-    /// <summary>
-    /// Get current snapshot
-    /// </summary>
+    // These ownership boundaries can be verified independently of native session activation.
+    internal void AddHistory(TypeAllocationSnapshot snapshot)
+    {
+        lock (_stateGate)
+        {
+            if (_maxHistorySnapshots == 0) return;
+            _history.Enqueue(Detach(snapshot));
+            while (_history.Count > _maxHistorySnapshots) _history.Dequeue();
+        }
+    }
+
+    internal void Notify(TypeAllocationSnapshot snapshot, long generation)
+    {
+        lock (_notificationGate)
+        {
+            var callbacks = OnSnapshotUpdated?.GetInvocationList() ?? [];
+            foreach (var callback in callbacks)
+            {
+                lock (_stateGate)
+                {
+                    if (_disposed || _evidenceGeneration != generation) return;
+                }
+                var previous = _notifyingProvider;
+                _notifyingProvider = this;
+                try { ((Action<TypeAllocationSnapshot>)callback)(Detach(snapshot)); }
+                catch (Exception ex) { _logger.LogWarning(ex, "CLR allocation snapshot subscriber failed."); }
+                finally { _notifyingProvider = previous; }
+            }
+        }
+    }
+
     public TypeAllocationSnapshot GetCurrentSnapshot()
     {
-        return BuildSnapshot();
+        lock (_stateGate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return BuildSnapshot(_activeSession != null || !_hasEvidence ? DateTime.UtcNow : _stoppedAtUtc);
+        }
     }
 
-    /// <summary>
-    /// Get historical snapshot
-    /// </summary>
     public IReadOnlyList<TypeAllocationSnapshot> GetHistory()
     {
-        return _history.ToList();
+        lock (_stateGate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return _history.Select(Detach).ToArray();
+        }
     }
 
-    /// <summary>
-    /// Reset data
-    /// </summary>
+    private static TypeAllocationSnapshot Detach(TypeAllocationSnapshot snapshot) => new()
+    {
+        Timestamp = snapshot.Timestamp,
+        Duration = snapshot.Duration,
+        Types = snapshot.Types.Select(type => new TypeAllocationInfo
+        {
+            TypeName = type.TypeName,
+            AllocationCount = type.AllocationCount,
+            TotalBytes = type.TotalBytes,
+            AllocationPercentage = type.AllocationPercentage,
+            BytesPercentage = type.BytesPercentage,
+            LastSeenUtc = type.LastSeenUtc
+        }).ToArray(),
+        TotalAllocationCount = snapshot.TotalAllocationCount,
+        TotalBytes = snapshot.TotalBytes,
+        IsCollecting = snapshot.IsCollecting,
+        SamplingMode = snapshot.SamplingMode,
+        DroppedEventCount = snapshot.DroppedEventCount,
+        DataSource = snapshot.DataSource,
+        ErrorMessage = snapshot.ErrorMessage
+    };
+
     public void ResetData()
     {
-        _typeAllocations.Clear();
-        while (_history.TryDequeue(out _)) { }
-        Interlocked.Exchange(ref _totalAllocationCount, 0);
-        Interlocked.Exchange(ref _totalBytes, 0);
-        Interlocked.Exchange(ref _droppedEventCount, 0);
-        _collectionStartTime = DateTime.UtcNow;
+        RejectNotificationReentry();
+        _lifecycleGate.Wait();
+        TypeAllocationSnapshot snapshot;
+        long generation;
+        try
+        {
+            lock (_stateGate)
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                _typeAllocations.Clear();
+                _history.Clear();
+                _totalAllocationCount = _totalBytes = _droppedEventCount = 0;
+                _windowStartedUtc = _stoppedAtUtc = DateTime.UtcNow;
+                _stoppedDuration = TimeSpan.Zero;
+                _hasEvidence = _activeSession != null;
+                _recordedMode = _activeSession?.Mode ?? AllocationSamplingMode.Disabled;
+                _errorMessage = null;
+                generation = ++_evidenceGeneration;
+                snapshot = BuildSnapshot(_windowStartedUtc);
+            }
+        }
+        finally { _lifecycleGate.Release(); }
+        Notify(snapshot, generation);
     }
 
-    public void Dispose()
+    private void RejectNotificationReentry()
     {
-        StopCollection();
-        _typeAllocations.Clear();
+        if (ReferenceEquals(_notifyingProvider, this))
+            throw new InvalidOperationException("Allocation lifecycle operations cannot run synchronously inside a snapshot notification. Schedule the operation after the callback returns.");
+    }
+
+    public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
+
+    public ValueTask DisposeAsync()
+    {
+        RejectNotificationReentry();
+        lock (_stateGate)
+        {
+            _disposed = true;
+            // One stored retirement task makes concurrent disposal callers await the same drain.
+            return new ValueTask(_disposeTask ??= Task.Run(DisposeCoreAsync));
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        Task[] monitors;
+        await _lifecycleGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            CollectionSession? collection;
+            lock (_stateGate)
+            {
+                collection = _activeSession;
+            }
+            if (collection != null)
+                await RetireSessionAsync(collection, null).ConfigureAwait(false);
+            lock (_stateGate) monitors = _monitorTasks.ToArray();
+        }
+        finally { _lifecycleGate.Release(); }
+        await Task.WhenAll(monitors).ConfigureAwait(false);
+        // Serialize with a callback already admitted before the disposed flag was set.
+        lock (_notificationGate) { }
         GC.SuppressFinalize(this);
+    }
+
+    private sealed class CollectionSession
+    {
+        public CollectionSession(TraceEventSession session, ETWTraceEventSource source,
+            AllocationSamplingMode mode, int processId)
+        {
+            Session = session;
+            Source = source;
+            Mode = mode;
+            ProcessId = processId;
+            Cancellation = new CancellationTokenSource();
+            Token = Cancellation.Token;
+        }
+
+        public TraceEventSession Session { get; }
+        public ETWTraceEventSource Source { get; }
+        public AllocationSamplingMode Mode { get; }
+        public int ProcessId { get; }
+        public CancellationTokenSource Cancellation { get; }
+        public CancellationToken Token { get; }
+        public Action<GCAllocationTickTraceData>? AllocationHandler { get; set; }
+        public Task ProcessingTask { get; set; } = Task.CompletedTask;
+        public Task SnapshotTask { get; set; } = Task.CompletedTask;
+        public Task MonitorTask { get; set; } = Task.CompletedTask;
     }
 }

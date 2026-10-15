@@ -1,290 +1,240 @@
 @attribute [Route(PAGE_URL)]
 @using Monica.OpenTelemetry.UI.UIOpenTelemetry.Components
 @using Monica.OpenTelemetry.UI.UIOpenTelemetry.State
-@inject OpenTelemetryDashboardPageStateFactory PageStateFactory
+@using Monica.OpenTelemetry.UI.UIOpenTelemetry.Support
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceProvider Services
 @inject IStringLocalizer<OpenTelemetryUIResource> L
+@inject IDialogService Dialogs
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
+@inject ILogger<UIOpenTelemetryDashboardPage> Logger
 @implements IAsyncDisposable
 
 <PageTitle>@L["Page:Title"]</PageTitle>
-
-<div class="opentelemetry-page mo-page-shell mo-page-shell--full-width">
-    <MudContainer MaxWidth="MaxWidth.False" Gutters="false" Class="opentelemetry-container">
-        <MudPaper Class="dashboard-banner mo-self-painted" Elevation="0">
-            <div class="banner-title">
-                <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Size="Size.Large" Color="Color.Primary" />
-                <div>
-                    <MudText Typo="Typo.h4">@L["Page:Title"]</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+<div class="telemetry-workspace">
+    <header class="telemetry-heading">
+        <div><p class="telemetry-eyebrow"><MudIcon Icon="@Icons.Material.Outlined.Sensors" Size="Size.Small" />@L["Workbench:Eyebrow"]</p><h1>@L["Page:Title"]</h1><p class="telemetry-intro">@L["Workbench:Intro"]</p></div>
+        @if (_state is not null)
+        {
+            <div class="telemetry-controls">
+                <div class="telemetry-refresh-row">
+                    <div class="telemetry-refresh-choice"><MudSelect T="string" Value="@AutoRefreshValue" ValueChanged="SetAutoRefreshAsync" Variant="Variant.Outlined" Dense="true" aria-label="@L["Filter:AutoRefresh"]">
+                        <MudSelectItem T="string" Value="@("off")">@L["Workbench:Manual"]</MudSelectItem><MudSelectItem T="string" Value="@("1s")">@L["Filter:Refresh1s"]</MudSelectItem><MudSelectItem T="string" Value="@("5s")">@L["Filter:Refresh5s"]</MudSelectItem>
+                    </MudSelect></div>
+                    <MudButton @ref="_refreshButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="RefreshAsync" Disabled="_state.IsLoading">@L["Action:Refresh"]</MudButton>
                 </div>
+                <small>@L[_state.AutoRefreshInterval is null ? "Workbench:ReadingPaused" : "Workbench:ReadingActive"]</small>
+                @if (_state.SnapshotCapturedAt is { } adopted) { <small>@L["Workbench:ViewRead"] <time datetime="@adopted.ToString("O")">@adopted.ToLocalTime().ToString("HH:mm:ss")</time></small> }
             </div>
-
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-                @L["Banner:PerInstanceHint"]
-            </MudAlert>
-
-            @if (PageState.Snapshot is not null)
-            {
-                <div class="banner-stats">
-                    <div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner:Service"]</MudText>
-                        <MudText Typo="Typo.subtitle2">@PageState.Snapshot.ResourceServiceName</MudText>
-                    </div>
-                    <div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner:CapturedAt"]</MudText>
-                        <MudText Typo="Typo.subtitle2">@PageState.Snapshot.TimestampUtc.ToLocalTime().ToString("HH:mm:ss")</MudText>
-                    </div>
-                    <div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner:Meters"]</MudText>
-                        <MudText Typo="Typo.subtitle2">@PageState.GetMeterNames().Count</MudText>
-                    </div>
-                    <div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner:Instruments"]</MudText>
-                        <MudText Typo="Typo.subtitle2">@PageState.Snapshot.Instruments.Count</MudText>
-                    </div>
+        }
+    </header>
+    @if (_state is null)
+    {
+        <section class="telemetry-empty" role="status"><h2>@L["Workbench:UnavailableTitle"]</h2><p>@L["Workbench:Unavailable"]</p></section>
+    }
+    else
+    {
+        @if (_state.Error is not null)
+        {
+            <div class="telemetry-read-error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" /><div><strong>@L["Status:LoadFailed"]</strong><p>@L[_state.HasSnapshot ? "Workbench:RetainedAfterFailure" : "Workbench:NoSnapshot"]</p><p>@_state.Error</p></div></div>
+        }
+        @if (_state.Snapshot is { } snapshot)
+        {
+            <section class="telemetry-scope" aria-label="@L["Workbench:Scope"]">
+                <div class="telemetry-resource">
+                    <span class="telemetry-resource-label">@L["Workbench:Resource"]</span><h2>@snapshot.ResourceServiceName</h2><p>@L["Banner:PerInstanceHint"]</p>
+                    <div class="telemetry-resource-meta">@if (!string.IsNullOrEmpty(snapshot.ResourceServiceVersion)) { <span>@snapshot.ResourceServiceVersion</span> } @if (!string.IsNullOrEmpty(snapshot.DeploymentEnvironment)) { <span>@snapshot.DeploymentEnvironment</span> }</div>
                 </div>
-            }
-        </MudPaper>
-
-        <MudPaper Class="filter-bar mo-self-painted" Elevation="0">
-            <MudSelect T="string"
-                       Value="@PageState.MeterPrefixFilter"
-                       ValueChanged="SetMeterFilter"
-                       Label="@L["Filter:MeterPrefix"]"
-                       Variant="Variant.Outlined"
-                       Dense="true"
-                       Margin="Margin.Dense">
-                <MudSelectItem T="string" Value="@string.Empty">@L["Filter:AllMeters"]</MudSelectItem>
-                @foreach (var meterName in PageState.GetMeterNames())
-                {
-                    <MudSelectItem T="string" Value="@meterName">@meterName</MudSelectItem>
-                }
-            </MudSelect>
-
-            <MudTextField T="string"
-                          Value="@PageState.InstrumentNameFilter"
-                          ValueChanged="SetInstrumentFilter"
-                          Label="@L["Filter:InstrumentName"]"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search" />
-
-            <MudSelect T="string"
-                       Value="@AutoRefreshValue"
-                       ValueChanged="SetAutoRefresh"
-                       Label="@L["Filter:AutoRefresh"]"
-                       Variant="Variant.Outlined"
-                       Dense="true"
-                       Margin="Margin.Dense">
-                <MudSelectItem T="string" Value="@AUTO_REFRESH_OFF">@L["Filter:RefreshOff"]</MudSelectItem>
-                <MudSelectItem T="string" Value="@AUTO_REFRESH_1S">@L["Filter:Refresh1s"]</MudSelectItem>
-                <MudSelectItem T="string" Value="@AUTO_REFRESH_5S">@L["Filter:Refresh5s"]</MudSelectItem>
-            </MudSelect>
-
-            <div class="filter-actions">
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Refresh"
-                           OnClick="RefreshAsync"
-                           Disabled="@PageState.IsLoading">
-                    @L["Action:Refresh"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.ContentCopy"
-                           OnClick="CopyPrometheusAsync"
-                           Disabled="@(PageState.Snapshot is null)">
-                    @L["Action:CopyAsPrometheus"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.DataObject"
-                           OnClick="CopyJsonAsync"
-                           Disabled="@(PageState.Snapshot is null)">
-                    @L["Action:CopyAsJson"]
-                </MudButton>
+                <div class="telemetry-coverage">
+                    <div class="telemetry-coverage-heading"><span>@L["Workbench:WholeRegistry"]</span><span>@L["Workbench:SourceCapture"] <time datetime="@snapshot.TimestampUtc.ToString("O")" title="@snapshot.TimestampUtc.ToString("O")">@snapshot.TimestampUtc.ToLocalTime().ToString("HH:mm:ss")</time></span></div>
+                    <dl class="telemetry-counts"><div><dt>@L["Banner:Meters"]</dt><dd>@_state.GetMeterNames().Count</dd></div><div><dt>@L["Banner:Instruments"]</dt><dd>@snapshot.Instruments.Count</dd></div><div><dt>@L["Instrument:TagSets"]</dt><dd>@snapshot.Instruments.Sum(instrument => instrument.TagSets.Count)</dd></div></dl>
+                    <div class="telemetry-retention"><span>@L["Workbench:SamplesPerSeries"] <code>@snapshot.SamplesPerSeries</code></span><span>@L["Workbench:SeriesPerInstrument"] <code>@snapshot.MaxTagSetsPerInstrument</code></span></div>
+                </div>
+            </section>
+            <div class="telemetry-mobile-navigation" aria-label="@L["Workbench:WorkspaceNavigation"]">
+                <MudButton Variant="@(_showRegistry ? Variant.Filled : Variant.Outlined)" Color="Color.Primary" OnClick="@(() => _showRegistry = true)" aria-pressed="@(_showRegistry ? "true" : "false")">@L["Workbench:BrowseInstruments"] <span class="telemetry-navigation-count">@_state.FilteredInstruments().Count</span></MudButton>
+                <MudButton @ref="_detailNavigationButton" Variant="@(_showRegistry ? Variant.Outlined : Variant.Filled)" Color="Color.Primary" OnClick="@(() => _showRegistry = false)" Disabled="_state.SelectedInstrument is null" aria-pressed="@(_showRegistry ? "false" : "true")">@L["Workbench:ViewEvidence"]</MudButton>
             </div>
-        </MudPaper>
-
-        @if (PageState.IsLoading && PageState.Snapshot is null)
-        {
-            <MudPaper Class="status-panel mo-self-painted" Elevation="0">
-                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Status:Loading"]</MudText>
-            </MudPaper>
-        }
-        else if (!string.IsNullOrWhiteSpace(PageState.Error))
-        {
-            <MudAlert Severity="Severity.Error">@PageState.Error</MudAlert>
-        }
-        else if (PageState.FilteredInstruments().Count == 0)
-        {
-            <MudAlert Severity="Severity.Info">@L["Status:Empty"]</MudAlert>
-        }
-        else
-        {
-            <div class="meter-groups">
-                <MudExpansionPanels MultiExpansion="true" Elevation="0">
-                    @foreach (var meterGroup in PageState.FilteredInstrumentGroups())
-                    {
-                        <MudExpansionPanel Text="@meterGroup.Key" Expanded="true" Class="mo-self-painted">
-                            <div class="instrument-grid">
-                                @foreach (var instrument in meterGroup)
-                                {
-                                    <InstrumentCard Instrument="@instrument" />
-                                }
-                            </div>
-
-                            @foreach (var instrument in meterGroup.Where(static item => item.TagSets.Count > 0))
-                            {
-                                <div class="instrument-details">
-                                    <MudExpansionPanels MultiExpansion="true" Elevation="0">
-                                        <MudExpansionPanel Text="@instrument.Name">
-                                            @if (instrument.Kind.Equals("Histogram", StringComparison.Ordinal))
-                                            {
-                                                @foreach (var tagSet in instrument.TagSets.Where(static tagSet => tagSet.Histogram is not null))
-                                                {
-                                                    <HistogramView Histogram="@tagSet.Histogram" Unit="@instrument.Unit" />
-                                                }
-                                            }
-
-                                            <TagSetTable TagSets="@instrument.TagSets" Unit="@instrument.Unit" />
-                                        </MudExpansionPanel>
-                                    </MudExpansionPanels>
-                                </div>
-                            }
-                        </MudExpansionPanel>
-                    }
-                </MudExpansionPanels>
+            <div class="telemetry-explorer @(_showRegistry ? "is-browsing" : "is-inspecting")">
+                <TelemetryInstrumentRegistry Instruments="@_state.FilteredInstruments()" MeterNames="@_state.GetMeterNames()" Selected="@_state.SelectedInstrument" MeterFilter="@_state.MeterPrefixFilter" NameFilter="@_state.InstrumentNameFilter" OnMeterFilter="SetMeterFilter" OnNameFilter="SetNameFilter" OnSelect="SelectInstrument" />
+                <TelemetryInstrumentDossier Instrument="@_state.SelectedInstrument" Series="@_state.SelectedSeries" CapturedAt="@_state.SnapshotCapturedAt" SamplesPerSeries="snapshot.SamplesPerSeries" OnSelectSeries="SelectSeries" OnInspect="InspectAsync" OnInspectTriggerRemoved="MarkRestoreFocus" />
             </div>
+            <section class="telemetry-export">
+                <div><h2>@L["Workbench:ExportTitle"]</h2><p>@L["Workbench:ExportHelp"]</p></div>
+                <div class="telemetry-export-actions"><MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.DataObject" Disabled="_copyBusy" OnClick="CopyJsonAsync">@L["Action:CopyAsJson"]</MudButton><MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.ContentCopy" Disabled="_copyBusy" OnClick="CopyPrometheusAsync">@L["Action:CopyAsPrometheus"]</MudButton></div>
+            </section>
         }
-    </MudContainer>
+        else if (_state.IsLoading)
+        {
+            <section class="telemetry-empty" role="status"><MudProgressLinear Indeterminate="true" Color="Color.Primary" /><p>@L["Status:Loading"]</p></section>
+        }
+    }
 </div>
 
 @code {
-    /// <summary>
-    /// Route used by the OpenTelemetry metrics dashboard.
-    /// </summary>
+    /// <summary>Route of the current-host instrument and retained-series workspace.</summary>
     public const string PAGE_URL = "/opentelemetry-dashboard";
-
-    private const string AUTO_REFRESH_OFF = "off";
-    private const string AUTO_REFRESH_1S = "1s";
-    private const string AUTO_REFRESH_5S = "5s";
-    private readonly CancellationTokenSource _lifetimeCancellation = new();
-    private OpenTelemetryDashboardPageState PageState { get; set; } = null!;
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly object _disposeLock = new();
+    private readonly object _renderLock = new();
+    private readonly HashSet<Task> _renders = [];
+    private OpenTelemetryDashboardPageState? _state;
+    private MudButton? _refreshButton;
+    private MudButton? _detailNavigationButton;
+    private IDialogReference? _dialog;
+    private Task<IDialogReference?> _opening = Task.FromResult<IDialogReference?>(null);
+    private Task _closing = Task.CompletedTask;
+    private Task _copyTask = Task.CompletedTask;
+    private Task? _disposeTask;
     private bool _disposed;
-
-    private string AutoRefreshValue => PageState.AutoRefreshInterval switch
-    {
-        null => AUTO_REFRESH_OFF,
-        { TotalSeconds: <= 1.5 } => AUTO_REFRESH_1S,
-        _ => AUTO_REFRESH_5S
-    };
+    private bool _openingDialog;
+    private bool _copyBusy;
+    private bool _restoreRefreshFocus;
+    private bool _focusAfterDialog;
+    private bool _showRegistry = true;
+    private bool _focusDetailNavigation;
+    private string AutoRefreshValue => _state?.AutoRefreshInterval is null ? "off" : _state.AutoRefreshInterval.Value.TotalSeconds <= 1.5 ? "1s" : "5s";
 
     protected override async Task OnInitializedAsync()
     {
-        PageState = PageStateFactory.Create();
-        PageState.StateChanged += HandleStateChangedAsync;
-        var result = await PageState.LoadAsync();
-        if (!_disposed && result.IsFailed(out var error))
+        _state = Services.GetService<OpenTelemetryDashboardPageStateFactory>()?.Create();
+        if (_state is null) return;
+        _state.StateChanged += StateChanged;
+        await _state.LoadAsync();
+    }
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        lock (_renderLock)
         {
-            Snackbar.Add(error.Message ?? L["Status:Empty"].Value, Severity.Error);
+            if (!_disposed && _focusDetailNavigation && _detailNavigationButton is not null)
+            {
+                _focusDetailNavigation = false;
+                return TrackRender(_detailNavigationButton.FocusAsync().AsTask());
+            }
+            if (_disposed || !_focusAfterDialog || _refreshButton is null || _state?.IsLoading == true) return Task.CompletedTask;
+            _focusAfterDialog = false;
+            return TrackRender(_refreshButton.FocusAsync().AsTask());
         }
     }
-
-    private async Task RefreshAsync()
+    private Task RefreshAsync() => _disposed || _state is null ? Task.CompletedTask : _state.RefreshAsync();
+    private Task SetAutoRefreshAsync(string value) => _disposed || _state is null ? Task.CompletedTask : _state.SetAutoRefreshIntervalAsync(value switch { "1s" => TimeSpan.FromSeconds(1), "5s" => TimeSpan.FromSeconds(5), _ => null });
+    private void SetMeterFilter(string value) { if (!_disposed && _state is not null) { _state.MeterPrefixFilter = value; MarkRestoreFocus(); } }
+    private void SetNameFilter(string value) { if (!_disposed && _state is not null) { _state.InstrumentNameFilter = value; MarkRestoreFocus(); } }
+    private void SelectInstrument(InstrumentSnapshot instrument)
     {
-        var result = await PageState.RefreshAsync();
-        if (!_disposed && result.IsFailed(out var error))
+        if (_disposed || _state is null) return;
+        _state.SelectInstrument(instrument);
+        if (!ReferenceEquals(_state.SelectedInstrument, instrument)) return;
+        _showRegistry = false; _focusDetailNavigation = true; MarkRestoreFocus();
+    }
+    private void SelectSeries(TagSetSamples series) { if (!_disposed) { _state?.SelectSeries(series); MarkRestoreFocus(); } }
+    private void MarkRestoreFocus() { if (_openingDialog) _restoreRefreshFocus = true; }
+    private Task CopyJsonAsync() => ExportAndCopy(() => _state?.ExportJson() ?? string.Empty);
+    private Task CopyPrometheusAsync() => ExportAndCopy(() => _state?.ExportPrometheusText() ?? string.Empty);
+    private Task ExportAndCopy(Func<string> export)
+    {
+        if (_disposed) return Task.CompletedTask;
+        string payload;
+        try { payload = export(); }
+        catch (Exception exception)
         {
-            Snackbar.Add(error.Message ?? L["Status:Empty"].Value, Severity.Error);
+            Logger.LogError(exception, "OpenTelemetry snapshot export failed.");
+            lock (_renderLock) { if (!_disposed) Snackbar.Add(L["Status:CopyFailed"], Severity.Error); }
+            return Task.CompletedTask;
+        }
+        return StartCopy(payload);
+    }
+    private Task StartCopy(string payload)
+    {
+        lock (_renderLock)
+        {
+            if (_disposed || _copyBusy) return Task.CompletedTask;
+            _copyBusy = true;
+            return _copyTask = CopyAsync(payload);
         }
     }
-
-    private Task SetMeterFilter(string value)
-    {
-        PageState.MeterPrefixFilter = value;
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    private Task SetInstrumentFilter(string value)
-    {
-        PageState.InstrumentNameFilter = value;
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    private async Task SetAutoRefresh(string value)
-    {
-        await PageState.SetAutoRefreshIntervalAsync(value switch
-        {
-            AUTO_REFRESH_1S => TimeSpan.FromSeconds(1),
-            AUTO_REFRESH_5S => TimeSpan.FromSeconds(5),
-            _ => null
-        });
-    }
-
-    private async Task CopyPrometheusAsync()
-    {
-        await CopyAsync(PageState.ExportPrometheusText());
-    }
-
-    private async Task CopyJsonAsync()
-    {
-        await CopyAsync(PageState.ExportJson());
-    }
-
-    private async Task CopyAsync(string text)
+    private async Task CopyAsync(string payload)
     {
         try
         {
-            var success = await JSRuntime.InvokeAsync<bool>(
-                "MoClipboard.copyText",
-                _lifetimeCancellation.Token,
-                text);
-            if (!_disposed)
-            {
-                Snackbar.Add(success ? L["Status:Copied"].Value : L["Status:CopyFailed"].Value, success ? Severity.Success : Severity.Error);
-            }
+            var success = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", _lifetime.Token, payload);
+            if (!_disposed) Snackbar.Add(success ? L["Status:Copied"] : L["Status:CopyFailed"], success ? Severity.Success : Severity.Error);
         }
-        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (JSDisconnectedException) { }
+        catch (Exception exception) { Logger.LogError(exception, "OpenTelemetry snapshot clipboard copy failed."); if (!_disposed) Snackbar.Add(L["Status:CopyFailed"], Severity.Error); }
+        finally { _copyBusy = false; }
+    }
+    private Task InspectAsync(TelemetrySampleRequest request)
+    {
+        // Capture exact state evidence before taking the component admission lock; state notifications
+        // enter that lock from the session's lock, so the reverse lock order must never be taken.
+        var evidence = _state?.InspectSample(request.Series, request.SourceIndex);
+        lock (_renderLock)
         {
-        }
-        catch
-        {
-            if (!_disposed)
-            {
-                Snackbar.Add(L["Status:CopyFailed"].Value, Severity.Error);
-            }
+            if (_disposed || _openingDialog || evidence is null) return Task.CompletedTask;
+            _openingDialog = true;
+            _restoreRefreshFocus = false;
+            _opening = OpenAsync(evidence);
+            return _closing = ObserveCloseAsync(_opening);
         }
     }
-
-    private Task HandleStateChangedAsync() => InvokeAsync(() =>
+    private async Task<IDialogReference?> OpenAsync(OpenTelemetrySampleEvidence evidence)
     {
-        if (!_disposed)
+        try
         {
-            StateHasChanged();
+            var reference = await Dialogs.ShowAsync<TelemetrySampleDetailDialog>(L["Inspector:Title"], new DialogParameters<TelemetrySampleDetailDialog> { { dialog => dialog.Evidence, evidence } }, new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = true, BackdropClick = true });
+            if (_disposed) { Retire(reference); return null; }
+            return _dialog = reference;
         }
-    });
-
-    public async ValueTask DisposeAsync()
+        catch (Exception exception) { Logger.LogError(exception, "OpenTelemetry sample inspector could not be opened."); if (!_disposed) Snackbar.Add(L["Inspector:OpenFailed"], Severity.Error); return null; }
+    }
+    private async Task ObserveCloseAsync(Task<IDialogReference?> opening)
     {
-        if (_disposed)
+        try { if (await opening is { } reference) { await reference.Result; if (ReferenceEquals(_dialog, reference)) _dialog = null; } }
+        finally
         {
-            return;
+            _openingDialog = false;
+            if (!_disposed && _restoreRefreshFocus) { _focusAfterDialog = true; StateChanged(); }
         }
-
-        _disposed = true;
-        await _lifetimeCancellation.CancelAsync();
-        if (PageState is not null)
+    }
+    private static void Retire(IDialogReference? reference) { if (reference is null) return; reference.Close(DialogResult.Cancel()); reference.Dismiss(DialogResult.Cancel()); }
+    private void StateChanged()
+    {
+        lock (_renderLock)
         {
-            PageState.StateChanged -= HandleStateChangedAsync;
-            await PageState.DisposeAsync();
+            if (_disposed) return;
+            TrackRender(InvokeAsync(() => { if (!_disposed) StateHasChanged(); }));
         }
-
-        _lifetimeCancellation.Dispose();
+    }
+    // Call under the admission lock so every render and focus operation remains owned until retirement drains it.
+    private Task TrackRender(Task work)
+    {
+        var render = ObserveRenderAsync(work);
+        _renders.Add(render);
+        _ = ReleaseRenderAsync(render);
+        return render;
+    }
+    private async Task ObserveRenderAsync(Task render) { try { await render; } catch (Exception exception) { Logger.LogError(exception, "OpenTelemetry workspace rendering failed."); } }
+    private async Task ReleaseRenderAsync(Task render) { await render; lock (_renderLock) _renders.Remove(render); }
+    /// <summary>Retires local dialogs, clipboard work, reads and rendering without stopping the borrowed collector.</summary>
+    public ValueTask DisposeAsync() { lock (_disposeLock) { lock (_renderLock) _disposed = true; return new ValueTask(_disposeTask ??= DisposeCoreAsync()); } }
+    private async Task DisposeCoreAsync()
+    {
+        if (_state is not null) _state.StateChanged -= StateChanged;
+        var stateDrain = _state?.DisposeAsync().AsTask() ?? Task.CompletedTask;
+        try
+        {
+            await _lifetime.CancelAsync();
+            Retire(_dialog); await _opening; Retire(_dialog); await _closing;
+            await _copyTask;
+        }
+        finally
+        {
+            try { await stateDrain; }
+            finally { Task[] renders; lock (_renderLock) renders = _renders.ToArray(); await Task.WhenAll(renders); _lifetime.Dispose(); }
+        }
     }
 }

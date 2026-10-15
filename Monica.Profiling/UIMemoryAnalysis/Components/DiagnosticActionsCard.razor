@@ -2,82 +2,24 @@
 @inject IStringLocalizer<MemoryAnalysisResource> L
 
 <section class="diagnostic-actions-layout">
-    <article class="diagnostic-action diagnostic-action--warning">
-        <header class="diagnostic-action__header">
-            <span class="diagnostic-action__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.CleaningServices" /></span>
-            <div><MudText Typo="Typo.overline" Class="diagnostic-action__eyebrow">@L["Diagnostics:ManualGc:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Diagnostics:ManualGc:Title"]</MudText></div>
-        </header>
-        @if (Options?.AllowManualGC == true)
-        {
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Diagnostics:ManualGc:Description"]</MudText>
-            <div class="diagnostic-action__controls">
-                <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary">
-                    <MudButton OnClick="@(() => OnForceGC.InvokeAsync(0))" Disabled="IsLoading">Gen 0</MudButton>
-                    <MudButton OnClick="@(() => OnForceGC.InvokeAsync(1))" Disabled="IsLoading">Gen 1</MudButton>
-                    <MudButton OnClick="@(() => OnForceGC.InvokeAsync(2))" Disabled="IsLoading">Gen 2</MudButton>
-                </MudButtonGroup>
-                <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="@(() => OnForceGC.InvokeAsync(-1))" Disabled="IsLoading" StartIcon="@Icons.Material.Filled.DeleteSweep">
-                    @L["Diagnostics:FullCollection"]
-                </MudButton>
-            </div>
-        }
-        else
-        {
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Diagnostics:ManualGc:Disabled"]</MudAlert>
-        }
+    <article class="diagnostic-action">
+        <header><span class="diagnostic-action__icon"><MudIcon Icon="@Icons.Material.Outlined.CleaningServices" /></span><div><span class="diagnostic-action__eyebrow">@L["Diagnostics:ManualGc:Eyebrow"]</span><h2>@L["Diagnostics:ManualGc:Title"]</h2></div></header>
+        <p>@L["Diagnostics:ManualGc:Description"]</p>
+        <div class="diagnostic-action__policy" data-manual-gc-policy="@Options?.AllowManualGC">@(Options?.AllowManualGC == true ? L["Diagnostics:Policy:Permitted"] : L["Diagnostics:ManualGc:Disabled"])</div>
+        <div class="diagnostic-action__controls"><div class="diagnostic-generation"><MudSelect T="int" @bind-Value="_generation" Label="@L["Diagnostics:Generation"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(IsLoading || Options?.AllowManualGC != true)">
+            <MudSelectItem T="int" Value="-1">@L["Diagnostics:FullCollection"]</MudSelectItem><MudSelectItem T="int" Value="0">@L["Common:Generation",0]</MudSelectItem><MudSelectItem T="int" Value="1">@L["Common:Generation",1]</MudSelectItem><MudSelectItem T="int" Value="2">@L["Common:Generation",2]</MudSelectItem>
+        </MudSelect></div><MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => OnForceGC.InvokeAsync(_generation))" Disabled="@(IsLoading || Options?.AllowManualGC != true)" StartIcon="@Icons.Material.Outlined.CleaningServices">@L["Diagnostics:ManualGc:Action"]</MudButton></div>
+        <p class="diagnostic-action__footnote">@L["Diagnostics:ManualGc:Effect"]</p>
     </article>
-
-    <article class="diagnostic-action diagnostic-action--info">
-        <header class="diagnostic-action__header">
-            <span class="diagnostic-action__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Download" /></span>
-            <div><MudText Typo="Typo.overline" Class="diagnostic-action__eyebrow">@L["Diagnostics:Dump:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Diagnostics:Dump:Title"]</MudText></div>
-        </header>
-        @if (Options?.AllowGcDump == true)
-        {
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Diagnostics:Dump:Description"]</MudText>
-            <div class="diagnostic-command"><span>@L["Diagnostics:Dump:Requirement"]</span><code>dotnet tool install -g dotnet-gcdump</code></div>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnCreateDump" Disabled="IsLoading" StartIcon="@Icons.Material.Filled.SaveAlt">
-                @L["Diagnostics:Dump:Action"]
-            </MudButton>
-        }
-        else
-        {
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Diagnostics:Dump:Disabled"]</MudAlert>
-        }
+    <article class="diagnostic-action">
+        <header><span class="diagnostic-action__icon"><MudIcon Icon="@Icons.Material.Outlined.SaveAlt" /></span><div><span class="diagnostic-action__eyebrow">@L["Diagnostics:Dump:Eyebrow"]</span><h2>@L["Diagnostics:Dump:Title"]</h2></div></header>
+        <p>@L["Diagnostics:Dump:Description"]</p>
+        <div class="diagnostic-action__policy" data-gcdump-policy="@Options?.AllowGcDump">@(Options?.AllowGcDump == true ? L["Diagnostics:Policy:Permitted"] : L["Diagnostics:Dump:Disabled"])</div>
+        <div class="diagnostic-prerequisite"><span>@L["Diagnostics:Dump:Requirement"]</span><code>dotnet-gcdump</code><p>@L["Diagnostics:Dump:Prerequisite"]</p></div>
+        <div class="diagnostic-action__controls"><MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnCreateDump" Disabled="@(IsLoading || Options?.AllowGcDump != true)" StartIcon="@Icons.Material.Outlined.SaveAlt">@L["Diagnostics:Dump:Action"]</MudButton></div>
+        <p class="diagnostic-action__footnote">@L["Diagnostics:Dump:ServerFile"]</p>
     </article>
-
-    <article class="diagnostic-guidance">
-        <header class="diagnostic-action__header">
-            <span class="diagnostic-action__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Lightbulb" /></span>
-            <div><MudText Typo="Typo.overline" Class="diagnostic-action__eyebrow">@L["Diagnostics:Guidance:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Diagnostics:Guidance:Title"]</MudText></div>
-        </header>
-        <MudExpansionPanels Elevation="0">
-            <MudExpansionPanel Text="@L["Diagnostics:Guidance:Signals:Title"]">
-                <ul class="diagnostic-guidance__list">
-                    <li><strong>@L["Diagnostics:Guidance:Signals:GrowingHeap:Title"]</strong><span>@L["Diagnostics:Guidance:Signals:GrowingHeap:Description"]</span></li>
-                    <li><strong>@L["Diagnostics:Guidance:Signals:Gen2:Title"]</strong><span>@L["Diagnostics:Guidance:Signals:Gen2:Description"]</span></li>
-                    <li><strong>@L["Diagnostics:Guidance:Signals:Pinned:Title"]</strong><span>@L["Diagnostics:Guidance:Signals:Pinned:Description"]</span></li>
-                    <li><strong>@L["Diagnostics:Guidance:Signals:Finalizers:Title"]</strong><span>@L["Diagnostics:Guidance:Signals:Finalizers:Description"]</span></li>
-                </ul>
-            </MudExpansionPanel>
-            <MudExpansionPanel Text="@L["Diagnostics:Guidance:Causes:Title"]">
-                <ul class="diagnostic-guidance__list">
-                    <li><strong>@L["Diagnostics:Guidance:Causes:Events:Title"]</strong><span>@L["Diagnostics:Guidance:Causes:Events:Description"]</span></li>
-                    <li><strong>@L["Diagnostics:Guidance:Causes:Statics:Title"]</strong><span>@L["Diagnostics:Guidance:Causes:Statics:Description"]</span></li>
-                    <li><strong>@L["Diagnostics:Guidance:Causes:Caches:Title"]</strong><span>@L["Diagnostics:Guidance:Causes:Caches:Description"]</span></li>
-                    <li><strong>@L["Diagnostics:Guidance:Causes:Disposal:Title"]</strong><span>@L["Diagnostics:Guidance:Causes:Disposal:Description"]</span></li>
-                </ul>
-            </MudExpansionPanel>
-            <MudExpansionPanel Text="@L["Diagnostics:Guidance:Tools:Title"]">
-                <ul class="diagnostic-guidance__list">
-                    <li><strong>Visual Studio</strong><span>@L["Diagnostics:Guidance:Tools:VisualStudio"]</span></li>
-                    <li><strong>PerfView</strong><span>@L["Diagnostics:Guidance:Tools:PerfView"]</span></li>
-                    <li><strong>dotMemory</strong><span>@L["Diagnostics:Guidance:Tools:DotMemory"]</span></li>
-                    <li><strong>dotnet-dump / dotnet-gcdump</strong><span>@L["Diagnostics:Guidance:Tools:Dotnet"]</span></li>
-                </ul>
-            </MudExpansionPanel>
-        </MudExpansionPanels>
-    </article>
+    <aside class="diagnostic-action-scope"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" /><p>@L["Diagnostics:Scope"]</p></aside>
 </section>
 
 @code {
@@ -85,4 +27,5 @@
     [Parameter] public EventCallback<int> OnForceGC { get; set; }
     [Parameter] public EventCallback OnCreateDump { get; set; }
     [Parameter] public bool IsLoading { get; set; }
+    private int _generation = -1;
 }

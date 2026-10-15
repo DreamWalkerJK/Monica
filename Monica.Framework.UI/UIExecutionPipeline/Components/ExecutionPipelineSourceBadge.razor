@@ -2,9 +2,9 @@
 @inject IStringLocalizer<ExecutionPipelineResource> L
 
 <MudTooltip Text="@L["Page:Help:Concepts:Source"]" Arrow="true" Placement="Placement.Top">
-    <MudChip T="string" Size="@Size" Color="Color.Info" Variant="Variant.Outlined">
+    <span class="@($"execution-pipeline-source execution-pipeline-source--{Size.ToString().ToLowerInvariant()}")">
         @(SourceModuleKey?.Value ?? L["Page:Common:ApplicationHost"])
-    </MudChip>
+    </span>
 </MudTooltip>
 
 @code {

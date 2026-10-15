@@ -30,10 +30,12 @@ internal sealed class JobExecutionsStateFactory(
     }
 
     /// <summary>
-    /// Creates a fresh state for one execution-detail dialog instance.
+    /// Creates a fresh state bound to one exact execution-detail identity.
     /// </summary>
-    public ExecutionDetailState CreateDetailState()
+    /// <remarks>The caller owns and drains this state. Identity changes require a new state; identifiers are not trimmed.</remarks>
+    /// <exception cref="ArgumentException">The identifier is blank.</exception>
+    public ExecutionDetailState CreateDetailState(string instanceId)
     {
-        return new ExecutionDetailState(facade, access, timeProvider);
+        return new ExecutionDetailState(facade, access, timeProvider, instanceId);
     }
 }

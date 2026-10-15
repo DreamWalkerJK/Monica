@@ -2,12 +2,10 @@
 @using Monica.Framework.UI.UIExecutionPipeline.Support
 @inject IStringLocalizer<ExecutionPipelineResource> L
 
-<MudChip T="string"
-         Size="@Size"
-         Color="@ExecutionPipelinePresentation.GetStatusColor(Status)"
-         Icon="@ExecutionPipelinePresentation.GetStatusIcon(Status)">
-    @L[$"Page:Statuses:{Status}"]
-</MudChip>
+<span class="@("execution-pipeline-status execution-pipeline-status--" + Size.ToString().ToLowerInvariant())" data-status="@Status">
+    <MudIcon Icon="@ExecutionPipelinePresentation.GetStatusIcon(Status)" Size="Size.Small" />
+    <span>@L[$"Page:Statuses:{Status}"]</span>
+</span>
 
 @code {
     [Parameter]

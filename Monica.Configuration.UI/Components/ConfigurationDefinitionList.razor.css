@@ -1,208 +1,26 @@
-.configuration-definition-list-shell {
-    height: 100%;
-    width: 100%;
-    min-height: 0;
-    min-width: 0;
-    display: flex;
-    align-items: stretch;
-}
-
-.configuration-definition-list-shell ::deep .configuration-definition-list {
-    flex: 1 1 auto;
-    min-height: 0;
-    min-width: 0;
-    display: flex;
-    overflow: hidden;
-}
-
-.configuration-definition-list-shell ::deep .configuration-definition-list-content {
-    min-height: 0;
-}
-
-.configuration-definition-list-content {
-    flex: 1 1 auto;
-    min-height: 0;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    align-items: stretch;
-    justify-content: flex-start;
-}
-
-.configuration-definition-list-content ::deep .mud-input-control {
-    flex: 0 0 auto;
-}
-
-.configuration-definition-list-toolbar {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: flex-start;
-    gap: 0.5rem;
-    min-width: 0;
-}
-
-.configuration-definition-list-search {
-    grid-column: 1 / -1;
-    min-width: 0;
-}
-
-.configuration-definition-list-lifecycle-filter {
-    min-width: 0;
-}
-
-.configuration-definition-list-lifecycle-filter ::deep .mud-input-control {
-    width: 100%;
-}
-
-.configuration-definition-list-group-filter {
-    min-width: 0;
-}
-
-.configuration-definition-list-group-filter ::deep .mud-input-control {
-    width: 100%;
-}
-
-.configuration-definition-list-scroll {
-    flex: 1 1 auto;
-    min-height: 0;
-    min-width: 0;
-    overflow: auto;
-}
-
-.configuration-definition-list-scroll ::deep .mud-list-item-text,
-.configuration-definition-list-scroll ::deep .mud-list-item-text .mud-typography {
-    min-width: 0;
-    overflow: hidden;
-}
-
-.configuration-definition-list-scroll ::deep .mud-list-item-text .mud-typography {
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-.configuration-definition-list-footer {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.configuration-definition-list-footer ::deep .mud-stack {
-    align-items: center;
-}
-
-.configuration-definition-list-footer-actions {
-    align-items: center;
-}
-
-.configuration-definition-list-footer-actions ::deep .mud-tooltip-root {
-    display: inline-flex;
-    align-items: center;
-    line-height: 0;
-}
-
-.configuration-definition-list-scroll ::deep .mud-list-item {
-    align-items: center;
-}
-
-.configuration-definition-list-scroll ::deep .mud-list-item-icon {
-    flex: 0 0 auto;
-    align-self: center;
-    margin-top: 0;
-}
-
-.configuration-definition-list-scroll ::deep .mud-list-item-text {
-    min-width: 0;
-    overflow: hidden;
-}
-
-.configuration-definition-list-scroll ::deep .mud-list-subheader {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.configuration-definition-list-shell ::deep .selected-definition {
-    background-color: var(--mud-palette-action-default-hover);
-}
-
-.configuration-definition-title {
-    min-width: 0;
-}
-
-.configuration-definition-pending-count {
-    flex: 0 0 auto;
-}
-
-.configuration-description-icon {
-    display: inline-flex;
-    flex: 0 0 auto;
-    height: 1.5rem;
-    align-items: center;
-    justify-content: center;
-    line-height: 0;
-    vertical-align: middle;
-}
-
-.configuration-description-icon ::deep .mud-icon-root {
-    display: block;
-}
-
-.configuration-definition-title ::deep .mud-typography {
-    min-width: 0;
-}
-
-.configuration-node-match-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    min-width: 0;
-    margin-top: 0.375rem;
-}
-
-.configuration-node-match-list ::deep .configuration-node-match-button {
-    justify-content: flex-start;
-    min-width: 0;
-    width: 100%;
-    padding-inline: 0.25rem;
-    text-align: left;
-}
-
-.configuration-node-match-list ::deep .mud-button-label {
-    min-width: 0;
-    justify-content: flex-start;
-}
-
-.configuration-node-match-text {
-    min-width: 0;
-}
-
-.configuration-node-match-text ::deep .mud-typography {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-@media (max-width: 599.98px) {
-    .configuration-definition-list-toolbar {
-        grid-template-columns: minmax(0, 1fr);
-        align-items: stretch;
-    }
-
-    .configuration-definition-list-search,
-    .configuration-definition-list-lifecycle-filter,
-    .configuration-definition-list-group-filter {
-        width: 100%;
-    }
-
-    .configuration-definition-list-scroll {
-        max-height: 45vh;
-    }
-
-    .configuration-definition-title {
-        flex-wrap: wrap;
-    }
-}
+.configuration-definition-list-shell, .configuration-definition-list { min-width: 0; }
+.configuration-definition-list { border: 1px solid var(--mud-palette-lines-default); border-radius: var(--mud-default-borderradius); background: var(--mud-palette-surface); }
+.configuration-catalog-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 22px 20px 16px; }
+.configuration-catalog-heading h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.configuration-catalog-heading > span { font-size: 11px; color: var(--mud-palette-text-secondary); }
+.configuration-definition-list-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0 16px 18px; border-bottom: 1px solid var(--mud-palette-lines-default); }
+.configuration-definition-list-search { grid-column: 1 / -1; }
+.configuration-definition-list-toolbar > div { min-width: 0; }
+.configuration-definition-list-scroll { max-height: calc(100dvh - 400px); overflow: auto; min-height: 180px; padding: 8px; }
+.configuration-definition-list-scroll ::deep .mud-list { padding: 0; }
+.configuration-definition-list-scroll ::deep .mud-list-subheader { padding: 16px 12px 10px; color: var(--mud-palette-text-secondary); font-size: 11px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.configuration-definition-list-scroll ::deep .mud-list-item { padding: 14px 12px; min-width: 0; border-radius: var(--mud-default-borderradius); border: 1px solid transparent; }
+.configuration-definition-list-scroll ::deep .mud-list-item.selected-definition { border-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-divider)); background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface)); }
+.configuration-definition-list-scroll ::deep .mud-list-item-icon { min-width: 28px; color: var(--mud-palette-text-secondary); }
+.configuration-definition-list-scroll ::deep .mud-list-item-icon .mud-icon-root { width: 18px; height: 18px; }
+.configuration-definition-list-scroll ::deep .mud-list-item-text { min-width: 0; }
+.configuration-definition-title { flex-wrap: wrap; }
+.configuration-definition-title ::deep .mud-typography { font-weight: 500; overflow-wrap: anywhere; }
+.configuration-definition-list-scroll ::deep .mud-typography-caption { font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.configuration-definition-list-scroll ::deep .mud-chip { margin: 0; height: 22px; font-size: 10px; }
+.configuration-node-match-list { display: grid; gap: 4px; padding: 8px 12px 12px 28px; }
+.configuration-node-match-list ::deep .configuration-node-match-button { text-align: start; justify-content: flex-start; max-width: 100%; }
+.configuration-node-match-text { min-width: 0; }
+.configuration-definition-list-footer { display: flex; gap: 8px; align-items: flex-start; padding: 16px 20px; border-top: 1px solid var(--mud-palette-lines-default); color: var(--mud-palette-text-secondary); font-size: 11px; line-height: 1.6; }
+.configuration-definition-list-footer ::deep .mud-icon-root { flex-shrink: 0; }
+@media (max-width: 800px) { .configuration-definition-list-scroll { max-height: 320px; min-height: 0; } }

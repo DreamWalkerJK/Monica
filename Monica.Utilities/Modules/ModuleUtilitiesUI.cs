@@ -12,7 +12,7 @@ using MudBlazor;
 namespace Monica.Modules;
 
 /// <summary>
-/// Registers the utilities toolbox page inside the Monica shell.
+/// Registers the connectivity and text transformation workspaces inside the Monica shell.
 /// </summary>
 public class ModuleUtilitiesUI : MonicaModule<ModuleUtilitiesUIOption>, IUIModule
 {
@@ -24,17 +24,28 @@ public class ModuleUtilitiesUI : MonicaModule<ModuleUtilitiesUIOption>, IUIModul
             static option => option.AddResource<UtilitiesResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
+            {
                 registry.RegisterLocalizedPage<UIUtilitiesPage, UtilitiesResource>(
                     UIUtilitiesPage.PAGE_URL,
                     "Pages:UtilitiesToolbox:Title",
-                    Icons.Material.Filled.Build,
+                    Icons.Material.Outlined.Lan,
                     BuiltInNavigationCategoryIds.Infrastructure,
                     addToNav: true,
-                    navOrder: 38)));
+                    navOrder: 38);
+                registry.RegisterLocalizedPage<UIUtilitiesTextPage, UtilitiesResource>(
+                    UIUtilitiesTextPage.PAGE_URL,
+                    "Pages:TextTransform:Title",
+                    Icons.Material.Outlined.Code,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 39);
+            }));
     }
 
     /// <summary>
-    /// Registers page-local UI state used by the toolbox panels.
+    /// Registers circuit-scoped draft and accepted-result state borrowed by the tool panels.
+    /// Panels retain their drafts when navigating between sibling routes and cancel their own
+    /// pending operations when retiring; injected state and facades remain owned by the circuit.
     /// </summary>
     public override void ConfigureServices(ModuleContext<ModuleUtilitiesUIOption> context)
     {

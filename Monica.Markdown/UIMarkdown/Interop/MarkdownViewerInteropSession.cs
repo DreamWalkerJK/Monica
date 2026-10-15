@@ -9,7 +9,8 @@ namespace Monica.Markdown.UIMarkdown.Interop;
 /// </summary>
 internal sealed class MarkdownViewerInteropSession(
     IJSRuntime jsRuntime,
-    Func<string?, Task> hashChangedAsync)
+    Func<string?, Task> hashChangedAsync,
+    Func<double, double, Task>? viewportChangedAsync = null)
     : IAsyncDisposable
 {
     private const string MARKDOWN_LAYOUT_MODULE_PATH =
@@ -27,11 +28,8 @@ internal sealed class MarkdownViewerInteropSession(
     /// <summary>
     /// Imports the viewer module and creates the instance-scoped JavaScript session.
     /// </summary>
-    /// <returns>
-    /// Whether the sidebar should initially be shown, or <see langword="null" /> when disposal
-    /// won the initialization race.
-    /// </returns>
-    internal async Task<bool?> InitializeAsync(ElementReference viewerRoot)
+    /// <remarks>Initialization is idempotent; pane visibility belongs to the measured workspace state.</remarks>
+    internal async Task InitializeAsync(ElementReference viewerRoot)
     {
         await _gate.WaitAsync();
 
@@ -39,12 +37,12 @@ internal sealed class MarkdownViewerInteropSession(
         {
             if (IsDisposeRequested)
             {
-                return null;
+                return;
             }
 
             if (_viewerSession is not null)
             {
-                return null;
+                return;
             }
 
             var module = await jsRuntime.InvokeAsync<IJSObjectReference>(
@@ -58,13 +56,7 @@ internal sealed class MarkdownViewerInteropSession(
             {
                 if (IsDisposeRequested)
                 {
-                    return null;
-                }
-
-                var showSidebar = await module.InvokeAsync<bool>("shouldShowSidebarByDefault");
-                if (IsDisposeRequested)
-                {
-                    return null;
+                    return;
                 }
 
                 callbackReference = DotNetObjectReference.Create(this);
@@ -75,14 +67,13 @@ internal sealed class MarkdownViewerInteropSession(
 
                 if (IsDisposeRequested)
                 {
-                    return null;
+                    return;
                 }
 
                 _module = module;
                 _viewerSession = viewerSession;
                 _callbackReference = callbackReference;
                 ownershipPublished = true;
-                return showSidebar;
             }
             finally
             {
@@ -111,7 +102,7 @@ internal sealed class MarkdownViewerInteropSession(
         }
         catch (JSDisconnectedException)
         {
-            return null;
+            return;
         }
         finally
         {
@@ -158,6 +149,10 @@ internal sealed class MarkdownViewerInteropSession(
             viewerSession => viewerSession.InvokeVoidAsync("clearSearchHit"));
     }
 
+    /// <summary>Reveals the current document heading only when JavaScript confirms the same rendered source.</summary>
+    internal Task RevealDocumentHeadingAsync(string groupKey, string relativePath, string? culture) =>
+        InvokeViewerAsync(session => session.InvokeVoidAsync("revealDocumentHeading", groupKey, relativePath, culture));
+
     /// <summary>
     /// Receives active-heading changes from this viewer's JavaScript session.
     /// </summary>
@@ -177,6 +172,19 @@ internal sealed class MarkdownViewerInteropSession(
         {
             _gate.Release();
         }
+    }
+
+    /// <summary>Receives the rendered workspace's content-box dimensions from its owned observer.</summary>
+    [JSInvokable]
+    public async Task OnViewportChanged(double width, double height)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            if (!IsDisposeRequested && viewportChangedAsync is not null)
+                await viewportChangedAsync(width, height);
+        }
+        finally { _gate.Release(); }
     }
 
     /// <inheritdoc />
@@ -235,10 +243,12 @@ internal sealed class MarkdownViewerInteropSession(
                 }
             }
         }
-        finally
+        catch (Exception exception)
         {
-            _disposedCompletion.TrySetResult();
+            _disposedCompletion.TrySetException(exception);
+            throw;
         }
+        _disposedCompletion.TrySetResult();
     }
 
     private bool IsDisposeRequested => Volatile.Read(ref _disposeRequested) != 0;

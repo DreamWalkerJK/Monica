@@ -1,0 +1,54 @@
+@using Monica.UI.Shell.Models
+@using Monica.UI.Shell.Support
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
+
+<div class="context-navigation-tree" @ref="_treeRef">
+    <MudNavMenu Class="sidebar-tree" aria-label="@Group.DisplayName">
+        <NavigationTree Group="@Group" ActiveItem="@ActiveItem" ShowPageIcons="false" />
+    </MudNavMenu>
+</div>
+
+@code {
+    private ElementReference _treeRef;
+    private JsModuleSession? _focusInterop;
+    private bool _disposed;
+
+    /// <summary>The authorized category rendered when its temporary contextual panel opens.</summary>
+    [Parameter, EditorRequired] public NavigationGroup Group { get; set; } = default!;
+
+    /// <summary>The active destination used to select a leaf and expand its ancestors.</summary>
+    [Parameter] public NavigationItem? ActiveItem { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            // The browser resolves inherited visibility after the drawer's opening render.
+            _focusInterop = new JsModuleSession(JSRuntime, NavBarLayoutInteropSession.LAYOUT_MODULE_PATH);
+            await _focusInterop.InvokeVoidAsync("focusContextNavigation", _treeRef);
+        }
+        catch (JSDisconnectedException)
+        {
+            // A disconnected browser no longer has contextual navigation to focus.
+        }
+        catch (ObjectDisposedException) when (_disposed)
+        {
+            // A category switch can remove this tree while its module import completes.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        if (_focusInterop is { } interop)
+        {
+            await interop.DisposeAsync();
+        }
+    }
+}

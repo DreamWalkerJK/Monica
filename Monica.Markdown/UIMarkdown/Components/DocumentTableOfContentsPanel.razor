@@ -7,10 +7,16 @@
 
 <div class="toc-panel">
     <div class="toc-header">
-        <div class="toc-header-copy">
-            <h2 class="toc-title">@L["MarkdownViewer:Navbar:Outline"]</h2>
-            <p class="toc-description">@L["MarkdownViewer:Toolbar:OutlineDescription"]</p>
-        </div>
+        <h2 class="toc-title">@L["MarkdownViewer:Navbar:Outline"]</h2>
+        @if (OnClose.HasDelegate)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                           Size="Size.Small"
+                           OnClick="OnClose"
+                           title="@L["MarkdownViewer:Toolbar:HideOutline"]"
+                           aria-label="@L["MarkdownViewer:Toolbar:HideOutline"]"
+                           Class="toc-close-button" />
+        }
     </div>
 
     @if (Document is null)
@@ -68,6 +74,13 @@
     [Parameter]
     public EventCallback<string> OnHeadingSelected { get; set; }
 
+    /// <summary>
+    /// Requests that the page close its outline pane and restore focus where appropriate.
+    /// The close control is omitted when no callback is supplied; this component does not own pane visibility.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
     private IReadOnlyList<MoMarkdownHeading> _outlineHeadings = [];
 
     protected override void OnParametersSet()
@@ -75,7 +88,6 @@
         _outlineHeadings = Headings
             .Where(static heading => heading.Level <= 3)
             .ToArray();
-
     }
 
     private string GetHeadingClass(MoMarkdownHeading heading)

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Monica.EventBus.Abstractions;
 using Monica.Core.Modularity.Diagnostics.Models;
 
@@ -74,7 +75,15 @@ public class EventBusProviderInfo
     public bool SupportsDeadLetterQueue => Capabilities.HasFlag(EventBusProviderCapabilities.DeadLetterQueue);
 
     /// <summary>
-    /// Get unique identifier (for comparison and selection)
+    /// Gets an opaque, ordinal identity for comparison and selection, including provider kind, bus scope, and key.
     /// </summary>
-    public string UniqueId => $"{ProviderType}:{ServiceKey ?? "default"}:{(IsDistributed ? "dist" : "local")}";
+    /// <remarks>
+    /// The default provider's null key differs from every named key, including "default" and an empty key.
+    /// Named keys retain exact UTF-16 code units and case. Consumers must not parse or display the encoding;
+    /// use <see cref="ServiceKey"/> and <see cref="IsDistributed"/> for routing and labels.
+    /// </remarks>
+    public string UniqueId => $"{(int)ProviderType}:{(IsDistributed ? "dist" : "local")}:" +
+        (ServiceKey is null
+            ? "n"
+            : "k" + string.Concat(ServiceKey.Select(static value => ((int)value).ToString("x4", CultureInfo.InvariantCulture))));
 }

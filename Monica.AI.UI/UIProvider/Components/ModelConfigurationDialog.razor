@@ -2,66 +2,84 @@
 @using Monica.AI.Configuration.Models
 @using Monica.AI.Providers
 @using Monica.AI.UI.Localization
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<AIResource> L
-@implements IDisposable
+@implements IAsyncDisposable
 
-<MudDialog>
+<MudDialog Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px" Gutters="false" TitleClass="pa-0" ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent>
+        <div class="model-dialog-heading">
+            <MoDialogHeading Text="@(Model is null ? L["Settings:AddModel"] : L["Settings:EditModel"])" />
+            @if (IsProviderDraft) { <p>@L["Settings:Dialog:NestedModelScope"]</p> }
+        </div>
+    </TitleContent>
     <DialogContent>
         <div class="model-form">
-            <div class="metadata-heading">
-                <span>@L["Settings:ModelHelp"]</span>
-                @if (OnDiscover is not null)
-                {
-                    <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.AutoFixHigh" Disabled="@(Busy || string.IsNullOrWhiteSpace(_name))" OnClick="FetchMetadataAsync">@L["Settings:FillMetadata"]</MudButton>
-                }
-            </div>
-            <fieldset class="model-fields" disabled="@Busy">
-                <MudTextField T="string" @bind-Value="_name" Label="@L["Settings:ModelId"]" Required="true" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <fieldset class="model-fields" aria-busy="@Busy.ToString().ToLowerInvariant()">
+                <section class="form-section">
+                    <div class="metadata-heading">
+                        <h3>@L["Settings:Dialog:ModelIdentity"]</h3>
+                        @if (OnDiscover is not null)
+                        {
+                            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.AutoFixHigh" aria-disabled="@((Busy || string.IsNullOrWhiteSpace(_name)).ToString().ToLowerInvariant())" OnClick="FetchMetadataAsync">@L["Settings:FillMetadata"]</MudButton>
+                        }
+                    </div>
+                    <p class="form-help">@L["Settings:ModelHelp"]</p>
+                <MudTextField Disabled="@Busy" T="string" @ref="_nameField" @bind-Value="_name" Label="@L["Settings:ModelId"]" Required="true" RequiredError="@L["Common:Validation:Required"]" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
                 <div class="form-grid">
-                    <MudTextField T="string" @bind-Value="_display" Label="@L["Settings:DisplayName"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    <MudSelect T="AIModelKind" @bind-Value="_kind" Label="@L["Settings:ModelKind"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudTextField Disabled="@Busy" T="string" @bind-Value="_display" Label="@L["Settings:DisplayName"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudSelect Disabled="@Busy" T="AIModelKind" @bind-Value="_kind" Label="@L["Settings:ModelKind"]" Variant="Variant.Outlined" Margin="Margin.Dense">
                         <MudSelectItem T="AIModelKind" Value="@AIModelKind.Chat">@L["Workbench:Chat"]</MudSelectItem>
                         <MudSelectItem T="AIModelKind" Value="@AIModelKind.Embedding">@L["Settings:Embedding"]</MudSelectItem>
                     </MudSelect>
                 </div>
-                <section class="form-grid limits-section">
+                </section>
+                <section class="form-section limits-section">
+                    <h3>@L["Settings:Dialog:Capacity"]</h3>
+                    <div class="form-grid">
                     <div>
                         <ModelSettingLabel Label="@L["Workbench:ContextCapacity"]" Help="@L["Settings:ContextLimitHelp"]" />
-                        <MudTextField T="string" @bind-Value="_contextText" Immediate="true" Placeholder="256K" aria-label="@L["Workbench:ContextCapacity"]"
+                        <MudTextField Disabled="@Busy" T="string" @ref="_contextField" @bind-Value="_contextText" Immediate="true" Placeholder="256K" aria-label="@L["Workbench:ContextCapacity"]"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Error="@InvalidContext" ErrorText="@L["Settings:InvalidTokenQuantity"]" />
                         <span class="limit-preview">@TokenPreview(_contextText, _kind == AIModelKind.Chat)</span>
                     </div>
                     <div>
                         <ModelSettingLabel Label="@L["Settings:MaxOutput"]" Help="@L["Settings:OutputLimitHelp"]" />
-                        <MudTextField T="string" @bind-Value="_outputText" Immediate="true" Placeholder="32K" aria-label="@L["Settings:MaxOutput"]"
+                        <MudTextField Disabled="@Busy" T="string" @ref="_outputField" @bind-Value="_outputText" Immediate="true" Placeholder="32K" aria-label="@L["Settings:MaxOutput"]"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Error="@InvalidOutput" ErrorText="@L["Settings:InvalidTokenQuantity"]" />
                         <span class="limit-preview">@TokenPreview(_outputText, false)</span>
+                    </div>
                     </div>
                 </section>
                 @if (_kind == AIModelKind.Embedding)
                 {
-                    <MudNumericField T="int?" @bind-Value="_dimensions" Label="@L["Settings:EmbeddingDimensions"]" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+                    <MudNumericField Disabled="@Busy" T="int?" @bind-Value="_dimensions" Label="@L["Settings:EmbeddingDimensions"]" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
                 }
                 else
                 {
-                    <section>
+                    <section class="form-section">
+                        <h3>@L["Settings:Dialog:InputsCapabilities"]</h3>
+                        <p class="form-help">@L["Settings:CapabilityHelp"]</p>
+                        <div>
                         <ModelSettingLabel Label="@L["Settings:InputTypes"]" Help="@L["Settings:InputTypesHelp"]" />
                         <div class="capability-choices">
                             <ModelCapabilityCheckbox Label="@L["Settings:TextInput"]" Value="true" Disabled="true" Locked="true" />
                             <ModelCapabilityCheckbox Label="@L["Settings:ImageInput"]" @bind-Value="_images" Disabled="@Busy" />
                             <ModelCapabilityCheckbox Label="@L["Settings:NativeDocuments"]" @bind-Value="_documents" Disabled="@Busy" />
                         </div>
-                    </section>
-                    <section>
+                        </div>
+                        <div>
                         <ModelSettingLabel Label="@L["Settings:Capabilities"]" Help="@L["Settings:CapabilityHelp"]" />
                         <div class="capability-choices">
                             <ModelCapabilityCheckbox Label="@L["Settings:FunctionTools"]" @bind-Value="_tools" Disabled="@Busy" />
                             <ModelCapabilityCheckbox Label="@L["Workbench:Reasoning"]" Value="@_reasoning" ValueChanged="SetReasoning" Disabled="@Busy" />
                         </div>
+                        </div>
                     </section>
                     @if (_reasoning != false)
                     {
-                        <section>
+                        <section class="form-section">
+                            <h3>@L["Settings:Dialog:Reasoning"]</h3>
                             <ModelSettingLabel Label="@L["Settings:ReasoningLevels"]" Help="@L["Settings:ReasoningLevelsHelp"]" />
                             <ModelReasoningPicker Selected="@SelectedLevelIds" SelectedChanged="SetLevels"
                                                   @bind-DefaultLevel="_defaultReasoning" Disabled="@Busy" />
@@ -72,18 +90,23 @@
                             <p>@L["Settings:MappingHelp"]</p>
                             @foreach (var level in _levels)
                             {
-                                <div class="reasoning-row @(ProviderType == EAIProviderType.Anthropic ? "has-budget" : null)" @key="level">
-                                    <MudTextField T="string" @bind-Value="level.Id" Label="@L["Settings:LevelId"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                                    <MudTextField T="string" @bind-Value="level.DisplayName" Label="@L["Settings:DisplayName"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                                    <MudTextField T="string" @bind-Value="level.ProviderValue" Label="@L["Settings:ProviderValue"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                <div class="reasoning-row" @key="level">
+                                    <div class="reasoning-row-heading">
+                                        <span>@(string.IsNullOrWhiteSpace(level.Id) ? L["Settings:Dialog:ReasoningLevel"] : level.Id)</span>
+                                        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.Close" Disabled="@Busy" OnClick="@(() => RemoveLevel(level))">@L["Settings:RemoveLevel"]</MudButton>
+                                    </div>
+                                    <div class="reasoning-fields @(ProviderType == EAIProviderType.Anthropic ? "has-budget" : null)">
+                                    <MudTextField Disabled="@Busy" T="string" @bind-Value="level.Id" Label="@L["Settings:LevelId"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                    <MudTextField Disabled="@Busy" T="string" @bind-Value="level.DisplayName" Label="@L["Settings:DisplayName"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                    <MudTextField Disabled="@Busy" T="string" @bind-Value="level.ProviderValue" Label="@L["Settings:ProviderValue"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
                                     @if (ProviderType == EAIProviderType.Anthropic)
                                     {
-                                        <MudNumericField T="int?" @bind-Value="level.Budget" Label="@L["Settings:ThinkingBudget"]" Min="1024" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                        <MudNumericField Disabled="@Busy" T="int?" @bind-Value="level.Budget" Label="@L["Settings:ThinkingBudget"]" Min="1024" Variant="Variant.Outlined" Margin="Margin.Dense" />
                                     }
-                                    <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="@(() => RemoveLevel(level))" aria-label="@L["Settings:RemoveLevel"]" />
+                                    </div>
                                 </div>
                             }
-                            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.Add" OnClick="AddLevel">@L["Settings:AddLevel"]</MudButton>
+                            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.Add" Disabled="@Busy" OnClick="AddLevel">@L["Settings:AddLevel"]</MudButton>
                         </details>
                     }
                 }
@@ -96,7 +119,7 @@
     <DialogActions>
         <div class="model-dialog-actions">
             <MudButton Disabled="@Busy" OnClick="Reset">@L["Settings:ResetForm"]</MudButton>
-            <div><MudButton Disabled="@_saving" OnClick="@(() => Dialog.Cancel())">@L["Common:Actions:Cancel"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@Busy">@L["Common:Actions:Save"]</MudButton></div>
+            <div><MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" aria-disabled="@Busy.ToString().ToLowerInvariant()">@L["Settings:Dialog:SaveModel"]</MudButton></div>
         </div>
     </DialogActions>
 </MudDialog>

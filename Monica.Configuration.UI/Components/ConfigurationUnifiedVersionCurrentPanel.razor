@@ -1,45 +1,33 @@
 @inject IStringLocalizer<ConfigurationUIResource> L
 
-<div class="configuration-current-version-panel">
-    <MudPaper Outlined="true" Class="pa-3">
-        <MudStack Spacing="2">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                <MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Primary" />
-                <MudText Typo="Typo.subtitle1">@L["Versions:Current:Title"]</MudText>
-            </MudStack>
-            <MudText Typo="Typo.h6">@VersionText</MudText>
-            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
-                <MudTooltip Text="@DefinitionTooltip">
-                    <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">
-                        @L["Versions:Current:DefinitionCount", Version.DefinitionCount]
-                    </MudChip>
-                </MudTooltip>
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                    @L["History:Dialog:Operator"]: @OperatorText
-                </MudChip>
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                    @L["Group:Label"]: @ConfigurationUnifiedVersionDisplayFormatter.ValueOrEmpty(Version.MutationGroupId, EmptyText)
-                </MudChip>
-            </MudStack>
-            @if (!string.IsNullOrWhiteSpace(Version.Reason))
-            {
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@Version.Reason</MudText>
-            }
-        </MudStack>
-    </MudPaper>
-</div>
+<section class="configuration-captured-version" aria-label="@L["Versions:Current:Title"]">
+    <div class="configuration-captured-identity">
+        <span class="configuration-captured-eyebrow"><MudIcon Icon="@Icons.Material.Outlined.Layers" Size="Size.Small" />@L["Versions:Current:Title"]</span>
+        <strong class="configuration-captured-number">@ConfigurationUnifiedVersionDisplayFormatter.VersionLabel(Version)</strong>
+        <p>@L["Versions:Workbench:LatestHelp"]</p>
+    </div>
+    <div class="configuration-captured-audit">
+        <div><span>@L["Versions:Workbench:CapturedAt"]</span><time datetime="@Version.CreatedTime.ToString("O")">@ConfigurationUnifiedVersionDisplayFormatter.CreatedTimeText(Version)</time></div>
+        <div><span>@L["History:Dialog:Operator"]</span><strong>@ConfigurationUnifiedVersionDisplayFormatter.OperatorText(Version, L["Common:States:Empty"])</strong>
+            @if (!string.IsNullOrWhiteSpace(Version.ModifierId)) { <code>@Version.ModifierId</code> }
+        </div>
+        <div class="configuration-captured-group"><span>@L["Versions:Workbench:CaptureGroup"]</span><code>@ConfigurationUnifiedVersionDisplayFormatter.ValueOrEmpty(Version.MutationGroupId, L["Common:States:Empty"])</code></div>
+        @if (!string.IsNullOrWhiteSpace(Version.Reason)) { <p class="configuration-captured-reason">@Version.Reason</p> }
+    </div>
+    <div class="configuration-captured-scope">
+        <MudTooltip Text="@ConfigurationUnifiedVersionDisplayFormatter.DefinitionTooltip(Version, L["Versions:Definitions:Empty"])">
+            <span class="configuration-captured-count">@Version.DefinitionCount</span>
+            <span>@L["Versions:Workbench:CapturedDefinitions"]</span>
+        </MudTooltip>
+        @if (Version.TriggerDefinitionKeys.Count > 0)
+        {
+            <span class="configuration-captured-trigger">@L["Versions:Workbench:TriggeredBy"]</span>
+            @foreach (var key in Version.TriggerDefinitionKeys) { <code>@key</code> }
+        }
+    </div>
+</section>
 
 @code {
-    [Parameter, EditorRequired]
-    public ConfigurationUnifiedVersionSummary Version { get; set; } = default!;
-
-    private string EmptyText => L["Common:States:Empty"];
-
-    private string VersionText => ConfigurationUnifiedVersionDisplayFormatter.VersionText(Version);
-
-    private string DefinitionTooltip => ConfigurationUnifiedVersionDisplayFormatter.DefinitionTooltip(
-        Version,
-        L["Versions:Definitions:Empty"]);
-
-    private string OperatorText => ConfigurationUnifiedVersionDisplayFormatter.OperatorText(Version, EmptyText);
+    /// <summary>Gets or sets the newest returned saved snapshot, not the current effective configuration.</summary>
+    [Parameter, EditorRequired] public ConfigurationUnifiedVersionSummary Version { get; set; } = default!;
 }

@@ -23,15 +23,15 @@ public class FreshTheme : ThemeDefinitionBase
             PaletteLight = new PaletteLight()
             {
                 // Main color: Mint Green (Fresh & Natural)
-                Primary = "#66CBA3",
-                PrimaryLighten = "#8CE0C0",
-                PrimaryDarken = "#46AC82",
+                Primary = "#2d7b60",
+                PrimaryLighten = "#4e9b7f",
+                PrimaryDarken = "#22634c",
                 PrimaryContrastText = "#FFFFFF",
 
                 // Secondary color: Serenity Blue (Adding delicate layers)
-                Secondary = "#8FABC9",
-                SecondaryLighten = "#AEC5EB",
-                SecondaryDarken = "#708EA8",
+                Secondary = "#486f97",
+                SecondaryLighten = "#678caf",
+                SecondaryDarken = "#355574",
                 SecondaryContrastText = "#FFFFFF",
 
                 // Third color: Soft Pink
@@ -39,27 +39,27 @@ public class FreshTheme : ThemeDefinitionBase
                 TertiaryContrastText = "#FFFFFF",
 
                 // Info color: Serenity Blue
-                Info = "#8FABC9",
-                InfoLighten = "#AEC5EB",
-                InfoDarken = "#708EA8",
+                Info = "#486f97",
+                InfoLighten = "#678caf",
+                InfoDarken = "#355574",
                 InfoContrastText = "#FFFFFF",
 
                 // Success color: Mint Green
-                Success = "#66CBA3",
-                SuccessLighten = "#8CE0C0",
-                SuccessDarken = "#46AC82",
+                Success = "#2f8064",
+                SuccessLighten = "#4e9b7f",
+                SuccessDarken = "#22634c",
                 SuccessContrastText = "#FFFFFF",
 
                 // Warning Color: Soft Orange
-                Warning = "#E8BC71",
-                WarningLighten = "#F6D194",
-                WarningDarken = "#CD9F53",
+                Warning = "#916521",
+                WarningLighten = "#ae843d",
+                WarningDarken = "#714d17",
                 WarningContrastText = "#FFFFFF",
 
                 // Error color: Soft Red
-                Error = "#DF8479",
-                ErrorLighten = "#F09C92",
-                ErrorDarken = "#C2675C",
+                Error = "#b04e44",
+                ErrorLighten = "#ca6c61",
+                ErrorDarken = "#8c3c33",
                 ErrorContrastText = "#FFFFFF",
 
                 // Dark tones
@@ -90,7 +90,7 @@ public class FreshTheme : ThemeDefinitionBase
                 TextDisabled = "#9CA3AF",
 
                 // Operation color
-                ActionDefault = "#8FABC9",
+                ActionDefault = "#6484A8",
                 ActionDisabled = "#E5E7EB",
                 ActionDisabledBackground = "#F3F4F6",
 
@@ -223,47 +223,16 @@ public class FreshTheme : ThemeDefinitionBase
             LayoutProperties = new LayoutProperties()
             {
                 // Soft rounded corners
-                DefaultBorderRadius = "12px",
+                DefaultBorderRadius = "8px",
                 
                 DrawerWidthLeft = "260px",
                 DrawerWidthRight = "260px",
-                DrawerMiniWidthLeft = "72px",
-                DrawerMiniWidthRight = "72px",
+                DrawerMiniWidthLeft = "64px",
+                DrawerMiniWidthRight = "64px",
                 
-                AppbarHeight = "64px",
+                AppbarHeight = "56px",
             },
-            Shadows = new Shadow()
-            {
-                Elevation = new[]
-                {
-                    "none",
-                    "0 1px 3px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.05)",
-                    "0 2px 4px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.05)",
-                    "0 3px 6px rgba(0,0,0,0.03), 0 2px 4px rgba(0,0,0,0.05)",
-                    "0 4px 8px rgba(0,0,0,0.03), 0 3px 6px rgba(0,0,0,0.05)",
-                    "0 5px 10px rgba(0,0,0,0.03), 0 4px 8px rgba(0,0,0,0.05)",
-                    "0 6px 12px rgba(0,0,0,0.03), 0 5px 10px rgba(0,0,0,0.05)",
-                    "0 7px 14px rgba(0,0,0,0.03), 0 6px 12px rgba(0,0,0,0.05)",
-                    "0 8px 16px rgba(0,0,0,0.03), 0 7px 14px rgba(0,0,0,0.05)",
-                    "0 9px 18px rgba(0,0,0,0.03), 0 8px 16px rgba(0,0,0,0.05)",
-                    "0 10px 20px rgba(0,0,0,0.03), 0 9px 18px rgba(0,0,0,0.05)",
-                    "0 11px 22px rgba(0,0,0,0.03), 0 10px 20px rgba(0,0,0,0.05)",
-                    "0 12px 24px rgba(0,0,0,0.03), 0 11px 22px rgba(0,0,0,0.05)",
-                    "0 13px 26px rgba(0,0,0,0.03), 0 12px 24px rgba(0,0,0,0.05)",
-                    "0 14px 28px rgba(0,0,0,0.03), 0 13px 26px rgba(0,0,0,0.05)",
-                    "0 15px 30px rgba(0,0,0,0.03), 0 14px 28px rgba(0,0,0,0.05)",
-                    "0 16px 32px rgba(0,0,0,0.03), 0 15px 30px rgba(0,0,0,0.05)",
-                    "0 17px 34px rgba(0,0,0,0.03), 0 16px 32px rgba(0,0,0,0.05)",
-                    "0 18px 36px rgba(0,0,0,0.03), 0 17px 34px rgba(0,0,0,0.05)",
-                    "0 19px 38px rgba(0,0,0,0.03), 0 18px 36px rgba(0,0,0,0.05)",
-                    "0 20px 40px rgba(0,0,0,0.03), 0 19px 38px rgba(0,0,0,0.05)",
-                    "0 21px 42px rgba(0,0,0,0.03), 0 20px 40px rgba(0,0,0,0.05)",
-                    "0 22px 44px rgba(0,0,0,0.03), 0 21px 42px rgba(0,0,0,0.05)",
-                    "0 23px 46px rgba(0,0,0,0.03), 0 22px 44px rgba(0,0,0,0.05)",
-                    "0 24px 48px rgba(0,0,0,0.03), 0 23px 46px rgba(0,0,0,0.05)",
-                    "0 25px 50px rgba(0,0,0,0.03), 0 24px 48px rgba(0,0,0,0.05)"
-                }
-            },
+            Shadows = MonicaShadowDefaults.Create(),
             ZIndex = new ZIndex()
             {
                 Drawer = 1100,

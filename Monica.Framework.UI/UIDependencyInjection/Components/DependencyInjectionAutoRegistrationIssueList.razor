@@ -2,91 +2,119 @@
 @using Monica.DependencyInjection.Models
 @inject IStringLocalizer<DependencyInjectionResource> L
 
-@if (IssueGroups.Count == 0)
-{
-    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-        @L["Page:States:NotAvailable"]
-    </MudAlert>
-}
-else
-{
-    <MudExpansionPanels Elevation="0" Dense="true" MultiExpansion="true" Class="di-issue-panels">
-        @foreach (var group in IssueGroups)
-        {
-            <MudExpansionPanel Class="di-issue-panel">
-                <TitleContent>
-                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1" Class="di-issue-title">
-                        <MudChip T="string" Size="Size.Small" Color="@GetChipColor(group.Severity)" Variant="Variant.Filled">
-                            @L[$"Page:Shared:IssueSeverities:{group.Severity}"]
-                        </MudChip>
-                        <MudText Typo="Typo.subtitle2">@GetIssueTitle(group.Kind)</MudText>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
-                            @group.Items.Count
-                        </MudChip>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="di-issue-title-description">
-                            @GetIssueDescription(group.Kind, group.Items[0])
-                        </MudText>
-                    </MudStack>
-                </TitleContent>
-                <ChildContent>
-                    <MudPaper Class="pa-3 di-issue-panel-body" Outlined="true">
-                        <MudStack Spacing="2">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @GetIssueDescription(group.Kind, group.Items[0])
-                            </MudText>
+<div class="di-issue-index">
+    @if (Items.Count > 8 || !string.IsNullOrWhiteSpace(_searchText))
+    {
+        <div class="di-issue-search">
+            <div class="di-issue-search-field">
+                <MudTextField T="string"
+                              @bind-Value="_searchText"
+                              Label="@L["Page:Issues:SearchLabel"]"
+                              Placeholder="@L["Page:Issues:SearchPlaceholder"]"
+                              Immediate="true"
+                              Clearable="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Outlined.Search" />
+            </div>
+            <span class="di-issue-search-count" aria-live="polite">
+                @L["Page:Issues:Showing", VisibleItems.Count, Items.Count]
+            </span>
+        </div>
+    }
 
-                            <div class="di-issue-list-scroll">
-                                <MudStack Spacing="2">
-                                    @foreach (var issue in group.Items)
-                                    {
-                                        <MudPaper Class="pa-2 di-issue-item" Outlined="true">
-                                            <MudStack Spacing="1">
-                                                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" AlignItems="AlignItems.Center">
-                                                    <MudTooltip Text="@issue.SourceImplementationType">
-                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
-                                                            @issue.SourceImplementationTypeDisplayName
-                                                        </MudChip>
-                                                    </MudTooltip>
-                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
-                                                        @L[$"Page:Shared:Lifetimes:{issue.Lifetime}"]
-                                                    </MudChip>
-                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
-                                                        @L[$"Page:Shared:LifetimeSources:{issue.LifetimeSource}"]
-                                                    </MudChip>
-                                                </MudStack>
-
-                                                @if (issue.ExposedServices.Count > 0)
-                                                {
-                                                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" AlignItems="AlignItems.Center">
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                            @L["Page:Dialog:Fields:ExposedServices"]
-                                                        </MudText>
-                                                        @foreach (var exposedService in issue.ExposedServices)
-                                                        {
-                                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                                                                @GetExposedServiceText(exposedService)
-                                                            </MudChip>
-                                                        }
-                                                    </MudStack>
-                                                }
-                                            </MudStack>
-                                        </MudPaper>
-                                    }
-                                </MudStack>
+    @if (IssueGroups.Count == 0)
+    {
+        <p class="di-issue-empty">
+            @L[Items.Count == 0 ? "Page:Issues:Empty" : "Page:Issues:NoMatches"]
+        </p>
+    }
+    else
+    {
+        <MudExpansionPanels Elevation="0" Dense="true" MultiExpansion="true" Class="di-issue-panels">
+            @foreach (var group in IssueGroups)
+            {
+                <MudExpansionPanel Class="di-issue-panel">
+                    <TitleContent>
+                        <div class="di-issue-title">
+                            <span class="@GetSeverityClass(group.Severity)">
+                                @L[$"Page:Shared:IssueSeverities:{group.Severity}"]
+                            </span>
+                            <div class="di-issue-title-copy">
+                                <h3>@GetIssueTitle(group.Kind)</h3>
+                                <p>@L[$"Page:Shared:IssueKinds:{group.Kind}:Summary"]</p>
                             </div>
-                        </MudStack>
-                    </MudPaper>
-                </ChildContent>
-            </MudExpansionPanel>
-        }
-    </MudExpansionPanels>
-}
+                            <span class="di-issue-group-count">@group.Items.Count</span>
+                        </div>
+                    </TitleContent>
+                    <ChildContent>
+                        <div class="di-issue-list-scroll" role="region" tabindex="0" aria-label="@GetIssueTitle(group.Kind)">
+                            @foreach (var issue in group.Items)
+                            {
+                                <article class="di-issue-item">
+                                    <header class="di-issue-item-header">
+                                        <h4>@issue.SourceImplementationTypeDisplayName</h4>
+                                        <span class="di-issue-lifetime">@L[$"Page:Shared:Lifetimes:{issue.Lifetime}"]</span>
+                                    </header>
+                                    <code class="di-issue-source">@issue.SourceImplementationType</code>
+                                    <p class="di-issue-description">@GetIssueDescription(group.Kind, issue)</p>
+                                    <dl class="di-issue-metadata">
+                                        <div>
+                                            <dt>@L["Page:Dialog:Fields:SourceImplementationAssembly"]</dt>
+                                            <dd>@GetTextOrFallback(issue.SourceImplementationAssemblyName)</dd>
+                                        </div>
+                                        <div>
+                                            <dt>@L["Page:Dialog:Fields:LifetimeSource"]</dt>
+                                            <dd>@L[$"Page:Shared:LifetimeSources:{issue.LifetimeSource}"]</dd>
+                                        </div>
+                                    </dl>
+                                    <div class="di-issue-exposures">
+                                        <span class="di-issue-exposure-label">@L["Page:Dialog:Fields:ExposedServices"]</span>
+                                        @if (issue.ExposedServices.Count == 0)
+                                        {
+                                            <p class="di-issue-no-exposures">@L["Page:Issues:NoExposures"]</p>
+                                        }
+                                        else
+                                        {
+                                            <ul>
+                                                @foreach (var exposedService in issue.ExposedServices)
+                                                {
+                                                    <li>
+                                                        <code>@exposedService.ServiceType</code>
+                                                        @if (exposedService.IsKeyedService)
+                                                        {
+                                                            <span class="di-issue-exposure-key">
+                                                                @L["Page:Dialog:Fields:ServiceKey"]: @GetTextOrFallback(exposedService.ServiceKey)
+                                                            </span>
+                                                        }
+                                                    </li>
+                                                }
+                                            </ul>
+                                        }
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    </ChildContent>
+                </MudExpansionPanel>
+            }
+        </MudExpansionPanels>
+    }
+</div>
 
 @code {
     [Parameter]
     public IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> Items { get; set; } = [];
 
-    private IReadOnlyList<IssueGroup> IssueGroups => Items
+    private string? _searchText;
+
+    private IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> VisibleItems =>
+        string.IsNullOrWhiteSpace(_searchText)
+            ? Items
+            : Items.Where(MatchesSearch).ToArray();
+
+    private IReadOnlyList<IssueGroup> IssueGroups => VisibleItems
         .GroupBy(item => item.Kind)
         .Select(group => new IssueGroup(
             group.Key,
@@ -96,6 +124,30 @@ else
         .ThenBy(group => group.Kind.ToString(), StringComparer.OrdinalIgnoreCase)
         .ToArray();
 
+    private bool MatchesSearch(DependencyInjectionAutoRegistrationIssueInfo issue)
+    {
+        var search = _searchText?.Trim() ?? string.Empty;
+        return Contains(issue.SourceImplementationType, search)
+            || Contains(issue.SourceImplementationTypeDisplayName, search)
+            || Contains(issue.SourceImplementationAssemblyName, search)
+            || Contains(issue.Kind.ToString(), search)
+            || Contains(issue.Severity.ToString(), search)
+            || Contains(issue.Lifetime.ToString(), search)
+            || Contains(issue.LifetimeSource.ToString(), search)
+            || Contains(GetIssueTitle(issue.Kind), search)
+            || Contains(L[$"Page:Shared:IssueSeverities:{issue.Severity}"], search)
+            || Contains(L[$"Page:Shared:Lifetimes:{issue.Lifetime}"], search)
+            || Contains(L[$"Page:Shared:LifetimeSources:{issue.LifetimeSource}"], search)
+            || issue.ExposedServices.Any(service => Contains(service.ServiceType, search)
+                || Contains(service.ServiceTypeDisplayName, search)
+                || Contains(service.ServiceKey, search));
+    }
+
+    private static bool Contains(string? value, string search)
+    {
+        return value?.Contains(search, StringComparison.OrdinalIgnoreCase) == true;
+    }
+
     private static DependencyInjectionDiagnosticSeverity ResolveGroupSeverity(
         IEnumerable<DependencyInjectionAutoRegistrationIssueInfo> issues)
     {
@@ -104,11 +156,16 @@ else
             : DependencyInjectionDiagnosticSeverity.Warning;
     }
 
-    private Color GetChipColor(DependencyInjectionDiagnosticSeverity severity)
+    private static string GetSeverityClass(DependencyInjectionDiagnosticSeverity severity)
     {
         return severity == DependencyInjectionDiagnosticSeverity.Error
-            ? Color.Error
-            : Color.Warning;
+            ? "di-issue-severity di-issue-severity--error"
+            : "di-issue-severity di-issue-severity--warning";
+    }
+
+    private string GetTextOrFallback(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? L["Page:States:NotAvailable"] : value;
     }
 
     private string GetIssueTitle(DependencyInjectionAutoRegistrationIssueKind kind)
@@ -129,13 +186,6 @@ else
                 issue.SourceImplementationTypeDisplayName],
             _ => issue.SourceImplementationTypeDisplayName
         };
-    }
-
-    private string GetExposedServiceText(DependencyInjectionExposedServiceInfo exposedService)
-    {
-        return exposedService.IsKeyedService
-            ? $"{exposedService.ServiceTypeDisplayName} ({exposedService.ServiceKey})"
-            : exposedService.ServiceTypeDisplayName;
     }
 
     private sealed record IssueGroup(

@@ -1,0 +1,11 @@
+@page "/eventbus-kafka/workspaces/performance"
+@using Monica.EventBus.Kafka.UIEventBusKafka.Workspaces
+
+<KafkaWorkbench @key="ClusterId" Workspace="KafkaWorkspace.Performance" ClusterId="@ClusterId" />
+
+@code {
+    /// <summary>Provides the sampled offset and performance evidence route.</summary>
+    public const string PAGE_URL = "/eventbus-kafka/workspaces/performance";
+    /// <summary>Gets or sets the exact selected broker identity.</summary>
+    [SupplyParameterFromQuery(Name = "cluster")] public string? ClusterId { get; set; }
+}

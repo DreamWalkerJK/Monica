@@ -1,9 +1,9 @@
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
-@implements IDisposable
+@implements IAsyncDisposable
 @inject IStringLocalizer<AIResource> L
 
-<MudDialog Visible="@Open" VisibleChanged="@OpenChanged" Options="@DialogOptions">
+<MudDialog Visible="@Open" VisibleChanged="@OpenChanged" Options="@DialogOptions" ContentClass="pa-0" Style="max-height:calc(100dvh - 24px);margin:12px">
     <TitleContent>
         <div class="archive-title"><MudIcon Icon="@Icons.Material.Outlined.Inventory2" /><span>@L["Session:Archive:Title"]</span></div>
     </TitleContent>
@@ -88,8 +88,10 @@
     private string[]? _confirmationIds;
     private bool _working;
     private bool _disposed;
+    private Task? _operation;
+    private Task? _retirement;
     private int _focusCloseRequest;
-    private bool ActionsDisabled => Disabled || HasConflict || _working;
+    private bool ActionsDisabled => Disabled || HasConflict || _working || _disposed;
     private DialogOptions DialogOptions => new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = !_working, CloseOnEscapeKey = !_working, BackdropClick = !_working };
     private IReadOnlyList<ChatSessionSummary> VisibleSessions => Sessions.Where(item => item.Title.Contains(_search.Trim(), StringComparison.CurrentCultureIgnoreCase)).ToArray();
     private bool AllVisibleSelected => VisibleSessions.Count > 0 && VisibleSessions.All(item => _selected.Contains(item.SessionId));
@@ -100,25 +102,30 @@
         if (!Open) { _selected.Clear(); _search = string.Empty; _confirmationIds = null; _focusCloseRequest = 0; }
     }
     private void SearchChanged(string? value) => _search = value ?? string.Empty;
-    private void SelectSession(string id, bool selected) { if (selected) _selected.Add(id); else _selected.Remove(id); }
+    private void SelectSession(string id, bool selected) { if (ActionsDisabled) return; if (selected) _selected.Add(id); else _selected.Remove(id); }
     private void SelectVisible(bool selected)
     {
         foreach (var session in VisibleSessions) SelectSession(session.SessionId, selected);
     }
-    private void BeginDelete() => _confirmationIds = _selected.ToArray();
+    private void BeginDelete() { if (!ActionsDisabled && _selected.Count > 0) _confirmationIds = _selected.ToArray(); }
     private Task CancelDeleteAsync()
     {
+        if (_working || _disposed) return Task.CompletedTask;
         _confirmationIds = null;
         _focusCloseRequest++;
         return Task.CompletedTask;
     }
-    private Task CloseAsync() => OpenChanged.InvokeAsync(false);
+    private Task CloseAsync() => _working || _disposed ? Task.CompletedTask : OpenChanged.InvokeAsync(false);
     private Task RestoreAsync(IReadOnlyList<string> ids) => ApplyAsync(ids, RestoreSessions);
     private Task DeleteConfirmedAsync() => _confirmationIds is { Length: > 0 } ids ? ApplyAsync(ids, DeleteSessions) : Task.CompletedTask;
-    private async Task ApplyAsync(IReadOnlyList<string> ids, Func<IReadOnlyList<string>, Task<bool>> operation)
+    private Task ApplyAsync(IReadOnlyList<string> ids, Func<IReadOnlyList<string>, Task<bool>> operation)
     {
-        if (ActionsDisabled || ids.Count == 0) return;
+        if (ActionsDisabled || ids.Count == 0) return Task.CompletedTask;
         _working = true;
+        return _operation = ApplyCoreAsync(ids.ToArray(), operation);
+    }
+    private async Task ApplyCoreAsync(IReadOnlyList<string> ids, Func<IReadOnlyList<string>, Task<bool>> operation)
+    {
         try
         {
             if (await operation(ids) && !_disposed)
@@ -130,5 +137,6 @@
         }
         finally { _working = false; }
     }
-    public void Dispose() => _disposed = true;
+    public ValueTask DisposeAsync() => new(_retirement ??= RetireAsync());
+    private async Task RetireAsync() { _disposed = true; if (_operation is not null) await _operation; }
 }

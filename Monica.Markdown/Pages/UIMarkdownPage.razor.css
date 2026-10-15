@@ -1,119 +1,123 @@
 .doc-layout {
-    --doc-shell-gap: 18px;
-    --doc-sidebar-width: minmax(304px, 336px);
-    --doc-toc-width: 236px;
-    display: flex;
+    container-type: inline-size;
+    container-name: markdown-viewer;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 16px;
+    width: 100%;
     height: 100%;
+    min-width: 0;
     min-height: 0;
     overflow: hidden;
-    position: relative;
-    background-color: var(--mud-palette-background);
-}
-
-.doc-center-state {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 12px;
-    background-color: var(--mud-palette-surface);
-}
-
-.doc-center-state ::deep .empty-state-icon {
-    font-size: 4rem;
-    opacity: 0.3;
-}
-
-.doc-center-state ::deep .empty-state-copy {
-    opacity: 0.5;
+    padding: 20px;
+    background: var(--mud-palette-background);
 }
 
 .doc-workspace {
-    flex: 1;
-    display: grid;
-    grid-template-columns: var(--doc-sidebar-width) minmax(0, 1fr);
-    gap: var(--doc-shell-gap);
-    height: 100%;
-    min-height: 0;
     position: relative;
-}
-
-.doc-workspace.sidebar-hidden {
+    display: grid;
     grid-template-columns: minmax(0, 1fr);
-}
-
-.doc-main-stage {
+    gap: 16px;
     min-width: 0;
     min-height: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--doc-toc-width);
-    gap: var(--doc-shell-gap);
+    height: 100%;
 }
 
-.doc-main-stage.toc-hidden {
-    grid-template-columns: minmax(0, 1fr);
+.doc-layout.no-toolbar {
+    grid-template-rows: minmax(0, 1fr);
 }
 
-.doc-sidebar-rail,
-.doc-reader-card,
-.doc-toc-rail {
+.doc-workspace.has-library {
+    grid-template-columns: 272px minmax(0, 1fr);
+}
+
+.doc-workspace.has-outline {
+    grid-template-columns: minmax(0, 1fr) 216px;
+}
+
+.doc-workspace.has-library.has-outline {
+    grid-template-columns: 272px minmax(0, 1fr) 216px;
+}
+
+.doc-sidebar-rail, .doc-toc-rail, .doc-reader-card {
+    min-width: 0;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
+    height: 100%;
     overflow: hidden;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 12px;
-    background-color: var(--mud-palette-surface);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+}
+
+.doc-sidebar-rail {
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
+}
+
+.doc-reader-card {
+    border-top: 3px solid var(--mud-palette-primary);
 }
 
 .doc-toc-rail {
-    background-color: var(--mud-palette-background-gray);
+    border: 0;
+    background: transparent;
 }
 
-.doc-sidebar-backdrop {
-    display: none;
+.doc-pane-content {
+    height: 100%;
+    min-height: 0;
 }
 
-@media (max-width: 960px) {
-    .doc-workspace,
-    .doc-workspace.sidebar-hidden,
-    .doc-main-stage,
-    .doc-main-stage.toc-hidden {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .doc-main-stage {
-        grid-template-rows: minmax(0, 1fr);
-    }
-
-    .doc-toc-rail {
-        max-height: 260px;
-    }
-
-    .doc-sidebar-rail {
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: min(360px, calc(100% - 48px));
-        max-width: 100%;
-        z-index: 30;
-        height: 100%;
-    }
-
-    .doc-sidebar-backdrop {
-        display: block;
-        position: absolute;
-        inset: 0;
-        z-index: 20;
-        border: 0;
-        background: rgba(var(--mud-palette-dark-rgb), 0.18);
-    }
+.doc-workspace ::deep .doc-temporary-pane {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    max-width: calc(100% - 24px);
+    background: var(--mud-palette-surface);
+    transition: none;
+    animation: none;
 }
 
-@media (max-width: 720px) {
-    .doc-center-state {
-        border-radius: 12px;
+.doc-workspace ::deep .mud-drawer-overlay {
+    position: absolute;
+    inset: 0;
+}
+
+.doc-workspace ::deep .doc-temporary-pane .mud-drawer-content,
+.doc-workspace ::deep .doc-temporary-pane .mud-focus-trap,
+.doc-workspace ::deep .doc-temporary-pane .mud-focus-trap-child-container {
+    height: 100%;
+    min-height: 0;
+}
+
+.doc-center-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 32px;
+    text-align: center;
+    min-width: 0;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+}
+
+.doc-center-state h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.doc-center-state p {
+    color: var(--mud-palette-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+    .doc-layout {
+        padding: 12px;
+        gap: 12px;
     }
 }

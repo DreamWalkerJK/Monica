@@ -1,8 +1,89 @@
-.configuration-source-card {
-    border-color: var(--mud-palette-lines-default);
+.configuration-source-chain {
+    --configuration-source-chain-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary));
+    min-width: 0;
+    padding: 20px;
+    color: var(--mud-palette-text-primary);
 }
 
-.configuration-source-card.effective-source {
-    border-color: var(--mud-palette-success);
-    background: color-mix(in srgb, var(--mud-palette-success) 8%, transparent);
+.configuration-source-chain ::deep .mud-stack,
+.configuration-source-chain ::deep .mud-alert-message {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-chain ::deep .mud-typography-subtitle2 {
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-card-shell {
+    min-width: 0;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    overflow: clip;
+}
+
+.configuration-source-card-shell ::deep .configuration-source-card {
+    min-width: 0;
+    padding: 20px;
+    background: var(--mud-palette-surface);
+}
+
+.configuration-source-card-shell.effective-source {
+    border-inline-start: 3px solid var(--mud-palette-success);
+}
+
+.configuration-source-card-shell.effective-source ::deep .configuration-source-card {
+    background: color-mix(in srgb, var(--mud-palette-success) 5%, var(--mud-palette-surface));
+}
+
+.configuration-source-chain-path {
+    display: block;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    color: var(--configuration-source-chain-muted);
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-chain-value {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-chain-reason {
+    margin: 8px 0 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--configuration-source-chain-muted);
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-chain ::deep .configuration-source-effective,
+.configuration-source-chain ::deep .configuration-source-writable {
+    border-color: color-mix(in srgb, var(--mud-palette-success) 25%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mud-palette-success) 8%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-success) 25%, var(--mud-palette-text-primary));
+}
+
+.configuration-source-chain ::deep .mud-icon-button:not(:disabled) {
+    color: var(--configuration-source-chain-muted);
+}
+
+.configuration-source-chain-actions {
+    padding: 12px 20px 20px;
+}
+
+@media (max-width: 600px) {
+    .configuration-source-chain,
+    .configuration-source-card-shell ::deep .configuration-source-card {
+        padding: 16px;
+    }
+
+    .configuration-source-chain-actions {
+        padding: 8px 16px 16px;
+    }
 }

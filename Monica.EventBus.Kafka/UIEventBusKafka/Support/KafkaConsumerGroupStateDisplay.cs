@@ -38,6 +38,7 @@ internal static class KafkaConsumerGroupStateDisplay
         "COMPLETINGREBALANCE" => localizer["ConsumerGroups:States:CompletingRebalance"],
         "DEAD" => localizer["ConsumerGroups:States:Dead"],
         "EMPTY" => localizer["ConsumerGroups:States:Empty"],
+        "UNKNOWN" => localizer["ConsumerGroups:States:Unknown"],
         _ => string.IsNullOrWhiteSpace(state)
             ? localizer["ConsumerGroups:States:Unknown"]
             : state

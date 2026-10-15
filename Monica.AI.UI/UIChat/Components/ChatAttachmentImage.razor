@@ -8,7 +8,7 @@
 @inject IStringLocalizer<AIResource> L
 
 <div class="image-attachment" @ref="_root">
-    <MudButton Class="image-preview-button" OnClick="OnPreview" aria-label="@L["Workbench:PreviewImage", Attachment.FileName]" title="@Attachment.FileName">
+    <MudButton Class="image-preview-button" Disabled="@Disabled" OnClick="OnPreview" aria-label="@L["Workbench:PreviewImage", Attachment.FileName]" title="@Attachment.FileName">
         <span class="image-preview">
             @if (_source is not null) { <img src="@_source" alt="@Attachment.FileName" loading="lazy" decoding="async" /> }
             else if (_loading) { <MudProgressCircular Indeterminate="true" Size="Size.Small" /> }

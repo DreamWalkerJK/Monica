@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
@@ -6,6 +7,7 @@ using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.Localization;
+using Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
 using Monica.JobScheduler.UI.UIJobScheduler.Support;
@@ -96,12 +98,28 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
     [Parameter]
     public EventCallback<JobOperationalSummary> RunRequested { get; set; }
 
+    /// <summary>Gets or sets the filters rendered inside the registry's painted surface.</summary>
+    [Parameter]
+    public RenderFragment? FilterContent { get; set; }
+
+    /// <summary>Gets or sets the optional selection toolbar rendered between filters and native rows.</summary>
+    [Parameter]
+    public RenderFragment? SelectionContent { get; set; }
+
+    /// <summary>Gets or sets whether unavailable query evidence must replace an ordinary empty-result message.</summary>
+    [Parameter]
+    public bool IsQueryFailed { get; set; }
+
+    /// <summary>Gets or sets the empty-result message. A null value uses the localized no-match message.</summary>
+    [Parameter]
+    public string? EmptyText { get; set; }
+
     private readonly Dictionary<string, string?> _cronDescriptions = new(StringComparer.Ordinal);
-    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SchedulerOperationLifetime _operations = new();
     private IReadOnlyList<JobOperationalSummary> _visibleSummaries = [];
     private CronDescriptionSession? _cronSession;
+    private ExecutionDialogSession? _dialogs;
     private MudTable<JobOperationalSummary>? _table;
-    private Task? _descriptionLoadTask;
     private string? _descriptionFingerprint;
     private bool _descriptionLoadPending;
     private bool _descriptionLoadRunning;
@@ -123,6 +141,9 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
     protected override void OnInitialized()
     {
         _cronSession = new CronDescriptionSession(JsRuntime);
+        _dialogs = new ExecutionDialogSession(
+            instanceId => ExecutionDetailDialogLauncher.OpenAsync(DialogService, L, instanceId),
+            ReloadAsync);
     }
 
     protected override void OnParametersSet()
@@ -138,19 +159,16 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
         }
 
         _descriptionLoadRunning = true;
-        var loadTask = DrainCronDescriptionsAsync();
-        _descriptionLoadTask = loadTask;
         try
         {
-            await loadTask;
+            await _operations.RunAsync(DrainCronDescriptionsAsync);
+        }
+        catch (OperationCanceledException) when (IsDisposed)
+        {
         }
         finally
         {
             _descriptionLoadRunning = false;
-            if (ReferenceEquals(_descriptionLoadTask, loadTask))
-            {
-                _descriptionLoadTask = null;
-            }
         }
     }
 
@@ -184,16 +202,21 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
         TableState tableState,
         CancellationToken cancellationToken)
     {
-        var tableData = await ServerData(tableState, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        if (!IsDisposed)
+        return await _operations.RunAsync(async lifetimeToken =>
         {
-            _visibleSummaries = tableData.Items?.ToArray() ?? [];
-            QueueCronDescriptionLoad(_visibleSummaries);
-            await InvokeAsync(StateHasChanged);
-        }
-
-        return tableData;
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken, cancellationToken);
+            var tableData = await ServerData(tableState, linked.Token);
+            linked.Token.ThrowIfCancellationRequested();
+            if (_operations.TryApply(() =>
+            {
+                _visibleSummaries = tableData.Items?.ToArray() ?? [];
+                QueueCronDescriptionLoad(_visibleSummaries);
+            }))
+            {
+                await InvokeAsync(() => { if (!IsDisposed) StateHasChanged(); });
+            }
+            return tableData;
+        });
     }
 
     private void QueueCronDescriptionLoad(IReadOnlyList<JobOperationalSummary> summaries)
@@ -216,16 +239,16 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
         _cronDescriptions.Clear();
     }
 
-    private async Task DrainCronDescriptionsAsync()
+    private async Task DrainCronDescriptionsAsync(CancellationToken cancellationToken)
     {
         while (_descriptionLoadPending && !IsDisposed)
         {
             _descriptionLoadPending = false;
-            await LoadCronDescriptionsAsync(_descriptionVersion);
+            await LoadCronDescriptionsAsync(_descriptionVersion, cancellationToken);
         }
     }
 
-    private async Task LoadCronDescriptionsAsync(int version)
+    private async Task LoadCronDescriptionsAsync(int version, CancellationToken cancellationToken)
     {
         var session = _cronSession;
         if (session is null || IsDisposed)
@@ -250,9 +273,9 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
             results = await session.DescribeAsync(
                 requests,
                 CronDescriptionSession.ResolveCultureName(),
-                _lifetimeCancellation.Token);
+                cancellationToken);
         }
-        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return;
         }
@@ -280,7 +303,7 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
                 : result.Description;
         }
 
-        await InvokeAsync(StateHasChanged);
+        await InvokeAsync(() => { if (!IsDisposed) StateHasChanged(); });
     }
 
     private string GetCronDescription(JobOperationalSummary summary) =>
@@ -288,24 +311,27 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
             ? description ?? L["Catalog:Cron:Unavailable"]
             : L["Catalog:Cron:Parsing"];
 
-    private async Task OpenLatestExecutionAsync(string instanceId)
-    {
-        await ExecutionDetailDialogLauncher.ShowAsync(DialogService, L, instanceId);
-        // The dialog can cancel a running execution; refresh so the last-run column stays truthful.
-        await ReloadAsync();
-    }
+    private Task OpenLatestExecutionAsync(string instanceId) =>
+        IsDisposed || _dialogs is null ? Task.CompletedTask : _dialogs.OpenAsync(instanceId);
 
     private async Task CopyJobKeyAsync(string jobKey)
+    {
+        if (IsDisposed) return;
+        try { await _operations.RunAsync(token => CopyJobKeyCoreAsync(jobKey, token)); }
+        catch (OperationCanceledException) when (IsDisposed) { }
+    }
+
+    private async Task CopyJobKeyCoreAsync(string jobKey, CancellationToken cancellationToken)
     {
         bool copied;
         try
         {
             copied = await JsRuntime.InvokeAsync<bool>(
                 "MoClipboard.copyText",
-                _lifetimeCancellation.Token,
+                cancellationToken,
                 jobKey);
         }
-        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return;
         }
@@ -314,13 +340,19 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
             copied = false;
         }
 
+        if (IsDisposed) return;
         Snackbar.Add(
             copied ? L["Catalog:Actions:CopiedKey"] : L["Catalog:Actions:CopyKeyFailed"],
             copied ? Severity.Success : Severity.Warning);
     }
 
     private static string GetCronDescriptionKey(JobOperationalSummary summary) =>
-        $"{summary.Definition.OwnerKey}\u001e{summary.Definition.Declaration.JobKey}\u001e{summary.Definition.Policy.ConcurrencyStamp}";
+        JsonSerializer.Serialize(new[]
+        {
+            summary.Definition.OwnerKey,
+            summary.Definition.Declaration.JobKey,
+            summary.Definition.Policy.ConcurrencyStamp
+        });
 
     private string GetNextRunStatusLabel(JobOperationalSummary summary) => summary.RecurringScheduleStatus switch
     {
@@ -466,28 +498,24 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
         JobSchedulerUiUrls.JobDefinition(summary.Definition.Id);
 
     /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        if (Interlocked.Exchange(ref _disposed, 1) == 0) _descriptionVersion++;
+        // Close the native inspector promptly, then drain every admitted native/interop caller.
+        var dialogRetirement = _dialogs?.DisposeAsync() ?? ValueTask.CompletedTask;
+        return _operations.RetireAsync(async () =>
         {
-            return;
-        }
-
-        _descriptionVersion++;
-        await _lifetimeCancellation.CancelAsync();
-        var pendingLoad = _descriptionLoadTask;
-        if (pendingLoad is not null)
-        {
-            await pendingLoad;
-        }
-
-        var session = _cronSession;
-        _cronSession = null;
-        if (session is not null)
-        {
-            await session.DisposeAsync();
-        }
-
-        _lifetimeCancellation.Dispose();
+            var failures = new List<Exception>();
+            try { await dialogRetirement; }
+            catch (Exception exception) { failures.Add(exception); }
+            var session = _cronSession;
+            _cronSession = null;
+            if (session is not null)
+            {
+                try { await session.DisposeAsync(); }
+                catch (Exception exception) { failures.Add(exception); }
+            }
+            if (failures.Count > 0) throw new AggregateException("Catalog table retirement failed.", failures);
+        });
     }
 }

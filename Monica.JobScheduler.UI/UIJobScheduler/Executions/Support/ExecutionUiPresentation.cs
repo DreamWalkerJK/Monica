@@ -47,14 +47,14 @@ internal static class ExecutionUiPresentation
         ExecutionCancellationUiResult result,
         IStringLocalizer<JobSchedulerResource> localizer)
     {
-        if (!result.IsAuthorized)
-        {
-            return (localizer["Access:DeniedDescription"].Value, Severity.Error);
-        }
-
         if (result.Error is not null)
         {
             return (result.Error, Severity.Error);
+        }
+
+        if (!result.IsAuthorized)
+        {
+            return (localizer["Access:DeniedDescription"].Value, Severity.Error);
         }
 
         return result.Status switch

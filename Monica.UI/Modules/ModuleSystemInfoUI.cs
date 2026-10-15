@@ -158,7 +158,8 @@ public class ModuleSystemInfoUI : MonicaModule<ModuleSystemInfoUIOption>, IWebHo
                     Icons.Material.Filled.Info,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
-                    navOrder: 50)));
+                    navOrder: 50,
+                    descriptionKey: "Page:Summary")));
     }
 
     /// <summary>

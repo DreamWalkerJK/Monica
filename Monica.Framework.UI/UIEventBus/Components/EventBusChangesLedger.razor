@@ -1,0 +1,247 @@
+@using Monica.EventBus.Models
+@using Monica.Framework.UI.UIEventBus.Models
+@using Monica.Framework.UI.UIEventBus.State
+@using Monica.Framework.UI.UIEventBus.Support
+@inject IStringLocalizer<EventBusResource> L
+
+<section class="changes-ledger" aria-labelledby="@_headingId">
+    <header class="changes-ledger-heading">
+        <div>
+            <span class="changes-ledger-eyebrow">@L["ChangeLedger:Eyebrow"]</span>
+            <h2 id="@_headingId">@L["ChangeLedger:Title"]</h2>
+            <p>@L["ChangeLedger:Scope", RetentionLimit]</p>
+        </div>
+        <dl class="changes-ledger-counts">
+            <div><dt>@L["ChangeLedger:Observed"]</dt><dd>@ObservedChangeCount</dd></div>
+            <div><dt>@L["ChangeLedger:Retained"]</dt><dd>@_retainedChanges.Count</dd></div>
+        </dl>
+    </header>
+
+    @if (DroppedChangeCount > 0)
+    {
+        <div class="changes-ledger-notice changes-ledger-notice-loss" role="status">
+            <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />
+            <div><strong>@L["ChangeLedger:FeedLossTitle"]</strong><p>@L["ChangeLedger:FeedLoss", DroppedChangeCount]</p></div>
+        </div>
+    }
+    @if (TruncatedChangeCount > 0)
+    {
+        <div class="changes-ledger-notice changes-ledger-notice-window">
+            <MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Small" />
+            <p>@L["ChangeLedger:WindowTruncated", TruncatedChangeCount, RetentionLimit]</p>
+        </div>
+    }
+
+    <div class="changes-ledger-controls">
+        <MudTextField T="string" Value="@_searchText" ValueChanged="SearchChanged" Immediate="true"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                      Placeholder="@L["ChangeLedger:Search"]" aria-label="@L["ChangeLedger:Search"]"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+        <div class="changes-ledger-filter-row">
+            <div class="changes-ledger-filters" role="group" aria-label="@L["ChangeLedger:ChangeType"]">
+                <span class="changes-ledger-filter" data-tone="Primary" data-selected="@(_changeType is null ? "true" : "false")">
+                    <MudButton OnClick="() => ChangeTypeChanged(null)" aria-pressed="@(_changeType is null ? "true" : "false")">
+                        @L["ChangeLedger:AllChanges"] <span class="changes-ledger-filter-count">@_retainedChanges.Count</span>
+                    </MudButton>
+                </span>
+                @foreach (var changeType in Enum.GetValues<EventSubscriptionChangeType>())
+                {
+                    <span class="changes-ledger-filter" data-tone="@ChangeTypeColor(changeType)" data-selected="@(_changeType == changeType ? "true" : "false")">
+                        <MudButton OnClick="() => ChangeTypeChanged(changeType)" aria-pressed="@(_changeType == changeType ? "true" : "false")">
+                            @L.GetSubscriptionChangeTypeText(changeType)
+                            <span class="changes-ledger-filter-count">@_retainedChanges.Count(change => change.ChangeType == changeType)</span>
+                        </MudButton>
+                    </span>
+                }
+            </div>
+            @if (HasFilters)
+            {
+                <MudButton OnClick="ClearFilters" Size="Size.Small" StartIcon="@Icons.Material.Outlined.FilterAltOff">
+                    @L["ChangeLedger:ClearFilters"]
+                </MudButton>
+            }
+        </div>
+        <div class="changes-ledger-filter-caption">
+            <span>@L["ChangeLedger:FilterScope"]</span>
+            <span>@L["ChangeLedger:Shown", _filteredChanges.Count, _retainedChanges.Count]</span>
+        </div>
+    </div>
+
+    <div class="changes-ledger-table-wrapper">
+        <MudTable T="SubscriptionChangeViewModel" Items="@_filteredChanges" Hover="true" Square="true" Elevation="0"
+                  Breakpoint="Breakpoint.Xs" @bind-CurrentPage="_currentPage" @bind-RowsPerPage="_pageSize">
+            <HeaderContent>
+                <MudTh>@L["ChangeLedger:RecordedChange"]</MudTh>
+                <MudTh>@L["ChangeLedger:Subscription"]</MudTh>
+                <MudTh>@L["ChangeLedger:Route"]</MudTh>
+                <MudTh>@L["ChangeLedger:Registration"]</MudTh>
+                <MudTh>@L["ChangeLedger:Runtime"]</MudTh>
+                <MudTh>@L["ChangeLedger:Evidence"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["ChangeLedger:RecordedChange"]">
+                    <div class="changes-ledger-cell">
+                        <EventBusStatusBadge Tone="@context.ChangeTypeColor">@L.GetSubscriptionChangeTypeText(context.ChangeType)</EventBusStatusBadge>
+                        <time class="changes-ledger-timestamp" datetime="@context.Timestamp.ToUniversalTime().ToString("O")">@EventBusPresentation.Timestamp(context.Timestamp)</time>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["ChangeLedger:Subscription"]">
+                    <div class="changes-ledger-cell">
+                        <code class="changes-ledger-event-type">@context.Subscription.EventType</code>
+                        <span class="changes-ledger-id"><span>@L["ChangeLedger:SubscriptionId"]</span> <code>@context.Subscription.SubscriptionId</code></span>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["ChangeLedger:Route"]">
+                    <div class="changes-ledger-cell">
+                        <code class="changes-ledger-topic">@context.Subscription.TopicName</code>
+                        <span class="changes-ledger-key-label">@L["ChangeLedger:ServiceKey"]</span>
+                        <code class="changes-ledger-key" data-service-key="@context.Subscription.ServiceKey">@EventBusPresentation.KeyText(context.Subscription.ServiceKey, L)</code>
+                        <span class="changes-ledger-scope">@L.GetSubscriptionScopeText(context.Subscription.Scope)</span>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["ChangeLedger:Registration"]">
+                    <div class="changes-ledger-cell">
+                        <EventBusStatusBadge Tone="@context.Subscription.StateColor">@L.GetSubscriptionStateText(context.Subscription.State)</EventBusStatusBadge>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["ChangeLedger:Runtime"]">
+                    <div class="changes-ledger-cell">
+                        @if (context.Subscription.Scope == EventSubscriptionScope.Local)
+                        {
+                            <span class="changes-ledger-no-runtime">@L["ChangeLedger:LocalRuntime"]</span>
+                        }
+                        else if (context.Subscription.TopicStatus is { } status)
+                        {
+                            <EventBusStatusBadge Tone="@EventBusPresentation.RuntimeColor(status.State)">@L.GetTopicRuntimeStateText(status.State)</EventBusStatusBadge>
+                        }
+                        else
+                        {
+                            <span class="changes-ledger-no-runtime">@L["ChangeLedger:NotReported"]</span>
+                        }
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["ChangeLedger:Evidence"]">
+                    <div class="changes-ledger-cell changes-ledger-action">
+                        <MudTooltip Text="@L["ChangeLedger:InspectEvidence"]">
+                            <MudIconButton Icon="@Icons.Material.Outlined.ArrowForward" Color="Color.Primary" Size="Size.Small"
+                                           OnClick="() => Inspect(context)" aria-label="@L["ChangeLedger:Inspect", context.Subscription.SubscriptionId, L.GetSubscriptionChangeTypeText(context.ChangeType), EventBusPresentation.Timestamp(context.Timestamp)]" />
+                        </MudTooltip>
+                    </div>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <div class="changes-ledger-empty">
+                    <MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Large" />
+                    <h3>@L[HasFilters ? "ChangeLedger:NoMatches" : "ChangeLedger:Empty"]</h3>
+                    <p>@L[HasFilters ? "ChangeLedger:NoMatchesHelp" : "ChangeLedger:EmptyHelp"]</p>
+                    @if (HasFilters)
+                    {
+                        <MudButton OnClick="ClearFilters" Variant="Variant.Outlined" Size="Size.Small">@L["ChangeLedger:ClearFilters"]</MudButton>
+                    }
+                </div>
+            </NoRecordsContent>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="@PageSizeOptions" RowsPerPageString="@L["ChangeLedger:RowsPerPage"]" InfoFormat="@L["ChangeLedger:PageInfo"]" />
+            </PagerContent>
+        </MudTable>
+    </div>
+    <p class="changes-ledger-evidence-note">@L["ChangeLedger:EvidenceHelp"]</p>
+</section>
+
+@code {
+    private const int RetentionLimit = 100;
+    private static readonly int[] PageSizeOptions = [10, 20, 50, 100];
+    private readonly string _headingId = $"eventbus-changes-{Guid.NewGuid():N}";
+    private IReadOnlyList<SubscriptionChangeViewModel> _retainedChanges = [];
+    private List<SubscriptionChangeViewModel> _filteredChanges = [];
+    private string? _searchText;
+    private EventSubscriptionChangeType? _changeType;
+    private int _currentPage;
+    private int _pageSize = 20;
+
+    /// <summary>Gets or sets detached session observations, newest first. At most 100 are displayed.</summary>
+    [Parameter] public IReadOnlyList<SubscriptionChangeViewModel> Changes { get; set; } = [];
+
+    /// <summary>Gets or sets accepted subscription-change observations, including entries outside the retained window.</summary>
+    [Parameter] public long ObservedChangeCount { get; set; }
+
+    /// <summary>Gets or sets cumulative feed notification loss, independently of accepted observations and retention.</summary>
+    [Parameter] public long DroppedChangeCount { get; set; }
+
+    /// <summary>Receives a detached evidence copy without resolving the subscription's current registry membership.</summary>
+    [Parameter] public EventCallback<SubscriptionChangeViewModel> OnInspect { get; set; }
+
+    private long TruncatedChangeCount => Math.Max(0, ObservedChangeCount - _retainedChanges.Count);
+    private bool HasFilters => _changeType.HasValue || !string.IsNullOrWhiteSpace(_searchText);
+
+    protected override void OnParametersSet()
+    {
+        _retainedChanges = Changes.Take(RetentionLimit).ToArray();
+        ApplyFilters();
+    }
+
+    private void SearchChanged(string? value)
+    {
+        _searchText = value;
+        _currentPage = 0;
+        ApplyFilters();
+    }
+
+    private void ChangeTypeChanged(EventSubscriptionChangeType? value)
+    {
+        _changeType = value;
+        _currentPage = 0;
+        ApplyFilters();
+    }
+
+    private void ClearFilters()
+    {
+        _searchText = null;
+        _changeType = null;
+        _currentPage = 0;
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        var query = _searchText?.Trim();
+        _filteredChanges = _retainedChanges.Where(change =>
+            (!_changeType.HasValue || change.ChangeType == _changeType.Value)
+            && (string.IsNullOrEmpty(query) || MatchesSearch(change, query))).ToList();
+        _currentPage = Math.Min(_currentPage, Math.Max(0, (_filteredChanges.Count - 1) / _pageSize));
+    }
+
+    private bool MatchesSearch(SubscriptionChangeViewModel change, string query)
+    {
+        var row = change.Subscription;
+        return Contains(row.EventType, query)
+            || Contains(row.EventTypeShortName, query)
+            || Contains(row.SubscriptionId, query)
+            || Contains(row.TopicName, query)
+            || Contains(row.ServiceKey, query)
+            || Contains(EventBusPresentation.KeyText(row.ServiceKey, L), query)
+            || Contains(row.HandlerType, query)
+            || Contains(row.ActionMethodSignature, query)
+            || Contains(L.GetSubscriptionScopeText(row.Scope), query)
+            || Contains(L.GetSubscriptionChangeTypeText(change.ChangeType), query);
+    }
+
+    private static bool Contains(string? value, string query) =>
+        value?.Contains(query, StringComparison.OrdinalIgnoreCase) == true;
+
+    private static Color ChangeTypeColor(EventSubscriptionChangeType changeType) => changeType switch
+    {
+        EventSubscriptionChangeType.Added => Color.Success,
+        EventSubscriptionChangeType.Activated => Color.Info,
+        EventSubscriptionChangeType.Deactivated => Color.Warning,
+        EventSubscriptionChangeType.Removed => Color.Error,
+        _ => Color.Default
+    };
+
+    private Task Inspect(SubscriptionChangeViewModel change) => OnInspect.InvokeAsync(new SubscriptionChangeViewModel
+    {
+        ChangeType = change.ChangeType,
+        Timestamp = change.Timestamp,
+        Subscription = EventBusWorkbenchState.CloneSubscription(change.Subscription)
+    });
+}

@@ -26,7 +26,12 @@ public class DataChannel(ChannelPipeline pipeline)
     /// <summary>
     /// Reinitializes the data channel.
     /// Call this when the channel needs to be reset or reconnected.
+    /// Concurrent attempts are rejected. Success clears initialization unavailability; failure or cancellation
+    /// retires the attempt with an uninitialized, unavailable pipeline. Endpoints remain host-owned.
     /// </summary>
+    /// <param name="cancellationToken">Cancels this admitted endpoint initialization attempt.</param>
+    /// <exception cref="InvalidOperationException">An initialization attempt is already active.</exception>
+    /// <exception cref="OperationCanceledException">The supplied token cancels initialization.</exception>
     public async Task ReInitialize(CancellationToken cancellationToken = default)
     {
         await Pipe.InitAsync(cancellationToken);

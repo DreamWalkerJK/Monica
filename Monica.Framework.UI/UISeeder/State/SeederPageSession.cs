@@ -225,6 +225,15 @@ public sealed class SeederPageSession : IAsyncDisposable
         FailureBehaviorFilter = value
     });
 
+    /// <summary>Clears every presentation filter in one transition without changing the snapshot or selected details.</summary>
+    public Task ClearFiltersAsync() => UpdatePresentationAsync(state => state with
+    {
+        SearchText = string.Empty,
+        StatusFilter = null,
+        CriticalityFilter = null,
+        FailureBehaviorFilter = null
+    });
+
     /// <summary>Opens the detail drawer for one Seeder.</summary>
     public Task OpenDetailsAsync(SeederExecutionSnapshot seeder)
     {

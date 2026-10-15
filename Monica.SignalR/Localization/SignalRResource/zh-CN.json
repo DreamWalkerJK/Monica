@@ -2,24 +2,20 @@
   "Pages": {
     "SignalRDebug": {
       "Title": "SignalR 调试",
-      "Heading": "实时通道实验室",
+      "Heading": "SignalR 工作台",
       "Eyebrow": "SIGNALR / 实时传输",
-      "Subtitle": "在同一工作区打开浏览器 Hub 会话、检查通道活动并验证已注册契约。",
+      "Subtitle": "连接浏览器会话，验证 Hub 契约，并检查真实运行证据。",
       "Summary": {
         "AriaLabel": "SignalR 通道摘要",
-        "Hubs": "个 Hub",
-        "Users": "个用户",
-        "Received": "条接收"
+        "Hubs": "已映射 Hub",
+        "Users": "已跟踪连接",
+        "Received": "浏览器接收"
       },
       "Sections": {
-        "Connection": "连接工作区",
-        "Telemetry": "通道遥测",
-        "Methods": "Hub 契约工具",
-        "Messages": "消息工具"
+        "Connection": "连接工作区"
       },
       "Settings": {
         "Eyebrow": "客户端跟踪",
-        "Title": "调试设置",
         "VerboseLogging": "启用详细调试日志",
         "VerboseLoggingHelper": "显示参数转换和方法调用的详细信息，用于排查参数类型相关问题。"
       },
@@ -40,14 +36,22 @@
         "InvokeMethodFailed": "方法 {0} 调用失败。",
         "ToggleListenerFailed": "更新监听器状态失败。",
         "EnableListenersSuccess": "已启用 {0} 个监听器。",
-        "DisableListenersSuccess": "已禁用 {0} 个监听器。"
+        "DisableListenersSuccess": "已禁用 {0} 个监听器。",
+        "OperationFailed": "操作失败，请检查会话记录后重试。"
+      },
+      "WorkspaceLabel": "浏览器会话工具",
+      "MethodCatalog": "方法目录",
+      "Tabs": {
+        "Methods": "方法与监听",
+        "Messages": "消息与会话",
+        "Connections": "主机连接",
+        "Sends": "服务端发送"
       }
     }
   },
   "UISignalR": {
     "Common": {
       "None": "无",
-      "NoArguments": "无参数",
       "Authenticated": "已认证",
       "Unauthenticated": "未认证",
       "Status": {
@@ -62,7 +66,7 @@
     "ConnectionConfig": {
       "Title": "连接配置",
       "AccessTokenLabel": "访问令牌",
-      "AccessTokenHelper": "输入用于 SignalR 连接的访问令牌。",
+      "AccessTokenHelper": "用于下次连接。生成的测试用户令牌将保留在此处，可查看和复制。",
       "HubUrlLabel": "Hub 地址",
       "HubUrlHelper": "选择要连接的 SignalR Hub。",
       "Connecting": "连接中...",
@@ -71,19 +75,31 @@
       "Disconnect": "断开连接",
       "RefreshHubInfo": "刷新 Hub 信息",
       "TestUserConnect": "测试用户连接",
-      "TestUserConnectHelper": "生成随机测试用户的访问令牌并立即连接，令牌会回填到输入框便于断点调试。"
+      "TestUserConnectHelper": "生成随机测试用户令牌，回填令牌输入框，并连接所选 Hub。",
+      "Intro": "选择 Hub 并连接当前浏览器。",
+      "DraftHubLabel": "下次连接的 Hub",
+      "DraftHubHelper": "修改此选项仅为下次连接做准备；重新连接后才会生效。",
+      "TestUserUnavailable": "当前主机不提供测试用户令牌。若 Hub 需要认证，请填写访问令牌。",
+      "NoHubs": "当前主机未映射任何 Hub。主机配置变更后可刷新。",
+      "Loading": "正在读取已映射的 Hub…",
+      "NotLoaded": "尚未获取 Hub 元数据。",
+      "LoadFailed": "无法读取 Hub 元数据，请刷新重试。",
+      "LoadFailedRetained": "无法刷新 Hub 元数据，当前仍显示上次获取的目录。",
+      "CapturedAt": "目录获取时间：{0}"
     },
     "ConnectionStatus": {
       "Title": "连接状态",
-      "ConnectionId": "连接 ID：{0}",
-      "CurrentHub": "当前 Hub：{0}",
-      "TotalReceivedMessages": "接收到的消息总数：{0}",
-      "AnonymousWarning": "连接已建立，但服务器将其视为匿名连接，因此不会出现在已连接用户列表中。访问令牌可能为空、无效或已过期，或未被 WebSocket 传输接受。"
+      "AnonymousWarning": "此浏览器连接未出现在当前主机连接注册表最近一次成功采集的快照中。该注册表记录 Monica 跟踪 Hub 的已认证连接，仅凭未观察到连接无法判断其认证状态。",
+      "ActiveHubLabel": "当前连接的 Hub",
+      "NoActiveHub": "没有活动连接",
+      "DraftHubLabel": "下次连接的 Hub",
+      "ConnectionIdLabel": "浏览器连接 ID",
+      "ReceivedLabel": "浏览器接收消息数"
     },
     "ConnectedUsers": {
-      "Title": "已连接用户（{0}）",
+      "Title": "已认证连接（{0}）",
       "Refresh": "刷新",
-      "Empty": "当前没有已连接的用户。",
+      "Empty": "此快照中没有已跟踪的连接。",
       "Columns": {
         "ConnectionId": "连接 ID",
         "UserName": "用户名",
@@ -92,23 +108,41 @@
         "ConnectionTime": "连接时间",
         "Actions": "操作"
       },
-      "ViewDetails": "查看详细信息",
-      "DetailsTitle": "用户详细信息",
-      "BasicInfoTitle": "基本信息",
-      "ClaimsTitle": "用户 Claims（{0}）",
+      "ViewDetails": "查看",
+      "DetailsTitle": "连接快照",
+      "BasicInfoTitle": "连接信息",
+      "ClaimsTitle": "已获取的 Claims（{0}）",
       "ClaimsEmpty": "该用户没有 Claims 信息。",
       "ClaimType": "Claim 类型",
       "ClaimValue": "Claim 值",
-      "Close": "关闭"
+      "Close": "关闭",
+      "Scope": "主机连接注册表快照。每行表示一个已跟踪连接，同一用户可能具有多个连接。",
+      "CapturedAt": "快照获取时间：{0}",
+      "EmptyHelp": "匿名浏览器连接不会记录到此注册表。刷新以获取主机当前的连接快照。",
+      "Loading": "正在读取已跟踪的连接…",
+      "NotLoaded": "尚未获取服务器连接注册表快照。",
+      "LoadFailed": "无法读取服务器连接注册表，请刷新重试。",
+      "LoadFailedRetained": "无法刷新服务器连接注册表，当前仍显示上次获取的快照。",
+      "Search": "搜索连接",
+      "SearchPlaceholder": "连接 ID、用户或 Claim…",
+      "SearchSummary": "匹配 {0} 项 / 快照共 {1} 项",
+      "NoMatches": "没有符合搜索条件的连接。",
+      "NoMatchesHelp": "搜索涵盖完整连接 ID、用户 ID、用户名以及快照提供的 Claim 类型和值。",
+      "ClearSearch": "清除搜索",
+      "RowsPerPage": "每页行数",
+      "PageInfo": "{first_item}–{last_item}，共 {all_items} 项",
+      "InspectConnection": "查看连接 {0}",
+      "FrozenHint": "此处为所选连接的独立快照。刷新或断开连接不会改变正在查看的信息。",
+      "ClaimsNote": "主机会合并同一 Claim 类型的重复值。"
     },
     "SendDiagnostics": {
-      "Title": "发送诊断",
+      "Title": "服务端发送证据",
       "Refresh": "刷新",
       "NotLoaded": "尚未加载发送诊断信息。",
       "Disabled": "发送指标当前未启用。请启用 ModuleSignalROption.EnableSendMetrics 以采集 Monica 观测到的发送计数。",
       "Empty": "尚未记录到发送活动。",
       "Summary": {
-        "Pending": "积压中",
+        "Pending": "进行中",
         "Started": "已开始",
         "Completed": "已完成",
         "Failed": "失败"
@@ -116,13 +150,17 @@
       "Columns": {
         "Method": "方法",
         "Target": "目标",
-        "TargetBreakdown": "目标明细",
-        "Pending": "积压中",
+        "TargetBreakdown": "目标行",
+        "Pending": "进行中",
         "Started": "已开始",
         "Failed": "失败",
         "LastDuration": "最近耗时",
         "MaxDuration": "最大耗时",
-        "AverageDuration": "平均耗时"
+        "AverageDuration": "平均耗时",
+        "Completed": "已完成",
+        "SendTasks": "发送任务",
+        "Durations": "发送耗时",
+        "ActivityTime": "观察时间"
       },
       "Details": {
         "Expand": "显示目标明细",
@@ -148,29 +186,48 @@
         "UsersCount": "用户目标数：{0}",
         "UnknownIdentifiers": "目标：{0}",
         "UnknownCount": "目标标识数：{0}"
-      }
+      },
+      "Scope": "主机快照 · 自进程启动以来",
+      "SnapshotTime": "采集于 {0} UTC",
+      "EvidenceNote": "这些计数描述 Monica 观察到的服务端到客户端发送任务。任务完成不代表客户端已收到消息。",
+      "Loading": "正在加载发送证据…",
+      "LoadFailed": "无法加载发送证据。请再次刷新。",
+      "RefreshFailed": "最近一次刷新失败。下方保留上次成功采集的快照。",
+      "RankedMethods": "显示 {1} 个方法中的 {0} 个，按进行中的任务数、最长已观察耗时依次排序。",
+      "TargetEvidence": "{0} 的目标选择",
+      "TargetScope": "目标行按显式选择或排除条件分组；其数量不是接收方数量。",
+      "TargetRowsPerPage": "每页目标行数",
+      "TargetPageInfo": "第 {first_item}–{last_item} 行，共 {all_items} 行",
+      "LastStarted": "最近开始",
+      "LastCompleted": "最近结束",
+      "NoTimestamp": "尚未观察到",
+      "UtcTime": "{0} UTC"
     },
     "MethodListener": {
-      "Title": "Hub 方法监听",
+      "Title": "浏览器回调",
       "Manage": "管理监听…",
       "EnableAll": "全部启用",
       "DisableAll": "全部禁用",
       "EnabledSummary": "已启用 {0}/{1}",
-      "TotalReceived": "累计接收 {0} 次",
+      "TotalReceived": "已接收 {0} 次回调",
       "StopListening": "取消监听",
-      "Empty": "请先连接到 Hub 以加载可用的方法。",
-      "EmptyEnabled": "未启用任何监听，点击“管理监听…”选择要监听的方法。",
-      "DialogTitle": "管理方法监听",
-      "SearchPlaceholder": "搜索方法名…",
+      "Empty": "当前目录没有可供注册的回调名称。",
+      "EmptyEnabled": "尚未启用浏览器回调。可通过“管理监听…”选择目录中的名称。",
+      "DialogTitle": "管理浏览器回调",
+      "SearchPlaceholder": "搜索名称和签名",
       "SearchEmpty": "没有匹配的方法。",
       "DialogClose": "关闭",
-      "Parameters": "参数：{0}",
-      "ReceivedCount": "接收次数：{0}"
+      "Parameters": "目录签名：{0}",
+      "ReceivedCount": "回调接收次数：{0}",
+      "Scope": "当前连接的 Hub → 当前浏览器",
+      "ContractHelp": "使用目录中的名称注册客户端回调。Hub 方法可被调用，并不保证服务端会以相同名称或签名发送回调。",
+      "ConnectHelp": "连接当前浏览器后即可启用或禁用回调注册。断开期间仍可查看已记录的次数。",
+      "Updating": "正在更新回调注册…"
     },
     "MethodInvoker": {
-      "Title": "方法调用",
+      "Title": "调用 Hub 方法",
       "MethodLabel": "选择方法",
-      "ParametersTitle": "参数设置",
+      "ParametersTitle": "调用参数",
       "NoParameters": "该方法无需参数。",
       "Invoke": "调用方法",
       "ClearParameters": "清空参数",
@@ -179,36 +236,65 @@
         "String": "字符串类型，直接输入文本内容。",
         "Int": "整数类型，例如：123",
         "Long": "长整数类型，例如：123456789",
-        "Double": "双精度浮点数类型，例如：123.45",
-        "Float": "单精度浮点数类型，例如：123.45",
-        "Bool": "布尔类型，输入 true 或 false。",
-        "DateTime": "日期时间类型，例如：2023-12-01 12:00:00",
+        "Double": "双精度数字。请使用小数点，例如：123.45",
+        "Float": "单精度数字。请使用小数点，例如：123.45",
+        "Bool": "布尔值：true/false、1/0、yes/no、y/n 或 on/off，不区分大小写。",
+        "DateTime": "按固定区域格式解析日期时间，例如：2026-10-10T12:00:00Z",
         "Guid": "GUID 类型，例如：12345678-1234-1234-1234-123456789abc",
-        "Array": "数组类型，请输入 JSON，例如：[\"item1\",\"item2\"]",
-        "List": "列表类型，请输入 JSON，例如：[\"item1\",\"item2\"]",
-        "Complex": "复杂类型（{0}），请输入 JSON。"
+        "Array": "括号包围的数组或对象按 JSON 解析，例如：[\"item1\",\"item2\"]。其他文本按原样传递。",
+        "List": "括号包围的数组或对象按 JSON 解析，例如：[\"item1\",\"item2\"]。其他文本按原样传递。",
+        "Complex": "类型 {0}：括号包围的数组或对象按 JSON 解析，其他文本按原样传递。"
       },
       "ErrorText": {
         "Int": "请输入有效的整数。",
         "Long": "请输入有效的长整数。",
         "Double": "请输入有效的双精度数字。",
         "Float": "请输入有效的单精度数字。",
-        "Bool": "请输入 true 或 false。",
+        "Bool": "请输入 true/false、1/0、yes/no、y/n 或 on/off。",
         "DateTime": "请输入有效的日期时间格式。",
         "Guid": "请输入有效的 GUID 格式。",
         "Invalid": "参数格式无效。"
-      }
+      },
+      "Scope": "浏览器 → 当前连接的 Hub",
+      "Help": "从当前目录选择可调用的方法并填写参数。",
+      "Empty": "当前目录没有可调用的方法。",
+      "DefaultsHelp": "空字段使用解析器默认值：数值为零，布尔值为 false，DateTime 为当前 UTC 时间，Guid 为空 GUID，其他类型为空文本。",
+      "ConnectHelp": "连接当前浏览器后即可调用方法。断开期间保留参数草稿。",
+      "Invoking": "正在调用…"
     },
     "MessageSender": {
       "Title": "快速消息发送",
       "UserNameLabel": "用户名",
       "MessageLabel": "消息内容",
       "Send": "发送消息",
-      "Clear": "清空"
+      "Clear": "清空",
+      "Contract": "已连接的 Hub 必须提供此方法，并接受两个字符串参数。",
+      "Sending": "正在发送…",
+      "DraftHelp": "按 Enter 发送。发送后保留草稿。",
+      "ConnectHelp": "连接到 Hub 后即可发送。发送后保留草稿。"
     },
     "MessageLog": {
-      "Title": "消息日志",
-      "Clear": "清空日志"
+      "Title": "会话跟踪",
+      "Clear": "清空日志",
+      "Scope": "浏览器会话 · 最新记录在前",
+      "Help": "此会话保留最近 1,000 条事件。清空跟踪记录也会重置已接收消息计数。",
+      "Empty": "尚无事件记录。连接 Hub 或调用方法以开始跟踪。",
+      "NoMatches": "没有事件符合当前筛选条件。",
+      "SearchLabel": "搜索跟踪记录",
+      "TypeLabel": "事件类型",
+      "AllTypes": "所有事件类型",
+      "Showing": "符合筛选的第 {0}–{1} 条事件，共 {2} 条",
+      "Pagination": "会话跟踪分页",
+      "Source": "来源",
+      "Details": "详情",
+      "Types": {
+        "Sent": "已发送",
+        "Received": "已接收",
+        "System": "系统",
+        "Success": "成功",
+        "Error": "错误",
+        "Info": "信息"
+      }
     },
     "JavaScript": {
       "NoArguments": "无参数",

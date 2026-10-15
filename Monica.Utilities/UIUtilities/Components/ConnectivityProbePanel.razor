@@ -1,107 +1,69 @@
+@using Microsoft.JSInterop
 @using Monica.Utilities.Connectivity.Models
 @using Monica.Utilities.Localization
 @implements IAsyncDisposable
 @inject ConnectivityProbeState State
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<UtilitiesResource> L
 
-<div class="connectivity-panel">
-    <MudGrid Spacing="2" Class="connectivity-panel__grid">
-        <MudItem xs="12" lg="6" xl="5">
-            <MudPaper Class="connectivity-panel__card connectivity-panel__card--form mo-self-painted pa-4" Elevation="0">
-                <MudStack Spacing="3">
-                    <div>
-                        <MudText Typo="Typo.h6">@L["Connectivity:Title"]</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Connectivity:Subtitle"]</MudText>
-                    </div>
-
-                    <MudTextField T="string"
-                                  @bind-Value="State.Host"
-                                  Label="@L["Connectivity:TargetHost"]"
-                                  Placeholder="@L["Connectivity:TargetHostPlaceholder"]"
-                                  Variant="Variant.Outlined"
-                                  Margin="Margin.Dense"
-                                  Immediate="true" />
-
-                    <MudGrid Spacing="2">
-                        <MudItem xs="12" md="6">
-                            <MudSelect T="ConnectivityProbeKind"
-                                       Value="State.ProbeKind"
-                                       ValueChanged="State.SetProbeKind"
-                                       Label="@L["Connectivity:ProbeKind"]"
-                                       Variant="Variant.Outlined"
-                                       Margin="Margin.Dense">
-                                <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Ping">@L["Connectivity:Kinds:Ping"]</MudSelectItem>
-                                <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Tcp">@L["Connectivity:Kinds:Tcp"]</MudSelectItem>
-                                <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Http">@L["Connectivity:Kinds:Http"]</MudSelectItem>
-                                <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Https">@L["Connectivity:Kinds:Https"]</MudSelectItem>
-                            </MudSelect>
-                        </MudItem>
+<div class="connectivity-panel" aria-busy="@(State.IsBusy ? "true" : "false")">
+    <div class="connectivity-panel__layout">
+        <section class="connectivity-panel__request" @ref="_requestOwner">
+            <header class="connectivity-panel__request-heading">
+                <MudIcon Icon="@Icons.Material.Outlined.TravelExplore" aria-hidden="true" />
+                <div><h2>@L["Connectivity:RequestTitle"]</h2><p>@L["Connectivity:ScopeNote"]</p></div>
+            </header>
+            <form class="connectivity-panel__form" @onsubmit="RunProbeAsync" @onsubmit:preventDefault>
+                <div class="connectivity-panel__fields">
+                    <MudTextField T="string" @bind-Value="State.Host" Label="@L["Connectivity:TargetHost"]"
+                                  Placeholder="@L["Connectivity:TargetHostPlaceholder"]" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" Immediate="true" Disabled="@State.IsBusy" />
+                    <MudSelect T="ConnectivityProbeKind" Value="State.ProbeKind" ValueChanged="State.SetProbeKind"
+                               Label="@L["Connectivity:ProbeKind"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@State.IsBusy">
+                        <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Ping">@L["Connectivity:Kinds:Ping"]</MudSelectItem>
+                        <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Tcp">@L["Connectivity:Kinds:Tcp"]</MudSelectItem>
+                        <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Http">@L["Connectivity:Kinds:Http"]</MudSelectItem>
+                        <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Https">@L["Connectivity:Kinds:Https"]</MudSelectItem>
+                    </MudSelect>
+                    <div class="connectivity-panel__numbers @(State.RequiresPort ? "connectivity-panel__numbers--paired" : null)">
                         @if (State.RequiresPort)
                         {
-                            <MudItem xs="12" md="6">
-                                <MudNumericField T="int?"
-                                                 @bind-Value="State.Port"
-                                                 Label="@L["Connectivity:Port"]"
-                                                 Placeholder="@L["Connectivity:PortPlaceholder"]"
-                                                 Variant="Variant.Outlined"
-                                                 Margin="Margin.Dense"
-                                                 Min="1"
-                                                 Max="65535"
-                                                 Immediate="true" />
-                            </MudItem>
+                            <MudNumericField T="int?" @bind-Value="State.Port" Label="@L["Connectivity:Port"]"
+                                             Placeholder="@L["Connectivity:PortPlaceholder"]" Variant="Variant.Outlined"
+                                             Margin="Margin.Dense" Min="1" Max="65535" Immediate="true" Disabled="@State.IsBusy" />
                         }
-                        <MudItem xs="12" md="6">
-                            <MudNumericField T="int"
-                                             @bind-Value="State.TimeoutMilliseconds"
-                                             Label="@L["Connectivity:Timeout"]"
-                                             Variant="Variant.Outlined"
-                                             Margin="Margin.Dense"
-                                             Min="250"
-                                             Max="60000"
-                                             Immediate="true" />
-                        </MudItem>
-                        @if (State.RequiresHttpPath)
-                        {
-                            <MudItem xs="12" md="6">
-                                <MudTextField T="string"
-                                              @bind-Value="State.Path"
-                                              Label="@L["Connectivity:Path"]"
-                                              Placeholder="@L["Connectivity:PathPlaceholder"]"
-                                              Variant="Variant.Outlined"
-                                              Margin="Margin.Dense"
-                                              Immediate="true" />
-                            </MudItem>
-                        }
-                    </MudGrid>
-
+                        <MudNumericField T="int" @bind-Value="State.TimeoutMilliseconds" Label="@L["Connectivity:Timeout"]"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense" Min="250"
+                                         Max="@State.MaximumTimeoutMilliseconds" Immediate="true" Disabled="@State.IsBusy" />
+                    </div>
+                    <p class="connectivity-panel__helper">@L["Connectivity:TimeoutHelper"]</p>
+                    @if (State.RequiresHttpPath)
+                    {
+                        <MudTextField T="string" @bind-Value="State.Path" Label="@L["Connectivity:Path"]"
+                                      Placeholder="@L["Connectivity:PathPlaceholder"]" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" Immediate="true" Disabled="@State.IsBusy" />
+                    }
                     @if (State.ShowsCertificateToggle)
                     {
-                        <MudSwitch T="bool"
-                                   @bind-Value="State.AllowInvalidCertificate"
-                                   Color="Color.Warning"
-                                   Label="@L["Connectivity:AllowInvalidCertificate"]" />
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @L["Connectivity:AllowInvalidCertificateHelper"]
-                        </MudText>
+                        <div class="connectivity-panel__certificate">
+                            <MudCheckBox T="bool" @bind-Value="State.AllowInvalidCertificate" Color="Color.Warning"
+                                         Label="@L["Connectivity:SkipCertificateValidation"]" Disabled="@State.IsBusy" />
+                            <p class="connectivity-panel__helper">@L["Connectivity:CertificateBypassHelper"]</p>
+                            @if (State.AllowInvalidCertificate)
+                            {
+                                <p class="connectivity-panel__warning">@L["Connectivity:CertificateBypassWarning"]</p>
+                            }
+                        </div>
                     }
-
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-                        @GetHintText()
-                    </MudAlert>
-
+                    <p class="connectivity-panel__helper">@GetHintText()</p>
                     @if (!string.IsNullOrWhiteSpace(State.ErrorMessage))
                     {
-                        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true">
-                            @State.ErrorMessage
-                        </MudAlert>
+                        <div class="connectivity-panel__error" role="alert">
+                            <h3 tabindex="-1" @ref="_errorHeading">@L["Connectivity:ErrorTitle"]</h3>
+                            <p>@State.ErrorMessage</p>
+                        </div>
                     }
-
-                    <MudStack Row="true" Spacing="2">
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   Disabled="@State.IsBusy"
-                                   OnClick="RunProbeAsync">
+                    <div class="connectivity-panel__actions">
+                        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@State.IsBusy">
                             @if (State.IsBusy)
                             {
                                 <MudProgressCircular Color="Color.Inherit" Indeterminate="true" Size="Size.Small" Class="mr-2" />
@@ -109,266 +71,313 @@
                             }
                             else
                             {
-                                <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Class="mr-1" />
+                                <MudIcon Icon="@Icons.Material.Outlined.PlayArrow" Class="mr-1" aria-hidden="true" />
                                 @L["Connectivity:Run"]
                             }
                         </MudButton>
-                        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="@(() => State.Reset())">
-                            @L["Connectivity:Reset"]
-                        </MudButton>
-                    </MudStack>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12" lg="6" xl="7">
-            <MudPaper Class="connectivity-panel__card connectivity-panel__card--result mo-self-painted pa-4" Elevation="0">
-                @if (State.LastResult is null)
-                {
-                    <div class="connectivity-panel__empty">
-                        <MudStack AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.TravelExplore" Size="Size.Large" Color="Color.Default" />
-                            <MudText Typo="Typo.h6">@L["Connectivity:NoResultTitle"]</MudText>
-                            <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
-                                @L["Connectivity:NoResultSubtitle"]
-                            </MudText>
-                        </MudStack>
+                        <MudButton ButtonType="ButtonType.Button" Variant="Variant.Text" Color="Color.Default"
+                                   OnClick="Reset" Disabled="@State.IsBusy">@L["Connectivity:Reset"]</MudButton>
                     </div>
-                }
-                else
+                </div>
+            </form>
+        </section>
+        <section class="connectivity-panel__evidence" @ref="_evidenceOwner">
+            <header class="connectivity-panel__evidence-heading">
+                <h2 tabindex="-1" @ref="_resultHeading">@(State.IsBusy && State.LastResult is not null
+                    ? L["Connectivity:PreviousCompleted"] : L["Connectivity:LatestCompleted"])</h2>
+            </header>
+            <p class="connectivity-panel__live @(State.IsBusy ? null : "connectivity-panel__live--completed")" role="status" aria-live="polite" aria-atomic="true">
+                @if (State.IsBusy && State.ActiveRequest is { } activeRequest)
                 {
-                    <MudStack Spacing="3">
-                        <div>
-                            <MudText Typo="Typo.h6">@L["Connectivity:ResultTitle"]</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Connectivity:ResultSubtitle"]</MudText>
-                        </div>
-
-                        <MudAlert Severity="@(State.LastResult.Succeeded ? Severity.Success : Severity.Warning)" Variant="Variant.Filled">
-                            <MudText Typo="Typo.subtitle2">
-                                @(State.LastResult.Succeeded ? L["Connectivity:Succeeded"] : L["Connectivity:Failed"])
-                            </MudText>
-                            <MudText Typo="Typo.body2">@GetResultSummary(State.LastResult)</MudText>
-                        </MudAlert>
-
-                        <div class="connectivity-panel__stats">
-                            <article class="connectivity-panel__stat">
-                                <span class="connectivity-panel__stat-label">@L["Connectivity:Endpoint"]</span>
-                                <strong>@State.LastResult.Endpoint</strong>
-                            </article>
-                            <article class="connectivity-panel__stat">
-                                <span class="connectivity-panel__stat-label">@L["Connectivity:Duration"]</span>
-                                <strong>@($"{State.LastResult.TotalDurationMilliseconds} ms")</strong>
-                            </article>
-                            <article class="connectivity-panel__stat">
-                                <span class="connectivity-panel__stat-label">@GetPrimaryLatencyLabel()</span>
-                                <strong>@GetPrimaryLatencyValue(State.LastResult)</strong>
-                            </article>
-                            <article class="connectivity-panel__stat">
-                                <span class="connectivity-panel__stat-label">@L["Connectivity:StartedAt"]</span>
-                                <strong>@State.LastResult.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</strong>
-                            </article>
-                        </div>
-
-                        @if (!string.IsNullOrWhiteSpace(State.LastResult.ResolutionError))
-                        {
-                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                                <strong>@L["Connectivity:ResolutionError"]:</strong> @State.LastResult.ResolutionError
-                            </MudAlert>
-                        }
-
-                        <div>
-                            <MudText Typo="Typo.subtitle1">@L["Connectivity:ResolvedAddresses"]</MudText>
-                            @if (State.LastResult.ResolvedAddresses.Count == 0)
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Empty"]</MudText>
-                            }
-                            else
-                            {
-                                <div class="connectivity-panel__chips">
-                                    @foreach (var address in State.LastResult.ResolvedAddresses)
-                                    {
-                                        <MudChip T="string" Value="@address" Color="Color.Info" Variant="Variant.Outlined">@address</MudChip>
-                                    }
-                                </div>
-                            }
-                        </div>
-
-                        @if (State.LastResult.Ping is not null)
-                        {
-                            <div class="connectivity-panel__detail">
-                                <MudText Typo="Typo.subtitle1">@L["Connectivity:PingTitle"]</MudText>
-                                <dl class="connectivity-panel__kv">
-                                    <dt>@L["Connectivity:ReplyAddress"]</dt>
-                                    <dd>@(State.LastResult.Ping.ReplyAddress ?? L["Common:Empty"].Value)</dd>
-                                    <dt>@L["Connectivity:PingStatus"]</dt>
-                                    <dd>@(State.LastResult.Ping.Status ?? L["Common:Empty"].Value)</dd>
-                                    <dt>@L["Connectivity:PingLatency"]</dt>
-                                    <dd>@FormatMilliseconds(State.LastResult.Ping.LatencyMilliseconds)</dd>
-                                    <dt>@L["Connectivity:Failure"]</dt>
-                                    <dd>@(State.LastResult.Ping.FailureMessage ?? L["Common:Empty"].Value)</dd>
-                                </dl>
-                            </div>
-                        }
-
-                        @if (State.LastResult.Tcp is not null)
-                        {
-                            <div class="connectivity-panel__detail">
-                                <MudText Typo="Typo.subtitle1">@L["Connectivity:TcpTitle"]</MudText>
-                                <dl class="connectivity-panel__kv">
-                                    <dt>@L["Connectivity:RemoteEndpoint"]</dt>
-                                    <dd>@(State.LastResult.Tcp.RemoteEndpoint ?? L["Common:Empty"].Value)</dd>
-                                    <dt>@L["Connectivity:TcpLatency"]</dt>
-                                    <dd>@FormatMilliseconds(State.LastResult.Tcp.LatencyMilliseconds)</dd>
-                                    <dt>@L["Connectivity:Failure"]</dt>
-                                    <dd>@(State.LastResult.Tcp.FailureMessage ?? L["Common:Empty"].Value)</dd>
-                                </dl>
-                            </div>
-                        }
-
-                        @if (State.LastResult.Http is not null)
-                        {
-                            <div class="connectivity-panel__detail">
-                                <MudText Typo="Typo.subtitle1">@L["Connectivity:HttpTitle"]</MudText>
-                                <dl class="connectivity-panel__kv">
-                                    <dt>@L["Connectivity:Method"]</dt>
-                                    <dd>@State.LastResult.Http.Method</dd>
-                                    <dt>@L["Connectivity:RequestUri"]</dt>
-                                    <dd>@State.LastResult.Http.RequestUri</dd>
-                                    <dt>@L["Connectivity:StatusCode"]</dt>
-                                    <dd>@(State.LastResult.Http.StatusCode?.ToString() ?? L["Common:Empty"].Value)</dd>
-                                    <dt>@L["Connectivity:ReasonPhrase"]</dt>
-                                    <dd>@(State.LastResult.Http.ReasonPhrase ?? L["Common:Empty"].Value)</dd>
-                                    <dt>@L["Connectivity:ServerHeader"]</dt>
-                                    <dd>@(string.IsNullOrWhiteSpace(State.LastResult.Http.ServerHeader) ? L["Common:Empty"].Value : State.LastResult.Http.ServerHeader)</dd>
-                                    <dt>@L["Connectivity:HttpLatency"]</dt>
-                                    <dd>@FormatMilliseconds(State.LastResult.Http.LatencyMilliseconds)</dd>
-                                    <dt>@L["Connectivity:Failure"]</dt>
-                                    <dd>@(State.LastResult.Http.FailureMessage ?? L["Common:Empty"].Value)</dd>
-                                </dl>
-                            </div>
-                        }
-                    </MudStack>
+                    @L["Connectivity:RunningTarget", activeRequest.Host]
                 }
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
+                else if (State.LastResult is { } announcedResult)
+                {
+                    @GetOutcomeText(announcedResult)
+                }
+            </p>
+            @if (State.LastResult is not { } result)
+            {
+                <div class="connectivity-panel__empty">
+                    <MudIcon Icon="@Icons.Material.Outlined.TravelExplore" aria-hidden="true" />
+                    <h3>@(State.ErrorMessage is null ? L["Connectivity:NoResultTitle"] : L["Connectivity:NoCompletedResult"])</h3>
+                    <p>@(State.ErrorMessage is null ? L["Connectivity:NoResultSubtitle"] : L["Connectivity:NoCompletedResultHelper"])</p>
+                </div>
+            }
+            else
+            {
+                <div class="connectivity-panel__outcome @(result.Succeeded ? "connectivity-panel__outcome--success" : "connectivity-panel__outcome--warning")">
+                    <div class="connectivity-panel__outcome-title">
+                        <MudIcon Icon="@(result.Succeeded ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.ReportProblem)" aria-hidden="true" />
+                        <h3>@GetOutcomeText(result)</h3>
+                    </div>
+                    <p class="connectivity-panel__endpoint">@result.Endpoint</p>
+                    <p class="connectivity-panel__summary">@GetResultSummary(result)</p>
+                </div>
+                <div class="connectivity-panel__dossier">
+                    <dl class="connectivity-panel__facts">
+                        <dt>@L["Connectivity:ProbeType"]</dt><dd>@GetKindText(result.ProbeKind)</dd>
+                        <dt>@L["Connectivity:Host"]</dt><dd>@result.Host</dd>
+                        <dt>@L["Connectivity:Port"]</dt><dd>@(result.Port?.ToString() ?? L["Connectivity:NoneReported"].Value)</dd>
+                        <dt>@L["Connectivity:EffectiveTimeout"]</dt><dd>@FormatMilliseconds(result.TimeoutMilliseconds)</dd>
+                        <dt>@L["Connectivity:StartedAt"]</dt><dd>@result.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</dd>
+                        <dt>@L["Connectivity:Duration"]</dt><dd>@FormatMilliseconds(result.TotalDurationMilliseconds)</dd>
+                    </dl>
+                    <section class="connectivity-panel__group">
+                        <div class="connectivity-panel__group-heading">
+                            <h3>@L["Connectivity:AddressResolution"]</h3>
+                            <span class="connectivity-panel__stage @(result.ResolutionError is not null ? "connectivity-panel__stage--warning" : null)">
+                                @(result.ResolutionError is not null ? L["Connectivity:AddressResolutionFailed"]
+                                    : result.ResolvedAddresses.Count > 0 ? L["Connectivity:AddressResolved"] : L["Connectivity:NoneReported"])
+                            </span>
+                        </div>
+                        @if (result.ResolvedAddresses.Count > 0)
+                        {
+                            <ul class="connectivity-panel__addresses">
+                                @foreach (var address in result.ResolvedAddresses)
+                                {
+                                    <li>@address</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p class="connectivity-panel__helper">@L["Connectivity:NoneReported"]</p>
+                        }
+                        @if (result.ResolutionError is not null)
+                        {
+                            <dl class="connectivity-panel__facts"><dt>@L["Connectivity:ResolutionError"]</dt><dd>@result.ResolutionError</dd></dl>
+                        }
+                    </section>
+                    @if (result.Ping is { } ping)
+                    {
+                        <section class="connectivity-panel__group">
+                            <div class="connectivity-panel__group-heading">
+                                <h3>@L["Connectivity:PingTitle"]</h3>
+                                <span class="connectivity-panel__stage @(ping.Succeeded ? "connectivity-panel__stage--success" : "connectivity-panel__stage--warning")">@GetStageText(ping.Succeeded)</span>
+                            </div>
+                            <dl class="connectivity-panel__facts">
+                                <dt>@L["Connectivity:ReplyAddress"]</dt><dd>@Available(ping.ReplyAddress)</dd>
+                                <dt>@L["Connectivity:PingStatus"]</dt><dd>@Available(ping.Status)</dd>
+                                <dt>@L["Connectivity:PingLatency"]</dt><dd>@FormatMilliseconds(ping.LatencyMilliseconds)</dd>
+                                <dt>@L["Connectivity:Failure"]</dt><dd>@Reported(ping.FailureMessage)</dd>
+                            </dl>
+                        </section>
+                    }
+                    @if (result.Tcp is { } tcp)
+                    {
+                        <section class="connectivity-panel__group">
+                            <div class="connectivity-panel__group-heading">
+                                <h3>@L["Connectivity:TcpTitle"]</h3>
+                                <span class="connectivity-panel__stage @(tcp.Succeeded ? "connectivity-panel__stage--success" : "connectivity-panel__stage--warning")">@GetStageText(tcp.Succeeded)</span>
+                            </div>
+                            <dl class="connectivity-panel__facts">
+                                <dt>@L["Connectivity:RemoteEndpoint"]</dt><dd>@Available(tcp.RemoteEndpoint)</dd>
+                                <dt>@L["Connectivity:TcpLatency"]</dt><dd>@FormatMilliseconds(tcp.LatencyMilliseconds)</dd>
+                                <dt>@L["Connectivity:Failure"]</dt><dd>@Reported(tcp.FailureMessage)</dd>
+                            </dl>
+                        </section>
+                    }
+                    @if (result.Http is { } http)
+                    {
+                        var httpSkipped = result.Tcp is { Succeeded: false };
+                        <section class="connectivity-panel__group">
+                            <div class="connectivity-panel__group-heading">
+                                <h3>@L["Connectivity:HttpTitle"]</h3>
+                                <span class="connectivity-panel__stage @(httpSkipped ? null : http.Succeeded ? "connectivity-panel__stage--success" : "connectivity-panel__stage--warning")">
+                                    @(httpSkipped ? L["Connectivity:NotAttempted"] : http.Succeeded ? L["Connectivity:HttpResponseReceived"] : L["Connectivity:StageFailed"])
+                                </span>
+                            </div>
+                            <dl class="connectivity-panel__facts">
+                                <dt>@L["Connectivity:Method"]</dt><dd>@http.Method</dd>
+                                <dt>@L["Connectivity:RequestUri"]</dt><dd>@http.RequestUri</dd>
+                                <dt>@L["Connectivity:StatusCode"]</dt><dd>@(http.StatusCode is { } code ? ((int)code).ToString() : L[httpSkipped ? "Connectivity:NotAttempted" : "Connectivity:NotAvailable"].Value)</dd>
+                                <dt>@L["Connectivity:ReasonPhrase"]</dt><dd>@Available(http.ReasonPhrase)</dd>
+                                <dt>@L["Connectivity:ServerHeader"]</dt><dd>@Reported(http.ServerHeader)</dd>
+                                <dt>@L["Connectivity:HttpLatency"]</dt><dd>@(httpSkipped ? L["Connectivity:NotAttempted"].Value : FormatMilliseconds(http.LatencyMilliseconds))</dd>
+                                <dt>@L["Connectivity:Failure"]</dt><dd>@Reported(http.FailureMessage)</dd>
+                            </dl>
+                            @if (http.StatusCode is { } errorStatus && (int)errorStatus >= 400)
+                            {
+                                <p class="connectivity-panel__warning">@L["Connectivity:HttpErrorResponseNote", (int)errorStatus]</p>
+                            }
+                        </section>
+                    }
+                    @if (result.ProbeKind == ConnectivityProbeKind.Https && State.CompletedRequest is { } completedRequest)
+                    {
+                        <section class="connectivity-panel__group">
+                            <h3>@L["Connectivity:TlsRequestOption"]</h3>
+                            <p class="@(completedRequest.AllowInvalidCertificate ? "connectivity-panel__warning" : "connectivity-panel__helper")">
+                                @(completedRequest.AllowInvalidCertificate ? L["Connectivity:CertificateBypassed"] : L["Connectivity:CertificateValidated"])
+                            </p>
+                        </section>
+                    }
+                </div>
+            }
+        </section>
+    </div>
 </div>
 
 @code {
     private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private ElementReference _requestOwner;
+    private ElementReference _evidenceOwner;
+    private ElementReference _resultHeading;
+    private ElementReference _errorHeading;
+    private Task _probeTask = Task.CompletedTask;
+    private Task _revealTask = Task.CompletedTask;
+    private long? _pendingRevealRevision;
+    private bool _pendingErrorFocus;
     private bool _disposed;
 
-    private async Task RunProbeAsync()
+    protected override void OnInitialized() => State.Changed += OnStateChangedAsync;
+
+    private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(() =>
+    {
+        if (!_disposed)
+            StateHasChanged();
+    });
+
+    private Task RunProbeAsync()
+    {
+        if (_disposed || State.IsBusy || !_probeTask.IsCompleted)
+            return Task.CompletedTask;
+        _pendingRevealRevision = null;
+        _probeTask = RunOwnedProbeAsync();
+        return _probeTask;
+    }
+
+    private async Task RunOwnedProbeAsync()
     {
         try
         {
-            var result = await State.RunAsync(_lifetimeCancellation.Token);
-            if (_disposed)
-            {
+            var operation = State.RunAsync(_lifetimeCancellation.Token);
+            var revision = State.Revision;
+            var result = await operation;
+            if (!IsCurrent(revision))
                 return;
-            }
-
-            if (result.IsFailed(out var error, out var probeResult))
-            {
-                Snackbar.Add(error.Message ?? L["Connectivity:Failed"].Value, Severity.Error);
-                return;
-            }
-
-            Snackbar.Add(
-                probeResult.Succeeded ? L["Messages:ProbeCompleted"].Value : L["Messages:ProbeFailed"].Value,
-                probeResult.Succeeded ? Severity.Success : Severity.Warning);
+            _pendingRevealRevision = revision;
+            _pendingErrorFocus = result.IsFailed(out _, out _);
         }
-        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        catch (OperationCanceledException exception) when (_disposed || exception.CancellationToken.IsCancellationRequested)
         {
         }
     }
 
-    private string FormatMilliseconds(long? milliseconds)
-    {
-        return milliseconds is not null
-            ? $"{milliseconds.Value} ms"
-            : L["Common:Empty"].Value;
-    }
+    private bool IsCurrent(long revision) => !_disposed && !_lifetimeCancellation.IsCancellationRequested && State.Revision == revision;
 
-    private string GetHintText()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        return State.ProbeKind switch
+        if (_pendingRevealRevision is not { } revision || !_revealTask.IsCompleted)
+            return;
+        _pendingRevealRevision = null;
+        _revealTask = RevealCompletionAsync(revision, _pendingErrorFocus);
+        try
         {
-            ConnectivityProbeKind.Ping => L["Connectivity:HintPing"].Value,
-            ConnectivityProbeKind.Tcp => L["Connectivity:HintTcp"].Value,
-            _ => L["Connectivity:HintHttp"].Value
-        };
-    }
-
-    private string GetPrimaryLatencyLabel()
-    {
-        return State.LastResult?.ProbeKind == ConnectivityProbeKind.Ping
-            ? L["Connectivity:PingLatency"].Value
-            : L["Connectivity:TcpLatency"].Value;
-    }
-
-    private string GetPrimaryLatencyValue(ConnectivityProbeResult result)
-    {
-        return result.ProbeKind switch
+            await _revealTask;
+        }
+        finally
         {
-            ConnectivityProbeKind.Ping => FormatMilliseconds(result.Ping?.LatencyMilliseconds),
-            _ => FormatMilliseconds(result.Tcp?.LatencyMilliseconds)
-        };
+            // A newer completion can render while this reveal is awaiting geometry.
+            // OnAfterRenderAsync does not render again automatically after that await.
+            if (_pendingRevealRevision is { } pendingRevision && IsCurrent(pendingRevision))
+                StateHasChanged();
+        }
     }
 
+    private async Task RevealCompletionAsync(long revision, bool errorFocus)
+    {
+        if (!IsCurrent(revision))
+            return;
+        try
+        {
+            if (errorFocus)
+            {
+                await _errorHeading.FocusAsync();
+                return;
+            }
+            var requestBounds = await _requestOwner.MudGetBoundingClientRectAsync();
+            if (!IsCurrent(revision))
+                return;
+            var evidenceBounds = await _evidenceOwner.MudGetBoundingClientRectAsync();
+            if (!IsCurrent(revision))
+                return;
+            if (evidenceBounds.Top >= requestBounds.Bottom - 1)
+                await _resultHeading.FocusAsync();
+        }
+        catch (JSDisconnectedException) when (_disposed)
+        {
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+    }
+
+    private void Reset()
+    {
+        _pendingRevealRevision = null;
+        State.Reset();
+    }
+
+    private string FormatMilliseconds(long? value) => value is { } milliseconds ? $"{milliseconds} ms" : L["Connectivity:NotAvailable"].Value;
+    private string Available(string? value) => string.IsNullOrWhiteSpace(value) ? L["Connectivity:NotAvailable"].Value : value;
+    private string Reported(string? value) => string.IsNullOrWhiteSpace(value) ? L["Connectivity:NoneReported"].Value : value;
+    private string GetStageText(bool succeeded) => L[succeeded ? "Connectivity:StageSucceeded" : "Connectivity:StageFailed"].Value;
+    private string GetKindText(ConnectivityProbeKind kind) => kind switch
+    {
+        ConnectivityProbeKind.Ping => L["Connectivity:Kinds:Ping"].Value,
+        ConnectivityProbeKind.Tcp => L["Connectivity:Kinds:Tcp"].Value,
+        ConnectivityProbeKind.Http => L["Connectivity:Kinds:Http"].Value,
+        _ => L["Connectivity:Kinds:Https"].Value
+    };
+    private string GetOutcomeText(ConnectivityProbeResult result) => result.ProbeKind switch
+    {
+        ConnectivityProbeKind.Ping when result.Succeeded => L["Connectivity:EchoReceived"].Value,
+        ConnectivityProbeKind.Tcp when result.Succeeded => L["Connectivity:PortReachable"].Value,
+        _ when result.Succeeded => L["Connectivity:HttpResponseReceived"].Value,
+        _ => L["Connectivity:TransportFailed"].Value
+    };
+    private string GetHintText() => State.ProbeKind switch
+    {
+        ConnectivityProbeKind.Ping => L["Connectivity:HintPing"].Value,
+        ConnectivityProbeKind.Tcp => L["Connectivity:HintTcp"].Value,
+        _ => L["Connectivity:HintHttp"].Value
+    };
     private string GetResultSummary(ConnectivityProbeResult result)
     {
         var unknownError = L["Connectivity:Summary:UnknownError"].Value;
         return result.ProbeKind switch
         {
-            ConnectivityProbeKind.Ping when result.Succeeded => L[
-                "Connectivity:Summary:PingSucceeded",
-                result.Host,
-                result.Ping?.ReplyAddress ?? result.Host,
-                result.Ping?.LatencyMilliseconds ?? result.TotalDurationMilliseconds].Value,
-            ConnectivityProbeKind.Ping => L[
-                "Connectivity:Summary:PingFailed",
-                result.Host,
+            ConnectivityProbeKind.Ping when result.Succeeded => L["Connectivity:Summary:PingSucceeded", result.Host,
+                result.Ping?.ReplyAddress ?? result.Host, result.Ping?.LatencyMilliseconds ?? result.TotalDurationMilliseconds].Value,
+            ConnectivityProbeKind.Ping => L["Connectivity:Summary:PingFailed", result.Host,
                 result.Ping?.FailureMessage ?? result.Ping?.Status ?? result.ResolutionError ?? unknownError].Value,
-            ConnectivityProbeKind.Tcp when result.Succeeded => L[
-                "Connectivity:Summary:TcpSucceeded",
-                result.Endpoint,
+            ConnectivityProbeKind.Tcp when result.Succeeded => L["Connectivity:Summary:TcpSucceeded", result.Endpoint,
                 result.Tcp?.LatencyMilliseconds ?? result.TotalDurationMilliseconds].Value,
-            ConnectivityProbeKind.Tcp => L[
-                "Connectivity:Summary:TcpFailed",
-                result.Endpoint,
+            ConnectivityProbeKind.Tcp => L["Connectivity:Summary:TcpFailed", result.Endpoint,
                 result.Tcp?.FailureMessage ?? result.ResolutionError ?? unknownError].Value,
-            _ when result.Succeeded => L[
-                "Connectivity:Summary:HttpSucceeded",
-                result.Endpoint,
-                GetHttpResponseLabel(result),
+            _ when result.Succeeded => L["Connectivity:Summary:HttpSucceeded", result.Endpoint,
+                result.Http?.StatusCode is { } code ? $"{(int)code} {result.Http.ReasonPhrase}".TrimEnd() : L["Connectivity:Summary:HttpResponse"].Value,
                 result.Http?.LatencyMilliseconds ?? result.TotalDurationMilliseconds].Value,
-            _ => L[
-                "Connectivity:Summary:HttpFailed",
-                result.Endpoint,
+            _ => L["Connectivity:Summary:HttpFailed", result.Endpoint,
                 result.Http?.FailureMessage ?? result.Tcp?.FailureMessage ?? result.ResolutionError ?? unknownError].Value
         };
     }
-
-    private string GetHttpResponseLabel(ConnectivityProbeResult result)
-    {
-        if (result.Http?.StatusCode is not { } statusCode)
-        {
-            return L["Connectivity:Summary:HttpResponse"].Value;
-        }
-
-        return $"{(int)statusCode} {result.Http.ReasonPhrase}".TrimEnd();
-    }
-
     public async ValueTask DisposeAsync()
     {
         if (_disposed)
-        {
             return;
-        }
-
         _disposed = true;
+        _pendingRevealRevision = null;
+        State.Changed -= OnStateChangedAsync;
         await _lifetimeCancellation.CancelAsync();
-        _lifetimeCancellation.Dispose();
+        try
+        {
+            await Task.WhenAll(_probeTask, _revealTask);
+        }
+        finally
+        {
+            _lifetimeCancellation.Dispose();
+        }
     }
 }

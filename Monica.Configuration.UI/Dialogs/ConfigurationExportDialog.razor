@@ -5,6 +5,7 @@
 @using Microsoft.JSInterop
 @using Monica.Configuration.UI.Localization
 @using Monica.UI.Shell.State
+@using Monica.UI.Shared.Components.Dialogs
 @implements IAsyncDisposable
 @inject ConfigurationParameterPackageService PackageService
 @inject IJSRuntime JSRuntime
@@ -13,14 +14,10 @@
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <MudDialog>
+    <TitleContent><MoDialogHeading Text="@Title" /></TitleContent>
     <DialogContent>
         <MudStack Spacing="3">
-            <MudPaper Outlined="true" Class="pa-3">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.subtitle2">@Title</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ImportExport:Export:Subtitle"]</MudText>
-                </MudStack>
-            </MudPaper>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ImportExport:Export:Subtitle"]</MudText>
 
             <MudSwitch T="bool"
                        @bind-Value="_includeSensitive"
@@ -88,6 +85,8 @@
     [Parameter] public string? DefinitionDisplayName { get; set; }
 
     private ConfigurationDownloadInteropSession? _downloadInteropSession;
+    private readonly ConfigurationOperationLifetime _operations = new();
+    private Task _pendingProgressRender = Task.CompletedTask;
     private bool _disposed;
     private bool _includeSensitive;
     private bool _exporting;
@@ -116,6 +115,13 @@
 
     private async Task DownloadAsync()
     {
+        if (_disposed) return;
+        try { await _operations.RunAsync(_ => DownloadCoreAsync()); }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+    }
+
+    private async Task DownloadCoreAsync()
+    {
         if (_disposed || _exporting || _downloadInteropSession is null)
         {
             return;
@@ -130,7 +136,7 @@
         });
         try
         {
-            var progress = new Progress<ConfigurationPackageProgress>(ReportProgress);
+            var progress = new ExportProgress(ReportProgress);
             var document = await PackageService.CreateExportAsync(new ConfigurationExportRequest
             {
                 DefinitionKey = DefinitionKey,
@@ -154,12 +160,9 @@
                 MudDialog.Close(DialogResult.Ok(true));
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!_disposed)
         {
-            if (!_disposed)
-            {
-                _error = ex.Message;
-            }
+            _error = ex.Message;
         }
         finally
         {
@@ -178,7 +181,18 @@
         }
 
         _progress = progress;
-        StateHasChanged();
+        _pendingProgressRender = RenderProgressAsync(_pendingProgressRender);
+    }
+
+    private async Task RenderProgressAsync(Task previous)
+    {
+        await previous;
+        await InvokeAsync(() => { if (!_disposed) StateHasChanged(); });
+    }
+
+    private sealed class ExportProgress(Action<ConfigurationPackageProgress> report) : IProgress<ConfigurationPackageProgress>
+    {
+        public void Report(ConfigurationPackageProgress value) => report(value);
     }
 
     private string BuildFileName()
@@ -193,14 +207,15 @@
         MudDialog.Cancel();
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _disposed = true;
-        var downloadInteropSession = _downloadInteropSession;
-        _downloadInteropSession = null;
-        if (downloadInteropSession is not null)
+        return _operations.RetireAsync(async () =>
         {
-            await downloadInteropSession.DisposeAsync();
-        }
+            await _pendingProgressRender;
+            var downloadInteropSession = _downloadInteropSession;
+            _downloadInteropSession = null;
+            if (downloadInteropSession is not null) await downloadInteropSession.DisposeAsync();
+        });
     }
 }

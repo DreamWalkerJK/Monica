@@ -1,3 +1,8 @@
+.kafka-dialog-body {
+    padding: 20px;
+    min-width: 0;
+}
+
 .topic-groups-heading {
     display: flex;
     align-items: flex-start;
@@ -8,15 +13,8 @@
 
 .topic-groups-heading__copy {
     flex: 1 1 auto;
-    max-width: 100%;
-    min-width: 0;
-}
-
-.topic-groups-heading__copy ::deep .topic-groups-topic-name {
-    max-width: 100%;
     min-width: 0;
     overflow-wrap: anywhere;
-    word-break: break-word;
 }
 
 .topic-groups-heading ::deep .mud-button-root {
@@ -30,22 +28,26 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
+    padding: 20px;
 }
 
 .topic-group-id {
-    display: inline-block;
+    display: block;
+    min-width: 0;
     max-width: 100%;
+    font-weight: 500;
     overflow-wrap: anywhere;
-    word-break: break-word;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 600px) {
+    .kafka-dialog-body {
+        padding: 16px;
+    }
     .topic-groups-heading {
         align-items: stretch;
         flex-direction: column;
     }
-
-    .topic-groups-heading ::deep .mud-button-root {
-        width: 100%;
-    }
 }
+
+.topic-group-identity { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.topic-group-diagnostic { font-size: .8125rem; line-height: 1.65; overflow-wrap: anywhere; }

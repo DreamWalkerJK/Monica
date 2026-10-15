@@ -1,0 +1,10 @@
+.ai-administration-frame { min-width: 0; margin-bottom: 24px; }
+.ai-administration-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; padding: 4px 0 22px; }
+.ai-administration-heading { min-width: 0; flex: 1 1 360px; }
+.ai-administration-eyebrow { display: block; margin-bottom: 10px; color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)); font-size: 11px; font-weight: 600; letter-spacing: .1em; }
+.ai-administration-heading h1 { margin: 0; color: var(--mud-palette-text-primary); font-family: var(--mud-typography-h1-family); font-size: 30px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.ai-administration-heading p { margin: 8px 0 0; color: color-mix(in srgb, var(--mud-palette-text-secondary) 75%, var(--mud-palette-text-primary)); font-size: 13px; line-height: 1.6; }
+.ai-administration-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; }
+@media (max-width: 600px) { .ai-administration-header { gap: 16px; padding-bottom: 20px; } .ai-administration-heading { flex-basis: 100%; } .ai-administration-heading h1 { font-size: 27px; } }
+
+.ai-administration-actions ::deep .mud-button-filled-primary:not(.mud-disabled):not(:disabled):not([aria-disabled="true"]) { color: var(--mud-palette-text-primary); background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface)); border: 1px solid var(--mud-palette-primary); }

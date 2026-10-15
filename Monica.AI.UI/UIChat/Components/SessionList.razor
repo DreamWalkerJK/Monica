@@ -4,7 +4,14 @@
 
 <div class="session-list">
     <div class="session-header">
-        <MudButton @ref="_newChatButton" Variant="Variant.Text" Color="Color.Default" StartIcon="@Icons.Material.Outlined.EditNote"
+        <div class="session-heading">
+            <span>@L["Session:Conversations"]</span>
+            @if (ShowClose)
+            {
+                <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="OnClose" aria-label="@L["Session:CloseHistory"]" />
+            }
+        </div>
+        <MudButton @ref="_newChatButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.EditNote"
                    Class="new-chat-button" Disabled="@(IsLoading || Disabled)" OnClick="@OnNewSession">
             @L["Session:NewChat"]
         </MudButton>
@@ -48,7 +55,7 @@
     </div>
     <div class="session-footer">
         <MudButton Variant="Variant.Text" Color="Color.Default" StartIcon="@Icons.Material.Outlined.Archive"
-                   Class="archive-manager-button" Disabled="@IsLoading" OnClick="@OnOpenArchive">
+                   Class="archive-manager-button" Disabled="@(IsLoading || Disabled)" OnClick="@OnOpenArchive">
             <span>@L["Session:Archive:Title"]</span>
             @if (ArchivedCount > 0) { <span class="archive-count">@ArchivedCount</span> }
         </MudButton>
@@ -66,6 +73,8 @@
     [Parameter] public EventCallback<string> OnPinSession { get; set; }
     [Parameter] public EventCallback<string> OnArchiveSession { get; set; }
     [Parameter] public EventCallback OnOpenArchive { get; set; }
+    [Parameter] public bool ShowClose { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
     private MudButton? _newChatButton;
     private string? _focusSessionId;
     private int _focusRequest;

@@ -41,18 +41,15 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
             PaletteDark = CreateDarkPalette(),
             LayoutProperties = new LayoutProperties
             {
-                DefaultBorderRadius = "22px",
-                AppbarHeight = "64px",
+                DefaultBorderRadius = "12px",
+                AppbarHeight = "56px",
                 DrawerWidthLeft = "276px",
                 DrawerWidthRight = "276px",
-                DrawerMiniWidthLeft = "80px",
-                DrawerMiniWidthRight = "80px"
+                DrawerMiniWidthLeft = "64px",
+                DrawerMiniWidthRight = "64px"
             },
             Typography = CreateTypography(),
-            Shadows = new Shadow
-            {
-                Elevation = CreateShadows()
-            },
+            Shadows = MonicaShadowDefaults.Create(),
             ZIndex = new ZIndex
             {
                 Drawer = 1200,
@@ -69,40 +66,40 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
     {
         return new PaletteLight
         {
-            Primary = "#F48FB1",
-            PrimaryLighten = "#FFC4D6",
-            PrimaryDarken = "#D86A94",
-            PrimaryContrastText = "#4F2A3A",
+            Primary = "#ad416b",
+            PrimaryLighten = "#c9698c",
+            PrimaryDarken = "#8b2f53",
+            PrimaryContrastText = "#ffffff",
 
-            Secondary = "#9AD7F5",
-            SecondaryLighten = "#C7ECFF",
-            SecondaryDarken = "#6FBEE7",
-            SecondaryContrastText = "#224558",
+            Secondary = "#34749a",
+            SecondaryLighten = "#5594b8",
+            SecondaryDarken = "#245979",
+            SecondaryContrastText = "#ffffff",
 
             Tertiary = "#B8E8C7",
             TertiaryLighten = "#D9F7E2",
             TertiaryDarken = "#8DD4A3",
             TertiaryContrastText = "#315541",
 
-            Info = "#9AD7F5",
-            InfoLighten = "#C7ECFF",
-            InfoDarken = "#6FBEE7",
-            InfoContrastText = "#224558",
+            Info = "#34749a",
+            InfoLighten = "#5594b8",
+            InfoDarken = "#245979",
+            InfoContrastText = "#ffffff",
 
-            Success = "#B8E8C7",
-            SuccessLighten = "#D9F7E2",
-            SuccessDarken = "#8DD4A3",
-            SuccessContrastText = "#315541",
+            Success = "#36754d",
+            SuccessLighten = "#55966a",
+            SuccessDarken = "#265a39",
+            SuccessContrastText = "#ffffff",
 
-            Warning = "#FFD58A",
-            WarningLighten = "#FFE8B8",
-            WarningDarken = "#F4B85C",
-            WarningContrastText = "#60451C",
+            Warning = "#906525",
+            WarningLighten = "#ad8442",
+            WarningDarken = "#704c19",
+            WarningContrastText = "#ffffff",
 
-            Error = "#F47D8A",
-            ErrorLighten = "#FFB5BE",
-            ErrorDarken = "#D95868",
-            ErrorContrastText = "#55262D",
+            Error = "#b04454",
+            ErrorLighten = "#cb6574",
+            ErrorDarken = "#8b303e",
+            ErrorContrastText = "#ffffff",
 
             Dark = "#5D4250",
             DarkLighten = "#7E6271",
@@ -299,36 +296,4 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
         };
     }
 
-    private static string[] CreateShadows()
-    {
-        return
-        [
-            "none",
-            "0 1px 2px rgba(93, 66, 80, 0.04)",
-            "0 2px 6px rgba(244, 143, 177, 0.07)",
-            "0 4px 10px rgba(244, 143, 177, 0.08)",
-            "0 6px 14px rgba(244, 143, 177, 0.09)",
-            "0 8px 18px rgba(244, 143, 177, 0.10)",
-            "0 10px 22px rgba(244, 143, 177, 0.11)",
-            "0 12px 26px rgba(244, 143, 177, 0.12)",
-            "0 14px 30px rgba(244, 143, 177, 0.13)",
-            "0 16px 34px rgba(244, 143, 177, 0.14)",
-            "0 18px 38px rgba(244, 143, 177, 0.15)",
-            "0 20px 42px rgba(244, 143, 177, 0.16)",
-            "0 22px 46px rgba(244, 143, 177, 0.17)",
-            "0 24px 50px rgba(244, 143, 177, 0.18)",
-            "0 26px 54px rgba(244, 143, 177, 0.19)",
-            "0 28px 58px rgba(244, 143, 177, 0.20)",
-            "0 30px 62px rgba(244, 143, 177, 0.21)",
-            "0 32px 66px rgba(244, 143, 177, 0.22)",
-            "0 34px 70px rgba(244, 143, 177, 0.23)",
-            "0 36px 74px rgba(244, 143, 177, 0.24)",
-            "0 38px 78px rgba(244, 143, 177, 0.25)",
-            "0 40px 82px rgba(244, 143, 177, 0.26)",
-            "0 42px 86px rgba(244, 143, 177, 0.27)",
-            "0 44px 90px rgba(244, 143, 177, 0.28)",
-            "0 46px 94px rgba(244, 143, 177, 0.29)",
-            "0 48px 98px rgba(244, 143, 177, 0.30)"
-        ];
-    }
 }

@@ -74,8 +74,7 @@ public class ModuleRAGUI : MonicaModule<ModuleRAGUIOption>, IUIModule
 
     public override void ConfigureServices(ModuleContext<ModuleRAGUIOption> context)
     {
-        context.Services.AddScoped<RAGQueuePollingState>();
-        context.Services.AddScoped<RAGManagePageState>();
+        context.Services.AddScoped<RAGManagePageStateFactory>();
     }
 }
 

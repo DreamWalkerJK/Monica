@@ -3,32 +3,31 @@ using Monica.AI.UI.UIRAG.State;
 
 namespace Monica.AI.UI.Pages;
 
-public partial class RAGManagePage : IDisposable
+public partial class RAGManagePage : IAsyncDisposable
 {
     public const string PAGE_URL = "/ai/rag/manage";
 
     [Inject]
-    public required RAGManagePageState PageState { get; set; }
+    private RAGManagePageStateFactory StateFactory { get; set; } = null!;
+    public RAGManagePageState PageState { get; private set; } = null!;
+    private bool _retired;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
+        PageState = StateFactory.Create(action => InvokeAsync(action));
         PageState.StateChanged += OnStateChanged;
         await PageState.InitializeAsync();
     }
 
-    private void OnStateChanged()
-    {
-        _ = InvokeAsync(StateHasChanged);
-    }
+    private Task OnStateChanged() => InvokeAsync(() => { if (!_retired) StateHasChanged(); });
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        _retired = true;
+        var focusRetirement = _dossierFocus.DisposeAsync().AsTask();
+        if (PageState is null) { await focusRetirement; return; }
         PageState.StateChanged -= OnStateChanged;
-        PageState.Dispose();
+        var stateRetirement = PageState.DisposeAsync().AsTask();
+        await Task.WhenAll(focusRetirement, stateRetirement);
     }
 }

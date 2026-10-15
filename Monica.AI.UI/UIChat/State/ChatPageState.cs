@@ -11,6 +11,8 @@ using Monica.AI.UI.Localization;
 using Monica.AI.UI.UIChat.Components;
 using Monica.AI.UI.UIChat.Models;
 using Monica.AI.UI.UIChat.Support;
+using Monica.AI.UI.Shared.Support;
+using Microsoft.AspNetCore.Components;
 using Monica.Modules;
 using Monica.Core.Results;
 using MudBlazor;
@@ -35,12 +37,12 @@ public sealed partial class ChatPageState(
     IStringLocalizer<AIResource> localizer) : IAsyncDisposable
 {
     private readonly CancellationTokenSource _lifetime = new();
+    private readonly AIAdministrationOperationLifetime _operations = new();
+    private Func<Action, Task>? _dialogDispatch;
     private readonly ModuleAIUIOption _options = options.Value;
     private readonly List<ChatAttachmentReference> _attachments = [];
     private CancellationTokenSource? _requestCancellation;
-    private Task? _activeOperation;
-    private Task? _uploadOperation;
-    private Task<bool>? _historyOperation;
+    private ChatSession? _operationSession;
     private Task? _initialization;
     private Task? _disposeTask;
     private bool _disposed;
@@ -63,7 +65,11 @@ public sealed partial class ChatPageState(
     /// <summary>Whether a catalog action is currently being persisted.</summary>
     public bool IsHistoryUpdating { get; private set; }
     /// <summary>Whether conversation navigation or organization must wait for the current operation.</summary>
-    public bool IsHistoryBusy => IsHistoryLoading || IsHistoryUpdating || IsSending || IsUploading;
+    public bool IsHistoryBusy => IsHistoryLoading || IsHistoryUpdating || IsSending || IsUploading || IsCommandRunning;
+    /// <summary>Whether a settings, dialog, or staged-attachment command owns this visit.</summary>
+    public bool IsCommandRunning { get; private set; }
+    /// <summary>Whether input commands are unavailable independently of generation/upload and their Stop action.</summary>
+    public bool IsInputBlocked => IsHistoryLoading || IsHistoryUpdating || IsCommandRunning || HasHistoryConflict || HasHistoryLoadFailure || _disposed;
     /// <summary>Selected conversation identifier.</summary>
     public string? CurrentSessionId => workspace.CurrentSessionId;
     /// <summary>Selected durable conversation, shared by Chat and Trajectory.</summary>
@@ -92,6 +98,8 @@ public sealed partial class ChatPageState(
     public bool IsUploading { get; private set; }
     /// <summary>Whether local edits conflict with a newer durable conversation revision.</summary>
     public bool HasHistoryConflict => workspace.IsConflicted;
+    /// <summary>Whether history must be explicitly reloaded after an unreadable catalog.</summary>
+    public bool HasHistoryLoadFailure => workspace.HasLoadFailure;
     /// <summary>Last actionable error for this page visit.</summary>
     public string? ErrorMessage { get; private set; }
     /// <summary>Current attachments that have been persisted but not submitted.</summary>
@@ -107,7 +115,61 @@ public sealed partial class ChatPageState(
     private AIProviderInfo? CurrentProvider => ChatProviderResolver.FindProvider(Providers, CurrentProviderId);
 
     /// <summary>Initializes server-owned data without browser interop.</summary>
-    public Task InitializeAsync() => _initialization ??= InitializeCoreAsync();
+    public Task InitializeAsync() => _initialization ??= _operations.RunAsync(_ => InitializeCoreAsync());
+
+    /// <summary>Binds the owning component's renderer dispatcher before initialization. The dispatcher is borrowed.</summary>
+    public void SetDialogDispatcher(Func<Action, Task> dispatch)
+    {
+        ArgumentNullException.ThrowIfNull(dispatch);
+        if (_initialization is not null || _disposed) throw new InvalidOperationException("Bind the renderer before initializing the chat visit.");
+        _dialogDispatch = dispatch;
+    }
+
+    private Task<bool> RunCommandAsync(Func<Task<bool>> command, bool allowConflict = false)
+    {
+        if (_disposed || IsHistoryBusy || (HasHistoryConflict || HasHistoryLoadFailure) && !allowConflict) return Task.FromResult(false);
+        IsCommandRunning = true;
+        return _operations.RunAsync(async _ =>
+        {
+            NotifyStateChanged();
+            try { return await command(); }
+            catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { return false; }
+            catch (Exception exception) { SetError(exception.Message); return false; }
+            finally { IsCommandRunning = false; NotifyStateChanged(); }
+        });
+    }
+
+    private async Task<DialogResult?> ShowDialogAsync<T>(string title, DialogParameters parameters,
+        DialogOptions options, CancellationToken token) where T : IComponent
+    {
+        token.ThrowIfCancellationRequested();
+        var dispatch = _dialogDispatch ?? throw new InvalidOperationException("The chat visit requires its renderer dispatcher for native dialogs.");
+        // ShowAsync itself cannot be canceled. Adopt and close a late reference before draining it.
+        var reference = await dialogService.ShowAsync<T>(title, parameters, options);
+        Task closing = Task.CompletedTask;
+        using var cancellation = token.Register(() =>
+        {
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            closing = completion.Task;
+            _ = CloseAsync(completion);
+        });
+        async Task CloseAsync(TaskCompletionSource completion)
+        {
+            try { await dispatch(() => reference.Close(DialogResult.Cancel())); completion.TrySetResult(); }
+            catch (Exception exception)
+            {
+                try { reference.Dismiss(DialogResult.Cancel()); }
+                catch (Exception failure) { exception = new AggregateException(exception, failure); }
+                completion.TrySetException(exception);
+            }
+        }
+        try { return await reference.Result; }
+        finally
+        {
+            if (reference.Dialog is IAsyncDisposable owner) await Task.WhenAll(closing, owner.DisposeAsync().AsTask());
+            else await closing;
+        }
+    }
 
     private async Task InitializeCoreAsync()
     {
@@ -176,17 +238,7 @@ public sealed partial class ChatPageState(
             _attached = false;
         }
         StateChanged = null;
-        await _lifetime.CancelAsync();
-        if (_requestCancellation is not null) await _requestCancellation.CancelAsync();
-        try
-        {
-            if (_initialization is not null) await _initialization;
-            if (_activeOperation is not null) await _activeOperation;
-            if (_uploadOperation is not null) await _uploadOperation;
-            if (_historyOperation is not null) await _historyOperation;
-        }
-        catch (OperationCanceledException) { }
-        _requestCancellation?.Dispose();
-        _lifetime.Dispose();
+        try { await Task.WhenAll(_lifetime.CancelAsync(), _operations.RetireAsync().AsTask()); }
+        finally { _requestCancellation?.Dispose(); _lifetime.Dispose(); }
     }
 }

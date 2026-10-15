@@ -8,6 +8,7 @@
     @if (Steps.Count > 0)
     {
         <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="Toggle"
+                   aria-expanded="@(_expanded ? "true" : "false")"
                    StartIcon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">
             @(Running ? L["Workbench:Working"] : L["Workbench:ProcessSummary", Steps.Count])
         </MudButton>
@@ -33,7 +34,10 @@
                                 }
                                 else if (part.Kind == ChatContentKind.Text && step.Id != FinalAnswerStepId)
                                 {
-                                    <div class="step-text"><MoMarkdown Value="@(part.Text ?? string.Empty)" /></div>
+                                    <div class="step-text">
+                                        @if (EnableMarkdown) { <MoMarkdown Value="@(part.Text ?? string.Empty)" /> }
+                                        else { <div class="plain-text">@part.Text</div> }
+                                    </div>
                                 }
                                 else if (part.Kind == ChatContentKind.ToolCall)
                                 {
@@ -63,6 +67,8 @@
 @code {
     [Parameter] public IReadOnlyList<ChatExecutionStep> Steps { get; set; } = [];
     [Parameter] public bool Running { get; set; }
+    /// <summary>Whether intermediate assistant text uses Markdown. Defaults to true, matching the host default.</summary>
+    [Parameter] public bool EnableMarkdown { get; set; } = true;
     [Parameter] public string? FinalAnswerStepId { get; set; }
     [Parameter] public EventCallback<ChatExecutionStep> OnInspect { get; set; }
     private bool _expanded;

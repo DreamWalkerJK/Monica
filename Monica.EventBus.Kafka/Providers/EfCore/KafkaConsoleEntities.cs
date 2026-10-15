@@ -153,6 +153,15 @@ public sealed class KafkaPerformanceSnapshotEntity
     public DateTimeOffset CapturedAt { get; set; }
 
     /// <summary>
+    /// Whether broker, topic and consumer-group metadata completed successfully.
+    /// </summary>
+    /// <remarks>
+    /// Consumer-owned EF migrations must add this scalar column. Existing rows default to false
+    /// and must be captured again before their numeric counts represent verified metadata.
+    /// </remarks>
+    public bool HasMetadataSnapshot { get; set; }
+
+    /// <summary>
     /// Broker count.
     /// </summary>
     public int BrokerCount { get; set; }
@@ -230,6 +239,7 @@ public sealed class KafkaPerformanceSnapshotEntity
         {
             ClusterId = ClusterId,
             CapturedAt = CapturedAt,
+            HasMetadataSnapshot = HasMetadataSnapshot,
             BrokerCount = BrokerCount,
             TopicCount = TopicCount,
             ConsumerGroupCount = ConsumerGroupCount,
@@ -255,6 +265,7 @@ public sealed class KafkaPerformanceSnapshotEntity
         {
             ClusterId = model.ClusterId,
             CapturedAt = model.CapturedAt,
+            HasMetadataSnapshot = model.HasMetadataSnapshot,
             BrokerCount = model.BrokerCount,
             TopicCount = model.TopicCount,
             ConsumerGroupCount = model.ConsumerGroupCount,

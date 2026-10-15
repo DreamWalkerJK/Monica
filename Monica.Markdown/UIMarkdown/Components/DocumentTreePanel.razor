@@ -9,6 +9,8 @@
     <div class="tree-header">
         <MudTextField T="string"
                       @bind-Value="SearchText"
+                      Label="@L["MarkdownViewer:Placeholders:SearchFiles"]"
+                      aria-label="@L["MarkdownViewer:Placeholders:SearchFiles"]"
                       Placeholder="@L["MarkdownViewer:Placeholders:SearchFiles"]"
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search"
@@ -48,6 +50,7 @@
                                      Items="@context.Children"
                                      Value="@context.Value"
                                      Text="@context.Text"
+                                     title="@context.Text"
                                      TextClass="@GetTextClass(context.Value)"
                                      Icon="@GetIcon(context.Value)"
                                      IconColor="Color.Inherit"

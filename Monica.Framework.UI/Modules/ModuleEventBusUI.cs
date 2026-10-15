@@ -44,7 +44,7 @@ public class ModuleEventBusUI : MonicaModule<ModuleEventBusUIOption>, IWebHostRe
         module.Require<ModuleEventBus, ModuleEventBusOption>();
         module.RequireDependencyFeature<ModuleEventBus, ModuleEventBusOption>(
             ModuleEventBus.DISTRIBUTED_PROVIDER_FEATURE);
-        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
+        module.Require<ModuleResultEnvelope, ModuleResultEnvelopeOption>();
         module.Require<ModuleLocalization, ModuleLocalizationOption>(static option =>
         {
             option.AddResource<EventBusResource>();
@@ -52,13 +52,23 @@ public class ModuleEventBusUI : MonicaModule<ModuleEventBusUIOption>, IWebHostRe
         });
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
+            {
                 registry.RegisterLocalizedPage<UIEventBusMonitorPage, EventBusResource>(
-                    UIEventBusMonitorPage.PAGE_URL,
-                    "Pages:EventBusMonitor:Title",
-                    Icons.Material.Filled.Hub,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 40)));
+                    UIEventBusMonitorPage.PAGE_URL, "Pages:EventBusMonitor:Title", Icons.Material.Outlined.Hub,
+                    BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 40, descriptionKey: "Workbench:OverviewDescription");
+                registry.RegisterLocalizedPage<UIEventBusProvidersPage, EventBusResource>(
+                    UIEventBusProvidersPage.PAGE_URL, "Pages:EventBusProviders:Title", Icons.Material.Outlined.CloudQueue,
+                    BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 41, descriptionKey: "Workbench:ProvidersDescription");
+                registry.RegisterLocalizedPage<UIEventBusSubscriptionsPage, EventBusResource>(
+                    UIEventBusSubscriptionsPage.PAGE_URL, "Pages:EventBusSubscriptions:Title", Icons.Material.Outlined.Route,
+                    BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 42, descriptionKey: "Workbench:SubscriptionsDescription");
+                registry.RegisterLocalizedPage<UIEventBusChangesPage, EventBusResource>(
+                    UIEventBusChangesPage.PAGE_URL, "Pages:EventBusChanges:Title", Icons.Material.Outlined.History,
+                    BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 43, descriptionKey: "Workbench:ChangesDescription");
+                registry.RegisterLocalizedPage<UIEventBusTestToolsPage, EventBusResource>(
+                    UIEventBusTestToolsPage.PAGE_URL, "Pages:EventBusTestTools:Title", Icons.Material.Outlined.Science,
+                    BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 44, descriptionKey: "Workbench:TestToolsDescription");
+            }));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleEventBusUIOption> context)
@@ -72,6 +82,7 @@ public class ModuleEventBusUI : MonicaModule<ModuleEventBusUIOption>, IWebHostRe
 
         // Register the Provider Discovery Service
         services.AddScoped<EventBusProviderDiscoveryService>();
+        services.AddScoped<EventBusWorkbenchState>();
     }
 
     public override void ConfigureEndpoints(WebModuleContext<ModuleEventBusUIOption> context)

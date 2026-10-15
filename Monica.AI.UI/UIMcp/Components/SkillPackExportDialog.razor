@@ -5,16 +5,22 @@
 @using Monica.Core.Results
 @inject McpFacade McpFacade
 @inject ISnackbar Snackbar
+@using Monica.UI.Shared.Components.Dialogs
+@using Monica.AI.UI.Shared.Support
 @inject IStringLocalizer<AIResource> L
+@implements IAsyncDisposable
 
-<MudDialog>
+<MudDialog Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px" Gutters="false" TitleClass="pa-0" ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent>
+        <div class="export-dialog-heading"><MoDialogHeading Text="@L["Capabilities:Mcp:ExportSkill:Title"]" /></div>
+    </TitleContent>
     <DialogContent>
-        <MudStack Spacing="3">
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
+        <div class="export-form">
+            <MudText Typo="Typo.body2">
                 @L["Capabilities:Mcp:ExportSkill:Summary", ServerName, ToolCount]
             </MudText>
 
-            <MudTextField T="string"
+            <MudTextField T="string" Disabled="@_isExporting"
                           @bind-Value="@_endpoint"
                           Label="@L["Capabilities:Mcp:Dialog:Endpoint"]"
                           Variant="Variant.Outlined"
@@ -25,7 +31,7 @@
                           Error="@(!string.IsNullOrWhiteSpace(EndpointValidationMessage))"
                           ErrorText="@EndpointValidationMessage" />
 
-            <MudTextField T="string"
+            <MudTextField T="string" Disabled="@_isExporting"
                           @bind-Value="@_targetRoot"
                           Label="@L["Capabilities:Mcp:ExportSkill:TargetRoot"]"
                           Variant="Variant.Outlined"
@@ -34,13 +40,16 @@
                           Required="true"
                           RequiredError="@L["Common:Validation:Required"]"
                           HelperText="@L["Capabilities:Mcp:ExportSkill:TargetRootHint"]" />
-        </MudStack>
+            @if (_error is not null) { <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert> }
+        </div>
     </DialogContent>
     <DialogActions>
+        <div class="export-dialog-actions">
         <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
-                   Disabled="@(!CanSubmit || _isExporting)"
+                   Disabled="@(!CanSubmit)"
+                   aria-disabled="@((_isExporting || !CanSubmit).ToString().ToLowerInvariant())"
                    OnClick="ExportAsync">
             @if (_isExporting)
             {
@@ -48,6 +57,7 @@
             }
             @L["Capabilities:Mcp:ExportSkill:Submit"]
         </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
@@ -61,7 +71,9 @@
 
     private string _endpoint = string.Empty;
     private string _targetRoot = string.Empty;
-    private bool _isExporting;
+    private bool _isExporting, _initialized;
+    private string? _error;
+    private readonly AIAdministrationOperationLifetime _lifetime = new();
 
     private string? EndpointValidationMessage
     {
@@ -86,6 +98,8 @@
 
     protected override void OnParametersSet()
     {
+        if (_initialized) return;
+        _initialized = true;
         if (string.IsNullOrEmpty(_endpoint))
         {
             _endpoint = DefaultEndpoint;
@@ -98,31 +112,38 @@
         }
     }
 
-    private async Task ExportAsync()
+    private Task ExportAsync() => _lifetime.RunAsync(async cancellationToken =>
     {
-        if (!CanSubmit || _isExporting)
+        if (!CanSubmit || _isExporting || _lifetime.IsRetired) return;
+        var server = ServerName;
+        var endpoint = _endpoint.Trim();
+        var targetRoot = _targetRoot.Trim();
+        _isExporting = true; _error = null;
+        try
         {
-            return;
+            // File writes are synchronous; drain the actual host operation even when retirement cancels its UI owner.
+            var result = await Task.Run(() => McpFacade.ExportSkillPack(server, endpoint, targetRoot), cancellationToken);
+            if (_lifetime.IsRetired || cancellationToken.IsCancellationRequested) return;
+            if (result.IsFailed(out var error, out var export))
+            {
+                _error = string.IsNullOrWhiteSpace(error.Message) ? L["Error:Generic"] : error.Message;
+                return;
+            }
+            Snackbar.Add(L["Capabilities:Mcp:ExportSkill:Success", export.SkillDirectoryPath, export.Pack.ToolCount], Severity.Success);
+            MudDialog.Close(DialogResult.Ok(export));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception) { if (!_lifetime.IsRetired) _error = L["Error:Generic"]; }
+        finally { if (!_lifetime.IsRetired) _isExporting = false; }
+    });
 
-        _isExporting = true;
-        StateHasChanged();
+    /// <summary>Cancels pending admission and drains host filesystem export before releasing the dialog.</summary>
+    public ValueTask DisposeAsync() => _lifetime.RetireAsync();
 
-        var result = McpFacade.ExportSkillPack(ServerName, _endpoint.Trim(), _targetRoot.Trim());
-        if (result.IsFailed(out var error, out var export))
-        {
-            Snackbar.Add(string.IsNullOrWhiteSpace(error.Message) ? L["Error:Generic"] : error.Message, Severity.Error);
-            _isExporting = false;
-            StateHasChanged();
-            return;
-        }
-
-        Snackbar.Add(L["Capabilities:Mcp:ExportSkill:Success", export.SkillDirectoryPath, export.Pack.ToolCount], Severity.Success);
-        MudDialog.Close(DialogResult.Ok(export));
-    }
-
-    private void Cancel()
+    private async Task Cancel()
     {
+        var retirement = DisposeAsync();
         MudDialog.Cancel();
+        await retirement;
     }
 }

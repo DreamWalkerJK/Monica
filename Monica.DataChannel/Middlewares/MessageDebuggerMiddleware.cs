@@ -1,6 +1,7 @@
-using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using Monica.Core.Extensions;
 using Monica.DataChannel.Pipeline;
+using Monica.DataChannel.Models;
 using Monica.Tool.Diagnostics;
 using Monica.Tool.Extensions;
 
@@ -13,7 +14,7 @@ namespace Monica.DataChannel.Middlewares;
 public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
 {
     /// <summary>
-    /// Represents a captured debug message.
+    /// Represents the legacy live debug message view. Raw payload and nested metadata values may be mutable.
     /// </summary>
     public class DebugMessage
     {
@@ -43,7 +44,8 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
     /// <summary>
     /// Queue that stores captured debug messages.
     /// </summary>
-    private readonly ConcurrentQueue<DebugMessage> _debugMessages = new();
+    private readonly Queue<(DebugMessage Live, DebugMessageSnapshot Snapshot)> _debugMessages = new();
+    private long _messageSequence;
 
     /// <summary>
     /// Synchronization lock for queue operations.
@@ -55,12 +57,15 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
     /// </summary>
     public bool IsActive
     {
-        get => _isActive;
+        get { lock (_queueLock) return _isActive; }
         set
         {
-            _isActive = value;
-            SetInfo("Debug status", value ? "Active" : "Inactive");
-            SetInfo("Status updated at", DateTime.Now);
+            lock (_queueLock)
+            {
+                _isActive = value;
+                SetInfo("Debug status", value ? "Active" : "Inactive");
+                SetInfo("Status updated at", DateTime.Now);
+            }
         }
     }
 
@@ -69,11 +74,14 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
     /// </summary>
     public string FilterKeyword
     {
-        get => _filterKeyword;
+        get { lock (_queueLock) return _filterKeyword; }
         set
         {
-            _filterKeyword = value ?? string.Empty;
-            SetInfo("Current filter keyword", _filterKeyword);
+            lock (_queueLock)
+            {
+                _filterKeyword = value ?? string.Empty;
+                SetInfo("Current filter keyword", _filterKeyword);
+            }
         }
     }
 
@@ -82,24 +90,39 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
     /// </summary>
     public int MaxQueueSize
     {
-        get => _maxQueueSize;
+        get { lock (_queueLock) return _maxQueueSize; }
         set
         {
-            _maxQueueSize = Math.Max(1, value);
-            SetInfo("Queue capacity", _maxQueueSize);
-            TrimQueue();
+            lock (_queueLock)
+            {
+                _maxQueueSize = Math.Max(1, value);
+                SetInfo("Queue capacity", _maxQueueSize);
+                TrimQueue();
+                SetInfo("Captured message count", _debugMessages.Count);
+            }
         }
     }
 
     /// <summary>
-    /// Gets the captured debug messages.
+    /// Gets legacy queue-held message references. Raw payload and nested metadata values remain live.
+    /// Use <see cref="GetDebugMessageSnapshots"/> for frozen evidence or retained selections.
     /// </summary>
     public List<DebugMessage> GetDebugMessages()
     {
         lock (_queueLock)
         {
-            return _debugMessages.ToList();
+            return _debugMessages.Select(message => message.Live).ToList();
         }
+    }
+
+    /// <summary>
+    /// Gets immutable message evidence frozen at capture time, in queue order. Previously returned snapshots
+    /// remain valid after trimming or clearing. Closing an inspector does not change this host-owned capture state.
+    /// </summary>
+    /// <returns>A detached read-only list with complete payload and metadata evidence.</returns>
+    public IReadOnlyList<DebugMessageSnapshot> GetDebugMessageSnapshots()
+    {
+        lock (_queueLock) return Array.AsReadOnly(_debugMessages.Select(message => message.Snapshot).ToArray());
     }
 
     /// <summary>
@@ -109,7 +132,7 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
     {
         lock (_queueLock)
         {
-            while (_debugMessages.TryDequeue(out _)) { }
+            _debugMessages.Clear();
             SetInfo("Messages cleared at", DateTime.Now);
             SetInfo("Captured message count", 0);
         }
@@ -133,7 +156,7 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
             {
                 var debugMessage = new DebugMessage
                 {
-                    Timestamp = DateTime.Now,
+                    Timestamp = DateTime.UtcNow,
                     Source = context.Source,
                     FormattedContent = formattedContent,
                     MessageType = context.Data?.GetType().GetCleanFullName() ?? "null",
@@ -141,7 +164,9 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
                     Metadata = context.Metadata.ToDictionary(kvp => kvp.Key, kvp => kvp.Value ?? "")
                 };
 
-                AddDebugMessage(debugMessage);
+                var metadata = new ReadOnlyDictionary<string, DataChannelValueSnapshot>(context.Metadata
+                    .ToDictionary(entry => entry.Key, entry => DataChannelValueSnapshot.Capture(entry.Value), StringComparer.Ordinal));
+                AddDebugMessage(debugMessage, DataChannelValueSnapshot.Capture(context.Data), metadata);
             }
         }
         catch (Exception ex)
@@ -202,11 +227,14 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
     /// <summary>
     /// Adds a debug message to the queue.
     /// </summary>
-    private void AddDebugMessage(DebugMessage message)
+    private void AddDebugMessage(DebugMessage message, DataChannelValueSnapshot payload,
+        IReadOnlyDictionary<string, DataChannelValueSnapshot> metadata)
     {
         lock (_queueLock)
         {
-            _debugMessages.Enqueue(message);
+            var snapshot = new DebugMessageSnapshot(++_messageSequence, message.Timestamp, message.Source,
+                message.FormattedContent, message.MessageType, payload, metadata);
+            _debugMessages.Enqueue((message, snapshot));
             TrimQueue();
             
             var count = _debugMessages.Count;
@@ -220,8 +248,9 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
     /// </summary>
     private void TrimQueue()
     {
-        while (_debugMessages.Count > _maxQueueSize && _debugMessages.TryDequeue(out _))
+        while (_debugMessages.Count > _maxQueueSize)
         {
+            _debugMessages.Dequeue();
         }
     }
 

@@ -17,6 +17,45 @@ public sealed class ServiceDiscoveryFacade(
 {
     private readonly ModuleServiceDiscoveryOption _option = options.Value;
 
+    /// <summary>
+    /// Captures detached current registrations and predefined services. Failed reads return an error,
+    /// rather than a successful empty registry. Cancellation prevents the UI from adopting retired work.
+    /// </summary>
+    public Task<Res<List<RegisteredServiceStatus>>> CaptureServicesAsync(CancellationToken cancellationToken = default)
+        => CaptureAsync(async () => (await queryService.GetMergedServicesStatusAsync(cancellationToken))
+            .Select(ServiceDiscoverySnapshot.Copy).ToList(), cancellationToken);
+
+    /// <summary>Captures detached catalog entries. A successful empty catalog remains distinct from a failed read.</summary>
+    public Task<Res<List<DomainInfo>>> CaptureDomainsAsync(CancellationToken cancellationToken = default)
+        => CaptureAsync(async () => (await queryService.GetDomainsAsync(cancellationToken)).Select(domain => new DomainInfo
+        {
+            Name = domain.Name, DisplayName = domain.DisplayName, Description = domain.Description
+        }).ToList(), cancellationToken);
+
+    /// <summary>Captures querying-host identity and local election evidence alongside the independently read application lease.</summary>
+    public Task<Res<CurrentInstanceSnapshot>> CaptureCurrentInstanceAsync(CancellationToken cancellationToken = default)
+        => CaptureAsync(() => queryService.GetCurrentInstanceSnapshotAsync(cancellationToken), cancellationToken);
+
+    private async Task<Res<T>> CaptureAsync<T>(Func<Task<T>> read, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var captured = await read();
+            cancellationToken.ThrowIfCancellationRequested();
+            return Res.Ok(captured);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            logger.LogError(exception, "Failed to capture discovery evidence.");
+            return Res.Fail(localizer["Workbench:ReadFailed"].Value);
+        }
+    }
+
     public async Task<Res<List<RegisteredServiceStatus>>> GetServicesStatusAsync()
     {
         try

@@ -1,31 +1,86 @@
-.cluster-identity,
-.cluster-bootstrap {
-    min-width: 0;
-    max-width: 100%;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-}
-
-.cluster-identity {
+.cluster-workspace {
     display: flex;
     flex-direction: column;
+    gap: 20px;
+    min-width: 0;
 }
 
-.cluster-identity ::deep .cluster-display-name,
-.cluster-identity ::deep .cluster-id {
+.cluster-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
     min-width: 0;
+}
+
+.cluster-search {
+    flex: 1 1 280px;
+    min-width: 0;
+}
+
+.cluster-search ::deep .mud-input-control {
+    margin: 0;
+}
+
+.cluster-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.cluster-identity, .cluster-evidence {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    min-width: 0;
+}
+
+.cluster-display-name {
+    font-weight: 500;
+}
+
+.cluster-id {
+    font-family: var(--mo-font-family-mono);
+    font-size: .75rem;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+}
+
+.cluster-identity, .cluster-bootstrap, .cluster-error {
     max-width: 100%;
     overflow-wrap: anywhere;
-    word-break: break-word;
 }
 
-.cluster-identity ::deep .cluster-display-name {
-    font-weight: 600;
+.cluster-error {
+    font-size: .8125rem;
 }
 
 .cluster-row-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
-    white-space: nowrap;
+    min-width: 0;
+}
+
+@media (max-width: 600px) {
+    .cluster-tools {
+        padding: 16px;
+    }
+}
+
+@media (min-width: 601px) {
+    .cluster-bootstrap {
+        white-space: nowrap;
+    }
+
+    .cluster-row-actions {
+        flex-wrap: nowrap;
+    }
 }

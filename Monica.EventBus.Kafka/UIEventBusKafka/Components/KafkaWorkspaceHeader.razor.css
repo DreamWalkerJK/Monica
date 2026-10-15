@@ -22,7 +22,7 @@
     align-items: center;
     justify-content: center;
     border-radius: var(--mud-default-borderradius);
-    color: var(--mud-palette-primary);
+    color: color-mix(in srgb, var(--mud-palette-primary) 55%, var(--mud-palette-text-primary));
     background: color-mix(in srgb, var(--mud-palette-primary) 11%, var(--mud-palette-surface));
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 22%, var(--mud-palette-lines-default));
 }
@@ -51,7 +51,6 @@
         flex-direction: column;
         gap: 12px;
     }
-
     .kafka-workspace-header__actions {
         width: 100%;
     }

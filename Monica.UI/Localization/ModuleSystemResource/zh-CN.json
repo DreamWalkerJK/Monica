@@ -1,6 +1,14 @@
 {
   "Navigation": {
-    "Title": "模块诊断"
+    "Title": "模块诊断",
+    "Description": "追踪启动健康、性能、类型发现与模块关系。",
+    "Descriptions": {
+      "Overview": "审阅启动健康、组合统计与模块诊断。",
+      "Performance": "追踪初始化耗时、关键路径与性能回归。",
+      "Modules": "检查模块注册、配置与生命周期证据。",
+      "Dependencies": "探索模块依赖拓扑与直接依赖关系。",
+      "Discovery": "检查扫描程序集、发现的类型与排除规则。"
+    }
   },
   "Page": {
     "Eyebrow": "MONICA / 组合过程飞行记录器",
@@ -99,7 +107,6 @@
       "RemainingStartup": "其余启动时间",
       "ActiveModules": "活动模块",
       "Declared": "共声明 {0} 个",
-      "DirectEdges": "{0} 条直接依赖边",
       "ServiceRegistration": "服务注册",
       "Exact": "精确值",
       "FinalCompositionInterval": "最终组合区间",
@@ -107,7 +114,6 @@
       "TypeDiscovery": "类型发现",
       "Queries": "{0} 个不同查询",
       "Matches": "{0} 次编译匹配",
-      "Findings": "诊断发现",
       "Errors": "{0} 个错误",
       "Warnings": "{0} 个警告"
     },
@@ -155,11 +161,13 @@
       "TimelineRegion": "交互式模块组合时间线",
       "Selected": "选中区间",
       "TableAlternative": "区间表格替代视图",
-      "SpanDescription": "{0}；{1}；开始于 {2}；结束于 {3}；耗时 {4}。"
+      "SpanDescription": "{0}；{1}；开始于 {2}；结束于 {3}；耗时 {4}。",
+      "SpanId": "区间 ID"
     },
     "Contributors": {
       "Eyebrow": "串行回调 + 启动工作",
-      "Title": "主要贡献者"
+      "Title": "主要贡献者",
+      "Empty": "没有符合当前筛选条件的模块贡献记录。"
     },
     "Filters": {
       "Limit": "行数",
@@ -194,7 +202,8 @@
       "Module": "模块",
       "WorkItem": "工作项",
       "Queue": "排队",
-      "State": "状态"
+      "State": "状态",
+      "End": "结束"
     }
   },
   "Modules": {
@@ -215,7 +224,8 @@
       "Active": "活动模块",
       "Ui": "UI 模块",
       "Web": "Web 模块",
-      "MaximumDepth": "最大深度"
+      "MaximumDepth": "最大深度",
+      "ScopeHint": "统计范围为完整快照；UI 与 Web 能力可能重叠。"
     },
     "Filters": {
       "Search": "搜索模块",
@@ -294,7 +304,8 @@
       "Requires": "直接依赖",
       "RequiredBy": "直接依赖方",
       "NoDependencies": "没有直接依赖",
-      "NoDependents": "没有直接依赖方"
+      "NoDependents": "没有直接依赖方",
+      "Inspect": "查看模块详情"
     },
     "Table": {
       "Show": "显示直接边表格",
@@ -312,10 +323,14 @@
       "Types": "枚举类型数",
       "Plans": "非空计划",
       "Queries": "不同查询",
-      "Matches": "匹配数"
+      "Matches": "匹配数",
+      "ScopeHint": "匹配数统计类型与查询的匹配记录，可能大于枚举类型数。"
     },
     "Stages": {
-      "Title": "五个事实阶段"
+      "Title": "已记录的发现阶段",
+      "Description": "按实际执行顺序排列，展开阶段可查看对应的跨度标识。",
+      "SpanId": "跨度标识",
+      "Empty": "未记录类型发现的阶段区间。"
     },
     "Queries": {
       "Title": "查询贡献",
@@ -331,7 +346,8 @@
       "Added": "新增服务",
       "Replaced": "替换服务",
       "Skipped": "跳过条件添加",
-      "Excluded": "排除类型"
+      "Excluded": "排除类型",
+      "Description": "类型发现提交阶段记录的服务变更。"
     },
     "Inventory": {
       "Eyebrow": "程序集解析",
@@ -340,11 +356,6 @@
       "Loading": "正在加载缓存的程序集清单…",
       "Failed": "无法加载程序集清单。",
       "PanelTitle": "程序集记录与扫描证据",
-      "Scanned": "已扫描 {0} 个",
-      "NotScanned": "已解析但未扫描 {0} 个",
-      "Excluded": "已排除 {0} 个",
-      "FailedCount": "解析失败 {0} 个",
-      "Partial": "部分加载 {0} 个",
       "Search": "搜索程序集或路径",
       "Summary": {
         "EntryAssembly": "入口程序集",
@@ -369,7 +380,8 @@
         "Attention": "需关注（{0}）",
         "ScanScope": "扫描范围（{0}）",
         "Excluded": "已排除（{0}）",
-        "All": "全部（{0}）"
+        "All": "全部（{0}）",
+        "Hint": "需要关注与扫描范围可能重叠；计数基于完整的缓存程序集清单。"
       },
       "Columns": {
         "Outcome": "结果",
@@ -565,5 +577,12 @@
     "StartupWorkCommitFailed": "模块 {0} 在提交源自 {1} 的启动工作时失败。",
     "CompositionFailed": "模块组合失败。请检查关联模块和跟踪区间中的因果证据。",
     "Unknown": "无法识别的诊断代码：{0}"
+  },
+  "Atlas": {
+    "Overview": {
+      "StartupNotTracked": "当前主机未记录完整的应用启动区间。",
+      "DirectDependencies": "直接依赖关系",
+      "ContributionHint": "回调与启动工作耗时；并发工作不代表互斥的启动时间占比。"
+    }
   }
 }

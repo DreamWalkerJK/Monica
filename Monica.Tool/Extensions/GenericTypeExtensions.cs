@@ -7,14 +7,28 @@ public static class GenericTypeExtensions
 {
 
     /// <summary>
-    /// Get the full namespace path name of the type, handle generics, nested classes and anonymous types, generally used for log formatting
+    /// Gets a namespace-qualified display name for arrays, generic types, nested classes, and anonymous types.
     /// </summary>
+    /// <param name="type">The type whose display name is required.</param>
+    /// <returns>The formatted type name, preserving array ranks and jagged array shapes.</returns>
+    /// <exception cref="ArgumentNullException">The supplied type is null.</exception>
     public static string GetCleanFullName(this Type type)
     {
         if (type == null) throw new ArgumentNullException(nameof(type));
         return InnerGetCleanName(type);
         string InnerGetCleanName(Type curType, bool jumpDeclareType = false, bool getFullName = true)
         {
+            if (curType.IsArray)
+            {
+                // Array.FullName embeds assembly identities when its element type is generic.
+                var elementName = InnerGetCleanName(curType.GetElementType()!);
+                var rank = curType.GetArrayRank();
+                var suffix = rank == 1
+                    ? curType.IsSZArray ? "[]" : "[*]"
+                    : $"[{new string(',', rank - 1)}]";
+                return elementName + suffix;
+            }
+
             // Handle nested classes (highest priority) The + symbol in the type name indicates ​Nested Class​.
             if (curType.DeclaringType != null && !jumpDeclareType)
             {

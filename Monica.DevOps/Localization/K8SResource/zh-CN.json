@@ -5,23 +5,7 @@
     }
   },
   "Page": {
-    "DocumentTitle": "K8S 运维",
-    "Title": "K8S 运维",
-    "Eyebrow": "Monica / 集群控制",
-    "Subtitle": "基于 SSH + 远程 kubectl 的运行时配置与受控重启操作。",
-    "Summary": {
-      "AriaLabel": "Kubernetes 集群运行摘要",
-      "ExecutionNode": "执行节点",
-      "Namespaces": "命名空间",
-      "Resources": "已加载资源",
-      "Restrictions": "保护关键字",
-      "NotConfigured": "未配置"
-    },
-    "SearchHelper": "搜索当前已加载资源的全部信息。",
-    "LoadingResources": "正在从 {1} 加载{0}...",
-    "SelectNamespace": "请选择一个命名空间以浏览资源。",
-    "NoResources": "当前命名空间未加载任何{0}。",
-    "ResourceListLoaded": "已于 {3} 从“{2}”加载 {0} 个{1}。"
+    "SelectNamespace": "请选择一个命名空间以浏览资源。"
   },
   "Forms": {
     "Namespace": "命名空间",
@@ -29,20 +13,8 @@
     "SearchCurrentList": "搜索当前列表"
   },
   "Actions": {
-    "RuntimeConfiguration": "运行时配置",
-    "Refresh": "刷新",
-    "RefreshCurrentList": "刷新当前列表",
-    "RestartMenu": "重启",
-    "RestartSelectedWorkloads": "重启所选 Workloads",
-    "RestartNamespaceWorkloads": "重启命名空间 Workloads",
-    "ScaleMenu": "伸缩",
-    "ScaleDownSelectedWorkloads": "Scale Down 所选 Workloads",
-    "ScaleUpSelectedWorkloads": "Scale Up 所选 Workloads",
-    "ScaleDownNamespaceWorkloads": "Scale Down 命名空间 Workloads",
-    "ScaleUpNamespaceWorkloads": "Scale Up 命名空间 Workloads",
     "Describe": "查看详情",
     "Restart": "重启",
-    "RestartWorkloads": "重启 Workloads",
     "RestartBackingWorkloads": "重启背后 Workloads"
   },
   "Columns": {
@@ -51,10 +23,8 @@
     "ClusterIp": "Cluster IP",
     "Ports": "端口",
     "Selector": "Selector",
-    "BackingWorkloadRestart": "背后 Workload 重启时间",
     "Images": "镜像",
     "Replicas": "Ready / Desired",
-    "LastRestart": "最后重启时间",
     "Actions": "操作"
   },
   "ResourceTypes": {
@@ -67,38 +37,9 @@
     "StatefulSet": "StatefulSet",
     "DaemonSet": "DaemonSet"
   },
-  "DialogTitles": {
-    "NamespaceRestart": "确认重启命名空间 {0} 的 Workloads",
-    "SingleServiceRestart": "确认重启 {0}/{1} 背后的 Workloads",
-    "SingleResourceRestart": "确认重启 {0}/{1}",
-    "BatchServiceRestart": "确认重启所选 Services 背后的 Workloads",
-    "BatchResourceRestart": "确认批量重启 {0}",
-    "BatchServiceScaleDown": "确认 Scale Down 所选 Services 背后的 Workloads",
-    "BatchServiceScaleUp": "确认 Scale Up 所选 Services 背后的 Workloads",
-    "BatchResourceScaleDown": "确认批量 Scale Down {0}",
-    "BatchResourceScaleUp": "确认批量 Scale Up {0}",
-    "NamespaceScaleDown": "确认 Scale Down 命名空间 {0} 的 Workloads",
-    "NamespaceScaleUp": "确认 Scale Up 命名空间 {0} 的 Workloads"
-  },
   "Messages": {
     "RuntimeConfigSaved": "运行时配置已保存。",
-    "RuntimeConfigSavedAllNamespaces": "运行时配置已保存。命名空间范围为空时，将允许 kubectl 返回的全部命名空间。",
-    "RestartResult": "已从 {1} 个目标重启 {0} 个 Workloads。",
-    "RestartIgnored": "已忽略：{0}",
-    "ScaleDownResult": "已从 {1} 个目标 Scale Down {0} 个 Workloads。",
-    "ScaleUpResult": "已从 {1} 个目标 Scale Up {0} 个 Workloads。",
-    "ScaleIgnored": "已忽略：{0}",
-    "NamespaceScopeMismatch": "配置的命名空间范围与 kubectl 返回的命名空间不匹配。",
-    "FailedDescribeResource": "查看 {0}/{1} 详情失败。",
-    "FailedBuildRestartPreview": "构建 {0} 的重启预览失败。",
-    "FailedBuildScalePreview": "构建 {0} 的伸缩预览失败。",
-    "FailedRestartResource": "重启 {0}/{1} 失败。",
-    "FailedRestartSelectedResources": "重启所选{0}失败。",
-    "FailedNamespaceRestartPreview": "构建命名空间“{0}”的重启预览失败。",
-    "FailedNamespaceRestart": "重启命名空间“{0}”失败。",
-    "FailedScaleSelectedResources": "伸缩所选{0}失败。",
-    "FailedNamespaceScalePreview": "构建命名空间“{0}”的伸缩预览失败。",
-    "FailedNamespaceScale": "伸缩命名空间“{0}”失败。"
+    "RuntimeConfigSavedAllNamespaces": "运行时配置已保存。命名空间范围为空时，将允许 kubectl 返回的全部命名空间。"
   },
   "Common:Cancel": "取消",
   "Common:Close": "关闭",
@@ -123,7 +64,7 @@
     "Namespace": "命名空间",
     "ServiceType": "Service 类型",
     "ClusterIp": "Cluster IP",
-    "BackingWorkloadRestart": "背后 Workload 重启时间",
+    "BackingWorkloadRestart": "关联工作负载重启／启动时间",
     "ServiceExplanation": "Service 是网络入口对象。重启操作针对其背后的 Workloads，而不是 Service 对象本身。",
     "ReadyDesired": "Ready / Desired",
     "LastRestart": "最后重启时间",
@@ -149,7 +90,8 @@
     "ReadyStateReady": "已就绪",
     "ReadyStateNotReady": "未就绪",
     "DescribePod": "查看 Pod 详情",
-    "RelatedWorkloadChip": "{0}（{1}，重启于 {2}）"
+    "RelatedWorkloadChip": "{0}（{1}，重启／启动时间 {2}）",
+    "Title": "查看 {0} · {1}"
   },
   "PodDialog": {
     "Pod": "Pod",
@@ -161,34 +103,35 @@
     "Started": "启动时间",
     "Node": "节点",
     "PodIp": "Pod IP",
-    "Issue": "异常"
+    "Issue": "异常",
+    "Title": "查看 Pod/{0} · {1}",
+    "ReportedOwner": "直接报告的属主",
+    "Attention": "此 Pod 存在需要关注的证据。阶段与就绪状态是不同的观测结果。"
   },
   "RestartDialog": {
-    "SummaryWithWorkloads": "将从 {1} 个可执行目标中重启 {0} 个 Workloads。",
+    "SummaryWithWorkloads": "当前预览：{1} 个符合条件的目标对应 {0} 个工作负载。",
     "SummaryWithoutWorkloads": "本次请求未解析到可执行的重启目标。",
-    "SensitiveRestrictionsActive": "当前已启用敏感操作限制：{0}",
     "ServiceExplanation": "Service 仅用于定位其背后的 Workloads。实际重启的是这些 Workloads，而不是 Service 对象本身。",
-    "EligibleTargets": "可执行目标",
     "NoEligibleTargets": "没有可执行目标。",
-    "IgnoredTargets": "已忽略目标",
     "NoIgnoredTargets": "没有被忽略的目标。",
     "WorkloadsToRestart": "待重启 Workloads",
     "NoWorkloads": "没有 Workloads 会被重启。",
-    "WorkloadEntry": "{0}（{1}，重启于 {2}）"
+    "Title": "审阅重启操作 · {0} · {1}",
+    "ConfirmWorkloads": "重启 {0} 个工作负载"
   },
   "ScaleDialog": {
-    "SummaryScaleDownWithWorkloads": "将从 {1} 个可执行目标中记录并 Scale Down {0} 个 Workloads。",
-    "SummaryScaleUpWithWorkloads": "将从 {1} 个可执行目标中 Scale Up {0} 个 Workloads。",
+    "SummaryScaleDownWithWorkloads": "记录先前副本数，并将 {1} 个符合条件的目标所对应的 {0} 个工作负载缩容至零。",
+    "SummaryScaleUpWithWorkloads": "使用已记录的正副本数（无有效记录时使用 1），恢复 {1} 个符合条件的目标所对应的 {0} 个工作负载。已超过目标副本数的工作负载不会被缩容。",
     "SummaryWithoutWorkloads": "本次请求未解析到可执行的伸缩目标。",
-    "SensitiveRestrictionsActive": "当前已启用敏感操作限制：{0}",
     "ServiceExplanation": "Service 仅用于定位其背后的 Workloads。实际伸缩的是这些 Workloads，而不是 Service 对象本身。",
-    "EligibleTargets": "可执行目标",
     "NoEligibleTargets": "没有可执行目标。",
-    "IgnoredTargets": "已忽略目标",
     "NoIgnoredTargets": "没有被忽略的目标。",
     "WorkloadsToScale": "待伸缩 Workloads",
     "NoWorkloads": "没有 Workloads 会被伸缩。",
-    "WorkloadEntry": "{0}：副本 {1}->{2}，已记录原副本 {3}"
+    "TitleScaleDown": "审阅缩容至零 · {0} · {1}",
+    "TitleScaleUp": "审阅恢复副本 · {0} · {1}",
+    "ConfirmScaleDown": "将 {0} 个工作负载缩容至零",
+    "ConfirmScaleUp": "恢复 {0} 个工作负载的副本"
   },
   "ServiceMessages": {
     "LoadRuntimeConfigFailed": "加载 K8S 运行时配置失败：{0}",
@@ -234,5 +177,130 @@
     "UnsupportedWorkloadKind": "暂不支持的 Workload 类型：“{0}”。",
     "UnsupportedResourceType": "暂不支持的资源类型：“{0}”。"
   },
-  "Common:Empty": "-"
+  "Common:Empty": "-",
+  "Workbench": {
+    "Navigation": {
+      "Label": "K8S 工作区",
+      "Inventory": "资源清单",
+      "RuntimeConfig": "运行时配置"
+    },
+    "Inventory": {
+      "Subtitle": "检查资源并审核工作负载操作。",
+      "ExecutionNode": "已配置的执行节点",
+      "NotConfigured": "未配置",
+      "Scope": "命名空间操作解析 Service 关联的工作负载；不包括未关联的工作负载，与当前列表类型无关。",
+      "NamespaceOperations": "命名空间操作",
+      "NamespaceRestart": "重启 Service 关联工作负载",
+      "NamespaceDown": "将 Service 关联工作负载缩容至零",
+      "NamespaceUp": "恢复 Service 关联副本数",
+      "RefreshAll": "刷新全部",
+      "RefreshList": "刷新列表",
+      "Kind": "资源类型",
+      "NoNamespaces": "最近一次成功发现未返回任何命名空间。",
+      "MissingNamespace": "{0} 在最近一次命名空间发现中不存在或不在范围内。下方保留的证据仍属于原始上下文。",
+      "FirstReadFailed": "首次读取失败，尚未获取资源清单。",
+      "Capture": "{0} · {1} · 已加载 {2} 项 · 获取时间 {3}",
+      "Retained": "已保留上次获取的数据；请求的上下文为 {0} / {1}。",
+      "ReadFailure": "读取 {0} / {1} 失败：{2}",
+      "Empty": "已获取的 {0} 列表为空。",
+      "NoMatches": "没有资源符合当前搜索和列筛选条件。",
+      "TimeExplanation": "重启/启动时间可能来自重启注解或关联 Pod 的启动时间。",
+      "BackingTime": "关联工作负载重启/启动时间",
+      "WorkloadTime": "重启/启动时间"
+    },
+    "Selection": {
+      "Count": "已选择 {0} 项",
+      "Clear": "清除选择",
+      "Hidden": "已选资源中有 {0} 项被当前筛选条件隐藏。",
+      "Actions": "已选资源操作",
+      "Restart": "重启已选资源",
+      "Down": "将已选工作负载缩容至零",
+      "Up": "恢复已选副本数",
+      "ReplicaActions": "副本数操作",
+      "RowActions": "{0} 的操作"
+    },
+    "Pager": {
+      "Rows": "每页行数：",
+      "Info": "第 {first_item}–{last_item} 项，共 {all_items} 项",
+      "First": "首页",
+      "Previous": "上一页",
+      "Next": "下一页",
+      "Last": "末页"
+    },
+    "Operation": {
+      "Completed": "命令已完成",
+      "Failed": "命令失败",
+      "Partial": "前面的命令可能已经生效。请刷新或检查后再决定下一步操作。",
+      "Readiness": "命令完成不代表滚动更新结束或副本已就绪。",
+      "Details": "操作详情",
+      "Targets": "受影响目标",
+      "Workloads": "工作负载",
+      "Ignored": "已忽略目标",
+      "Commands": "已执行命令",
+      "RestartTitle": "审核 {0} 中的重启操作",
+      "DownTitle": "审核 {0} 中的缩容至零操作",
+      "UpTitle": "审核 {0} 中的副本恢复操作",
+      "ScaleToZero": "缩容至零",
+      "RestoreReplicas": "恢复副本数",
+      "AttemptedNamespace": "尝试操作：{0} · Service 关联工作负载",
+      "AttemptedSingle": "尝试操作：{0} · {1}/{2}",
+      "AttemptedSelected": "尝试操作：{0} · 已选 {1} 项{2} · {3}"
+    },
+    "Config": {
+      "Title": "K8S 运行时配置",
+      "Subtitle": "编辑当前运行应用的连接设置和操作允许条件。",
+      "Lifetime": "更改由当前应用的各会话共享，进程重启后丢失。保存不会测试连接。",
+      "Execution": "执行",
+      "Scope": "操作范围",
+      "Provider": "提供程序",
+      "ProviderName": "SSH 远程 kubectl",
+      "Addresses": "已配置的地址",
+      "MasterAddresses": "已配置的主节点地址",
+      "WorkerAddresses": "已配置的工作节点地址",
+      "Fallback": "执行节点为空时，使用第一个已配置主节点地址，否则使用第一个工作节点地址。这些地址并非发现的节点角色。",
+      "AllowedNamespaces": "允许的命名空间",
+      "AllowedKeywords": "允许的操作名称关键词",
+      "KeywordHelp": "请求名称必须包含至少一个关键词（不区分大小写）。留空允许所有名称。Service 请求检查 Service 名称。",
+      "ShowPassword": "显示密码",
+      "HidePassword": "隐藏密码",
+      "Dirty": "有未保存的更改",
+      "Clean": "没有未保存的更改",
+      "Discard": "放弃更改",
+      "Save": "保存运行时配置",
+      "Saved": "已保存到当前运行的应用。",
+      "ReloadFailed": "重新加载失败；已保留输入的草稿值。",
+      "Loading": "正在读取运行时配置…",
+      "Saving": "正在保存运行时配置…"
+    },
+    "Activity": {
+      "Reading": "正在读取上下文和资源证据…",
+      "Previewing": "正在准备操作预览…",
+      "Reviewing": "正在等待操作审核…",
+      "Inspecting": "正在检查资源证据…",
+      "Executing": "正在执行已审核的请求…"
+    }
+  },
+  "Inspector": {
+    "Summary": "概览",
+    "PodsWithCount": "Pods（{0}）",
+    "PodsWithAttention": "Pods（{0}）· {1} 个需要关注",
+    "Describe": "原始描述",
+    "State": "状态",
+    "RestartsStarted": "重启次数 / 启动时间",
+    "Placement": "部署位置"
+  },
+  "OperationReview": {
+    "TargetCounts": "请求目标：{0} · 符合条件：{1} · 已忽略：{2}",
+    "AllowedKeywords": "允许操作的名称关键字：{0}",
+    "RequestedTargets": "请求目标（{0}）",
+    "NoRequestedTargets": "未请求任何目标。",
+    "EligibleTargets": "符合条件的目标（{0}）",
+    "IgnoredTargets": "已忽略的目标（{0}）",
+    "CommandArguments": "命令参数",
+    "CommandArgumentsHelp": "此处保留预览中的原始参数，不包含已配置的可执行命令前缀。",
+    "GeneratedAt": "预览生成时间：{0}",
+    "ExecutionRechecks": "执行时将使用当时的运行时配置，并重新检查目标是否符合条件。此预览不保证配置或集群状态保持不变。命令完成不代表 Pod 已就绪或发布已收敛。",
+    "ReplicaChange": "当前 → 目标副本数",
+    "RecordedReplicas": "已记录的先前副本数"
+  }
 }

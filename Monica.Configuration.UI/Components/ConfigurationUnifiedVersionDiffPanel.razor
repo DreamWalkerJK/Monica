@@ -1,13 +1,18 @@
 @using Monica.Configuration.UI.Localization
 @inject ConfigurationFacade Facade
 @inject IStringLocalizer<ConfigurationUIResource> L
+@implements IAsyncDisposable
 
-<div class="configuration-unified-version-diff-panel">
-    @if (_loading)
+<div class="configuration-unified-version-diff-panel" aria-busy="@((_session?.Loading ?? true) ? "true" : "false")">
+    @if (_session?.Loading ?? true)
     {
         <MudProgressLinear Indeterminate="true" />
     }
-    else if (_rows.Count == 0)
+    else if (_session?.Prepared is not { } prepared)
+    {
+        <MudAlert Severity="Severity.Error">@L["Common:Errors:LoadFailed"]</MudAlert>
+    }
+    else if (prepared.Rows.Count == 0)
     {
         <MudAlert Severity="Severity.Info">@L["Versions:Diff:NoChanges"]</MudAlert>
     }
@@ -19,9 +24,9 @@
                 <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                     <MudStack Spacing="0">
                         <MudText Typo="Typo.subtitle1">
-                            @L["Versions:Diff:Title", VersionLabel(Comparison.Origin.Summary.Version), VersionLabel(Comparison.Target.Summary.Version)]
+                            @L["Versions:Diff:Title", VersionLabel(prepared.OriginVersion), VersionLabel(prepared.TargetVersion)]
                         </MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Versions:Diff:ChangedDefinitions", _rows.Count]</MudText>
+                        <MudText Typo="Typo.caption">@L["Versions:Diff:ChangedDefinitions", prepared.Rows.Count]</MudText>
                     </MudStack>
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
                         @L["Versions:Diff:UnifiedView"]
@@ -29,20 +34,20 @@
                 </MudStack>
             }
 
-            @foreach (var row in _rows)
+            @foreach (var row in prepared.Rows)
             {
-                <section class="configuration-unified-version-diff-definition">
+                <section class="configuration-unified-version-diff-definition" @key="row.DefinitionKey">
                     <MudStack Spacing="2">
                         <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                             <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
                                 <MudChip T="string" Size="Size.Small" Color="@ChangeColor(row.ChangeKind)" Variant="Variant.Outlined">
-                                    @row.ChangeKindText
+                                    @ChangeKindText(row.ChangeKind)
                                 </MudChip>
                                 <MudText Typo="Typo.subtitle2">@row.DisplayName</MudText>
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@row.DefinitionKey</MudChip>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="configuration-unified-version-diff-key">@row.DefinitionKey</MudChip>
                             </MudStack>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @L["Versions:Diff:Direction", VersionLabel(Comparison.Origin.Summary.Version), VersionLabel(Comparison.Target.Summary.Version)]
+                            <MudText Typo="Typo.caption">
+                                @L["Versions:Diff:Direction", VersionLabel(prepared.OriginVersion), VersionLabel(prepared.TargetVersion)]
                             </MudText>
                         </MudStack>
 
@@ -77,127 +82,108 @@
         ContextLines = 4,
         MaxCharacterDiffLength = 20000
     };
+    private PreparationSession? _session;
+    private ConfigurationUnifiedVersionComparison? _lastComparison;
+    private DisplayLabels? _lastLabels;
 
-    private readonly Dictionary<string, ConfigurationDefinition> _definitions = new(StringComparer.OrdinalIgnoreCase);
-    private readonly List<UnifiedVersionDiffRow> _rows = [];
-    private bool _loading;
-    private string? _comparisonKey;
-
+    /// <summary>Gets or sets the raw saved-snapshot comparison to prepare for schema-aware display.</summary>
+    /// <remarks>Changed comparisons must be supplied as a new record. The admitted snapshot is copied before awaiting schema reads.</remarks>
     [Parameter, EditorRequired] public ConfigurationUnifiedVersionComparison Comparison { get; set; } = null!;
+
+    /// <summary>Gets or sets whether to show the captured comparison's summary heading; defaults to true.</summary>
     [Parameter] public bool ShowSummaryHeader { get; set; } = true;
 
-    protected override async Task OnParametersSetAsync()
+    protected override void OnInitialized() => _session = new(async key =>
     {
-        var comparisonKey = $"{Comparison.Origin.Summary.Version}:{Comparison.Target.Summary.Version}:{Comparison.Changes.Count}";
-        if (string.Equals(_comparisonKey, comparisonKey, StringComparison.Ordinal)
-            && _rows.Count == Comparison.Changes.Count)
-        {
-            return;
-        }
+        var result = await Facade.GetDefinitionAsync(key);
+        return result.IsFailed(out _, out var detail) ? null : detail.Definition;
+    });
 
-        _loading = true;
-        await EnsureDefinitionsAsync();
-
-        _rows.Clear();
-        _rows.AddRange(Comparison.Changes.Select(CreateRow));
-        _comparisonKey = comparisonKey;
-        _loading = false;
+    protected override Task OnParametersSetAsync()
+    {
+        var labels = new DisplayLabels(L["State:Value:Sensitive"], L["State:Value:Hidden"],
+            L["State:Value:HiddenBeforeChange"], L["State:Value:HiddenAfterChange"]);
+        if (ReferenceEquals(_lastComparison, Comparison) && _lastLabels == labels) return Task.CompletedTask;
+        _lastComparison = Comparison;
+        _lastLabels = labels;
+        return _session!.PrepareAsync(Comparison, labels);
     }
 
-    private async Task EnsureDefinitionsAsync()
+    public ValueTask DisposeAsync() => _session?.DisposeAsync() ?? ValueTask.CompletedTask;
+
+    private string ChangeKindText(ConfigurationUnifiedVersionDefinitionChangeKind kind) => kind switch
     {
-        foreach (var definitionKey in Comparison.Changes.Select(static change => change.DefinitionKey)
-                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        ConfigurationUnifiedVersionDefinitionChangeKind.Added => L["Versions:Diff:Kinds:Added"],
+        ConfigurationUnifiedVersionDefinitionChangeKind.Removed => L["Versions:Diff:Kinds:Removed"],
+        _ => L["Versions:Diff:Kinds:Modified"]
+    };
+
+    private static Color ChangeColor(ConfigurationUnifiedVersionDefinitionChangeKind kind) => kind switch
+    {
+        ConfigurationUnifiedVersionDefinitionChangeKind.Added => Color.Success,
+        ConfigurationUnifiedVersionDefinitionChangeKind.Removed => Color.Warning,
+        _ => Color.Info
+    };
+
+    private static string VersionLabel(long version) => ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version);
+
+    internal sealed record DisplayLabels(string Sensitive, string Hidden, string BeforeChange, string AfterChange);
+    internal sealed record PreparedComparison(long OriginVersion, long TargetVersion, IReadOnlyList<PreparedRow> Rows);
+    internal sealed record PreparedRow(string DefinitionKey, string DisplayName,
+        ConfigurationUnifiedVersionDefinitionChangeKind ChangeKind, string OriginText, string TargetText,
+        bool HasHiddenChanges, bool HasSchemaDrift);
+
+    /// <summary>Owns actual tokenless schema reads and publishes only the current fully redacted comparison.</summary>
+    internal sealed class PreparationSession(Func<string, Task<ConfigurationDefinition?>> loadDefinition) : IAsyncDisposable
+    {
+        private readonly ConfigurationOperationLifetime _lifetime = new();
+        private long _generation;
+        internal bool Loading { get; private set; }
+        internal PreparedComparison? Prepared { get; private set; }
+
+        internal Task PrepareAsync(ConfigurationUnifiedVersionComparison comparison, DisplayLabels labels)
         {
-            if (_definitions.ContainsKey(definitionKey))
+            // Facade records carry IReadOnlyList collections; copy them before the first asynchronous boundary.
+            var captured = comparison with
             {
-                continue;
-            }
-
-            var result = await Facade.GetDefinitionAsync(definitionKey);
-            if (!result.IsFailed(out _, out var detail))
+                Origin = comparison.Origin with { Definitions = comparison.Origin.Definitions.ToArray() },
+                Target = comparison.Target with { Definitions = comparison.Target.Definitions.ToArray() },
+                Changes = comparison.Changes.ToArray()
+            };
+            return _lifetime.RunAsync(async _ =>
             {
-                _definitions[definitionKey] = detail.Definition;
-            }
-        }
-    }
+                long generation = 0;
+                _lifetime.TryApply(() => { generation = ++_generation; Loading = true; Prepared = null; });
+                var definitions = new Dictionary<string, ConfigurationDefinition>(StringComparer.OrdinalIgnoreCase);
+                foreach (var key in captured.Changes.Select(change => change.DefinitionKey).Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    ConfigurationDefinition? definition;
+                    try { definition = await loadDefinition(key); }
+                    catch (Exception) { definition = null; }
+                    if (_lifetime.IsRetired || generation != _generation) return;
+                    if (definition is not null) definitions[key] = definition;
+                }
 
-    private UnifiedVersionDiffRow CreateRow(ConfigurationUnifiedVersionDefinitionChange change)
-    {
-        _definitions.TryGetValue(change.DefinitionKey, out var definition);
-        var hasSchemaDrift = HasSchemaDrift(change.DefinitionKey, definition);
-        var display = ConfigurationUnifiedVersionJsonFormatter.FormatComparisonForDisplay(
-            change.OriginJson,
-            change.TargetJson,
-            definition,
-            L["State:Value:Sensitive"],
-            L["State:Value:Hidden"],
-            L["State:Value:HiddenBeforeChange"],
-            L["State:Value:HiddenAfterChange"],
-            hasSchemaDrift);
-
-        return new UnifiedVersionDiffRow(
-            change.DefinitionKey,
-            string.IsNullOrWhiteSpace(change.DisplayName) ? change.DefinitionKey : change.DisplayName,
-            ChangeKindText(change.ChangeKind),
-            change.ChangeKind,
-            display.OriginText,
-            display.TargetText,
-            display.HasHiddenChanges,
-            hasSchemaDrift);
-    }
-
-    private bool HasSchemaDrift(string definitionKey, ConfigurationDefinition? currentDefinition)
-    {
-        if (currentDefinition is null)
-        {
-            return true;
+                var rows = captured.Changes.Select(change =>
+                {
+                    definitions.TryGetValue(change.DefinitionKey, out var definition);
+                    var unproven = ConfigurationUnifiedVersionValuePrivacy.HasSchemaDrift(captured, change, definition);
+                    var display = ConfigurationUnifiedVersionJsonFormatter.FormatComparisonForDisplay(
+                        change.OriginJson, change.TargetJson, definition, labels.Sensitive, labels.Hidden,
+                        labels.BeforeChange, labels.AfterChange, unproven);
+                    return new PreparedRow(change.DefinitionKey,
+                        string.IsNullOrWhiteSpace(change.DisplayName) ? change.DefinitionKey : change.DisplayName,
+                        change.ChangeKind, display.OriginText, display.TargetText, display.HasHiddenChanges, unproven);
+                }).ToArray();
+                _lifetime.TryApply(() =>
+                {
+                    if (generation != _generation) return;
+                    Prepared = new(captured.Origin.Summary.Version, captured.Target.Summary.Version, Array.AsReadOnly(rows));
+                    Loading = false;
+                });
+            });
         }
 
-        return Comparison.Origin.Definitions
-            .Concat(Comparison.Target.Definitions)
-            .Where(snapshot => string.Equals(
-                snapshot.DefinitionKey,
-                definitionKey,
-                StringComparison.OrdinalIgnoreCase))
-            .Any(snapshot => !string.Equals(
-                snapshot.SchemaHash,
-                currentDefinition.SchemaHash,
-                StringComparison.Ordinal));
+        public ValueTask DisposeAsync() => _lifetime.RetireAsync();
     }
-
-    private string ChangeKindText(ConfigurationUnifiedVersionDefinitionChangeKind kind)
-    {
-        return kind switch
-        {
-            ConfigurationUnifiedVersionDefinitionChangeKind.Added => L["Versions:Diff:Kinds:Added"],
-            ConfigurationUnifiedVersionDefinitionChangeKind.Removed => L["Versions:Diff:Kinds:Removed"],
-            _ => L["Versions:Diff:Kinds:Modified"]
-        };
-    }
-
-    private static Color ChangeColor(ConfigurationUnifiedVersionDefinitionChangeKind kind)
-    {
-        return kind switch
-        {
-            ConfigurationUnifiedVersionDefinitionChangeKind.Added => Color.Success,
-            ConfigurationUnifiedVersionDefinitionChangeKind.Removed => Color.Warning,
-            _ => Color.Info
-        };
-    }
-
-    private static string VersionLabel(long version)
-    {
-        return ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version);
-    }
-
-    private sealed record UnifiedVersionDiffRow(
-        string DefinitionKey,
-        string DisplayName,
-        string ChangeKindText,
-        ConfigurationUnifiedVersionDefinitionChangeKind ChangeKind,
-        string OriginText,
-        string TargetText,
-        bool HasHiddenChanges,
-        bool HasSchemaDrift);
 }

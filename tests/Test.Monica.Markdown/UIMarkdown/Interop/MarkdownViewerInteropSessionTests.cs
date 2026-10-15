@@ -42,8 +42,6 @@ public sealed class MarkdownViewerInteropSessionTests
     {
         var fixture = new InteropFixture();
         fixture.Import.Complete(fixture.Module);
-        var shouldShowSidebar = fixture.Module.Plan("shouldShowSidebarByDefault");
-        shouldShowSidebar.Complete(true);
         var createSession = fixture.Module.Plan("createMarkdownViewerSession");
         var shutdown = fixture.ViewerSession.Plan("shutdown");
         shutdown.Complete();
@@ -71,18 +69,15 @@ public sealed class MarkdownViewerInteropSessionTests
     }
 
     [Fact]
-    public async Task InitializeAsync_WhenCircuitDisconnectsDuringSessionCreation_ShouldReleaseModuleAndReturnNull()
+    public async Task InitializeAsync_WhenCircuitDisconnectsDuringSessionCreation_ShouldReleaseModule()
     {
         var fixture = new InteropFixture();
         fixture.Import.Complete(fixture.Module);
-        var shouldShowSidebar = fixture.Module.Plan("shouldShowSidebarByDefault");
-        shouldShowSidebar.Complete(true);
         var createSession = fixture.Module.Plan("createMarkdownViewerSession");
         createSession.Fail(new JSDisconnectedException("Circuit disconnected."));
 
-        var result = await fixture.Session.InitializeAsync(default);
+        await fixture.Session.InitializeAsync(default);
 
-        result.Should().BeNull();
         fixture.Module.DisposeCount.Should().Be(1);
         fixture.ViewerSession.DisposeCount.Should().Be(0);
         await fixture.Session.DisposeAsync();
@@ -162,11 +157,10 @@ public sealed class MarkdownViewerInteropSessionTests
         var runtimeInvocationCount = fixture.Runtime.InvocationCount;
         var viewerInvocationCount = fixture.ViewerSession.Invocations.Count;
 
-        var initializeResult = await fixture.Session.InitializeAsync(default(ElementReference));
+        await fixture.Session.InitializeAsync(default(ElementReference));
         await fixture.Session.ClearSearchHitAsync();
         await fixture.Session.RefreshHeadingTrackerAsync([], null);
 
-        initializeResult.Should().BeNull();
         fixture.Runtime.InvocationCount.Should().Be(runtimeInvocationCount);
         fixture.ViewerSession.Invocations.Should().HaveCount(viewerInvocationCount);
         fixture.ViewerSession.DisposeCount.Should().Be(1);
@@ -242,9 +236,72 @@ public sealed class MarkdownViewerInteropSessionTests
         }
     }
 
+    [Fact]
+    public async Task OnViewportChanged_WhenDisposalStartsDuringCallback_ShouldDrainAndRejectLateDimensions()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var count = 0;
+        var fixture = await InteropFixture.CreateInitializedAsync(viewportChangedAsync: (_, _) =>
+        {
+            count++;
+            started.TrySetResult();
+            return completion.Task;
+        });
+        var callback = fixture.Session.OnViewportChanged(1300, 700);
+        await started.Task.WaitAsync(TestContext.Current.CancellationToken);
+        var shutdown = fixture.ViewerSession.Plan("shutdown");
+        var first = fixture.Session.DisposeAsync().AsTask();
+        var second = fixture.Session.DisposeAsync().AsTask();
+        first.IsCompleted.Should().BeFalse();
+        completion.TrySetResult();
+        await shutdown.Started.WaitAsync(TestContext.Current.CancellationToken);
+        await fixture.Session.OnViewportChanged(889, 540);
+        count.Should().Be(1);
+        shutdown.Complete();
+        await Task.WhenAll(callback, first, second);
+        fixture.ViewerSession.DisposeCount.Should().Be(1);
+        fixture.Module.DisposeCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RevealDocumentHeadingAsync_WhenSourceIncludesCulture_ShouldForwardPhysicalSourceAndDrain()
+    {
+        var fixture = await InteropFixture.CreateInitializedAsync();
+        var reveal = fixture.ViewerSession.Plan("revealDocumentHeading");
+        var invocation = fixture.Session.RevealDocumentHeadingAsync("docs", "zh-CN/guide.md", "zh-CN");
+        await reveal.Started.WaitAsync(TestContext.Current.CancellationToken);
+        var shutdown = fixture.ViewerSession.Plan("shutdown");
+        var disposal = fixture.Session.DisposeAsync().AsTask();
+        disposal.IsCompleted.Should().BeFalse();
+        fixture.ViewerSession.Invocations.Last().Arguments.Should().Equal("docs", "zh-CN/guide.md", "zh-CN");
+        reveal.Complete();
+        await shutdown.Started.WaitAsync(TestContext.Current.CancellationToken);
+        shutdown.Complete();
+        await Task.WhenAll(invocation, disposal);
+        await fixture.Session.RevealDocumentHeadingAsync("other", "guide.md", null);
+        fixture.ViewerSession.Invocations.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task DisposeAsync_WhenShutdownFails_ShouldPropagateFailureToConcurrentRetirementCallers()
+    {
+        var fixture = await InteropFixture.CreateInitializedAsync();
+        var shutdown = fixture.ViewerSession.Plan("shutdown");
+        var first = fixture.Session.DisposeAsync().AsTask();
+        await shutdown.Started.WaitAsync(TestContext.Current.CancellationToken);
+        var second = fixture.Session.DisposeAsync().AsTask();
+        shutdown.Fail(new JSException("Shutdown failed."));
+
+        await ((Func<Task>)(() => first)).Should().ThrowAsync<JSException>();
+        await ((Func<Task>)(() => second)).Should().ThrowAsync<JSException>();
+        fixture.Module.DisposeCount.Should().Be(1);
+        fixture.ViewerSession.DisposeCount.Should().Be(1);
+    }
+
     private sealed class InteropFixture
     {
-        internal InteropFixture(Func<string?, Task>? hashChangedAsync = null)
+        internal InteropFixture(Func<string?, Task>? hashChangedAsync = null, Func<double, double, Task>? viewportChangedAsync = null)
         {
             EventLog = new JsInteropEventLog();
             Import = new ControlledJsOperation(EventLog, "runtime.import");
@@ -253,7 +310,7 @@ public sealed class MarkdownViewerInteropSessionTests
             ViewerSession = new ControlledJsObjectReference(EventLog, "viewer");
             Session = new MarkdownViewerInteropSession(
                 Runtime,
-                hashChangedAsync ?? (_ => Task.CompletedTask));
+                hashChangedAsync ?? (_ => Task.CompletedTask), viewportChangedAsync);
         }
 
         internal JsInteropEventLog EventLog { get; }
@@ -269,17 +326,16 @@ public sealed class MarkdownViewerInteropSessionTests
         internal MarkdownViewerInteropSession Session { get; }
 
         internal static async Task<InteropFixture> CreateInitializedAsync(
-            Func<string?, Task>? hashChangedAsync = null)
+            Func<string?, Task>? hashChangedAsync = null, Func<double, double, Task>? viewportChangedAsync = null)
         {
-            var fixture = new InteropFixture(hashChangedAsync);
+            var fixture = new InteropFixture(hashChangedAsync, viewportChangedAsync);
             fixture.Import.Complete(fixture.Module);
-            var shouldShowSidebar = fixture.Module.Plan("shouldShowSidebarByDefault");
-            shouldShowSidebar.Complete(true);
             var createSession = fixture.Module.Plan("createMarkdownViewerSession");
             createSession.Complete(fixture.ViewerSession);
 
-            var shouldShowSidebarResult = await fixture.Session.InitializeAsync(default);
-            shouldShowSidebarResult.Should().Be(true);
+            await fixture.Session.InitializeAsync(default);
+            fixture.Module.Invocations.Should().ContainSingle(invocation =>
+                invocation.Identifier == "createMarkdownViewerSession");
             return fixture;
         }
     }

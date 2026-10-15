@@ -4,17 +4,17 @@
 @inject IStringLocalizer<JobSchedulerResource> L
 
 @{
-    var total = States.Sum(state => Counts.GetValueOrDefault(state));
+    var total = States.Sum(state => (long)Counts.GetValueOrDefault(state));
     var offset = 0d;
 }
 
 <section class="execution-flow" aria-labelledby="execution-flow-title">
     <header class="execution-flow__heading">
         <div>
-            <MudText id="execution-flow-title" Typo="Typo.h6" HtmlTag="h2">@L["Overview:Queue:Title"]</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Queue:Description"]</MudText>
+            <h2 id="execution-flow-title">@L["Overview:Queue:Title"]</h2>
+            <p>@L["Overview:Queue:Description"]</p>
         </div>
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@total</MudChip>
+        <span class="execution-flow__count">@total</span>
     </header>
 
     <div class="execution-flow__body">
@@ -93,7 +93,7 @@
                    @onfocus="@(() => SetActiveState(state))"
                    @onblur="ClearActiveState">
                     <span class="execution-flow__state-dot" aria-hidden="true"></span>
-                    <span>@L[$"ExecutionStates:{state}"]</span>
+                    <span class="execution-flow__state-name">@L[$"ExecutionStates:{state}"]</span>
                     <strong>@count</strong>
                     <em>@FormatShare(count, total)</em>
                 </a>
@@ -117,13 +117,13 @@
     private static string GetExecutionHref(JobExecutionState state) =>
         $"/job-scheduler/executions?states={Uri.EscapeDataString(state.ToString())}";
 
-    private static string FormatShare(int count, int total) => total == 0
+    private static string FormatShare(int count, long total) => total == 0
         ? "—"
         // The custom "0%" pattern keeps the percent sign glued to the digits in every
         // culture; the standard "P0" pattern inserts a locale gap under invariant culture.
         : (count / (double)total).ToString("0%", CultureInfo.InvariantCulture);
 
-    private string GetSegmentTooltip(JobExecutionState state, int count, int total) => L[
+    private string GetSegmentTooltip(JobExecutionState state, int count, long total) => L[
         "Overview:Queue:SegmentTooltip",
         L[$"ExecutionStates:{state}"],
         count,

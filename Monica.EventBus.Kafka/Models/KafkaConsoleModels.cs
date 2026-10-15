@@ -67,9 +67,19 @@ public sealed class KafkaClusterSummary
     public int TopicCount { get; set; }
 
     /// <summary>
+    /// Whether the last connection probe successfully loaded the topic inventory, including an empty inventory.
+    /// </summary>
+    public bool HasTopicInventory { get; set; }
+
+    /// <summary>
     /// Consumer group count from the last group query.
     /// </summary>
     public int ConsumerGroupCount { get; set; }
+
+    /// <summary>
+    /// Whether the last connection probe successfully loaded consumer groups, including an empty inventory.
+    /// </summary>
+    public bool HasConsumerGroupInventory { get; set; }
 
     /// <summary>
     /// Time when the summary was captured.
@@ -441,7 +451,14 @@ public sealed class KafkaConsumerGroupSummary
     /// <summary>
     /// Member count from consumer group description.
     /// </summary>
+    /// <remarks>A nonempty <see cref="ErrorMessage"/> means this count must not be interpreted as verified member evidence.</remarks>
     public int MemberCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the diagnostic when the group description or scoped metric query is incomplete;
+    /// otherwise null. A default member count on a failed description does not prove an empty group.
+    /// </summary>
+    public string? ErrorMessage { get; set; }
 
     /// <summary>
     /// Total lag when it can be calculated; otherwise null.
@@ -469,6 +486,18 @@ public sealed class KafkaPerformanceSnapshot
     /// UTC capture time.
     /// </summary>
     public DateTimeOffset CapturedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// Whether broker, topic and consumer-group metadata completed successfully during this capture.
+    /// </summary>
+    /// <remarks>
+    /// The default is false. Default numeric counts in a failed or configuration-only capture are
+    /// not evidence of an empty cluster. Optional offset diagnostics do not clear this flag.
+    /// Persistent EF Core console stores must add the corresponding
+    /// <c>KafkaPerformanceSnapshotEntity.HasMetadataSnapshot</c> column through a consumer-owned migration.
+    /// Older stored snapshots default to false and require a fresh capture before their counts are shown as verified.
+    /// </remarks>
+    public bool HasMetadataSnapshot { get; set; }
 
     /// <summary>
     /// Broker count.
@@ -525,6 +554,10 @@ public sealed class KafkaPerformanceSnapshot
     /// <summary>
     /// Whether JMX metrics were included in this snapshot.
     /// </summary>
+    /// <remarks>
+    /// A configured JMX endpoint only declares configuration visibility. The current producer
+    /// does not run a JMX collector and leaves this value false.
+    /// </remarks>
     public bool IncludesJmxMetrics { get; set; }
 
     /// <summary>

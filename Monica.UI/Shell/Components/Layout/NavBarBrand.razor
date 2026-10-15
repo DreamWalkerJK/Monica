@@ -1,23 +1,39 @@
 @using Microsoft.Extensions.Options
 @using Monica.Modules
+@using Monica.UI.Shared.Components.Branding
+@using Microsoft.Extensions.Hosting
 @inject IOptions<ModuleShellUIOption> Options
+@inject IHostEnvironment HostEnvironment
 
-<a class="navbar-brand" href="/system-info" aria-label="@Options.Value.GetAppName()">
-    <div class="brand-logo">
-        <img class="brand-logo-image"
-             src="/_content/Monica.UI/favicon.ico"
-             alt=""
-             width="40"
-             height="40" />
-    </div>
-    <div class="brand-text">
-        <div class="brand-name">@Options.Value.GetAppName()</div>
-        <div class="brand-version-container">
-            @if (!string.IsNullOrWhiteSpace(Options.Value.GetAppId()))
-            {
-                <span class="brand-appid">@Options.Value.GetAppId()</span>
-            }
-            <span class="brand-version">@Options.Value.GetAppVersion()</span>
+<a class="navbar-brand @(Contextual ? "navbar-brand--contextual" : null)" href="/system-info" aria-label="@Options.Value.GetAppName()">
+    @if (ShowIcon)
+    {
+        <div class="brand-logo"><MonicaIcon /></div>
+    }
+    @if (!IconOnly)
+    {
+        <div class="brand-text">
+            <div class="brand-name" title="@Options.Value.GetAppName()">@Options.Value.GetAppName()</div>
+            <div class="brand-version-container">
+                @if (!string.IsNullOrWhiteSpace(Options.Value.GetAppId()))
+                {
+                    <span class="brand-appid" title="@Options.Value.GetAppId()">@Options.Value.GetAppId()</span>
+                }
+                <span class="brand-version" title="@Options.Value.GetAppVersion()">@Options.Value.GetAppVersion()</span>
+                @if (Contextual)
+                {
+                    <span class="brand-environment">@HostEnvironment.EnvironmentName</span>
+                }
+            </div>
         </div>
-    </div>
+    }
 </a>
+
+@code {
+    /// <summary>Shows only the themed Monica mark in the category rail.</summary>
+    [Parameter] public bool IconOnly { get; set; }
+    /// <summary>Includes the mark beside host identity. Defaults to true.</summary>
+    [Parameter] public bool ShowIcon { get; set; } = true;
+    /// <summary>Uses the spacious host identity with separate metadata lines in contextual navigation. Defaults to false.</summary>
+    [Parameter] public bool Contextual { get; set; }
+}

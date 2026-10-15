@@ -5,8 +5,9 @@ using Monica.Configuration.Models;
 namespace Monica.Configuration.Services.Support;
 
 /// <summary>
-/// Resolves the effective JSON visible to the current process while preserving published-only definitions from the
-/// shared effective-value store.
+/// Resolves complete local values through current production binding, including constructor defaults, while
+/// preserving published-only definitions from the shared effective-value store. This is configuration evidence,
+/// not proof that a consumer has reloaded.
 /// </summary>
 internal sealed class ConfigurationEffectiveSnapshotReader(
     IConfigurationEffectiveValueStore effectiveValueStore,
@@ -59,7 +60,7 @@ internal sealed class ConfigurationEffectiveSnapshotReader(
         }
 
         return new ConfigurationResolvedEffectiveSnapshot(
-            seedFactory.CreateRuntimeJson(definition.Root, definition.SectionPath),
+            seedFactory.CreateEffectiveJson(definition),
             reloadCoordinator.GetLoadedMonicaProjectionVersion(definition.DefinitionKey) ?? document?.Version,
             document);
     }

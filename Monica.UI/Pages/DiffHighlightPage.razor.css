@@ -1,74 +1,48 @@
-.diff-highlight-page {
-    width: 100%;
-    min-width: 0;
-    min-height: 100%;
+.diff-highlight-page { width:100%; min-width:0; padding:24px; color:var(--mud-palette-text-primary); }
+.diff-page-identity { display:flex; align-items:center; gap:14px; margin-bottom:24px; }
+.diff-page-identity h1 { margin:0; font-family:var(--mo-font-family-display); font-size:2rem; font-weight:500; line-height:1.2; }
+.diff-page-identity p { margin:6px 0 0; color:var(--mud-palette-text-secondary); font-size:.875rem; }
+.diff-draft-surface { container:diff-drafts / inline-size; border:1px solid var(--mud-palette-lines-default); border-radius:var(--mud-default-borderradius); background:var(--mud-palette-surface); }
+.diff-draft-commands { display:grid; grid-template-columns:minmax(160px,1fr) minmax(160px,1fr) auto; gap:16px; align-items:center; padding:16px 20px 8px; }
+.diff-sample-action { display:flex; flex-direction:column; align-items:flex-start; gap:5px; }
+.diff-sample-action span,.diff-rules-help { color:var(--mud-palette-text-secondary); font-size:.8125rem; }
+.diff-rules { padding:0 20px; }
+.diff-rules ::deep .mud-expand-panel-header { min-height:44px; padding:10px 0; }
+.diff-rules ::deep .mud-expand-panel-content { padding:8px 0 16px; }
+.diff-rule-fields { display:grid; grid-template-columns:1fr 1fr 1fr; align-items:center; gap:16px; }
+.diff-rules-help { margin:8px 0 0; line-height:1.5; }
+.diff-draft-pair { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px; padding:12px 20px 20px; }
+.diff-draft-editor { min-width:0; }
+.diff-draft-editor ::deep .mud-input-label { color:var(--mud-palette-text-primary); font-weight:500; }
+/* MudBlazor v9 labels are siblings of the native input owner. Keep small ink readable in every label state. */
+.diff-draft-editor--updated { --diff-updated-label-ink:color-mix(in srgb,var(--mud-palette-primary) 22%,var(--mud-palette-text-primary)); }
+.diff-draft-editor--updated ::deep label.mud-input-label.mud-input-label-inputcontrol,
+.diff-draft-editor--updated ::deep .mud-input:hover ~ label.mud-input-label.mud-input-label-inputcontrol,
+.diff-draft-editor--updated ::deep .mud-shrink ~ label.mud-input-label.mud-input-label-inputcontrol,
+.diff-draft-editor--updated ::deep .mud-input:focus-within ~ label.mud-input-label.mud-input-label-inputcontrol { color:var(--diff-updated-label-ink); }
+.diff-draft-editor ::deep textarea.mud-input-slot { min-width:0; box-sizing:content-box; height:calc(var(--diff-wide-lines) * 1.5em); font-family:var(--mo-font-family-mono); font-size:.8125rem; line-height:1.5; font-weight:400; overflow-y:auto; resize:vertical; }
+.diff-draft-footer { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 20px; border-top:1px solid var(--mud-palette-lines-default); background:color-mix(in srgb,var(--mud-palette-primary) 4%,var(--mud-palette-surface)); border-radius:0 0 var(--mud-default-borderradius) var(--mud-default-borderradius); }
+.diff-draft-status { flex:1; min-width:160px; color:color-mix(in srgb, var(--mud-palette-text-primary) 80%, var(--mud-palette-text-secondary)); font-size:.8125rem; }
+.diff-accepted-reader,.diff-failure,.diff-uncomputed { margin-top:24px; min-width:0; }
+.diff-uncomputed { display:flex; align-items:center; gap:12px; padding:24px; border:1px dashed var(--mud-palette-lines-default); border-radius:var(--mud-default-borderradius); color:var(--mud-palette-text-secondary); }
+.diff-uncomputed p { margin:0; }
+@container diff-drafts (width < 900px) {
+    .diff-draft-pair { grid-template-columns:minmax(0,1fr); gap:20px; }
+    .diff-draft-editor ::deep textarea.mud-input-slot { height:calc(var(--diff-compact-lines) * 1.5em); }
 }
-
-.diff-highlight-page ::deep .diff-highlight-page__container {
-    width: 100%;
-    min-width: 0;
-    padding: clamp(.75rem, 2vw, 2rem);
+@container diff-drafts (width < 600px) {
+    .diff-draft-commands { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; padding:16px 16px 8px; }
+    .diff-sample-action { grid-column:1 / -1; flex-direction:row; align-items:center; flex-wrap:wrap; gap:10px; }
+    .diff-rules { padding:0 16px; }
+    .diff-rule-fields { grid-template-columns:minmax(0,1fr); gap:4px; }
+    .diff-draft-pair { padding:16px; }
+    .diff-draft-footer { padding:12px 16px; }
 }
-
-.diff-highlight-page__editor {
-    min-width: 0;
-    height: 31rem;
+@media (max-width:600px) {
+    .diff-highlight-page { padding:16px; }
+    .diff-page-identity { align-items:flex-start; gap:10px; margin-bottom:20px; }
+    .diff-page-identity h1 { font-size:1.875rem; }
 }
-
-.diff-highlight-page__editor ::deep .mud-paper,
-.diff-highlight-page__editor ::deep .mud-stack {
-    height: 100%;
-    min-width: 0;
-}
-
-.diff-highlight-page ::deep .diff-text-input {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.diff-highlight-page ::deep .diff-text-input .mud-input-control,
-.diff-highlight-page ::deep .diff-text-input .mud-input,
-.diff-highlight-page ::deep .diff-text-input textarea {
-    min-width: 0;
-    font-family: var(--mo-font-family-mono);
-    font-size: .8125rem;
-    line-height: 1.45;
-}
-
-.diff-highlight-page__output {
-    max-width: 100%;
-    margin: 0;
-    overflow-wrap: anywhere;
-    white-space: pre-wrap;
-    font-family: var(--mo-font-family-mono);
-}
-
-@media (max-width: 929px) {
-    .diff-highlight-page__editor {
-        height: 25rem;
-    }
-}
-
-@media (max-width: 600px) {
-    .diff-highlight-page ::deep .diff-highlight-page__container {
-        padding: .75rem;
-    }
-
-    .diff-highlight-page__editor {
-        height: 22rem;
-    }
-
-    .diff-highlight-page ::deep .diff-text-input .mud-input,
-    .diff-highlight-page ::deep .diff-text-input textarea {
-        font-size: .75rem;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .diff-highlight-page ::deep .mud-button-root,
-    .diff-highlight-page ::deep .mud-expand-panel,
-    .diff-highlight-page ::deep .mud-progress-circular {
-        transition: none !important;
-        animation: none !important;
-    }
+@media (prefers-reduced-motion:reduce) {
+    .diff-highlight-page ::deep .mud-button-root,.diff-highlight-page ::deep .mud-expand-panel { transition:none; }
 }

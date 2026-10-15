@@ -21,7 +21,7 @@ public sealed class GitCredentialResolverInfo
     public required int Order { get; init; }
 
     /// <summary>
-    /// Gets the implementation type name.
+    /// Gets the namespace-qualified display name of the implementation type, with readable generic arguments.
     /// </summary>
     public required string ImplementationType { get; init; }
 }

@@ -15,6 +15,7 @@ internal static class InstrumentKindResolver
             "Counter`1" => "Counter",
             "UpDownCounter`1" => "UpDownCounter",
             "Histogram`1" => "Histogram",
+            "Gauge`1" => "Gauge",
             "ObservableCounter`1" => "ObservableCounter",
             "ObservableUpDownCounter`1" => "ObservableUpDownCounter",
             "ObservableGauge`1" => "ObservableGauge",

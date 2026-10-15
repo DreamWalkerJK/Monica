@@ -2,71 +2,38 @@
 @using Monica.EventBus.Models
 @inject IStringLocalizer<EventBusResource> L
 
-@if (Subscription != null && Subscription.State != EventSubscriptionState.Disposed)
+@if (Subscription is { State: not EventSubscriptionState.Disposed })
 {
-    <MudStack Row="true" Spacing="1">
-        <MudTooltip Text="@L["SubscriptionLifecycle:Actions:Test"]">
-            <MudIconButton Icon="@Icons.Material.Filled.Science"
-                           Color="@(IsTestListening ? Color.Success : Color.Info)"
-                           Size="Size.Small"
-                           OnClick="() => OnTest.InvokeAsync()" />
-        </MudTooltip>
+    <MudStack Row="true" Spacing="0">
+        <MudIconButton Icon="@Icons.Material.Outlined.Science" Color="@(IsTestListening ? Color.Success : Color.Info)" Size="Size.Small"
+            aria-label="@L["SubscriptionLifecycle:Actions:Test"]" title="@L["SubscriptionLifecycle:Actions:Test"]" aria-disabled="@(IsBusy ? "true" : "false")"
+            OnClick="() => DispatchAsync(OnTest)" />
         @if (Subscription.State == EventSubscriptionState.Active)
         {
-            <!-- Active state: Show deactivate and remove buttons -->
-            <MudTooltip Text="@L["SubscriptionLifecycle:Actions:Deactivate"]">
-                <MudIconButton Icon="@Icons.Material.Filled.PauseCircle"
-                             Color="Color.Warning"
-                             Size="Size.Small"
-                             OnClick="() => OnDeactivate.InvokeAsync()" />
-            </MudTooltip>
-            <MudTooltip Text="@L["SubscriptionLifecycle:Actions:Remove"]">
-                <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
-                             Color="Color.Error"
-                             Size="Size.Small"
-                             OnClick="() => OnUnsubscribe.InvokeAsync()" />
-            </MudTooltip>
+            <MudIconButton Icon="@Icons.Material.Outlined.PauseCircle" Color="Color.Warning" Size="Size.Small"
+                aria-label="@L["SubscriptionLifecycle:Actions:Deactivate"]" title="@L["SubscriptionLifecycle:Actions:Deactivate"]" aria-disabled="@(IsBusy ? "true" : "false")"
+                OnClick="() => DispatchAsync(OnDeactivate)" />
         }
-        else if (Subscription.State == EventSubscriptionState.Inactive || Subscription.State == EventSubscriptionState.Pending)
+        else
         {
-            <!-- Inactive/pending activation status: Show activation and removal buttons -->
-            <MudTooltip Text="@L["SubscriptionLifecycle:Actions:Activate"]">
-                <MudIconButton Icon="@Icons.Material.Filled.PlayCircle"
-                             Color="Color.Success"
-                             Size="Size.Small"
-                             OnClick="() => OnActivate.InvokeAsync()" />
-            </MudTooltip>
-            <MudTooltip Text="@L["SubscriptionLifecycle:Actions:Remove"]">
-                <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
-                             Color="Color.Error"
-                             Size="Size.Small"
-                             OnClick="() => OnUnsubscribe.InvokeAsync()" />
-            </MudTooltip>
+            <MudIconButton Icon="@Icons.Material.Outlined.PlayCircle" Color="Color.Success" Size="Size.Small"
+                aria-label="@L["SubscriptionLifecycle:Actions:Activate"]" title="@L["SubscriptionLifecycle:Actions:Activate"]" aria-disabled="@(IsBusy ? "true" : "false")"
+                OnClick="() => DispatchAsync(OnActivate)" />
         }
+        <MudIconButton Icon="@Icons.Material.Outlined.Delete" Color="Color.Error" Size="Size.Small"
+            aria-label="@L["SubscriptionLifecycle:Actions:Remove"]" title="@L["SubscriptionLifecycle:Actions:Remove"]" aria-disabled="@(IsBusy ? "true" : "false")"
+            OnClick="() => DispatchAsync(OnUnsubscribe)" />
     </MudStack>
-}
-else if (Subscription?.State == EventSubscriptionState.Disposed)
-{
-    <!-- Released state: no buttons are displayed -->
-    <MudChip T="string" Color="Color.Default" Size="Size.Small">@L.GetSubscriptionStateText(EventSubscriptionState.Disposed)</MudChip>
 }
 
 @code {
-    [Parameter]
-    public SubscriptionViewModel? Subscription { get; set; }
+    [Parameter] public SubscriptionViewModel? Subscription { get; set; }
+    [Parameter] public EventCallback OnActivate { get; set; }
+    [Parameter] public EventCallback OnDeactivate { get; set; }
+    [Parameter] public EventCallback OnUnsubscribe { get; set; }
+    [Parameter] public EventCallback OnTest { get; set; }
+    [Parameter] public bool IsTestListening { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
 
-    [Parameter]
-    public EventCallback OnActivate { get; set; }
-
-    [Parameter]
-    public EventCallback OnDeactivate { get; set; }
-
-    [Parameter]
-    public EventCallback OnUnsubscribe { get; set; }
-
-    [Parameter]
-    public EventCallback OnTest { get; set; }
-
-    [Parameter]
-    public bool IsTestListening { get; set; }
+    private Task DispatchAsync(EventCallback callback) => IsBusy ? Task.CompletedTask : callback.InvokeAsync();
 }

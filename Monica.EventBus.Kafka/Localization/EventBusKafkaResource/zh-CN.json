@@ -107,17 +107,28 @@
       "Refresh": "刷新",
       "Save": "保存",
       "Select": "选择",
-      "Details": "详情"
+      "Details": "详情",
+      "ResetFilters": "重置筛选"
     },
     "Columns": {
       "Actions": "操作"
+    },
+    "Values": {
+      "Unavailable": "暂不可用"
+    },
+    "Filters": {
+      "All": "全部"
+    },
+    "Labels": {
+      "ClusterId": "集群 ID",
+      "Topic": "主题"
+    },
+    "Pagination": {
+      "RowsPerPage": "每页行数",
+      "InfoFormat": "{first_item}–{last_item}，共 {all_items} 项"
     }
   },
   "Page": {
-    "PageTitle": "Kafka EventBus",
-    "Eyebrow": "EventBus 集成",
-    "Title": "Kafka EventBus 控制台",
-    "Subtitle": "查看 Kafka 支撑的 EventBus 集成、集群、主题、消费者组和性能快照。",
     "States": {
       "Loading": "正在加载 Kafka 控制台",
       "LoadingDescription": "正在解析 EventBus Provider 状态和已配置的 Kafka 集群。"
@@ -127,36 +138,28 @@
       "RefreshSucceeded": "Kafka 控制台已刷新。"
     }
   },
-  "Tabs": {
-    "Dashboard": "仪表盘",
-    "Clusters": "集群",
-    "Topics": "主题",
-    "ConsumerGroups": "消费者组",
-    "Performance": "性能"
-  },
+  "Tabs": {},
   "Dashboard": {
     "Sections": {
-      "ContextEyebrow": "身份上下文",
-      "ContextTitle": "Provider 与当前集群",
-      "ContextDescription": "确认当前控制台上下文由哪个 EventBus Provider 和 Kafka 集群承载。",
-      "SummaryEyebrow": "运行摘要",
       "SummaryTitle": "运行信号",
-      "SummaryDescription": "集中查看最新 Broker、清单、保留消息和吞吐证据。",
-      "EvidenceEyebrow": "证据与下一步",
-      "EvidenceTitle": "访问与采样就绪度",
-      "EvidenceDescription": "检查当前集群可用能力，并直接进入下一项有价值的工作区。"
+      "EvidenceTitle": "访问与采样就绪度"
     },
     "Evidence": {
       "AdminAccess": "Broker 管理访问",
       "AdminAccessReady": "可直接访问 Kafka，能够查看清单并执行管理操作。",
       "AdminAccessLimited": "无法直接访问 Kafka，Broker 管理能力受限。",
-      "LiveSampling": "性能采样"
+      "LiveSampling": "性能采样",
+      "JmxConfiguration": "JMX 配置",
+      "JmxConfigured": "已配置端点；尚不提供 JMX 采集",
+      "JmxNotConfigured": "未配置 JMX 端点"
     },
     "NextActions": {
       "Title": "继续排查",
       "Description": "无需重复全局操作，直接检查集群配置或性能证据。",
       "Clusters": "打开集群",
-      "Performance": "打开性能"
+      "Performance": "打开性能",
+      "Topics": "浏览主题",
+      "ConsumerGroups": "检查消费组"
     },
     "Cards": {
       "Provider": "当前 Provider",
@@ -186,8 +189,7 @@
     "SelectedCluster": {
       "Label": "当前集群",
       "None": "未选择集群",
-      "NoneDescription": "新建或配置 Kafka 集群后可启用控制台视图。",
-      "ExternalCredentials": "Kafka 凭据由 Monica 外部管理。"
+      "NoneDescription": "新建或配置 Kafka 集群后可启用控制台视图。"
     }
   },
   "Clusters": {
@@ -201,7 +203,6 @@
     "Columns": {
       "Name": "名称",
       "Bootstrap": "Bootstrap",
-      "Mode": "模式",
       "Status": "状态",
       "Actions": "操作"
     },
@@ -215,7 +216,8 @@
     "Status": {
       "Reachable": "可连接",
       "Unknown": "未测试",
-      "Limited": "受限"
+      "Limited": "受限",
+      "ConnectionFailed": "连接失败"
     },
     "Dialog": {
       "CreateTitle": "新建 Kafka 集群",
@@ -262,11 +264,17 @@
       "SslCaLocation": "SSL CA 路径",
       "IsDaprBacked": "支撑 Dapr pub/sub",
       "CredentialsManagedExternally": "凭据由外部管理",
-      "DaprPubSubName": "Dapr pub/sub 名称"
+      "DaprPubSubName": "Dapr pub/sub 名称",
+      "JmxHint": "仅保存配置；此控制台不采集 JMX 指标。"
     },
     "Validation": {
       "DisplayNameRequired": "显示名称必填。",
       "BootstrapRequired": "当凭据由 Monica 管理时，Bootstrap Servers 必填。"
+    },
+    "Search": {
+      "Label": "搜索集群",
+      "Placeholder": "名称、ID 或引导服务器",
+      "NoMatches": "没有匹配筛选条件的集群"
     }
   },
   "Topics": {
@@ -316,7 +324,8 @@
       "PartitionsTitle": "增加分区",
       "RetentionTitle": "设置保留时间",
       "PartitionsMessage": "主题 {0} 当前有 {1} 个分区。Kafka 只允许增加分区数量。",
-      "RetentionMessage": "设置主题 {0} 的 retention.ms。"
+      "RetentionMessage": "设置主题 {0} 的 retention.ms。",
+      "CreateHint": "在下方指定集群中创建主题；保留时间留空时使用代理默认值。"
     },
     "BacklogDialog": {
       "Summary": "采样时间 {1}，共 {0} 条保留消息。该数量基于每个分区 latest offset 减 earliest offset 计算，不需要消费者组。",
@@ -332,7 +341,8 @@
       "Title": "{0} 的消费者组",
       "Summary": "此主题有 {0} 个消费者组存在当前分配或已提交 offset。",
       "Loading": "正在加载此主题的消费者组……",
-      "Empty": "此主题没有存在当前分配或已提交 offset 的消费者组。"
+      "Empty": "此主题没有存在当前分配或已提交 offset 的消费者组。",
+      "Unavailable": "消费组查询失败，请刷新重试。"
     },
     "MessagesDialog": {
       "ReadHint": "显示最多 {0} 条最近消息，采样时间 {1}。此预览不会提交消费者 offset。",
@@ -342,7 +352,8 @@
       "Encoding": "编码",
       "Size": "大小",
       "SizeBytes": "{0} bytes",
-      "Truncated": "负载已截断后显示。"
+      "Truncated": "负载已截断后显示。",
+      "Payload": "消息负载"
     },
     "Confirm": {
       "DeleteTitle": "删除 Kafka 主题",
@@ -368,11 +379,16 @@
       "NameRequired": "主题名称必填。",
       "PartitionIncreaseRequired": "新的分区数量必须大于当前分区数量。",
       "RetentionRequired": "保留时间必须大于 0。"
-    }
+    },
+    "Filters": {
+      "Application": "应用主题",
+      "Internal": "内部主题",
+      "MetadataUnavailable": "元数据不可用"
+    },
+    "Loading": "正在加载主题清单"
   },
   "ConsumerGroups": {
     "Title": "消费者组",
-    "Summary": "当前可见 {0} 个消费者组",
     "Unavailable": "消费者组查看需要直接 Kafka Broker 访问。",
     "Empty": "选中集群未返回消费者组。",
     "Actions": {
@@ -417,8 +433,16 @@
       "Values": {
         "OffsetUnknown": "未知",
         "Unassigned": "未分配"
-      }
-    }
+      },
+      "Unavailable": "尚无可用的消费组采样，请刷新重试。"
+    },
+    "Loading": "正在加载消费组",
+    "Search": {
+      "Label": "搜索消费组",
+      "Placeholder": "输入消费组 ID",
+      "NoMatches": "没有匹配筛选条件的消费组"
+    },
+    "FilteredSummary": "显示 {1} 个消费组中的 {0} 个"
   },
   "Performance": {
     "Live": {
@@ -433,6 +457,7 @@
     "Title": "性能快照",
     "Unavailable": "性能采样需要直接 Kafka Broker 访问。",
     "Empty": "尚未采集性能快照。",
+    "CaptureUnavailable": "尚无有效的性能快照，请重新采样后重试。",
     "NoConsumerGroupMetrics": "最新性能快照中没有可显示的主题与消费者组指标。",
     "MetricsFilter": {
       "Label": "筛选主题或消费者组",
@@ -461,6 +486,32 @@
     },
     "Messages": {
       "Captured": "Kafka 性能快照已采集。"
+    },
+    "Evidence": {
+      "OffsetBased": "速率来自可比较的 Kafka 位点采样，不采集 JMX 指标。",
+      "Diagnostic": "采样诊断"
+    }
+  },
+  "Workbench": {
+    "Eyebrow": "KAFKA / 消息基础设施",
+    "NavigationLabel": "Kafka 工作区",
+    "ClusterContext": "当前集群",
+    "NoCluster": "尚无已配置集群",
+    "UnavailableCluster": "当前配置中没有此集群，未替换为其他集群。",
+    "CategoryDescription": "配置代理访问，检查主题与消费组，并查看基于位点的性能证据。",
+    "Titles": {
+      "Overview": "Kafka 集成概览",
+      "Clusters": "集群配置",
+      "Topics": "主题管理",
+      "ConsumerGroups": "消费组",
+      "Performance": "采样与性能"
+    },
+    "Descriptions": {
+      "Overview": "了解当前 EventBus 集成方式，以及主机可读取的代理与运行证据。",
+      "Clusters": "管理访问配置，通过真实连接检查确认集群可用性。",
+      "Topics": "检查当前集群的主题拓扑、保留策略与消息记录。",
+      "ConsumerGroups": "检查消费组状态、成员、分区分配与提交位点。",
+      "Performance": "比较真实 Kafka 位点采样，同时保留采集诊断与已有证据。"
     }
   }
 }

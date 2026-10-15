@@ -1,7 +1,7 @@
 <header class="system-info-evidence-header">
-    <span class="system-info-evidence-header__number">@Number</span>
-    <div>
-        <h2>@Title</h2>
+    <div class="system-info-evidence-header__copy">
+        <span class="system-info-evidence-header__number" aria-hidden="true">@Number</span>
+        <h2 id="@HeadingId">@Title</h2>
         <p>@Description</p>
     </div>
     @if (Count.HasValue)
@@ -14,6 +14,7 @@
     [Parameter, EditorRequired] public string Number { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    [Parameter] public string? HeadingId { get; set; }
     [Parameter] public int? Count { get; set; }
     [Parameter] public string? CountLabel { get; set; }
 }

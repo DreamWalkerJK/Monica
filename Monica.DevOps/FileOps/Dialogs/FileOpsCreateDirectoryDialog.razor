@@ -1,54 +1,18 @@
 @using Monica.DevOps.Localization
-@using Monica.DevOps.FileOps.Models
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<FileOpsResource> L
-
-<MudDialog>
-    <DialogContent>
-        <MudStack Spacing="2">
-            <MudTextField T="string"
-                          Label="@L["CreateDirectoryDialog:CurrentPath"]"
-                          Value="@ParentPath"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Disabled="true" />
-
-            <MudTextField T="string"
-                          Label="@L["CreateDirectoryDialog:DirectoryName"]"
-                          HelperText="@L["CreateDirectoryDialog:DirectoryNameHelper"]"
-                          @bind-Value="_directoryName"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Immediate="true" />
-        </MudStack>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">
-            @L["Common:Cancel"]
-        </MudButton>
-        <MudButton OnClick="Confirm" Variant="Variant.Filled" Color="Color.Primary">
-            @L["CreateDirectoryDialog:Confirm"]
-        </MudButton>
-    </DialogActions>
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px">
+    <TitleContent><MoDialogHeading Text="@L["CreateDirectoryDialog:Title"]" /></TitleContent>
+    <DialogContent><div class="decision-content">
+        <p>@L["CreateDirectoryDialog:CurrentPath"]</p><code>@ParentPath</code>
+        <MudTextField T="string" Label="@L["CreateDirectoryDialog:DirectoryName"]" HelperText="@L["CreateDirectoryDialog:DirectoryNameHelper"]" Value="@_name" ValueChanged="@((string value) => _name = value)" Variant="Variant.Outlined" Immediate="true" Error="@(_name.Length > 0 && !Valid)" ErrorText="@L["CreateDirectoryDialog:InvalidName"]" />
+    </div></DialogContent>
+    <DialogActions><div class="decision-actions"><MudButton OnClick="@(() => Dialog.Cancel())">@L["Common:Cancel"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!Valid)" OnClick="@(() => Dialog.Close(DialogResult.Ok(_name.Trim())))">@L["CreateDirectoryDialog:Confirm"]</MudButton></div></DialogActions>
 </MudDialog>
-
 @code {
-    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
-
-    [Parameter] public string ParentPath { get; set; } = string.Empty;
-
-    private string _directoryName = string.Empty;
-
-    private void Cancel()
-    {
-        MudDialog?.Cancel();
-    }
-
-    private void Confirm()
-    {
-        MudDialog?.Close(DialogResult.Ok(new FileOpsCreateDirectoryRequest
-        {
-            ParentPath = ParentPath,
-            DirectoryName = _directoryName
-        }));
-    }
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    /// <summary>The immutable accepted parent captured before native dialog admission.</summary>
+    [Parameter] public string ParentPath { get; set; } = "";
+    private string _name = "";
+    private bool Valid => !string.IsNullOrWhiteSpace(_name) && !_name.Contains('/') && !_name.Contains('\\') && _name.Trim() is not ("." or "..");
 }

@@ -257,12 +257,12 @@ public sealed record RepositoryActivityResult
     public RepositoryActivityProviderGuide? ProviderGuide { get; init; }
 
     /// <summary>
-    /// Activity rows ordered by runtime descending.
+    /// All server-visible activity rows, including sessions on other databases, ordered by query age descending.
     /// </summary>
     public IReadOnlyList<RepositoryActivityRow> Rows { get; init; } = [];
 
     /// <summary>
-    /// Aggregated session counts scoped to the context's database.
+    /// Aggregated session counts. Totals include every returned row; per-state counts use the context's database when known.
     /// Populated only when the provider activity query is supported and succeeds.
     /// </summary>
     public RepositoryActivitySummary? Summary { get; init; }
@@ -280,8 +280,8 @@ public sealed record RepositoryActivityResult
 
 /// <summary>
 /// Aggregated session counts derived from provider activity rows.
-/// Per-state counts are scoped to a single database so they can be compared
-/// against that connection's pool settings; totals keep every returned row.
+/// Totals include every server-visible row. Per-state counts use the selected database when known,
+/// including other clients, and do not measure occupancy of the application's local connection pool.
 /// </summary>
 public sealed record RepositoryActivitySummary
 {
@@ -291,7 +291,7 @@ public sealed record RepositoryActivitySummary
     /// </summary>
     /// <param name="rows">Normalized activity rows returned by the provider query.</param>
     /// <param name="databaseName">
-    /// Database name of the context whose pool is inspected. When empty, all rows are scoped in.
+    /// Database name of the inspected context. When empty, all rows are included in the per-state scope.
     /// </param>
     public static RepositoryActivitySummary Create(IReadOnlyList<RepositoryActivityRow> rows, string? databaseName)
     {
@@ -336,7 +336,8 @@ public sealed record RepositoryActivitySummary
     public int IdleInTransactionSessions { get; init; }
 
     /// <summary>
-    /// Database sessions currently waiting on a resource or lock.
+    /// Database sessions whose provider waiting projection is true. PostgreSQL reports only
+    /// <c>wait_event_type = Lock</c>; openGauss uses its native waiting field. The count can overlap state counts.
     /// </summary>
     public int WaitingSessions { get; init; }
 
@@ -447,7 +448,8 @@ public sealed record RepositoryActivityProviderGuide
 public sealed record RepositoryActivityRow
 {
     /// <summary>
-    /// Query runtime.
+    /// Age since the provider's current or most recent query-start timestamp, including idle sessions.
+    /// This is not necessarily the duration of an actively executing statement.
     /// </summary>
     public TimeSpan? Runtime { get; init; }
 
@@ -507,7 +509,9 @@ public sealed record RepositoryActivityRow
     public DateTime? StateChange { get; init; }
 
     /// <summary>
-    /// Whether the session is waiting.
+    /// Provider waiting projection. PostgreSQL is true only for <c>wait_event_type = Lock</c>;
+    /// false does not exclude other wait categories. openGauss uses its native waiting field.
+    /// Null means no waiting value was supplied.
     /// </summary>
     public bool? Waiting { get; init; }
 

@@ -6,8 +6,9 @@
     "Title": "Health checks",
     "Eyebrow": "Operations",
     "Heading": "Host health",
-    "Subtitle": "Inspect the current host's point-in-time readiness and sanitized health-check evidence.",
-    "CurrentHost": "Current host · {0}"
+    "Subtitle": "Live readiness and dependency checks for this host.",
+    "CurrentHost": "Current host · {0}",
+    "LastChecked": "Last updated"
   },
   "Access": {
     "Checking": "Checking dashboard access…",
@@ -19,7 +20,8 @@
     "Retry": "Retry",
     "Details": "Inspect details",
     "DetailsFor": "Inspect details for {0}",
-    "Close": "Close details"
+    "Close": "Close details",
+    "ClearFilters": "Clear filters"
   },
   "State": {
     "Loading": "Running health checks",
@@ -30,10 +32,22 @@
   "Overview": {
     "ReadinessLabel": "Readiness",
     "ReadinessChecks": "{0} readiness checks",
-    "Ready": "Ready to receive traffic",
-    "ReadyDegraded": "Ready with degraded dependencies",
-    "NotReady": "Not ready to receive traffic",
-    "DurationMilliseconds": "Last checked in {0:0.##} ms"
+    "Ready": "Required checks passed. This host can receive traffic.",
+    "ReadyDegraded": "This host can receive traffic, but some required checks are degraded.",
+    "NotReady": "This host cannot receive traffic until the required checks pass.",
+    "SnapshotDuration": "Snapshot duration",
+    "DurationMilliseconds": "Last checked in {0:0.##} ms",
+    "AutoRefresh": "Refreshes every 10s",
+    "Distribution": "All registered checks",
+    "AttentionTitle": "Needs attention",
+    "AllClear": "No unhealthy or degraded checks were reported in this snapshot.",
+    "CoverageMissingTitle": "Readiness not configured",
+    "CoverageMissingDescription": "No readiness checks are registered. Traffic readiness cannot be established from this snapshot.",
+    "Headlines": {
+      "Healthy": "Ready",
+      "Degraded": "Ready, with caveats",
+      "Unhealthy": "Not ready"
+    }
   },
   "Status": {
     "Healthy": "Healthy",
@@ -45,13 +59,13 @@
     "NameLabel": "Name or description",
     "NamePlaceholder": "Search checks",
     "StatusLabel": "Status",
-    "AnyStatus": "Any status",
+    "AnyStatus": "All checks",
     "TagLabel": "Tag",
     "Results": "Showing {0} of {1}"
   },
   "Table": {
-    "Eyebrow": "Current evidence",
-    "Title": "Registered checks",
+    "Eyebrow": "Live snapshot",
+    "Title": "Check registry",
     "Subtitle": "This view is point-in-time and stores no history.",
     "Columns": {
       "Name": "Name",

@@ -1,52 +1,29 @@
-.subscription-table-wrapper {
-    width: 100%;
-    min-width: 0;
-    overflow-x: auto;
-}
-
-.subscription-table-wrapper ::deep .mud-table {
-    width: 100%;
-    min-width: 0;
-}
-
-.subscription-table-wrapper ::deep .mud-table-row {
-    transition: background-color 140ms ease;
-}
-
-.subscription-table-wrapper ::deep .mud-table-row:focus-within {
-    outline: 2px solid var(--mud-palette-primary);
-    outline-offset: -2px;
-}
-
-.subscription-table-wrapper ::deep .subscription-table__event-link {
-    color: var(--mud-palette-primary);
-    cursor: pointer;
-}
-
-.subscription-table-wrapper ::deep .subscription-table__tooltip {
-    width: min(31rem, 80vw);
-    min-width: 0;
-}
-
-.subscription-table-wrapper ::deep .subscription-table__tooltip-label {
-    margin-top: .5rem;
-    font-weight: 600;
-}
-
-.subscription-table-wrapper ::deep .subscription-table__technical {
-    min-width: 0;
-    overflow-wrap: anywhere;
-    font-family: var(--mo-font-family-mono);
-}
-
+.subscription-table-wrapper { min-width: 0; overflow: hidden; border: 1px solid var(--mud-palette-divider); border-radius: var(--mud-default-borderradius); background: var(--mud-palette-surface); }
+.subscription-table-wrapper ::deep .mud-table { border-radius: 0; background: transparent; }
+.subscription-table-wrapper ::deep .mud-table-container { border-radius: 0; }
+.subscription-table-wrapper ::deep th { padding: 15px 20px; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); background: color-mix(in srgb, var(--mud-palette-background) 60%, var(--mud-palette-surface)); font-size: .75rem; font-weight: 500; }
+.subscription-table-wrapper ::deep td { padding: 19px 20px; vertical-align: middle; }
+.subscription-table-wrapper ::deep .mud-table-pagination { padding: 8px 12px; }
+.subscription-table-wrapper ::deep .subscription-inspect { padding: 0; min-width: 0; text-align: left; font-size: .875rem; line-height: 1.5; text-transform: none; font-weight: 600; justify-content: flex-start; }
+.subscription-table-wrapper ::deep .subscription-inspect .mud-button-label { overflow-wrap: anywhere; }
+.subscription-topic, .subscription-key, .subscription-handler { display: block; margin-top: 4px; font-size: .8rem; line-height: 1.6; overflow-wrap: anywhere; }
+.subscription-topic { max-width: 36rem; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); }
+.subscription-key { max-width: 20rem; }
+.subscription-handler { max-width: 18rem; }
+.subscription-id, .subscription-discovery, .subscription-scope, .subscription-no-runtime { display: block; font-size: .73rem; line-height: 1.65; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); overflow-wrap: anywhere; }
+.subscription-id { margin-top: 5px; font-family: var(--mo-font-family-mono); }
+.subscription-discovery { margin-top: 7px; }
+.subscription-listening { display: block; margin-top: 6px; font-size: .7rem; color: color-mix(in srgb, var(--mud-palette-success) 45%, var(--mud-palette-text-primary)); }
+.subscription-empty { padding: 40px 24px; text-align: center; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); }
+@media (max-width: 960px) and (min-width: 601px) { .subscription-table-wrapper ::deep th, .subscription-table-wrapper ::deep td { padding: 14px 12px; } }
+.subscription-cell { min-width: 0; }
 @media (max-width: 600px) {
-    .subscription-table-wrapper ::deep .subscription-table__tooltip {
-        width: min(19rem, 80vw);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .subscription-table-wrapper ::deep .mud-table-row {
-        transition: none;
-    }
+    .subscription-table-wrapper ::deep .mud-table-row { padding: 0; border-bottom: 1px solid var(--mud-palette-divider); }
+    .subscription-table-wrapper ::deep .mud-table-cell { display: grid; grid-template-columns: minmax(80px, 34%) minmax(0, 1fr); gap: 12px; padding: 8px 16px; border-bottom: 0; align-items: start; }
+    .subscription-table-wrapper ::deep .mud-table-cell:first-child { padding-top: 20px; }
+    .subscription-table-wrapper ::deep .mud-table-cell:last-child { padding-bottom: 20px; }
+    .subscription-table-wrapper ::deep .mud-table-cell::before { display: block; width: auto; padding-right: 0; font-size: .72rem; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); }
+    .subscription-table-wrapper ::deep .mud-table-cell.mud-table-empty-row { display: table-cell; padding: 0; }
+    .subscription-table-wrapper ::deep .mud-table-cell.mud-table-empty-row::before { display: none; }
+    .subscription-table-wrapper ::deep .mud-table-pagination { padding: 6px 16px; }
 }

@@ -1,0 +1,77 @@
+@using System.Globalization
+@using Monica.Profiling.RuntimeMetrics.Models
+@using Monica.Profiling.UIMemoryAnalysis.Support
+
+<div class="memory-owned-plot" data-plot-unit="@_geometry.Unit" data-omitted-values="@_geometry.OmittedValueCount">
+    @if (_geometry.HasValues)
+    {
+        <span class="memory-owned-plot-unit">@_geometry.Unit · UTC</span>
+        <div class="memory-owned-plot-grid">
+            <div class="memory-owned-plot-values" aria-hidden="true">
+                @foreach (var tick in _geometry.ValueTicks)
+                {
+                    <span title="@MemoryAnalysisDisplayFormatter.Raw(tick.Value)">@TickText(tick.Value)</span>
+                }
+            </div>
+            <svg class="memory-owned-plot-canvas" viewBox="0 0 1000 240" preserveAspectRatio="none" role="img"
+                 aria-labelledby="@_titleId" aria-describedby="@(string.IsNullOrEmpty(Description) ? null : _descriptionId)">
+                <title id="@_titleId">@SeriesLabel · @_geometry.Unit · UTC</title>
+                @if (!string.IsNullOrEmpty(Description)) { <desc id="@_descriptionId">@Description</desc> }
+                @foreach (var tick in _geometry.ValueTicks)
+                {
+                    <line class="memory-owned-plot-gridline" x1="24" x2="976" y1="@Coordinate(tick.Y)" y2="@Coordinate(tick.Y)" vector-effect="non-scaling-stroke" />
+                }
+                @foreach (var segment in _geometry.Segments.Where(segment => segment.Count > 1))
+                {
+                    <path class="memory-owned-plot-line" d="@Path(segment)" stroke="@StrokeColor" fill="none" vector-effect="non-scaling-stroke" />
+                }
+                @foreach (var point in _geometry.Points)
+                {
+                    <circle class="memory-owned-plot-point" cx="@Coordinate(point.X)" cy="@Coordinate(point.Y)" r="4"
+                            fill="@StrokeColor" data-source-index="@point.SourceIndex"
+                            data-sample-timestamp="@MemoryAnalysisDisplayFormatter.MachineTime(point.TimestampUtc)"
+                            data-raw-value="@MemoryAnalysisDisplayFormatter.Raw(point.RawValue)">
+                        <title>@PointTitle(point)</title>
+                    </circle>
+                }
+            </svg>
+            <div class="memory-owned-plot-times" aria-hidden="true">
+                @for (var index = 0; index < _geometry.TimeTicks.Count; index++)
+                {
+                    var tick = _geometry.TimeTicks[index];
+                    var anchor = _geometry.TimeTicks.Count == 1 ? "middle" : index == 0 ? "start" : index == _geometry.TimeTicks.Count - 1 ? "end" : "middle";
+                    <time class="memory-owned-plot-time" data-anchor="@anchor" style="left:@Percent(tick.X / MemoryHistoryPlotGeometry.Width)"
+                          datetime="@MemoryAnalysisDisplayFormatter.MachineTime(tick.TimestampUtc)" title="@MemoryAnalysisDisplayFormatter.MachineTime(tick.TimestampUtc)">@tick.TimestampUtc.ToString("MM-dd HH:mm:ss", CultureInfo.InvariantCulture)</time>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="memory-owned-plot-unavailable" role="status" aria-label="@SeriesLabel">@UnavailableText</div>
+    }
+</div>
+
+@code {
+    /// <summary>Gets or sets the complete retained observations; no sampling or collector call occurs here.</summary>
+    [Parameter] public IReadOnlyList<RuntimeMetricsPoint>? Points { get; set; }
+    /// <summary>Gets or sets the source-qualified measurement and its fixed display conversion.</summary>
+    [Parameter] public MemoryHistoryMetric Metric { get; set; }
+    /// <summary>Gets or sets the localized name used by the native SVG and exact point titles.</summary>
+    [Parameter, EditorRequired] public string SeriesLabel { get; set; } = string.Empty;
+    /// <summary>Gets or sets an approved palette color; it does not classify memory severity.</summary>
+    [Parameter] public string StrokeColor { get; set; } = "var(--mud-palette-primary)";
+    /// <summary>Gets or sets an optional localized explanation of the measurement and observation basis.</summary>
+    [Parameter] public string? Description { get; set; }
+    /// <summary>Gets or sets the localized unavailable marker shown when no finite observation exists.</summary>
+    [Parameter] public string UnavailableText { get; set; } = "—";
+    private readonly string _titleId = $"memory-plot-title-{Guid.NewGuid():N}";
+    private readonly string _descriptionId = $"memory-plot-description-{Guid.NewGuid():N}";
+    private MemoryHistoryPlotGeometry _geometry = MemoryHistoryPlotGeometry.Create(null, MemoryHistoryMetric.HeapMegabytes);
+    protected override void OnParametersSet() => _geometry = MemoryHistoryPlotGeometry.Create(Points, Metric);
+    private static string Coordinate(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+    private static string Percent(double fraction) => $"{(fraction * 100).ToString("0.####", CultureInfo.InvariantCulture)}%";
+    private static string Path(IReadOnlyList<MemoryHistoryPlotPoint> points) => string.Join(" ", points.Select((point, index) => $"{(index == 0 ? "M" : "L")} {Coordinate(point.X)} {Coordinate(point.Y)}"));
+    private static string TickText(double value) => value.ToString(value != 0 && (Math.Abs(value) >= 1000000 || Math.Abs(value) < .01) ? "0.##E+0" : "0.##", CultureInfo.CurrentCulture);
+    private string PointTitle(MemoryHistoryPlotPoint point) => $"{MemoryAnalysisDisplayFormatter.MachineTime(point.TimestampUtc)}\n{SeriesLabel}: {MemoryAnalysisDisplayFormatter.Raw(point.RawValue)} {_geometry.RawUnit} ({MemoryAnalysisDisplayFormatter.Raw(point.Value)} {_geometry.Unit})";
+}

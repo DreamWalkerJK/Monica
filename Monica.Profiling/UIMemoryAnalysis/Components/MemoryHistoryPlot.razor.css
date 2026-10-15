@@ -1,0 +1,62 @@
+.memory-owned-plot {
+    min-width: 0;
+    container: memoryplot / inline-size;
+    color: var(--mud-palette-text-primary);
+    --memory-plot-muted: var(--memory-ink-muted, color-mix(in srgb, var(--mud-palette-text-secondary) 60%, var(--mud-palette-text-primary)));
+}
+
+.memory-owned-plot-unit {
+    display: block;
+    margin: 0 0 6px;
+    font-family: var(--mo-font-family-mono);
+    font-size: 10px;
+    line-height: 1.5;
+    color: var(--memory-plot-muted);
+}
+
+.memory-owned-plot-grid {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-rows: 240px 28px;
+    gap: 0 10px;
+    min-width: 0;
+}
+
+.memory-owned-plot-values {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 12px 0;
+    text-align: end;
+    font-family: var(--mo-font-family-mono);
+    font-size: 11px;
+    line-height: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--memory-plot-muted);
+}
+
+.memory-owned-plot-canvas { display: block; width: 100%; height: 240px; min-width: 0; }
+.memory-owned-plot-gridline { stroke: var(--mud-palette-lines-default); stroke-width: 1; }
+.memory-owned-plot-line { stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.memory-owned-plot-point { opacity: .8; }
+.memory-owned-plot-point:hover { opacity: 1; }
+
+.memory-owned-plot-times { position: relative; grid-column: 2; min-width: 0; }
+.memory-owned-plot-time {
+    position: absolute;
+    top: 8px;
+    white-space: nowrap;
+    font-family: var(--mo-font-family-mono);
+    font-size: 10px;
+    line-height: 1.5;
+    color: var(--memory-plot-muted);
+}
+.memory-owned-plot-time[data-anchor="middle"] { transform: translateX(-50%); }
+.memory-owned-plot-time[data-anchor="end"] { transform: translateX(-100%); text-align: end; }
+.memory-owned-plot-unavailable { min-height: 240px; display: grid; place-items: center; color: var(--memory-plot-muted); font-family: var(--mo-font-family-mono); }
+
+@container memoryplot (max-width: 520px) {
+    .memory-owned-plot-time[data-anchor="middle"] { visibility: hidden; }
+    .memory-owned-plot-time:only-child { visibility: visible; }
+    .memory-owned-plot-grid { gap: 0 8px; }
+}

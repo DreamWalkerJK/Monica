@@ -31,7 +31,7 @@ public static class ModuleMemoryAnalysisUIBuilderExtensions
     extension(ModuleRegistration<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption> registration)
     {
         /// <summary>
-        /// Enables allocation tracking and the type-allocation tab for this host.
+        /// Enables the optional allocation workspace and its host-owned allocation backend.
         /// </summary>
         /// <returns>The same host-bound memory-analysis registration.</returns>
         public ModuleRegistration<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption> EnableTypeAllocationTab()
@@ -56,16 +56,38 @@ public class ModuleMemoryAnalysisUI : MonicaModule<ModuleMemoryAnalysisUIOption>
         {
             option.AddResource<ProfilingResource>();
             option.AddResource<MemoryAnalysisResource>();
+            option.AddResource<RuntimeMetricsResource>();
         });
-        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
-            option.ConfigureNavigation(static registry =>
+        module.Require<ModuleShellUI, ModuleShellUIOption>(option =>
+            option.ConfigureNavigation(registry =>
+            {
+                var includeAllocations = Option.EnableTypeAllocationTab;
+                var category = registry.RegisterLocalizedCategory<MemoryAnalysisResource>(
+                    "Monica.Profiling.MemoryAnalysis", "Pages:MemoryAnalysis:Title", 60,
+                    parentId: BuiltInNavigationCategoryIds.Monitor,
+                    icon: Icons.Material.Outlined.Memory,
+                    descriptionKey: "Pages:MemoryAnalysis:Description");
                 registry.RegisterLocalizedPage<UIMemoryAnalysisPage, MemoryAnalysisResource>(
-                    UIMemoryAnalysisPage.PAGE_URL,
-                    "Pages:MemoryAnalysis:Title",
-                    Icons.Material.Filled.Memory,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 60)));
+                    UIMemoryAnalysisPage.PAGE_URL, "Pages:MemoryAnalysis:Overview:Title",
+                    Icons.Material.Outlined.Memory, category, addToNav: true, navOrder: 10,
+                    descriptionKey: "Pages:MemoryAnalysis:Overview:Description");
+                registry.RegisterLocalizedPage<UIMemoryGcPage, MemoryAnalysisResource>(
+                    UIMemoryGcPage.PAGE_URL, "Pages:MemoryAnalysis:Gc:Title",
+                    Icons.Material.Outlined.Layers, category, addToNav: true, navOrder: 20,
+                    descriptionKey: "Pages:MemoryAnalysis:Gc:Description");
+                registry.RegisterLocalizedPage<UIMemoryHistoryPage, MemoryAnalysisResource>(
+                    UIMemoryHistoryPage.PAGE_URL, "Pages:MemoryAnalysis:History:Title",
+                    Icons.Material.Outlined.ShowChart, category, addToNav: true, navOrder: 30,
+                    descriptionKey: "Pages:MemoryAnalysis:History:Description");
+                registry.RegisterLocalizedPage<UIMemoryAllocationsPage, MemoryAnalysisResource>(
+                    UIMemoryAllocationsPage.PAGE_URL, "Pages:MemoryAnalysis:Allocations:Title",
+                    Icons.Material.Outlined.Category, category, addToNav: includeAllocations, navOrder: 40,
+                    descriptionKey: "Pages:MemoryAnalysis:Allocations:Description");
+                registry.RegisterLocalizedPage<UIMemoryDiagnosticsPage, MemoryAnalysisResource>(
+                    UIMemoryDiagnosticsPage.PAGE_URL, "Pages:MemoryAnalysis:Diagnostics:Title",
+                    Icons.Material.Outlined.Build, category, addToNav: true, navOrder: 50,
+                    descriptionKey: "Pages:MemoryAnalysis:Diagnostics:Description");
+            }));
     }
 
     /// <inheritdoc />
@@ -85,26 +107,30 @@ public class ModuleMemoryAnalysisUI : MonicaModule<ModuleMemoryAnalysisUIOption>
 public class ModuleMemoryAnalysisUIOption : ModuleOptions<ModuleMemoryAnalysisUI>
 {
     /// <summary>
-    /// Controls the dashboard refresh interval in milliseconds.
-    /// Set this to 0 to disable timer-based refresh and require manual refresh only.
+    /// Controls overview, GC and history view reads in milliseconds; defaults to 2000.
+    /// Non-positive values require manual reads. Diagnostics always starts in manual mode.
+    /// This does not configure or stop the host-owned runtime metrics collector.
     /// </summary>
     public int AutoRefreshIntervalMs { get; set; } = 2000;
 
     /// <summary>
-    /// Enables the manual GC action button in the diagnostics UI.
-    /// Disable this when operators should observe memory behavior without forcing collections.
+    /// Allows the diagnostics page to request manual garbage collection; defaults to true.
+    /// The page state enforces this admission policy as well as disabling the control.
+    /// This is not authorization for separate backend facade or HTTP callers.
     /// </summary>
     public bool AllowManualGC { get; set; } = true;
 
     /// <summary>
-    /// Enables GC dump creation from the diagnostics UI.
-    /// Disable this if operators must not generate diagnostic dump files from the browser.
+    /// Allows GC dump creation from the diagnostics page; defaults to true.
+    /// The page state enforces this admission policy. The native tool and server write access
+    /// are still required; a returned path is a server file, not a browser download.
     /// </summary>
     public bool AllowGcDump { get; set; } = true;
 
     /// <summary>
-    /// Enables the type allocation tab and registers the type allocation backend dependency for the page.
-    /// Keep this disabled when the memory analysis view should expose only memory snapshots and GC diagnostics.
+    /// Gets whether the optional allocations route is exposed in navigation; defaults to false.
+    /// Use <c>EnableTypeAllocationTab()</c> on the registration to include its backend dependency.
+    /// Opening or leaving the workspace does not start or stop host-owned allocation collection.
     /// </summary>
     public bool EnableTypeAllocationTab { get; internal set; }
 }

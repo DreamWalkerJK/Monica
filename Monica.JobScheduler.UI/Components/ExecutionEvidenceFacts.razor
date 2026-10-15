@@ -61,8 +61,12 @@
                     <dd><code>@(Execution.RunningWorkerInstanceId ?? "—")</code></dd>
                 </div>
                 <div>
-                    <dt>@L["ExecutionDetail:Attempts"]</dt>
-                    <dd>@Execution.ExecutionAttempt / @Execution.RetryAttempt</dd>
+                    <dt>@L["Executions:Evidence:Claims"]</dt>
+                    <dd>@Execution.ExecutionAttempt</dd>
+                </div>
+                <div>
+                    <dt>@L["Executions:Evidence:ConsumedFailures"]</dt>
+                    <dd>@Execution.RetryAttempt</dd>
                 </div>
                 <div>
                     <dt>@L["ExecutionDetail:LeaseLosses"]</dt>
@@ -76,6 +80,8 @@
         </section>
     </div>
 
+    <p class="execution-evidence__scope">@L["ExecutionDetail:EvidenceScope", TimePresentation.TimeZoneDisplayName]</p>
+
     <div class="execution-evidence__grid execution-evidence__grid--contract">
         <section class="execution-evidence__panel" aria-labelledby="execution-policy-heading">
             <header class="execution-evidence__heading">
@@ -84,6 +90,7 @@
                     @L["ExecutionDetail:PolicySnapshot"]
                 </MudText>
             </header>
+            <p class="execution-evidence__help">@L["ExecutionDetail:CapturedPolicyNotice"]</p>
             <dl class="execution-evidence__facts">
                 <div>
                     <dt>@L["ExecutionDetail:MaxConcurrency"]</dt>

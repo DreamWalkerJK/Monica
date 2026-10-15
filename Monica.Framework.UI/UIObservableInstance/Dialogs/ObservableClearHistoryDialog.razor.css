@@ -1,0 +1,10 @@
+.observable-clear-scope p { font-size: .85rem; line-height: 1.8; overflow-wrap: anywhere; }.observable-clear-scope p + p { margin-top: 16px; color: var(--mud-palette-text-secondary); }
+.observable-clear-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.observable-clear-actions ::deep .observable-clear-confirm {
+    color: color-mix(in srgb, var(--mud-palette-error) 60%, var(--mud-palette-text-primary));
+    background: var(--mo-color-state-error-soft-background);
+    border-color: var(--mo-color-state-error-soft-border);
+}
+.observable-clear-actions ::deep .observable-clear-confirm:hover {
+    background: color-mix(in srgb, var(--mud-palette-error) 16%, var(--mud-palette-surface));
+}

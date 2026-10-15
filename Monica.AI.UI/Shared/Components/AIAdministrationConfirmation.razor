@@ -1,0 +1,23 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.UI.Shared.Components.Dialogs
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px">
+    <TitleContent><MoDialogHeading Text="@Title" /></TitleContent>
+    <DialogContent><div class="ai-confirmation-content"><p>@Description</p></div></DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => Dialog.Cancel())">@L["Common:Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@(() => Dialog.Close(DialogResult.Ok(true)))">@ConfirmText</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    /// <summary>Gets or sets the native dialog's localized accessible title.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    /// <summary>Gets or sets the encoded action scope and consequences.</summary>
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    /// <summary>Gets or sets the localized affirmative action label.</summary>
+    [Parameter, EditorRequired] public string ConfirmText { get; set; } = string.Empty;
+}

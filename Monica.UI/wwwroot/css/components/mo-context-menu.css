@@ -1,6 +1,12 @@
 /* MudMenu-backed context menus share overlay behavior, focus management, and nested-menu timing. */
 .mo-context-menu-root {
-    display: contents;
+    /* MudPopover checks the anchor's viewport rect before applying cursor coordinates. */
+    display: block;
+    position: fixed;
+    inset: 0 auto auto 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
 }
 
 .mud-popover.mo-context-menu-popover {

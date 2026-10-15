@@ -96,7 +96,10 @@ public sealed class ProjectUnitsFacade(
     /// <summary>
     /// Publishes a domain event payload.
     /// </summary>
-    /// <param name="eventKey">The discovered domain-event short type name.</param>
+    /// <param name="eventKey">
+    /// The exact full CLR identity supplied by <see cref="ProjectUnitDomainEventInfo.EventKey"/>.
+    /// Legacy short type names remain supported using the catalog's first matching name.
+    /// </param>
     /// <param name="eventContent">The JSON payload to deserialize as the selected event type.</param>
     /// <returns>A result envelope describing whether the event was published.</returns>
     public async Task<Res> PublishDomainEventAsync(string eventKey, JsonNode eventContent)
@@ -114,11 +117,35 @@ public sealed class ProjectUnitsFacade(
     }
 
     /// <summary>
+    /// Gets a read-only snapshot of the current host's request-filter service and disabled paths.
+    /// </summary>
+    /// <returns>
+    /// A result envelope that distinguishes an unavailable service from an available service with no disabled paths.
+    /// Reading this snapshot does not attach middleware, change paths, or grant mutation access.
+    /// </returns>
+    public Task<Res<ProjectUnitRequestFilterState>> GetRequestFilterStateAsync()
+    {
+        try
+        {
+            return Task.FromResult(Res.Ok(CatalogService.GetRequestFilterState()));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to read request-filter state.");
+            return Task.FromResult<Res<ProjectUnitRequestFilterState>>(
+                Res.Fail($"Failed to read request-filter state: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
     /// Reads and updates the request-filter state.
     /// </summary>
     /// <param name="urls">Request paths to update, or <see langword="null"/> to query the current state.</param>
     /// <param name="disable"><see langword="true"/> to disable the paths; <see langword="false"/> to enable them.</param>
-    /// <returns>A result envelope containing the currently disabled request paths.</returns>
+    /// <returns>
+    /// A result envelope containing the currently disabled request paths, or an empty list if no service is registered.
+    /// Use <see cref="GetRequestFilterStateAsync"/> when availability must be distinguished from an empty set.
+    /// </returns>
     public Task<Res<List<string>>> ManageRequestFilterAsync(List<string>? urls, bool? disable)
     {
         try

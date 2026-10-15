@@ -62,17 +62,14 @@ public sealed class ComicBurstTheme : ThemeDefinitionBase
             LayoutProperties = new LayoutProperties
             {
                 DefaultBorderRadius = "0px",
-                AppbarHeight = "64px",
+                AppbarHeight = "56px",
                 DrawerWidthLeft = "280px",
                 DrawerWidthRight = "280px",
-                DrawerMiniWidthLeft = "72px",
-                DrawerMiniWidthRight = "72px"
+                DrawerMiniWidthLeft = "64px",
+                DrawerMiniWidthRight = "64px"
             },
             Typography = CreateTypography(),
-            Shadows = new Shadow
-            {
-                Elevation = CreateComicShadows()
-            },
+            Shadows = MonicaShadowDefaults.Create(),
             ZIndex = new ZIndex
             {
                 Drawer = 1200,
@@ -94,30 +91,30 @@ public sealed class ComicBurstTheme : ThemeDefinitionBase
             PrimaryDarken = "#A91520",
             PrimaryContrastText = "#FFFFFF",
 
-            Secondary = "#F5A300",
-            SecondaryLighten = "#FFC247",
-            SecondaryDarken = "#BD7E00",
-            SecondaryContrastText = "#1B150D",
+            Secondary = "#946000",
+            SecondaryLighten = "#b88117",
+            SecondaryDarken = "#714900",
+            SecondaryContrastText = "#ffffff",
 
             Tertiary = "#1B150D",
             TertiaryLighten = "#3A3024",
             TertiaryDarken = "#0C0804",
             TertiaryContrastText = "#FFF6E3",
 
-            Info = "#0B79A8",
+            Info = "#0a739f",
             InfoLighten = "#2AA6D8",
             InfoDarken = "#075A80",
             InfoContrastText = "#FFFFFF",
 
-            Success = "#168848",
+            Success = "#137c42",
             SuccessLighten = "#25B866",
             SuccessDarken = "#0F6234",
             SuccessContrastText = "#FFFFFF",
 
-            Warning = "#F5A300",
-            WarningLighten = "#FFC247",
-            WarningDarken = "#BD7E00",
-            WarningContrastText = "#1B150D",
+            Warning = "#946000",
+            WarningLighten = "#b88117",
+            WarningDarken = "#714900",
+            WarningContrastText = "#ffffff",
 
             Error = "#D8202A",
             ErrorLighten = "#F04A54",
@@ -177,7 +174,7 @@ public sealed class ComicBurstTheme : ThemeDefinitionBase
             Primary = "#FF4A54",
             PrimaryLighten = "#FF757D",
             PrimaryDarken = "#D8202A",
-            PrimaryContrastText = "#FFFFFF",
+            PrimaryContrastText = "#210b0d",
 
             Secondary = "#FFC247",
             SecondaryLighten = "#FFD77A",
@@ -334,36 +331,4 @@ public sealed class ComicBurstTheme : ThemeDefinitionBase
         };
     }
 
-    private static string[] CreateComicShadows()
-    {
-        return
-        [
-            "none",
-            "1px 1px 0 rgba(27, 21, 13, 0.95)",
-            "2px 2px 0 rgba(27, 21, 13, 0.95)",
-            "3px 3px 0 rgba(27, 21, 13, 0.95)",
-            "4px 4px 0 rgba(27, 21, 13, 0.95)",
-            "5px 5px 0 rgba(27, 21, 13, 0.95)",
-            "6px 6px 0 rgba(27, 21, 13, 0.95)",
-            "7px 7px 0 rgba(27, 21, 13, 0.95)",
-            "8px 8px 0 rgba(27, 21, 13, 0.95)",
-            "9px 9px 0 rgba(27, 21, 13, 0.95)",
-            "10px 10px 0 rgba(27, 21, 13, 0.95)",
-            "11px 11px 0 rgba(27, 21, 13, 0.95)",
-            "12px 12px 0 rgba(27, 21, 13, 0.95)",
-            "13px 13px 0 rgba(27, 21, 13, 0.95)",
-            "14px 14px 0 rgba(27, 21, 13, 0.95)",
-            "15px 15px 0 rgba(27, 21, 13, 0.95)",
-            "16px 16px 0 rgba(27, 21, 13, 0.95)",
-            "17px 17px 0 rgba(27, 21, 13, 0.95)",
-            "18px 18px 0 rgba(27, 21, 13, 0.95)",
-            "19px 19px 0 rgba(27, 21, 13, 0.95)",
-            "20px 20px 0 rgba(27, 21, 13, 0.95)",
-            "21px 21px 0 rgba(27, 21, 13, 0.95)",
-            "22px 22px 0 rgba(27, 21, 13, 0.95)",
-            "23px 23px 0 rgba(27, 21, 13, 0.95)",
-            "24px 24px 0 rgba(27, 21, 13, 0.95)",
-            "25px 25px 0 rgba(27, 21, 13, 0.95)"
-        ];
-    }
 }

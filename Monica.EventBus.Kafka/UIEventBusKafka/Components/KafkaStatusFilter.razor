@@ -1,0 +1,21 @@
+<div class="@RootClass">
+    <MudButton Variant="Variant.Outlined" Size="Size.Small"
+               StartIcon="@(Selected ? Icons.Material.Filled.Check : null)"
+               aria-pressed="@Selected.ToString().ToLowerInvariant()" OnClick="OnClick">
+        <span class="filter-label">@Text</span><span class="filter-count">@Count</span>
+    </MudButton>
+</div>
+
+@code {
+    /// <summary>Gets or sets the localized filter label.</summary>
+    [Parameter, EditorRequired] public string Text { get; set; } = string.Empty;
+    /// <summary>Gets or sets the number of records in this status, including a true zero.</summary>
+    [Parameter] public int Count { get; set; }
+    /// <summary>Gets or sets the status's semantic palette role, retained when selected.</summary>
+    [Parameter] public Color Color { get; set; } = Color.Default;
+    /// <summary>Gets or sets whether this native button's filter is selected.</summary>
+    [Parameter] public bool Selected { get; set; }
+    /// <summary>Gets or sets the filter toggle action.</summary>
+    [Parameter] public EventCallback OnClick { get; set; }
+    private string RootClass => $"kafka-status-filter kafka-status-filter--{Color.ToString().ToLowerInvariant()} {(Selected ? "kafka-status-filter--selected" : string.Empty)}";
+}

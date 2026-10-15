@@ -1,122 +1,167 @@
 @attribute [Route(PAGE_URL)]
 @using Monica.Profiling.ExecutionTiming.Models
+@using Monica.Profiling.UIExecutionTiming.Components
 @inject ExecutionTimingPageStateFactory PageStateFactory
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ExecutionTimingResource> L
+@inject ILogger<UIExecutionTimingPage> Logger
 @implements IAsyncDisposable
 
 <PageTitle>@L["Pages:ExecutionTiming:Title"]</PageTitle>
-
 <div class="execution-timing-page">
-    <header class="execution-timing-header">
-        <div class="execution-timing-header__identity">
-            <span class="execution-timing-header__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Timer" /></span>
-            <div>
-                <MudText Typo="Typo.overline" Class="execution-timing-eyebrow">@L["Page:Eyebrow"]</MudText>
-                <MudText Typo="Typo.h4">@L["Pages:ExecutionTiming:Title"]</MudText>
-                <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+    <header class="timing-heading">
+        <div>
+            <span class="timing-eyebrow"><MudIcon Icon="@Icons.Material.Outlined.Timer" Size="Size.Small" /> @L["Page:Eyebrow"]</span>
+            <h1>@L["Pages:ExecutionTiming:Title"]</h1><p>@L["Page:Subtitle"]</p>
+        </div>
+        <div class="timing-heading__controls">
+            <div class="timing-heading__actions">
+                <MudSwitch T="bool" Value="PageState.AutoRefresh" ValueChanged="SetAutoRefresh" Disabled="@(!PageState.CanAutoRefresh)"
+                           Color="Color.Primary" Label="@L["Page:Actions:AutoRefresh"]" />
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh"
+                           OnClick="RefreshDataAsync" Disabled="@PageState.IsLoading">@L["Page:Actions:Refresh"]</MudButton>
+            </div>
+            <div class="timing-freshness">
+                <span class="timing-polling"><span class="timing-polling__dot" aria-hidden="true"></span>@PollingLabel</span>
+                @if (PageState.SnapshotCapturedAt is { } capturedAt)
+                {
+                    <span>@L["Page:Captured"] <time datetime="@ExecutionTimingDisplayFormatter.FormatMachineDateTime(capturedAt)">@ExecutionTimingDisplayFormatter.FormatDateTime(capturedAt)</time></span>
+                }
             </div>
         </div>
-        <div class="execution-timing-header__actions">
-            <MudChip T="string" Size="Size.Small" Color="@(PageState.AutoRefresh ? Color.Success : Color.Default)" Icon="@(PageState.AutoRefresh ? Icons.Material.Filled.Sensors : Icons.Material.Filled.Pause)">
-                @(PageState.AutoRefresh ? L["Page:Status:Live"] : L["Page:Status:Paused"])
-            </MudChip>
-            <MudSwitch T="bool" Value="PageState.AutoRefresh" ValueChanged="SetAutoRefresh" Color="Color.Primary" Label="@L["Page:Actions:AutoRefresh"]" />
-            <MudTooltip Text="@L["Page:Actions:Refresh"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" Variant="Variant.Outlined" OnClick="RefreshDataAsync" Disabled="PageState.IsLoading" />
-            </MudTooltip>
-        </div>
     </header>
-
-    <main class="execution-timing-content">
-        <section class="timing-summary" aria-label="@L["Summary:AriaLabel"]">
-            <article><span>@L["Summary:Running"]</span><strong class="mud-success-text">@PageState.RunningOperations.Count</strong></article>
-            <article><span>@L["Summary:Operations"]</span><strong class="mud-primary-text">@PageState.Statistics.Count</strong></article>
-            <article><span>@L["Summary:Samples"]</span><strong class="mud-info-text">@PageState.Statistics.Sum(item => item.ExecutionCount)</strong></article>
-            <article><span>@L["Summary:Average"]</span><strong class="mud-warning-text">@FormatAverageDuration()</strong></article>
-        </section>
-
-        <section class="timing-panel timing-panel--running">
-            <header class="timing-panel__header">
-                <div><MudText Typo="Typo.overline" Class="execution-timing-eyebrow">@L["Running:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Running:Title"]</MudText></div>
-                <MudChip T="string" Size="Size.Small" Color="Color.Success">@L["Common:Count", PageState.RunningOperations.Count]</MudChip>
-            </header>
-            @if (PageState.RunningOperations.Count > 0)
-            {
-                <div class="timing-table-scroll">
-                    <MudSimpleTable Dense="true" Hover="true">
-                        <thead><tr><th>@L["Columns:Name"]</th><th>@L["Columns:Description"]</th><th>@L["Columns:StartedAt"]</th><th class="number-cell">@L["Columns:CurrentDuration"]</th><th class="number-cell">@L["Columns:RunningFor"]</th></tr></thead>
-                        <tbody>
-                            @foreach (var operation in PageState.RunningOperations)
-                            {
-                                <tr><td class="diagnostic-value">@operation.DisplayName</td><td>@(operation.Description ?? L["Common:Unavailable"])</td><td>@ExecutionTimingDisplayFormatter.FormatDateTime(operation.StartedAt)</td><td class="number-cell diagnostic-value mud-success-text">@ExecutionTimingDisplayFormatter.FormatDuration(operation.GetCurrentElapsedMs())</td><td class="number-cell">@ExecutionTimingDisplayFormatter.FormatRunningDuration(operation)</td></tr>
-                            }
-                        </tbody>
-                    </MudSimpleTable>
-                </div>
-            }
-            else
-            {
-                <div class="timing-empty"><MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" /><span>@L["Running:Empty"]</span></div>
-            }
-        </section>
-
-        <section class="timing-panel">
-            <header class="timing-panel__header">
-                <div><MudText Typo="Typo.overline" Class="execution-timing-eyebrow">@L["Statistics:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Statistics:Title"]</MudText></div>
-                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@L["Common:Count", PageState.Statistics.Count]</MudChip>
-            </header>
-            @if (PageState.Statistics.Count > 0)
-            {
-                <div class="timing-table-scroll">
-                    <MudSimpleTable Dense="true" Hover="true">
-                        <thead><tr><th>@L["Columns:Name"]</th><th class="number-cell">@L["Columns:Executions"]</th><th class="number-cell">@L["Columns:AverageDuration"]</th><th class="number-cell">@L["Columns:LastDuration"]</th><th class="number-cell">@L["Columns:Rate"]</th><th class="number-cell">@L["Columns:AverageMemory"]</th><th class="number-cell">@L["Columns:LastMemory"]</th><th>@L["Columns:LastRecordedAt"]</th></tr></thead>
-                        <tbody>
-                            @foreach (var statistics in PageState.Statistics)
-                            {
-                                <tr><td class="diagnostic-value">@statistics.DisplayName</td><td class="number-cell">@statistics.ExecutionCount</td><td class="number-cell diagnostic-value mud-warning-text">@ExecutionTimingDisplayFormatter.FormatDuration(statistics.AverageDurationMs)</td><td class="number-cell diagnostic-value">@ExecutionTimingDisplayFormatter.FormatDuration(statistics.LastDurationMs)</td><td class="number-cell">@ExecutionTimingDisplayFormatter.FormatRatePerMinute(statistics)</td><td class="number-cell">@ExecutionTimingDisplayFormatter.FormatMemory(statistics.AverageMemoryBytes)</td><td class="number-cell">@ExecutionTimingDisplayFormatter.FormatMemory(statistics.LastMemoryBytes)</td><td>@ExecutionTimingDisplayFormatter.FormatDateTime(statistics.LastRecordedAt)</td></tr>
-                            }
-                        </tbody>
-                    </MudSimpleTable>
-                </div>
-            }
-            else
-            {
-                <div class="timing-empty"><MudIcon Icon="@Icons.Material.Outlined.QueryStats" /><span>@L["Statistics:Empty"]</span></div>
-            }
-        </section>
-    </main>
+    @if (PageState.LoadError is not null)
+    {
+        <div class="timing-error" role="status">
+            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+            <div><strong>@L["Page:Messages:RefreshFailed"]</strong><p>@(PageState.HasSnapshot ? L["Page:Messages:Retained"] : L["Page:Messages:NoSnapshot"])</p>
+                @if (!string.IsNullOrEmpty(PageState.LoadError)) { <p>@PageState.LoadError</p> }
+            </div>
+        </div>
+    }
+    @if (PageState.IsLoading)
+    {
+        <div class="timing-loading" role="status" aria-label="@L["Page:Loading"]"><MudProgressLinear Indeterminate="true" Color="Color.Primary" /></div>
+    }
+    <section class="timing-scope" aria-label="@L["Summary:AriaLabel"]">
+        <div class="timing-scope__facts">
+            <div><span>@L["Summary:Running"]</span><strong>@SnapshotNumber(PageState.RunningOperations.Count)</strong></div>
+            <div><span>@L["Summary:Operations"]</span><strong>@SnapshotNumber(PageState.Statistics.Count)</strong></div>
+            <div><span>@L["Summary:Samples"]</span><strong>@SnapshotNumber(PageState.Statistics.Sum(item => (long)item.ExecutionCount))</strong></div>
+            <p>@L["Summary:Scope"]</p>
+        </div>
+        <div class="timing-scope__mean">
+            <span>@L["Summary:Average"]</span><strong>@FormatAverageDuration()</strong><small>@L["Summary:AverageBasis"]</small>
+        </div>
+    </section>
+    @if (PageState.HasSnapshot && PageState.SnapshotCapturedAt is { } snapshotAt)
+    {
+        <TimingStatisticsPanel Statistics="@PageState.Statistics" CapturedAt="@snapshotAt" OnInspect="InspectCompletedAsync" />
+        <TimingRunningPanel Operations="@PageState.RunningOperations" CapturedAt="@snapshotAt" OnInspect="InspectRunningAsync" />
+    }
+    else if (PageState.LoadError is null)
+    {
+        <div class="timing-awaiting" role="status">@L["Page:Loading"]</div>
+    }
 </div>
 
 @code {
     public const string PAGE_URL = "/execution-timing";
     private ExecutionTimingPageState PageState { get; set; } = null!;
+    private readonly HashSet<Task> _renderTasks = [];
+    private readonly object _renderLock = new();
+    private IDialogReference? _detailDialog;
+    private Task _dialogOpen = Task.CompletedTask;
+    private bool _openingDialog;
     private bool _disposed;
 
-    protected override void OnInitialized() => PageState = PageStateFactory.Create();
+    private string PollingLabel => !PageState.CanAutoRefresh ? L["Page:Status:Manual"]
+        : PageState.AutoRefresh ? L["Page:Status:Live", PageState.RefreshIntervalMs / 1000d] : L["Page:Status:Paused"];
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender) return;
+        PageState = PageStateFactory.Create();
         PageState.StateChanged += HandleStateChanged;
-        var result = await PageState.InitializeAsync();
-        if (!_disposed && result.IsFailed(out var error)) Snackbar.Add(error.Message ?? L["Page:Messages:RefreshFailed"], Severity.Error);
+        await PageState.InitializeAsync();
     }
-
     private async Task RefreshDataAsync()
     {
         var result = await PageState.RefreshAsync();
-        if (!_disposed && result.IsFailed(out var error)) Snackbar.Add(error.Message ?? L["Page:Messages:RefreshFailed"], Severity.Error);
+        if (!_disposed && result.Status != ResStatus.Conflict && result.IsFailed(out _))
+            Snackbar.Add(L["Page:Messages:RefreshFailed"], Severity.Error);
     }
-
     private Task SetAutoRefresh(bool value) => PageState.SetAutoRefreshAsync(value);
-    private string FormatAverageDuration() => PageState.Statistics.Count == 0 ? L["Common:Unavailable"] : ExecutionTimingDisplayFormatter.FormatDuration(PageState.Statistics.Average(item => item.AverageDurationMs));
-    private void HandleStateChanged() { if (!_disposed) _ = InvokeAsync(StateHasChanged); }
+    private string SnapshotNumber(long value) => PageState.HasSnapshot ? value.ToString("N0") : L["Common:Unavailable"];
+    private string FormatAverageDuration() => !PageState.HasSnapshot || PageState.Statistics.Count == 0
+        ? L["Common:Unavailable"] : ExecutionTimingDisplayFormatter.FormatDuration(PageState.Statistics.Average(item => item.AverageDurationMs));
 
+    private Task InspectCompletedAsync(TimingCompletedEvidence evidence) =>
+        BeginInspectAsync(new DialogParameters<ExecutionTimingDetailDialog>
+        {
+            { dialog => dialog.Completed, evidence.Statistics }, { dialog => dialog.CapturedAt, evidence.CapturedAt }
+        }, L["Details:CompletedTitle"]);
+    private Task InspectRunningAsync(TimingRunningEvidence evidence) =>
+        BeginInspectAsync(new DialogParameters<ExecutionTimingDetailDialog>
+        {
+            { dialog => dialog.Running, evidence.Operation }, { dialog => dialog.CapturedAt, evidence.CapturedAt }
+        }, L["Details:RunningTitle"]);
+    private Task BeginInspectAsync(DialogParameters<ExecutionTimingDetailDialog> parameters, string title)
+    {
+        if (_disposed || _openingDialog) return Task.CompletedTask;
+        _openingDialog = true;
+        return _dialogOpen = OpenDetailsAsync(parameters, title);
+    }
+    private async Task OpenDetailsAsync(DialogParameters<ExecutionTimingDetailDialog> parameters, string title)
+    {
+        try
+        {
+            var reference = await DialogService.ShowAsync<ExecutionTimingDetailDialog>(title, parameters,
+                new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = true, BackdropClick = true });
+            if (_disposed) { reference.Close(DialogResult.Cancel()); return; }
+            _detailDialog?.Close(DialogResult.Cancel());
+            _detailDialog = reference;
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Execution timing evidence inspector could not be opened.");
+            if (!_disposed) Snackbar.Add(L["Details:OpenFailed"], Severity.Error);
+        }
+        finally { _openingDialog = false; }
+    }
+    private void HandleStateChanged()
+    {
+        if (_disposed) return;
+        var render = ObserveRenderAsync(InvokeAsync(() => { if (!_disposed) StateHasChanged(); }));
+        lock (_renderLock) _renderTasks.Add(render);
+        _ = RemoveRenderAsync(render);
+    }
+    private async Task ObserveRenderAsync(Task render)
+    {
+        try { await render; }
+        catch (Exception exception) { Logger.LogError(exception, "Execution timing page rendering failed."); }
+    }
+    private async Task RemoveRenderAsync(Task render)
+    {
+        await render;
+        lock (_renderLock) _renderTasks.Remove(render);
+    }
     public async ValueTask DisposeAsync()
     {
+        if (_disposed) return;
         _disposed = true;
         PageState.StateChanged -= HandleStateChanged;
-        await PageState.DisposeAsync();
+        try { await PageState.DisposeAsync(); }
+        finally
+        {
+            try { await _dialogOpen; }
+            finally
+            {
+                _detailDialog?.Close(DialogResult.Cancel());
+                Task[] renders;
+                lock (_renderLock) renders = _renderTasks.ToArray();
+                await Task.WhenAll(renders);
+            }
+        }
     }
 }

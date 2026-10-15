@@ -1,11 +1,169 @@
-.configuration-source-json {
-    max-height: 65vh;
-    overflow: auto;
-    margin: 0;
+.configuration-source-file {
+    --file-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary));
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+    padding: 20px;
     color: var(--mud-palette-text-primary);
-    background: var(--mud-palette-background-gray);
-    border-radius: 4px;
-    padding: 12px;
+}
+
+.configuration-source-file-target {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 16px;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-info) 30%, var(--mud-palette-lines-default));
+    border-radius: var(--mud-default-borderradius);
+    background: color-mix(in srgb, var(--mud-palette-info) 7%, var(--mud-palette-surface));
+}
+
+.configuration-source-file-target ::deep .mud-icon-root {
+    margin-top: 3px;
+    color: color-mix(in srgb, var(--mud-palette-info) 25%, var(--mud-palette-text-primary));
+}
+
+.configuration-source-file-target h3 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 550;
+    line-height: 1.5;
     white-space: pre-wrap;
-    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-file code,
+.configuration-source-json {
+    font-family: var(--mo-font-family-mono);
+    font-size: 12px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-file-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.configuration-source-file-badges span {
+    --file-tone: var(--mud-palette-text-secondary);
+    padding: 5px 9px;
+    border: 1px solid color-mix(in srgb, var(--file-tone) 30%, var(--mud-palette-lines-default));
+    border-radius: 5px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: color-mix(in srgb, var(--file-tone) 25%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--file-tone) 7%, var(--mud-palette-surface));
+}
+
+.configuration-source-file-badges [data-tone="info"] {
+    --file-tone: var(--mud-palette-info);
+}
+
+.configuration-source-file-badges [data-tone="warning"] {
+    --file-tone: var(--mud-palette-warning);
+}
+
+.configuration-source-file-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 24px;
+    min-width: 0;
+    margin: 0;
+}
+
+.configuration-source-file-facts > div {
+    min-width: 0;
+}
+
+.configuration-source-file-facts dt {
+    margin-bottom: 5px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--file-muted);
+}
+
+.configuration-source-file-facts dd {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.configuration-source-file-fact-wide {
+    grid-column: 1 / -1;
+}
+
+.configuration-source-file-redaction,
+.configuration-source-file-loading {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--file-muted);
+}
+
+.configuration-source-file-content {
+    min-width: 0;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    overflow: clip;
+    background: var(--mud-palette-background-gray);
+}
+
+.configuration-source-file-content > header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+}
+
+.configuration-source-file-content h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 550;
+    line-height: 1.5;
+}
+
+.configuration-source-json {
+    margin: 0;
+    min-width: 0;
+    padding: 20px;
+    color: var(--mud-palette-text-primary);
+}
+
+.configuration-source-file-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 20px 20px;
+}
+
+.configuration-source-file ::deep .mud-alert-text-error {
+    color: color-mix(in srgb, var(--mud-palette-error) 40%, var(--mud-palette-text-primary));
+}
+
+@media (max-width: 600px) {
+    .configuration-source-file {
+        gap: 20px;
+        padding: 16px;
+    }
+    .configuration-source-file-target {
+        padding: 16px;
+        gap: 12px;
+    }
+    .configuration-source-file-facts {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .configuration-source-file-content > header {
+        padding: 16px;
+    }
+    .configuration-source-json {
+        padding: 16px;
+    }
+    .configuration-source-file-actions {
+        padding: 8px 16px 16px;
+    }
 }

@@ -21,7 +21,8 @@ public static class ThemeCatalog
             new MacaronSweetheartTheme(),
             new InkLandscapeTheme(),
             new ZenInkTheme(),
-            new ComicBurstTheme()
+            new ComicBurstTheme(),
+            new GroveTheme()
         }.ToFrozenDictionary(static theme => theme.Kind);
 
     /// <summary>

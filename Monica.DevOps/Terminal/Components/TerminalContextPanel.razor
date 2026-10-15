@@ -1,0 +1,80 @@
+@using Monica.DevOps.Localization
+@using Monica.DevOps.Terminal.Models
+@inject IStringLocalizer<TerminalResource> L
+
+<section class="terminal-context" aria-labelledby="terminal-context-title">
+    <header>
+        <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="Close" aria-label="@L["Actions:CloseContext"]" />
+        <div><h2 id="terminal-context-title">@(Result is not null ? L["Labels:LatestResult"] : CurrentCommand is not null ? L["Labels:CurrentCommand"] : History ? L["Labels:History"] : L["Labels:SessionHost"])</h2><span class="terminal-context__session">@(InspectedSessionName ?? Session.Name)</span></div>
+    </header>
+    <div class="terminal-context__body">
+        @if (Result is not null || CurrentCommand is not null)
+        {
+            <div class="terminal-facts"><h3>@L["Labels:Command"]</h3><code>@(Result?.Command ?? CurrentCommand!.Command)</code></div>
+            <div class="terminal-facts"><h3>@(Result is not null ? L["Labels:ResultDirectory"] : L["Labels:RunningDirectory"])</h3><code>@(Result?.WorkingDirectory ?? CurrentCommand!.WorkingDirectory)</code></div>
+            <div class="terminal-facts"><h3>@L["Labels:SessionId"]</h3><code>@(InspectedSessionId ?? Session.Id)</code></div>
+            @if (Result is not null)
+            {
+                <div class="terminal-facts"><dl><dt>@L["Labels:ExitCode"]</dt><dd>@Result.ExitCode</dd><dt>@L["Labels:Duration"]</dt><dd>@L["Labels:DurationValue", Result.Duration.TotalSeconds.ToString("0.00")]</dd></dl></div>
+            }
+        }
+        else if (History)
+        {
+            <p class="terminal-context__intro">@L["History:Scope", Math.Min(12, Session.History.Length), Session.History.Length]</p>
+            @if (Session.History.Length == 0)
+            {
+                <p class="terminal-context__empty">@L["History:Empty"]</p>
+            }
+            else
+            {
+                <div class="terminal-history">
+                    @foreach (var command in Session.History.Reverse().Take(12))
+                    {
+                        <MudButton Variant="Variant.Text" Disabled="@Disabled" OnClick="@(() => Reuse.InvokeAsync(command))"
+                                   aria-label="@L["History:Reuse", command]">
+                            <span class="terminal-history__row"><code>@command</code><MudIcon Icon="@Icons.Material.Outlined.NorthWest" Size="Size.Small" /></span>
+                        </MudButton>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <div class="terminal-facts">
+                <h3>@L["Labels:Session"]</h3>
+                <dl><dt>@L["Labels:SessionName"]</dt><dd>@Session.Name</dd>
+                    <dt>@L["Labels:SessionId"]</dt><dd><code>@Session.Id</code></dd>
+                    <dt>@L["Labels:WorkingDirectory"]</dt><dd><code>@Session.WorkingDirectory</code></dd>
+                    <dt>@L["Labels:CreatedAt"]</dt><dd>@Session.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss zzz")</dd>
+                    <dt>@L["Labels:ActivityAt"]</dt><dd>@Session.LastActivityAt.ToString("yyyy-MM-dd HH:mm:ss zzz")</dd></dl>
+            </div>
+            @if (Environment is not null)
+            {
+                <div class="terminal-facts">
+                    <h3>@L["Labels:Host"]</h3>
+                    <dl><dt>@L["Labels:OperatingSystem"]</dt><dd>@Environment.OperatingSystemDescription</dd>
+                        <dt>@L["Labels:Architecture"]</dt><dd>@Environment.Architecture</dd>
+                        <dt>@L["Labels:Runtime"]</dt><dd><code>@Environment.RuntimeIdentifier</code></dd>
+                        <dt>@L["Labels:Shell"]</dt><dd><code>@Environment.ShellPath</code></dd>
+                        <dt>@L["Labels:ShellArguments"]</dt><dd><code>@string.Join(" ", Environment.ShellArguments)</code></dd>
+                        <dt>@L["Labels:DefaultDirectory"]</dt><dd><code>@Environment.DefaultWorkingDirectory</code></dd>
+                        <dt>@L["Labels:BaseDirectory"]</dt><dd><code>@Environment.ApplicationBaseDirectory</code></dd></dl>
+                </div>
+            }
+            <div class="terminal-facts"><h3>@L["Behavior:Title"]</h3><p>@L["Behavior:Shell"]</p><p>@L["Behavior:Directory"]</p><p>@L["Behavior:Lifetime"]</p><p>@L["Behavior:Partition"]</p></div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public TerminalSessionSnapshot Session { get; set; } = default!;
+    [Parameter] public TerminalEnvironmentSnapshot? Environment { get; set; }
+    [Parameter] public bool History { get; set; }
+    [Parameter] public TerminalCommandResultSnapshot? Result { get; set; }
+    [Parameter] public TerminalActiveCommandSnapshot? CurrentCommand { get; set; }
+    [Parameter] public string? InspectedSessionName { get; set; }
+    [Parameter] public string? InspectedSessionId { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+    [Parameter] public EventCallback<string> Reuse { get; set; }
+}

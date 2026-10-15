@@ -4,12 +4,13 @@
 @implements IAsyncDisposable
 @inject IStringLocalizer<AIResource> L
 
-<div class="message-list" @ref="_messageListRef">
+<div class="message-list" @ref="_messageListRef" data-short="@(Layout is { IsObserved: true, Height: <= 600 } ? "true" : "false")">
     @if (Session?.Turns.Count is not > 0)
     {
         <div class="welcome-panel">
+            <div class="welcome-mark" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ChatBubbleOutline" /></div>
             <span class="welcome-eyebrow">@L["Workbench:WelcomeEyebrow"]</span>
-            <MudText Typo="Typo.h4">@L["Workbench:WelcomeTitle"]</MudText>
+            <h2 class="welcome-title">@L["Workbench:WelcomeTitle"]</h2>
             <MudText Typo="Typo.body1" Class="welcome-subtitle">@L["Workbench:WelcomeDescription"]</MudText>
             <div class="welcome-features">
                 <span><MudIcon Icon="@Icons.Material.Outlined.AttachFile" Size="Size.Small" />@L["Workbench:WelcomeAttachments"]</span>
@@ -42,6 +43,7 @@
 </div>
 @code {
     [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+    [CascadingParameter] private ChatWorkbenchLayout? Layout { get; set; }
 
     [Parameter] public ChatSession? Session { get; set; }
     [Parameter] public bool IsSending { get; set; }

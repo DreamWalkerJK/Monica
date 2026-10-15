@@ -13,12 +13,13 @@ public class StateStoreKeyInfo
     public required string Key { get; init; }
 
     /// <summary>
-    /// Raw value preview shown by the dashboard.
+    /// Stored value preview, or retained input after a successful write whose read-back failed.
+    /// Consult <see cref="Error"/> before treating this text as freshly read evidence.
     /// </summary>
     public string? RawValue { get; set; }
 
     /// <summary>
-    /// Whether the value preview has been loaded.
+    /// Whether the value preview load has completed, including an unsuccessful attempt.
     /// </summary>
     public bool IsValueLoaded { get; set; }
 
@@ -85,7 +86,8 @@ public record KeyScanResult
     public int TotalCount { get; init; }
 
     /// <summary>
-    /// Whether more results exist after the current page.
+    /// Whether the matched snapshot was truncated by the requested display limit.
+    /// This result does not carry a cursor or a subsequent page.
     /// </summary>
     public bool HasMore { get; init; }
 }

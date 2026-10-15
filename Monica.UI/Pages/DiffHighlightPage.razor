@@ -1,374 +1,202 @@
 @attribute [Route(DIFF_HIGHLIGHT_URL)]
-@implements IDisposable
-
-@using Monica.Core.Results;
+@implements IAsyncDisposable
 @using Microsoft.Extensions.Localization
+@using Microsoft.JSInterop
 @using Monica.UI.Localization
 @using Monica.UI.UIDiffHighlight.Components
 @using Monica.UI.UIDiffHighlight.Facades
 @using Monica.UI.UIDiffHighlight.Models
 @using Monica.UI.UIDiffHighlight.State
-
 @inject DiffHighlightFacade DiffHighlightFacade
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> L
+@inject IJSRuntime JS
 
+@{ var comparison = Comparison; }
 <PageTitle>@L["DiffHighlightPage:PageTitle"]</PageTitle>
-
-<div class="diff-highlight-page">
-<MudContainer MaxWidth="MaxWidth.False" Class="diff-highlight-page__container">
-    <MudPaper Elevation="1" Class="pa-4 mb-4">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
-            <MudIcon Icon="@Icons.Material.Filled.Compare" Size="Size.Large" />
-            <div>
-                <MudText Typo="Typo.h4">@L["DiffHighlightPage:Title"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    @L["DiffHighlightPage:Description"]
-                </MudText>
-            </div>
-        </MudStack>
-
-        <MudExpansionPanels>
-            <MudExpansionPanel Text="@L["DiffHighlightPage:ConfigOptions"]" Icon="@Icons.Material.Filled.Settings">
-                <div class="pa-2">
-                    <MudGrid>
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudSelect T="EDiffHighlightMode" @bind-Value="_state.Options.Mode" Label="@L["DiffHighlightPage:CompareMode"]">
-                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Line">@L["DiffHighlightPage:Modes:Line"]</MudSelectItem>
-                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Character">@L["DiffHighlightPage:Modes:Character"]</MudSelectItem>
-                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Mixed">@L["DiffHighlightPage:Modes:Mixed"]</MudSelectItem>
-                            </MudSelect>
-                        </MudItem>
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudSelect T="EDiffOutputFormat" @bind-Value="_state.Options.OutputFormat" Label="@L["DiffHighlightPage:OutputFormat"]">
-                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Html">@L["DiffHighlightPage:Formats:Html"]</MudSelectItem>
-                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Markdown">@L["DiffHighlightPage:Formats:Markdown"]</MudSelectItem>
-                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.PlainText">@L["DiffHighlightPage:Formats:PlainText"]</MudSelectItem>
-                            </MudSelect>
-                        </MudItem>
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudNumericField T="int" @bind-Value="_state.Options.ContextLines" Label="@L["DiffHighlightPage:ContextLines"]" Min="0" Max="20" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudNumericField T="int" @bind-Value="_state.Options.MaxCharacterDiffLength" Label="@L["DiffHighlightPage:MaxCharacterDiffLength"]" Min="100" Max="10000" />
-                        </MudItem>
-                    </MudGrid>
-                    <MudGrid Class="mt-2">
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudSwitch T="bool" @bind-Value="_state.Options.IgnoreWhitespace" Label="@L["DiffHighlightPage:IgnoreWhitespace"]" Color="Color.Primary" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudSwitch T="bool" @bind-Value="_state.Options.IgnoreCase" Label="@L["DiffHighlightPage:IgnoreCase"]" Color="Color.Primary" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudSwitch T="bool" @bind-Value="_state.AutoRefresh" Label="@L["DiffHighlightPage:AutoRefresh"]" Color="Color.Primary" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudButton Variant="Variant.Outlined"
-                                      StartIcon="@Icons.Material.Filled.Refresh"
-                                      OnClick="LoadSampleDataAsync"
-                                      Size="Size.Small">
-                                @L["DiffHighlightPage:LoadSample"]
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
+<div class="diff-highlight-page" @ref="_pageElement" data-accepted-revision="@_accepted?.Revision" data-draft-revision="@comparison.DraftRevision" data-visit="@_visit">
+    <header class="diff-page-identity">
+        <MudIcon Icon="@Icons.Material.Outlined.Compare" Color="Color.Primary" Size="Size.Large" />
+        <div><h1>@L["DiffHighlightPage:Title"]</h1><p>@L["DiffHighlightPage:Description"]</p></div>
+    </header>
+    <section class="diff-draft-surface" aria-label="@L["DiffHighlightPage:Drafts"]" style="@EditorSizing">
+        <div class="diff-draft-commands">
+            <MudSelect T="EDiffHighlightMode" Value="_state.Options.Mode" ValueChanged="ChangeModeAsync" Label="@L["DiffHighlightPage:CompareMode"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Line">@L["DiffHighlightPage:Modes:Line"]</MudSelectItem>
+                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Character">@L["DiffHighlightPage:Modes:Character"]</MudSelectItem>
+                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Mixed">@L["DiffHighlightPage:Modes:Mixed"]</MudSelectItem>
+            </MudSelect>
+            <MudSelect T="EDiffOutputFormat" Value="_state.Options.OutputFormat" ValueChanged="ChangeFormatAsync" Label="@L["DiffHighlightPage:OutputFormat"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Html">@L["DiffHighlightPage:Formats:Html"]</MudSelectItem>
+                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Markdown">@L["DiffHighlightPage:Formats:Markdown"]</MudSelectItem>
+                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.PlainText">@L["DiffHighlightPage:Formats:PlainText"]</MudSelectItem>
+            </MudSelect>
+            <div class="diff-sample-action"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadSampleAsync">@L["DiffHighlightPage:LoadSample"]</MudButton><span>@L["DiffHighlightPage:SampleHint"]</span></div>
+        </div>
+        <div class="diff-rules">
+            <MudExpansionPanels Elevation="0"><MudExpansionPanel Text="@L["DiffHighlightPage:ConfigOptions"]" Icon="@Icons.Material.Outlined.Tune">
+                <div class="diff-rule-fields">
+                    <MudSwitch T="bool" Value="_state.Options.IgnoreWhitespace" ValueChanged="ChangeWhitespaceAsync" Label="@L["DiffHighlightPage:IgnoreWhitespace"]" Color="Color.Primary" />
+                    <MudSwitch T="bool" Value="_state.Options.IgnoreCase" ValueChanged="ChangeCaseAsync" Label="@L["DiffHighlightPage:IgnoreCase"]" Color="Color.Primary" />
+                    <MudNumericField T="int" Value="_state.Options.MaxCharacterDiffLength" ValueChanged="ChangeLimitAsync" Label="@L["DiffHighlightPage:MaxCharacterDiffLength"]" Min="100" Max="1000" Variant="Variant.Outlined" Margin="Margin.Dense" />
                 </div>
-            </MudExpansionPanel>
-        </MudExpansionPanels>
-    </MudPaper>
-
-    <MudGrid>
-        <MudItem xs="12" lg="6">
-            <div class="diff-highlight-page__editor">
-            <MudPaper Elevation="2" Class="pa-4">
-                <MudStack>
-                    <MudText Typo="Typo.h6" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-2" />
-                        @L["DiffHighlightPage:OriginalText"]
-                    </MudText>
-                    <MudTextField T="string"
-                                 Value="@_state.OriginText"
-                                 ValueChanged="@OnOriginTextChanged"
-                                 Lines="18"
-                                 Variant="Variant.Outlined"
-                                 Class="diff-text-input"
-                                 Placeholder="@L["DiffHighlightPage:OriginalTextPlaceholder"]"
-                                 Immediate="true" />
-                </MudStack>
-            </MudPaper>
+                <p class="diff-rules-help">@L["DiffHighlightPage:RulesHint"]</p>
+            </MudExpansionPanel></MudExpansionPanels>
+        </div>
+        <div class="diff-draft-pair">
+            <div class="diff-draft-editor">
+                <MudTextField T="string" Value="_state.OriginText" ValueChanged="ChangeOriginalAsync" Lines="@EditorLines" Label="@L["DiffHighlightPage:OriginalText"]" InputId="diff-original-draft" Variant="Variant.Outlined" Class="diff-text-input" Immediate="true" spellcheck="false" Placeholder="@L["DiffHighlightPage:OriginalTextPlaceholder"]" />
             </div>
-        </MudItem>
-        <MudItem xs="12" lg="6">
-            <div class="diff-highlight-page__editor">
-            <MudPaper Elevation="2" Class="pa-4">
-                <MudStack>
-                    <MudText Typo="Typo.h6" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="mr-2" />
-                        @L["DiffHighlightPage:NewText"]
-                    </MudText>
-                    <MudTextField T="string"
-                                 Value="@_state.NewText"
-                                 ValueChanged="@OnNewTextChanged"
-                                 Lines="18"
-                                 Variant="Variant.Outlined"
-                                 Class="diff-text-input"
-                                 Placeholder="@L["DiffHighlightPage:NewTextPlaceholder"]"
-                                 Immediate="true" />
-                </MudStack>
-            </MudPaper>
+            <div class="diff-draft-editor diff-draft-editor--updated">
+                <MudTextField T="string" Value="_state.NewText" ValueChanged="ChangeUpdatedAsync" Lines="@EditorLines" Label="@L["DiffHighlightPage:NewText"]" InputId="diff-updated-draft" Variant="Variant.Outlined" Class="diff-text-input" Immediate="true" spellcheck="false" Placeholder="@L["DiffHighlightPage:NewTextPlaceholder"]" />
             </div>
-        </MudItem>
-    </MudGrid>
-
-    <MudPaper Elevation="2" Class="mt-4">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Class="pa-4 pb-2">
-            <MudText Typo="Typo.h6">
-                <MudIcon Icon="@Icons.Material.Filled.Compare" Size="Size.Small" Class="mr-2" />
-                @L["DiffHighlightPage:DiffResult"]
-            </MudText>
-            <MudSpacer />
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
-                    Color="@GetFormatChipColor()" Icon="@GetFormatIcon()">
-                @_state.Options.OutputFormat
-            </MudChip>
-            <MudButton Variant="Variant.Filled"
-                      Color="Color.Primary"
-                      StartIcon="@Icons.Material.Filled.Refresh"
-                      OnClick="RefreshDiffAsync"
-                      Disabled="_state.IsRefreshing">
-                @if (_state.IsRefreshing)
-                {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                    <text>@L["DiffHighlightPage:Comparing"]</text>
-                }
-                else
-                {
-                    <text>@L["DiffHighlightPage:ManualRefresh"]</text>
-                }
-            </MudButton>
-        </MudStack>
-        
-        @if (_state.Options.OutputFormat == EDiffOutputFormat.Html)
-        {
-            <DiffViewer @ref="DiffViewerRef"
-                       OriginText="@_state.OriginText" 
-                       NewText="@_state.NewText" 
-                       Options="@_state.Options"
-                       AutoRefresh="@_state.AutoRefresh" />
-        }
-        else
-        {
-            <div class="pa-4">
-                @if (_state.DiffResult != null)
-                {
-                    @if (_state.Options.OutputFormat == EDiffOutputFormat.Markdown)
-                    {
-                        <MudPaper Elevation="1" Class="pa-3 markdown-viewer">
-                            <pre class="diff-highlight-page__output">@_state.DiffResult.HighlightedContent</pre>
-                        </MudPaper>
-                    }
-                    else if (_state.Options.OutputFormat == EDiffOutputFormat.PlainText)
-                    {
-                        <MudPaper Elevation="1" Class="pa-3 plaintext-viewer">
-                            <pre class="diff-highlight-page__output">@_state.DiffResult.HighlightedContent</pre>
-                        </MudPaper>
-                    }
-                }
-                else if (_state.IsRefreshing)
-                {
-                    <MudProgressLinear Indeterminate="true" />
-                }
-                else
-                {
-                    <MudAlert Severity="Severity.Info">@L["DiffHighlightPage:EnterTextAndRefresh"]</MudAlert>
-                }
-            </div>
-        }
-    </MudPaper>
-</MudContainer>
+        </div>
+        <footer class="diff-draft-footer">
+            <MudSwitch T="bool" Value="_state.AutoRefresh" ValueChanged="ChangeAutoAsync" Label="@L["DiffHighlightPage:AutoRefresh"]" Color="Color.Primary" />
+            <span class="diff-draft-status" role="status" aria-live="polite">@GetDraftStatus(comparison)</span>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Compare" OnClick="CompareAsync" Disabled="@comparison.IsBusy">@L["DiffHighlightPage:ManualRefresh"]</MudButton>
+        </footer>
+    </section>
+    @if (comparison.IsFailureCurrent && comparison.Failure is { } failure)
+    {
+        <div class="diff-failure"><MudAlert Severity="Severity.Error">@L["DiffHighlightPage:ComparisonFailed"]: @failure.Message</MudAlert></div>
+    }
+    @if (_accepted is not null && _result is not null)
+    {
+        <div class="diff-accepted-reader">
+            <DiffResultPresentation Result="_result" Continuous="true" IsCurrent="@comparison.IsAcceptedCurrent" InputsEmpty="@_accepted.Input.IsEmpty" ComparedAt="@_accepted.ReceivedAt" HeadingId="diff-accepted-heading" CurrentInputsLabel="@L["DiffHighlightPage:CurrentDrafts"]" EarlierInputsLabel="@L["DiffHighlightPage:EarlierDrafts"]">
+                <Actions><MudButton Class="diff-back-to-drafts" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowUpward" OnClick="BackToDraftsAsync">@L["DiffHighlightPage:BackToDrafts"]</MudButton></Actions>
+            </DiffResultPresentation>
+        </div>
+    }
+    else
+    {
+        <div class="diff-uncomputed"><MudIcon Icon="@Icons.Material.Outlined.Compare" /><p>@L["DiffHighlightPage:EnterTextAndRefresh"]</p></div>
+    }
 </div>
 
 @code {
     public const string DIFF_HIGHLIGHT_URL = "/diff-highlight-debug";
-
     private readonly DiffHighlightPageState _state = new();
-    private readonly CancellationTokenSource _lifetimeCancellation = new();
-    private DiffViewer? DiffViewerRef { get; set; }
-    private CancellationTokenSource? _debounceTokenSource;
-    private bool _disposed;
+    private readonly string _visit = Guid.NewGuid().ToString("N");
+    private DiffComparisonController _controller = null!;
+    private DiffComparisonEvidence? _accepted;
+    private DiffHighlightResult? _result;
+    private ElementReference _pageElement;
+    private Task<IJSObjectReference>? _moduleImport;
+    private readonly List<Task> _revealTasks = [];
+    private long? _revealRevision;
+    private bool _retired;
+    private Task? _retirementTask;
+    private DiffComparisonState Comparison => _controller.State;
+    private int ContentLines => Math.Max(_state.OriginText.Count(c => c == '\n'), _state.NewText.Count(c => c == '\n')) + 1;
+    private int EditorLines => Math.Clamp(ContentLines, 6, 9);
+    private string EditorSizing => $"--diff-wide-lines:{EditorLines};--diff-compact-lines:{Math.Clamp(ContentLines, 5, 8)}";
+    private string GetDraftStatus(DiffComparisonState comparison) => L[comparison.IsBusy ? "DiffHighlightPage:Comparing" : comparison.IsFailureCurrent ? "DiffHighlightPage:FailedDraft" : comparison.IsAcceptedCurrent ? "DiffHighlightPage:CurrentDrafts" : "DiffHighlightPage:PendingDrafts"];
 
+    protected override async Task OnInitializedAsync()
+    {
+        _controller = DiffComparisonController.ForFacade(DiffHighlightFacade);
+        _state.LoadSampleData();
+        CaptureDraft();
+        await RequestAsync(false);
+    }
+    private void CaptureDraft() => _controller.SetDraft(DiffComparisonInput.Capture(_state.OriginText, _state.NewText, _state.Options));
+    private Task ChangeOriginalAsync(string value) { _state.SetOriginText(value); return DraftChangedAsync(); }
+    private Task ChangeUpdatedAsync(string value) { _state.SetNewText(value); return DraftChangedAsync(); }
+    private Task ChangeModeAsync(EDiffHighlightMode value) { _state.Options.Mode = value; return DraftChangedAsync(); }
+    private Task ChangeFormatAsync(EDiffOutputFormat value) { _state.Options.OutputFormat = value; return DraftChangedAsync(); }
+    private Task ChangeWhitespaceAsync(bool value) { _state.Options.IgnoreWhitespace = value; return DraftChangedAsync(); }
+    private Task ChangeCaseAsync(bool value) { _state.Options.IgnoreCase = value; return DraftChangedAsync(); }
+    private Task ChangeLimitAsync(int value) { _state.Options.MaxCharacterDiffLength = Math.Clamp(value, 100, 1000); return DraftChangedAsync(); }
+    private async Task DraftChangedAsync()
+    {
+        if (_retired) return;
+        _revealRevision = null;
+        CaptureDraft();
+        if (_state.AutoRefresh) await RequestAsync(false);
+    }
+    private async Task ChangeAutoAsync(bool value)
+    {
+        _state.AutoRefresh = value;
+        if (value && !_retired) { CaptureDraft(); await RequestAsync(false); }
+    }
+    private async Task LoadSampleAsync() { if (_retired) return; _state.LoadSampleData(); await DraftChangedAsync(); }
+    private async Task CompareAsync() { if (_retired || Comparison.IsBusy) return; CaptureDraft(); await RequestAsync(true); }
+    private async Task RequestAsync(bool manual)
+    {
+        var requestedRevision = Comparison.DraftRevision;
+        var work = _controller.RequestAsync();
+        StateHasChanged();
+        await work;
+        if (_retired) return;
+        var completed = Comparison;
+        if (!ReferenceEquals(_accepted, completed.Accepted))
+        {
+            _accepted = completed.Accepted;
+            _result = _accepted?.CreateResult();
+        }
+        if (manual && completed.IsAcceptedCurrent && completed.Accepted?.Revision == requestedRevision)
+            _revealRevision = requestedRevision;
+        StateHasChanged();
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !_disposed)
-        {
-            await LoadSampleDataAsync();
-        }
+        if (_retired || _revealRevision is not { } revision || !Comparison.IsAcceptedCurrent || _accepted?.Revision != revision) return;
+        _revealRevision = null;
+        _revealTasks.RemoveAll(task => task.IsCompleted);
+        var reveal = RevealAsync(revision);
+        _revealTasks.Add(reveal);
+        await reveal;
     }
-
-    private async Task OnOriginTextChanged(string value)
+    private async Task RevealAsync(long revision)
     {
-        _state.SetOriginText(value);
-        await OnTextChanged();
-    }
-
-    private async Task OnNewTextChanged(string value)
-    {
-        _state.SetNewText(value);
-        await OnTextChanged();
-    }
-
-    private async Task OnTextChanged()
-    {
-        if (!_state.AutoRefresh || _disposed) return;
-        
-        // Cancel the previous debounce task.
-        var previousDebounce = _debounceTokenSource;
-        previousDebounce?.Cancel();
-        previousDebounce?.Dispose();
-        var debounceTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
-        _debounceTokenSource = debounceTokenSource;
-        
         try
         {
-            var totalChars = _state.GetTotalCharacterCount();
-            
-            // Delay for 300ms only if it exceeds 100,000 characters, otherwise no delay
-            if (totalChars > 100000)
-            {
-                await Task.Delay(300, debounceTokenSource.Token);
-            }
-
-            if (!_disposed && ReferenceEquals(debounceTokenSource, _debounceTokenSource))
-            {
-                await RefreshDiffAsync();
-            }
+            _moduleImport ??= JS.InvokeAsync<IJSObjectReference>("import", "./_content/Monica.UI/UIDiffHighlight/diff-page.js").AsTask();
+            var module = await _moduleImport;
+            if (!_retired && Comparison.IsAcceptedCurrent && _accepted?.Revision == revision)
+                await module.InvokeVoidAsync("revealAccepted", _pageElement, "diff-accepted-heading", revision.ToString(), _visit);
         }
-        catch (OperationCanceledException)
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+    }
+    private async Task BackToDraftsAsync()
+    {
+        if (_retired) return;
+        _revealTasks.RemoveAll(task => task.IsCompleted);
+        var reveal = RevealDraftsAsync();
+        _revealTasks.Add(reveal);
+        await reveal;
+    }
+    private async Task RevealDraftsAsync()
+    {
+        try
         {
-            // Debounce cancellation is expected and can be ignored.
+            _moduleImport ??= JS.InvokeAsync<IJSObjectReference>("import", "./_content/Monica.UI/UIDiffHighlight/diff-page.js").AsTask();
+            var module = await _moduleImport;
+            if (!_retired) await module.InvokeVoidAsync("revealDrafts", _pageElement, "diff-original-draft", _visit);
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+    }
+    public ValueTask DisposeAsync() => new(_retirementTask ??= RetireAsync());
+    private async Task RetireAsync()
+    {
+        _retired = true;
+        _revealRevision = null;
+        try
+        {
+            await _controller.DisposeAsync();
+            await Task.WhenAll(_revealTasks);
         }
         finally
         {
-            if (ReferenceEquals(debounceTokenSource, _debounceTokenSource))
+            if (_moduleImport is not null)
             {
-                _debounceTokenSource = null;
-            }
-
-            debounceTokenSource.Dispose();
-        }
-    }
-
-    private async Task RefreshDiffAsync()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _state.BeginRefresh();
-        StateHasChanged();
-
-        try
-        {
-            if (_state.Options.OutputFormat == EDiffOutputFormat.Html && DiffViewerRef != null)
-            {
-                await DiffViewerRef.RefreshDiffAsync();
-            }
-            else
-            {
-                var result = await DiffHighlightFacade.HighlightAsync(
-                    _state.OriginText,
-                    _state.NewText,
-                    _state.Options);
-
-                if (_disposed)
-                {
-                    return;
-                }
-
-                if (result.IsFailed(out var error, out var data))
-                {
-                    Snackbar.Add($"{L["DiffHighlightPage:ComparisonFailed"]}: {error}", Severity.Error);
-                    _state.CompleteRefresh(diffResult: null);
-                }
-                else
-                {
-                    _state.CompleteRefresh(data);
-                }
+                try { await (await _moduleImport).DisposeAsync(); }
+                catch (JSDisconnectedException) { }
+                catch (TaskCanceledException) { }
             }
         }
-        finally
-        {
-            if (_state.IsRefreshing)
-            {
-                _state.CompleteRefresh(_state.DiffResult);
-            }
-
-            if (!_disposed)
-            {
-                StateHasChanged();
-            }
-        }
-    }
-
-    private Color GetFormatChipColor()
-    {
-        return _state.Options.OutputFormat switch
-        {
-            EDiffOutputFormat.Html => Color.Primary,
-            EDiffOutputFormat.Markdown => Color.Secondary,
-            EDiffOutputFormat.PlainText => Color.Tertiary,
-            _ => Color.Default
-        };
-    }
-
-    private string GetFormatIcon()
-    {
-        return _state.Options.OutputFormat switch
-        {
-            EDiffOutputFormat.Html => Icons.Material.Filled.Code,
-            EDiffOutputFormat.Markdown => Icons.Material.Filled.Notes,
-            EDiffOutputFormat.PlainText => Icons.Material.Filled.TextFields,
-            _ => Icons.Material.Filled.Help
-        };
-    }
-
-    private async Task LoadSampleDataAsync()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _state.LoadSampleData();
-
-        StateHasChanged();
-        try
-        {
-            await Task.Delay(100, _lifetimeCancellation.Token);
-            if (!_disposed)
-            {
-                await RefreshDiffAsync();
-            }
-        }
-        catch (OperationCanceledException) when (_disposed)
-        {
-            // Component disposal cancels the initial sample refresh.
-        }
-    }
-
-    public void Dispose()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _disposed = true;
-        _lifetimeCancellation.Cancel();
-        _debounceTokenSource?.Cancel();
-        _debounceTokenSource?.Dispose();
-        _debounceTokenSource = null;
-        _lifetimeCancellation.Dispose();
     }
 }

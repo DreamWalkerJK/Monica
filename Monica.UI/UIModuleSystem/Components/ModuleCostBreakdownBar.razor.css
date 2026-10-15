@@ -1,11 +1,12 @@
 .module-cost-breakdown {
     display: grid;
     gap: .3rem;
-    min-width: 8.5rem;
+    min-width: 0;
 }
 
 .module-cost-breakdown__value {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
     gap: .75rem;
@@ -14,12 +15,16 @@
 
 .module-cost-breakdown__value strong {
     font-variant-numeric: tabular-nums;
+    font-family: var(--mo-font-family-mono);
+    font-size: 13px;
+    font-weight: 500;
     white-space: nowrap;
 }
 
 .module-cost-breakdown__value span {
-    color: var(--mud-palette-text-secondary);
-    font-size: .68rem;
+    color: var(--module-workbench-muted-text, var(--mud-palette-text-secondary));
+    font-family: var(--mo-font-family-mono);
+    font-size: 10px;
     font-variant-numeric: tabular-nums;
 }
 
@@ -27,7 +32,7 @@
 .module-cost-breakdown__meter svg {
     display: block;
     width: 100%;
-    height: .65rem;
+    height: 6px;
 }
 
 .module-cost-breakdown__meter svg {
@@ -49,9 +54,9 @@
 }
 
 .module-cost-breakdown__callbacks {
-    fill: var(--mud-palette-primary);
+    fill: color-mix(in srgb, var(--mud-palette-primary) 80%, var(--mud-palette-text-primary) 20%);
 }
 
 .module-cost-breakdown__startup {
-    fill: var(--mud-palette-info);
+    fill: color-mix(in srgb, var(--mud-palette-info) 75%, var(--mud-palette-text-primary) 25%);
 }

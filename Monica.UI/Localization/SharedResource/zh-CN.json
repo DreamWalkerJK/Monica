@@ -5,21 +5,27 @@
     }
   },
   "Common": {
-    "Close": "关闭",
-    "Loading": "加载中",
-    "Initializing": "初始化中"
+    "Initializing": "初始化中",
+    "GoHome": "返回首页"
   },
   "Theme": {
-    "Settings": "主题设置",
-    "SelectStyle": "选择主题风格",
-    "DarkMode": "深色模式",
-    "CurrentTheme": "当前主题",
+    "Settings": "外观",
+    "Introduction": "选择主题与导航布局。",
+    "SelectStyle": "主题",
+    "ColorMode": "颜色模式",
+    "NavigationLayout": "导航布局",
+    "Sidebar": "侧边栏",
+    "SidebarDescription": "可收起，支持多层导航",
+    "Topbar": "顶部导航",
+    "TopbarDescription": "单行布局，分组菜单",
+    "Apply": "应用更改",
+    "Cancel": "取消",
     "Dark": "深色",
     "Light": "浅色",
     "Options": {
       "MudBlazor": {
         "Name": "MudBlazor 默认",
-        "Description": "保留 MudBlazor 风格，并使用 Monica 的离线字体回退"
+        "Description": "熟悉的 Material 表面与清晰的视觉节奏"
       },
       "Default": {
         "Name": "默认主题",
@@ -27,55 +33,62 @@
       },
       "HermesTeal": {
         "Name": "Hermes Teal",
-        "Description": "参考 Hermes Agent Web UI 的深青色编辑感控制台风格"
+        "Description": "深青色、柔和对比与精致的控制台表面"
       },
       "VibeUsageMatrix": {
         "Name": "黑客矩阵",
-        "Description": "参考 VibeUsage 控制台的终端绿黑客矩阵风格"
+        "Description": "终端绿与清晰利落的技术风格"
       },
       "MaterialDesign3": {
         "Name": "Material Design 3",
-        "Description": "基于 Material Design 3 token 的柔和表面、圆角形状和表现型排版"
+        "Description": "柔和的色彩层次与富有表现力的圆角控件"
       },
       "FluentDesign": {
         "Name": "Fluent Design",
-        "Description": "Fluent Design 风格，包含 Mica 层次、亚克力弹层、Segoe 排版和柔和圆角控件"
+        "Description": "轻盈层次、清晰强调与柔和景深"
       },
       "Fresh": {
         "Name": "小清新",
-        "Description": "薄荷浅色调，清爽安静"
+        "Description": "通透的薄荷色与清爽安静的工作空间"
       },
       "MacaronSweetheart": {
         "Name": "马卡龙甜心",
-        "Description": "粉嫩马卡龙色系，圆润俏皮的甜美手写风格"
+        "Description": "粉嫩色彩、柔和轮廓与俏皮细节"
       },
       "InkLandscape": {
         "Name": "墨韵山水",
-        "Description": "水墨留白风格，沉静克制"
+        "Description": "沉静的水墨色调与疏朗的空间感"
       },
       "ZenInk": {
         "Name": "禅墨",
-        "Description": "极简中国水墨画风格，大面积留白与笔触之美"
+        "Description": "克制的墨色对比与恰到好处的留白"
       },
       "ComicBurst": {
         "Name": "漫画爆裂",
-        "Description": "漫画分镜般的墨线面板、纸张纹理、硬投影和高饱和红黄色强调"
+        "Description": "醒目的墨线轮廓与鲜明的印刷色强调"
+      },
+      "Grove": {
+        "Name": "Grove",
+        "Description": "暖石色、森林绿与优雅的标题排版"
       }
     }
   },
   "Layout": {
-    "SearchTooltip": "搜索 (Ctrl+K)",
     "NotificationsTooltip": "通知",
     "LanguageTooltip": "Language / 语言",
     "UserMenu": {
       "Profile": "个人资料",
       "Settings": "设置",
       "Logout": "退出登录"
-    }
+    },
+    "Error": "此页面发生了错误。",
+    "Reload": "重新加载页面",
+    "DismissError": "关闭错误提示",
+    "ErrorRecovery": "请重新加载页面以继续。"
   },
   "NavBar": {
     "More": "更多",
-    "MoreModules": "更多模块",
+    "MoreModules": "更多页面",
     "Categories": {
       "AI": "AI",
       "KnowledgeRetrieval": "知识与检索",
@@ -87,7 +100,26 @@
       "Monitor": "监控",
       "Debug": "调试",
       "Uncategorized": "未分类"
-    }
+    },
+    "CategoryDescriptions": {
+      "AI": "与模型对话、比较服务提供方，并查看 AI 集成能力。",
+      "KnowledgeRetrieval": "组织知识库，追踪文档检索过程。",
+      "Documentation": "阅读指南、参考资料与 Markdown 文档。",
+      "Configuration": "检查托管配置，审阅配置变更。",
+      "Infrastructure": "检查服务组合、持久化与消息通信。",
+      "Module": "探索模块组合、启动耗时与依赖关系。",
+      "TaskScheduling": "管理调度任务，查看执行历史。",
+      "Monitor": "跟踪服务健康、运行指标与日志证据。",
+      "Debug": "检查执行行为，使用故障排查能力。",
+      "Uncategorized": "访问宿主贡献的其他扩展能力。"
+    },
+    "Navigation": "导航",
+    "ExpandSidebar": "展开侧边栏",
+    "CollapseSidebar": "收起侧边栏",
+    "OpenNavigation": "打开导航",
+    "CloseNavigation": "关闭导航",
+    "Explore": "浏览",
+    "MorePages": "浏览更多页面与工具。"
   },
   "DiffViewer": {
     "Changes": "变更",
@@ -98,47 +130,72 @@
     },
     "DisplayModes": {
       "Compare": "比较",
-      "NewValue": "新值",
-      "OldValue": "旧值"
+      "NewValue": "仅更新内容",
+      "OldValue": "仅原始内容"
     },
     "OriginalContent": "原始内容",
-    "NewContent": "新内容",
-    "NoDifferences": "两段文本没有差异。",
+    "NewContent": "更新内容",
+    "NoDifferences": "在这些规则下没有变化。",
     "ComparisonFailed": "差异对比失败",
-    "ComparisonError": "差异对比出错"
+    "Title": "已接受的比较",
+    "Scope": "计数涵盖完整比较。",
+    "Added": "新增",
+    "Deleted": "删除",
+    "Modified": "修改",
+    "Layout": "布局",
+    "Display": "显示",
+    "Current": "已比较内容",
+    "Stale": "输入已更改 — 显示上次比较",
+    "ComparedAt": "本页比较时间：{0}",
+    "BothEmpty": "两份输入均为空。",
+    "Uncomputed": "输入文本以进行比较。",
+    "Absent": "无源文本行",
+    "SplitStacked": "此阅读区域逐对堆叠显示。",
+    "Comparing": "正在比较…",
+    "FailureStale": "先前一次比较尝试失败。",
+    "ExactMatching": "行匹配区分大小写及行首和行尾空白。",
+    "AcceptedWhitespace": "行匹配忽略行首和行尾空白。",
+    "AcceptedCase": "行匹配忽略大小写。",
+    "CharacterLimit": "字符细节上限：{0}"
   },
   "DiffHighlightPage": {
-    "PageTitle": "差异高亮",
-    "Title": "差异高亮工具",
-    "Description": "比较两段文本并高亮显示差异，支持多种比较模式和输出格式",
-    "ConfigOptions": "配置选项",
-    "CompareMode": "比较模式",
+    "BackToDrafts": "返回草稿",
+    "PageTitle": "文本比较",
+    "Title": "文本比较",
+    "Description": "编辑两段文本，查看它们的差异。",
+    "Drafts": "比较草稿",
+    "ConfigOptions": "比较规则",
+    "CompareMode": "比较方式",
     "Modes": {
-      "Line": "行模式",
-      "Character": "字符模式",
-      "Mixed": "混合模式"
+      "Line": "行",
+      "Character": "字符",
+      "Mixed": "混合"
     },
-    "OutputFormat": "输出格式",
+    "OutputFormat": "输出",
     "Formats": {
       "Html": "HTML",
-      "Markdown": "Markdown",
+      "Markdown": "Markdown 源码",
       "PlainText": "纯文本"
     },
-    "ContextLines": "上下文行数",
-    "MaxCharacterDiffLength": "最大字符差异长度",
-    "IgnoreWhitespace": "忽略空白字符",
+    "MaxCharacterDiffLength": "字符细节上限",
+    "IgnoreWhitespace": "忽略行首和行尾空白",
     "IgnoreCase": "忽略大小写",
-    "AutoRefresh": "自动刷新",
+    "AutoRefresh": "自动比较",
     "LoadSample": "加载示例",
-    "OriginalText": "原始文本",
-    "OriginalTextPlaceholder": "在此输入原始文本...",
-    "NewText": "新文本",
-    "NewTextPlaceholder": "在此输入新文本...",
-    "DiffResult": "差异结果",
-    "Comparing": "比较中...",
-    "ManualRefresh": "手动刷新",
-    "EnterTextAndRefresh": "在两个文本框中输入内容并点击刷新以查看比较结果",
-    "ComparisonFailed": "比较失败"
+    "SampleHint": "替换两份草稿",
+    "OriginalText": "原始草稿",
+    "OriginalTextPlaceholder": "输入原始文本…",
+    "NewText": "更新草稿",
+    "NewTextPlaceholder": "输入更新文本…",
+    "Comparing": "正在比较…",
+    "ManualRefresh": "比较",
+    "EnterTextAndRefresh": "输入文本并选择“比较”以查看比较结果。",
+    "ComparisonFailed": "比较失败",
+    "RulesHint": "空白匹配仅去除行首和行尾空白；大小写匹配忽略字母大小写。字符和混合模式目前使用相同的字符细节；超过此上限的长行使用行比较（最多 1,000 个字符）。所有行均保持可见。",
+    "FailedDraft": "当前比较失败",
+    "EarlierDrafts": "草稿已更改 — 显示上次比较",
+    "CurrentDrafts": "已比较当前草稿",
+    "PendingDrafts": "草稿已更改 — 等待比较"
   },
   "Markdown": {
     "CopyHint": "点击复制",
@@ -153,26 +210,24 @@
   },
   "Error": {
     "PageTitle": "请求处理失败",
-    "Eyebrow": "MONICA / 请求状态",
     "Title": "请求处理失败",
-    "Message": "应用未能完成此请求，且未继续执行后续操作。",
+    "Message": "应用未能完成此请求。",
     "RequestId": "请求 ID",
-    "BackToOverview": "返回概览",
-    "DevelopmentMode": "本地故障排查",
-    "DevelopmentModeWarning": "在本地调试时，开发环境可以提供更详细的错误证据。",
-    "DevelopmentModeNote": "请勿在已部署的宿主上启用开发环境，因为异常详情可能暴露敏感信息。",
-    "DevelopmentModeInstruction": "如需本地调试，请将 ASPNETCORE_ENVIRONMENT 设置为 Development，然后重启应用。"
+    "DevelopmentHeading": "本地诊断",
+    "DevelopmentGuidance": "复现问题时请查看宿主日志。宿主当前运行于 Development 环境，因此显示此提示。"
   },
   "PageNotFound": {
     "PageTitle": "页面未找到",
     "Title": "页面未找到",
-    "Message": "抱歉，请求的页面不存在。"
+    "Message": "此地址没有可用页面。",
+    "Recovery": "请检查地址，或选择其他页面。"
   },
   "RouteAccess": {
     "CheckingPageTitle": "正在检查访问权限",
-    "Checking": "正在检查你是否可以访问此页面……",
+    "Checking": "正在检查你是否可以访问此页面。",
     "DeniedPageTitle": "访问被拒绝",
     "DeniedTitle": "访问被拒绝",
-    "DeniedDescription": "你没有查看此页面的权限。"
+    "DeniedDescription": "未获准访问此页面。",
+    "DeniedRecovery": "请通过应用导航选择其他页面。"
   }
 }

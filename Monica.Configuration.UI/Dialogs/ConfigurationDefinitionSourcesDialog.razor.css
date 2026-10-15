@@ -1,0 +1,324 @@
+.configuration-sources {
+    --sources-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary));
+    --sources-accent-ink: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-text-primary));
+    display: grid;
+    gap: 20px;
+    min-width: 0;
+    padding: 8px 24px 24px;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mud-typography-default-family, var(--mo-font-family-body));
+}
+
+.configuration-sources-identity {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 24px;
+    min-width: 0;
+    padding: 20px;
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-primary-text);
+    background: var(--mud-palette-primary);
+}
+
+.configuration-sources-identity h3 {
+    flex: 1 1 260px;
+    min-width: 0;
+    margin: 0;
+    font-family: var(--mo-font-family-display);
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.configuration-sources-identity dl,
+.configuration-sources-identity dd {
+    margin: 0;
+    min-width: 0;
+}
+
+.configuration-sources-identity dl {
+    flex: 1 1 280px;
+}
+
+.configuration-sources-identity dt {
+    margin-bottom: 3px;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.configuration-sources-identity code,
+.configuration-sources-location {
+    display: block;
+    min-width: 0;
+    font-family: var(--mo-font-family-mono);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.configuration-sources-explanation {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.configuration-sources-explanation p,
+.configuration-sources-state p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--sources-muted);
+}
+
+.configuration-sources-explanation p:first-child {
+    color: var(--mud-palette-text-primary);
+}
+
+.configuration-sources-evidence {
+    min-width: 0;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    overflow: clip;
+    background: var(--mud-palette-surface);
+}
+
+.configuration-sources-evidence ::deep .mud-table-root {
+    table-layout: fixed;
+}
+
+.configuration-sources-evidence ::deep .mud-table-container {
+    border: 0;
+}
+
+.configuration-sources-evidence ::deep .configuration-sources-number-column {
+    width: 88px;
+}
+
+.configuration-sources-evidence ::deep .mud-table-head .mud-table-cell {
+    padding: 12px 20px;
+    color: var(--sources-muted) !important;
+    font-family: var(--mud-typography-default-family, var(--mo-font-family-body));
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.configuration-sources-evidence ::deep .mud-table-body .mud-table-cell {
+    min-width: 0;
+    padding: 16px 20px;
+    vertical-align: top;
+}
+
+.configuration-sources-evidence ::deep .mud-table-head .configuration-sources-number-cell,
+.configuration-sources-evidence ::deep .mud-table-body .configuration-sources-number-cell {
+    padding-inline: 12px;
+    text-align: end;
+}
+
+.configuration-sources-source {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.configuration-sources-source-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    min-width: 0;
+}
+
+.configuration-sources-source-name {
+    flex: 1 1 260px;
+    min-width: 0;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.configuration-sources-location {
+    color: var(--sources-muted);
+}
+
+.configuration-sources-source-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+}
+
+.configuration-sources-access {
+    --sources-access-tone: var(--mud-palette-text-secondary);
+    padding: 4px 8px;
+    border: 1px solid color-mix(in srgb, var(--sources-access-tone) 30%, var(--mud-palette-lines-default));
+    border-radius: 4px;
+    color: color-mix(in srgb, var(--sources-access-tone) 25%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--sources-access-tone) 7%, var(--mud-palette-surface));
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.configuration-sources-access[data-tone="info"] {
+    --sources-access-tone: var(--mud-palette-info);
+}
+
+.configuration-sources-source-actions ::deep .configuration-sources-file-action {
+    min-height: 32px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.configuration-sources-source-actions ::deep .configuration-sources-file-action:not(:disabled) {
+    color: var(--sources-accent-ink);
+}
+
+.configuration-sources-number {
+    display: inline-block;
+    font-family: var(--mo-font-family-mono);
+    font-size: 17px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
+}
+
+.configuration-sources-priority-cell .configuration-sources-number {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.8;
+}
+
+.configuration-sources-effective-cell .configuration-sources-number {
+    color: var(--sources-accent-ink);
+}
+
+.configuration-sources-state {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+}
+
+.configuration-sources-empty {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+}
+
+.configuration-sources-empty ::deep .mud-icon-root {
+    color: var(--sources-muted);
+}
+
+.configuration-sources-state ::deep .mud-alert-text-error {
+    color: color-mix(in srgb, var(--mud-palette-error) 40%, var(--mud-palette-text-primary));
+}
+
+.configuration-sources-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    padding: 0 24px 20px;
+}
+
+@media (max-width: 600px) {
+    .configuration-sources {
+        gap: 20px;
+        padding: 8px 16px 20px;
+    }
+
+    .configuration-sources-identity,
+    .configuration-sources-state {
+        padding: 16px;
+    }
+
+    .configuration-sources-identity h3 {
+        font-size: 22px;
+    }
+
+    .configuration-sources-source-actions ::deep .configuration-sources-file-action {
+        min-height: 44px;
+    }
+
+    .configuration-sources-evidence ::deep .mud-xs-table .mud-table-root,
+    .configuration-sources-evidence ::deep .mud-xs-table .mud-table-body {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .configuration-sources-evidence ::deep .mud-xs-table colgroup {
+        display: none;
+    }
+
+    .configuration-sources-evidence ::deep .mud-xs-table .mud-table-body {
+        border-top: 0;
+    }
+
+    .configuration-sources-evidence ::deep .mud-xs-table .mud-table-body > .mud-table-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        min-width: 0;
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .configuration-sources-evidence ::deep .mud-xs-table .mud-table-body > .mud-table-row:last-child {
+        border-bottom: 0;
+    }
+
+    .configuration-sources-evidence ::deep .mud-xs-table .mud-table-body .mud-table-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 6px;
+        width: auto;
+        min-width: 0;
+        padding: 12px 16px 16px;
+        border-bottom: 0;
+    }
+
+    .configuration-sources-evidence ::deep .mud-xs-table .mud-table-body .mud-table-cell::before {
+        padding: 0;
+        color: var(--sources-muted);
+        font-family: var(--mud-typography-default-family, var(--mo-font-family-body));
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 1.5;
+        white-space: normal;
+        overflow-wrap: normal;
+        word-break: normal;
+    }
+
+    .configuration-sources-evidence ::deep .mud-xs-table .mud-table-body .configuration-sources-source-cell {
+        grid-column: 1 / -1;
+        gap: 8px;
+        padding: 16px;
+    }
+
+    .configuration-sources-evidence ::deep .mud-xs-table .mud-table-body .configuration-sources-number-cell {
+        border-top: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .configuration-sources-priority-cell .configuration-sources-number {
+        font-size: 17px;
+        line-height: 1.5;
+    }
+
+    .configuration-sources-actions {
+        padding: 0 16px 16px;
+    }
+}

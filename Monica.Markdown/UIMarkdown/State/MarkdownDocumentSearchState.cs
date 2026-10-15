@@ -111,6 +111,7 @@ internal sealed class MarkdownDocumentSearchState(
 
     /// <summary>
     /// Updates dialog context when the owning component receives new parameters.
+    /// Pending and accepted results are invalidated when their originating group snapshot or culture changes.
     /// </summary>
     public void UpdateContext(MarkdownDocumentGroup? group, string? culture)
     {
@@ -119,8 +120,20 @@ internal sealed class MarkdownDocumentSearchState(
             return;
         }
 
-        CurrentGroup = group;
-        CurrentCulture = culture;
+        CancellationTokenSource? previous;
+        lock (_searchLock)
+        {
+            if (IsDisposeRequested || (ReferenceEquals(CurrentGroup, group)
+                && string.Equals(CurrentCulture, culture, StringComparison.OrdinalIgnoreCase))) return;
+            previous = _activeSearchCancellation;
+            _activeSearchCancellation = null;
+            CurrentGroup = group;
+            CurrentCulture = culture;
+            Results = [];
+            ErrorMessage = null;
+            IsSearching = false;
+        }
+        CancelSearch(previous);
     }
 
     /// <summary>
@@ -186,30 +199,29 @@ internal sealed class MarkdownDocumentSearchState(
 
         try
         {
-            _lifetimeCancellation.Cancel();
-
             Task[] searchOperations;
             lock (_searchLock)
             {
-                _activeSearchCancellation?.Cancel();
                 IsSearching = false;
                 searchOperations = _searchOperations.ToArray();
             }
 
-            if (searchOperations.Length > 0)
-            {
-                await Task.WhenAll(searchOperations);
-            }
-        }
-        finally
-        {
-            _lifetimeCancellation.Dispose();
+            var cancellation = _lifetimeCancellation.CancelAsync();
+            await Task.WhenAll(searchOperations.Append(cancellation));
             _disposedCompletion.TrySetResult();
         }
+        catch (Exception exception)
+        {
+            _disposedCompletion.TrySetException(exception);
+            throw;
+        }
+        finally { _lifetimeCancellation.Dispose(); }
     }
 
     private Task StartSearch()
     {
+        CancellationTokenSource? previous;
+        Task searchTask;
         lock (_searchLock)
         {
             if (IsDisposeRequested)
@@ -217,31 +229,30 @@ internal sealed class MarkdownDocumentSearchState(
                 return Task.CompletedTask;
             }
 
-            _activeSearchCancellation?.Cancel();
+            previous = _activeSearchCancellation;
+            _activeSearchCancellation = null;
             ErrorMessage = null;
 
             if (!HasEnoughQueryLength)
             {
                 Results = [];
                 IsSearching = false;
-                return Task.CompletedTask;
+                searchTask = Task.CompletedTask;
             }
-
-            var searchCancellation = CancellationTokenSource.CreateLinkedTokenSource(
-                _lifetimeCancellation.Token);
-            var request = new MarkdownDocumentSearchRequest(
-                Query.Trim(),
-                CurrentGroup?.Key,
-                IncludeAllKnowledgeBases,
-                CurrentCulture);
-
-            _activeSearchCancellation = searchCancellation;
-            IsSearching = true;
-            _searchOperations.RemoveAll(static task => task.IsCompleted);
-            var searchTask = ExecuteSearchAsync(request, searchCancellation);
-            _searchOperations.Add(searchTask);
-            return searchTask;
+            else
+            {
+                var searchCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
+                var request = new MarkdownDocumentSearchRequest(
+                    Query.Trim(), CurrentGroup?.Key, IncludeAllKnowledgeBases, CurrentCulture);
+                _activeSearchCancellation = searchCancellation;
+                IsSearching = true;
+                _searchOperations.RemoveAll(static task => task.IsCompleted);
+                searchTask = ExecuteSearchAsync(request, searchCancellation);
+                _searchOperations.Add(searchTask);
+            }
         }
+        CancelSearch(previous);
+        return searchTask;
     }
 
     private async Task ExecuteSearchAsync(
@@ -309,10 +320,15 @@ internal sealed class MarkdownDocumentSearchState(
 
     private void CancelActiveSearch()
     {
-        lock (_searchLock)
-        {
-            _activeSearchCancellation?.Cancel();
-        }
+        CancellationTokenSource? cancellation;
+        lock (_searchLock) cancellation = _activeSearchCancellation;
+        CancelSearch(cancellation);
+    }
+
+    private static void CancelSearch(CancellationTokenSource? cancellation)
+    {
+        try { cancellation?.Cancel(); }
+        catch (ObjectDisposedException) { }
     }
 
     private bool IsCurrentSearch(CancellationTokenSource searchCancellation)

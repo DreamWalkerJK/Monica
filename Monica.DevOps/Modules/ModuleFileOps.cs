@@ -35,6 +35,8 @@ public class ModuleFileOps : MonicaModule<ModuleFileOpsOption>, IWebModule
         services.AddScoped<FileOpsMessageLocalizer>();
         services.AddScoped<FileOpsWorkspaceService>();
         services.AddScoped<FileOpsTransferService>();
+        services.AddScoped<IFileOpsWorkspaceService>(provider => provider.GetRequiredService<FileOpsWorkspaceService>());
+        services.AddScoped<IFileOpsTransferService>(provider => provider.GetRequiredService<FileOpsTransferService>());
         services.AddScoped<FileOpsFacade>();
     }
 
@@ -164,7 +166,7 @@ public class ModuleFileOps : MonicaModule<ModuleFileOpsOption>, IWebModule
 
     private static async Task<IResult> DownloadAsync(
         [FromQuery] string path,
-        [FromServices] FileOpsTransferService transferService,
+        [FromServices] IFileOpsTransferService transferService,
         [FromServices] FileOpsMessageLocalizer messageLocalizer,
         [FromServices] IStringLocalizer<FileOpsResource> localizer,
         [FromServices] ILogger<ModuleFileOps> logger,
@@ -191,7 +193,7 @@ public class ModuleFileOps : MonicaModule<ModuleFileOpsOption>, IWebModule
 
     private static async Task<IResult> DownloadArchiveAsync(
         [FromBody] FileOpsArchiveDownloadRequest request,
-        [FromServices] FileOpsTransferService transferService,
+        [FromServices] IFileOpsTransferService transferService,
         [FromServices] FileOpsMessageLocalizer messageLocalizer,
         [FromServices] IStringLocalizer<FileOpsResource> localizer,
         [FromServices] ILogger<ModuleFileOps> logger,

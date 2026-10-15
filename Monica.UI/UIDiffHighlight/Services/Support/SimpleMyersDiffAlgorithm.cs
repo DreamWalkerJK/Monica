@@ -8,6 +8,8 @@ namespace Monica.UI.UIDiffHighlight.Services.Support;
 /// </summary>
 public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
 {
+    private const int MAX_CHARACTER_LCS_LENGTH = 1000;
+
     /// <summary>
     /// Computes line-level differences between two texts.
     /// </summary>
@@ -108,6 +110,12 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
     /// <summary>
     /// Computes character-level differences between two strings.
     /// </summary>
+    /// <remarks>
+    /// Deleted ranges use UTF-16 offsets into the original text; added ranges use
+    /// UTF-16 offsets into the updated text. Empty-side comparisons return the
+    /// complete nonempty side. When both inputs are nonempty and either exceeds
+    /// 1000 UTF-16 code units, no ranges are returned to bound quadratic LCS matching.
+    /// </remarks>
     public List<DiffCharacterRange> ComputeCharacterDiff(string oldText, string newText, DiffHighlightOptions options)
     {
         var result = new List<DiffCharacterRange>();
@@ -139,6 +147,10 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
             return result;
         }
         
+        // Keep an over-limit comparison distinct from an admitted comparison with no shared characters.
+        if (oldText.Length > MAX_CHARACTER_LCS_LENGTH || newText.Length > MAX_CHARACTER_LCS_LENGTH)
+            return result;
+
         // Use an LCS pass over characters to find inserted and deleted spans.
         var oldChars = oldText.ToCharArray();
         var newChars = newText.ToCharArray();
@@ -175,6 +187,28 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
             
             oldPos = oldCharPos + 1;
             newPos = newCharPos + 1;
+        }
+
+        if (oldPos < oldText.Length)
+        {
+            result.Add(new DiffCharacterRange
+            {
+                Type = EDiffLineType.Deleted,
+                Start = oldPos,
+                Length = oldText.Length - oldPos,
+                Content = oldText[oldPos..]
+            });
+        }
+
+        if (newPos < newText.Length)
+        {
+            result.Add(new DiffCharacterRange
+            {
+                Type = EDiffLineType.Added,
+                Start = newPos,
+                Length = newText.Length - newPos,
+                Content = newText[newPos..]
+            });
         }
         
         return result;
@@ -265,10 +299,6 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
     {
         int m = oldChars.Length;
         int n = newChars.Length;
-        
-        // Skip quadratic character matching for very long lines.
-        if (m > 1000 || n > 1000)
-            return new List<(int, int)>();
         
         var dp = new int[m + 1, n + 1];
         

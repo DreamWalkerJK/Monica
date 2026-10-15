@@ -19,9 +19,13 @@ public sealed class SignalRDebugPageState(
     : IAsyncDisposable
 {
     private bool _disposed;
-    private bool _initialized;
     private bool _verboseLogging;
     private bool _connectedUsersRefreshInProgress;
+    private bool _connectedUsersRefreshRequested;
+    private string _selectedHubRoute = string.Empty;
+    private Task? _initializationTask;
+    private Task? _connectedUsersRefreshTask;
+    private Task? _disposeTask;
 
     /// <summary>
     /// Raised whenever the page should re-render.
@@ -34,9 +38,23 @@ public sealed class SignalRDebugPageState(
     public string AccessToken { get; set; } = options.Value.DefaultAccessToken ?? string.Empty;
 
     /// <summary>
-    /// Gets or sets the currently selected hub route.
+    /// Gets or sets the draft target for the next browser connection. Editing it never retargets a live connection.
     /// </summary>
-    public string SelectedHubRoute { get; set; } = string.Empty;
+    public string SelectedHubRoute
+    {
+        get => _selectedHubRoute;
+        set => SelectHubRoute(value);
+    }
+
+    /// <summary>
+    /// Gets the mapped route targeted by the established or pending browser connection, or an empty value when disconnected.
+    /// </summary>
+    public string ConnectedHubRoute { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// Gets the route represented by the method catalog: the active connection target, or the draft target when disconnected.
+    /// </summary>
+    public string MethodCatalogHubRoute => jsClient.MethodCatalogHubRoute;
 
     /// <summary>
     /// Gets or sets the user name used by the quick send box.
@@ -77,8 +95,20 @@ public sealed class SignalRDebugPageState(
     /// </summary>
     public List<SignalRHubInfo> AvailableHubs { get; } = [];
 
+    /// <summary>Gets whether hub metadata has been captured successfully, including an empty capture.</summary>
+    public bool HubsLoaded { get; private set; }
+
+    /// <summary>Gets whether a hub metadata capture is in progress.</summary>
+    public bool IsLoadingHubs { get; private set; }
+
+    /// <summary>Gets whether the latest hub metadata capture failed; previous evidence remains available.</summary>
+    public bool HubsLoadFailed { get; private set; }
+
+    /// <summary>Gets the UTC time of the last successful hub metadata capture, or null before the first success.</summary>
+    public DateTime? HubsCapturedAtUtc { get; private set; }
+
     /// <summary>
-    /// Gets the available methods for the selected hub.
+    /// Gets the methods for the active connection target, or the selected draft hub while disconnected.
     /// </summary>
     public List<HubMethodInfo> HubMethods { get; } = [];
 
@@ -97,10 +127,28 @@ public sealed class SignalRDebugPageState(
     /// </summary>
     public List<SignalRConnectedUserInfo> ConnectedUsers { get; } = [];
 
+    /// <summary>Gets whether tracked connections have been captured successfully, including an empty capture.</summary>
+    public bool ConnectedUsersLoaded { get; private set; }
+
+    /// <summary>Gets whether a tracked-connection capture is in progress.</summary>
+    public bool IsLoadingConnectedUsers { get; private set; }
+
+    /// <summary>Gets whether the latest tracked-connection capture failed; previous evidence remains available.</summary>
+    public bool ConnectedUsersLoadFailed { get; private set; }
+
+    /// <summary>Gets the UTC time of the last successful tracked-connection capture, or null before the first success.</summary>
+    public DateTime? ConnectedUsersCapturedAtUtc { get; private set; }
+
     /// <summary>
     /// Gets the latest server-side send diagnostics snapshot.
     /// </summary>
     public SignalRSendDiagnosticsSnapshot? SendDiagnostics { get; private set; }
+
+    /// <summary>Gets whether a server send diagnostics capture is in progress.</summary>
+    public bool IsLoadingSendDiagnostics { get; private set; }
+
+    /// <summary>Gets whether the latest send diagnostics capture failed; the previous snapshot remains available.</summary>
+    public bool SendDiagnosticsLoadFailed { get; private set; }
 
     /// <summary>
     /// Gets the current connection state.
@@ -118,31 +166,37 @@ public sealed class SignalRDebugPageState(
     public string? LastTestUserName { get; private set; }
 
     /// <summary>
-    /// Gets a value indicating whether the browser connection is established but the server treats it as anonymous.
+    /// Gets whether a connected browser was absent from the latest successful host registry capture.
     /// </summary>
     /// <remarks>
-    /// This happens when the access token is missing, invalid, expired, or not accepted for the WebSocket transport,
-    /// because anonymous connections are never registered in the server-side connected-user list.
+    /// Registry absence is not an authentication result. Anonymous connections, hubs that do not use Monica's tracking
+    /// base class, and connections observed by another host can all be absent from this host's registry.
     /// </remarks>
-    public bool IsServerSideAnonymous { get; private set; }
+    public bool IsConnectionNotObserved { get; private set; }
+
+    /// <summary>
+    /// Gets the legacy registry-absence diagnostic. This does not establish that the connection is anonymous.
+    /// </summary>
+    public bool IsServerSideAnonymous => IsConnectionNotObserved;
 
     /// <summary>
     /// Initializes the page state and JavaScript client.
     /// </summary>
-    public async Task InitializeAsync()
+    public Task InitializeAsync() => _disposed
+        ? Task.CompletedTask
+        : _initializationTask ??= InitializeCoreAsync();
+
+    private async Task InitializeCoreAsync()
     {
-        if (_initialized)
-        {
-            return;
-        }
-
-        _initialized = true;
-
         jsClient.MessageReceived += OnMessageReceived;
         jsClient.ConnectionStateChanged += OnConnectionStateChanged;
         jsClient.MethodListenerChanged += OnMethodListenerChanged;
 
         await jsClient.InitializeAsync();
+        if (_disposed)
+        {
+            return;
+        }
         jsClient.IsVerboseLoggingEnabled = _verboseLogging;
 
         await LoadHubsAsync();
@@ -158,24 +212,45 @@ public sealed class SignalRDebugPageState(
     /// </summary>
     public async Task<bool> LoadHubsAsync()
     {
-        var result = await signalRFacade.GetHubInfosAsync();
-        if (result.IsFailed(out _, out var hubInfos) || hubInfos is null)
+        if (_disposed || IsLoadingHubs)
         {
             return false;
         }
 
-        AvailableHubs.Clear();
-        AvailableHubs.AddRange(hubInfos);
-
-        if (string.IsNullOrWhiteSpace(SelectedHubRoute) && AvailableHubs.Count > 0)
-        {
-            SelectedHubRoute = AvailableHubs[0].Route;
-        }
-
-        jsClient.SetHubMetadata(hubInfos);
-        SyncFromJsClient();
+        IsLoadingHubs = true;
+        HubsLoadFailed = false;
         NotifyStateChanged();
-        return true;
+        try
+        {
+            var result = await signalRFacade.GetHubInfosAsync();
+            if (_disposed)
+            {
+                return false;
+            }
+            if (result.IsFailed(out _, out var hubInfos) || hubInfos is null)
+            {
+                HubsLoadFailed = true;
+                return false;
+            }
+
+            AvailableHubs.Clear();
+            AvailableHubs.AddRange(hubInfos);
+            HubsLoaded = true;
+            HubsCapturedAtUtc = DateTime.UtcNow;
+            if (string.IsNullOrWhiteSpace(SelectedHubRoute) && AvailableHubs.Count > 0)
+            {
+                _selectedHubRoute = AvailableHubs[0].Route;
+            }
+
+            UpdateMethodCatalog(force: true);
+            SyncFromJsClient();
+            return true;
+        }
+        finally
+        {
+            IsLoadingHubs = false;
+            NotifyStateChanged();
+        }
     }
 
     /// <summary>
@@ -183,16 +258,40 @@ public sealed class SignalRDebugPageState(
     /// </summary>
     public async Task<bool> LoadConnectedUsersAsync()
     {
-        var result = await signalRFacade.GetConnectedUsersAsync();
-        if (result.IsFailed(out _, out var users) || users is null)
+        if (_disposed || IsLoadingConnectedUsers)
         {
             return false;
         }
 
-        ConnectedUsers.Clear();
-        ConnectedUsers.AddRange(users);
+        IsLoadingConnectedUsers = true;
+        ConnectedUsersLoadFailed = false;
+        IsConnectionNotObserved = false;
         NotifyStateChanged();
-        return true;
+        try
+        {
+            var result = await signalRFacade.GetConnectedUsersAsync();
+            if (_disposed)
+            {
+                return false;
+            }
+            if (result.IsFailed(out _, out var users) || users is null)
+            {
+                ConnectedUsersLoadFailed = true;
+                return false;
+            }
+
+            ConnectedUsers.Clear();
+            ConnectedUsers.AddRange(users);
+            ConnectedUsersLoaded = true;
+            ConnectedUsersCapturedAtUtc = DateTime.UtcNow;
+            return true;
+        }
+        finally
+        {
+            IsLoadingConnectedUsers = false;
+            UpdateConnectionRegistryDiagnostic();
+            NotifyStateChanged();
+        }
     }
 
     /// <summary>
@@ -200,15 +299,35 @@ public sealed class SignalRDebugPageState(
     /// </summary>
     public async Task<bool> LoadSendDiagnosticsAsync()
     {
-        var result = await signalRFacade.GetSendDiagnosticsAsync();
-        if (result.IsFailed(out _, out var snapshot) || snapshot is null)
+        if (_disposed || IsLoadingSendDiagnostics)
         {
             return false;
         }
 
-        SendDiagnostics = snapshot;
+        IsLoadingSendDiagnostics = true;
+        SendDiagnosticsLoadFailed = false;
         NotifyStateChanged();
-        return true;
+        try
+        {
+            var result = await signalRFacade.GetSendDiagnosticsAsync();
+            if (_disposed)
+            {
+                return false;
+            }
+            if (result.IsFailed(out _, out var snapshot) || snapshot is null)
+            {
+                SendDiagnosticsLoadFailed = true;
+                return false;
+            }
+
+            SendDiagnostics = snapshot;
+            return true;
+        }
+        finally
+        {
+            IsLoadingSendDiagnostics = false;
+            NotifyStateChanged();
+        }
     }
 
     /// <summary>
@@ -216,8 +335,21 @@ public sealed class SignalRDebugPageState(
     /// </summary>
     public async Task<bool> ConnectAsync(string baseUri)
     {
-        var hubUrl = BuildHubUrl(baseUri, SelectedHubRoute);
+        if (_disposed || ConnectionState.IsConnecting || ConnectionState.Status == "Disconnecting"
+            || string.IsNullOrWhiteSpace(SelectedHubRoute))
+        {
+            return false;
+        }
+
+        ConnectedHubRoute = SelectedHubRoute;
+        UpdateMethodCatalog(force: true);
+        SyncMethodCatalog();
+        var hubUrl = BuildHubUrl(baseUri, ConnectedHubRoute);
         var success = await jsClient.ConnectAsync(hubUrl, AccessToken);
+        if (_disposed)
+        {
+            return false;
+        }
         SyncFromJsClient();
         NotifyStateChanged();
         await RefreshConnectedUsersAfterConnectionChangeAsync();
@@ -231,6 +363,10 @@ public sealed class SignalRDebugPageState(
     /// <returns><c>true</c> when the test user was minted and the connection succeeded.</returns>
     public async Task<bool> TestUserConnectAsync(string baseUri)
     {
+        if (_disposed)
+        {
+            return false;
+        }
         SignalRDebugTestToken token;
         try
         {
@@ -255,8 +391,12 @@ public sealed class SignalRDebugPageState(
     public async Task<bool> DisconnectAsync()
     {
         var success = await jsClient.DisconnectAsync();
+        if (_disposed)
+        {
+            return false;
+        }
         SyncFromJsClient();
-        IsServerSideAnonymous = false;
+        IsConnectionNotObserved = false;
         NotifyStateChanged();
         await RefreshConnectedUsersAfterConnectionChangeAsync();
         return success;
@@ -347,6 +487,10 @@ public sealed class SignalRDebugPageState(
     /// </summary>
     public void SelectMethod(string methodName)
     {
+        if (_disposed)
+        {
+            return;
+        }
         SelectedMethodName = methodName;
 
         var selectedMethod = HubMethods.FirstOrDefault(method => method.Name == methodName);
@@ -374,21 +518,45 @@ public sealed class SignalRDebugPageState(
         NotifyStateChanged();
     }
 
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    /// <summary>
+    /// Updates the next connection target and, while disconnected, its method catalog.
+    /// </summary>
+    /// <param name="hubRoute">The mapped route selected for the next connection.</param>
+    public void SelectHubRoute(string hubRoute)
     {
-        if (_disposed)
+        if (_disposed || string.Equals(_selectedHubRoute, hubRoute, StringComparison.Ordinal))
         {
             return;
         }
 
+        _selectedHubRoute = hubRoute;
+        UpdateMethodCatalog();
+        SyncMethodCatalog();
+        NotifyStateChanged();
+    }
+
+    /// <inheritdoc />
+    public ValueTask DisposeAsync() => new(_disposeTask ??= DisposeCoreAsync());
+
+    private async Task DisposeCoreAsync()
+    {
         _disposed = true;
 
         jsClient.MessageReceived -= OnMessageReceived;
         jsClient.ConnectionStateChanged -= OnConnectionStateChanged;
         jsClient.MethodListenerChanged -= OnMethodListenerChanged;
 
-        await jsClient.DisposeAsync();
+        try
+        {
+            await jsClient.DisposeAsync();
+        }
+        finally
+        {
+            if (_connectedUsersRefreshTask is not null)
+            {
+                await _connectedUsersRefreshTask;
+            }
+        }
     }
 
     private void OnMessageReceived(SignalRMessage _)
@@ -418,19 +586,31 @@ public sealed class SignalRDebugPageState(
     /// connection, so refreshing here observes the debug client itself. Failures are swallowed because this is a
     /// best-effort auto refresh; the manual refresh button still surfaces errors.
     /// </remarks>
-    private async Task RefreshConnectedUsersAfterConnectionChangeAsync()
+    private Task RefreshConnectedUsersAfterConnectionChangeAsync()
     {
         if (_disposed
-            || ConnectionState.Status is not ("Connected" or "Disconnected")
-            || _connectedUsersRefreshInProgress)
+            || ConnectionState.Status is not ("Connected" or "Disconnected"))
         {
-            return;
+            return Task.CompletedTask;
         }
 
+        _connectedUsersRefreshRequested = true;
+        return _connectedUsersRefreshInProgress
+            ? _connectedUsersRefreshTask ?? Task.CompletedTask
+            : _connectedUsersRefreshTask = RefreshConnectedUsersCoreAsync();
+    }
+
+    private async Task RefreshConnectedUsersCoreAsync()
+    {
         _connectedUsersRefreshInProgress = true;
         try
         {
-            await LoadConnectedUsersAsync();
+            do
+            {
+                _connectedUsersRefreshRequested = false;
+                await LoadConnectedUsersAsync();
+            }
+            while (!_disposed && _connectedUsersRefreshRequested);
         }
         catch (Exception)
         {
@@ -441,17 +621,24 @@ public sealed class SignalRDebugPageState(
             _connectedUsersRefreshInProgress = false;
         }
 
-        UpdateAnonymousConnectionDiagnostic();
+        UpdateConnectionRegistryDiagnostic();
         NotifyStateChanged();
     }
 
     /// <summary>
-    /// Marks the connection as server-side anonymous when the browser reports it as established but the
-    /// server-side connected-user registry does not contain its connection identifier.
+    /// Reports registry absence only when the latest capture succeeded and the browser is connected.
     /// </summary>
-    private void UpdateAnonymousConnectionDiagnostic()
+    private void UpdateConnectionRegistryDiagnostic()
     {
-        IsServerSideAnonymous = ConnectionState.IsConnected
+        if (_disposed)
+        {
+            return;
+        }
+
+        IsConnectionNotObserved = ConnectedUsersLoaded
+            && !IsLoadingConnectedUsers
+            && !ConnectedUsersLoadFailed
+            && ConnectionState.IsConnected
             && !string.IsNullOrEmpty(ConnectionState.ConnectionId)
             && ConnectedUsers.All(user =>
                 !string.Equals(user.ConnectionId, ConnectionState.ConnectionId, StringComparison.Ordinal));
@@ -459,18 +646,57 @@ public sealed class SignalRDebugPageState(
 
     private void SyncFromJsClient()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         Messages.Clear();
         Messages.AddRange(jsClient.GetMessages());
 
+        ConnectionState = jsClient.GetConnectionState();
+        if (!HasActiveConnectionTarget)
+        {
+            ConnectedHubRoute = string.Empty;
+            IsConnectionNotObserved = false;
+        }
+
+        UpdateMethodCatalog();
+        SyncMethodCatalog();
+    }
+
+    private void SyncMethodCatalog()
+    {
         HubMethods.Clear();
         HubMethods.AddRange(jsClient.GetHubMethods());
+    }
 
-        ConnectionState = jsClient.GetConnectionState();
+    private bool HasActiveConnectionTarget => ConnectionState.IsConnecting
+        || ConnectionState.Status is "Connected" or "Connecting" or "Reconnecting" or "Disconnecting";
+
+    private void UpdateMethodCatalog(bool force = false)
+    {
+        var route = HasActiveConnectionTarget ? ConnectedHubRoute : SelectedHubRoute;
+        var routeChanged = !string.Equals(route, MethodCatalogHubRoute, StringComparison.Ordinal);
+        if (!force && !routeChanged)
+        {
+            return;
+        }
+
+        jsClient.SetHubMetadata(AvailableHubs, route);
+        if (routeChanged || !jsClient.GetHubMethods().Any(method => method.Name == SelectedMethodName))
+        {
+            SelectedMethodName = string.Empty;
+            MethodParameters.Clear();
+        }
     }
 
     private void NotifyStateChanged()
     {
-        StateChanged?.Invoke();
+        if (!_disposed)
+        {
+            StateChanged?.Invoke();
+        }
     }
 
     private static string BuildHubUrl(string baseUri, string selectedHubRoute)

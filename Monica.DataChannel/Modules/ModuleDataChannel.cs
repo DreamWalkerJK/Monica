@@ -28,6 +28,7 @@ public class ModuleDataChannel : MonicaModule<ModuleDataChannelOption>, IWebHost
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleHostedService, ModuleHostedServiceOption>();
+        module.Require<ModuleResultEnvelope, ModuleResultEnvelopeOption>();
         module.RequireFeature(CHANNEL_SETUP_FEATURE);
     }
 
@@ -127,8 +128,8 @@ public class ModuleDataChannel : MonicaModule<ModuleDataChannelOption>, IWebHost
                 })
                 .WithName("DataChannel.ClearExceptions")
                 .WithTags(tagName)
-                .WithSummary("Clear data-channel exceptions")
-                .WithDescription("Clears exception history for the specified data channel.");
+                .WithSummary("Clear retained data-channel history")
+                .WithDescription("Clears all retained observable records, including ordinary records and exceptions, while preserving lifetime counters.");
         });
     }
 
@@ -174,7 +175,8 @@ public static class ModuleDataChannelBuilderExtensions
 public class ModuleDataChannelOption : MinimalApiModuleOptions<ModuleDataChannel>
 {
     /// <summary>
-    /// Gets or sets how many recent exceptions each channel retains. The default is 10 and the value must be positive.
+    /// Gets or sets each channel's shared observable history capacity, including ordinary records and exceptions.
+    /// The default is 10 and the value must be positive; lifetime counters survive trimming and clearing.
     /// </summary>
     public int RecentExceptionToKeep { get; set; } = 10;
 

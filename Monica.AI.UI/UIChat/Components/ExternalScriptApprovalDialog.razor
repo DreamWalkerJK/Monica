@@ -3,23 +3,19 @@
 @using Microsoft.Extensions.Localization
 @inject IStringLocalizer<AIResource> L
 
-<MudDialog>
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" ContentClass="pa-0" Style="max-height:calc(100dvh - 24px);margin:12px">
     <DialogContent>
-        <MudStack Spacing="2">
+        <div class="approval-content">
             <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
                 @L["Chat:Approval:Warning"]
             </MudAlert>
-            <MudText Typo="Typo.subtitle2">@L["Chat:Approval:Skill"]</MudText>
-            <MudText Typo="Typo.body2">@Request.SkillName</MudText>
-            <MudText Typo="Typo.subtitle2">@L["Chat:Approval:Script"]</MudText>
-            <MudText Typo="Typo.body2">@Request.ScriptName</MudText>
-            <MudText Typo="Typo.subtitle2">@L["Chat:Approval:Source"]</MudText>
-            <MudText Typo="Typo.body2">@Request.Source</MudText>
-            <MudText Typo="Typo.subtitle2">@L["Chat:Approval:Arguments"]</MudText>
-            <MudPaper Class="pa-3 overflow-auto" Elevation="0">
-                <MudText Typo="Typo.body2"><pre class="ma-0">@Request.Arguments</pre></MudText>
-            </MudPaper>
-        </MudStack>
+            <dl>
+                <dt>@L["Chat:Approval:Skill"]</dt><dd>@Request.SkillName</dd>
+                <dt>@L["Chat:Approval:Script"]</dt><dd>@Request.ScriptName</dd>
+                <dt>@L["Chat:Approval:Source"]</dt><dd>@Request.Source</dd>
+            </dl>
+            <div class="approval-arguments"><strong>@L["Chat:Approval:Arguments"]</strong><pre>@Request.Arguments</pre></div>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton Color="Color.Error" Variant="Variant.Text" OnClick="Reject">
@@ -36,7 +32,6 @@
 
     [Parameter, EditorRequired]
     public required ChatApprovalRequestEvent Request { get; set; }
-
     private void Approve() => Dialog.Close(DialogResult.Ok(true));
 
     private void Reject() => Dialog.Close(DialogResult.Ok(false));

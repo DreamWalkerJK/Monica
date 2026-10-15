@@ -74,11 +74,18 @@ public class ModuleAIUI : MonicaModule<ModuleAIUIOption>, IUIModule
             navOrder: 2);
         registry.RegisterLocalizedPage<AgentCapabilityManagePage, AIResource>(
             AgentCapabilityManagePage.PAGE_URL,
-            "Pages:AICapabilities:Title",
+            "Pages:AISkills:Title",
             Icons.Material.Filled.Extension,
             BuiltInNavigationCategoryIds.AI,
             addToNav: true,
             navOrder: 3);
+        registry.RegisterLocalizedPage<McpCapabilityManagePage, AIResource>(
+            McpCapabilityManagePage.PAGE_URL,
+            "Pages:AIMcp:Title",
+            Icons.Material.Filled.AccountTree,
+            BuiltInNavigationCategoryIds.AI,
+            addToNav: true,
+            navOrder: 4);
     }
 
     public override void ConfigureServices(ModuleContext<ModuleAIUIOption> context)

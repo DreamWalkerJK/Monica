@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "upstream_repository": "https://github.com/google/fonts",
+  "tools": {
+    "python": "3.14.0",
+    "fonttools": "4.64.0",
+    "brotli": "1.1.0"
+  },
+  "scope": "Four shared active families. Other runtime fonts and legacy files are unchanged.",
+  "recipe": "TTFont(recalcTimestamp=False); WOFF2 full conversion; Playfair identity rename only; retain source timestamps, outlines, cmap, variation data, metrics and license records.",
+  "fonts": [
+    {
+      "family": "Playfair Display",
+      "file": "MonicaEditorial-Variable.woff2",
+      "css_aliases": [
+        "MoGroveDisplay"
+      ],
+      "source": {
+        "source_path": "ofl/playfairdisplay/PlayfairDisplay[wght].ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf",
+        "commit": "66928797f271fed5ee428544e7229685e2d90127",
+        "sha256": "c40f2293766a503bc70cce9e512ef844a4ccb7cbcde792fe2ea31d191917d8d6",
+        "bytes": 300724
+      },
+      "license": {
+        "file": "licenses/PlayfairDisplay-OFL.txt",
+        "url": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/playfairdisplay/OFL.txt",
+        "commit": "66928797f271fed5ee428544e7229685e2d90127",
+        "sha256": "566be814f8e96e93dfa16101331557eb6b5467e9e03f627c0910fe93ca12300e"
+      },
+      "conversion": "Complete variable WOFF2; no glyph subsetting or metrics overrides. Rename primary and variable-instance identity records to Monica Editorial.",
+      "css_stretch": "normal",
+      "audit": {
+        "sha256": "af8e1fc79f93ac287c70d59d5dc2c4fbb71ff3aea6e3f203d0bb478cdd8c5025",
+        "bytes": 106444,
+        "cmap_codepoints": 659,
+        "ascii_letters": 52,
+        "ascii_printable": 95,
+        "axes": [
+          {
+            "tag": "wght",
+            "min": 400.0,
+            "default": 400.0,
+            "max": 900.0
+          }
+        ],
+        "internal_family": "Monica Editorial",
+        "source_cmap_identical": true,
+        "source_metrics_identical": true,
+        "source_outlines_identical": true,
+        "source_variation_data_identical": true,
+        "copyright_license_records_unchanged": true,
+        "reserved_name_removed_from_identity_records": true
+      }
+    },
+    {
+      "family": "Noto Serif SC",
+      "file": "NotoSerifSC-Variable.woff2",
+      "css_aliases": [
+        "MoGroveSerifSC",
+        "Noto Serif SC"
+      ],
+      "source": {
+        "source_path": "ofl/notoserifsc/NotoSerifSC[wght].ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/notoserifsc/NotoSerifSC%5Bwght%5D.ttf",
+        "commit": "66928797f271fed5ee428544e7229685e2d90127",
+        "sha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9",
+        "bytes": 25125512
+      },
+      "license": {
+        "file": "licenses/NotoSerifSC-OFL.txt",
+        "url": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/notoserifsc/OFL.txt",
+        "commit": "66928797f271fed5ee428544e7229685e2d90127",
+        "sha256": "5e0da210fb04058a8c0087985d2d456b931c2579811a49655721d3cf0c36b6d6"
+      },
+      "conversion": "Complete variable WOFF2; no glyph subsetting or metrics overrides. Preserve source internal names.",
+      "css_stretch": "normal",
+      "audit": {
+        "sha256": "4ee9b0921ec9bd3f8b04587c7bc66c62731045e89d74eec054f37fc7a2d26383",
+        "bytes": 11032420,
+        "cmap_codepoints": 30928,
+        "ascii_letters": 52,
+        "ascii_printable": 95,
+        "axes": [
+          {
+            "tag": "wght",
+            "min": 200.0,
+            "default": 200.0,
+            "max": 900.0
+          }
+        ],
+        "internal_family": "Noto Serif SC ExtraLight",
+        "source_cmap_identical": true,
+        "source_metrics_identical": true,
+        "source_outlines_identical": true,
+        "source_variation_data_identical": true,
+        "copyright_license_records_unchanged": true,
+        "reserved_name_removed_from_identity_records": false
+      }
+    },
+    {
+      "family": "Nunito",
+      "file": "Nunito-Variable.woff2",
+      "css_aliases": [
+        "Nunito"
+      ],
+      "source": {
+        "source_path": "ofl/nunito/Nunito[wght].ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/nunito/Nunito%5Bwght%5D.ttf",
+        "commit": "66928797f271fed5ee428544e7229685e2d90127",
+        "sha256": "bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207",
+        "bytes": 276932
+      },
+      "license": {
+        "file": "licenses/Nunito-OFL.txt",
+        "url": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/nunito/OFL.txt",
+        "commit": "66928797f271fed5ee428544e7229685e2d90127",
+        "sha256": "580df76c95a1ec5ab878ceb25bb3d85c6a076804e9c970c8c6972aea775fdf65"
+      },
+      "conversion": "Complete variable WOFF2; no glyph subsetting or metrics overrides. Preserve source internal names.",
+      "css_stretch": "normal",
+      "audit": {
+        "sha256": "fd0bff4bcc6e73295ec4f03d6ebcaecabff6292de6e04b31154e2d6fddab6b80",
+        "bytes": 100924,
+        "cmap_codepoints": 938,
+        "ascii_letters": 52,
+        "ascii_printable": 95,
+        "axes": [
+          {
+            "tag": "wght",
+            "min": 200.0,
+            "default": 200.0,
+            "max": 1000.0
+          }
+        ],
+        "internal_family": "Nunito ExtraLight",
+        "source_cmap_identical": true,
+        "source_metrics_identical": true,
+        "source_outlines_identical": true,
+        "source_variation_data_identical": true,
+        "copyright_license_records_unchanged": true,
+        "reserved_name_removed_from_identity_records": false
+      }
+    },
+    {
+      "family": "Roboto",
+      "file": "Roboto-Variable.woff2",
+      "css_aliases": [
+        "MoM3Text",
+        "MoM3Display"
+      ],
+      "source": {
+        "source_path": "ofl/roboto/Roboto[wdth,wght].ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/roboto/Roboto%5Bwdth%2Cwght%5D.ttf",
+        "commit": "66928797f271fed5ee428544e7229685e2d90127",
+        "sha256": "d7598e12c5dbef095ff8272cfc55da0250bd07fbdecbac8a530b9b277872a134",
+        "bytes": 488584
+      },
+      "license": {
+        "file": "licenses/Roboto-OFL.txt",
+        "url": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/roboto/OFL.txt",
+        "commit": "66928797f271fed5ee428544e7229685e2d90127",
+        "sha256": "061402327a96aadb0bfb694a960ed289ecd38d383e396243831ab81feb109c41"
+      },
+      "conversion": "Complete variable WOFF2; no glyph subsetting or metrics overrides. Preserve source internal names.",
+      "css_stretch": "normal (source wdth default 100)",
+      "audit": {
+        "sha256": "66e3a7dafb09acdf7af615078ae7f281a048d18e37816dd093c4722a37b8c884",
+        "bytes": 222128,
+        "cmap_codepoints": 927,
+        "ascii_letters": 52,
+        "ascii_printable": 95,
+        "axes": [
+          {
+            "tag": "wght",
+            "min": 100.0,
+            "default": 400.0,
+            "max": 900.0
+          },
+          {
+            "tag": "wdth",
+            "min": 75.0,
+            "default": 100.0,
+            "max": 100.0
+          }
+        ],
+        "internal_family": "Roboto",
+        "source_cmap_identical": true,
+        "source_metrics_identical": true,
+        "source_outlines_identical": true,
+        "source_variation_data_identical": true,
+        "copyright_license_records_unchanged": true,
+        "reserved_name_removed_from_identity_records": false
+      }
+    }
+  ]
+}

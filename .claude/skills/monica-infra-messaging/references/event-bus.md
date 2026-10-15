@@ -40,3 +40,7 @@ Implement `IDistributedEventHandler<TEvent>` for distributed receives and make s
 For a database write that must publish only after commit, mark the event `[Outbox]`, enable outbox on the primary UnitOfWork context, and publish through the scoped gateway inside that operation. A successful outbox `PublishAsync` means the prepared payload was staged, not committed or transported. Worker delivery can retry, so consumers need idempotency; `[Inbox]` supplies durable handler deduplication when configured. Follow the persistence skill's [transactional-events reference](../../monica-infra-persistence/references/transactional-events.md) for migration and transaction ownership.
 
 Source and checks: `Monica.EventBus/Abstractions/IEventBus.cs`, `Abstractions/Handlers/ILocalEventHandler.cs` and `IDistributedEventHandler.cs`, `Monica.EventBus/Modules/ModuleEventBus.cs`, `Monica.EventBus.Kafka/Modules/ModuleEventBusKafka.cs`, `tests/Test.Monica.EventBus/Services/EventBusAutoDiscoveryLifecycleTests.cs`, `tests/Test.Monica.EventBus/Modules/ModuleEventBusCompositionTests.cs`, and `OutboxGatewayTests.cs`.
+
+For registered-handler inspection, independent transport health, live change-feed ownership, and diagnostic publishing, use [EventBus diagnostics](event-bus-diagnostics.md).
+
+For Kafka broker configuration, routed topic and consumer inspection, sampled evidence, and persisted-snapshot upgrades, use [Kafka console diagnostics](kafka-console.md).

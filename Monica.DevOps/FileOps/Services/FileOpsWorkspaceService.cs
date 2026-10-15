@@ -11,7 +11,7 @@ public class FileOpsWorkspaceService(
     IFileOpsRuntimeConfigStore runtimeConfigStore,
     FileOpsPathPolicy pathPolicy,
     FileOpsTextInspector textInspector,
-    ILogger<FileOpsWorkspaceService> logger)
+    ILogger<FileOpsWorkspaceService> logger) : IFileOpsWorkspaceService
 {
     public Task<FileOpsRuntimeConfig> GetRuntimeConfigAsync(CancellationToken cancellationToken = default)
     {

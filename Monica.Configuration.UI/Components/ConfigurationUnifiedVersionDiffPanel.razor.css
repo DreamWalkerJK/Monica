@@ -9,10 +9,52 @@
     background: var(--mud-palette-surface);
 }
 
+.configuration-unified-version-diff-panel ::deep .mud-typography,
+.configuration-unified-version-diff-panel ::deep .configuration-unified-version-diff-key {
+    overflow-wrap: anywhere;
+}
+
+.configuration-unified-version-diff-panel ::deep .configuration-unified-version-diff-key {
+    max-width: 100%;
+    height: auto;
+    min-height: 24px;
+}
+
 .configuration-unified-version-diff-panel ::deep .diff-viewer {
     width: 100%;
 }
 
 .configuration-unified-version-diff-panel ::deep .diff-content {
     max-height: min(54vh, 620px);
+}
+
+.configuration-unified-version-diff-panel ::deep .diff-viewer .line-number,
+.configuration-unified-version-diff-panel ::deep .diff-viewer .line-old-number,
+.configuration-unified-version-diff-panel ::deep .diff-viewer .line-new-number {
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary));
+}
+
+.configuration-unified-version-diff-panel ::deep .mud-chip.mud-chip-outlined.mud-chip-color-info {
+    color: color-mix(in srgb, var(--mud-palette-info) 40%, var(--mud-palette-text-primary));
+}
+.configuration-unified-version-diff-panel ::deep .mud-chip.mud-chip-outlined.mud-chip-color-success {
+    color: color-mix(in srgb, var(--mud-palette-success) 40%, var(--mud-palette-text-primary));
+}
+.configuration-unified-version-diff-panel ::deep .mud-chip.mud-chip-outlined.mud-chip-color-error {
+    color: color-mix(in srgb, var(--mud-palette-error) 40%, var(--mud-palette-text-primary));
+}
+.configuration-unified-version-diff-panel ::deep .mud-chip.mud-chip-filled.mud-chip-color-success {
+    color: color-mix(in srgb, var(--mud-palette-success) 40%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mud-palette-success) 9%, var(--mud-palette-surface));
+}
+.configuration-unified-version-diff-panel ::deep .mud-chip.mud-chip-filled.mud-chip-color-error {
+    color: color-mix(in srgb, var(--mud-palette-error) 40%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mud-palette-error) 9%, var(--mud-palette-surface));
+}
+.configuration-unified-version-diff-panel ::deep .mud-chip.mud-chip-outlined.mud-chip-color-warning {
+    color: color-mix(in srgb, var(--mud-palette-warning) 40%, var(--mud-palette-text-primary));
+}
+.configuration-unified-version-diff-panel ::deep .mud-chip.mud-chip-filled.mud-chip-color-warning {
+    color: color-mix(in srgb, var(--mud-palette-warning) 40%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mud-palette-warning) 9%, var(--mud-palette-surface));
 }

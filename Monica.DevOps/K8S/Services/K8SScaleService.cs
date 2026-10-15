@@ -5,6 +5,12 @@ using Monica.DevOps.K8S.Services.Support;
 
 namespace Monica.DevOps.K8S.Services;
 
+/// <summary>
+/// Previews and scales workloads using one detached runtime configuration snapshot per operation.
+/// </summary>
+/// <remarks>
+/// Execution rebuilds discovery and restrictions using its own current snapshot; a previous preview does not freeze configuration or targets.
+/// </remarks>
 public class K8SScaleService(
     K8SResourceDiscoveryService discoveryService,
     IK8SRuntimeConfigStore runtimeConfigStore,
@@ -34,7 +40,17 @@ public class K8SScaleService(
         K8SScaleOperation operation,
         CancellationToken cancellationToken = default)
     {
-        var runtimeConfig = runtimeConfigStore.GetCurrent();
+        return await BuildBatchScalePreviewAsync(runtimeConfigStore.GetCurrent(), namespaceName, resourceType, resourceNames, operation, cancellationToken);
+    }
+
+    private async Task<K8SScalePreview> BuildBatchScalePreviewAsync(
+        K8SRuntimeConfig runtimeConfig,
+        string namespaceName,
+        K8SResourceType resourceType,
+        IReadOnlyCollection<string> resourceNames,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken)
+    {
         runtimeConfig.EnsureNamespaceAllowed(namespaceName);
 
         var normalizedNames = KubectlCommandBuilder.NormalizeRequestedNames(resourceNames);
@@ -53,7 +69,15 @@ public class K8SScaleService(
         K8SScaleOperation operation,
         CancellationToken cancellationToken = default)
     {
-        var runtimeConfig = runtimeConfigStore.GetCurrent();
+        return await BuildNamespaceScalePreviewAsync(runtimeConfigStore.GetCurrent(), namespaceName, operation, cancellationToken);
+    }
+
+    private async Task<K8SScalePreview> BuildNamespaceScalePreviewAsync(
+        K8SRuntimeConfig runtimeConfig,
+        string namespaceName,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken)
+    {
         runtimeConfig.EnsureNamespaceAllowed(namespaceName);
 
         var serviceNames = (await discoveryService.ListServiceSummariesAsync(runtimeConfig, namespaceName, cancellationToken))
@@ -76,8 +100,9 @@ public class K8SScaleService(
         K8SScaleOperation operation,
         CancellationToken cancellationToken = default)
     {
-        var preview = await GetBatchScalePreviewAsync(namespaceName, resourceType, resourceNames, operation, cancellationToken);
-        return await ExecuteScalePreviewAsync(preview, cancellationToken);
+        var runtimeConfig = runtimeConfigStore.GetCurrent();
+        var preview = await BuildBatchScalePreviewAsync(runtimeConfig, namespaceName, resourceType, resourceNames, operation, cancellationToken);
+        return await ExecuteScalePreviewAsync(runtimeConfig, preview, cancellationToken);
     }
 
     public async Task<K8SScaleResult> ScaleNamespaceAsync(
@@ -85,8 +110,9 @@ public class K8SScaleService(
         K8SScaleOperation operation,
         CancellationToken cancellationToken = default)
     {
-        var preview = await GetNamespaceScalePreviewAsync(namespaceName, operation, cancellationToken);
-        return await ExecuteScalePreviewAsync(preview, cancellationToken);
+        var runtimeConfig = runtimeConfigStore.GetCurrent();
+        var preview = await BuildNamespaceScalePreviewAsync(runtimeConfig, namespaceName, operation, cancellationToken);
+        return await ExecuteScalePreviewAsync(runtimeConfig, preview, cancellationToken);
     }
 
     private async Task<K8SScalePreview> BuildServiceScalePreviewAsync(
@@ -283,12 +309,12 @@ public class K8SScaleService(
     }
 
     private async Task<K8SScaleResult> ExecuteScalePreviewAsync(
+        K8SRuntimeConfig runtimeConfig,
         K8SScalePreview preview,
         CancellationToken cancellationToken)
     {
         EnsurePreviewHasScalableTargets(preview);
 
-        var runtimeConfig = runtimeConfigStore.GetCurrent();
         var commands = await ExecuteScaleCommandsAsync(runtimeConfig, preview.Workloads, cancellationToken);
         return new K8SScaleResult
         {

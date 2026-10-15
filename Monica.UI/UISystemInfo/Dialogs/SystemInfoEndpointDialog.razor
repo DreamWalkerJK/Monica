@@ -8,17 +8,17 @@
 <MudDialog>
     <DialogContent>
         <div class="system-info-endpoint-dialog">
-            <span class="system-info-endpoint-dialog__signal"><MudIcon Icon="@Icons.Material.Filled.SettingsInputAntenna" Size="Size.Large" /></span>
-            <h2 title="@Endpoint.Address">@Endpoint.Address</h2>
+            <p class="system-info-endpoint-dialog__eyebrow">@L["Page:Sections:Endpoints:ListeningAddress"]</p>
+            <h2>@Endpoint.Address</h2>
             <dl>
                 <div><dt>@L["Page:Dialogs:Endpoint:Transport"]</dt><dd>@Transport</dd></div>
-                <div><dt>@L["Page:Dialogs:Endpoint:ExactAddress"]</dt><dd title="@Endpoint.Address">@Endpoint.Address</dd></div>
+                <div><dt>@L["Page:Dialogs:Endpoint:ExactAddress"]</dt><dd>@Endpoint.Address</dd></div>
                 <div><dt>@L["Page:Dialogs:Endpoint:Captured"]</dt><dd>@SystemInfoDisplayFormatter.FormatDateTime(CapturedAtUtc, CultureInfo.CurrentCulture)</dd></div>
             </dl>
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">@L["Page:Dialogs:Endpoint:Close"]</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="Close">@L["Page:Dialogs:Endpoint:Close"]</MudButton>
     </DialogActions>
 </MudDialog>
 

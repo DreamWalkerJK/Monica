@@ -1,17 +1,15 @@
 {
   "Pages": {
     "OpenTelemetryMetrics": {
-      "Title": "OpenTelemetry 指标"
+      "Title": "OpenTelemetry 指标",
+      "Description": "浏览当前主机的指标注册表、精确标签序列、保留样本和诊断导出。"
     }
   },
   "Page": {
-    "Title": "OpenTelemetry 指标",
-    "Subtitle": "用于调试和离线排查的进程内快照"
+    "Title": "OpenTelemetry 指标观测"
   },
   "Banner": {
     "PerInstanceHint": "仅当前实例、仅内存保留。生产环境需要配置 OTLP 或 Prometheus。",
-    "Service": "服务",
-    "CapturedAt": "采集时间",
     "Meters": "Meter 数",
     "Instruments": "指标数"
   },
@@ -20,19 +18,17 @@
     "AllMeters": "全部 Meter",
     "InstrumentName": "指标名包含",
     "AutoRefresh": "自动刷新",
-    "RefreshOff": "关闭",
     "Refresh1s": "1 秒",
     "Refresh5s": "5 秒"
   },
   "Action": {
     "Refresh": "刷新",
-    "CopyAsPrometheus": "复制为 Prometheus 文本",
+    "CopyAsPrometheus": "复制诊断文本",
     "CopyAsJson": "复制为 JSON"
   },
   "Status": {
     "Loading": "正在加载指标...",
     "LoadFailed": "加载指标快照失败。",
-    "Empty": "尚未采集到指标样本。",
     "Copied": "已复制到剪贴板。",
     "CopyFailed": "复制失败。"
   },
@@ -91,11 +87,113 @@
     "Max": "最大值",
     "P50": "P50",
     "P95": "P95",
-    "P99": "P99"
+    "P99": "P99",
+    "WindowTitle": "保留窗口分布",
+    "WindowHelp": "分位数、范围和桶计数仅描述所选序列保留窗口中的有限观测，不是全生命周期总量或服务等级阈值。",
+    "FiniteCount": "{0} 次有限观测",
+    "Excluded": "这些统计不含保留窗口内的 {0} 次非有限观测。",
+    "BucketHelp": "计数属于各自区间。首桶包含下界，后续桶不含下界但包含上界。条形长度比较本窗口内的桶计数。",
+    "LowerBound": "下界",
+    "UpperBound": "上界",
+    "BucketCount": "计数"
   },
   "Overflow": {
     "Title": "溢出",
     "Message": "Tag 组合数量超过 MaxTagSetsPerInstrument，部分序列未显示。",
     "DroppedSamples": "已丢弃 {0} 个样本"
+  },
+  "Workbench": {
+    "Eyebrow": "可观测性 / 指标仪器",
+    "Intro": "从已发布的指标中选择精确标签序列，查看背后的观测值与分布。",
+    "Manual": "手动读取",
+    "ReadingPaused": "视图读取已暂停 · 主机继续采集",
+    "ReadingActive": "正在读取保留证据 · 主机独立采集",
+    "ViewRead": "视图读取",
+    "UnavailableTitle": "OpenTelemetry 界面不可用",
+    "Unavailable": "当前主机尚未注册 OpenTelemetry 界面模块及其进程内采集依赖。",
+    "RetainedAfterFailure": "保留上次成功读取的视图，采集与读取时间均未更新。",
+    "NoSnapshot": "尚无成功读取的快照。",
+    "Scope": "当前主机资源与完整注册表范围",
+    "Resource": "当前主机 / 资源",
+    "WholeRegistry": "当前读取的完整注册表",
+    "SourceCapture": "快照构建",
+    "SamplesPerSeries": "每序列保留样本容量",
+    "SeriesPerInstrument": "每指标标签组容量",
+    "ExportTitle": "导出当前证据",
+    "ExportHelp": "复制当前读取的完整快照，不受筛选影响。JSON 不含样本历史；Prometheus 诊断文本以 gauge 表示保留窗口统计，不是 SDK 抓取结果。",
+    "WorkspaceNavigation": "指标工作区",
+    "BrowseInstruments": "浏览指标",
+    "ViewEvidence": "指标观测"
+  },
+  "Registry": {
+    "Title": "指标注册表",
+    "Eyebrow": "发现与选择",
+    "Search": "搜索指标名称…",
+    "Series": "个序列",
+    "Dropped": "已丢弃 {0} 次新标签观测",
+    "Shown": "第 {0}–{1} 项，共 {2} 项",
+    "EmptyTitle": "尚无已发布指标",
+    "Empty": "此采集器尚未收到匹配的指标，请检查主机选择的 meter 模式和指标注册。",
+    "NoMatchesTitle": "没有匹配指标",
+    "NoMatches": "尝试其他名称或 meter。资源摘要仍描述完整快照。"
+  },
+  "Dossier": {
+    "Title": "所选指标",
+    "Eyebrow": "指标档案",
+    "ChooseTitle": "选择一个指标",
+    "Choose": "从注册表中选择已发布指标，查看其精确序列与保留观测。",
+    "Kind": "类型",
+    "Collection": "观测来源",
+    "Observable": "可观测回调",
+    "Recorded": "主动记录",
+    "Overflow": "达到标签组容量后，新增标签组的 {0} 次观测被丢弃。已有序列继续采集，此计数不是全部传输丢失。",
+    "UnmeasuredTitle": "已发布，等待观测",
+    "Unmeasured": "此指标已注册，但尚无保留标签序列。缺少观测不代表测得零值。"
+  },
+  "Series": {
+    "Eyebrow": "精确标签序列",
+    "Title": "选择序列",
+    "Available": "保留 {0} 个标签组",
+    "Untagged": "无标签序列",
+    "Selected": "当前序列",
+    "LatestReading": "最新保留值",
+    "AdjacentDelta": "相邻观测差值",
+    "DeltaHelp": "差值比较最后两次保留观测，不是每秒速率或与上次视图读取的差值。单个样本无法确定差值。",
+    "LastObservation": "最近观测",
+    "Retention": "保留 {0} 个 / 容量 {1}",
+    "HistoryTitle": "保留观测",
+    "Finite": "有限值 {0} 个 / 保留 {1} 个",
+    "RecordedValue": "记录值",
+    "Unitless": "未声明单位",
+    "PlotHelp": "每个有限保留值按实际 UTC 观测时间绘制。非有限值保留在明细中并使折线断开，不补造缺失样本。",
+    "Omitted": "明细保留 {0} 个非有限值，绘图中省略这些值。",
+    "NoSamples": "此序列尚无保留观测。",
+    "NoFiniteSamples": "保留值均为非有限值，请查看原始明细。没有可绘制的有限值或分布。",
+    "HistogramBasis": "直方图样本为原始记录值。分布统计使用有界保留窗口中的有限值，不是 SDK 全生命周期聚合。",
+    "CounterBasis": "此主动计数器将记录的增量累积为保留值。淘汰限制的是观测历史，而不是累计值。",
+    "MeasurementBasis": "按声明单位保留每次主动记录或可观测回调的值，不按页面刷新间隔换算。",
+    "Choose": "选择保留标签序列以查看观测证据。"
+  },
+  "Ledger": {
+    "Title": "样本明细",
+    "Help": "所有保留样本均可检查，包括非有限值。原始值使用指标声明的单位。",
+    "Timestamp": "观测时间",
+    "Raw": "原始值",
+    "Value": "显示值"
+  },
+  "Inspector": {
+    "Title": "样本证据",
+    "Frozen": "此检查器固定于一次成功读取的视图，主机后续采集与刷新不会替换其中的值。",
+    "Open": "检查",
+    "OpenSample": "检查观测于 {0} 的样本",
+    "OpenFailed": "无法打开样本检查器。",
+    "Close": "关闭",
+    "InstrumentIdentity": "采集器本地指标标识",
+    "MeterVersion": "Meter 版本",
+    "SeriesContext": "本次读取的序列上下文",
+    "SourceIndex": "保留来源索引 · 从零开始",
+    "SeriesKey": "精确序列键",
+    "FiniteCount": "有限保留样本",
+    "NonFiniteCount": "非有限保留样本"
   }
 }

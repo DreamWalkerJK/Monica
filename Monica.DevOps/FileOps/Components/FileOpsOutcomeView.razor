@@ -1,0 +1,30 @@
+@using Monica.DevOps.FileOps.State
+@using Monica.DevOps.Localization
+@inject IStringLocalizer<FileOpsResource> L
+@if (Outcome is { } outcome && (!outcome.Succeeded || ShowSuccess))
+{
+    <div class="outcome" role="@(outcome.Succeeded ? "status" : null)" aria-live="polite">
+        <MudAlert Severity="@(outcome.Succeeded ? Severity.Success : Severity.Error)" Variant="Variant.Outlined">
+            <strong>@Title(outcome)</strong>
+            @if (!string.IsNullOrWhiteSpace(Target)) { <code>@Target</code> }
+            @if (!outcome.Succeeded && !string.IsNullOrWhiteSpace(outcome.Message)) { <p>@outcome.Message</p> }
+            @if (!outcome.Succeeded && outcome.Kind == FileOpsOperationKind.DeleteSelection) { <p>@L["Outcome:PartialDelete"]</p> }
+        </MudAlert>
+    </div>
+}
+@code {
+    /// <summary>A detached actual command/read result, never an inferred operation success.</summary>
+    [Parameter] public FileOpsOutcome? Outcome { get; set; }
+    /// <summary>Whether successful read/command evidence merits a visible completion; defaults false.</summary>
+    [Parameter] public bool ShowSuccess { get; set; }
+    /// <summary>Captured command target identity, independent of later selection or refreshed evidence.</summary>
+    [Parameter] public string? Target { get; set; }
+    private string Title(FileOpsOutcome outcome) => !outcome.Succeeded ? L["Outcome:Failed"] : L[outcome.Kind switch {
+        FileOpsOperationKind.SaveText => "Outcome:Saved",
+        FileOpsOperationKind.SavePolicy => "Outcome:PolicyApplied",
+        FileOpsOperationKind.CreateDirectory => "Outcome:Created",
+        FileOpsOperationKind.DeleteEntry or FileOpsOperationKind.DeleteSelection => "Outcome:Deleted",
+        FileOpsOperationKind.Upload => "Outcome:Uploaded",
+        FileOpsOperationKind.Download or FileOpsOperationKind.DownloadSelection => "Outcome:DownloadStarted",
+        _ => "Outcome:Updated" }];
+}

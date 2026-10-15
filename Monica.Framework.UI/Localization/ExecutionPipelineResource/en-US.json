@@ -8,19 +8,24 @@
     "PageTitle": "Execution Pipeline",
     "Header": {
       "Title": "Execution Pipeline",
-      "Description": "Inspect the final behavior chain for observed operations and compare it with every candidate behavior registered in the host.",
+      "Description": "Explore the behavior policies applied to observed operations, with host registrations alongside each plan’s evidence.",
       "Refresh": "Refresh",
-      "CapturedAt": "Snapshot captured at {0}"
+      "Eyebrow": "Infrastructure / Execution",
+      "CaptureLabel": "Catalog snapshot",
+      "LocalTime": "Local time"
     },
     "Summary": {
       "Registrations": "Behavior registrations",
       "Plans": "Observed plans",
       "ExecutionPoints": "Execution points",
-      "Faults": "Faulted plans"
+      "Faults": "Construction faults",
+      "AriaLabel": "Execution catalog summary",
+      "Scope": "Execution catalog",
+      "Description": "Host registrations and observed operation plans."
     },
     "Tabs": {
-      "Plans": "Observed plans",
-      "Registrations": "Registrations"
+      "PlansWithCount": "Observed plans · {0}",
+      "RegistrationsWithCount": "Registrations · {0}"
     },
     "States": {
       "Loading": "Loading the execution-pipeline catalog...",
@@ -29,8 +34,10 @@
       "NoFilteredPlans": "No observed plans match the current filters.",
       "NoRegistrations": "No execution behaviors are registered.",
       "SelectPlan": "Select an observed plan to inspect its applied behavior chain.",
-      "NoAppliedBehaviors": "This operation uses the terminal handler directly because no behaviors were applied.",
-      "NotAvailable": "Not available"
+      "NoAppliedBehaviors": "No behaviors were applied to this ready plan. Its operation is connected directly to the terminal handler.",
+      "NotAvailable": "Not available",
+      "NoObservedPlansTitle": "Waiting for observed operations",
+      "PlanBuilding": "This snapshot captured a plan whose behavior chain was still being constructed. Refresh the catalog to see its latest materialization state."
     },
     "Common": {
       "Yes": "Yes",
@@ -51,16 +58,16 @@
       "All": "All",
       "BusinessOnly": "Business only",
       "NonBusinessOnly": "Non-business only",
-      "Showing": "Showing {0} of {1} observed plans"
+      "Showing": "Showing {0} of {1} observed plans",
+      "Clear": "Clear filters"
     },
     "Plans": {
       "Title": "Observed operation plans",
       "Component": "Component",
-      "Behaviors": "Behaviors",
-      "OverviewTitle": "Operation overview",
-      "OverviewDescription": "Readable execution metadata used to understand what enters the pipeline and which policies apply.",
+      "OverviewTitle": "Operation evidence",
+      "OverviewDescription": "Execution-boundary policy, callable types, and the times this cached plan was constructed.",
       "DetailTitle": "Applied behavior chain",
-      "DetailDescription": "Final positions run outermost to innermost; configured order is the value used to sort matching registrations.",
+      "DetailDescription": "Positions describe the chain from outermost to innermost. Configured order controls candidate sorting.",
       "Order": "Order {0}",
       "ResolvedType": "Resolved behavior",
       "RegisteredType": "Registered type",
@@ -68,26 +75,37 @@
       "Method": "Entry method",
       "Input": "Input",
       "Result": "Result",
-      "StartedAt": "Plan started",
-      "CompletedAt": "Plan completed",
+      "StartedAt": "Construction started",
+      "CompletedAt": "Construction completed",
       "Business": "Business operation",
       "Transaction": "Transaction mode",
       "Fault": "Plan construction failed",
-      "ExceptionType": "Exception type"
+      "ExceptionType": "Exception type",
+      "SelectedOperation": "Selected operation",
+      "MaterializationStatus": "Plan construction state",
+      "AppliedCount": "{0} applied",
+      "EvidenceBoundary": "Boundary policy",
+      "EvidenceCallable": "Callable identity",
+      "EvidenceMaterialization": "Plan construction",
+      "TerminalTitle": "Terminal handler",
+      "TerminalDescription": "When invoked, the operation reaches its entry method if preceding behaviors continue. A behavior can short-circuit the chain."
     },
     "Registrations": {
       "Title": "Registered behaviors",
-      "Description": "All candidate behaviors registered in this host, in execution order. A behavior enters an operation plan only when its type matches and its descriptor filter passes.",
+      "Description": "Candidate behaviors registered in this host, sorted by configured order and type. Inclusion in a plan depends on type matching and descriptor filters; this catalog does not record exclusion reasons.",
       "Behavior": "Behavior",
       "Order": "Order",
       "Lifetime": "Lifetime",
       "Source": "Source",
       "OpenGeneric": "Open generic",
-      "DescriptorFilter": "Descriptor filter"
+      "DescriptorFilter": "Descriptor filter",
+      "Eyebrow": "Host policy registry",
+      "PolicyColumn": "Lifetime & origin",
+      "ApplicabilityColumn": "Applicability"
     },
     "Diagnostics": {
       "Title": "Developer diagnostics",
-      "Description": "Exact machine identities are kept here for support and correlation. They are intentionally hidden from the normal reading flow.",
+      "Description": "Exact identities for support and correlation. Copy the plan and operation keys, assembly-qualified types, and method signature together.",
       "Copy": "Copy diagnostics",
       "CopySucceeded": "Execution diagnostics copied.",
       "CopyFailed": "Could not copy execution diagnostics.",
@@ -110,7 +128,7 @@
         "BusinessOperation": "Whether the adapter marks this execution as application business work; behaviors may use it as an applicability filter.",
         "TransactionMode": "Whether the boundary allows the registered unit-of-work behavior to wrap the whole execution automatically; None still permits explicit transactions.",
         "PlanStatus": "Behavior-chain state: Building is matching, Ready has an available chain, and Faulted has a cached materialization error.",
-        "BehaviorOrder": "Configured sort value; lower values run earlier and outermost, with type identity breaking ties deterministically.",
+        "BehaviorOrder": "Configured sort value; lower values are placed farther outside in the chain, with type identity breaking ties deterministically.",
         "Lifetime": "Dependency-injection lifetime of the behavior instance: Singleton, Scoped, or Transient.",
         "Source": "Monica module that contributed the registration; Application / host means direct host registration."
       },
@@ -128,7 +146,7 @@
         "Result": "Result type returned by the behavior chain; no-result operations use an internal placeholder type.",
         "StartedAt": "Time behavior-plan materialization started, not the business operation start time.",
         "CompletedAt": "Time behavior-plan materialization completed or faulted, not the business operation completion time.",
-        "AppliedChain": "Behaviors actually executed for this operation, ordered outermost to innermost before the terminal handler.",
+        "AppliedChain": "Matched behaviors in the cached plan, ordered outermost to innermost. This is not an invocation log; behaviors may short-circuit before reaching the terminal handler.",
         "BehaviorPosition": "One-based position of the behavior in the final applied chain.",
         "ResolvedType": "Concrete behavior type resolved for this operation; open generics appear as their closed type.",
         "RegisteredType": "Behavior type originally registered with the host; it may be open generic.",
@@ -154,6 +172,9 @@
       "Singleton": "Singleton",
       "Scoped": "Scoped",
       "Transient": "Transient"
+    },
+    "Catalog": {
+      "AriaLabel": "Execution catalog views"
     }
   }
 }

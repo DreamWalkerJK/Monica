@@ -12,6 +12,7 @@ Start with composition for module-graph or host-lifecycle problems, then select 
 | Compose a Web or generic host, select discovery assemblies, or inspect module diagnostics | [Host composition](references/host-composition.md) |
 | Discover application services, choose DI lifetimes, or decorate an interface | [Dependency injection](references/dependency-injection.md) |
 | Register workers or diagnose their startup, state, and shutdown | [Hosted services](references/hosted-services.md) |
+| Register an observable object or inspect captured state, retained history, and exceptions | [Observable instance evidence](references/observable-instances.md) |
 | Configure registry/worker roles or inspect registered services | [Service discovery](references/service-discovery.md) |
 | Store key-value state using a memory, distributed, or keyed provider | [State stores](references/state-stores.md) |
 | Inspect local or remote failures and choose response diagnostic visibility | [Exception diagnostics](references/exception-diagnostics.md) |

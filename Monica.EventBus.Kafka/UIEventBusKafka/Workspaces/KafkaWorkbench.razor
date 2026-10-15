@@ -1,0 +1,113 @@
+@using Monica.UI.Shared.Components.Navigation
+@using Monica.UI.Shared.Components.Dialogs
+@inject KafkaWorkbenchSessionFactory SessionFactory
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IStringLocalizer<EventBusKafkaResource> L
+@implements IAsyncDisposable
+
+<PageTitle>@L[$"Workbench:Titles:{Workspace}"]</PageTitle>
+
+<div class="kafka-workbench mo-page-shell mo-page-shell--full-width" aria-busy="@IsWorking">
+    <header class="kafka-page-header">
+        <div class="kafka-page-identity">
+            <span class="kafka-page-eyebrow">@L["Workbench:Eyebrow"]</span>
+            <h1>@L[$"Workbench:Titles:{Workspace}"]</h1>
+            <p>@L[$"Workbench:Descriptions:{Workspace}"]</p>
+        </div>
+        <MudButton StartIcon="@Icons.Material.Outlined.Refresh" Variant="Variant.Outlined" Color="Color.Primary"
+                   Disabled="@IsWorking" OnClick="RefreshAsync">@L["Common:Actions:Refresh"]</MudButton>
+    </header>
+
+    <MoWorkbenchNavigation Label="@L["Workbench:NavigationLabel"]">
+        @foreach (var item in NavigationItems)
+        {
+            <a href="@WorkspaceUrl(item.Workspace)" aria-current="@(Workspace == item.Workspace ? "page" : null)">
+                <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                <span>@L[$"Workbench:Titles:{item.Workspace}"]</span>
+            </a>
+        }
+    </MoWorkbenchNavigation>
+
+    @if (State.IsLoading)
+    {
+        <div class="kafka-page-loading" role="status">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small" />
+            <div><strong>@L["Page:States:Loading"]</strong><p>@L["Page:States:LoadingDescription"]</p></div>
+        </div>
+    }
+    else
+    {
+        <section class="kafka-context" aria-label="@L["Workbench:ClusterContext"]">
+            <div class="kafka-context-selector">
+                <MudSelect T="string" Value="@State.SelectedClusterId" ValueChanged="SelectContextAsync"
+                           Label="@L["Workbench:ClusterContext"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Disabled="@(IsWorking || State.Clusters.Count == 0)" Clearable="false">
+                    @foreach (var cluster in State.Clusters)
+                    {
+                        <MudSelectItem T="string" Value="@cluster.Config.ClusterId">@cluster.Config.DisplayName</MudSelectItem>
+                    }
+                    @if (State.IsSelectedClusterUnavailable && State.SelectedClusterId is { } missingId)
+                    {
+                        <MudSelectItem T="string" Value="@missingId">@missingId</MudSelectItem>
+                    }
+                </MudSelect>
+                @if (State.SelectedCluster is { Config.HasDirectKafkaAccess: true } selected)
+                {
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Cable" Disabled="@IsWorking"
+                               OnClick="@(() => TestClusterAsync(selected))">@L["Clusters:Actions:Test"]</MudButton>
+                }
+            </div>
+            <div class="kafka-context-evidence">
+                <span class="kafka-context-label">@L["Common:Labels:ClusterId"]</span>
+                <code>@(State.SelectedClusterId ?? L["Workbench:NoCluster"].Value)</code>
+                @if (State.SelectedCluster is { } cluster)
+                {
+                    <span class="kafka-context-bootstrap">@(cluster.Config.HasDirectKafkaAccess ? cluster.Config.BootstrapServers : L["Clusters:Values:ExternalBootstrap"].Value)</span>
+                }
+                @if (State.IsSelectedClusterUnavailable)
+                {
+                    <span class="kafka-context-unavailable">@L["Workbench:UnavailableCluster"]</span>
+                }
+            </div>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(State.ErrorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@State.ErrorMessage</MudAlert>
+        }
+        <div class="kafka-workspace-body">
+            @switch (Workspace)
+            {
+                case KafkaWorkspace.Overview:
+                    <KafkaDashboardTab State="State" InteractionBusy="@InteractionBusy" OnRefresh="RefreshAsync"
+                                       ClustersUrl="@WorkspaceUrl(KafkaWorkspace.Clusters)" TopicsUrl="@WorkspaceUrl(KafkaWorkspace.Topics)"
+                                       ConsumerGroupsUrl="@WorkspaceUrl(KafkaWorkspace.ConsumerGroups)" PerformanceUrl="@WorkspaceUrl(KafkaWorkspace.Performance)" />
+                    break;
+                case KafkaWorkspace.Clusters:
+                    <KafkaClustersTab State="State" InteractionBusy="@InteractionBusy" OnCreate="OpenCreateClusterAsync" OnRefresh="RefreshAsync"
+                                      OnSelect="SelectClusterAsync" OnEdit="OpenEditClusterAsync" OnDelete="DeleteClusterAsync" OnTest="TestClusterAsync" />
+                    break;
+                case KafkaWorkspace.Topics:
+                    <KafkaTopicsTab State="State" InteractionBusy="@InteractionBusy" OnCreate="OpenCreateTopicAsync" OnRefresh="RefreshAsync"
+                                    OnDelete="DeleteTopicAsync" OnViewMessages="OpenMessagesAsync" OnViewBacklog="OpenBacklogAsync"
+                                    OnViewConsumerGroups="OpenTopicGroupsAsync" OnIncreasePartitions="OpenPartitionsAsync"
+                                    OnUpdateRetention="OpenRetentionAsync" OnClearMessages="ClearMessagesAsync" />
+                    break;
+                case KafkaWorkspace.ConsumerGroups:
+                    <KafkaConsumerGroupsTab State="State" InteractionBusy="@InteractionBusy" OnRefresh="RefreshAsync" OnViewMembers="OpenGroupAsync" />
+                    break;
+                case KafkaWorkspace.Performance:
+                    <KafkaPerformanceTab State="State" InteractionBusy="@InteractionBusy" OnRefresh="RefreshAsync" OnCapture="CapturePerformanceAsync"
+                                         OnViewDetails="OpenPerformanceGroupAsync" />
+                    break;
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private RenderFragment ConfirmationHeading(string title) => @<MoDialogHeading Text="@title" />;
+    private RenderFragment ConfirmationBody(string message, string identity) => @<div class="kafka-confirmation-content"><p>@message</p><code>@identity</code></div>;
+}

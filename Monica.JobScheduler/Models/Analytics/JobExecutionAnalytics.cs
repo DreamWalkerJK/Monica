@@ -70,7 +70,7 @@ public sealed record JobExecutionAnalyticsQuery
     public int TopJobLimit { get; init; } = 8;
 
     /// <summary>
-    /// Gets the maximum number of distinct jobs represented by their longest terminal attempt.
+    /// Gets the maximum number of exact owner/job pairs represented by their longest measured completion.
     /// </summary>
     public int SlowestExecutionLimit { get; init; } = 10;
 
@@ -210,7 +210,8 @@ public sealed record JobExecutionAnalyticsSnapshot
     public double RecurringScheduleFulfillment { get; init; }
 
     /// <summary>
-    /// Gets terminal-attempt duration statistics for executions completed in the range.
+    /// Gets recorded elapsed-duration statistics for measured executions completed in the range.
+    /// The retained start-to-completion interval can include retry waiting; it is not CPU or summed attempt time.
     /// </summary>
     public required JobExecutionDurationStatistics Duration { get; init; }
 
@@ -230,7 +231,8 @@ public sealed record JobExecutionAnalyticsSnapshot
     public required IReadOnlyList<JobExecutionAnalyticsJobRank> TopJobsByFailures { get; init; }
 
     /// <summary>
-    /// Gets the bounded longest terminal attempts with at most one execution per logical job.
+    /// Gets the bounded longest measured completions with at most one execution per exact owner/job pair.
+    /// Equal maximum durations select the ordinal-smallest instance ID before the global limit is applied.
     /// </summary>
     public required IReadOnlyList<JobExecutionAnalyticsSlowExecution> SlowestExecutions { get; init; }
 }
@@ -282,17 +284,19 @@ public sealed record JobExecutionAnalyticsBucket
 }
 
 /// <summary>
-/// Describes duration distribution for terminal attempts using <c>CompletedAtUtc - StartedAtUtc</c>.
+/// Describes recorded elapsed-duration distribution using <c>CompletedAtUtc - StartedAtUtc</c>.
+/// Only nonnegative measured terminal intervals participate. Retained starts can include retry waiting;
+/// these values are neither CPU time nor the sum of individual attempt durations.
 /// </summary>
 public sealed record JobExecutionDurationStatistics
 {
     /// <summary>
-    /// Gets the number of terminal attempts in the distribution.
+    /// Gets the number of nonnegative measured terminal start-to-completion intervals in the distribution.
     /// </summary>
     public long Count { get; init; }
 
     /// <summary>
-    /// Gets the shortest duration, or <see langword="null"/> when no terminal attempt completed.
+    /// Gets the shortest duration, or <see langword="null"/> when no qualifying measured completion exists.
     /// </summary>
     public TimeSpan? Minimum { get; init; }
 
@@ -322,7 +326,7 @@ public sealed record JobExecutionDurationStatistics
     public TimeSpan? P99 { get; init; }
 
     /// <summary>
-    /// Gets the longest duration, or <see langword="null"/> when no terminal attempt completed.
+    /// Gets the longest duration, or <see langword="null"/> when no qualifying measured completion exists.
     /// </summary>
     public TimeSpan? Maximum { get; init; }
 }
@@ -384,7 +388,7 @@ public sealed record JobExecutionAnalyticsJobRank
 }
 
 /// <summary>
-/// Describes one owner-scoped job's longest terminal attempt completed in an analytics range.
+/// Describes one exact owner-scoped job's longest measured completion in an analytics range.
 /// </summary>
 public sealed record JobExecutionAnalyticsSlowExecution
 {
@@ -414,17 +418,17 @@ public sealed record JobExecutionAnalyticsSlowExecution
     public JobExecutionState State { get; init; }
 
     /// <summary>
-    /// Gets when the measured attempt started.
+    /// Gets the retained execution start used by this measured interval.
     /// </summary>
     public DateTimeOffset StartedAtUtc { get; init; }
 
     /// <summary>
-    /// Gets when the measured attempt completed.
+    /// Gets the durable terminal completion used by this measured interval.
     /// </summary>
     public DateTimeOffset CompletedAtUtc { get; init; }
 
     /// <summary>
-    /// Gets the measured terminal-attempt duration.
+    /// Gets the retained start-to-completion elapsed interval, which can include retry waiting.
     /// </summary>
     public TimeSpan Duration => CompletedAtUtc - StartedAtUtc;
 }

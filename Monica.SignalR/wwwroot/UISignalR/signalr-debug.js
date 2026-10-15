@@ -24,6 +24,7 @@ export async function createSession(callback, localizedMessages) {
     let callbackReference = callback;
     let isShuttingDown = false;
     let shutdownPromise = null;
+    let connectionGeneration = 0;
     const registeredListeners = new Map();
     const pendingCallbacks = new Set();
     const stoppingConnections = new WeakMap();
@@ -105,20 +106,22 @@ export async function createSession(callback, localizedMessages) {
         }
 
         if (notifyClient && !isShuttingDown) {
-            notify("OnConnectionStatusChanged", "Disconnected");
-            notify("SetConnectionId", "");
+            notify("OnConnectionStatusChangedForSession", "Disconnected", connectionGeneration);
+            notify("SetConnectionIdForSession", "", connectionGeneration);
             log("System", text("Disconnected"), "Info");
         }
 
         return !isShuttingDown;
     }
 
-    async function connect(hubUrl, accessToken) {
+    async function connect(hubUrl, accessToken, generation) {
         if (isShuttingDown) {
             return closedResult();
         }
 
         let activeConnection = null;
+        const activeGeneration = generation || 0;
+        connectionGeneration = activeGeneration;
         try {
             await disconnectCore(false);
             if (isShuttingDown) {
@@ -137,8 +140,8 @@ export async function createSession(callback, localizedMessages) {
                 }
 
                 connection = null;
-                notify("OnConnectionStatusChanged", "Disconnected");
-                notify("SetConnectionId", "");
+                notify("OnConnectionStatusChangedForSession", "Disconnected", activeGeneration);
+                notify("SetConnectionIdForSession", "", activeGeneration);
                 log(
                     "System",
                     error ? text("ConnectionClosedWithError", error.message || error) : text("ConnectionClosed"),
@@ -149,7 +152,7 @@ export async function createSession(callback, localizedMessages) {
                     return;
                 }
 
-                notify("OnConnectionStatusChanged", "Reconnecting");
+                notify("OnConnectionStatusChangedForSession", "Reconnecting", activeGeneration);
                 log("System", text("Reconnecting"), "Info");
             });
             activeConnection.onreconnected(connectionId => {
@@ -157,8 +160,8 @@ export async function createSession(callback, localizedMessages) {
                     return;
                 }
 
-                notify("OnConnectionStatusChanged", "Connected");
-                notify("SetConnectionId", connectionId || "");
+                notify("OnConnectionStatusChangedForSession", "Connected", activeGeneration);
+                notify("SetConnectionIdForSession", connectionId || "", activeGeneration);
                 log("System", text("ReconnectedSuccessfully"), "Success");
             });
 
@@ -172,10 +175,10 @@ export async function createSession(callback, localizedMessages) {
                 return closedResult();
             }
 
-            notify("OnConnectionStatusChanged", "Connected");
-            notify("SetConnectionId", activeConnection.connectionId || "");
+            notify("OnConnectionStatusChangedForSession", "Connected", activeGeneration);
+            notify("SetConnectionIdForSession", activeConnection.connectionId || "", activeGeneration);
             log("System", text("ConnectedSuccessfully"), "Success");
-            return { success: true };
+            return { success: true, connectionId: activeConnection.connectionId || "" };
         } catch (error) {
             if (connection === activeConnection) {
                 connection = null;
@@ -198,13 +201,14 @@ export async function createSession(callback, localizedMessages) {
             }
 
             const errorMessage = error?.message || String(error);
-            notify("OnConnectionStatusChanged", "Disconnected");
+            notify("OnConnectionStatusChangedForSession", "Disconnected", activeGeneration);
             log("System", text("ConnectionFailed", errorMessage), "Error");
             return { success: false, error: errorMessage };
         }
     }
 
-    async function disconnect() {
+    async function disconnect(generation) {
+        connectionGeneration = generation || 0;
         try {
             await disconnectCore(true);
             return isShuttingDown ? closedResult() : { success: true };
@@ -246,8 +250,9 @@ export async function createSession(callback, localizedMessages) {
         return invokeMethod("ReceiveTestMessage", [userName, message]);
     }
 
-    function registerListener(methodName, methodDisplayName) {
+    function registerListener(methodName, methodDisplayName, hubRoute) {
         const activeConnection = connection;
+        const activeGeneration = connectionGeneration;
         if (isShuttingDown || !activeConnection) {
             return closedResult();
         }
@@ -260,7 +265,7 @@ export async function createSession(callback, localizedMessages) {
                 }
 
                 const argumentDisplay = args.length > 0 ? JSON.stringify(args) : text("NoArguments");
-                log("Received", `${methodDisplayName}: ${argumentDisplay}`, "Received");
+                notify("OnMethodReceived", methodName, argumentDisplay, hubRoute || "", activeGeneration);
             });
             registeredListeners.set(methodName, methodDisplayName);
             log("System", text("RegisteredListener", methodDisplayName), "Info");

@@ -39,7 +39,8 @@ internal sealed class ProjectUnitCatalogService(
 
     internal async Task<object> PublishDomainEventAsync(string eventKey, JsonNode eventContent)
     {
-        if (catalog.FindByName<UnitDomainEvent>(eventKey) is not { } unitEvent)
+        if ((catalog.FindByFullName<UnitDomainEvent>(eventKey)
+             ?? catalog.FindByName<UnitDomainEvent>(eventKey)) is not { } unitEvent)
         {
             throw new KeyNotFoundException($"Project-unit metadata for domain event '{eventKey}' was not found.");
         }
@@ -50,6 +51,15 @@ internal sealed class ProjectUnitCatalogService(
 
         await eventBus.PublishAsync(unitEvent.Type, eventToPublish);
         return eventToPublish;
+    }
+
+    internal ProjectUnitRequestFilterState GetRequestFilterState()
+    {
+        return new ProjectUnitRequestFilterState
+        {
+            IsAvailable = requestFilter is not null,
+            DisabledPaths = requestFilter is null ? [] : requestFilter.GetDisabledUrls().AsReadOnly()
+        };
     }
 
     internal List<string> ManageRequestFilter(List<string>? urls, bool? disable)

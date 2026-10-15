@@ -32,9 +32,14 @@ public sealed partial class ChatPageState
     /// <summary>Updates knowledge retrieval tools for the next request.</summary>
     public void SetSelectedKnowledgeBases(List<string> ids)
     {
-        SelectedKnowledgeBaseIds = ids;
+        if (IsInputBlocked || IsSending || IsUploading) return;
+        var selection = ids.ToList();
         if (CurrentSession is { } session)
-            _ = chatFacade.UpdateRuntimeContext(session, BuildRuntimeContext(ids));
+        {
+            var result = chatFacade.UpdateRuntimeContext(session, BuildRuntimeContext(selection));
+            if (result.IsFailed(out var error)) { SetError(error.Message); return; }
+        }
+        SelectedKnowledgeBaseIds = selection;
         NotifyStateChanged();
     }
 }

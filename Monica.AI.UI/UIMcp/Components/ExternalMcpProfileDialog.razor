@@ -1,18 +1,26 @@
 @using Microsoft.Extensions.Localization
 @using ModelContextProtocol.Client
-@using Monica.AI.Facades
 @using Monica.AI.Mcp.Facades
 @using Monica.AI.Mcp.Models
 @using Monica.AI.UI.Localization
-@using Monica.Core.Results
+@implements IAsyncDisposable
 @inject McpFacade McpFacade
-@inject ISnackbar Snackbar
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<AIResource> L
 
-<MudDialog>
+<MudDialog Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px" Gutters="false" TitleClass="pa-0" ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent>
+        <div class="external-mcp-heading">
+            <MoDialogHeading Text="@(IsEdit ? L["Capabilities:Mcp:Dialog:EditTitle"] : L["Capabilities:Mcp:Dialog:AddTitle"])" />
+        </div>
+    </TitleContent>
     <DialogContent>
-        <MudForm @ref="_form">
-            <MudStack Spacing="3">
+        <div class="external-mcp-form">
+        <MudForm>
+            <fieldset class="profile-fields" disabled="@_isSaving">
+            <div class="profile-groups">
+                <section class="profile-section">
+                <h3>@L["Capabilities:Mcp:Dialog:IdentityEndpoint"]</h3>
                 <MudTextField T="string"
                               Value="@Name"
                               ValueChanged="OnNameChanged"
@@ -20,20 +28,21 @@
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Immediate="true"
-                              Disabled="@IsEdit"
+                              Disabled="@(IsEdit || _isSaving)"
                               Required="true"
                               RequiredError="@L["Common:Validation:Required"]" />
 
-                <MudTextField T="string"
+                <MudTextField Disabled="@_isSaving" T="string"
                               @bind-Value="@Description"
                               Label="@L["Capabilities:Mcp:Dialog:Description"]"
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Lines="2"
+                              Immediate="true"
                               Required="true"
                               RequiredError="@L["Common:Validation:Required"]" />
 
-                <MudTextField T="string"
+                <MudTextField Disabled="@_isSaving" T="string"
                               @bind-Value="@Endpoint"
                               Label="@L["Capabilities:Mcp:Dialog:Endpoint"]"
                               Variant="Variant.Outlined"
@@ -44,9 +53,8 @@
                               Error="@(!string.IsNullOrWhiteSpace(EndpointValidationMessage))"
                               ErrorText="@EndpointValidationMessage" />
 
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="7">
-                        <MudSelect T="HttpTransportMode"
+                <div class="connection-grid">
+                        <MudSelect Disabled="@_isSaving" T="HttpTransportMode"
                                    @bind-Value="@TransportMode"
                                    Label="@L["Capabilities:Mcp:Dialog:TransportMode"]"
                                    Variant="Variant.Outlined"
@@ -55,26 +63,30 @@
                             <MudSelectItem T="HttpTransportMode" Value="HttpTransportMode.StreamableHttp">StreamableHttp</MudSelectItem>
                             <MudSelectItem T="HttpTransportMode" Value="HttpTransportMode.Sse">Sse</MudSelectItem>
                         </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" sm="5">
-                        <MudNumericField T="int"
+
+                        <MudNumericField Disabled="@_isSaving" T="int"
                                          @bind-Value="@ConnectionTimeoutSeconds"
                                          Label="@L["Capabilities:Mcp:Dialog:Timeout"]"
                                          Variant="Variant.Outlined"
                                          Margin="Margin.Dense"
+                                         Immediate="true"
                                          Min="1"
                                          Max="300" />
-                    </MudItem>
-                </MudGrid>
+                </div>
 
-                <MudSwitch T="bool"
+                </section>
+                <section class="profile-section">
+                <h3>@L["Capabilities:Mcp:Dialog:AgentExposure"]</h3>
+                <p class="form-help">@L["Capabilities:Mcp:Dialog:ExposureHelp"]</p>
+                <MudSwitch Disabled="@_isSaving" T="bool"
                            @bind-Value="@IsAgentToolEnabled"
                            Color="Color.Primary"
                            Label="@L["Capabilities:Mcp:Dialog:ExposeTools"]" />
 
-                <div class="headers-section">
+                </section>
+                <section class="profile-section headers-section">
                     <div class="headers-title-row">
-                        <MudText Typo="Typo.subtitle2">@L["Capabilities:Mcp:Dialog:Headers"]</MudText>
+                        <h3>@L["Capabilities:Mcp:Dialog:Headers"]</h3>
                         <MudButton Variant="Variant.Text"
                                    Size="Size.Small"
                                    StartIcon="@Icons.Material.Filled.Add"
@@ -83,9 +95,10 @@
                         </MudButton>
                     </div>
 
+                    <p class="form-help">@L["Capabilities:Mcp:Dialog:HeadersHelp"]</p>
                     @if (_headers.Count == 0)
                     {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        <MudText Typo="Typo.body2">
                             @L["Capabilities:Mcp:Dialog:NoHeaders"]
                         </MudText>
                     }
@@ -94,31 +107,50 @@
                         <div class="headers-list">
                             @foreach (var header in _headers)
                             {
-                                <div class="header-row">
-                                    <MudTextField T="string"
+                                <div class="header-row" @key="header">
+                                    <div class="header-row-heading">
+                                        <span>@(string.IsNullOrWhiteSpace(header.Name) ? L["Capabilities:Mcp:Dialog:HeaderName"] : header.Name)</span>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Color="Color.Error"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => RemoveHeader(header))"
+                                                   aria-label="@L["Capabilities:Mcp:Dialog:RemoveHeader"]" />
+
+                                    </div>
+                                    <div class="header-fields">
+                                    <MudTextField Disabled="@_isSaving" T="string"
                                                   @bind-Value="@header.Name"
                                                   Label="@L["Capabilities:Mcp:Dialog:HeaderName"]"
                                                   Variant="Variant.Outlined"
                                                   Margin="Margin.Dense"
                                                   Immediate="true" />
-                                    <MudTextField T="string"
+                                    <MudTextField Disabled="@_isSaving" T="string"
                                                   @bind-Value="@header.Value"
                                                   Label="@L["Capabilities:Mcp:Dialog:HeaderValue"]"
                                                   Variant="Variant.Outlined"
                                                   Margin="Margin.Dense"
                                                   Immediate="true"
-                                                  InputType="InputType.Password" />
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                   Color="Color.Error"
-                                                   Size="Size.Small"
-                                                   OnClick="@(() => RemoveHeader(header))" />
+                                                  InputType="InputType.Password"
+                                                  autocomplete="new-password" />
+                                    </div>
                                 </div>
                             }
                         </div>
                     }
-                </div>
+                </section>
 
-                @if (_lastTestResult is not null)
+                <section class="profile-section">
+                <h3>@L["Capabilities:Mcp:Dialog:TestResult"]</h3>
+                <p class="form-help">@L["Capabilities:Mcp:Dialog:TestHelp"]</p>
+                @if (_testedProfile is not null && !TestResultMatches)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">@L["Capabilities:Mcp:Dialog:DraftChanged"]</MudAlert>
+                }
+                @if (_error is not null && (!_errorIsTest || TestResultMatches))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+                }
+                @if (_lastTestResult is not null && TestResultMatches)
                 {
                     <MudAlert Severity="@(_lastTestResult.Success ? Severity.Success : Severity.Error)" Dense="true">
                         <div class="test-result">
@@ -141,14 +173,18 @@
                         </div>
                     </MudAlert>
                 }
-            </MudStack>
+                </section>
+            </div>
+            </fieldset>
         </MudForm>
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
+        <div class="external-mcp-actions">
         <MudButton Variant="Variant.Outlined"
                    StartIcon="@Icons.Material.Filled.NetworkPing"
-                   Disabled="@(_isTesting || !CanSubmit)"
+                   Disabled="@(!CanSubmit)"
+                   aria-disabled="@((_isTesting || _isSaving || !CanSubmit).ToString().ToLowerInvariant())"
                    OnClick="TestAsync">
             @if (_isTesting)
             {
@@ -156,177 +192,16 @@
             }
             @L["Capabilities:Mcp:Test"]
         </MudButton>
+        <div class="profile-final-actions">
+        <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    Disabled="@(!CanSubmit)"
-                   OnClick="Submit">
+                   aria-disabled="@((_isTesting || _isSaving || !CanSubmit).ToString().ToLowerInvariant())"
+                   OnClick="SubmitAsync">
             @(SubmitText ?? L["Common:Actions:Save"].Value)
         </MudButton>
+        </div>
+        </div>
     </DialogActions>
 </MudDialog>
-
-@code {
-    [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = null!;
-
-    [Parameter] public ExternalMcpClientProfile? Profile { get; set; }
-    [Parameter] public bool IsEdit { get; set; }
-    [Parameter] public string? SubmitText { get; set; }
-
-    private MudForm? _form;
-    private readonly List<HeaderRow> _headers = [];
-    private McpConnectivityTestResult? _lastTestResult;
-    private bool _initialized;
-    private bool _isTesting;
-
-    private string Name { get; set; } = string.Empty;
-    private string Description { get; set; } = string.Empty;
-    private string Endpoint { get; set; } = string.Empty;
-    private HttpTransportMode TransportMode { get; set; } = HttpTransportMode.AutoDetect;
-    private int ConnectionTimeoutSeconds { get; set; } = 30;
-    private bool IsAgentToolEnabled { get; set; } = true;
-
-    private string? EndpointValidationMessage
-    {
-        get
-        {
-            if (string.IsNullOrWhiteSpace(Endpoint))
-            {
-                return null;
-            }
-
-            return Uri.TryCreate(Endpoint.Trim(), UriKind.Absolute, out var uri)
-                   && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
-                ? null
-                : L["Capabilities:Mcp:Dialog:EndpointInvalid"].Value;
-        }
-    }
-
-    private bool CanSubmit
-        => !string.IsNullOrWhiteSpace(Name)
-           && !string.IsNullOrWhiteSpace(Description)
-           && !string.IsNullOrWhiteSpace(Endpoint)
-           && string.IsNullOrWhiteSpace(EndpointValidationMessage)
-           && _headers.All(static header => !string.IsNullOrWhiteSpace(header.Name));
-
-    protected override void OnParametersSet()
-    {
-        if (_initialized)
-        {
-            return;
-        }
-
-        if (Profile is not null)
-        {
-            Name = Profile.Name;
-            Description = Profile.Description;
-            Endpoint = Profile.Endpoint;
-            TransportMode = Profile.TransportMode;
-            ConnectionTimeoutSeconds = Profile.ConnectionTimeoutSeconds;
-            IsAgentToolEnabled = Profile.IsAgentToolEnabled;
-            _headers.AddRange(Profile.Headers.Select(static header => new HeaderRow(header.Key, header.Value)));
-        }
-
-        _initialized = true;
-    }
-
-    private Task OnNameChanged(string value)
-    {
-        Name = value.Trim();
-        return Task.CompletedTask;
-    }
-
-    private void AddHeader()
-    {
-        _headers.Add(new HeaderRow());
-    }
-
-    private void RemoveHeader(HeaderRow header)
-    {
-        _headers.Remove(header);
-    }
-
-    private async Task TestAsync()
-    {
-        if (_isTesting || !CanSubmit)
-        {
-            return;
-        }
-
-        _isTesting = true;
-        _lastTestResult = null;
-
-        var result = await McpFacade.TestExternalProfileAsync(CreateProfile());
-        if (result.IsFailed(out var error, out var connectivity))
-        {
-            AddErrorSnackbar(error.Message);
-        }
-        else
-        {
-            _lastTestResult = connectivity;
-            Snackbar.Add(FormatConnectivityMessage(connectivity), connectivity.Success ? Severity.Success : Severity.Error);
-        }
-
-        _isTesting = false;
-    }
-
-    private void Submit()
-    {
-        if (!CanSubmit)
-        {
-            return;
-        }
-
-        MudDialog.Close(DialogResult.Ok(CreateProfile()));
-    }
-
-    private ExternalMcpClientProfile CreateProfile()
-    {
-        return new ExternalMcpClientProfile
-        {
-            Name = Name,
-            Description = Description,
-            Endpoint = Endpoint,
-            TransportMode = TransportMode,
-            ConnectionTimeoutSeconds = ConnectionTimeoutSeconds,
-            Headers = _headers
-                .Where(static header => !string.IsNullOrWhiteSpace(header.Name))
-                .GroupBy(static header => header.Name.Trim(), StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(
-                    static group => group.Key,
-                    static group => group.Last().Value?.Trim() ?? string.Empty,
-                    StringComparer.OrdinalIgnoreCase),
-            IsAgentToolEnabled = IsAgentToolEnabled,
-            Origin = ExternalMcpClientProfileOrigin.User
-        }.Normalize(ExternalMcpClientProfileOrigin.User);
-    }
-
-    private void Cancel()
-    {
-        MudDialog.Cancel();
-    }
-
-    private void AddErrorSnackbar(string? message)
-    {
-        Snackbar.Add(string.IsNullOrWhiteSpace(message) ? L["Error:Generic"] : message, Severity.Error);
-    }
-
-    private string FormatConnectivityMessage(McpConnectivityTestResult result)
-    {
-        return result.Message switch
-        {
-            McpCapabilityMessageCode.Connectivity.ConnectedToEndpoint => L["Capabilities:Mcp:Connectivity:ConnectedToEndpoint", result.ToolCount],
-            McpCapabilityMessageCode.Connectivity.ConnectedAndListedTools => L["Capabilities:Mcp:Connectivity:ConnectedAndListedTools", result.ToolCount],
-            McpCapabilityMessageCode.Connectivity.LocalHttpDisplayUrlMissing => L["Capabilities:Mcp:Connectivity:LocalHttpDisplayUrlMissing", result.ToolCount],
-            McpCapabilityMessageCode.Connectivity.LocalStdioInProcessReady => L["Capabilities:Mcp:Connectivity:LocalStdioInProcessReady", result.ToolCount],
-            _ => result.Message
-        };
-    }
-
-    private sealed class HeaderRow(string name = "", string value = "")
-    {
-        public string Name { get; set; } = name;
-
-        public string Value { get; set; } = value;
-    }
-}

@@ -16,7 +16,7 @@ internal static class ConfigurationUnifiedVersionDisplayFormatter
 
     public static string CreatedTimeText(ConfigurationUnifiedVersionSummary version)
     {
-        return version.CreatedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+        return version.CreatedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fffffff zzz");
     }
 
     public static string DefinitionTooltip(ConfigurationUnifiedVersionSummary version, string emptyText)

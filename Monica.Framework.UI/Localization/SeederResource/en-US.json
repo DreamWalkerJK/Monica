@@ -3,10 +3,10 @@
     "Title": "Seeders"
   },
   "Page": {
-    "Title": "Seeder Operations",
+    "Title": "Seeder initialization",
     "Eyebrow": "APPLICATION INITIALIZATION",
-    "Heading": "Seeder Operations",
-    "Subtitle": "Inspect the current host's initialization graph, effective policies, attempts, and failure evidence.",
+    "Heading": "Initialization run",
+    "Subtitle": "Inspect this host's initialization progress, effective policies, and execution evidence.",
     "CurrentHost": "Host · {0}"
   },
   "Access": {
@@ -19,7 +19,8 @@
     "Retry": "Try again",
     "Close": "Close",
     "Details": "Inspect details",
-    "DetailsFor": "Inspect {0}"
+    "DetailsFor": "Inspect {0}",
+    "ClearFilters": "Clear filters"
   },
   "State": {
     "Loading": "Loading Seeder diagnostics",
@@ -36,19 +37,29 @@
     "Duration": "Elapsed · {0}",
     "CapturedAt": "Captured · {0}",
     "FailFastTrigger": "Fail-fast trigger: {0}",
-    "Readiness": "Readiness · {0}"
+    "Readiness": "Seeder readiness · {0}",
+    "TerminalCompletion": "Terminal completion",
+    "ActiveRefresh": "Live · updates every second",
+    "CompletedRefresh": "Run ended · refresh manually",
+    "EmptyRun": "No Seeder work in this snapshot"
   },
   "Configuration": {
     "Eyebrow": "EFFECTIVE DEFAULTS",
-    "Title": "Runtime configuration",
-    "Subtitle": "Seeder-level annotations can override inherited values.",
+    "Title": "Execution defaults",
+    "Subtitle": "Seeder annotations can override individual inherited policies. Inspect their origins in details.",
     "MaxConcurrency": "Max concurrency",
     "ExecutionMode": "Execution mode",
     "Criticality": "Criticality",
     "MaxAttempts": "Max attempts",
     "RetryBaseDelay": "Initial retry delay",
     "RetryMaxDelay": "Maximum retry delay",
-    "FailureBehavior": "Failure behavior"
+    "FailureBehavior": "Failure behavior",
+    "Groups": {
+      "Scheduling": "Scheduling",
+      "Retries": "Retries",
+      "Failure": "On failure",
+      "Readiness": "Readiness"
+    }
   },
   "Filters": {
     "AriaLabel": "Seeder filters",
@@ -78,7 +89,8 @@
       "Attempts": "Attempts",
       "Duration": "Duration",
       "Dependencies": "Dependencies",
-      "Actions": "Details"
+      "Actions": "Details",
+      "Policy": "Effective policy"
     },
     "AttemptsValue": "{0} / {1}",
     "DependencyCount": {

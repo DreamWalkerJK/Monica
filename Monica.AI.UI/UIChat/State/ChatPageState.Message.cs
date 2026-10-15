@@ -19,6 +19,8 @@ public sealed partial class ChatPageState
             if (string.IsNullOrWhiteSpace(request.Message) && _attachments.Count == 0) return;
             var session = CurrentSession ?? await TryCreateSessionAsync();
             if (session is null) return;
+            _operationSession = session;
+            ct.ThrowIfCancellationRequested();
             if (_attachments.Any(item => item.Kind == ChatAttachmentKind.Image) && CurrentModel?.SupportsImage != true)
             {
                 SetError(localizer["Workbench:ImageUnsupported"]);
@@ -29,7 +31,8 @@ public sealed partial class ChatPageState
                 SetError(localizer["Workbench:DocumentUnsupported"]);
                 return;
             }
-            _ = chatFacade.UpdateRuntimeContext(session, BuildRuntimeContext(SelectedKnowledgeBaseIds));
+            if (chatFacade.UpdateRuntimeContext(session, BuildRuntimeContext(SelectedKnowledgeBaseIds)).IsFailed(out var runtimeError))
+            { SetError(runtimeError.Message); return; }
             if (session.Messages.Count == 0)
                 _ = chatFacade.Rename(session, ChatProviderResolver.GenerateSessionTitle(
                     string.IsNullOrWhiteSpace(request.Message) ? _attachments[0].FileName : request.Message));
@@ -76,14 +79,15 @@ public sealed partial class ChatPageState
 
     private Task RunOperationAsync(Func<CancellationToken, Task> operation)
     {
-        if (IsSending || IsUploading || IsHistoryUpdating || _disposed || HasHistoryConflict) return Task.CompletedTask;
-        _activeOperation = RunOperationCoreAsync(operation);
-        return _activeOperation;
+        if (IsHistoryBusy || _disposed || HasHistoryConflict || HasHistoryLoadFailure) return Task.CompletedTask;
+        IsSending = true;
+        return _operations.RunAsync(_ => RunOperationCoreAsync(operation));
     }
 
     private async Task RunOperationCoreAsync(Func<CancellationToken, Task> operation)
     {
         IsSending = true;
+        _operationSession = CurrentSession;
         ErrorMessage = null;
         _requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
         if (_options.RequestTimeoutMs > 0) _requestCancellation.CancelAfter(_options.RequestTimeoutMs);
@@ -91,7 +95,7 @@ public sealed partial class ChatPageState
         try { await operation(_requestCancellation.Token); }
         catch (OperationCanceledException)
         {
-            if (CurrentSession is { } session) _ = await chatFacade.CancelAsync(session, CancellationToken.None);
+            if (_operationSession is { } session) _ = await chatFacade.CancelAsync(session, CancellationToken.None);
         }
         catch (Exception exception) { SetError(exception.Message); }
         finally
@@ -99,7 +103,7 @@ public sealed partial class ChatPageState
             // Cancellation stops generation, but saving its terminal state must still complete.
             try
             {
-                if (CurrentSession is { } session) await workspace.SaveSessionAsync(session);
+                if (_operationSession is { } session) await workspace.SaveSessionAsync(session);
             }
             catch (Exception exception) { SetError(exception.Message); }
             finally
@@ -107,6 +111,7 @@ public sealed partial class ChatPageState
                 IsSending = false;
                 _requestCancellation.Dispose();
                 _requestCancellation = null;
+                _operationSession = null;
                 NotifyStateChanged();
             }
         }
@@ -148,16 +153,9 @@ public sealed partial class ChatPageState
         }
         ct.ThrowIfCancellationRequested();
         if (approval is null || _disposed) return;
-        var dialog = await dialogService.ShowAsync<ExternalScriptApprovalDialog>(localizer["Chat:Approval:Title"],
+        var resultDialog = await ShowDialogAsync<ExternalScriptApprovalDialog>(localizer["Chat:Approval:Title"],
             new DialogParameters { [nameof(ExternalScriptApprovalDialog.Request)] = approval },
-            new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = false });
-        DialogResult? resultDialog;
-        try { resultDialog = await dialog.Result.WaitAsync(ct); }
-        catch (OperationCanceledException)
-        {
-            dialog.Close(DialogResult.Cancel());
-            throw;
-        }
+            new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = false }, ct);
         ct.ThrowIfCancellationRequested();
         if (_disposed) return;
         if (resultDialog is not { Canceled: false })
@@ -173,9 +171,9 @@ public sealed partial class ChatPageState
     /// <summary>Persists selected files before accepting them into a request.</summary>
     public Task UploadAttachmentsAsync(InputFileChangeEventArgs args)
     {
-        if (IsSending || IsUploading || IsHistoryUpdating || _disposed || HasHistoryConflict) return Task.CompletedTask;
-        _uploadOperation = UploadAttachmentsCoreAsync(args);
-        return _uploadOperation;
+        if (IsHistoryBusy || _disposed || HasHistoryConflict || HasHistoryLoadFailure) return Task.CompletedTask;
+        IsUploading = true;
+        return _operations.RunAsync(_ => UploadAttachmentsCoreAsync(args));
     }
 
     private async Task UploadAttachmentsCoreAsync(InputFileChangeEventArgs args)
@@ -201,16 +199,22 @@ public sealed partial class ChatPageState
     }
 
     /// <summary>Removes an attachment that has not yet been submitted.</summary>
-    public async Task RemoveAttachmentAsync(ChatAttachmentReference attachment)
+    public async Task RemoveAttachmentAsync(ChatAttachmentReference attachment) => _ = await RunCommandAsync(() => RemoveAttachmentCoreAsync(attachment));
+
+    private async Task<bool> RemoveAttachmentCoreAsync(ChatAttachmentReference attachment)
     {
-        if (CurrentSessionId is { } id)
-            await attachmentFacade.DeleteAsync(id, attachment.Id, _lifetime.Token);
-        if (_disposed) return;
+        if (_disposed || !_attachments.Contains(attachment) || CurrentSessionId is not { } id) return false;
+        var result = await attachmentFacade.DeleteAsync(id, attachment.Id, _lifetime.Token);
+        if (result.IsFailed(out var error)) { SetError(error.Message); return false; }
+        if (_disposed || CurrentSessionId != id) return false;
         _attachments.Remove(attachment);
         NotifyStateChanged();
+        return true;
     }
-    private async Task DiscardAttachmentsAsync()
+    private async Task<bool> DiscardAttachmentsAsync()
     {
-        foreach (var attachment in _attachments.ToArray()) await RemoveAttachmentAsync(attachment);
+        foreach (var attachment in _attachments.ToArray())
+            if (!await RemoveAttachmentCoreAsync(attachment)) return false;
+        return true;
     }
 }

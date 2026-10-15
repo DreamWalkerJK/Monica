@@ -104,11 +104,21 @@ Every successful run writes the WOFF2 files and a companion `font-faces.css` man
 
 Google Fonts CSS commonly returns several `@font-face` rules for the same family and weight, one per unicode range. The downloader preserves each range with a collision-safe suffix and a matching rule in the generated manifest. Variable descriptors such as `font-weight: 100 700` remain ranges; `--weights 400` includes that face because the requested weight falls inside the range. Select every required subset deliberately, keep the manifest beside its shards (or update all relative URLs together), and inspect glyph coverage before committing. Never rename one downloaded shard as if it were the complete family.
 
+### Shared font coverage and redistribution
+
+For shared theme families, prefer a complete conversion from a pinned official source over a subset inferred from the current page or localization resources. A browser CSS response can contain many shards: keeping only its last URL can produce a valid WOFF2 file with almost no intended glyphs. Validate the decoded asset's cmap against the source, including all printable ASCII and the intended Latin/CJK coverage; a filename, file size or successful font load is insufficient. Preserve source glyph mappings, outlines, horizontal/vertical metrics and variation data, and declare the actual style and weight range. A static weight must not advertise a variable range.
+
+`mo-fonts.css` shares complete variable assets for Playfair-derived editorial headings, Noto Serif SC, Nunito and Roboto. Noto Serif SC uses one full-source asset across aliases and weights rather than several complete copies or a page-text subset. This includes that pinned source's cmap, not every Unicode ideograph. Roboto retains its source width axis with normal CSS stretch at the default width of 100. Do not introduce loads for an unreferenced font merely because its source has been prepared. Existing specialized subsets such as Komi remain governed by their own regeneration contract below.
+
+Keep the exact source license and copyright notice with the redistributed runtime asset. Record the official source URL, immutable upstream commit, source/output SHA-256, conversion tools and versions, glyph coverage, axes and any naming changes in `wwwroot/fonts/font-provenance.json`; store original licenses under `wwwroot/fonts/licenses/`. Source TTFs remain ignored tooling inputs. Where the license reserves a font name, conservatively rename derivative family, full, unique, PostScript, preferred/WWS family and variation-prefix identity records, including variable-instance PostScript names; preserve the original copyright/license records and the original license text. CSS aliases and filenames are independent of those internal names.
+
+Verify the shipped asset against its pinned source after conversion or renaming. Offline glyph/metrics checks establish asset integrity; browser smoke checks must separately establish local requests, realized glyph ownership, wrapping and fallback behavior. For a complete CJK asset, measure cold and warm loading before making performance claims.
+
 ### Font Configuration
 
-#### Step 1: Download fonts
+#### Step 1: Obtain fonts
 
-Run the font downloader script to download required fonts from Google Fonts.
+Obtain a pinned official source with its original license for a complete shared family, or use the font downloader when the deliberately selected shards and their manifest meet the feature's maintained coverage contract.
 
 #### Step 2: Copy or convert font files
 
@@ -221,6 +231,9 @@ Before deploying, verify:
 - [ ] No TTF/OTF runtime font files are committed to Monica UI packages
 - [ ] Source TTF/OTF fonts stay in ignored local tooling/cache paths such as `.tmp/monica-ui-font-sources/`, or are supplied with `--source-font`
 - [ ] WOFF2 subsets are regenerated and checked after localization resource changes
+- [ ] Shared font assets preserve the intended pinned source cmap, metrics and variable axes
+- [ ] Shipped source licenses and copyright notices are unchanged; derivative identity records respect reserved names
+- [ ] Font provenance records immutable sources, tools, hashes, coverage and naming changes
 - [ ] All CSS files are local (no external `@import`)
 - [ ] All JavaScript files are local
 - [ ] All images are local

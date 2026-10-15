@@ -1,38 +1,414 @@
 {
-  "Pages": { "MemoryAnalysis": { "Title": "内存分析" } },
-  "Page": {
-    "Eyebrow": "托管内存实验室", "Subtitle": "关联进程内存、GC 行为、分配压力与诊断操作。",
-    "Status": { "Live": "实时采样", "Paused": "采样已暂停" }, "Actions": { "AutoRefresh": "自动刷新", "Refresh": "刷新证据" },
-    "Messages": { "RefreshFailed": "刷新内存证据失败。", "GcFailed": "垃圾回收执行失败。", "GcCompleted": "{0} 回收已完成。", "DumpStarting": "正在创建 GC 转储…", "OperationFailed": "诊断操作失败。", "DumpCreated": "GC 转储已创建于 {0}。" }
+  "Pages": {
+    "MemoryAnalysis": {
+      "Title": "内存分析",
+      "Description": "查看进程内存、回收证据、保留的采样历史，并按需执行主机诊断。",
+      "Overview": {
+        "Title": "内存概览",
+        "Description": "读取进程内存占用与 GC 报告的堆上下文，不主动触发回收。"
+      },
+      "Gc": {
+        "Title": "垃圾回收",
+        "Description": "通过暂停证据和分代净变化，理解最近一次报告的回收。"
+      },
+      "History": {
+        "Title": "内存历史",
+        "Description": "跟踪保留的观测窗口，查看内存趋势背后的精确采样记录。"
+      },
+      "Allocations": {
+        "Title": "类型分配",
+        "Description": "对照归因的分配事件与按需堆清查，分别呈现不同来源的证据。"
+      },
+      "Diagnostics": {
+        "Title": "内存诊断",
+        "Description": "按需执行主机允许的诊断操作，独立保留真实结果与后续视图读取状态。"
+      }
+    }
   },
-  "Tabs": { "Overview": "概览", "GcStatistics": "GC 证据", "Trend": "趋势", "Allocation": "分配", "Diagnostics": "诊断" },
+  "Page": {
+    "Eyebrow": "内存 / 当前进程",
+    "Status": {
+      "Live": "每 {0:0.##} 秒读取视图",
+      "Paused": "视图读取已暂停 · 采集器继续运行",
+      "Manual": "手动读取视图"
+    },
+    "Actions": {
+      "AutoRefresh": "自动刷新",
+      "Refresh": "刷新证据"
+    },
+    "Messages": {
+      "RefreshFailed": "刷新内存证据失败。",
+      "Retained": "保留最近成功的视图及其读取时间。",
+      "NoSnapshot": "当前尚无成功读取的视图。"
+    },
+    "Navigation": "内存工作区",
+    "Captured": "视图读取",
+    "AllocationUnavailableTitle": "尚未启用类型分配工作区",
+    "AllocationUnavailableDescription": "此主机未选择可选的类型分配后端，仍可查看进程内存、GC 证据和历史。"
+  },
+  "Tabs": {
+    "Overview": "概览",
+    "GcStatistics": "GC 证据",
+    "Trend": "历史",
+    "Allocation": "分配",
+    "Diagnostics": "诊断"
+  },
   "Overview": {
-    "MetricsAriaLabel": "内存快照摘要", "WorkingSet": "工作集", "ManagedHeap": "托管堆", "Committed": "已提交", "ManagedMemory": "托管内存",
-    "Collections": { "Eyebrow": "回收压力", "Title": "分代回收次数" }, "Configuration": { "Eyebrow": "运行时配置", "Title": "回收器模式", "GcType": "GC 类型", "ServerGc": "服务器 GC", "WorkstationGc": "工作站 GC", "LatencyMode": "延迟模式" },
-    "Snapshot": { "CapturedAt": "采集时间", "MaxGeneration": "最大代" }
+    "MetricsAriaLabel": "内存快照摘要",
+    "WorkingSet": "工作集",
+    "ManagedHeap": "托管堆",
+    "Committed": "已提交",
+    "ManagedMemory": "托管内存",
+    "Collections": {
+      "Eyebrow": "进程累计回收",
+      "Title": "自进程启动以来的回收次数",
+      "Help": "GC.CollectionCount 提供累计值；刷新视图不会重置这些计数。"
+    },
+    "Configuration": {
+      "Eyebrow": "运行时配置",
+      "Title": "运行时的回收方式",
+      "GcType": "GC 类型",
+      "ServerGc": "服务器 GC",
+      "WorkstationGc": "工作站 GC",
+      "LatencyMode": "延迟模式",
+      "LatencyModes": {
+        "Batch": "批处理",
+        "Interactive": "交互式",
+        "LowLatency": "低延迟",
+        "SustainedLowLatency": "持续低延迟",
+        "NoGCRegion": "无 GC 区域"
+      }
+    },
+    "Snapshot": {
+      "CapturedAt": "快照读取时间",
+      "MaxGeneration": "最大代",
+      "ViewRead": "视图成功读取时间"
+    },
+    "Sources": {
+      "Immediate": "从运行进程读取",
+      "ImmediateHelp": "工作集和托管内存从当前进程读取，不会主动触发回收。",
+      "LastGc": "最近一次 GC 报告",
+      "LastGcHelp": "堆和已提交内存来自 GC.GetGCMemoryInfo，与进程读取的观测依据不同。",
+      "Independent": "这些测量相互重叠，且观测依据不同，不能作为同一总量的组成部分。"
+    },
+    "Raw": {
+      "Title": "精确快照值"
+    }
   },
   "Gc": {
-    "LastCollection": { "Eyebrow": "最近回收", "Title": "回收证据", "Empty": "暂无回收详情。" }, "Heap": { "Eyebrow": "堆构成", "Title": "托管堆" }, "SystemMemory": { "Eyebrow": "系统压力", "Title": "内存负载", "Unavailable": "系统内存负载证据不可用。" },
-    "Generations": { "Eyebrow": "分代变化", "Title": "回收移动", "Empty": "未记录分代变化。", "Columns": { "Generation": "分代", "Before": "回收前", "After": "回收后", "Collected": "已回收" } },
-    "Labels": { "Index": "索引", "Generation": "分代", "Type": "类型", "PauseDuration": "暂停时长", "TimeShare": "GC 时间占比", "HeapSize": "堆大小", "Fragmentation": "碎片", "Committed": "已提交", "Promoted": "已提升", "PinnedObjects": "固定对象", "FinalizationPending": "待终结", "AvailableMemory": "可用内存", "MemoryLoad": "内存负载", "MemoryLoadShare": "负载占比", "HighMemoryThreshold": "高内存阈值" },
-    "Types": { "Concurrent": "并发", "Compacting": "压缩", "Blocking": "阻塞" }
+    "LastCollection": {
+      "Eyebrow": "最近报告的回收",
+      "Title": "回收证据",
+      "Empty": "暂无回收证据",
+      "Scope": "GC.GetGCMemoryInfo · 最近报告的回收",
+      "ViewRead": "视图成功读取时间",
+      "NoTimestamp": "回收详情没有独立时间戳；此时间表示视图成功读取的时刻。",
+      "NoCollectionTitle": "尚未报告回收",
+      "NoCollectionHelp": "GC 索引为 0 表示运行时尚未报告已完成的回收；进程内存仍可读取。",
+      "EmptyHelp": "当前视图尚未成功读取 GC 证据。"
+    },
+    "Heap": {
+      "Eyebrow": "回收后的证据",
+      "Title": "堆与对象计数",
+      "Scope": "由本次 GC 报告；固定对象和待终结对象均为对象数量。"
+    },
+    "SystemMemory": {
+      "Eyebrow": "GC 报告的上下文",
+      "Title": "回收时的内存上下文",
+      "Scope": "负载、可用内存和阈值属于 GC 报告，不是当前操作系统空闲内存探测。"
+    },
+    "Generations": {
+      "Eyebrow": "分代变化",
+      "Title": "本次回收前后",
+      "Empty": "未记录分代变化。",
+      "Columns": {
+        "Generation": "分代",
+        "Before": "回收前",
+        "After": "回收后",
+        "Collected": "净大小减少"
+      },
+      "Scope": "净减少 = 回收前 − 回收后。负值表示增长，不代表故障，也不是精确的已释放对象数量。",
+      "Names": {
+        "Loh": "LOH",
+        "Poh": "POH"
+      }
+    },
+    "Labels": {
+      "Index": "索引",
+      "PauseDuration": "最长报告暂停",
+      "TimeShare": "累计暂停占比",
+      "HeapSize": "堆大小",
+      "Fragmentation": "碎片",
+      "Committed": "已提交",
+      "Promoted": "已提升",
+      "PinnedObjects": "固定对象",
+      "FinalizationPending": "待终结",
+      "AvailableMemory": "报告的可用内存",
+      "MemoryLoad": "内存负载",
+      "MemoryLoadShare": "负载 / 可用内存",
+      "HighMemoryThreshold": "高内存阈值"
+    },
+    "Types": {
+      "Concurrent": "并发",
+      "Compacting": "已压缩",
+      "NonConcurrent": "非并发",
+      "NonCompacting": "未压缩"
+    },
+    "Pause": {
+      "DurationHelp": "最多两段报告暂停时间中的最大值。",
+      "ShareHelp": "自运行时加载以来的暂停占比，在回收完成时更新。"
+    },
+    "Raw": {
+      "Title": "精确记录证据",
+      "Scope": "未缩放的字节和计数保留报告精度。",
+      "Columns": {
+        "BeforeSize": "回收前大小 · 字节",
+        "AfterSize": "回收后大小 · 字节",
+        "Decrease": "净减少 · 字节",
+        "BeforeFragmentation": "回收前碎片 · 字节",
+        "AfterFragmentation": "回收后碎片 · 字节"
+      },
+      "PauseMilliseconds": "最长报告暂停 · 毫秒",
+      "PausePercent": "累计暂停占比 · %",
+      "FragmentationPercent": "碎片 / 堆 · %"
+    }
   },
   "Trend": {
-    "SummaryAriaLabel": "内存趋势摘要", "Waiting": "等待更多样本以绘制趋势。", "Summary": { "AverageHeap": "平均堆", "MaximumHeap": "最大堆", "AverageAllocation": "平均分配", "Samples": "样本" },
-    "Heap": { "Eyebrow": "堆窗口", "Title": "托管堆趋势" }, "Allocation": { "Eyebrow": "分配压力", "Title": "分配速率趋势" }, "Generations": { "Eyebrow": "分代构成", "Title": "分代大小趋势" },
-    "Recent": { "Eyebrow": "采样证据", "Title": "最近内存观测", "Count": "{0} 个样本", "Empty": "尚未采集内存观测。", "Columns": { "Time": "采集时间", "Heap": "堆", "Allocation": "分配速率", "GcTime": "GC 时间", "Fragmentation": "碎片" } }, "Series": { "Size": "大小", "Heap": "托管堆", "Allocation": "分配速率" }
+    "Waiting": "尚无保留样本，采集器与当前视图采用独立的读取间隔。",
+    "Summary": {
+      "AverageHeap": "样本均值 · 堆",
+      "MaximumHeap": "窗口最大值 · 堆",
+      "AverageAllocation": "样本均值 · 分配速率",
+      "Samples": "样本"
+    },
+    "Heap": {
+      "Eyebrow": "堆窗口",
+      "Title": "托管堆趋势"
+    },
+    "Allocation": {
+      "Eyebrow": "分配压力",
+      "Title": "分配速率趋势"
+    },
+    "Generations": {
+      "Eyebrow": "最新样本 / 分代",
+      "Title": "最近的分代读数",
+      "Help": "最新样本中的五个独立报告计数器；这是快照，不是分代时间趋势。"
+    },
+    "Recent": {
+      "Eyebrow": "采样证据",
+      "Title": "采样记录",
+      "Empty": "尚未采集内存观测。",
+      "Columns": {
+        "Time": "采集时间",
+        "Heap": "堆",
+        "Allocation": "分配速率",
+        "GcTime": "GC 时间",
+        "Fragmentation": "碎片",
+        "Inspect": "查看详情"
+      },
+      "Help": "最新记录在前 · 可分页查看全部保留样本，并查看每条记录的原始值与 UTC 时间戳。",
+      "Inspect": "查看采样 {0}",
+      "Range": "显示第 {0}–{1} 条，共 {2} 条",
+      "Pagination": "内存样本分页"
+    },
+    "Series": {
+      "Heap": "托管堆",
+      "Allocation": "分配速率"
+    },
+    "WindowEyebrow": "保留的观测",
+    "WindowTitle": "内存观测窗口",
+    "WindowHelp": "平均值对每个保留样本采用相同权重，不是按时间加权的估算。",
+    "Capacity": "{0} / {1}",
+    "Window": "观测跨度",
+    "CollectorInterval": "采集间隔",
+    "Seconds": "{0:0.##} 秒",
+    "HeapUnit": "十进制 MB · UTC 时间轴",
+    "AllocationUnit": "报告速率 · 二进制 MiB/s · UTC 时间轴",
+    "MeasurementHelp": "历史由主机采集器维护。暂停视图读取不会停止采集；不同单位分别绘图，缓存计数器在初始阶段可能为零。",
+    "NoRetentionTitle": "未保留采样历史",
+    "NoRetention": "主机不保留样本，仍可读取当前进程。",
+    "SingleTitle": "已有一条观测",
+    "SingleRetention": "此主机只保留一个样本；可在下方查看其证据，时间趋势至少需要两个样本。",
+    "SingleWaiting": "首个样本已显示在下方，时间趋势还需要第二条观测。",
+    "WaitingTitle": "等待保留的观测"
   },
   "Allocation": {
-    "Eyebrow": "类型分配采样器", "Title": "分配证据", "SamplingMode": "采样模式", "Collecting": "正在采集 · {0}", "SummaryAriaLabel": "分配样本摘要", "DroppedEvents": "本次采集丢弃了 {0} 个分配事件。",
-    "Modes": { "Low": "低开销", "High": "高保真", "LowWithRate": "低开销 · 1%", "HighWithRate": "高保真 · 10%" }, "Actions": { "Start": "开始采样", "Stop": "停止采样", "Snapshot": "堆快照", "Snapshotting": "采集中…", "Refresh": "刷新", "Reset": "重置证据", "ShowShortNames": "显示短类型名", "ShowFullNames": "显示完整类型名" },
-    "Summary": { "UniqueTypes": "唯一类型", "Allocations": "分配次数", "Bytes": "分配字节", "Duration": "采集时长" }, "Sources": { "HeapSnapshot": "堆快照采集于 {0}。", "Live": "实时分配样本采集于 {0}。" },
-    "Ranking": { "Eyebrow": "类型排行", "Title": "分配热点", "Limit": "行数", "Collecting": "分配采样正在运行，排行会随证据更新。", "Empty": "尚未采集分配证据。", "Columns": { "Type": "类型", "Instances": "实例", "TotalSize": "总大小", "AverageSize": "平均大小", "Share": "占比" } },
-    "Guidance": { "Title": "采样指南", "Live": { "Title": "实时采样", "Description": "使用实时证据识别持续分配压力。" }, "Low": { "Title": "低开销", "Description": "适合较长观测窗口，但精度较低。" }, "High": { "Title": "高保真", "Description": "需要更清晰的类型分布时短时使用。" }, "Snapshot": { "Title": "堆快照", "Description": "实时分配量不足时采集保留对象。" } },
-    "Messages": { "LoadFailed": "加载分配证据失败。", "RefreshFailed": "刷新分配证据失败。", "StartFailed": "启动分配采样失败。", "Started": "已用 {0} 模式启动分配采样。", "StopFailed": "停止分配采样失败。", "Stopped": "分配采样已停止。", "SnapshotStarting": "正在采集堆快照…", "SnapshotFailed": "堆快照采集失败。", "SnapshotCompleted": "堆快照已采集 {0} 个唯一类型。", "ResetFailed": "重置分配证据失败。", "Reset": "分配证据已重置。" }
+    "Eyebrow": "类型证据",
+    "Title": "类型分配工作区",
+    "SamplingMode": "兼容模式",
+    "SummaryAriaLabel": "分配样本摘要",
+    "DroppedEvents": "有 {0} 个当前进程事件因缺少类型名或字节值无效而跳过；此计数不是 ETW 传输丢失。",
+    "Modes": {
+      "Low": "Low · 兼容模式",
+      "High": "High · 兼容模式"
+    },
+    "Actions": {
+      "Start": "开始采样",
+      "Stop": "停止采样",
+      "Snapshot": "采集堆清查",
+      "Snapshotting": "正在采集堆…",
+      "Refresh": "刷新",
+      "Reset": "重置证据",
+      "ShowFullNames": "显示完整类型名"
+    },
+    "Summary": {
+      "UniqueTypes": "保留的类型行",
+      "Ticks": "观测到的事件数",
+      "Objects": "枚举的对象数",
+      "EstimatedBytes": "归因字节估算",
+      "HeapBytes": "枚举对象字节",
+      "DurationValue": "{0:0.##} 秒",
+      "LiveDuration": "会话窗口",
+      "HeapDuration": "堆扫描耗时"
+    },
+    "Sources": {
+      "AriaLabel": "类型分配证据来源",
+      "LiveTitle": "分配事件",
+      "HeapTitle": "堆清查",
+      "None": "尚无记录来源",
+      "LiveHelp": "当前进程的 AllocationTick 事件。事件数和归因字节估算累积至重置，并非完整的对象清查。",
+      "HeapHelp": "在进程快照克隆中枚举非空闲对象。数量和字节不代表分配流量，也不保证对象可从根访问。",
+      "ModeHelp": "Low 和 High 当前采用相同的 AllocationTick 策略；兼容名称不表示采样百分比。",
+      "Preserved": "选择堆清查时，实时更新会独立保留。",
+      "Timestamp": "证据时间戳",
+      "ViewRead": "视图读取",
+      "Timing": "活动 ETW 证据使用视图时间，停止后保留停止时间。堆证据使用扫描完成时间，并非精确的克隆创建时刻。",
+      "DurationHelp": "ETW 耗时表示当前或上次会话窗口，计数则累积至重置；堆耗时表示扫描操作。"
+    },
+    "Ranking": {
+      "Eyebrow": "类型记录",
+      "Title": "观测背后的类型",
+      "Limit": "每页行数",
+      "Columns": {
+        "Type": "类型",
+        "Share": "来源字节占比",
+        "Ticks": "事件数",
+        "Objects": "对象数",
+        "EstimatedBytes": "归因字节",
+        "HeapBytes": "对象字节",
+        "Inspect": "查看类型"
+      },
+      "Search": "查找类型",
+      "SearchPlaceholder": "搜索完整类型名称…",
+      "Order": "排序方式",
+      "Sort": {
+        "Bytes": "字节最多",
+        "Count": "数量最多",
+        "Name": "类型名称 A–Z"
+      },
+      "Scope": "{0} 个匹配 / {1} 个保留类型",
+      "Range": "第 {0}–{1} 条，共 {2} 个匹配类型",
+      "Pagination": "类型分配分页",
+      "Inspect": "查看 {0}",
+      "Coverage": "占比以完整来源总量为分母。排除的类型不计入，已移除的排名行可能仍计入 ETW 累计总量；本视图无法测量 ETW 传输丢失。"
+    },
+    "Messages": {
+      "LoadFailed": "加载分配证据失败。",
+      "RefreshFailed": "刷新分配证据失败。",
+      "StartFailed": "启动分配采样失败。",
+      "Started": "已用 {0} 模式启动分配采样。",
+      "StopFailed": "停止分配采样失败。",
+      "Stopped": "分配采样已停止。",
+      "SnapshotFailed": "堆快照采集失败。",
+      "SnapshotCompleted": "堆快照已采集 {0} 个唯一类型。",
+      "ResetFailed": "重置分配证据失败。",
+      "Reset": "分配证据已重置。"
+    },
+    "Status": {
+      "Idle": "采集器空闲",
+      "Collecting": "正在采集分配事件",
+      "Unknown": "采集器状态尚未读取"
+    },
+    "Capabilities": {
+      "WindowsRequired": "ETW 跟踪和进程快照堆采集需要 Windows。",
+      "HeapVersion": "进程快照堆采集需要 Windows 8.1 / Server 2012 R2 或更新版本。",
+      "Etw": "实时跟踪需要创建 ETW 会话的权限；启动时会显示真实访问失败。",
+      "Heap": "堆采集通过进程快照克隆完成，需要主机访问权限，可能消耗额外内存和 CPU。"
+    },
+    "Errors": {
+      "Retained": "保留最近成功的各来源视图。",
+      "SourceFailed": "证据来源报告了失败。"
+    },
+    "Empty": {
+      "LiveTitle": "尚无保留的分配事件",
+      "LiveHelp": "采集器空闲，尚无保留的类型证据；需要观测窗口时可启动跟踪。",
+      "CollectingTitle": "等待有类型名的事件",
+      "CollectingHelp": "采集正在运行，但视图尚无保留的类型行；排除规则和跳过事件会影响覆盖。",
+      "HeapTitle": "尚无保留的堆清查",
+      "HeapHelp": "按需采集进程快照堆清查，独立于实时分配流量查看枚举对象。",
+      "NoMatchesTitle": "没有匹配此查询的类型",
+      "NoMatchesHelp": "修改或清除完整名称查询，来源总量不会改变。",
+      "UnreadTitle": "尚无成功读取的来源视图",
+      "UnreadHelp": "请刷新以读取真实来源状态；缺少证据不代表采集器空闲或计数为零。"
+    },
+    "Action": {
+      "Title": "最近的采集操作",
+      "Completed": "已完成",
+      "Failed": "未完成"
+    },
+    "Details": {
+      "Title": "类型证据",
+      "Bytes": "字节",
+      "Close": "关闭类型证据",
+      "OpenFailed": "无法打开类型详情。",
+      "Frozen": "类型、来源与来源总量保持固定，同时页面和实时采集器继续更新。",
+      "FullName": "完整类型标识",
+      "Source": "证据来源",
+      "LastSeen": "记录的类型时间戳 · UTC",
+      "CountShare": "记录的数量占比 · %",
+      "ByteShare": "记录的字节占比 · %",
+      "SourceTicks": "完整来源事件数",
+      "SourceObjects": "完整来源对象数",
+      "SourceEstimatedBytes": "完整来源归因字节",
+      "SourceHeapBytes": "完整来源对象字节",
+      "DroppedEvents": "报告的跳过事件数",
+      "Duration": "报告耗时 · 秒",
+      "NoObjectSize": "分配事件不能揭示单个对象大小，不据此推断对象大小或所属堆。"
+    }
   },
   "Diagnostics": {
-    "FullCollection": "完整 GC", "ManualGc": { "Eyebrow": "受控操作", "Title": "强制回收", "Description": "仅在验证内存压力假设时触发回收。", "Disabled": "主机策略已禁用手动回收。" }, "Dump": { "Eyebrow": "取证采集", "Title": "创建 GC 转储", "Description": "采集托管堆证据以供离线检查。", "Requirement": "创建转储可能暂停进程，并需要主机文件系统访问权限。", "Action": "创建转储", "Disabled": "主机策略已禁用 GC 转储。" },
-    "Guidance": { "Eyebrow": "诊断手册", "Title": "解释证据", "Signals": { "Title": "压力信号", "GrowingHeap": { "Title": "堆持续增长", "Description": "回收后堆仍增长可能表示存在保留引用。" }, "Gen2": { "Title": "频繁 Gen 2", "Description": "反复完整回收通常表示长期压力。" }, "Pinned": { "Title": "固定对象", "Description": "固定对象会阻碍压缩并增加碎片。" }, "Finalizers": { "Title": "终结队列", "Description": "队列增长可能表示清理工作延迟。" } }, "Causes": { "Title": "常见原因", "Events": { "Title": "事件订阅", "Description": "长生命周期发布者可能保留短生命周期订阅者。" }, "Statics": { "Title": "静态根", "Description": "静态集合可能无限期保留对象图。" }, "Caches": { "Title": "无限缓存", "Description": "缓存需要明确的容量或过期策略。" }, "Disposal": { "Title": "资源所有权", "Description": "缺少释放会保留原生与托管资源。" } }, "Tools": { "Title": "分析工具", "VisualStudio": "Visual Studio 分析器", "PerfView": "PerfView", "DotMemory": "dotMemory", "Dotnet": "dotnet-gcdump / dotnet-dump" } }
+    "FullCollection": "完整 GC",
+    "ManualGc": {
+      "Eyebrow": "受控操作",
+      "Title": "强制回收",
+      "Description": "请求选定代数的强制阻塞回收，此操作会改变正在运行的进程。",
+      "Disabled": "主机 UI 策略已禁用手动回收。",
+      "Action": "请求回收",
+      "Effect": "此调用默认不压缩；请求完成不代表内存泄漏已解决。"
+    },
+    "Dump": {
+      "Eyebrow": "取证采集",
+      "Title": "创建 GC 转储",
+      "Description": "通过主机原生诊断工具创建 GC 转储，采集可能暂停进程或增加负载。",
+      "Requirement": "PATH 中的原生工具",
+      "Action": "创建转储",
+      "Disabled": "主机 UI 策略已禁用 GC 转储创建。",
+      "Prerequisite": "主机运行身份需要访问工具、被诊断进程和输出目录；页面不会安装工具或提升权限。",
+      "ServerFile": "返回路径属于服务器文件系统，不表示可直接从浏览器下载。"
+    },
+    "Policy": {
+      "Permitted": "此主机的 UI 策略允许执行"
+    },
+    "Generation": "回收代数",
+    "Scope": "操作针对当前主机进程。读取视图不会执行诊断；已接受的原生操作会被跟踪至完成，即使离开页面。",
+    "ManualRead": "手动读取视图 · 此路由不自动轮询",
+    "Running": "主机诊断操作正在执行",
+    "Started": "开始时间",
+    "Outcome": {
+      "Eyebrow": "真实操作结果",
+      "Completed": "已完成",
+      "Failed": "失败",
+      "Finished": "完成时间",
+      "Status": "结果状态",
+      "ServerPath": "服务器输出路径",
+      "ReadScope": "最近成功的证据读取"
+    }
   },
-  "Common": { "LoadingValue": "采集中…", "Milliseconds": "{0} 毫秒", "Unavailable": "—", "Unknown": "未知" }
+  "Common": {
+    "LoadingValue": "正在读取证据…",
+    "Unavailable": "—",
+    "Unknown": "未知",
+    "Generation": "第 {0} 代",
+    "RawBytes": "字节 · 精确值"
+  }
 }

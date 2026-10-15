@@ -1,0 +1,222 @@
+@using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Executions.State
+@using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
+
+@inject JobExecutionsStateFactory PageStateFactory
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+@implements IAsyncDisposable
+
+@if (_state is { } state)
+{
+    <div class="execution-ledger-content">
+        @if (state.Error is not null)
+        {
+            <MudAlert Severity="@(state.HasLoadedSnapshot ? Severity.Warning : Severity.Error)" Variant="Variant.Outlined" Dense="true">
+                @(state.HasLoadedSnapshot ? L["Executions:RefreshFailed", state.Error] : state.Error)
+            </MudAlert>
+        }
+        <SchedulerAccessBoundary AccessChecked="@state.AccessChecked" IsAuthorized="@state.IsAuthorized">
+            <ExecutionOperationalTable @ref="_table" ServerData="@state.LoadTableAsync"
+                                       TotalCount="@state.TotalCount" HasLoadedSnapshot="@state.HasLoadedSnapshot"
+                                       IsQueryFailed="@state.IsQueryFailed" ObservedAtUtc="@state.ObservedAtUtc"
+                                       PageSize="@state.PageSize" PageSizeOptions="@state.PageSizeOptions"
+                                       IsLoading="@state.IsLoading"
+                                       InspectRequested="InspectAsync" RequestCancellation="RequestCancellationAsync">
+                <FilterContent>
+                    <ExecutionFilterBar TRange="ExecutionTimeRange"
+                                        SearchText="@state.SearchText" SearchTextChanged="@(value => state.SearchText = value)"
+                                        TimeRange="@state.TimeRange" TimeRangeChanged="@(value => state.TimeRange = value)"
+                                        TimeRanges="@TimeRanges" TimeRangeLabel="FormatTimeRange"
+                                        ShowCustomDates="@(state.TimeRange == ExecutionTimeRange.Custom)"
+                                        CustomStartDate="@state.CustomStartDate" CustomStartDateChanged="@(value => state.CustomStartDate = value)"
+                                        CustomEndDate="@state.CustomEndDate" CustomEndDateChanged="@(value => state.CustomEndDate = value)"
+                                        SelectedStates="@state.SelectedStates" SelectedStatesChanged="SelectStatesAsync"
+                                        IsLoading="@(state.IsLoading || state.IsMutating)" HasInvalidCustomRange="@state.HasInvalidCustomRange"
+                                        ApplyRequested="ApplyAsync" ResetRequested="ResetAsync" />
+                    <div class="execution-ledger-content__scope">
+                        <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />
+                        <span>@L["Executions:RecordedTimeNotice", TimePresentation.TimeZoneDisplayName]</span>
+                    </div>
+                    @if (state.HasInvalidCustomRange)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">@L["Executions:Filters:InvalidRange"]</MudAlert>
+                    }
+                    @if (state.IsQueryFailed && state.HasLoadedSnapshot && state.LoadedQuery is { } query)
+                    {
+                        <p class="execution-ledger-content__accepted-query">
+                            @L["Executions:AcceptedQuery", FormatAcceptedQuery(query)]
+                        </p>
+                    }
+                </FilterContent>
+            </ExecutionOperationalTable>
+        </SchedulerAccessBoundary>
+    </div>
+}
+
+@code {
+    /// <summary>Gets or sets the initial comma-separated state filter for this immutable route owner.</summary>
+    [Parameter]
+    public string? InitialStates { get; set; }
+
+    /// <summary>Gets or sets the exact initial inspector ID; the ledger uses it as a substring search.</summary>
+    [Parameter]
+    public string? InitialInstanceId { get; set; }
+
+    private static readonly ExecutionTimeRange[] TimeRanges = Enum.GetValues<ExecutionTimeRange>();
+    private readonly SchedulerOperationLifetime _lifetime = new();
+    private readonly object _retirementGate = new();
+    private TaskCompletionSource? _retirement;
+    private JobExecutionsPageState? _state;
+    private ExecutionOperationalTable? _table;
+    private ExecutionDialogSession? _inspectors;
+    private SchedulerDialogSession<CancellationRequest>? _confirmations;
+    private bool _initialInspectorOpened;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _inspectors = new(id => ExecutionDetailDialogLauncher.OpenAsync(DialogService, L, id), RefreshAsync);
+        _confirmations = new(OpenConfirmationAsync, CompleteCancellationAsync);
+        var state = PageStateFactory.CreatePageState();
+        _state = state;
+        state.StateChanged += OnStateChangedAsync;
+        state.ApplyInitialQuery(InitialStates, InitialInstanceId);
+        try { await _lifetime.RunAsync(_ => state.InitializeAsync()); }
+        catch (OperationCanceledException) when (_lifetime.IsRetired) { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_initialInspectorOpened || _lifetime.IsRetired || _state is not { AccessChecked: true, IsAuthorized: true, IsLoading: false }
+            || string.IsNullOrWhiteSpace(InitialInstanceId)) return;
+        _initialInspectorOpened = true;
+        await InspectIdAsync(InitialInstanceId);
+    }
+
+    private Task OnStateChangedAsync() => _lifetime.IsRetired ? Task.CompletedTask : InvokeAsync(() =>
+    {
+        if (!_lifetime.IsRetired) StateHasChanged();
+    });
+
+    private string FormatTimeRange(ExecutionTimeRange range) => L[$"Executions:TimeRanges:{range}"];
+
+    private string FormatAcceptedQuery(JobExecutionQuery query)
+    {
+        var states = query.States is { Count: > 0 }
+            ? string.Join(", ", query.States.Select(state => L[$"ExecutionStates:{state}"].Value))
+            : L["Executions:Filters:AnyState"].Value;
+        return L["Executions:QueryDescription", states, query.SearchText ?? L["Executions:AnyIdentifier"].Value,
+            query.CreatedAfterUtc is { } start ? TimePresentation.FormatTimestamp(start) : "—",
+            query.CreatedBeforeUtc is { } end ? TimePresentation.FormatTimestamp(end) : "—",
+            query.PageNumber].Value;
+    }
+
+    private async Task SelectStatesAsync(IReadOnlyCollection<JobExecutionState> states)
+    {
+        if (_lifetime.IsRetired) return;
+        _state?.SetSelectedStates(states);
+        await ApplyAsync();
+    }
+
+    private Task ApplyAsync() => _table is null || _lifetime.IsRetired ? Task.CompletedTask : _table.ReloadFromFirstPageAsync();
+
+    private async Task ResetAsync()
+    {
+        if (_lifetime.IsRetired) return;
+        _state?.ResetFilters();
+        await ApplyAsync();
+    }
+
+    private Task RefreshAsync() => _table is null || _lifetime.IsRetired ? Task.CompletedTask : _table.ReloadAsync();
+    private Task InspectAsync(JobExecutionInstance execution) => InspectIdAsync(execution.InstanceId);
+
+    private async Task InspectIdAsync(string exactId)
+    {
+        if (_inspectors is null || _lifetime.IsRetired) return;
+        try { await _inspectors.OpenAsync(exactId); }
+        catch (OperationCanceledException) when (_lifetime.IsRetired) { }
+    }
+
+    private async Task RequestCancellationAsync(JobExecutionInstance execution)
+    {
+        var state = _state;
+        // Freeze the clicked identity before authorization or native confirmation can yield.
+        var exactId = execution.InstanceId;
+        if (state is null || _confirmations is null || _lifetime.IsRetired) return;
+        try
+        {
+            if (!await state.ReauthorizeAsync() || _lifetime.IsRetired || _state != state) return;
+            await _confirmations.OpenAsync(new(state, exactId));
+        }
+        catch (OperationCanceledException) when (_lifetime.IsRetired || state.IsDisposed) { }
+    }
+
+    private Task<IDialogReference> OpenConfirmationAsync(CancellationRequest request)
+    {
+        var parameters = new DialogParameters<MudMessageBox>
+        {
+            { box => box.Title, L["Executions:Cancel:Title"].Value },
+            { box => box.MessageContent, (RenderFragment)(builder =>
+                {
+                    builder.OpenComponent<ExecutionCancellationMessage>(0);
+                    builder.AddAttribute(1, nameof(ExecutionCancellationMessage.Message), L["Executions:Cancel:Message", request.InstanceId].Value);
+                    builder.CloseComponent();
+                }) },
+            { box => box.YesText, L["Executions:Actions:Cancel"].Value },
+            { box => box.CancelText, L["Common:Keep"].Value }
+        };
+        return DialogService.ShowAsync<MudMessageBox>(null, parameters,
+            new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, FullWidth = true, MaxWidth = MaxWidth.Small });
+    }
+
+    private async Task CompleteCancellationAsync(CancellationRequest request, DialogResult? confirmation)
+    {
+        if (_lifetime.IsRetired || _state != request.State || confirmation is not { Canceled: false, Data: true }) return;
+        try
+        {
+            var result = await request.State.RequestCancellationAsync(request.InstanceId);
+            if (_lifetime.IsRetired || _state != request.State) return;
+            var feedback = ExecutionUiPresentation.GetCancellationFeedback(result, L);
+            Snackbar.Add(feedback.Message, feedback.Severity);
+            await RefreshAsync();
+        }
+        catch (OperationCanceledException) when (_lifetime.IsRetired || request.State.IsDisposed) { }
+    }
+
+    /// <inheritdoc />
+    public ValueTask DisposeAsync()
+    {
+        TaskCompletionSource completion;
+        lock (_retirementGate)
+        {
+            if (_retirement is not null) return new(_retirement.Task);
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _retirement = completion;
+        }
+        var state = _state;
+        if (state is not null) state.StateChanged -= OnStateChangedAsync;
+        // Start every owner before joining to avoid a dialog callback waiting on an uncanceled state read.
+        var operations = _lifetime.RetireAsync(() => ValueTask.CompletedTask);
+        var inspectors = _inspectors?.DisposeAsync() ?? ValueTask.CompletedTask;
+        var confirmations = _confirmations?.DisposeAsync() ?? ValueTask.CompletedTask;
+        var stateRetirement = state?.DisposeAsync() ?? ValueTask.CompletedTask;
+        _ = CompleteRetirementAsync([operations, inspectors, confirmations, stateRetirement], completion);
+        return new(completion.Task);
+    }
+
+    private static async Task CompleteRetirementAsync(ValueTask[] owners, TaskCompletionSource completion)
+    {
+        var failures = new List<Exception>();
+        foreach (var owner in owners)
+        {
+            try { await owner; } catch (Exception exception) { failures.Add(exception); }
+        }
+        if (failures.Count == 0) completion.TrySetResult();
+        else completion.TrySetException(new AggregateException("Execution ledger retirement failed.", failures));
+    }
+
+    private sealed record CancellationRequest(JobExecutionsPageState State, string InstanceId);
+}

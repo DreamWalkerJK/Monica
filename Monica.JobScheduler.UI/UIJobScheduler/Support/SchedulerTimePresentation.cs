@@ -40,9 +40,14 @@ internal sealed class SchedulerTimePresentation(
     /// minute, while repeated wall times select the earliest represented instant so the complete scheduler day remains
     /// inside the analytics range.
     /// </remarks>
-    internal DateTimeOffset GetStartOfSchedulerDayUtc(DateTimeOffset value)
+    internal DateTimeOffset GetStartOfSchedulerDayUtc(DateTimeOffset value) =>
+        GetStartOfSchedulerCalendarDayUtc(ToSchedulerWallTime(value).Date);
+
+    /// <summary>Resolves the beginning of a supplied scheduler-calendar date without interpreting it as a UTC instant.</summary>
+    /// <remarks>Skipped midnight advances to the first valid minute; repeated midnight selects its earliest instant.</remarks>
+    internal DateTimeOffset GetStartOfSchedulerCalendarDayUtc(DateTime calendarDate)
     {
-        var wallTime = DateTime.SpecifyKind(ToSchedulerWallTime(value).Date, DateTimeKind.Unspecified);
+        var wallTime = DateTime.SpecifyKind(calendarDate.Date, DateTimeKind.Unspecified);
         while (_timeZone.IsInvalidTime(wallTime))
         {
             wallTime = wallTime.AddMinutes(1);
@@ -63,6 +68,16 @@ internal sealed class SchedulerTimePresentation(
     /// </summary>
     internal string FormatTimestamp(DateTimeOffset? value) => value is { } instant
         ? ToSchedulerWallTime(instant).ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.CurrentCulture)
+        : "—";
+
+    /// <summary>Formats a scheduler-zone instant with its actual UTC offset, distinguishing repeated wall times.</summary>
+    internal string FormatTimestampWithOffset(DateTimeOffset? value) => value is { } instant
+        ? TimeZoneInfo.ConvertTime(instant, _timeZone).ToString("yyyy-MM-dd HH:mm:ss.fff zzz", CultureInfo.CurrentCulture)
+        : "—";
+
+    /// <summary>Formats the complete normalized UTC instant used by an inclusive or exclusive analytics boundary.</summary>
+    internal string FormatUtcTimestamp(DateTimeOffset? value) => value is { } instant
+        ? instant.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)
         : "—";
 
     /// <summary>
@@ -147,14 +162,19 @@ internal sealed class SchedulerTimePresentation(
         }
 
         var formatted = FormatDuration(duration);
-        return execution.CompletedAtUtc is null
+        return execution.State == JobExecutionState.Running && execution.CompletedAtUtc is null
             ? localizer["Common:RunningDuration", formatted]
             : formatted;
     }
 
     /// <summary>
-    /// Calculates elapsed execution time, using the caller's observation instant for active work.
+    /// Calculates a durable attempt interval, using the observation instant only for currently running work.
     /// </summary>
+    /// <remarks>
+    /// A queued retry can retain the prior attempt's start without its completion. That evidence does not describe
+    /// active elapsed work, so queued and incomplete terminal intervals remain unavailable. Terminal intervals use
+    /// the durable start and terminal completion; they are not CPU time or the sum of every retry attempt.
+    /// </remarks>
     internal static TimeSpan? GetExecutionDuration(
         JobExecutionInstance execution,
         DateTimeOffset observedAtUtc)
@@ -164,7 +184,10 @@ internal sealed class SchedulerTimePresentation(
             return null;
         }
 
-        var end = execution.CompletedAtUtc ?? observedAtUtc;
+        DateTimeOffset end;
+        if (execution.State == JobExecutionState.Running && execution.CompletedAtUtc is null) end = observedAtUtc;
+        else if (execution.IsTerminal && execution.CompletedAtUtc is { } completedAtUtc) end = completedAtUtc;
+        else return null;
         return end < startedAtUtc ? TimeSpan.Zero : end - startedAtUtc;
     }
 

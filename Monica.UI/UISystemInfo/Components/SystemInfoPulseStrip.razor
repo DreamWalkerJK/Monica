@@ -5,44 +5,25 @@
 @using Monica.UI.UISystemInfo.Support
 @inject IStringLocalizer<SystemInfoResource> L
 
-<section class="system-info-pulse" aria-label="@L["Page:Pulse:AriaLabel"]">
-    <article class="system-info-pulse__item mo-card-surface" data-mo-card-tone="primary">
-        <span class="mo-card-surface__rail" aria-hidden="true"></span>
-        <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.Timeline" /></span>
-        <div>
-            <span>@L["Page:Pulse:ProcessUptime"]</span>
-            <strong class="system-info-metric">@SystemInfoDisplayFormatter.FormatDuration(Uptime)</strong>
-        </div>
-        <small>@L["Page:Status:Running"]</small>
-    </article>
-    <article class="system-info-pulse__item mo-card-surface" data-mo-card-tone="info">
-        <span class="mo-card-surface__rail" aria-hidden="true"></span>
-        <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.Memory" /></span>
-        <div>
-            <span>@L["Page:Pulse:WorkingSet"]</span>
-            <strong class="system-info-metric">@SystemInfoDisplayFormatter.FormatScaledBytes(Snapshot.Process.WorkingSetBytes, CultureInfo.CurrentCulture)</strong>
-        </div>
-        <small>@L["Page:Status:Snapshot"]</small>
-    </article>
-    <article class="system-info-pulse__item mo-card-surface" data-mo-card-tone="neutral">
-        <span class="mo-card-surface__rail" aria-hidden="true"></span>
-        <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.DataObject" /></span>
-        <div>
-            <span>@L["Page:Pulse:ProcessId"]</span>
-            <strong class="system-info-metric">@Snapshot.Process.ProcessId.ToString("N0", CultureInfo.CurrentCulture)</strong>
-        </div>
-        <small>@L["Page:Pulse:ProcessId"]</small>
-    </article>
-    <article class="system-info-pulse__item mo-card-surface" data-mo-card-tone="success">
-        <span class="mo-card-surface__rail" aria-hidden="true"></span>
-        <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.CenterFocusStrong" /></span>
-        <div>
-            <span>@L["Page:Pulse:EvidenceAge"]</span>
-            <strong>@EvidenceAge</strong>
-        </div>
-        <small>@L["Page:Pulse:CapturedAt"] @SystemInfoDisplayFormatter.FormatTime(Snapshot.CapturedAtUtc, CultureInfo.CurrentCulture)</small>
-    </article>
-</section>
+<dl class="system-info-pulse" aria-label="@L["Page:Pulse:AriaLabel"]">
+    <div>
+        <dt><MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />@L["Page:Pulse:ProcessUptime"]</dt>
+        <dd class="system-info-live-uptime">@SystemInfoDisplayFormatter.FormatDuration(Uptime)</dd>
+    </div>
+    <div>
+        <dt><MudIcon Icon="@Icons.Material.Outlined.Memory" Size="Size.Small" />@L["Page:Pulse:WorkingSet"] <span>@L["Page:Status:Snapshot"]</span></dt>
+        <dd class="system-info-working-set" title="@L["Page:Sections:Runtime:WorkingSetAtCapture"]">@SystemInfoDisplayFormatter.FormatScaledBytes(Snapshot.Process.WorkingSetBytes, CultureInfo.CurrentCulture)</dd>
+        <small>@SystemInfoDisplayFormatter.FormatByteCount(Snapshot.Process.WorkingSetBytes, CultureInfo.CurrentCulture)</small>
+    </div>
+    <div>
+        <dt><MudIcon Icon="@Icons.Material.Outlined.Tag" Size="Size.Small" />@L["Page:Pulse:ProcessId"]</dt>
+        <dd>@Snapshot.Process.ProcessId.ToString(CultureInfo.CurrentCulture)</dd>
+    </div>
+    <div>
+        <dt><MudIcon Icon="@Icons.Material.Outlined.Update" Size="Size.Small" />@L["Page:Pulse:EvidenceAge"]</dt>
+        <dd class="system-info-evidence-age">@EvidenceAge</dd>
+    </div>
+</dl>
 
 @code {
     [Parameter, EditorRequired] public SystemInfoSnapshot Snapshot { get; set; } = null!;

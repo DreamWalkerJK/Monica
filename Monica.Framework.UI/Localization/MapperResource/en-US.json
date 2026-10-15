@@ -1,53 +1,58 @@
 {
-  "Pages": {
-    "MapperDebug": {
-      "Title": "Mapper Debug"
-    }
-  },
+  "Pages": { "MapperDebug": { "Title": "Mapper Debug" } },
   "Page": {
     "PageTitle": "Mapper Registry",
     "Header": {
-      "Eyebrow": "Monica / Transformation registry",
+      "Eyebrow": "Object mapping",
       "Title": "Mapper registry",
-      "Description": "Inspect the registered source-to-destination transformations and review their compiled mapping expressions."
+      "Description": "Find a registered type pair and inspect its generated C# expression."
     },
     "Actions": {
-      "Close": "Close",
-      "InspectExpression": "Inspect expression",
-      "Loading": "Loading...",
-      "Refresh": "Refresh registry"
+      "Refresh": "Refresh registry",
+      "RefreshShort": "Refresh",
+      "Retry": "Retry",
+      "Choose": "Choose a pair",
+      "ChooseAnother": "Choose another pair",
+      "ClosePicker": "Close pair picker",
+      "ClearSearch": "Clear search"
     },
-    "Summary": {
-      "AriaLabel": "Mapper registry summary",
-      "Ready": "Registry ready",
-      "RegisteredMappings": "Registered mappings",
-      "Scanning": "Scanning registry"
+    "Read": {
+      "LastSuccess": "Last successful read here: {0}",
+      "ExpressionReceipt": "Read completed here at {0}",
+      "Retained": "Showing the read completed here at {0}.",
+      "Diagnostic": "Technical diagnostic"
     },
     "Registry": {
-      "Title": "Transformation ledger",
-      "Description": "Each row is a registered conversion path available to the object mapper.",
-      "Count": "{0} mappings",
-      "Columns": {
-        "Actions": "Actions",
-        "DestinationType": "Destination type",
-        "SourceType": "Source type"
-      }
+      "Title": "Registered pairs",
+      "Count": "{0} registered pairs",
+      "FilteredCount": "{0} of {1} pairs",
+      "Search": "Search source or destination type"
+    },
+    "Reader": {
+      "Title": "Generated expression",
+      "Source": "Source type",
+      "Destination": "Destination type",
+      "Wrap": "Wrap lines"
     },
     "States": {
-      "EmptyDescription": "No source-to-destination expressions are registered in the current host.",
-      "EmptyTitle": "No mappings registered",
-      "Loading": "Reading mapper registrations..."
-    },
-    "Dialog": {
-      "DestinationType": "Destination type",
-      "NoExpression": "No mapping expression is available for this registration.",
-      "SourceType": "Source type",
-      "Title": "Mapping expression"
+      "Reading": "Reading registered pairs…",
+      "Refreshing": "Refreshing registry…",
+      "FirstFailed": "Registry could not be read",
+      "FirstFailedDescription": "The registered pairs are unavailable. Retry the read or review the technical diagnostic.",
+      "LatestFailed": "Latest read failed",
+      "EmptyTitle": "No registered pairs",
+      "EmptyDescription": "This view lists explicit registered pairs in the current host. Convention-only mappings may not appear.",
+      "NoMatches": "No pairs match this search",
+      "NoMatchesDescription": "Search either full type name, or clear the search to restore the registry.",
+      "SelectTitle": "Select a registered pair",
+      "SelectDescription": "Choose a source-to-destination pair to read its complete generated expression.",
+      "SelectAfterRefresh": "Registry refreshed. Choose a pair to inspect its current expression.",
+      "OutsideFilter": "The selected pair is outside this filter.",
+      "MissingExpression": "No expression was provided for this pair."
     },
     "Messages": {
-      "LoadException": "An error occurred while loading mapper data: {0}",
-      "LoadFailed": "Failed to load mapper data: {0}",
-      "LoadSucceeded": "Loaded {0} mapping registrations."
+      "LoadSucceeded": "Read {0} registered pairs.",
+      "LoadFailed": "Registry read failed: {0}"
     }
   }
 }

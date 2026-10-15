@@ -11,65 +11,90 @@ public sealed partial class KnowledgeBaseManagePageState
     /// <summary>
     /// Deletes the current knowledge-base selection if present.
     /// </summary>
-    public async Task DeleteSelectedKnowledgeBaseAsync()
+    public Task DeleteSelectedKnowledgeBaseAsync()
+        => _session.RunAsync(() => DeleteSelectedKnowledgeBaseAsyncCore(), selectionBound: true);
+
+    private async Task DeleteSelectedKnowledgeBaseAsyncCore()
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null)
         {
             return;
         }
 
-        await DeleteKnowledgeBaseAsync(SelectedKnowledgeBase);
+        await DeleteKnowledgeBaseAsync(originKnowledgeBase);
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Deletes one knowledge base after confirmation.
     /// </summary>
-    public async Task DeleteKnowledgeBaseAsync(Monica.AI.KnowledgeBase.Models.KnowledgeBase knowledgeBase)
+    public Task DeleteKnowledgeBaseAsync(Monica.AI.KnowledgeBase.Models.KnowledgeBase knowledgeBase)
+        => _session.RunAsync(() => DeleteKnowledgeBaseAsyncCore(knowledgeBase), selectionBound: true);
+
+    private async Task DeleteKnowledgeBaseAsyncCore(Monica.AI.KnowledgeBase.Models.KnowledgeBase knowledgeBase)
     {
-        var confirmed = await _dialogService.ShowMessageBoxAsync(
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        var confirmed = await _session.ShowMessageBoxAsync(
             _localizer["Common:Confirm"],
             _localizer["KnowledgeBase:Manage:DeleteConfirm", knowledgeBase.Name],
             yesText: _localizer["Common:Delete"],
             cancelText: _localizer["Common:Cancel"]);
+        _session.CheckCurrent();
 
         if (confirmed != true)
         {
             return;
         }
 
-        if ((await _knowledgeBaseFacade.DeleteAsync(knowledgeBase.Id)).IsFailed(out var error))
+        var deleteResult = await _knowledgeBaseFacade.DeleteAsync(knowledgeBase.Id);
+        _session.CheckCurrent();
+
+        if (deleteResult.IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;
         }
 
         _snackbar.Add(_localizer["Common:Success"], Severity.Success);
-        if (string.Equals(SelectedKnowledgeBase?.Id, knowledgeBase.Id, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(originKnowledgeBase?.Id, knowledgeBase.Id, StringComparison.OrdinalIgnoreCase))
         {
             SelectedKnowledgeBase = null;
+            _session.AdvanceSelection();
             DocumentInventory = [];
         }
 
         await LoadKnowledgeBasesAsync();
+        _session.CheckCurrent();
         NotifyStateChanged();
     }
 
     /// <summary>
     /// Opens the create knowledge-base dialog.
     /// </summary>
-    public async Task ShowCreateKnowledgeBaseDialogAsync()
-    {
-        var dialog = await _dialogService.ShowAsync<CreateKnowledgeBaseDialog>(
-            _localizer["RAG:Manage:CreateDialog:Title"],
-            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+    public Task ShowCreateKnowledgeBaseDialogAsync()
+        => _session.RunAsync(() => ShowCreateKnowledgeBaseDialogAsyncCore(), selectionBound: false);
 
-        var result = await dialog.Result;
+    private async Task ShowCreateKnowledgeBaseDialogAsyncCore()
+    {
+        _session.CheckCurrent();
+        var result = await _session.ShowAsync<CreateKnowledgeBaseDialog>(
+            _localizer["RAG:Manage:CreateDialog:Title"],
+            new DialogParameters(),
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        _session.CheckCurrent();
+
         if (result is not { Canceled: false, Data: KnowledgeBaseDialogResult data })
         {
             return;
         }
 
-        if ((await _knowledgeBaseFacade.CreateAsync(data.Id, data.Name, data.Description)).IsFailed(out var error))
+        var createResult = await _knowledgeBaseFacade.CreateAsync(data.Id, data.Name, data.Description);
+        _session.CheckCurrent();
+
+        if (createResult.IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;
@@ -77,42 +102,51 @@ public sealed partial class KnowledgeBaseManagePageState
 
         _snackbar.Add(_localizer["Common:Success"], Severity.Success);
         await LoadKnowledgeBasesAsync();
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Opens the edit knowledge-base dialog for the current selection.
     /// </summary>
-    public async Task ShowEditKnowledgeBaseDialogAsync()
+    public Task ShowEditKnowledgeBaseDialogAsync()
+        => _session.RunAsync(() => ShowEditKnowledgeBaseDialogAsyncCore(), selectionBound: true);
+
+    private async Task ShowEditKnowledgeBaseDialogAsyncCore()
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null)
         {
             return;
         }
 
         var parameters = new DialogParameters
         {
-            { nameof(CreateKnowledgeBaseDialog.InitialId), SelectedKnowledgeBase.Id },
-            { nameof(CreateKnowledgeBaseDialog.InitialName), SelectedKnowledgeBase.Name },
-            { nameof(CreateKnowledgeBaseDialog.InitialDescription), SelectedKnowledgeBase.Description },
+            { nameof(CreateKnowledgeBaseDialog.InitialId), originKnowledgeBase.Id },
+            { nameof(CreateKnowledgeBaseDialog.InitialName), originKnowledgeBase.Name },
+            { nameof(CreateKnowledgeBaseDialog.InitialDescription), originKnowledgeBase.Description },
             { nameof(CreateKnowledgeBaseDialog.SubmitText), _localizer["Common:Actions:Save"].Value },
             { nameof(CreateKnowledgeBaseDialog.IsIdReadOnly), true }
         };
 
-        var dialog = await _dialogService.ShowAsync<CreateKnowledgeBaseDialog>(
+        var result = await _session.ShowAsync<CreateKnowledgeBaseDialog>(
             _localizer["RAG:Manage:EditDialog:Title"],
             parameters,
             new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        _session.CheckCurrent();
 
-        var result = await dialog.Result;
         if (result is not { Canceled: false, Data: KnowledgeBaseDialogResult data })
         {
             return;
         }
 
-        if ((await _knowledgeBaseFacade.UpdateAsync(
-                SelectedKnowledgeBase.Id,
+        var updateResult = await _knowledgeBaseFacade.UpdateAsync(
+                originKnowledgeBase.Id,
                 data.Name,
-                data.Description)).IsFailed(out var error))
+                data.Description);
+        _session.CheckCurrent();
+
+        if (updateResult.IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;
@@ -120,19 +154,29 @@ public sealed partial class KnowledgeBaseManagePageState
 
         _snackbar.Add(_localizer["Common:Success"], Severity.Success);
         await RefreshSelectedKnowledgeBaseAsync();
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Opens the markdown document import dialog for the current selection.
     /// </summary>
-    public async Task ShowDocumentImportDialogAsync()
+    public Task ShowDocumentImportDialogAsync()
+        => _session.RunAsync(() => ShowDocumentImportDialogAsyncCore(), selectionBound: true);
+
+    private async Task ShowDocumentImportDialogAsyncCore()
     {
-        if (SelectedKnowledgeBase is null || string.IsNullOrEmpty(SelectedMarkdownGroup))
+        _session.CheckCurrent();
+        var originMarkdownGroup = SelectedMarkdownGroup;
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null || string.IsNullOrEmpty(originMarkdownGroup))
         {
             return;
         }
 
-        if ((await _knowledgeDocumentFacade.GetMarkdownDocumentsAsync(SelectedMarkdownGroup)).IsFailed(out var error, out var documents))
+        var documentsResult = await _knowledgeDocumentFacade.GetMarkdownDocumentsAsync(originMarkdownGroup);
+        _session.CheckCurrent();
+
+        if (documentsResult.IsFailed(out var error, out var documents))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;
@@ -148,21 +192,24 @@ public sealed partial class KnowledgeBaseManagePageState
             { nameof(DocumentSelectionDialog.ExistingDocumentIds), existingDocumentIds }
         };
 
-        var dialog = await _dialogService.ShowAsync<DocumentSelectionDialog>(
+        var result = await _session.ShowAsync<DocumentSelectionDialog>(
             _localizer["KnowledgeBase:DocumentImport:Title"],
             parameters,
             new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+        _session.CheckCurrent();
 
-        var result = await dialog.Result;
         if (result is not { Canceled: false, Data: List<string> selectedDocumentIds })
         {
             return;
         }
 
-        if ((await _knowledgeDocumentFacade.ImportMarkdownDocumentsAsync(
-                SelectedKnowledgeBase.Id,
-                SelectedMarkdownGroup,
-                selectedDocumentIds)).IsFailed(out var addError, out var importResult))
+        var importResultEnvelope = await _knowledgeDocumentFacade.ImportMarkdownDocumentsAsync(
+                originKnowledgeBase.Id,
+                originMarkdownGroup,
+                selectedDocumentIds);
+        _session.CheckCurrent();
+
+        if (importResultEnvelope.IsFailed(out var addError, out var importResult))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {addError.Message}", Severity.Error);
             return;
@@ -172,14 +219,20 @@ public sealed partial class KnowledgeBaseManagePageState
             _localizer["KnowledgeBase:DocumentImport:Imported", importResult.AddedCount, importResult.SkippedCount],
             Severity.Success);
         await LoadDocumentInventoryAsync();
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Uploads one file as a pending knowledge-base document.
     /// </summary>
-    public async Task UploadFileAsync(IBrowserFile file)
+    public Task UploadFileAsync(IBrowserFile file)
+        => _session.RunAsync(() => UploadFileAsyncCore(file), selectionBound: true);
+
+    private async Task UploadFileAsyncCore(IBrowserFile file)
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null)
         {
             return;
         }
@@ -193,14 +246,18 @@ public sealed partial class KnowledgeBaseManagePageState
                 return;
             }
 
-            using var stream = file.OpenReadStream(maxFileSize);
+            using var stream = file.OpenReadStream(maxFileSize, _session.Token);
             using var reader = new StreamReader(stream);
-            var content = await reader.ReadToEndAsync();
+            var content = await reader.ReadToEndAsync(_session.Token);
+            _session.CheckCurrent();
 
-            if ((await _knowledgeDocumentFacade.UploadDocumentAsync(
-                    SelectedKnowledgeBase.Id,
+            var uploadResult = await _knowledgeDocumentFacade.UploadDocumentAsync(
+                    originKnowledgeBase.Id,
                     file.Name,
-                    content)).IsFailed(out var error))
+                    content);
+            _session.CheckCurrent();
+
+            if (uploadResult.IsFailed(out var error))
             {
                 _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
                 return;
@@ -208,7 +265,9 @@ public sealed partial class KnowledgeBaseManagePageState
 
             _snackbar.Add(_localizer["Common:Success"], Severity.Success);
             await LoadDocumentInventoryAsync();
+            _session.CheckCurrent();
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {ex.Message}", Severity.Error);
@@ -218,25 +277,31 @@ public sealed partial class KnowledgeBaseManagePageState
     /// <summary>
     /// Deletes one document after confirmation.
     /// </summary>
-    public async Task DeleteDocumentAsync(DocumentQueueItem document)
-    {
-        if (SelectedKnowledgeBase is null)
-        {
-            return;
-        }
+    public Task DeleteDocumentAsync(DocumentQueueItem document)
+        => _session.RunAsync(() => DeleteDocumentAsyncCore(document), selectionBound: true);
 
-        var confirmed = await _dialogService.ShowMessageBoxAsync(
+    private async Task DeleteDocumentAsyncCore(DocumentQueueItem document)
+    {
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null || !string.Equals(originKnowledgeBase.Id, document.KnowledgeBaseId, StringComparison.OrdinalIgnoreCase)) return;
+
+        var confirmed = await _session.ShowMessageBoxAsync(
             _localizer["Common:Confirm"],
             _localizer["RAG:DocumentQueue:DeleteConfirm", document.Name],
             yesText: _localizer["Common:Delete"],
             cancelText: _localizer["Common:Cancel"]);
+        _session.CheckCurrent();
 
         if (confirmed != true)
         {
             return;
         }
 
-        if ((await _knowledgeDocumentFacade.RemoveDocumentAsync(SelectedKnowledgeBase.Id, document.Id)).IsFailed(out var error))
+        var removeResult = await _knowledgeDocumentFacade.RemoveDocumentAsync(originKnowledgeBase.Id, document.Id);
+        _session.CheckCurrent();
+
+        if (removeResult.IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;
@@ -244,20 +309,25 @@ public sealed partial class KnowledgeBaseManagePageState
 
         _snackbar.Add(_localizer["Common:Success"], Severity.Success);
         await RefreshSelectedKnowledgeBaseAsync();
+        _session.CheckCurrent();
         await LoadDocumentInventoryAsync();
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Opens the raw source preview for one knowledge-base document.
     /// </summary>
-    public async Task ShowDocumentPreviewAsync(DocumentQueueItem document)
-    {
-        if (SelectedKnowledgeBase is null)
-        {
-            return;
-        }
+    public Task ShowDocumentPreviewAsync(DocumentQueueItem document)
+        => _session.RunAsync(() => ShowDocumentPreviewAsyncCore(document), selectionBound: true);
 
-        var result = await _knowledgeDocumentFacade.GetDocumentPreviewAsync(SelectedKnowledgeBase.Id, document.Id);
+    private async Task ShowDocumentPreviewAsyncCore(DocumentQueueItem document)
+    {
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null || !string.Equals(originKnowledgeBase.Id, document.KnowledgeBaseId, StringComparison.OrdinalIgnoreCase)) return;
+
+        var result = await _knowledgeDocumentFacade.GetDocumentPreviewAsync(originKnowledgeBase.Id, document.Id);
+        _session.CheckCurrent();
         if (result.IsFailed(out var error, out var preview))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -273,34 +343,42 @@ public sealed partial class KnowledgeBaseManagePageState
             { nameof(KnowledgeBaseDocumentPreviewDialog.SourceGroupKey), preview.SourceGroupKey }
         };
 
-        await _dialogService.ShowAsync<KnowledgeBaseDocumentPreviewDialog>(
+        await _session.ShowAsync<KnowledgeBaseDocumentPreviewDialog>(
             _localizer["KnowledgeBase:Documents:Preview:Title"],
             parameters,
             new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Clears all documents after confirmation.
     /// </summary>
-    public async Task ClearKnowledgeBaseDocumentsAsync()
+    public Task ClearKnowledgeBaseDocumentsAsync()
+        => _session.RunAsync(() => ClearKnowledgeBaseDocumentsAsyncCore(), selectionBound: true);
+
+    private async Task ClearKnowledgeBaseDocumentsAsyncCore()
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null)
         {
             return;
         }
 
-        var confirmed = await _dialogService.ShowMessageBoxAsync(
+        var confirmed = await _session.ShowMessageBoxAsync(
             _localizer["Common:Confirm"],
-            _localizer["RAG:DocumentQueue:ClearDocumentsConfirm", SelectedKnowledgeBase.Name],
+            _localizer["RAG:DocumentQueue:ClearDocumentsConfirm", originKnowledgeBase.Name],
             yesText: _localizer["RAG:DocumentQueue:Actions:ClearDocuments"],
             cancelText: _localizer["Common:Cancel"]);
+        _session.CheckCurrent();
 
         if (confirmed != true)
         {
             return;
         }
 
-        var result = await _knowledgeDocumentFacade.ClearDocumentsAsync(SelectedKnowledgeBase.Id);
+        var result = await _knowledgeDocumentFacade.ClearDocumentsAsync(originKnowledgeBase.Id);
+        _session.CheckCurrent();
         if (result.IsFailed(out var error, out var removedCount))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -309,22 +387,29 @@ public sealed partial class KnowledgeBaseManagePageState
 
         _snackbar.Add(_localizer["RAG:DocumentQueue:Messages:DocumentsCleared", removedCount], Severity.Success);
         await RefreshSelectedKnowledgeBaseAsync();
+        _session.CheckCurrent();
         await LoadDocumentInventoryAsync();
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Shows the full indexing error for one document.
     /// </summary>
-    public async Task ShowIndexingErrorAsync(DocumentQueueItem document)
+    public Task ShowIndexingErrorAsync(DocumentQueueItem document)
+        => _session.RunAsync(() => ShowIndexingErrorAsyncCore(document), selectionBound: true);
+
+    private async Task ShowIndexingErrorAsyncCore(DocumentQueueItem document)
     {
+        _session.CheckCurrent();
         var message = string.IsNullOrWhiteSpace(document.ErrorMessage)
             ? _localizer["Common:Error"].Value
             : document.ErrorMessage;
 
-        await _dialogService.ShowMessageBoxAsync(
+        await _session.ShowMessageBoxAsync(
             _localizer["Common:Error"],
             $"{document.Name}\n\n{message}",
             yesText: _localizer["Common:Close"]);
+        _session.CheckCurrent();
     }
 
 }
