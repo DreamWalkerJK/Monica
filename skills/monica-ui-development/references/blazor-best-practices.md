@@ -46,6 +46,8 @@ A shared cursor menu needs a distinct identity for each opening, even A â†’ B â†
 
 In MudBlazor 9, `MudDialog.UserAttributes` are applied to its content rather than the enclosing `role="dialog"` owner. Putting `aria-label` on that component does not name the modal. `MoDialogHeading` mounts a unique visible heading, then its local module assigns `aria-labelledby` and `aria-modal` to the nearest native dialog after render. It owns and drains its import/use/disposal, including a late import after retirement; it does not mutate DOM during disposal or create callbacks. Verify the outer dialog's localized accessible name and native focus restoration in the browser.
 
+An intentionally headerless dialog can mount the same visible `MoDialogHeading` inside its content, such as a search results heading. Keep its typography in that component's isolated CSS. Do not enable a redundant native title row or assume that the service's hidden title names the modal.
+
 ## 2. Lifecycle Best Practices
 
 ### 2.1 Separate Data Initialization from DOM-Dependent JS Interop
