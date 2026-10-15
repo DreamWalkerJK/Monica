@@ -327,6 +327,8 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     /// <remarks>
     /// When null, the shell opens its built-in registered-page search palette. A configured callback replaces that
     /// palette for both the toolbar control and Ctrl/Cmd+K. The host owns its custom dialog, routing, and cancellation.
+    /// Repeated requests share the callback's incomplete task. Shell retirement observes that task to completion;
+    /// the host must finish it and remains responsible for retiring any resources it creates.
     /// </remarks>
     public Func<Task>? NavBarSearchAction { get; set; }
 
