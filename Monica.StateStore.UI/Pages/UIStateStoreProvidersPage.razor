@@ -15,7 +15,7 @@
 <PageTitle>@L["Workbench:Providers"]</PageTitle>
 <div class="state-providers-page" @ref="_page" data-provider="@_selected?.UniqueId">
     <header class="page-heading"><div><span class="eyebrow">@L["Workbench:Eyebrow"]</span><h1>@L["Workbench:Providers"]</h1></div><MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh" OnClick="Load">@L["KeyExplorer:Actions:RefreshProviders"]</MudButton></header>
-    <StateStoreWorkbenchNavigation IsProvidersPage="true" ProviderIdentity="@_selected?.UniqueId" />
+    <StateStoreWorkbenchNavigation IsProvidersPage="true" ProviderIdentity="@_selected?.UniqueId" ProviderCount="@_providers.Count" />
     @if (_error is not null) { <MudAlert Severity="Severity.Error" Icon="@MoIcons.Error">@_error</MudAlert> }
     @if (_providers.Count > 0)
     {

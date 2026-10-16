@@ -26,15 +26,7 @@
         <div class="provider-context">
             @if (selectedProvider is { } provider)
             {
-                <span class="provider-symbol" data-tone="@StateStoreUi.Tone(provider)"><MoIcon Icon="@StateStoreUi.Icon(provider)" Size="1.3rem" /></span>
-                @if (Providers.Count > 1)
-                {
-                    <MudSelect T="string" Class="provider-select" Value="@provider.UniqueId" ValueChanged="SelectProviderIdentity" Variant="Variant.Text" SelectionOnEnter="true" aria-label="@L["KeyExplorer:Labels:ProviderScope"]" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
-                        @foreach (var item in Providers) { <MudSelectItem T="string" Value="@item.UniqueId"><span class="provider-option">@L.GetProviderDisplayName(item)</span></MudSelectItem> }
-                    </MudSelect>
-                }
-                else { <strong class="provider-name">@L.GetProviderDisplayName(provider)</strong> }
-                <span class="provider-description">@GetProviderCardDescription(provider)</span>
+                <StateStoreProviderSelector Provider="provider" Providers="Providers" OnSelected="SelectProviderIdentity" />
                 <a class="provider-info" href="@StateStoreUi.Providers(provider.UniqueId)" aria-label="@L["ProviderCard:Actions:ViewDetails"]" title="@L["ProviderCard:Actions:ViewDetails"]"><MoIcon Icon="@MoIcons.Info" Size="1.1rem" /></a>
             }
         </div>

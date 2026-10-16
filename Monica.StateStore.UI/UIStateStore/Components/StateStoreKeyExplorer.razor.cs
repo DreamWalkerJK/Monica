@@ -475,7 +475,6 @@ public partial class StateStoreKeyExplorer
     private bool CanShowRowSelection() => Options.AllowKeyDeletion && selectedProvider?.SupportsBulkDelete == true;
     private bool IsSearchMode(EStateStoreKeySearchMode mode) => searchMode == mode;
     private string GetProviderCaption(StateStoreProviderInfo provider) => L.GetProviderDisplayName(provider) + " · " + L.GetProviderTypeText(provider.ProviderType);
-    private string GetProviderCardDescription(StateStoreProviderInfo provider) => L.GetProviderTypeText(provider.ProviderType) + " · " + L[provider.IsDistributed ? "ProviderDetail:Labels:Distributed" : "ProviderDetail:Labels:LocalMemory"];
     private string GetSearchLabel() => L[searchMode == EStateStoreKeySearchMode.PatternScan ? "KeyExplorer:Labels:KeyPattern" : "KeyExplorer:Labels:KeyName"];
     private string GetSearchPlaceholder() => L[searchMode == EStateStoreKeySearchMode.PatternScan ? "KeyExplorer:Placeholders:PatternSearch" : "KeyExplorer:Placeholders:FullKeyName"];
     private string GetSearchActionText() => L[searchMode == EStateStoreKeySearchMode.PatternScan ? "KeyExplorer:Actions:Scan" : "KeyExplorer:Actions:Query"];
