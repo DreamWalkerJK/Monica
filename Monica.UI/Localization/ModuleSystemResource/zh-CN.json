@@ -55,7 +55,8 @@
     "Null": "空值",
     "Yes": "是",
     "No": "否",
-    "None": "无"
+    "None": "无",
+    "PagerInfo": "{first_item}-{last_item} / {all_items} 条"
   },
   "Sections": {
     "Overview": "概览",
@@ -104,11 +105,9 @@
       "TypeDiscovery": "类型发现"
     },
     "CriticalPath": {
-      "Eyebrow": "启动因果链",
-      "Title": "关键路径带",
+      "Title": "因果序列",
       "Hint": "选择证据可同步时间线、模块和依赖上下文。",
       "Count": "{0} 个因果区间",
-      "Legend": "琥珀 = 阻塞等待 · 蓝 = 启动任务",
       "Empty": "没有记录因果阻塞路径。",
       "SpanDescription": "{0}；{1}；耗时 {2}。"
     },
@@ -120,23 +119,23 @@
     },
     "Score": {
       "Eyebrow": {
-        "Startup": "启动谱 · 进程启动至应用就绪",
-        "Composition": "组合谱 · 模块组合区间"
+        "Startup": "应用启动耗时",
+        "Composition": "模块组合耗时"
       },
       "Display": {
         "Aria": "记录耗时 {0}"
       },
       "Lede": {
-        "OfWhich": "其中",
-        "Joiner": "，"
+        "OfWhich": "分别记录：",
+        "Joiner": "；"
       },
       "Mark": {
         "Composition": "Monica 组合 {0}",
-        "Work": "启动任务 {0}"
+        "Work": "启动任务累计 {0}"
       },
       "Longest": {
-        "Prefix": "。最长单项是 ",
-        "Suffix": " 的启动任务。"
+        "Prefix": "。启动任务累计耗时最多：",
+        "Suffix": "。"
       }
     },
     "Ledger": {
@@ -178,35 +177,45 @@
       "Title": "依赖深度",
       "Sub": "{0} 个活跃模块的层级分布",
       "Empty": "没有活跃模块。"
+    },
+    "Trace": {
+      "Eyebrow": "启动轨迹",
+      "Title": "启动过程，一目了然",
+      "Count": "{0} 条记录"
     }
   },
   "Timeline": {
-    "Ready": "就绪",
-    "Caption": {
-      "Share": "占就绪时刻 {0}"
-    },
+    "Origin": "自组合开始的经过时间",
+    "Expand": "展开 {0} 个阶段",
+    "Collapse": "合并阶段",
     "Lane": {
       "Aria": "{0}，{1}",
+      "AggregateAria": "{0}，{1} 个记录区间，累计时长 {2}",
+      "Framework": "框架阶段",
+      "Discovery": "类型发现",
+      "Registration": "服务注册回调",
+      "Lifecycle": "生命周期回调",
       "Barriers": "阻塞等待",
       "Work": "启动任务"
     },
-    "Note": {
-      "Barriers": "启动任务屏障造成的串行等待，合计 {0}。",
-      "WorkAggregate": "并发任务按聚合串行视图展示，串行合计 {0}。",
-      "WorkSerial": "按真实发生区间展示。"
+    "Detail": {
+      "Select": "检查记录区间",
+      "Aggregate": "{0} 个区间 · 累计 {1}",
+      "Interval": "{0} → {1}",
+      "Duration": "时长 {0}"
     },
-    "Bracket": {
-      "Composition": "Monica 组合 · {0}",
-      "Work": "启动任务 · {0}",
-      "WorkAggregate": "启动任务 · 串行合计 {0}"
-    }
+    "Note": {
+      "Intervals": "条形按实际记录偏移绘制，重叠区间不能相加作为经过时间。"
+    },
+    "Empty": "尚未记录启动区间。"
   },
   "Performance": {
     "Budgets": {
       "Eyebrow": "已配置限制",
       "Title": "性能预算",
       "Measurement": "实际 {0} / 上限 {1}",
-      "Utilization": "利用率 {0}"
+      "Utilization": "利用率 {0}",
+      "MeterAria": "{0}：实际 {1}，预算 {2}。"
     },
     "Waterfall": {
       "Eyebrow": "启动时间线",
@@ -249,7 +258,8 @@
     },
     "Discovery": {
       "Eyebrow": "一次类型发现编译",
-      "Title": "强类型发现阶段"
+      "Title": "强类型发现阶段",
+      "StageAria": "{0}，{1}。"
     },
     "StartupWork": {
       "Eyebrow": "调度的启动工作",
@@ -282,10 +292,9 @@
       "Callbacks": "串行回调",
       "StartupWork": "启动工作",
       "ScaleHint": "进度条宽度相对于记录成本最高的模块；颜色区分串行回调与启动工作。",
-      "Breakdown": "{0}：总计 {1}；串行回调 {2}；启动工作 {3}；为最高模块记录成本的 {4}%。"
+      "MeterAria": "{0}：回调 {1}，启动任务 {2}。"
     },
     "Summary": {
-      "Label": "模块目录摘要",
       "Active": "活动模块",
       "Ui": "UI 模块",
       "Web": "Web 模块",
@@ -336,7 +345,6 @@
       "Radial": "径向深度"
     },
     "Overview": {
-      "Label": "可见拓扑摘要",
       "Modules": "模块",
       "Edges": "直接边",
       "Depth": "最大深度",
@@ -355,8 +363,6 @@
     "Graph": {
       "Rendering": "正在渲染模块拓扑…",
       "Failed": "无法渲染依赖图。",
-      "Nodes": "{0} 个节点",
-      "Edges": "{0} 条边",
       "FullHostMode": "完整宿主模式",
       "NeighborhoodMode": "{0} 跳邻域"
     },

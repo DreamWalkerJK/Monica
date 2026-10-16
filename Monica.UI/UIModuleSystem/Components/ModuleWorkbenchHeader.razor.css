@@ -1,87 +1,21 @@
-/* Workbench masthead built on the shared mo-vl-masthead roles; only the
-   baseline file control and the comparison banners need local styling. */
-
-/* Measured near 3.8-4.2:1 in light themes; one notch toward primary restores the 4.5:1 metadata floor. */
-.mo-vl-crumb,
-.mo-vl-meta {
-    color: color-mix(in srgb, var(--mud-palette-text-secondary) 55%, var(--mud-palette-text-primary));
-}
-
-.mo-vl-meta ::deep .identifier-value {
-    min-width: 0;
-    max-width: 100%;
-}
-
-.mo-vl-meta ::deep .identifier-value code {
-    font-size: 0.75rem;
-}
-
-.mo-vl-actions ::deep .mud-button-root {
-    min-height: 36px;
-    padding: 6px 12px;
-    border-radius: 9px;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    text-transform: none;
-}
-
-.mo-vl-actions ::deep .mud-icon-button {
-    width: 36px;
-    height: 36px;
-}
-
-.mo-vl-actions ::deep .mud-icon-root {
-    width: 18px;
-    height: 18px;
-}
-
-.baseline-file-button {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 36px;
-    padding: 6px 12px;
-    border: 1px solid var(--mud-palette-lines-inputs);
-    border-radius: 9px;
-    background: var(--mud-palette-surface);
-    color: var(--mud-palette-text-primary);
-    font-family: var(--mo-font-family-body);
-    font-size: 0.8125rem;
-    line-height: 1.5;
-    cursor: pointer;
-}
-
-.baseline-file-button:hover {
-    background: var(--mud-palette-action-default-hover);
-}
-
-.baseline-file-button:focus-within {
-    outline: 2px solid var(--mud-palette-primary);
-    outline-offset: 2px;
-}
-
-.baseline-file-button ::deep input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-}
-
-.comparison-banner {
-    width: 100%;
-    min-width: 0;
-    margin-top: 16px;
-}
-
-.comparison-banner ::deep .mud-alert {
-    border-radius: 8px;
-}
-
-.comparison-banner ::deep .mud-alert-message {
-    color: var(--mud-palette-text-primary);
-    font-size: 0.8125rem;
-    line-height: 1.7;
-    overflow-wrap: anywhere;
+.mo-vl-masthead { align-items: flex-end; }
+.mo-vl-meta { font-family: var(--mo-font-family-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.mo-vl-meta ::deep .identifier-value { min-width: 0; max-width: 100%; }
+.mo-vl-meta ::deep .identifier-value code { font-size: .75rem; }
+.mo-vl-actions { padding-bottom: 1px; }
+.mo-vl-actions ::deep .mud-button-root { min-height: 36px; padding: 7px 12px; border-radius: 7px; font-size: .8125rem; font-weight: 500; line-height: 1.5; text-transform: none; }
+.mo-vl-actions ::deep .mud-button-filled { box-shadow: none; }
+.mo-vl-actions ::deep .mud-icon-button { width: 36px; height: 36px; border-radius: 7px; }
+.mo-vl-actions ::deep .mud-icon-root { width: 18px; height: 18px; }
+.baseline-file-button { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 7px 12px; border: 1px solid var(--mud-palette-lines-inputs); border-radius: 7px; background: var(--mud-palette-surface); color: var(--mud-palette-text-primary); font-family: var(--mo-font-family-body); font-size: .8125rem; font-weight: 500; line-height: 1.5; cursor: pointer; }
+.baseline-file-button:hover { background: var(--mud-palette-action-default-hover); }
+.baseline-file-button:focus-within { outline: 2px solid var(--mud-palette-primary); outline-offset: 3px; }
+.baseline-file-button ::deep input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+.comparison-banner { width: 100%; min-width: 0; margin-top: 18px; }
+.comparison-banner ::deep .mud-alert { border-radius: 8px; }
+.comparison-banner ::deep .mud-alert-message { color: var(--mud-palette-text-primary); font-size: .8125rem; line-height: 1.7; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+    .mo-vl-actions { gap: 8px; }
+    .mo-vl-actions ::deep .mud-button-root, .baseline-file-button { padding-inline: 10px; }
+    .mo-vl-meta { gap: 8px 10px; }
 }

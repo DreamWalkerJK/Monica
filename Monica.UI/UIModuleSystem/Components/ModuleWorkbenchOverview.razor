@@ -1,6 +1,7 @@
 @using Microsoft.Extensions.Localization
 @using System.Globalization
 @using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.Core.Modularity.Models
 @using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.State
 @using Monica.UI.UIModuleSystem.Support
@@ -16,8 +17,9 @@
         .OrderByDescending(static module => module.StartupWorkDurationMs)
         .FirstOrDefault();
     <section class="overview-score" aria-label="@L["Aria:SummaryMetrics"]">
-        <div class="score-head">
+        <div class="score-feature">
             <div class="score-lede">
+                <span class="score-symbol" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Route" /></span>
                 <p class="mo-vl-eyebrow">@(startupDuration.HasValue ? L["Overview:Score:Eyebrow:Startup"] : L["Overview:Score:Eyebrow:Composition"])</p>
                 <MoDisplayValue Value="@DisplayValue(recordedDuration)"
                                 Unit="@DisplayUnit(recordedDuration)"
@@ -27,7 +29,7 @@
                 {
                     <p class="score-delta">@FormatExactDelta(startupDelta)</p>
                 }
-                <p class="mo-vl-lede">
+                <p class="mo-vl-lede score-finding">
                     @L["Overview:Score:Lede:OfWhich"]
                     <MoValueMark Role="MoVisualRole.Primary">@L["Overview:Score:Mark:Composition", ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TotalCompositionDurationMs)]</MoValueMark>
                     <span>@L["Overview:Score:Lede:Joiner"]</span>
@@ -35,8 +37,7 @@
                     @if (longestWorkModule is { } longest)
                     {
                         <span>@L["Overview:Score:Longest:Prefix"]</span>
-                        <button type="button" class="mo-vl-link" @onclick="() => ModuleSelected.InvokeAsync(longest)">@longest.TypeName</button>
-                        <span>@L["Overview:Score:Longest:Suffix"]</span>
+                        <span class="score-contributor"><button type="button" class="mo-vl-link" @onclick="() => ModuleSelected.InvokeAsync(longest)">@longest.TypeName</button><span>@L["Overview:Score:Longest:Suffix"]</span></span>
                     }
                 </p>
                 @if (!startupDuration.HasValue)
@@ -44,14 +45,23 @@
                     <p class="score-note">@L["Atlas:Overview:StartupNotTracked"]</p>
                 }
             </div>
-            <MoFactGrid Facts="@Facts(snapshot)" />
+            <div class="score-trace">
+                <header class="score-trace-heading">
+                    <div>
+                        <p class="mo-vl-eyebrow">@L["Overview:Trace:Eyebrow"]</p>
+                        <h2>@L["Overview:Trace:Title"]</h2>
+                    </div>
+                    <span class="trace-count mo-vl-mono">@L["Overview:Trace:Count", snapshot.TraceSpans.Length]</span>
+                </header>
+                <ModuleWorkbenchStartupTimeline Session="@Session" />
+            </div>
         </div>
-        <ModuleWorkbenchStartupTimeline Session="@Session" />
+        <div class="score-facts"><MoFactGrid Facts="@Facts(snapshot)" /></div>
     </section>
 
     <div class="overview-evidence">
         <section class="mo-vl-panel ledger-panel" aria-labelledby="ledger-title">
-            <header class="mo-vl-panel-head">
+            <header class="mo-vl-panel-head ledger-heading">
                 <div>
                     <h2 id="ledger-title" class="mo-vl-panel-title">@L["Overview:Ledger:Title"]</h2>
                     <p class="mo-vl-panel-sub">@L["Overview:Ledger:Sub", snapshot.Summary.ModuleCount]</p>
@@ -112,9 +122,10 @@
                             <MoSemanticCallout Severity="@FindingRole(finding.Severity)"
                                                 Title="@ModuleDiagnosticsDisplay.Finding(finding, L)">
                                 <span class="mo-vl-mono">@finding.Code</span>
-                                @if (finding.RelatedModules.FirstOrDefault() is { } relatedModule)
+                                @if (finding.RelatedModules.Length > 0)
                                 {
-                                    <button type="button" class="mo-vl-link" @onclick="() => SelectModuleByNameAsync(relatedModule.Value)">@relatedModule.Value</button>
+                                    var relatedModule = finding.RelatedModules[0];
+                                    <button type="button" class="mo-vl-link" @onclick="() => SelectFindingModuleAsync(relatedModule)">@relatedModule.Value</button>
                                 }
                             </MoSemanticCallout>
                         }
@@ -128,9 +139,10 @@
                                             <MoSemanticCallout Severity="@FindingRole(finding.Severity)"
                                                                 Title="@ModuleDiagnosticsDisplay.Finding(finding, L)">
                                                 <span class="mo-vl-mono">@finding.Code</span>
-                                                @if (finding.RelatedModules.FirstOrDefault() is { } overflowModule)
+                                                @if (finding.RelatedModules.Length > 0)
                                                 {
-                                                    <button type="button" class="mo-vl-link" @onclick="() => SelectModuleByNameAsync(overflowModule.Value)">@overflowModule.Value</button>
+                                                    var relatedModule = finding.RelatedModules[0];
+                                                    <button type="button" class="mo-vl-link" @onclick="() => SelectFindingModuleAsync(relatedModule)">@relatedModule.Value</button>
                                                 }
                                             </MoSemanticCallout>
                                         }
@@ -270,7 +282,8 @@
                     workCaption,
                     callback + work > 0 ? ModuleDiagnosticsDisplay.Duration(callback + work) : "—",
                     TotalWarn: module.ErrorCount > 0,
-                    Disabled: !module.IsActive);
+                    Disabled: !module.IsActive,
+                    Key: module.ModuleKey.Id);
                 rows.Add(row);
             }
 
@@ -334,13 +347,12 @@
     }
 
     private Task SelectLedgerRowAsync(MoLedgerRow row) => Session.Snapshot?.Modules
-        .FirstOrDefault(module => module.TypeName == row.Name
-            && module.AssemblyName == row.Metadata) is { } module
+        .FirstOrDefault(module => string.Equals(module.ModuleKey.Id, row.Key, StringComparison.Ordinal)) is { } module
             ? ModuleSelected.InvokeAsync(module)
             : Task.CompletedTask;
 
-    private Task SelectModuleByNameAsync(string typeName) => Session.Snapshot?.Modules
-        .FirstOrDefault(module => string.Equals(module.TypeName, typeName, StringComparison.Ordinal)) is { } module
+    private Task SelectFindingModuleAsync(ModuleKey moduleKey) => Session.Snapshot?.Modules
+        .FirstOrDefault(module => module.ModuleKey == moduleKey) is { } module
             ? ModuleSelected.InvokeAsync(module)
             : Task.CompletedTask;
 

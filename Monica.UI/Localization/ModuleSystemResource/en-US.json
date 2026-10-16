@@ -55,7 +55,8 @@
     "Null": "null",
     "Yes": "Yes",
     "No": "No",
-    "None": "None"
+    "None": "None",
+    "PagerInfo": "{first_item}-{last_item} of {all_items}"
   },
   "Sections": {
     "Overview": "Overview",
@@ -104,11 +105,9 @@
       "TypeDiscovery": "Type discovery"
     },
     "CriticalPath": {
-      "Eyebrow": "CAUSAL STARTUP CHAIN",
-      "Title": "Critical-path ribbon",
+      "Title": "Causal sequence",
       "Hint": "Select evidence to synchronize timeline, module, and dependency context.",
       "Count": "{0} causal intervals",
-      "Legend": "Amber = barrier wait · Blue = startup work",
       "Empty": "No causal blocking path was recorded.",
       "SpanDescription": "{0}; {1}; duration {2}."
     },
@@ -120,22 +119,22 @@
     },
     "Score": {
       "Eyebrow": {
-        "Startup": "Startup spectrum · process start to application ready",
-        "Composition": "Composition spectrum · module composition interval"
+        "Startup": "APPLICATION STARTUP",
+        "Composition": "MODULE COMPOSITION"
       },
       "Display": {
         "Aria": "Recorded duration {0}"
       },
       "Lede": {
-        "OfWhich": "Of which ",
-        "Joiner": ", "
+        "OfWhich": "Recorded separately: ",
+        "Joiner": "; "
       },
       "Mark": {
         "Composition": "Monica composition {0}",
-        "Work": "startup work {0}"
+        "Work": "aggregate startup work {0}"
       },
       "Longest": {
-        "Prefix": ". The longest item is startup work of ",
+        "Prefix": ". Largest startup-work contributor: ",
         "Suffix": "."
       }
     },
@@ -178,35 +177,45 @@
       "Title": "Dependency depth",
       "Sub": "Level distribution of {0} active modules",
       "Empty": "No active modules."
+    },
+    "Trace": {
+      "Eyebrow": "STARTUP TRACE",
+      "Title": "How startup unfolded",
+      "Count": "{0} spans"
     }
   },
   "Timeline": {
-    "Ready": "Ready",
-    "Caption": {
-      "Share": "{0} of the ready instant"
-    },
+    "Origin": "Elapsed from composition start",
+    "Expand": "Inspect {0} stages",
+    "Collapse": "Group stages",
     "Lane": {
       "Aria": "{0}, {1}",
+      "AggregateAria": "{0}, {1} recorded spans, aggregate duration {2}",
+      "Framework": "Framework stages",
+      "Discovery": "Type discovery",
+      "Registration": "Service callbacks",
+      "Lifecycle": "Lifecycle callbacks",
       "Barriers": "Barrier waits",
       "Work": "Startup work"
     },
-    "Note": {
-      "Barriers": "Serial waits imposed by startup-work barriers, {0} in total.",
-      "WorkAggregate": "Concurrent items shown as an aggregate serial view; the serial sum is {0}.",
-      "WorkSerial": "Shown at real recorded intervals."
+    "Detail": {
+      "Select": "Inspect a recorded span",
+      "Aggregate": "{0} spans · {1} aggregate",
+      "Interval": "{0} → {1}",
+      "Duration": "Duration {0}"
     },
-    "Bracket": {
-      "Composition": "Monica composition · {0}",
-      "Work": "Startup work · {0}",
-      "WorkAggregate": "Startup work · serial sum {0}"
-    }
+    "Note": {
+      "Intervals": "Bars use recorded offsets. Overlapping spans are not additive elapsed time."
+    },
+    "Empty": "No startup intervals were recorded."
   },
   "Performance": {
     "Budgets": {
       "Eyebrow": "CONFIGURED LIMITS",
       "Title": "Performance budgets",
       "Measurement": "{0} actual / {1} limit",
-      "Utilization": "{0} utilization"
+      "Utilization": "{0} utilization",
+      "MeterAria": "{0}: {1} actual against a {2} budget."
     },
     "Waterfall": {
       "Eyebrow": "STARTUP TIMELINE",
@@ -249,7 +258,8 @@
     },
     "Discovery": {
       "Eyebrow": "ONE DISCOVERY COMPILATION",
-      "Title": "Typed discovery stages"
+      "Title": "Typed discovery stages",
+      "StageAria": "{0}, {1}."
     },
     "StartupWork": {
       "Eyebrow": "SCHEDULED STARTUP WORK",
@@ -282,10 +292,9 @@
       "Callbacks": "Serial callbacks",
       "StartupWork": "Startup work",
       "ScaleHint": "Bar width is relative to the highest recorded module cost. Colors separate serial callbacks from startup work.",
-      "Breakdown": "{0}: {1} total; {2} serial callbacks; {3} startup work; {4}% of the highest recorded module cost."
+      "MeterAria": "{0}: callbacks {1}, startup work {2}."
     },
     "Summary": {
-      "Label": "Module catalog summary",
       "Active": "Active",
       "Ui": "UI modules",
       "Web": "Web modules",
@@ -336,7 +345,6 @@
       "Radial": "Radial depth"
     },
     "Overview": {
-      "Label": "Visible topology summary",
       "Modules": "Modules",
       "Edges": "Direct edges",
       "Depth": "Maximum depth",
@@ -355,8 +363,6 @@
     "Graph": {
       "Rendering": "Rendering module topology…",
       "Failed": "The dependency graph could not be rendered.",
-      "Nodes": "{0} nodes",
-      "Edges": "{0} edges",
       "FullHostMode": "Full-host mode",
       "NeighborhoodMode": "{0}-hop neighborhood"
     },
