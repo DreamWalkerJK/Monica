@@ -149,9 +149,14 @@
     color: var(--mud-palette-primary);
 }
 
-.tree-content ::deep .empty-state {
-    gap: 12px;
-    padding: 28px 8px;
+.tree-content--empty {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.tree-content--empty ::deep .tree-empty-state {
+    flex: 1;
 }
 
 .tree-content ::deep .tree-empty-icon {
