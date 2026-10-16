@@ -1,13 +1,13 @@
+using Monica.UI.Shared.Support;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.JSInterop;
-using Monica.UI.UIStackTrace.Support;
 using Xunit;
 
-namespace Test.Monica.UI.UIStackTrace.Support;
+namespace Test.Monica.UI.Shared.Support;
 
-public sealed class StackTraceCopySessionTests
+public sealed class TextCopySessionTests
 {
     [Theory]
     [InlineData(true)]
@@ -22,13 +22,13 @@ public sealed class StackTraceCopySessionTests
 
         var copy = session.CopyAsync();
         session.State.IsCopying.Should().BeTrue();
-        session.State.Feedback.Should().Be(StackTraceCopyFeedback.None);
+        session.State.Feedback.Should().Be(TextCopyFeedback.None);
         session.State.CanCopy.Should().BeFalse();
         runtime.Calls.Should().ContainSingle().Which.Should().Be(new ClipboardCall("MoClipboard.copyText", source));
 
         producer.SetResult(copied);
         await copy;
-        session.State.Feedback.Should().Be(copied ? StackTraceCopyFeedback.Copied : StackTraceCopyFeedback.Failed);
+        session.State.Feedback.Should().Be(copied ? TextCopyFeedback.Copied : TextCopyFeedback.Failed);
         session.State.IsCopying.Should().BeFalse();
         session.State.CanCopy.Should().BeTrue();
     }
@@ -65,7 +65,7 @@ public sealed class StackTraceCopySessionTests
 
         producer.SetResult(true);
         await Task.WhenAll(first, second);
-        session.State.Feedback.Should().Be(StackTraceCopyFeedback.None);
+        session.State.Feedback.Should().Be(TextCopyFeedback.None);
         session.State.CanCopy.Should().BeTrue();
         runtime.Calls.Should().ContainSingle();
     }
@@ -86,7 +86,7 @@ public sealed class StackTraceCopySessionTests
         producer.SetResult(copied);
         await copy;
 
-        session.State.Feedback.Should().Be(StackTraceCopyFeedback.None);
+        session.State.Feedback.Should().Be(TextCopyFeedback.None);
         runtime.Calls.Should().ContainSingle().Which.Payload.Should().Be("A");
     }
 
@@ -96,7 +96,7 @@ public sealed class StackTraceCopySessionTests
         var producer = NewCompletion();
         var runtime = new ControlledRuntime(_ => producer.Task);
         var logger = new RecordingLogger();
-        await using var session = new StackTraceCopySession(runtime, logger);
+        await using var session = new TextCopySession(runtime, logger);
         session.SetSource("A");
         var copy = session.CopyAsync();
         session.SetSource("B");
@@ -107,7 +107,7 @@ public sealed class StackTraceCopySessionTests
         await copy;
 
         logger.Errors.Should().ContainSingle().Which.Should().BeSameAs(error);
-        session.State.Feedback.Should().Be(StackTraceCopyFeedback.None);
+        session.State.Feedback.Should().Be(TextCopyFeedback.None);
     }
 
     [Fact]
@@ -117,20 +117,20 @@ public sealed class StackTraceCopySessionTests
         var error = new JSException("Clipboard script unavailable.");
         var runtime = new ControlledRuntime(_ => ++attempts == 1 ? throw error : Task.FromResult(true));
         var logger = new RecordingLogger();
-        await using var session = new StackTraceCopySession(runtime, logger);
+        await using var session = new TextCopySession(runtime, logger);
         session.SetSource("source");
 
         await session.CopyAsync();
-        session.State.Feedback.Should().Be(StackTraceCopyFeedback.Failed);
+        session.State.Feedback.Should().Be(TextCopyFeedback.Failed);
         logger.Errors.Should().ContainSingle().Which.Should().BeSameAs(error);
 
         await session.CopyAsync();
-        session.State.Feedback.Should().Be(StackTraceCopyFeedback.Copied);
+        session.State.Feedback.Should().Be(TextCopyFeedback.Copied);
         runtime.Calls.Should().HaveCount(2);
         session.SetSource("source").Should().BeFalse();
-        session.State.Feedback.Should().Be(StackTraceCopyFeedback.Copied);
+        session.State.Feedback.Should().Be(TextCopyFeedback.Copied);
         session.SetSource("new source").Should().BeTrue();
-        session.State.Feedback.Should().Be(StackTraceCopyFeedback.None);
+        session.State.Feedback.Should().Be(TextCopyFeedback.None);
     }
 
     [Theory]
@@ -154,7 +154,7 @@ public sealed class StackTraceCopySessionTests
 
         producer.SetResult(copied);
         await Task.WhenAll(copy, retirement);
-        session.State.Feedback.Should().Be(StackTraceCopyFeedback.None);
+        session.State.Feedback.Should().Be(TextCopyFeedback.None);
         session.State.IsCopying.Should().BeFalse();
         runtime.DisposeCount.Should().Be(0);
         await session.DisposeAsync();
@@ -166,7 +166,7 @@ public sealed class StackTraceCopySessionTests
         var producer = NewCompletion();
         var runtime = new ControlledRuntime(_ => producer.Task);
         var logger = new RecordingLogger();
-        var session = new StackTraceCopySession(runtime, logger);
+        var session = new TextCopySession(runtime, logger);
         session.SetSource("source");
         var copy = session.CopyAsync();
         var retirement = session.DisposeAsync().AsTask();
@@ -176,7 +176,7 @@ public sealed class StackTraceCopySessionTests
         await Task.WhenAll(copy, retirement);
 
         logger.Errors.Should().ContainSingle().Which.Should().BeSameAs(error);
-        session.State.Feedback.Should().Be(StackTraceCopyFeedback.None);
+        session.State.Feedback.Should().Be(TextCopyFeedback.None);
         runtime.DisposeCount.Should().Be(0);
     }
 
@@ -184,7 +184,7 @@ public sealed class StackTraceCopySessionTests
     public async Task CopyAsync_WhenRuntimeReentersRetirementBeforeReturningProducer_ShouldReserveDrainageFirst()
     {
         var producer = NewCompletion();
-        StackTraceCopySession? session = null;
+        TextCopySession? session = null;
         Task? retirement = null;
         var runtime = new ControlledRuntime(_ =>
         {
@@ -202,7 +202,7 @@ public sealed class StackTraceCopySessionTests
 
         producer.SetResult(true);
         await Task.WhenAll(copy, retirement);
-        session.State.Feedback.Should().Be(StackTraceCopyFeedback.None);
+        session.State.Feedback.Should().Be(TextCopyFeedback.None);
         runtime.DisposeCount.Should().Be(0);
     }
 
@@ -222,16 +222,16 @@ public sealed class StackTraceCopySessionTests
 
         secondProducer.SetResult(true);
         await secondCopy;
-        second.State.Feedback.Should().Be(StackTraceCopyFeedback.Copied);
+        second.State.Feedback.Should().Be(TextCopyFeedback.Copied);
         retirement.IsCompleted.Should().BeFalse();
 
         firstProducer.SetResult(false);
         await Task.WhenAll(firstCopy, retirement);
-        first.State.Feedback.Should().Be(StackTraceCopyFeedback.None);
-        second.State.Feedback.Should().Be(StackTraceCopyFeedback.Copied);
+        first.State.Feedback.Should().Be(TextCopyFeedback.None);
+        second.State.Feedback.Should().Be(TextCopyFeedback.Copied);
     }
 
-    private static StackTraceCopySession CreateSession(IJSRuntime runtime) => new(runtime, NullLogger.Instance);
+    private static TextCopySession CreateSession(IJSRuntime runtime) => new(runtime, NullLogger.Instance);
     private static TaskCompletionSource<bool> NewCompletion() => new(TaskCreationOptions.RunContinuationsAsynchronously);
     private sealed record ClipboardCall(string Identifier, string Payload);
 

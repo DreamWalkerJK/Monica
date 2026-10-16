@@ -18,6 +18,9 @@ public sealed class ChatWorkbenchPresentationTests : BunitContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddMudServices();
+        Services.AddOptions<global::Monica.Modules.ModuleShellUIOption>();
+        Services.AddOptions<global::Monica.Modules.ModuleClockOption>();
+        Services.AddSingleton<global::Monica.UI.Shared.Services.MoTimeFormatter>();
         Services.AddSingleton<IStringLocalizer<AIResource>, EchoStringLocalizer<AIResource>>();
         _ = Render<MudBlazor.MudPopoverProvider>();
     }

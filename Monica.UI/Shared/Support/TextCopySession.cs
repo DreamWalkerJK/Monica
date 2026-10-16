@@ -1,26 +1,26 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
-namespace Monica.UI.UIStackTrace.Support;
+namespace Monica.UI.Shared.Support;
 
 /// <summary>
 /// Owns clipboard admission and feedback for one viewer. The runtime and logger are borrowed.
 /// Source replacement invalidates feedback; retirement drains the actual write without claiming
 /// to cancel a browser clipboard operation or disposing either borrowed dependency.
 /// </summary>
-internal sealed class StackTraceCopySession(IJSRuntime runtime, ILogger logger) : IAsyncDisposable
+internal sealed class TextCopySession(IJSRuntime runtime, ILogger logger) : IAsyncDisposable
 {
     private readonly IJSRuntime _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
     private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly object _sync = new();
     private string? _source;
     private long _generation;
-    private StackTraceCopyFeedback _feedback;
+    private TextCopyFeedback _feedback;
     private TaskCompletionSource? _active;
     private Task? _retirement;
     private bool _retired;
 
-    internal StackTraceCopyState State
+    internal TextCopyState State
     {
         get
         {
@@ -37,7 +37,7 @@ internal sealed class StackTraceCopySession(IJSRuntime runtime, ILogger logger) 
             if (_retired || string.Equals(_source, source, StringComparison.Ordinal)) return false;
             _source = source;
             _generation++;
-            _feedback = StackTraceCopyFeedback.None;
+            _feedback = TextCopyFeedback.None;
             return true;
         }
     }
@@ -59,7 +59,7 @@ internal sealed class StackTraceCopySession(IJSRuntime runtime, ILogger logger) 
             generation = _generation;
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
             _active = completion;
-            _feedback = StackTraceCopyFeedback.None;
+            _feedback = TextCopyFeedback.None;
         }
 
         // Reserve drainage before a synchronous runtime can re-enter source replacement or retirement.
@@ -79,13 +79,13 @@ internal sealed class StackTraceCopySession(IJSRuntime runtime, ILogger logger) 
             }
             catch (Exception exception)
             {
-                _logger.LogWarning(exception, "Could not copy diagnostic text to the clipboard.");
+                _logger.LogWarning(exception, "Could not copy text to the clipboard.");
             }
 
             lock (_sync)
             {
                 if (!_retired && generation == _generation)
-                    _feedback = copied ? StackTraceCopyFeedback.Copied : StackTraceCopyFeedback.Failed;
+                    _feedback = copied ? TextCopyFeedback.Copied : TextCopyFeedback.Failed;
                 _active = null;
                 completion.TrySetResult();
             }
@@ -106,16 +106,16 @@ internal sealed class StackTraceCopySession(IJSRuntime runtime, ILogger logger) 
         lock (_sync)
         {
             _retired = true;
-            _feedback = StackTraceCopyFeedback.None;
+            _feedback = TextCopyFeedback.None;
             _retirement ??= _active?.Task ?? Task.CompletedTask;
             return new(_retirement);
         }
     }
 }
 
-internal readonly record struct StackTraceCopyState(bool CanCopy, bool IsCopying, StackTraceCopyFeedback Feedback, bool IsRetired);
+internal readonly record struct TextCopyState(bool CanCopy, bool IsCopying, TextCopyFeedback Feedback, bool IsRetired);
 
-internal enum StackTraceCopyFeedback
+internal enum TextCopyFeedback
 {
     None,
     Copied,

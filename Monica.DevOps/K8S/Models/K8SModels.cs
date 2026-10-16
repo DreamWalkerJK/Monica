@@ -340,14 +340,12 @@ public class K8SResourceSummary
 
     public string ReplicaStatus => DesiredReplicas > 0 || ReadyReplicas > 0 ? $"{ReadyReplicas}/{DesiredReplicas}" : "-";
 
-    public string LastRestartedAtDisplay => LastRestartedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "-";
-
     public string SearchText
     {
         get
         {
             var tokens =
-                new List<string> { Name, Namespace, Kind, Type, ClusterIp, SelectorDisplay, PortsDisplay, ImagesDisplay, ReplicaStatus, LastRestartedAtDisplay };
+                new List<string> { Name, Namespace, Kind, Type, ClusterIp, SelectorDisplay, PortsDisplay, ImagesDisplay, ReplicaStatus, LastRestartedAtUtc?.ToString("O") ?? string.Empty };
 
             tokens.AddRange(Selector.Select(pair => $"{pair.Key} {pair.Value}"));
             tokens.AddRange(Ports.Select(port => port.DisplayText));
@@ -384,8 +382,6 @@ public class K8SWorkloadReference
     public string DisplayName => $"{Kind}/{Name}";
 
     public string ReplicaStatus => DesiredReplicas > 0 || ReadyReplicas > 0 ? $"{ReadyReplicas}/{DesiredReplicas}" : "-";
-
-    public string LastRestartedAtDisplay => LastRestartedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "-";
 
     public K8SWorkloadReference WithPodStartFallback(DateTimeOffset? podStartTime)
     {
@@ -448,8 +444,6 @@ public class K8SPodSummary
     public string PhaseDisplay => string.IsNullOrWhiteSpace(Phase) ? "-" : Phase;
 
     public string ReadyDisplay => TotalContainers > 0 ? $"{ReadyContainers}/{TotalContainers}" : "-";
-
-    public string StartTimeDisplay => StartTimeUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "-";
 
     public string WorkloadDisplayName => !string.IsNullOrWhiteSpace(WorkloadKind) && !string.IsNullOrWhiteSpace(WorkloadName)
         ? $"{WorkloadKind}/{WorkloadName}"

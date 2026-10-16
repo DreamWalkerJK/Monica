@@ -359,6 +359,9 @@ public sealed class ProviderOptionDiagnosticsTests
         context.Services.AddSingleton<IOptions<ModuleShellUIOption>>(
             Options.Create(shellOptions ?? new ModuleShellUIOption()));
         context.Services.AddScoped<OperationalPageAccessEvaluator>();
+        context.Services.AddOptions<global::Monica.Modules.ModuleShellUIOption>();
+        context.Services.AddOptions<global::Monica.Modules.ModuleClockOption>();
+        context.Services.AddSingleton<global::Monica.UI.Shared.Services.MoTimeFormatter>();
         context.Services.AddSingleton<IStringLocalizer<EventBusResource>, EchoStringLocalizer<EventBusResource>>();
         context.Services.AddSingleton<IStringLocalizer<StateStoreResource>, EchoStringLocalizer<StateStoreResource>>();
         context.Services.AddSingleton<IStringLocalizer<ModuleSystemResource>, EchoStringLocalizer<ModuleSystemResource>>();

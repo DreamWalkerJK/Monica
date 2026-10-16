@@ -140,6 +140,9 @@ public sealed class SeederOperationsComponentTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddMudServices();
+        context.Services.AddOptions<global::Monica.Modules.ModuleShellUIOption>();
+        context.Services.AddOptions<global::Monica.Modules.ModuleClockOption>();
+        context.Services.AddSingleton<global::Monica.UI.Shared.Services.MoTimeFormatter>();
         context.Services.AddSingleton<IStringLocalizer<SeederResource>, EchoStringLocalizer<SeederResource>>();
         _ = context.Render<MudPopoverProvider>();
         return context;
