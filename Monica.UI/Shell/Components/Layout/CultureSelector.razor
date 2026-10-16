@@ -13,7 +13,7 @@
 <div class="culture-selector" @onkeydown="HandleMenuKeyDownAsync">
     <MudMenu @ref="_menu"
              @bind-Open="_menuOpen"
-             Icon="@ShellIcons.Globe"
+             Icon="@MoIcons.Globe"
              Color="Color.Primary"
              Size="Size.Medium"
              AnchorOrigin="Origin.BottomCenter"
@@ -32,7 +32,7 @@
 
             <MudMenuItem OnClick="@(() => ChangeCultureAsync(culture))"
                          Class="@(isCurrentCulture ? "active" : null)"
-                         Icon="@(isCurrentCulture ? ShellIcons.Check : null)">
+                         Icon="@(isCurrentCulture ? MoIcons.Check : null)">
                 @displayName
             </MudMenuItem>
         }

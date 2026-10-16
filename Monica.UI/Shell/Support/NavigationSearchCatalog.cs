@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Localization;
 using Monica.Core.Localization.Abstractions;
+using Monica.UI.Icons;
 using Monica.UI.Localization;
 using Monica.UI.Shell.Models;
 
@@ -45,7 +46,7 @@ internal sealed class NavigationSearchCatalog(
                     ?? group.Description ?? root.Description
                     ?? localizer["Search:FallbackDescription", title, breadcrumb].Value;
                 entries.Add(new NavigationSearchEntry(item, title, description, breadcrumb, root.DisplayName,
-                    root.Icon ?? item.Icon ?? ShellIcons.Folder));
+                    root.Icon ?? item.Icon ?? MoIcons.Folder));
             }
 
             foreach (var child in group.Children)

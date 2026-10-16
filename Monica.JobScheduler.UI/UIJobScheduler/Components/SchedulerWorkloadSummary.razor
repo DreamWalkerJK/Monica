@@ -19,7 +19,7 @@
     <div class="workload-summary__layout">
         <article class="workload-summary__feature" aria-labelledby="workload-summary-title">
             <header class="workload-summary__heading">
-                <span class="workload-summary__feature-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Workspaces" /></span>
+                <span class="workload-summary__feature-icon" aria-hidden="true"><MoIcon Icon="@MoIcons.Workspace" Size="1.5rem" /></span>
                 <div>
                     <h2 id="workload-summary-title">@L["Overview:Workload:Title"]</h2>
                     <p>@L["Overview:Workload:LedgerScope"]</p>
@@ -28,22 +28,22 @@
             <div class="workload-summary__executions">
                 <a class="workload-summary__execution" data-state="running" href="@GetExecutionHref(JobExecutionState.Running)">
                     <span class="workload-summary__execution-label">
-                        <MudIcon Icon="@Icons.Material.Outlined.PlayCircle" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.PlayCircle" Size="1.25rem" />
                         <span>@L["Overview:Workload:RunningJobs"]</span>
                     </span>
                     <span class="workload-summary__execution-value">
                         <strong>@runningCount</strong>
-                        <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.ChevronRight" Size="1.25rem" />
                     </span>
                 </a>
                 <a class="workload-summary__execution" data-state="queued" href="@GetExecutionHref(JobExecutionState.Queued)">
                     <span class="workload-summary__execution-label">
-                        <MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.Hourglass" Size="1.25rem" />
                         <span>@L["ExecutionStates:Queued"]</span>
                     </span>
                     <span class="workload-summary__execution-value">
                         <strong>@queuedCount</strong>
-                        <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.ChevronRight" Size="1.25rem" />
                     </span>
                 </a>
             </div>
@@ -51,7 +51,7 @@
         <dl class="workload-summary__facts">
             <div class="workload-summary__fact" data-tone="primary">
                 <dt>
-                    <span class="workload-summary__fact-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Small" /></span>
+                    <span class="workload-summary__fact-icon" aria-hidden="true"><MoIcon Icon="@MoIcons.Package" Size="1.25rem" /></span>
                     @L["Overview:Workload:TotalJobs"]
                 </dt>
                 <dd>
@@ -63,7 +63,7 @@
             </div>
             <div class="workload-summary__fact" data-tone="success">
                 <dt>
-                    <span class="workload-summary__fact-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" /></span>
+                    <span class="workload-summary__fact-icon" aria-hidden="true"><MoIcon Icon="@MoIcons.Success" Size="1.25rem" /></span>
                     @L["Overview:Workload:SuccessRate"]
                 </dt>
                 <dd>
@@ -73,7 +73,7 @@
             </div>
             <div class="workload-summary__fact" data-tone="info">
                 <dt>
-                    <span class="workload-summary__fact-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Speed" Size="Size.Small" /></span>
+                    <span class="workload-summary__fact-icon" aria-hidden="true"><MoIcon Icon="@MoIcons.Gauge" Size="1.25rem" /></span>
                     @L["Overview:Workload:Throughput"]
                 </dt>
                 <dd>

@@ -31,7 +31,7 @@
                         <details><summary>@L["Workbench:StateEvidence"]</summary><div class="entry-values"><section><h4>@L["Shared:Fields:Previous"]</h4><small>@entry.PreviousState.TypeName</small><pre tabindex="0">@(entry.PreviousState.CaptureError ?? entry.PreviousState.Text ?? L["Workbench:NoState"].Value)</pre></section><section><h4>@L["Shared:Fields:After"]</h4><small>@entry.CurrentState.TypeName</small><pre tabindex="0">@(entry.CurrentState.CaptureError ?? entry.CurrentState.Text ?? L["Workbench:NoState"].Value)</pre></section></div></details>
                         </article>
                     }
-                    <footer class="inspector-pager"><span role="status">@L["Workbench:PageCount", _page + 1, PageCount, Entries.Count]</span><div><button type="button" aria-disabled="@(_page == 0)" @onclick="PreviousPage" aria-label="@L["Workbench:Previous"]"><MudIcon Icon="@Icons.Material.Outlined.ChevronLeft" /></button><button type="button" aria-disabled="@(_page + 1 >= PageCount)" @onclick="NextPage" aria-label="@L["Workbench:Next"]"><MudIcon Icon="@Icons.Material.Outlined.ChevronRight" /></button></div></footer>
+                    <footer class="inspector-pager"><span role="status">@L["Workbench:PageCount", _page + 1, PageCount, Entries.Count]</span><div><button type="button" aria-disabled="@(_page == 0)" @onclick="PreviousPage" aria-label="@L["Workbench:Previous"]"><MoIcon Icon="@MoIcons.ChevronLeft" Size="1.5rem" /></button><button type="button" aria-disabled="@(_page + 1 >= PageCount)" @onclick="NextPage" aria-label="@L["Workbench:Next"]"><MoIcon Icon="@MoIcons.ChevronRight" Size="1.5rem" /></button></div></footer>
                 }
             </div>
         }

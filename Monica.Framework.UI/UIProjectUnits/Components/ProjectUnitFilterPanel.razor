@@ -10,12 +10,12 @@
                           Label="@L["ProjectUnitFilterPanel:Fields:SearchLabel"]"
                           HelperText="@L["ProjectUnitFilterPanel:Fields:SearchHelper"]"
                           Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                          Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search"
                           Immediate="true" DebounceInterval="300"
                           OnDebounceIntervalElapsed="OnFilterTextChangedAsync" />
         </div>
         <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ClearSearchAsync"
-                   StartIcon="@Icons.Material.Outlined.Close">
+                   StartIcon="@MoIcons.Close">
             @L["ProjectUnitFilterPanel:Actions:ClearSearch"]
         </MudButton>
     </div>
@@ -26,7 +26,7 @@
             <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="ClearAllTypesAsync">@L["Shared:Actions:Clear"]</MudButton>
         </div>
         <div class="pu-filter-panel__chips" tabindex="0" aria-label="@L["ProjectUnitFilterPanel:Sections:TypeFilter"]">
-            <MudChipSet T="EProjectUnitType" SelectionMode="SelectionMode.MultiSelection"
+            <MudChipSet CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" T="EProjectUnitType" SelectionMode="SelectionMode.MultiSelection"
                         SelectedValues="SelectedUnitTypes" SelectedValuesChanged="OnSelectedUnitTypesChangedAsync">
                 @foreach (var option in _unitTypeOptions)
                 {

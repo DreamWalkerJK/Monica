@@ -14,8 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MudBlazor" Version="9.0.0" />
-    <PackageReference Include="MudBlazor.Markdown" Version="9.0.0" />
+    <PackageReference Include="MudBlazor" Version="9.11.0" />
+    <PackageReference Include="MudBlazor.Markdown" Version="9.10.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +24,14 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Localization\**\*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Icons\Assets\**\*" Pack="false" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <Content Update="Icons\Assets\**\*" Pack="false" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <None Remove="Icons\Assets\Lucide\LICENSE" />
+    <None Include="Icons\Assets\Lucide\LICENSE" Pack="true" PackagePath="licenses/lucide/"
+          CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
   </ItemGroup>
 
   <ItemGroup>

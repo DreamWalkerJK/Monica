@@ -11,9 +11,6 @@ public sealed class GroveTheme : ThemeDefinitionBase
     public override string DisplayName => "Grove";
     public override string Description => "Warm stone surfaces, forest accents, and clear operational typography.";
 
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.GithubDark;
-
     public override MudTheme CreateTheme() => new()
     {
         PaletteLight = CreateLightPalette(),
@@ -31,8 +28,9 @@ public sealed class GroveTheme : ThemeDefinitionBase
         Typography = MonicaTypographyDefaults.CreateGrove()
     };
 
-    private static PaletteLight CreateLightPalette() => new()
+    private static MudMarkdownPaletteLight CreateLightPalette() => new()
     {
+        CodeHighlight = MudCodeHighlightThemes.Light.GitHub,
         Primary = "#335d43",
         PrimaryLighten = "#4f7758",
         PrimaryDarken = "#294b36",
@@ -109,8 +107,9 @@ public sealed class GroveTheme : ThemeDefinitionBase
         GrayDarker = "#3e5545"
     };
 
-    private static PaletteDark CreateDarkPalette() => new()
+    private static MudMarkdownPaletteDark CreateDarkPalette() => new()
     {
+        CodeHighlight = MudCodeHighlightThemes.Dark.GitHub,
         Primary = "#b5ce9a",
         PrimaryLighten = "#c7dcaf",
         PrimaryDarken = "#98b57e",

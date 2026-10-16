@@ -6,7 +6,7 @@
 <div class="history-timeline">
     @if (History == null || !History.Any())
     {
-        <MudAlert Severity="Severity.Info">@L["Shared:States:NoStateHistory"]</MudAlert>
+        <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["Shared:States:NoStateHistory"]</MudAlert>
     }
     else
     {
@@ -52,7 +52,7 @@
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:Previous"]:</MudText>
                                             <MudText Typo="Typo.body2">@entry.PreviousStateDisplay</MudText>
                                         </MudPaper>
-                                        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Default" />
+                                        <MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" Style="color:var(--mud-palette-text-secondary)" />
                                         <MudPaper Class="pa-2 flex-grow-1" Elevation="0" Outlined="true">
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:After"]:</MudText>
                                             <MudText Typo="Typo.body2">@entry.CurrentStateDisplay</MudText>
@@ -64,10 +64,10 @@
                                 @if (entry.IsException && entry.Exception != null)
                                 {
                                     <MudExpansionPanels>
-                                        <MudExpansionPanel>
+                                        <MudExpansionPanel Icon="@MoIcons.ChevronDown">
                                             <TitleContent>
                                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                                                    <MoIcon Icon="@MoIcons.Error" Size="1.25rem" Style="color:var(--mud-palette-error)" />
                                                     <MudText Typo="Typo.body2">@entry.ExceptionType</MudText>
                                                 </MudStack>
                                             </TitleContent>
@@ -101,7 +101,7 @@
         @if (History.Count > DisplayLimit)
         {
             <MudStack Row="true" Justify="Justify.Center" Class="mt-4">
-                <MudButton StartIcon="@Icons.Material.Filled.ExpandMore"
+                <MudButton StartIcon="@MoIcons.ChevronDown"
                           Variant="Variant.Outlined"
                           Color="Color.Primary"
                           OnClick="LoadMore">

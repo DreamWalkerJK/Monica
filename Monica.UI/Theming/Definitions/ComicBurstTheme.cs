@@ -49,10 +49,6 @@ public sealed class ComicBurstTheme : ThemeDefinitionBase
 
     public override string Description => "Inked comic panels with paper texture, hard shadows, and saturated red-yellow accents.";
 
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
-
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.AtomOneDark;
-
     public override MudTheme CreateTheme()
     {
         return new MudTheme
@@ -82,10 +78,11 @@ public sealed class ComicBurstTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteLight CreateLightPalette()
+    private static MudMarkdownPaletteLight CreateLightPalette()
     {
-        return new PaletteLight
+        return new MudMarkdownPaletteLight
         {
+            CodeHighlight = MudCodeHighlightThemes.Light.GitHub,
             Primary = "#D8202A",
             PrimaryLighten = "#F04A54",
             PrimaryDarken = "#A91520",
@@ -167,10 +164,11 @@ public sealed class ComicBurstTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteDark CreateDarkPalette()
+    private static MudMarkdownPaletteDark CreateDarkPalette()
     {
-        return new PaletteDark
+        return new MudMarkdownPaletteDark
         {
+            CodeHighlight = MudCodeHighlightThemes.Dark.OneDark,
             Primary = "#FF4A54",
             PrimaryLighten = "#FF757D",
             PrimaryDarken = "#D8202A",

@@ -17,16 +17,16 @@
                 @for (int i = 0; i < visibleCount; i++)
                 {
                     var url = urlItems[i];
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="ma-1" OnClick="@(async () => await OpenUrl(url))" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                         @GetDisplayText(url)
-                        <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
+                        <MoIcon Icon="@MoIcons.ExternalLink" Size="1.25rem" Class="ml-1" />
                     </MudChip>
                 }
 
-                <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ma-1" OnClick="@(() => _isExpanded = !_isExpanded)">
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ma-1" OnClick="@(() => _isExpanded = !_isExpanded)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                     +@(urlItems.Count - visibleCount)
-                    <MudIcon Icon="@(_isExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                             Size="Size.Small" Class="ml-1" />
+                    <MoIcon Icon="@(_isExpanded ? MoIcons.ChevronUp : MoIcons.ChevronDown)"
+                             Size="1.25rem" Class="ml-1" />
                 </MudChip>
 
                 @if (_isExpanded)
@@ -35,9 +35,9 @@
                         @for (int i = visibleCount; i < urlItems.Count; i++)
                         {
                             var url = urlItems[i];
-                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="ma-1" OnClick="@(async () => await OpenUrl(url))" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                 @GetDisplayText(url)
-                                <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
+                                <MoIcon Icon="@MoIcons.ExternalLink" Size="1.25rem" Class="ml-1" />
                             </MudChip>
                         }
                     </div>
@@ -48,9 +48,9 @@
                 @* Show all URLs *@
                 @foreach (var url in urlItems)
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="ma-1" OnClick="@(async () => await OpenUrl(url))" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                         @GetDisplayText(url)
-                        <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
+                        <MoIcon Icon="@MoIcons.ExternalLink" Size="1.25rem" Class="ml-1" />
                     </MudChip>
                 }
             }
@@ -62,7 +62,7 @@
             {
                 <MudLink Href="@url" Target="_blank" Color="Color.Primary" Typo="Typo.body2" Class="ma-1">
                     @GetDisplayText(url)
-                    <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
+                    <MoIcon Icon="@MoIcons.ExternalLink" Size="1.25rem" Class="ml-1" />
                 </MudLink>
             }
         }

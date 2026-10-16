@@ -7,6 +7,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -52,21 +53,21 @@ public class ModuleRAGUI : MonicaModule<ModuleRAGUIOption>, IUIModule
         registry.RegisterLocalizedPage<RAGManagePage, AIResource>(
             RAGManagePage.PAGE_URL,
             "Pages:RAGManage:Title",
-            Icons.Material.Filled.PlaylistPlay,
+            MoIcons.ListVideo,
             BuiltInNavigationCategoryIds.KnowledgeRetrieval,
             addToNav: true,
             navOrder: 4);
         registry.RegisterLocalizedPage<RAGDebugPage, AIResource>(
             RAGDebugPage.PAGE_URL,
             "Pages:RAGDebug:Title",
-            Icons.Material.Filled.ManageSearch,
+            MoIcons.TextSearch,
             BuiltInNavigationCategoryIds.KnowledgeRetrieval,
             addToNav: true,
             navOrder: 5);
         registry.RegisterLocalizedPage<RAGChunkersPage, AIResource>(
             RAGChunkersPage.PAGE_URL,
             "Pages:RAGChunkers:Title",
-            Icons.Material.Filled.AccountTree,
+            MoIcons.Workflow,
             BuiltInNavigationCategoryIds.KnowledgeRetrieval,
             addToNav: true,
             navOrder: 6);

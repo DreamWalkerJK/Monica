@@ -21,7 +21,7 @@ public sealed record ConfigurationEffectiveValue
     public string? ConfigurationPath { get; init; }
 
     /// <summary>
-    /// Gets the display-safe effective value.
+    /// Gets the effective display value. Sensitive values are omitted unless the read explicitly requests disclosure.
     /// </summary>
     public string? DisplayValue { get; init; }
 

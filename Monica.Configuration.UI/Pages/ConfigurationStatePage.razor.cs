@@ -10,6 +10,7 @@ using Monica.Configuration.UI.Support;
 using Monica.Configuration.Utils;
 using Monica.Core.Results;
 using Monica.Tool.Extensions;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.Configuration.UI.Pages;
@@ -142,11 +143,11 @@ public partial class ConfigurationStatePage
             : ConfigurationValidationPresentation.StatusColor(_runtimeValidationReport.Coverage, _runtimeValidationReport.IsValid);
 
     private string RuntimeValidationStatusIcon =>
-        _validationLoading ? Icons.Material.Filled.HourglassEmpty : _runtimeValidationReport is null
-            ? Icons.Material.Filled.Help
+        _validationLoading ? MoIcons.Hourglass : _runtimeValidationReport is null
+            ? MoIcons.Help
             : _runtimeValidationReport.IsValid
-                ? Icons.Material.Filled.CheckCircle
-                : Icons.Material.Filled.Warning;
+                ? MoIcons.Success
+                : MoIcons.Warning;
 
     private string RuntimeValidationStatusTooltip =>
         $"{L["Validation:SourceTitle"]}: {RuntimeValidationSummary}";
@@ -176,11 +177,11 @@ public partial class ConfigurationStatePage
         : _optionsValidationReports.Count == 0 || UnobservedDefinitionKeys.Any() ? Color.Default
         : _optionsValidationReports.All(report => report.IsValid) ? Color.Success : Color.Error;
 
-    private string OptionsValidationStatusIcon => _validationLoading ? Icons.Material.Filled.HourglassEmpty
-        : _optionsValidationError is not null ? Icons.Material.Filled.Warning
-        : _optionsValidationReports.Any(report => !report.IsValid) ? Icons.Material.Filled.Warning
-        : _optionsValidationReports.Count == 0 || UnobservedDefinitionKeys.Any() ? Icons.Material.Filled.VisibilityOff
-        : _optionsValidationReports.All(report => report.IsValid) ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning;
+    private string OptionsValidationStatusIcon => _validationLoading ? MoIcons.Hourglass
+        : _optionsValidationError is not null ? MoIcons.Warning
+        : _optionsValidationReports.Any(report => !report.IsValid) ? MoIcons.Warning
+        : _optionsValidationReports.Count == 0 || UnobservedDefinitionKeys.Any() ? MoIcons.EyeOff
+        : _optionsValidationReports.All(report => report.IsValid) ? MoIcons.Success : MoIcons.Warning;
 
     private string OptionsValidationSummary =>
         _validationLoading ? L["Validation:Pending"].Value
@@ -203,6 +204,15 @@ public partial class ConfigurationStatePage
 
     private Color ValidationPopoverStatusColor =>
         IsOptionsValidationPanel ? OptionsValidationStatusColor : RuntimeValidationStatusColor;
+
+    private string ValidationPopoverStatusIconStyle => ValidationPopoverStatusColor switch
+    {
+        Color.Info => "color:var(--mud-palette-info)",
+        Color.Success => "color:var(--mud-palette-success)",
+        Color.Warning => "color:var(--mud-palette-warning)",
+        Color.Error => "color:var(--mud-palette-error)",
+        _ => "color:var(--mud-palette-text-secondary)"
+    };
 
     private int ValidationPopoverIssueCount =>
         IsOptionsValidationPanel ? OptionsValidationIssueCount : RuntimeValidationIssueCount;
@@ -609,7 +619,7 @@ public partial class ConfigurationStatePage
         _externalEffectiveSources.Clear();
         try
         {
-            var result = await Facade.GetDefinitionStateAsync(summary.DefinitionKey);
+            var result = await Facade.GetDefinitionStateAsync(summary.DefinitionKey, Visibility.ShowSensitiveValues);
             if (route.IsRetired || generation != _selectionGeneration || valueGeneration != _valueReadGeneration) return;
             if (result.IsFailed(out var error, out var definitionState))
             {
@@ -646,7 +656,7 @@ public partial class ConfigurationStatePage
 
         var generation = ++_valueReadGeneration;
 
-        var result = await Facade.GetDefinitionStateAsync(definition.DefinitionKey);
+        var result = await Facade.GetDefinitionStateAsync(definition.DefinitionKey, Visibility.ShowSensitiveValues);
         if (route.IsRetired || generation != _valueReadGeneration
             || !string.Equals(_selectedSummary?.DefinitionKey, definition.DefinitionKey, StringComparison.Ordinal)) return;
         if (result.IsFailed(out var error, out var definitionState))
@@ -695,7 +705,7 @@ public partial class ConfigurationStatePage
             .ToArray();
         var result = await Facade.GetSourceChainsAsync(
             definition.DefinitionKey,
-            nodes.Select(static node => node.RelativePath).ToArray());
+            nodes.Select(static node => node.RelativePath).ToArray(), Visibility.ShowSensitiveValues);
         if (route.IsRetired || generation != _valueReadGeneration || !ReferenceEquals(definition, _selectedDefinition)) return;
         if (result.IsFailed(out _, out var sourceChains))
         {
@@ -888,10 +898,10 @@ public partial class ConfigurationStatePage
     {
         return node.NodeKind switch
         {
-            ConfigurationNodeKind.Dictionary => Icons.Material.Filled.DataObject,
-            ConfigurationNodeKind.List => Icons.Material.Filled.FormatListBulleted,
-            _ when node.RelativePath.Depth == 0 => Icons.Material.Filled.Home,
-            _ => Icons.Material.Filled.Folder
+            ConfigurationNodeKind.Dictionary => MoIcons.Braces,
+            ConfigurationNodeKind.List => MoIcons.List,
+            _ when node.RelativePath.Depth == 0 => MoIcons.Home,
+            _ => MoIcons.Folder
         };
     }
 
@@ -1469,7 +1479,7 @@ public partial class ConfigurationStatePage
                 continue;
             }
 
-            var rootValueResult = await Facade.GetEffectiveValueAsync(definitionChanges.Key, LogicalPath.Root);
+            var rootValueResult = await Facade.GetEffectiveValueAsync(definitionChanges.Key, LogicalPath.Root, Visibility.ShowSensitiveValues);
             if (route.IsRetired) return;
             if (rootValueResult.IsFailed(out _, out var rootValue))
             {
@@ -1487,7 +1497,7 @@ public partial class ConfigurationStatePage
                     continue;
                 }
 
-                var effectiveValueResult = await Facade.GetEffectiveValueAsync(change.DefinitionKey, change.LogicalPath);
+                var effectiveValueResult = await Facade.GetEffectiveValueAsync(change.DefinitionKey, change.LogicalPath, Visibility.ShowSensitiveValues);
                 if (route.IsRetired) return;
                 if (effectiveValueResult.IsFailed(out _, out var effectiveValue))
                 {

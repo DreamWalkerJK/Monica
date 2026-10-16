@@ -6,6 +6,7 @@ using Monica.Profiling.Localization;
 using Monica.Profiling.Pages;
 using Monica.Profiling.UIExecutionTiming.State;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -45,7 +46,7 @@ public class ModuleExecutionTimingUI : MonicaModule<ModuleExecutionTimingUIOptio
                 registry.RegisterLocalizedPage<UIExecutionTimingPage, ExecutionTimingResource>(
                     UIExecutionTimingPage.PAGE_URL,
                     "Pages:ExecutionTiming:Title",
-                    Icons.Material.Outlined.Timer,
+                    MoIcons.Timer,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 30,

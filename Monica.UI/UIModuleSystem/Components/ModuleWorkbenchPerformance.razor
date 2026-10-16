@@ -58,7 +58,7 @@
                 </header>
                 <div class="contributor-filters">
                     <div class="performance-field">
-                        <MudSelect T="int" Label="@L["Performance:Filters:Limit"]" Value="@Session.PerformanceContributorLimit" ValueChanged="@SetContributorLimit" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelect T="int" Label="@L["Performance:Filters:Limit"]" Value="@Session.PerformanceContributorLimit" ValueChanged="@SetContributorLimit" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                             <MudSelectItem T="int" Value="10">10</MudSelectItem>
                             <MudSelectItem T="int" Value="25">25</MudSelectItem>
                             <MudSelectItem T="int" Value="50">50</MudSelectItem>
@@ -83,7 +83,7 @@
             @if (snapshot.BlockingChain.IsEmpty)
             {
                 <section class="performance-blocking-summary" aria-labelledby="blocking-title">
-                    <MudIcon Icon="@Icons.Material.Outlined.LinkOff" Size="Size.Small" />
+                    <MoIcon Icon="@MoIcons.Unlink" Size="1.25rem" />
                     <div><h2 id="blocking-title">@L["Performance:Blocking:Title"]</h2><p>@L["Performance:Blocking:Empty"]</p></div>
                 </section>
             }
@@ -134,10 +134,10 @@
                 </div>
                 <div class="comparison-changes">
                     <MudExpansionPanels MultiExpansion="true">
-                        <MudExpansionPanel Text="@L["Comparison:AddedModules", comparison.AddedModules.Count]"><ChangeList Values="@comparison.AddedModules" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
-                        <MudExpansionPanel Text="@L["Comparison:RemovedModules", comparison.RemovedModules.Count]"><ChangeList Values="@comparison.RemovedModules" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
-                        <MudExpansionPanel Text="@L["Comparison:AddedEdges", comparison.AddedEdges.Count]"><ChangeList Values="@comparison.AddedEdges" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
-                        <MudExpansionPanel Text="@L["Comparison:RemovedEdges", comparison.RemovedEdges.Count]"><ChangeList Values="@comparison.RemovedEdges" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
+                        <MudExpansionPanel Text="@L["Comparison:AddedModules", comparison.AddedModules.Count]" Icon="@MoIcons.ChevronDown"><ChangeList Values="@comparison.AddedModules" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
+                        <MudExpansionPanel Text="@L["Comparison:RemovedModules", comparison.RemovedModules.Count]" Icon="@MoIcons.ChevronDown"><ChangeList Values="@comparison.RemovedModules" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
+                        <MudExpansionPanel Text="@L["Comparison:AddedEdges", comparison.AddedEdges.Count]" Icon="@MoIcons.ChevronDown"><ChangeList Values="@comparison.AddedEdges" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
+                        <MudExpansionPanel Text="@L["Comparison:RemovedEdges", comparison.RemovedEdges.Count]" Icon="@MoIcons.ChevronDown"><ChangeList Values="@comparison.RemovedEdges" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
                     </MudExpansionPanels>
                 </div>
             </section>
@@ -194,7 +194,7 @@
                         </MudTd>
                     </RowTemplate>
                     <NoRecordsContent><p class="performance-empty">@L["Performance:StartupWork:Empty"]</p></NoRecordsContent>
-                    <PagerContent><MudTablePager PageSizeOptions="@(new[] { 10, 25, 50 })" RowsPerPageString="@L["Common:RowsPerPage"]" InfoFormat="@L["Common:PagerInfo"]" /></PagerContent>
+                    <PagerContent><MudTablePager PageSizeOptions="@(new[] { 10, 25, 50 })" RowsPerPageString="@L["Common:RowsPerPage"]" InfoFormat="@L["Common:PagerInfo"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /></PagerContent>
                 </MudTable>
             </div>
         </section>

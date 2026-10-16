@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
 using Monica.Core.Localization.Abstractions;
 using Monica.Modules;
+using Monica.UI.Icons;
 using Monica.UI.Localization;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
@@ -282,7 +283,7 @@ public partial class NavBar : IAsyncDisposable, INavigationEventReceiver
         }
     }
 
-    private static string GetCategoryIcon(NavigationGroup group) => group.Icon ?? ShellIcons.Folder;
+    private static string GetCategoryIcon(NavigationGroup group) => group.Icon ?? MoIcons.Folder;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

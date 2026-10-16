@@ -8,10 +8,10 @@
 <section class="provider-directory">
     <header class="provider-directory-heading">
         <div><span class="provider-directory-kicker">@L["ProviderDirectory:Eyebrow"]</span><h2>@L["Providers:Title"]</h2><p>@L["ProviderDirectory:Scope"]</p></div>
-        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="OnRefresh" Disabled="@IsLoading">@L["Providers:Refresh"]</MudButton>
+        <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh" OnClick="OnRefresh" Disabled="@IsLoading">@L["Providers:Refresh"]</MudButton>
     </header>
     <div class="provider-directory-search">
-        <MudTextField T="string" @ref="_searchField" @bind-Value="_search" Label="@L["ProviderDirectory:Search"]" Immediate="true" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+        <MudTextField ClearIcon="@MoIcons.Close" T="string" @ref="_searchField" @bind-Value="_search" Label="@L["ProviderDirectory:Search"]" Immediate="true" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" />
         <span>@L["ProviderDirectory:Shown", FilteredProviders.Count, Providers.Count]</span>
     </div>
     @if (IsLoading && Providers.Count == 0)
@@ -20,11 +20,11 @@
     }
     else if (Providers.Count == 0)
     {
-        <div class="provider-directory-empty"><MudIcon Icon="@Icons.Material.Outlined.Hub" /><h3>@L["Providers:States:Empty"]</h3><p>@L["ProviderDirectory:EmptyHelp"]</p></div>
+        <div class="provider-directory-empty"><MoIcon Icon="@MoIcons.Network" Size="1.5rem" /><h3>@L["Providers:States:Empty"]</h3><p>@L["ProviderDirectory:EmptyHelp"]</p></div>
     }
     else if (FilteredProviders.Count == 0)
     {
-        <div class="provider-directory-empty"><MudIcon Icon="@Icons.Material.Outlined.SearchOff" /><h3>@L["ProviderDirectory:NoMatches"]</h3><MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearSearchAsync">@L["ProviderDirectory:ClearSearch"]</MudButton></div>
+        <div class="provider-directory-empty"><MoIcon Icon="@MoIcons.SearchOff" Size="1.5rem" /><h3>@L["ProviderDirectory:NoMatches"]</h3><MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearSearchAsync">@L["ProviderDirectory:ClearSearch"]</MudButton></div>
     }
     else
     {
@@ -36,7 +36,7 @@
                 {
                     <article class="provider-directory-record" @key="provider.UniqueId">
                         <div class="provider-directory-identity">
-                            <span class="provider-directory-icon" data-mode="@(provider.IsDistributed ? "distributed" : "local")"><MudIcon Icon="@(provider.IsDistributed ? Icons.Material.Outlined.CloudQueue : Icons.Material.Outlined.Memory)" /></span>
+                            <span class="provider-directory-icon" data-mode="@(provider.IsDistributed ? "distributed" : "local")"><MoIcon Icon="@(provider.IsDistributed ? MoIcons.Cloud : MoIcons.Cpu)" Size="1.5rem" /></span>
                             <div><h4>@L.GetProviderKindText(provider.ProviderType)<span class="provider-mode">@L.GetProviderModeText(provider.IsDistributed)</span></h4><code>@ProviderKey(provider)</code><p>@provider.ImplementationType</p></div>
                         </div>
                         <dl class="provider-directory-counts">
@@ -44,7 +44,7 @@
                             <div><dt>@L["ProviderDirectory:Active"]</dt><dd>@provider.ActiveSubscriptionCount</dd></div>
                             <div><dt>@L["ProviderDirectory:ReportedProblems"]</dt><dd data-attention="@(provider.UnhealthyTopicCount > 0 ? "true" : "false")">@provider.UnhealthyTopicCount</dd></div>
                         </dl>
-                        <div class="provider-directory-actions"><MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Outlined.ArrowOutward" OnClick="() => ViewDetailsAsync(provider)" aria-label="@L["ProviderDirectory:Inspect", ProviderKey(provider), L.GetProviderModeText(provider.IsDistributed)]">@L["Providers:Card:ViewDetails"]</MudButton></div>
+                        <div class="provider-directory-actions"><MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@MoIcons.ArrowUpRight" OnClick="() => ViewDetailsAsync(provider)" aria-label="@L["ProviderDirectory:Inspect", ProviderKey(provider), L.GetProviderModeText(provider.IsDistributed)]">@L["Providers:Card:ViewDetails"]</MudButton></div>
                         <div class="provider-directory-capabilities">
                             @if (provider.SupportsBulkPublish) { <span>@L["Providers:Capabilities:BulkPublish"]</span> }
                             @if (provider.SupportsStreaming) { <span>@L["Providers:Capabilities:Streaming"]</span> }

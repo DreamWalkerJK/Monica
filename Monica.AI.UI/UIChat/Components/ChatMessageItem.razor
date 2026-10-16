@@ -51,9 +51,9 @@
                 }
                 @if (!IsUser && Steps.Count > 0) { <ChatExecutionMetrics Steps="@Steps" /> }
                 <div class="message-actions">
-                    <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" OnClick="HandleCopy" aria-disabled="@(_copying ? "true" : "false")" aria-label="@L["Chat:Actions:Copy"]" />
-                    @if (IsUser) { <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" Disabled="@Disabled" OnClick="HandleStartEdit" aria-label="@L["Chat:Actions:Edit"]" /> }
-                    else { <MudIconButton Icon="@Icons.Material.Outlined.Refresh" Size="Size.Small" Disabled="@Disabled" OnClick="HandleRetry" aria-label="@L["Chat:Actions:Retry"]" /> }
+                    <MudIconButton Icon="@MoIcons.Copy" Size="Size.Small" OnClick="HandleCopy" aria-disabled="@(_copying ? "true" : "false")" aria-label="@L["Chat:Actions:Copy"]" />
+                    @if (IsUser) { <MudIconButton Icon="@MoIcons.Edit" Size="Size.Small" Disabled="@Disabled" OnClick="HandleStartEdit" aria-label="@L["Chat:Actions:Edit"]" /> }
+                    else { <MudIconButton Icon="@MoIcons.Refresh" Size="Size.Small" Disabled="@Disabled" OnClick="HandleRetry" aria-label="@L["Chat:Actions:Retry"]" /> }
                 </div>
             </footer>
         </div>

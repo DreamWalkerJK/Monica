@@ -6,6 +6,7 @@ using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
 using Monica.Framework.UI.UIExecutionPipeline.State;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -47,7 +48,7 @@ public sealed class ModuleExecutionPipelineUI : MonicaModule<ModuleExecutionPipe
                 registry.RegisterLocalizedPage<UIExecutionPipelinePage, ExecutionPipelineResource>(
                     UIExecutionPipelinePage.PAGE_URL,
                     "Pages:ExecutionPipeline:Title",
-                    Icons.Material.Filled.Schema,
+                    MoIcons.Workflow,
                     BuiltInNavigationCategoryIds.Infrastructure,
                     addToNav: true,
                     navOrder: 20)));

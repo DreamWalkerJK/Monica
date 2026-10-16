@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Monica.Framework.UI.UIObservableInstance.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIObservableInstance.Support;
@@ -9,6 +10,15 @@ namespace Monica.Framework.UI.UIObservableInstance.Support;
 /// </summary>
 public static class ObservableInstanceDisplayMapping
 {
+    internal static string IconStyle(Color color) => color switch
+    {
+        Color.Info => "color:var(--mud-palette-info)",
+        Color.Warning => "color:var(--mud-palette-warning)",
+        Color.Error => "color:var(--mud-palette-error)",
+        Color.Success => "color:var(--mud-palette-success)",
+        _ => "color:var(--mud-palette-text-secondary)"
+    };
+
     /// <summary>
     /// Gets the MudBlazor color used to represent a log level.
     /// </summary>
@@ -30,13 +40,13 @@ public static class ObservableInstanceDisplayMapping
     public static string GetLogLevelIcon(LogLevel? level) =>
         level switch
         {
-            LogLevel.Trace => Icons.Material.Filled.Code,
-            LogLevel.Debug => Icons.Material.Filled.BugReport,
-            LogLevel.Information => Icons.Material.Filled.Info,
-            LogLevel.Warning => Icons.Material.Filled.Warning,
-            LogLevel.Error => Icons.Material.Filled.Error,
-            LogLevel.Critical => Icons.Material.Filled.ErrorOutline,
-            _ => Icons.Material.Filled.HelpOutline
+            LogLevel.Trace => MoIcons.Code,
+            LogLevel.Debug => MoIcons.Bug,
+            LogLevel.Information => MoIcons.Info,
+            LogLevel.Warning => MoIcons.Warning,
+            LogLevel.Error => MoIcons.Error,
+            LogLevel.Critical => MoIcons.Error,
+            _ => MoIcons.Help
         };
 
     /// <summary>
@@ -56,8 +66,8 @@ public static class ObservableInstanceDisplayMapping
     public static string GetHealthStateIcon(HealthState state) =>
         state switch
         {
-            HealthState.Healthy => Icons.Material.Filled.CheckCircle,
-            HealthState.Unhealthy => Icons.Material.Filled.Warning,
-            _ => Icons.Material.Filled.HelpOutline
+            HealthState.Healthy => MoIcons.Success,
+            HealthState.Unhealthy => MoIcons.Warning,
+            _ => MoIcons.Help
         };
 }

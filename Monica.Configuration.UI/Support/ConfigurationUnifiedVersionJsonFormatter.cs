@@ -15,10 +15,17 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
         string hiddenLabel,
         string hiddenOriginChangeLabel,
         string hiddenTargetChangeLabel,
-        bool redactAllScalars)
+        bool showSensitiveValues = false)
     {
         var origin = Parse(originJson);
         var target = Parse(targetJson);
+
+        if (showSensitiveValues)
+        {
+            string Display(ParsedJson value) => value.IsValid
+                ? FormatNode(value.Node, value.Exists) : value.RawJson ?? "null";
+            return new(Display(origin), Display(target), false);
+        }
 
         if (definition is null || !origin.IsValid || !target.IsValid)
         {
@@ -40,7 +47,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
                 sensitiveLabel,
                 hiddenLabel,
                 hiddenOriginChangeLabel,
-                redactAllScalars,
                 ref hasHiddenChanges)
             : null;
         var formattedTarget = target.Exists
@@ -52,7 +58,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
                 sensitiveLabel,
                 hiddenLabel,
                 hiddenTargetChangeLabel,
-                redactAllScalars,
                 ref hasHiddenChanges)
             : null;
 
@@ -89,7 +94,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
         string sensitiveLabel,
         string hiddenLabel,
         string changedLabel,
-        bool redactAllScalars,
         ref bool hasHiddenChanges)
     {
         if (schema.IsSensitive)
@@ -99,42 +103,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
                 counterpart,
                 counterpartExists,
                 sensitiveLabel,
-                changedLabel,
-                ref hasHiddenChanges);
-        }
-
-        if (schema.NodeKind == ConfigurationNodeKind.Scalar && redactAllScalars)
-        {
-            return HideNode(
-                node,
-                counterpart,
-                counterpartExists,
-                hiddenLabel,
-                changedLabel,
-                ref hasHiddenChanges);
-        }
-
-        if (redactAllScalars && schema.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
-        {
-            return HideNode(
-                node,
-                counterpart,
-                counterpartExists,
-                hiddenLabel,
-                changedLabel,
-                ref hasHiddenChanges);
-        }
-
-        if (redactAllScalars
-            && schema.NodeKind == ConfigurationNodeKind.Object
-            && (ContainsUnknownProperty(node as JsonObject, schema)
-                || ContainsUnknownProperty(counterpart as JsonObject, schema)))
-        {
-            return HideNode(
-                node,
-                counterpart,
-                counterpartExists,
-                hiddenLabel,
                 changedLabel,
                 ref hasHiddenChanges);
         }
@@ -149,7 +117,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
                     sensitiveLabel,
                     hiddenLabel,
                     changedLabel,
-                    redactAllScalars,
                     ref hasHiddenChanges),
             ConfigurationNodeKind.Dictionary when node is JsonObject dictionary
                                                   && schema.DictionaryTemplate is not null =>
@@ -160,7 +127,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
                     sensitiveLabel,
                     hiddenLabel,
                     changedLabel,
-                    redactAllScalars,
                     ref hasHiddenChanges),
             ConfigurationNodeKind.List when node is JsonArray array
                                             && schema.ListTemplate is not null =>
@@ -171,7 +137,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
                     sensitiveLabel,
                     hiddenLabel,
                     changedLabel,
-                    redactAllScalars,
                     ref hasHiddenChanges),
             ConfigurationNodeKind.Scalar when node is JsonValue or null => node?.DeepClone(),
             _ => HideNode(
@@ -191,7 +156,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
         string sensitiveLabel,
         string hiddenLabel,
         string changedLabel,
-        bool redactAllScalars,
         ref bool hasHiddenChanges)
     {
         var result = new JsonObject();
@@ -217,20 +181,10 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
                     sensitiveLabel,
                     hiddenLabel,
                     changedLabel,
-                    redactAllScalars,
                     ref hasHiddenChanges);
         }
 
         return result;
-    }
-
-    private static bool ContainsUnknownProperty(
-        JsonObject? jsonObject,
-        ConfigurationNodeDefinition schema)
-    {
-        return jsonObject is not null
-               && jsonObject.Any(property => schema.Children.All(child =>
-                   !string.Equals(child.Name, property.Key, StringComparison.OrdinalIgnoreCase)));
     }
 
     private static JsonObject RedactDictionary(
@@ -240,7 +194,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
         string sensitiveLabel,
         string hiddenLabel,
         string changedLabel,
-        bool redactAllScalars,
         ref bool hasHiddenChanges)
     {
         var result = new JsonObject();
@@ -255,7 +208,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
                 sensitiveLabel,
                 hiddenLabel,
                 changedLabel,
-                redactAllScalars,
                 ref hasHiddenChanges);
         }
 
@@ -269,7 +221,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
         string sensitiveLabel,
         string hiddenLabel,
         string changedLabel,
-        bool redactAllScalars,
         ref bool hasHiddenChanges)
     {
         var result = new JsonArray();
@@ -284,7 +235,6 @@ internal static class ConfigurationUnifiedVersionJsonFormatter
                 sensitiveLabel,
                 hiddenLabel,
                 changedLabel,
-                redactAllScalars,
                 ref hasHiddenChanges));
         }
 

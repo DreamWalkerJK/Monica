@@ -16,7 +16,7 @@
 <div class="signalr-workbench mo-page-shell mo-page-shell--full-width">
     <header class="signalr-workbench-header">
         <div class="signalr-workbench-identity">
-            <span class="signalr-workbench-mark" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Cable" /></span>
+            <span class="signalr-workbench-mark" aria-hidden="true"><MoIcon Icon="@MoIcons.Cable" Size="1.5rem" /></span>
             <div>
                 <span class="signalr-workbench-eyebrow">@L["Pages:SignalRDebug:Eyebrow"]</span>
                 <h1>@L["Pages:SignalRDebug:Heading"]</h1>
@@ -49,8 +49,8 @@
         </aside>
 
         <section class="signalr-tool-workspace" aria-label="@L["Pages:SignalRDebug:WorkspaceLabel"]">
-            <MudTabs Elevation="0" Rounded="false" KeepPanelsAlive="true" Class="signalr-task-tabs">
-                <MudTabPanel Text="@L["Pages:SignalRDebug:Tabs:Methods"]" Icon="@Icons.Material.Outlined.Terminal">
+            <MudTabs Elevation="0" Rounded="false" KeepPanelsAlive="true" Class="signalr-task-tabs" PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight">
+                <MudTabPanel Text="@L["Pages:SignalRDebug:Tabs:Methods"]" Icon="@MoIcons.Terminal">
                     <div class="signalr-contract-scope"><span>@L["Pages:SignalRDebug:MethodCatalog"]</span><code>@(string.IsNullOrEmpty(PageState.MethodCatalogHubRoute) ? L["UISignalR:Common:None"].Value : PageState.MethodCatalogHubRoute)</code></div>
                     <div class="signalr-method-workspace">
                         <SignalRMethodInvoker HubMethods="@PageState.HubMethods" IsConnected="@PageState.ConnectionState.IsConnected"
@@ -61,7 +61,7 @@
                                                OnDisableAllListeners="DisableAllListenersAsync" />
                     </div>
                 </MudTabPanel>
-                <MudTabPanel Text="@L["Pages:SignalRDebug:Tabs:Messages"]" Icon="@Icons.Material.Outlined.Forum">
+                <MudTabPanel Text="@L["Pages:SignalRDebug:Tabs:Messages"]" Icon="@MoIcons.Messages">
                     <div class="signalr-message-workspace">
                         <SignalRMessageSender UserName="@PageState.UserName" UserNameChanged="@((string value) => PageState.UserName = value)"
                                               Message="@PageState.Message" MessageChanged="@((string value) => PageState.Message = value)"
@@ -69,12 +69,12 @@
                         <SignalRMessageLog Messages="@PageState.Messages" OnClearMessages="ClearMessages" />
                     </div>
                 </MudTabPanel>
-                <MudTabPanel Text="@L["Pages:SignalRDebug:Tabs:Connections"]" Icon="@Icons.Material.Outlined.PeopleAlt">
+                <MudTabPanel Text="@L["Pages:SignalRDebug:Tabs:Connections"]" Icon="@MoIcons.Users">
                     <SignalRConnectedUsers ConnectedUsers="@PageState.ConnectedUsers" OnRefreshClicked="LoadConnectedUsersAsync"
                                           DataLoaded="@PageState.ConnectedUsersLoaded" IsLoading="@PageState.IsLoadingConnectedUsers"
                                           LoadFailed="@PageState.ConnectedUsersLoadFailed" CapturedAtUtc="@PageState.ConnectedUsersCapturedAtUtc" />
                 </MudTabPanel>
-                <MudTabPanel Text="@L["Pages:SignalRDebug:Tabs:Sends"]" Icon="@Icons.Material.Outlined.MonitorHeart">
+                <MudTabPanel Text="@L["Pages:SignalRDebug:Tabs:Sends"]" Icon="@MoIcons.HeartPulse">
                     <SignalRSendDiagnostics Snapshot="@PageState.SendDiagnostics" OnRefreshClicked="LoadSendDiagnosticsAsync"
                                             IsLoading="@PageState.IsLoadingSendDiagnostics" LoadFailed="@PageState.SendDiagnosticsLoadFailed" />
                 </MudTabPanel>

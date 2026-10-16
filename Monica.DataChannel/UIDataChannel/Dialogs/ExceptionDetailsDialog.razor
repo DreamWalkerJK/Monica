@@ -41,7 +41,7 @@
                 }
                 else
                 {
-                    <MudDataGrid T="ExceptionDetailInfo" Items="ExceptionInfo.Exceptions" Square="true" Elevation="0" Filterable="true" SortMode="SortMode.Multiple" Hover="true" Dense="true" ReadOnly="true" Breakpoint="Breakpoint.Md">
+                    <MudDataGrid T="ExceptionDetailInfo" Items="ExceptionInfo.Exceptions" Square="true" Elevation="0" Filterable="true" SortMode="SortMode.Multiple" Hover="true" Dense="true" ReadOnly="true" Breakpoint="Breakpoint.Md" SortIcon="@MoIcons.ArrowUp" DragIndicatorIcon="@MoIcons.GripVertical" FilterIconEmpty="@MoIcons.Filter" FilterIconFilled="@MoIcons.Filter" FilterIconClear="@MoIcons.FilterOff" ColumnOptionsIcon="@MoIcons.MoreVertical">
                         <Columns>
                             <PropertyColumn Property="item => item.Timestamp" Title="@L["Exceptions:Columns:Timestamp"]" HeaderClass="exception-record-time" CellClass="exception-record-time">
                                 <CellTemplate>
@@ -88,18 +88,18 @@
                             <span>@L["Exceptions:Details:InspectorEyebrow"]</span>
                             <h3 id="exception-inspector-title">@selected.ExceptionType</h3>
                         </div>
-                        <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="() => _selectedException = null" aria-label="@L["Exceptions:Details:CloseSelection"]" />
+                        <MudIconButton Icon="@MoIcons.Close" Size="Size.Small" OnClick="() => _selectedException = null" aria-label="@L["Exceptions:Details:CloseSelection"]" />
                     </header>
                     @if (!string.IsNullOrEmpty(selected.CaptureError))
                     {
                         <div class="exception-capture-error">
-                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">
                                 <strong>@L["Exceptions:Details:CaptureFailed"]</strong>
                                 <p>@selected.CaptureError</p>
                             </MudAlert>
                         </div>
                     }
-                    <MudTabs Elevation="0" Rounded="false" MinimumTabWidth="var(--datachannel-tab-min-width, 160px)">
+                    <MudTabs Elevation="0" Rounded="false" MinimumTabWidth="var(--datachannel-tab-min-width, 160px)" PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight">
                         <MudTabPanel Text="@L["Exceptions:Details:Tabs:Evidence"]">
                             <div class="exception-inspector__tab">
                                 <dl class="exception-facts">

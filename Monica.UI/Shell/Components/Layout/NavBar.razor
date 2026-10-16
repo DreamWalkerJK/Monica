@@ -4,7 +4,7 @@
 
 <header class="mo-navbar" data-layout="@(Shell.Layout == ShellNavigationLayout.Sidebar ? "sidebar" : "topbar")">
     <div class="mobile-navigation-toggle">
-        <MudIconButton @ref="_mobileNavigationTrigger" Icon="@ShellIcons.Menu" OnClick="OpenMobileNavigation"
+        <MudIconButton @ref="_mobileNavigationTrigger" Icon="@MoIcons.Menu" OnClick="OpenMobileNavigation"
                        aria-label="@L["NavBar:OpenNavigation"]" />
     </div>
     <div class="topbar-brand"><NavBarBrand /></div>
@@ -12,7 +12,7 @@
         <span class="breadcrumb-category">@ActiveCategory?.DisplayName</span>
         @if (ActiveItem is not null)
         {
-            <MudIcon Icon="@ShellIcons.ChevronRight" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.ChevronRight" Size="20px" />
             <span class="breadcrumb-page">@ActiveItem.ResolveText(LocalizationCatalog)</span>
         }
     </div>
@@ -34,16 +34,16 @@
                 <span class="navbar-measure-link">
                     @if (!string.IsNullOrEmpty(category.Icon))
                     {
-                        <MudIcon Icon="@category.Icon" Class="navbar-measure-icon" />
+                        <MoIcon Icon="@category.Icon" Class="navbar-measure-icon" />
                     }
                     @category.DisplayName
-                    <MudIcon Icon="@ShellIcons.ChevronDown" Class="navbar-measure-chevron" />
+                    <MoIcon Icon="@MoIcons.ChevronDown" Class="navbar-measure-chevron" />
                 </span>
             </div>
         }
         <div data-nav-measure="more">
             <span class="navbar-measure-link">@L["NavBar:More"]
-                <MudIcon Icon="@ShellIcons.ChevronDown" Class="navbar-measure-chevron" />
+                <MoIcon Icon="@MoIcons.ChevronDown" Class="navbar-measure-chevron" />
             </span>
         </div>
     </div>
@@ -74,7 +74,7 @@
             }
         </nav>
         <div class="rail-collapse">
-            <MudIconButton Icon="@(Shell.SidebarCollapsed ? ShellIcons.ExpandSidebar : ShellIcons.CollapseSidebar)"
+            <MudIconButton Icon="@(Shell.SidebarCollapsed ? MoIcons.ExpandSidebar : MoIcons.CollapseSidebar)"
                            OnClick="Shell.ToggleSidebarAsync"
                            title="@(Shell.SidebarCollapsed ? L["NavBar:ExpandSidebar"] : L["NavBar:CollapseSidebar"])"
                            aria-label="@(Shell.SidebarCollapsed ? L["NavBar:ExpandSidebar"] : L["NavBar:CollapseSidebar"])" />
@@ -102,7 +102,7 @@
         <div class="context-navigation-content" @onkeydown="HandleContextDrawerKeyDown">
             <div class="context-navigation-header">
                 <div class="sidebar-identity"><NavBarBrand ShowIcon="false" Contextual="true" /></div>
-                <MudIconButton Icon="@ShellIcons.Close" OnClick="CloseContextNavigation" Size="Size.Small"
+                <MudIconButton Icon="@MoIcons.Close" OnClick="CloseContextNavigation" Size="Size.Small"
                                aria-label="@L["NavBar:CloseNavigation"]" />
             </div>
             <div class="sidebar-navigation-label">@L["NavBar:Explore"]</div>
@@ -126,14 +126,14 @@
         <MudFocusTrap>
             <div class="mobile-navigation-header">
                 <NavBarBrand />
-                <MudIconButton Icon="@ShellIcons.Close" OnClick="CloseMobileNavigation"
+                <MudIconButton Icon="@MoIcons.Close" OnClick="CloseMobileNavigation"
                                aria-label="@L["NavBar:CloseNavigation"]" />
             </div>
             <CascadingValue Value="@((MudBlazor.Interfaces.INavigationEventReceiver)this)" IsFixed="true">
             <MudNavMenu aria-label="@L["NavBar:Navigation"]">
                 @foreach (var category in AllCategories)
                 {
-                    <MudNavGroup Title="@category.DisplayName" Icon="@GetCategoryIcon(category)"
+                    <MudNavGroup Title="@category.DisplayName" Icon="@GetCategoryIcon(category)" ExpandIcon="@MoIcons.ChevronDown"
                                  Expanded="@(category == ActiveCategory)">
                         <NavigationTree Group="@category" ActiveItem="@ActiveItem" />
                     </MudNavGroup>

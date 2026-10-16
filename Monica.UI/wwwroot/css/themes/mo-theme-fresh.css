@@ -3,6 +3,17 @@
    Refreshing, simple, and soft visual style.
    ============================================ */
 
+/* Shared scrollbar treatment. */
+:root[data-theme="fresh-light"],
+:root[data-theme="fresh-dark"],
+.mo-theme-fresh-light,
+.mo-theme-fresh-dark {
+    --mo-scrollbar-radius: 8px;
+    --mo-color-scrollbar-thumb: color-mix(in srgb, var(--mud-palette-primary) 32%, transparent);
+    --mo-color-scrollbar-thumb-hover: color-mix(in srgb, var(--mud-palette-primary) 56%, transparent);
+    --mo-color-scrollbar-thumb-active: color-mix(in srgb, var(--mud-palette-primary) 80%, transparent);
+}
+
 /* Global and Light Mode */
 :root[data-theme="fresh-light"],
 .mo-theme-fresh-light {

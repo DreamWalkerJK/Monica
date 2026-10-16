@@ -7,12 +7,12 @@
             <div class="instrument-title">
                 <MudText Typo="Typo.subtitle1">@Instrument.Name</MudText>
                 <div class="instrument-meta">
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Instrument.Kind</MudChip>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@Instrument.Kind</MudChip>
                     @if (!string.IsNullOrWhiteSpace(Instrument.Unit))
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@GetUnitCaption()</MudChip>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@GetUnitCaption()</MudChip>
                     }
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                         @L["Instrument:TagSets"]: @Instrument.TagSets.Count
                     </MudChip>
                 </div>

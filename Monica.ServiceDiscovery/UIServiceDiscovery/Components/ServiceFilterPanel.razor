@@ -13,7 +13,7 @@
                               HelperText="@L["ServiceFilter:Labels:SearchHelp"]"
                               Variant="Variant.Outlined"
                               Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              AdornmentIcon="@MoIcons.Search"
                               Immediate="true"
                               DebounceInterval="300"
                               OnDebounceIntervalElapsed="OnFilterTextChanged" />
@@ -50,7 +50,7 @@
                                      Icon="@status.GetIcon()"
                                      Class="@(isSelected ? "status-filter status-filter--selected" : "status-filter")"
                                      Variant="Variant.Outlined"
-                                     Size="Size.Small">
+                                     Size="Size.Small" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                 @GetStatusLabel(status)
                             </MudChip>
                         }
@@ -86,7 +86,7 @@
                             <MudChip T="string"
                                      Value="domain"
                                      Color="@(isSelected ? Color.Info : Color.Default)"
-                                     Size="Size.Small">
+                                     Size="Size.Small" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                 @domain
                             </MudChip>
                         }

@@ -64,7 +64,7 @@
     border-radius: 9px;
 }
 
-.workload-summary__feature ::deep .mud-icon-root {
+.workload-summary__feature ::deep :is(.mud-icon-root, .mo-icon) {
     flex: 0 0 auto;
     color: var(--workload-on-feature);
 }
@@ -188,7 +188,7 @@
     background: color-mix(in srgb, var(--fact-tone) 9%, var(--mud-palette-surface));
 }
 
-.workload-summary__fact-icon ::deep .mud-icon-root {
+.workload-summary__fact-icon ::deep :is(.mud-icon-root, .mo-icon) {
     color: color-mix(in srgb, var(--fact-tone) 30%, var(--mud-palette-text-primary));
 }
 

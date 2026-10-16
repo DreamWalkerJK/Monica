@@ -4,7 +4,7 @@
 <div class="configuration-definition-unavailable-item"
      role="listitem">
     <div class="configuration-definition-unavailable-icon" aria-hidden="true">
-        <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" />
+        <MoIcon Icon="@MoIcons.Warning" Style="color:var(--mud-palette-warning)" Size="1.5rem" />
     </div>
     <div class="configuration-definition-unavailable-content">
         <div class="configuration-definition-unavailable-disabled-content" aria-disabled="true">
@@ -24,7 +24,7 @@
                              Size="Size.Small"
                              Color="Color.Warning"
                              Variant="Variant.Filled"
-                             Icon="@Icons.Material.Filled.Inventory2">
+                             Icon="@MoIcons.Package">
                         @L["State:Definitions:Retired"]
                     </MudChip>
                 }
@@ -48,7 +48,7 @@
                     <MudButton Variant="Variant.Text"
                                Size="Size.Small"
                                Color="Color.Warning"
-                               StartIcon="@Icons.Material.Filled.Troubleshoot"
+                               StartIcon="@MoIcons.ScanSearch"
                                OnClick="ShowProblemDetailsAsync"
                                aria-label="@L["State:Definitions:ViewProblemDetailsAria", Definition.DisplayName]">
                         @L["State:Definitions:ViewProblemDetails"]
@@ -59,7 +59,7 @@
                     <MudButton Variant="Variant.Text"
                                Size="Size.Small"
                                Color="Color.Error"
-                               StartIcon="@Icons.Material.Filled.DeleteForever"
+                               StartIcon="@MoIcons.Delete"
                                OnClick="RequestPurgeAsync"
                                aria-label="@L["DefinitionPurge:Actions:PreviewAria", Definition.DisplayName]">
                         @L["DefinitionPurge:Actions:Preview"]

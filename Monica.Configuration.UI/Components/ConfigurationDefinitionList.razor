@@ -15,10 +15,10 @@
                                   Margin="Margin.Dense"
                                   Immediate="true"
                                   Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Search" />
+                                  AdornmentIcon="@MoIcons.Search" />
                 </div>
                 <div class="configuration-definition-list-lifecycle-filter">
-                    <MudSelect T="ConfigurationDefinitionLifecycleFilter"
+                    <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="ConfigurationDefinitionLifecycleFilter"
                                Value="@LifecycleFilter"
                                ValueChanged="OnLifecycleFilterChanged"
                                ToStringFunc="LifecycleFilterText"
@@ -37,7 +37,7 @@
                     </MudSelect>
                 </div>
                 <div class="configuration-definition-list-group-filter">
-                    <MudSelect T="ConfigurationDefinitionGroupMode"
+                    <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="ConfigurationDefinitionGroupMode"
                                Value="@_groupMode"
                                ValueChanged="OnGroupModeChanged"
                                ToStringFunc="GroupModeText"
@@ -57,11 +57,11 @@
             <div class="configuration-definition-list-scroll">
                 @if (Definitions.Count == 0)
                 {
-                    <MudAlert Severity="Severity.Info">@L["State:Definitions:Empty"]</MudAlert>
+                    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["State:Definitions:Empty"]</MudAlert>
                 }
                 else if (!FilteredDefinitions.Any())
                 {
-                    <MudAlert Severity="Severity.Info">@L["State:Definitions:NoMatches"]</MudAlert>
+                    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["State:Definitions:NoMatches"]</MudAlert>
                 }
                 else
                 {
@@ -111,7 +111,7 @@
                                                                  Size="Size.Small"
                                                                  Color="Color.Warning"
                                                                  Variant="Variant.Filled"
-                                                                 Icon="@Icons.Material.Filled.Inventory2">
+                                                                 Icon="@MoIcons.Package">
                                                             @L["State:Definitions:Retired"]
                                                         </MudChip>
                                                     </MudTooltip>
@@ -154,7 +154,7 @@
                                                         <div @onclick:stopPropagation="true">
                                                             <MudButton Variant="Variant.Text"
                                                                        Size="Size.Small"
-                                                                       StartIcon="@Icons.Material.Filled.SubdirectoryArrowRight"
+                                                                       StartIcon="@MoIcons.CornerDownRight"
                                                                        Class="configuration-node-match-button"
                                                                        OnClick="@(() => NodeSearchMatchSelected.InvokeAsync(match))">
                                                                 <MudStack Spacing="0" AlignItems="AlignItems.Start" Class="configuration-node-match-text">
@@ -183,7 +183,7 @@
             </div>
 
             <div class="configuration-definition-list-footer">
-                <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" />
+                <MoIcon Icon="@MoIcons.Search" Size="1.25rem" />
                 <span>@L["Workbench:CatalogHelp"]</span>
             </div>
         </div>
@@ -268,8 +268,8 @@
     private static string DefinitionIcon(ConfigurationDefinitionSummary definition)
     {
         return definition.LifecycleState == ConfigurationDefinitionLifecycleState.Retired
-            ? Icons.Material.Filled.Inventory2
-            : Icons.Material.Outlined.Tune;
+            ? MoIcons.Package
+            : MoIcons.Sliders;
     }
 
     private bool IsSelected(ConfigurationDefinitionSummary definition)

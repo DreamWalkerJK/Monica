@@ -1,7 +1,7 @@
 .runtime-owners { --owner-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary)); min-width: 0; width: 100%; overflow: clip; border: 1px solid var(--mud-palette-lines-default); border-radius: 12px; color: var(--mud-palette-text-primary); background: var(--mud-palette-surface); container: runtime-owners / inline-size; }
 .runtime-owners__heading { display: flex; align-items: start; gap: 10px; padding: 20px; }
 .runtime-owners__heading > div { min-width: 0; }
-.runtime-owners__heading ::deep .mud-icon-root { flex: none; width: 24px; height: 24px; color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)) !important; }
+.runtime-owners__heading ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 24px; height: 24px; color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)) !important; }
 .runtime-owners h2 { margin: 0 0 5px; font-size: 20px; font-weight: 500; line-height: 1.4; }
 .runtime-owners p { margin: 0; color: var(--owner-muted); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
 .runtime-owners__heading .runtime-owners__threshold { display: flex; flex-wrap: wrap; gap: 5px 8px; margin-block-start: 6px; font-size: 12px; }
@@ -18,13 +18,13 @@
 .runtime-owners__table ::deep .mud-table-root .mud-table-row:last-child .mud-table-cell { border-block-end: 0; }
 .runtime-owners__owner-link { display: flex; align-items: start; gap: 8px; min-width: 0; padding: 3px 0; color: var(--mud-palette-text-primary); text-decoration: none; }
 .runtime-owners__owner-link code { flex: 1; }
-.runtime-owners__owner-link ::deep .mud-icon-root { flex: none; width: 18px; height: 18px; margin-block-start: 2px; color: var(--owner-muted) !important; }
+.runtime-owners__owner-link ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 18px; height: 18px; margin-block-start: 2px; color: var(--owner-muted) !important; }
 .runtime-owners__owner-link:hover code { text-decoration: underline; }
 .runtime-owners__owner-link:focus-visible { outline: 2px solid color-mix(in srgb, var(--mud-palette-primary) 55%, var(--mud-palette-text-primary)); outline-offset: 3px; border-radius: 3px; }
 .runtime-owners__observation { display: grid; gap: 9px; min-width: 0; }
 .runtime-owners__status { --observation-tone: var(--mud-palette-warning); display: inline-flex; align-items: start; gap: 6px; width: fit-content; max-width: 100%; padding: 4px 8px; border: 1px solid color-mix(in srgb, var(--observation-tone) 45%, var(--mud-palette-text-primary)); border-radius: 5px; color: color-mix(in srgb, var(--observation-tone) 25%, var(--mud-palette-text-primary)); background: color-mix(in srgb, var(--observation-tone) 8%, var(--mud-palette-surface)); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .runtime-owners__status[data-freshness="recent"] { --observation-tone: var(--mud-palette-success); }
-.runtime-owners__status ::deep .mud-icon-root { flex: none; width: 17px; height: 17px; color: color-mix(in srgb, var(--observation-tone) 45%, var(--mud-palette-text-primary)) !important; }
+.runtime-owners__status ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 17px; height: 17px; color: color-mix(in srgb, var(--observation-tone) 45%, var(--mud-palette-text-primary)) !important; }
 .runtime-owners__time { display: grid; gap: 3px; min-width: 0; }
 .runtime-owners__time > span { color: var(--owner-muted); font-size: 11px; line-height: 1.5; }
 .runtime-owners__time time { color: var(--mud-palette-text-primary); font-size: 12px; line-height: 1.65; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -32,7 +32,7 @@
 .runtime-owners__counts { display: block; min-width: 0; color: var(--mud-palette-text-primary); font-size: 13px; line-height: 1.65; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .runtime-owners__table ::deep .mud-table-root .mud-table-body .mud-table-empty-row { padding: 0; }
 .runtime-owners__empty { display: grid; justify-items: center; gap: 10px; padding: 28px 20px; color: var(--owner-muted); text-align: center; }
-.runtime-owners__empty ::deep .mud-icon-root { width: 28px; height: 28px; color: inherit !important; }
+.runtime-owners__empty ::deep :is(.mud-icon-root, .mo-icon) { width: 28px; height: 28px; color: inherit !important; }
 @container runtime-owners (max-width: 900px) {
     .runtime-owners__table ::deep colgroup,
     .runtime-owners__table ::deep .mud-table-head { display: none; }

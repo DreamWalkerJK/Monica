@@ -15,7 +15,7 @@
         <div class="runtime-test">
             @if (_subscription is null || _subscriptionId is null)
             {
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["SubscriptionTestDialog:States:NotSelected"]</MudAlert>
+                <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Variant="Variant.Outlined">@L["SubscriptionTestDialog:States:NotSelected"]</MudAlert>
             }
             else
             {
@@ -28,7 +28,7 @@
                         <div><dt>@L["SubscriptionTestDialog:Fields:Handler"]</dt><dd><code>@L.GetHandlerDisplayText(_subscription)</code></dd></div>
                     </dl>
                 </header>
-                <div class="runtime-test-warning"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" /><p>@L["RuntimeTest:Fanout"]</p></div>
+                <div class="runtime-test-warning"><MoIcon Icon="@MoIcons.Info" Size="1.25rem" /><p>@L["RuntimeTest:Fanout"]</p></div>
                 <div class="runtime-test-workspace">
                     <section class="runtime-test-publish">
                         <header class="runtime-test-heading"><span>01</span><div><h3>@L["RuntimeTest:Compose"]</h3><p>@L["RuntimeTest:ValidationHelp"]</p></div></header>
@@ -40,7 +40,7 @@
                             }
                             <div class="runtime-test-editor-actions">
                                 <div><MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="ValidateJson" Disabled="@Inactive" aria-disabled="@BusyAttribute">@L["SubscriptionTestDialog:Actions:ValidateJson"]</MudButton><MudButton Color="Color.Default" OnClick="LoadSampleJson" Disabled="@Inactive" aria-disabled="@BusyAttribute">@L["SubscriptionTestDialog:Actions:ResetSample"]</MudButton></div>
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Send" OnClick="PublishAsync" Disabled="@Inactive" aria-disabled="@BusyAttribute" aria-busy="@(_publishing ? "true" : "false")">@(_publishing ? L["SubscriptionTestDialog:Actions:Publishing"] : L["SubscriptionTestDialog:Actions:PublishEvent"])</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Send" OnClick="PublishAsync" Disabled="@Inactive" aria-disabled="@BusyAttribute" aria-busy="@(_publishing ? "true" : "false")">@(_publishing ? L["SubscriptionTestDialog:Actions:Publishing"] : L["SubscriptionTestDialog:Actions:PublishEvent"])</MudButton>
                             </div>
                             <p class="runtime-test-note">@L["RuntimeTest:AcceptanceHelp"]</p>
                         </div>
@@ -48,13 +48,13 @@
                     <section class="runtime-test-receive">
                         <header class="runtime-test-heading"><span>02</span><div><h3>@L["RuntimeTest:Receive"]</h3><p>@L["RuntimeTest:ReceiveHelp"]</p></div><span class="runtime-test-listener-state" data-listening="@(_listenerSnapshot.IsListening ? "true" : "false")">@(_listenerSnapshot.IsListening ? L["TestBench:Listening"] : L["TestBench:Stopped"])</span></header>
                         <div class="runtime-test-listener-actions">
-                            <MudButton Variant="Variant.Outlined" Color="@(_listenerSnapshot.IsListening ? Color.Warning : Color.Primary)" StartIcon="@(_listenerSnapshot.IsListening ? Icons.Material.Outlined.StopCircle : Icons.Material.Outlined.PlayArrow)" OnClick="ToggleListeningAsync" Disabled="@Inactive" aria-disabled="@BusyAttribute" aria-busy="@(_listenerBusy ? "true" : "false")">@(_listenerSnapshot.IsListening ? L["SubscriptionTestDialog:Actions:StopListening"] : L["SubscriptionTestDialog:Actions:StartListening"])</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="@(_listenerSnapshot.IsListening ? Color.Warning : Color.Primary)" StartIcon="@(_listenerSnapshot.IsListening ? MoIcons.StopCircle : MoIcons.Play)" OnClick="ToggleListeningAsync" Disabled="@Inactive" aria-disabled="@BusyAttribute" aria-busy="@(_listenerBusy ? "true" : "false")">@(_listenerSnapshot.IsListening ? L["SubscriptionTestDialog:Actions:StopListening"] : L["SubscriptionTestDialog:Actions:StartListening"])</MudButton>
                             <MudButton Color="Color.Default" OnClick="ClearMessages" Disabled="@Inactive" aria-disabled="@(_commandBusy || _listenerSnapshot.MessageCount == 0 ? "true" : "false")">@L["SubscriptionTestDialog:Actions:Clear"]</MudButton>
                         </div>
                         <div class="runtime-test-retained"><strong>@L["TestBench:Retained", _listenerSnapshot.MessageCount]</strong>@if (_listenerSnapshot.StartedAt is { } startedAt) { <span>@L["RuntimeTest:Started", startedAt.ToString("HH:mm:ss")]</span> }</div>
                         @if (_listenerSnapshot.MessageCount == 0)
                         {
-                            <div class="runtime-test-empty"><MudIcon Icon="@Icons.Material.Outlined.Inbox" /><h4>@L["SubscriptionTestDialog:States:NoMessages"]</h4><p>@L["RuntimeTest:EmptyHelp"]</p></div>
+                            <div class="runtime-test-empty"><MoIcon Icon="@MoIcons.Inbox" Size="1.5rem" /><h4>@L["SubscriptionTestDialog:States:NoMessages"]</h4><p>@L["RuntimeTest:EmptyHelp"]</p></div>
                         }
                         else
                         {
@@ -62,14 +62,14 @@
                                 @foreach (var message in _listenerSnapshot.Messages.Reverse())
                                 {
                                     <li @key="message">
-                                        <header><span><MudIcon Icon="@Icons.Material.Outlined.CallReceived" Size="Size.Small" />@L["TestBench:Received"]</span><time>@message.ReceivedAt.ToString("HH:mm:ss.fff")</time></header>
+                                        <header><span><MoIcon Icon="@MoIcons.ArrowDownLeft" Size="1.25rem" />@L["TestBench:Received"]</span><time>@message.ReceivedAt.ToString("HH:mm:ss.fff")</time></header>
                                         <dl><div><dt>@L["SubscriptionTestDialog:Fields:TopicName"]</dt><dd><code>@message.TopicName</code></dd></div><div><dt>@L["SubscriptionTestDialog:Fields:EventType"]</dt><dd><code>@message.EventType</code></dd></div></dl>
                                         <pre>@message.PayloadJson</pre>
                                     </li>
                                 }
                             </ol>
                         }
-                        <footer class="runtime-test-listener-help"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" /><p>@L["RuntimeTest:ListenerLifetime"]</p></footer>
+                        <footer class="runtime-test-listener-help"><MoIcon Icon="@MoIcons.Info" Size="1.25rem" /><p>@L["RuntimeTest:ListenerLifetime"]</p></footer>
                     </section>
                 </div>
             }

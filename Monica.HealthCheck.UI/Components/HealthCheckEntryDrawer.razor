@@ -22,7 +22,7 @@
                     <header class="health-detail-header">
                         <div class="health-detail-header__topline">
                             <span class="health-detail-eyebrow">@L["Details:Eyebrow"]</span>
-                            <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                            <MudIconButton Icon="@MoIcons.Close"
                                            Size="Size.Small"
                                            Class="health-detail-close"
                                            OnClick="@Session.CloseDetailsAsync"
@@ -30,9 +30,8 @@
                         </div>
                         <h2>@entry.Name</h2>
                         <span class="health-detail-status">
-                            <MudIcon Icon="@StatusIcon(entry.Status)"
-                                     Color="@HealthCheckDisplay.Color(entry.Status)"
-                                     Size="Size.Small" />
+                            <MoIcon Icon="@StatusIcon(entry.Status)"
+                                     Size="1.25rem" Style="@HealthCheckDisplay.IconStyle(entry.Status)" />
                             <span>@L.GetStatusText(entry.Status)</span>
                         </span>
                     </header>
@@ -96,7 +95,7 @@
                         {
                             <section class="health-detail-section health-detail-section--error">
                                 <h3>
-                                    <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" Color="Color.Error" />
+                                    <MoIcon Icon="@MoIcons.Error" Size="1.25rem" Style="color:var(--mud-palette-error);" />
                                     @L["Details:Error"]
                                 </h3>
                                 <dl class="health-detail-error">
@@ -123,10 +122,10 @@
 
     private static string StatusIcon(HealthCheckState status) => status switch
     {
-        HealthCheckState.Healthy => Icons.Material.Outlined.CheckCircleOutline,
-        HealthCheckState.Degraded => Icons.Material.Outlined.WarningAmber,
-        HealthCheckState.Unhealthy => Icons.Material.Outlined.ErrorOutline,
-        _ => Icons.Material.Outlined.HelpOutline
+        HealthCheckState.Healthy => MoIcons.Success,
+        HealthCheckState.Degraded => MoIcons.Warning,
+        HealthCheckState.Unhealthy => MoIcons.Error,
+        _ => MoIcons.Help
     };
 
     private Task OnOpenChangedAsync(bool open) => open

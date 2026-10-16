@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using Monica.Configuration.UI.Localization
 @inject ConfigurationFacade Facade
 @inject IStringLocalizer<ConfigurationUIResource> L
@@ -10,11 +11,11 @@
     }
     else if (_session?.Prepared is not { } prepared)
     {
-        <MudAlert Severity="Severity.Error">@L["Common:Errors:LoadFailed"]</MudAlert>
+        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@L["Common:Errors:LoadFailed"]</MudAlert>
     }
     else if (prepared.Rows.Count == 0)
     {
-        <MudAlert Severity="Severity.Info">@L["Versions:Diff:NoChanges"]</MudAlert>
+        <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["Versions:Diff:NoChanges"]</MudAlert>
     }
     else
     {
@@ -51,15 +52,15 @@
                             </MudText>
                         </MudStack>
 
-                        @if (row.HasSchemaDrift)
+                        @if (row.HasSchemaDrift && !Visibility.ShowSensitiveValues)
                         {
-                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                                @L["State:Value:SchemaDriftHiddenNotice"]
+                            <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                @L["State:Value:SchemaDriftNotice"]
                             </MudAlert>
                         }
                         @if (row.HasHiddenChanges)
                         {
-                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
                                 @L["State:Value:HiddenChangedNotice"]
                             </MudAlert>
                         }
@@ -97,7 +98,7 @@
     {
         var result = await Facade.GetDefinitionAsync(key);
         return result.IsFailed(out _, out var detail) ? null : detail.Definition;
-    });
+    }, Visibility.ShowSensitiveValues);
 
     protected override Task OnParametersSetAsync()
     {
@@ -134,7 +135,7 @@
         bool HasHiddenChanges, bool HasSchemaDrift);
 
     /// <summary>Owns actual tokenless schema reads and publishes only the current fully redacted comparison.</summary>
-    internal sealed class PreparationSession(Func<string, Task<ConfigurationDefinition?>> loadDefinition) : IAsyncDisposable
+    internal sealed class PreparationSession(Func<string, Task<ConfigurationDefinition?>> loadDefinition, bool showSensitiveValues = false) : IAsyncDisposable
     {
         private readonly ConfigurationOperationLifetime _lifetime = new();
         private long _generation;
@@ -170,7 +171,7 @@
                     var unproven = ConfigurationUnifiedVersionValuePrivacy.HasSchemaDrift(captured, change, definition);
                     var display = ConfigurationUnifiedVersionJsonFormatter.FormatComparisonForDisplay(
                         change.OriginJson, change.TargetJson, definition, labels.Sensitive, labels.Hidden,
-                        labels.BeforeChange, labels.AfterChange, unproven);
+                        labels.BeforeChange, labels.AfterChange, showSensitiveValues);
                     return new PreparedRow(change.DefinitionKey,
                         string.IsNullOrWhiteSpace(change.DisplayName) ? change.DefinitionKey : change.DisplayName,
                         change.ChangeKind, display.OriginText, display.TargetText, display.HasHiddenChanges, unproven);

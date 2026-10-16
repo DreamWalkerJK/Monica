@@ -19,6 +19,59 @@ public sealed class ConfigurationSourceInspectorTests : IDisposable
 {
     private readonly string _rootDirectory = Path.Combine(Path.GetTempPath(), $"monica-source-inspector-tests-{Guid.NewGuid():N}");
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReadSources_WhenSensitiveDisclosureIsSelected_ShouldUseItForChainsInventoriesAndFiles(bool includeSensitive)
+    {
+        Directory.CreateDirectory(_rootDirectory);
+        await File.WriteAllTextAsync(Path.Combine(_rootDirectory, "disclosure.json"),
+            """{"Disclosure":{"Password":"synthetic-secret","ConsumerOriginator":"ordinary-value","Group":{"Token":"nested-secret"},"Secrets":["list-secret"]}}""",
+            TestContext.Current.CancellationToken);
+        var configuration = new ConfigurationBuilder().SetBasePath(_rootDirectory)
+            .AddJsonFile("disclosure.json", optional: false, reloadOnChange: false).Build();
+        using var configurationLifetime = configuration as IDisposable;
+        var definition = new ConfigurationDefinitionScanner(new ConfigurationSchemaHasher()).Scan(typeof(DisclosureOptions));
+        var inspector = CreateInspector(configuration, definition);
+
+        var chain = inspector.GetSourceChain(definition, LogicalPath.FromProperties("Password"), includeSensitive);
+        var root = inspector.GetSourceChain(definition, LogicalPath.Root, includeSensitive);
+        var inventory = (await inspector.GetSourceInventoriesAsync(TestContext.Current.CancellationToken, includeSensitive)).Single();
+        var file = await inspector.GetSourceFileViewAsync(inspector.GetSources().Single().SourceKey,
+            TestContext.Current.CancellationToken, includeSensitive);
+
+        chain.Values.Single().IsSensitive.Should().BeTrue();
+        chain.Values.Single().DisplayValue.Should().Be(includeSensitive ? "synthetic-secret" : null);
+        inventory.Items.Single(item => item.ConfigurationPath == "Disclosure:Password").DisplayValue
+            .Should().Be(includeSensitive ? "synthetic-secret" : null);
+        inventory.Items.Single(item => item.ConfigurationPath == "Disclosure:ConsumerOriginator").DisplayValue
+            .Should().Be("ordinary-value");
+        file.HasRedactions.Should().Be(!includeSensitive);
+        foreach (var json in new[] { root.Values.Single().DisplayValue!, file.Content })
+        {
+            json.Should().Contain("ordinary-value");
+            foreach (var marker in new[] { "synthetic-secret", "nested-secret", "list-secret" })
+            {
+                if (includeSensitive) json.Should().Contain(marker);
+                else json.Should().NotContain(marker);
+            }
+        }
+    }
+
+    [Configuration("Disclosure")]
+    private sealed class DisclosureOptions
+    {
+        [OptionSetting(IsSensitive = true)] public string Password { get; set; } = string.Empty;
+        public string ConsumerOriginator { get; set; } = string.Empty;
+        public DisclosureGroup Group { get; set; } = new();
+        [OptionSetting(IsSensitive = true)] public List<string> Secrets { get; set; } = [];
+    }
+
+    private sealed class DisclosureGroup
+    {
+        [OptionSetting(IsSensitive = true)] public string Token { get; set; } = string.Empty;
+    }
+
     [Fact]
     public async Task GetSourceInventories_WhenJsonProvidersSharePhysicalFile_ShouldKeepProviderInstancesDistinct()
     {

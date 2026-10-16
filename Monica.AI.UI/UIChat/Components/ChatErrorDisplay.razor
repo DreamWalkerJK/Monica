@@ -4,7 +4,7 @@
 
 @if (_visible && !string.IsNullOrEmpty(ErrorMessage))
 {
-    <MudAlert Severity="Severity.Error"
+    <MudAlert Icon="@MoIcons.Error" CloseIcon="@MoIcons.Close" Severity="Severity.Error"
               Variant="Variant.Outlined"
               Dense="true"
               Class="chat-error-alert"
@@ -17,7 +17,7 @@
                 <MudButton Variant="Variant.Text"
                            Color="Color.Error"
                            Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Refresh"
+                           StartIcon="@MoIcons.Refresh"
                            OnClick="@HandleRetry"
                            Class="retry-button">
                     @L["Chat:Actions:Retry"]

@@ -8,7 +8,7 @@
             <h2>@L["UISignalR:MessageLog:Title"]</h2>
         </div>
         <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
-                   StartIcon="@Icons.Material.Outlined.DeleteSweep" OnClick="ClearMessagesAsync"
+                   StartIcon="@MoIcons.ClearList" OnClick="ClearMessagesAsync"
                    Disabled="@(Messages.Count == 0)">
             @L["UISignalR:MessageLog:Clear"]
         </MudButton>
@@ -21,12 +21,12 @@
             <MudTextField T="string" Value="@_searchText" ValueChanged="ChangeSearch"
                           Immediate="true" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense"
                           Label="@L["UISignalR:MessageLog:SearchLabel"]"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+                          Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" ClearIcon="@MoIcons.Close" />
         </div>
         <div class="signalr-trace-type">
             <MudSelect T="MessageType?" Value="@_typeFilter" ValueChanged="ChangeTypeFilter"
                        Variant="Variant.Outlined" Margin="Margin.Dense"
-                       Label="@L["UISignalR:MessageLog:TypeLabel"]">
+                       Label="@L["UISignalR:MessageLog:TypeLabel"]" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 <MudSelectItem T="MessageType?" Value="@(null)">@L["UISignalR:MessageLog:AllTypes"]</MudSelectItem>
                 @foreach (var type in Enum.GetValues<MessageType>())
                 {
@@ -52,7 +52,7 @@
                 <li @key="message" class="signalr-trace-event @(IsError(message) ? "signalr-trace-event--error" : string.Empty)">
                     <header class="signalr-trace-event-heading">
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                 Color="@GetMessageColor(message)" Icon="@GetMessageIcon(message.Type)">
+                                 Color="@GetMessageColor(message)" Icon="@GetMessageIcon(message.Type)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                             @GetMessageTypeLabel(message.Type)
                         </MudChip>
                         <time datetime="@message.Timestamp.ToString("O")" title="@message.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff")">
@@ -80,7 +80,7 @@
             {
                 <MudPagination Count="PageCount" Selected="_page" SelectedChanged="ChangePage"
                                ShowFirstButton="true" ShowLastButton="true" BoundaryCount="0" MiddleCount="1"
-                               Size="Size.Small" Color="Color.Default" aria-label="@L["UISignalR:MessageLog:Pagination"]" />
+                               Size="Size.Small" Color="Color.Default" aria-label="@L["UISignalR:MessageLog:Pagination"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
             }
         </footer>
     }
@@ -143,11 +143,11 @@
 
     private static string GetMessageIcon(MessageType type) => type switch
     {
-        MessageType.Sent => Icons.Material.Outlined.Send,
-        MessageType.Received => Icons.Material.Outlined.MoveToInbox,
-        MessageType.Success => Icons.Material.Outlined.CheckCircle,
-        MessageType.Error => Icons.Material.Outlined.ErrorOutline,
-        _ => Icons.Material.Outlined.Info
+        MessageType.Sent => MoIcons.Send,
+        MessageType.Received => MoIcons.Inbox,
+        MessageType.Success => MoIcons.Success,
+        MessageType.Error => MoIcons.Error,
+        _ => MoIcons.Info
     };
 
     private static Color GetMessageColor(SignalRMessage message) => IsError(message)

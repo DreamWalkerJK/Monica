@@ -8,14 +8,14 @@
     @if (Session?.Turns.Count is not > 0)
     {
         <div class="welcome-panel">
-            <div class="welcome-mark" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ChatBubbleOutline" /></div>
+            <div class="welcome-mark" aria-hidden="true"><MoIcon Icon="@MoIcons.Message" Size="1.5rem" /></div>
             <span class="welcome-eyebrow">@L["Workbench:WelcomeEyebrow"]</span>
             <h2 class="welcome-title">@L["Workbench:WelcomeTitle"]</h2>
             <MudText Typo="Typo.body1" Class="welcome-subtitle">@L["Workbench:WelcomeDescription"]</MudText>
             <div class="welcome-features">
-                <span><MudIcon Icon="@Icons.Material.Outlined.AttachFile" Size="Size.Small" />@L["Workbench:WelcomeAttachments"]</span>
-                <span><MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" />@L["Workbench:WelcomeTools"]</span>
-                <span><MudIcon Icon="@Icons.Material.Outlined.Timeline" Size="Size.Small" />@L["Workbench:WelcomeTrajectory"]</span>
+                <span><MoIcon Icon="@MoIcons.Paperclip" Size="1.25rem" />@L["Workbench:WelcomeAttachments"]</span>
+                <span><MoIcon Icon="@MoIcons.Workflow" Size="1.25rem" />@L["Workbench:WelcomeTools"]</span>
+                <span><MoIcon Icon="@MoIcons.ChartLine" Size="1.25rem" />@L["Workbench:WelcomeTrajectory"]</span>
             </div>
         </div>
     }

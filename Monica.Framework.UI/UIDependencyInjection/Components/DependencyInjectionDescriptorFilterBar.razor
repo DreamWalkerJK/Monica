@@ -6,7 +6,7 @@
 <div class="di-filter-shell">
     <div class="di-filter-header">
         <div class="di-search-field">
-            <MudTextField T="string"
+            <MudTextField ClearIcon="@MoIcons.Close" T="string"
                           Value="@State.SearchText"
                           ValueChanged="OnSearchTextChangedAsync"
                           Label="@L["Page:Filters:SearchLabel"]"
@@ -14,7 +14,7 @@
                           Immediate="true"
                           Clearable="true"
                           Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Outlined.Search"
+                          AdornmentIcon="@MoIcons.Search"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense" />
         </div>
@@ -52,7 +52,7 @@
                 </div>
             </div>
 
-            <MudChipSet T="DependencyInjectionDescriptorScopeFilter"
+            <MudChipSet CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" T="DependencyInjectionDescriptorScopeFilter"
                         SelectionMode="SelectionMode.MultiSelection"
                         SelectedValues="State.ScopeFilters"
                         SelectedValuesChanged="OnScopeFiltersChangedAsync"
@@ -92,7 +92,7 @@
                 </div>
             </div>
 
-            <MudChipSet T="ServiceLifetime"
+            <MudChipSet CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" T="ServiceLifetime"
                         SelectionMode="SelectionMode.MultiSelection"
                         SelectedValues="State.LifetimeFilters"
                         SelectedValuesChanged="OnLifetimeFiltersChangedAsync"
@@ -132,7 +132,7 @@
                 </div>
             </div>
 
-            <MudChipSet T="DependencyInjectionDescriptorMarkerFilter"
+            <MudChipSet CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" T="DependencyInjectionDescriptorMarkerFilter"
                         SelectionMode="SelectionMode.MultiSelection"
                         SelectedValues="State.MarkerFilters"
                         SelectedValuesChanged="OnMarkerFiltersChangedAsync"

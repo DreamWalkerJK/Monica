@@ -3,9 +3,9 @@
 @inject IStringLocalizer<AIResource> L
 
 <span class="capability-choice @(Value == true ? "enabled" : null) @(Value is null ? "unknown" : null)">
-    <MudCheckBox T="bool?" Value="@Value" ValueChanged="@ValueChanged" TriState="true" Dense="true" Disabled="@Disabled" Color="Color.Primary" Label="@Label"
+    <MudCheckBox CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="bool?" Value="@Value" ValueChanged="@ValueChanged" TriState="true" Dense="true" Disabled="@Disabled" Color="Color.Primary" Label="@Label"
                  aria-checked="@(Value is null ? "mixed" : Value.Value ? "true" : "false")" />
-    @if (Locked) { <MudIcon Icon="@Icons.Material.Outlined.Lock" Size="Size.Small" /> }
+    @if (Locked) { <MoIcon Icon="@MoIcons.Lock" Size="1.25rem" /> }
     else if (Value is null) { <span class="unknown-label">@L["Settings:Unknown"]</span> }
 </span>
 

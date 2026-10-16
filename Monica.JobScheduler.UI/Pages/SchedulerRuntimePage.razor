@@ -22,14 +22,14 @@
         <div class="runtime-page">
             @if (state.IsQueryFailed)
             {
-                <MudAlert Severity="@(state.HasLoadedSnapshot ? Severity.Warning : Severity.Error)" Variant="Variant.Outlined" Dense="true">
+                <MudAlert Severity="@(state.HasLoadedSnapshot ? Severity.Warning : Severity.Error)" Variant="Variant.Outlined" Dense="true" Icon="@(state.HasLoadedSnapshot ? MoIcons.Warning : MoIcons.Error)">
                     @(state.HasLoadedSnapshot ? L["Runtime:RefreshFailed", state.Error ?? L["Runtime:Observation:NoDiagnostic"]] : state.Error ?? L["Runtime:Observation:UnavailableDescription"])
                 </MudAlert>
             }
             @if (!state.AccessChecked && state.IsQueryFailed && !state.IsLoading)
             {
                 <div class="runtime-page__unavailable" role="status">
-                    <MudIcon Icon="@Icons.Material.Outlined.Dns" aria-hidden="true" />
+                    <MoIcon Icon="@MoIcons.Server" aria-hidden="true" Size="1.5rem" />
                     <h2>@L["Runtime:Observation:Unavailable"]</h2>
                     <p>@L["Runtime:Observation:UnavailableDescription"]</p>
                     <MudButton Variant="Variant.Outlined" OnClick="RefreshAsync">@L["Common:Retry"]</MudButton>
@@ -53,7 +53,7 @@
                                 <dd>@(UiOptions.Value.AutoRefreshInterval > TimeSpan.Zero ? SchedulerRuntimePresentation.FormatInterval(UiOptions.Value.AutoRefreshInterval, L) : L["Runtime:Observation:Manual"])</dd>
                             </div>
                         </dl>
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@state.IsLoading" OnClick="RefreshAsync">@L["Common:Refresh"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh" Disabled="@state.IsLoading" OnClick="RefreshAsync">@L["Common:Refresh"]</MudButton>
                     </section>
                     @if (state.IsLoading)
                     {
@@ -70,7 +70,7 @@
                     else if (state.IsQueryFailed && !state.IsLoading)
                     {
                         <div class="runtime-page__unavailable" role="status">
-                            <MudIcon Icon="@Icons.Material.Outlined.Dns" aria-hidden="true" />
+                            <MoIcon Icon="@MoIcons.Server" aria-hidden="true" Size="1.5rem" />
                             <h2>@L["Runtime:Observation:Unavailable"]</h2>
                             <p>@L["Runtime:Observation:UnavailableDescription"]</p>
                         </div>

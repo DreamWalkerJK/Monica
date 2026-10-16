@@ -8,7 +8,7 @@
                 {
                     <MudAlert Severity="Severity.Warning"
                               Variant="Variant.Outlined"
-                              Icon="@Icons.Material.Filled.WarningAmber">
+                              Icon="@MoIcons.Warning">
                         <MudText Typo="Typo.subtitle2">@L["Dialogs:SaveGroup:Impact:UnavailableTitle"]</MudText>
                         <MudText Typo="Typo.body2">@L["Dialogs:SaveGroup:Impact:UnavailableSummary"]</MudText>
                     </MudAlert>
@@ -22,7 +22,7 @@
                         </MudPaper>
                     </div>
 
-                    <MudAlert Severity="Severity.Warning" Dense="true">
+                    <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Dense="true">
                         @L["Dialogs:SaveGroup:Impact:SaveAnywayNotice"]
                     </MudAlert>
                 }
@@ -30,7 +30,7 @@
                 {
                     <MudAlert Severity="Severity.Info"
                               Variant="Variant.Outlined"
-                              Icon="@Icons.Material.Filled.Hub">
+                              Icon="@MoIcons.Network">
                         <MudText Typo="Typo.subtitle2">
                             @L["Dialogs:SaveGroup:Impact:Summary", ChangeCount, Impact.AffectedPublishers.Count]
                         </MudText>
@@ -54,7 +54,7 @@
                     {
                         <MudAlert Severity="Severity.Warning"
                                   Variant="Variant.Filled"
-                                  Icon="@Icons.Material.Filled.RestartAlt">
+                                  Icon="@MoIcons.Restart">
                             <MudText Typo="Typo.subtitle2">
                                 @L["Dialogs:SaveGroup:Impact:RestartRequiredTitle", ConfirmedRestartServiceCount]
                             </MudText>
@@ -68,7 +68,7 @@
                     {
                         <MudAlert Severity="Severity.Warning"
                                   Variant="Variant.Filled"
-                                  Icon="@Icons.Material.Filled.HelpOutline">
+                                  Icon="@MoIcons.Help">
                             <MudText Typo="Typo.subtitle2">
                                 @L["Dialogs:SaveGroup:Impact:UncertainImpactTitle"]
                             </MudText>
@@ -82,13 +82,13 @@
                     {
                         <MudAlert Severity="Severity.Success"
                                   Variant="Variant.Outlined"
-                                  Icon="@Icons.Material.Filled.CheckCircle">
+                                  Icon="@MoIcons.Success">
                             <MudText Typo="Typo.subtitle2">@L["Dialogs:SaveGroup:Impact:AllOnlineTitle"]</MudText>
                             <MudText Typo="Typo.body2">@L["Dialogs:SaveGroup:Impact:AllOnlineSummary"]</MudText>
                         </MudAlert>
                     }
 
-                    <MudAlert Severity="Severity.Info" Dense="true">
+                    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">
                         @L["Dialogs:SaveGroup:Impact:Advisory"]
                     </MudAlert>
 
@@ -98,7 +98,7 @@
                             <MudPaper Outlined="true" Class="pa-3">
                                 <div class="configuration-affected-service-confirmation-heading">
                                     <div class="configuration-affected-service-confirmation-publisher-key">
-                                        <MudIcon Icon="@PublisherIcon(publisher)" Color="@PublisherColor(publisher)" />
+                                        <MoIcon Icon="@PublisherIcon(publisher)" Style="@PublisherIconStyle(publisher)" Size="1.5rem" />
                                         <MudText Typo="Typo.subtitle2">@publisher.PublisherKey</MudText>
                                     </div>
                                     <div class="configuration-affected-service-confirmation-heading-chips">
@@ -191,7 +191,7 @@
 
                     @if (Impact.ParametersWithoutKnownConsumers.Count > 0)
                     {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                        <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined">
                             <MudText Typo="Typo.subtitle2">
                                 @L[
                                     "Dialogs:SaveGroup:Impact:UnknownConsumersTitle",
@@ -253,7 +253,7 @@
         {
             <MudButton Color="Color.Warning"
                        Variant="Variant.Filled"
-                       StartIcon="@Icons.Material.Filled.Save"
+                       StartIcon="@MoIcons.Save"
                        OnClick="Confirm">
                 @L["Dialogs:SaveGroup:Impact:Actions:SaveAnyway"]
             </MudButton>
@@ -262,7 +262,7 @@
         {
             <MudButton Color="@ConfirmColor"
                        Variant="Variant.Filled"
-                       StartIcon="@Icons.Material.Filled.Save"
+                       StartIcon="@MoIcons.Save"
                        OnClick="Confirm">
                 @L["Dialogs:SaveGroup:Impact:Actions:ConfirmSave"]
             </MudButton>
@@ -316,11 +316,16 @@
             : Color.Success;
     }
 
+    private static string PublisherIconStyle(ConfigurationAffectedPublisher publisher) =>
+        PublisherColor(publisher) == Color.Warning
+            ? "color:var(--mud-palette-warning)"
+            : "color:var(--mud-palette-success)";
+
     private static string PublisherIcon(ConfigurationAffectedPublisher publisher)
     {
         return publisher.RequiresRestart || publisher.Parameters.Any(IsUncertain)
-            ? Icons.Material.Filled.RestartAlt
-            : Icons.Material.Filled.Sync;
+            ? MoIcons.Restart
+            : MoIcons.Refresh;
     }
 
     private static Color ParameterImpactColor(ConfigurationAffectedParameter parameter)

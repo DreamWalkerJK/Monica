@@ -18,7 +18,7 @@ header { min-width: 0; }
     text-transform: uppercase;
     color: var(--mud-palette-text-primary);
 }
-.page-category ::deep .mud-icon-root { width: 16px; height: 16px; flex: 0 0 16px; }
+.page-category ::deep :is(.mud-icon-root, .mo-icon) { width: 16px; height: 16px; flex: 0 0 16px; }
 h1 {
     margin: 12px 0 0;
     font-family: var(--mo-font-family-display);
@@ -43,7 +43,7 @@ h1 {
     font-weight: 500;
     white-space: normal;
 }
-.policy-trigger ::deep .mud-button-icon-start .mud-icon-root { width: 18px; height: 18px; }
+.policy-trigger ::deep .mud-button-icon-start :is(.mud-icon-root, .mo-icon) { width: 18px; height: 18px; }
 
 @container file-workspace (max-width: 600px) {
     .family-header { grid-template-columns: minmax(0, 1fr); gap: 12px; }

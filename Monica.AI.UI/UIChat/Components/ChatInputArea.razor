@@ -32,7 +32,7 @@
                     @if (FilteredCapabilityCandidates.Count == 0)
                     {
                         <div class="capability-empty">
-                            <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Small" />
+                            <MoIcon Icon="@MoIcons.SearchOff" Size="1.25rem" />
                             <MudText Typo="Typo.body2">@L["Chat:CapabilityPicker:NoMatches"]</MudText>
                         </div>
                     }
@@ -44,7 +44,7 @@
                                     class="@GetCandidateClass(candidate.index)"
                                     @onclick="@(() => CompleteCandidate(candidate.candidate))">
                                 <span class="candidate-icon">
-                                    <MudIcon Icon="@GetReferenceIcon(candidate.candidate.Kind)" Size="Size.Small" />
+                                    <MoIcon Icon="@GetReferenceIcon(candidate.candidate.Kind)" Size="1.25rem" />
                                 </span>
                                 <span class="candidate-copy">
                                     <span class="candidate-title">@candidate.candidate.Name</span>
@@ -62,7 +62,7 @@
         <div class="input-bottom">
             <div class="input-actions-left">
                 <InputFile id="@_uploadId" class="file-input" OnChange="@OnUpload" multiple accept="image/png,image/jpeg,image/webp,image/gif,.pdf,.docx,.txt,.md,.csv,.json,.xml,.html" disabled="@(IsSending || IsUploading || Disabled)" />
-                <MudButton HtmlTag="label" for="@_uploadId" StartIcon="@Icons.Material.Outlined.AttachFile" Size="Size.Small" Disabled="@(IsSending || IsUploading || Disabled)" aria-label="@L["Workbench:Attach"]"><span class="attachment-label">@L["Workbench:Attach"]</span></MudButton>
+                <MudButton HtmlTag="label" for="@_uploadId" StartIcon="@MoIcons.Paperclip" Size="Size.Small" Disabled="@(IsSending || IsUploading || Disabled)" aria-label="@L["Workbench:Attach"]"><span class="attachment-label">@L["Workbench:Attach"]</span></MudButton>
                 @if (KnowledgeBases is { Count: > 0 })
                 {
                     <KnowledgeBaseSelector KnowledgeBases="@KnowledgeBases" SelectedIds="@SelectedKnowledgeBaseIds" SelectedIdsChanged="@SelectedKnowledgeBaseIdsChanged" Disabled="@(IsSending || IsUploading || Disabled)" />
@@ -77,17 +77,17 @@
             <div class="input-send">
                 @if (IsSending)
                 {
-                    <MudIconButton Class="composer-stop" Icon="@Icons.Material.Filled.Stop" Color="Color.Error" OnClick="HandleCancel" aria-label="@L["Chat:Input:Stop"]" />
+                    <MudIconButton Class="composer-stop" Icon="@MoIcons.Stop" Color="Color.Error" OnClick="HandleCancel" aria-label="@L["Chat:Input:Stop"]" />
                 }
                 else
                 {
-                    <MudIconButton Class="composer-send" Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Primary" Disabled="@((string.IsNullOrWhiteSpace(InputText) && Attachments.Count == 0) || EditorDisabled || IsUploading || AttachmentIncompatible || ModelName is null)" OnClick="HandleSend" aria-label="@L["Chat:Input:Send"]" />
+                    <MudIconButton Class="composer-send" Icon="@MoIcons.ArrowUp" Color="Color.Primary" Disabled="@((string.IsNullOrWhiteSpace(InputText) && Attachments.Count == 0) || EditorDisabled || IsUploading || AttachmentIncompatible || ModelName is null)" OnClick="HandleSend" aria-label="@L["Chat:Input:Send"]" />
                 }
             </div>
         </div>
         @if (IsUploading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
-        @if (ImageIncompatible) { <MudAlert Dense="true" Severity="Severity.Warning">@L["Workbench:ImageUnsupported"]</MudAlert> }
-        @if (DocumentIncompatible) { <MudAlert Dense="true" Severity="Severity.Warning">@L["Workbench:DocumentUnsupported"]</MudAlert> }
+        @if (ImageIncompatible) { <MudAlert Icon="@MoIcons.Warning" Dense="true" Severity="Severity.Warning">@L["Workbench:ImageUnsupported"]</MudAlert> }
+        @if (DocumentIncompatible) { <MudAlert Icon="@MoIcons.Warning" Dense="true" Severity="Severity.Warning">@L["Workbench:DocumentUnsupported"]</MudAlert> }
     </MudPaper>
     <div class="composer-options"><span class="composer-hint">@L["Workbench:ComposerHint"]</span></div>
 </div>
@@ -154,8 +154,8 @@
     private string EditorContentEditable => EditorDisabled ? "false" : "true";
     private static readonly IReadOnlyDictionary<string, string> REFERENCE_ICONS = new Dictionary<string, string>
     {
-        ["skills"] = Icons.Material.Filled.AutoAwesome,
-        ["mcp"] = Icons.Material.Filled.AccountTree
+        ["skills"] = MoIcons.Sparkle,
+        ["mcp"] = MoIcons.Workflow
     };
     private IReadOnlyList<AgentCapabilityReferenceCandidate> FilteredCapabilityCandidates =>
         CapabilityCandidates
@@ -482,8 +482,8 @@
     private static string GetReferenceIcon(AgentCapabilityKind kind)
     {
         return kind == AgentCapabilityKind.Skill
-            ? Icons.Material.Filled.AutoAwesome
-            : Icons.Material.Filled.AccountTree;
+            ? MoIcons.Sparkle
+            : MoIcons.Workflow;
     }
 
     public async Task FocusAsync()

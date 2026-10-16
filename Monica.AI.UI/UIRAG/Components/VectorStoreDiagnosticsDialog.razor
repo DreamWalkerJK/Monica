@@ -31,7 +31,7 @@
             }
             else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))
             {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Variant="Variant.Outlined">
                     @_loadErrorMessage
                 </MudAlert>
             }
@@ -69,7 +69,7 @@
 
                     @if (diagnostics.ConfigurationEntries.Count == 0)
                     {
-                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                        <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
                             @L["RAG:VectorDiagnostics:NoConfiguration"]
                         </MudAlert>
                     }
@@ -105,7 +105,7 @@
                         <MudButton Variant="Variant.Outlined"
                                    Size="Size.Small"
                                    Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.PlayArrow"
+                                   StartIcon="@MoIcons.Play"
                                    OnClick="@TestConnectionAsync"
                                    aria-disabled="@(_isTesting ? "true" : "false")">
                             @(_isTesting ? L["RAG:VectorDiagnostics:Testing"] : L["RAG:VectorDiagnostics:Test"])
@@ -121,8 +121,8 @@
                     else
                     {
                         <div class="test-result @(_testResult.Succeeded ? "success" : "failed")" role="status">
-                            <MudIcon Icon="@(_testResult.Succeeded ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.ErrorOutline)"
-                                     Size="Size.Small" />
+                            <MoIcon Icon="@(_testResult.Succeeded ? MoIcons.Success : MoIcons.Error)"
+                                     Size="1.25rem" />
                             <div class="test-result-copy">
                                 <MudText Typo="Typo.body2">@BuildTestResultText(_testResult)</MudText>
                                 @if (!string.IsNullOrWhiteSpace(_testResult.ProbeCollectionName))

@@ -1,7 +1,7 @@
 .runtime-config { --config-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary)); min-width: 0; width: 100%; overflow: clip; border: 1px solid var(--mud-palette-lines-default); border-radius: 12px; color: var(--mud-palette-text-primary); background: var(--mud-palette-surface); container: runtime-config / inline-size; }
 .runtime-config__heading { display: flex; align-items: start; gap: 10px; padding: 20px; }
 .runtime-config__heading > div { min-width: 0; }
-.runtime-config__heading ::deep .mud-icon-root { flex: none; width: 24px; height: 24px; color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)) !important; }
+.runtime-config__heading ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 24px; height: 24px; color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)) !important; }
 .runtime-config h2 { margin: 0 0 5px; font-size: 20px; font-weight: 500; line-height: 1.4; }
 .runtime-config p { margin: 0; color: var(--config-muted); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
 .runtime-config__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; min-width: 0; padding: 0 20px 20px; }

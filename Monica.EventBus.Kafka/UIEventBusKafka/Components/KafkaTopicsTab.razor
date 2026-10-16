@@ -3,15 +3,15 @@
 
 @{ var topics = FilteredTopics; }
 <div class="topic-workspace">
-    <KafkaWorkspaceHeader Icon="@Icons.Material.Outlined.Topic" Title="@L["Topics:Title"]"
+    <KafkaWorkspaceHeader Icon="@MoIcons.Folder" Title="@L["Topics:Title"]"
                           Subtitle="@(State.HasLoadedTopics ? L["Topics:Summary", topics.Count, State.Topics.Count] : L["Common:Values:Unavailable"])">
         <Actions>
-            <KafkaPrimaryButton StartIcon="@Icons.Material.Filled.Add" Disabled="@(IsBusy || !State.CanAdminSelectedCluster)" OnClick="OnCreate">@L["Topics:Actions:Create"]</KafkaPrimaryButton>
+            <KafkaPrimaryButton StartIcon="@MoIcons.Add" Disabled="@(IsBusy || !State.CanAdminSelectedCluster)" OnClick="OnCreate">@L["Topics:Actions:Create"]</KafkaPrimaryButton>
         </Actions>
     </KafkaWorkspaceHeader>
     <div class="topic-tools">
         <div class="topic-search"><MudTextField T="string" @bind-Value="_searchText" Immediate="true" DebounceInterval="200" Label="@L["Topics:Search:Label"]" Placeholder="@L["Topics:Search:Placeholder"]"
-                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" /></div>
+                           Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" ClearIcon="@MoIcons.Close" /></div>
         @if (State.HasLoadedTopics)
         {
         <div class="topic-filters" aria-label="@L["Topics:Search:Label"]">
@@ -24,23 +24,23 @@
     </div>
     @if (!string.IsNullOrWhiteSpace(State.TopicsError))
     {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@State.TopicsError</MudAlert>
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@State.TopicsError</MudAlert>
     }
     @if (!State.CanAdminSelectedCluster)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Lock" Title="@L["Topics:Title"]" Description="@L["Topics:Unavailable"]" AccentColor="Color.Warning" />
+        <KafkaWorkspaceState Icon="@MoIcons.Lock" Title="@L["Topics:Title"]" Description="@L["Topics:Unavailable"]" AccentColor="Color.Warning" />
     }
     else if (!State.HasLoadedTopics)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Topic" Title="@L["Topics:Title"]" Description="@(State.IsBusy || State.IsLoading ? L["Topics:Loading"] : L["Common:Values:Unavailable"])" />
+        <KafkaWorkspaceState Icon="@MoIcons.Folder" Title="@L["Topics:Title"]" Description="@(State.IsBusy || State.IsLoading ? L["Topics:Loading"] : L["Common:Values:Unavailable"])" />
     }
     else if (State.Topics.Count == 0)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Topic" Title="@L["Topics:Title"]" Description="@L["Topics:Empty"]" ActionLabel="@L["Topics:Actions:Create"]" ActionIcon="@Icons.Material.Filled.Add" ActionDisabled="@IsBusy" OnAction="OnCreate" />
+        <KafkaWorkspaceState Icon="@MoIcons.Folder" Title="@L["Topics:Title"]" Description="@L["Topics:Empty"]" ActionLabel="@L["Topics:Actions:Create"]" ActionIcon="@MoIcons.Add" ActionDisabled="@IsBusy" OnAction="OnCreate" />
     }
     else if (topics.Count == 0)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.SearchOff" Title="@L["Topics:Search:NoMatches"]" Description="@L["Topics:Search:Placeholder"]" ActionLabel="@L["Common:Actions:ResetFilters"]" OnAction="ResetFilters" />
+        <KafkaWorkspaceState Icon="@MoIcons.SearchOff" Title="@L["Topics:Search:NoMatches"]" Description="@L["Topics:Search:Placeholder"]" ActionLabel="@L["Common:Actions:ResetFilters"]" OnAction="ResetFilters" />
     }
     else
     {
@@ -53,7 +53,7 @@
                             <span class="topic-name">@context.TopicName</span>
                             @if (context.IsInternal) { <span class="topic-description">@L["Topics:Values:Internal"]</span> }
                             @if (!context.IsMetadataAvailable) {
-                                <span class="topic-metadata-warning"><MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />@L["Topics:Values:MetadataUnavailable", context.MetadataError ?? string.Empty]</span>
+                                <span class="topic-metadata-warning"><MoIcon Icon="@MoIcons.Warning" Size="1.25rem" />@L["Topics:Values:MetadataUnavailable", context.MetadataError ?? string.Empty]</span>
                             }
                         </div>
                     </MudTd>
@@ -66,19 +66,19 @@
                     <MudTd DataLabel="@L["Topics:Columns:RetainedMessages"]">@KafkaMetricDisplayFormatter.FormatOptionalInt64(context.RetainedMessageCount, L["Topics:Values:RetainedMessagesUnknown"])</MudTd>
                     <MudTd DataLabel="@L["Topics:Columns:Retention"]">@FormatRetention(context.RetentionMs)</MudTd>
                     <MudTd DataLabel="@L["Topics:Columns:Actions"]">
-                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Disabled="@IsBusy" AriaLabel="@L["Topics:Actions:OpenMenu", context.TopicName]">
-                            <MudMenuItem Icon="@Icons.Material.Outlined.Visibility" OnClick="@(() => OnViewMessages.InvokeAsync(context))">@L["Topics:Actions:Messages"]</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.Storage" OnClick="@(() => OnViewBacklog.InvokeAsync(context))">@L["Topics:Actions:Backlog"]</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.Groups" OnClick="@(() => OnViewConsumerGroups.InvokeAsync(context))">@L["Topics:Actions:ConsumerGroups"]</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.CallSplit" Disabled="@(!context.IsMetadataAvailable)" OnClick="@(() => OnIncreasePartitions.InvokeAsync(context))">@L["Topics:Actions:Partitions"]</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.Schedule" Disabled="@(!context.IsMetadataAvailable)" OnClick="@(() => OnUpdateRetention.InvokeAsync(context))">@L["Topics:Actions:Retention"]</MudMenuItem>
+                        <MudMenu Icon="@MoIcons.MoreVertical" Size="Size.Small" Dense="true" Disabled="@IsBusy" AriaLabel="@L["Topics:Actions:OpenMenu", context.TopicName]">
+                            <MudMenuItem Icon="@MoIcons.Eye" OnClick="@(() => OnViewMessages.InvokeAsync(context))">@L["Topics:Actions:Messages"]</MudMenuItem>
+                            <MudMenuItem Icon="@MoIcons.Database" OnClick="@(() => OnViewBacklog.InvokeAsync(context))">@L["Topics:Actions:Backlog"]</MudMenuItem>
+                            <MudMenuItem Icon="@MoIcons.Users" OnClick="@(() => OnViewConsumerGroups.InvokeAsync(context))">@L["Topics:Actions:ConsumerGroups"]</MudMenuItem>
+                            <MudMenuItem Icon="@MoIcons.Split" Disabled="@(!context.IsMetadataAvailable)" OnClick="@(() => OnIncreasePartitions.InvokeAsync(context))">@L["Topics:Actions:Partitions"]</MudMenuItem>
+                            <MudMenuItem Icon="@MoIcons.Clock" Disabled="@(!context.IsMetadataAvailable)" OnClick="@(() => OnUpdateRetention.InvokeAsync(context))">@L["Topics:Actions:Retention"]</MudMenuItem>
                             <MudDivider />
-                            <MudMenuItem Icon="@Icons.Material.Outlined.DeleteSweep" IconColor="Color.Error" Disabled="@(!context.IsMetadataAvailable || context.IsInternal)" OnClick="@(() => OnClearMessages.InvokeAsync(context))">@L["Topics:Actions:ClearMessages"]</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.Delete" IconColor="Color.Error" OnClick="@(() => OnDelete.InvokeAsync(context))">@L["Common:Actions:Delete"]</MudMenuItem>
+                            <MudMenuItem Icon="@MoIcons.ClearList" IconColor="Color.Error" Disabled="@(!context.IsMetadataAvailable || context.IsInternal)" OnClick="@(() => OnClearMessages.InvokeAsync(context))">@L["Topics:Actions:ClearMessages"]</MudMenuItem>
+                            <MudMenuItem Icon="@MoIcons.Delete" IconColor="Color.Error" OnClick="@(() => OnDelete.InvokeAsync(context))">@L["Common:Actions:Delete"]</MudMenuItem>
                         </MudMenu>
                     </MudTd>
                 </RowTemplate>
-                <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
+                <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /></PagerContent>
             </MudTable>
         </KafkaTableSurface>
     }

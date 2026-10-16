@@ -21,14 +21,14 @@
             </MudText>
             @if (Target == ConfigurationCandidateValidationTarget.EffectiveAggregate && HasEffectiveChange == false)
             {
-                <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:MaskedChange"]</MudAlert>
+                <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Validation:MaskedChange"]</MudAlert>
             }
         }
         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="configuration-validation-report__text configuration-validation-report__revision">
             @(string.IsNullOrWhiteSpace(ValidationRevision) ? L["Validation:RevisionUnavailable"] : L["Validation:Revision", ValidationRevision])
         </MudText>
         @ChildContent
-        <MudAlert Severity="@StatusSeverity" Dense="true">@StatusText</MudAlert>
+        <MudAlert Icon="@((StatusSeverity) switch { Severity.Success => MoIcons.Success, Severity.Warning => MoIcons.Warning, Severity.Error => MoIcons.Error, _ => MoIcons.Info })" Severity="@StatusSeverity" Dense="true">@StatusText</MudAlert>
         <ConfigurationValidationIssueList Issues="Issues"
                                           ShowRuntimeMetadata="ShowRuntimeMetadata"
                                           ShowSourceChain="ShowSourceChain"

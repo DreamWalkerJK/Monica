@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using Monica.Configuration.UI.Localization
 @using Monica.UI.Shared.Components.Dialogs
 @inject ConfigurationFacade Facade
@@ -16,11 +17,11 @@
         }
         else if (_error is not null)
         {
-            <MudAlert Severity="Severity.Error">@_error</MudAlert>
+            <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert>
         }
         else if (_chain is null || _chain.Values.Count == 0)
         {
-            <MudAlert Severity="Severity.Info">@L["Sources:Chain:Empty"]</MudAlert>
+            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["Sources:Chain:Empty"]</MudAlert>
         }
         else
         {
@@ -49,7 +50,7 @@
                                 @if (CanEdit(value))
                                 {
                                     <MudTooltip Text="@L["Sources:Actions:EditSource"]">
-                                        <MudIconButton Icon="@Icons.Material.Outlined.Edit"
+                                        <MudIconButton Icon="@MoIcons.Edit"
                                                        aria-label="@L["Sources:Actions:EditSource"]"
                                                        Size="Size.Small"
                                                        Color="Color.Default"
@@ -126,7 +127,7 @@
         {
             await _operations.RunAsync(async token =>
             {
-                var result = await Facade.GetSourceChainAsync(definitionKey, path);
+                var result = await Facade.GetSourceChainAsync(definitionKey, path, Visibility.ShowSensitiveValues);
                 token.ThrowIfCancellationRequested();
                 _operations.TryApply(() =>
                 {
@@ -176,7 +177,7 @@
 
     private static string SourcePath(ConfigurationSourceDescriptor source) => source.PhysicalPath ?? source.SourcePath ?? source.ProviderType;
 
-    private string DisplayValue(ConfigurationSourceValue value) => value.IsSensitive
+    private string DisplayValue(ConfigurationSourceValue value) => Visibility.ShouldMask(value.IsSensitive)
         ? L["State:Value:Sensitive"] : value.DisplayValue ?? L["Value:States:Empty"];
 
     private static string SourceCardClass(ConfigurationSourceValue value) => value.IsEffective

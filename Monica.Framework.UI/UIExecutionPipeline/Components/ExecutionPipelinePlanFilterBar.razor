@@ -14,7 +14,7 @@
                       Label="@L["Page:Filters:Search"]"
                       Placeholder="@L["Page:Filters:SearchPlaceholder"]"
                       Adornment="Adornment.Start"
-                      AdornmentIcon="@Icons.Material.Outlined.Search"
+                      AdornmentIcon="@MoIcons.Search"
                       Variant="Variant.Outlined"
                       Margin="Margin.Dense" />
     </div>
@@ -22,7 +22,7 @@
         <div class="execution-pipeline-filters__field">
             <ExecutionPipelineHelpLabel Text="@L["Page:Filters:ExecutionPoint"]"
                                         HelpText="@L["Page:Help:Concepts:ExecutionPoint"]" />
-            <MudSelect T="string"
+            <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string"
                        Value="@State.ExecutionPointFilter"
                        ValueChanged="State.SetExecutionPointFilter"
                        aria-label="@L["Page:Filters:ExecutionPoint"]"
@@ -38,7 +38,7 @@
         <div class="execution-pipeline-filters__field">
             <ExecutionPipelineHelpLabel Text="@L["Page:Filters:BusinessOperation"]"
                                         HelpText="@L["Page:Help:Concepts:BusinessOperation"]" />
-            <MudSelect T="ExecutionPipelineBusinessFilter"
+            <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="ExecutionPipelineBusinessFilter"
                        Value="@State.BusinessFilter"
                        ValueChanged="State.SetBusinessFilter"
                        aria-label="@L["Page:Filters:BusinessOperation"]"
@@ -52,7 +52,7 @@
         <div class="execution-pipeline-filters__field">
             <ExecutionPipelineHelpLabel Text="@L["Page:Filters:TransactionMode"]"
                                         HelpText="@L["Page:Help:Concepts:TransactionMode"]" />
-            <MudSelect T="string"
+            <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string"
                        Value="@State.TransactionModeFilter"
                        ValueChanged="State.SetTransactionModeFilter"
                        aria-label="@L["Page:Filters:TransactionMode"]"
@@ -68,7 +68,7 @@
         <div class="execution-pipeline-filters__field">
             <ExecutionPipelineHelpLabel Text="@L["Page:Filters:Status"]"
                                         HelpText="@L["Page:Help:Concepts:PlanStatus"]" />
-            <MudSelect T="string"
+            <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string"
                        Value="@State.StatusFilter"
                        ValueChanged="State.SetStatusFilter"
                        aria-label="@L["Page:Filters:Status"]"

@@ -7,13 +7,13 @@
         <div class="message-dialog">
             <MudStack Spacing="3">
                 <KafkaDialogContext ClusterId="@(ClusterId ?? Batch.ClusterId)" TopicName="@Batch.TopicName" />
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@MoIcons.Info">
                     @L["Topics:MessagesDialog:ReadHint", Batch.MaxMessages, FormatCapturedAt()]
                 </MudAlert>
 
                 @if (Batch.Messages.Count == 0)
                 {
-                    <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Inbox" Title="@L["Topics:Actions:Messages"]" Description="@L["Topics:MessagesDialog:Empty"]" />
+                    <KafkaWorkspaceState Icon="@MoIcons.Inbox" Title="@L["Topics:Actions:Messages"]" Description="@L["Topics:MessagesDialog:Empty"]" />
                 }
                 else
                 {
@@ -46,7 +46,7 @@
 
                             @if (message.IsTruncated)
                             {
-                                <MudAlert Severity="Severity.Warning" Variant="Variant.Text" Dense="true">
+                                <MudAlert Severity="Severity.Warning" Variant="Variant.Text" Dense="true" Icon="@MoIcons.Warning">
                                     @L["Topics:MessagesDialog:Truncated"]
                                 </MudAlert>
                             }

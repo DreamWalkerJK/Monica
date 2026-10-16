@@ -18,7 +18,7 @@
                   Hover="true"
                   Breakpoint="Breakpoint.None"
                   Elevation="0"
-                  AriaLabel="@L["Table:Title"]"
+                  TableAttributes="@(new Dictionary<string, object?> { ["aria-label"] = L["Table:Title"].Value })"
                   Class="seeder-execution-table">
             <HeaderContent>
                 <MudTh>@L["Table:Columns:Name"]</MudTh>
@@ -67,7 +67,7 @@
                 <MudTd DataLabel="@L["Table:Columns:Actions"]" Class="seeder-action-cell">
                     <MudTooltip Text="@L["Actions:Details"]">
                         <MudIconButton id="@SeederDisplay.DetailsTriggerId(context.Seeder.SeederTypeName)"
-                                       Icon="@Icons.Material.Outlined.ChevronRight"
+                                       Icon="@MoIcons.ChevronRight"
                                        Color="Color.Primary"
                                        Size="Size.Small"
                                        OnClick="@(() => Session.OpenDetailsAsync(context.Seeder))"
@@ -82,13 +82,13 @@
                 <div class="seeder-table-empty" data-testid="seeder-table-empty">
                     @if (Session.Snapshot?.Run.TotalCount == 0)
                     {
-                        <MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Large" />
+                        <MoIcon Icon="@MoIcons.Package" Size="2.25rem" />
                         <strong>@L["Table:NoSeeders"]</strong>
                         <p>@L["Table:NoSeedersDescription"]</p>
                     }
                     else
                     {
-                        <MudIcon Icon="@Icons.Material.Outlined.FilterAltOff" Size="Size.Large" />
+                        <MoIcon Icon="@MoIcons.FilterOff" Size="2.25rem" />
                         <strong>@L["Table:Empty"]</strong>
                         <p>@L["Table:EmptyDescription"]</p>
                         <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@Session.ClearFiltersAsync">@L["Actions:ClearFilters"]</MudButton>

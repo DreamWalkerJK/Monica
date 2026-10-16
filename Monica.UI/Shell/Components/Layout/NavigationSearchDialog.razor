@@ -15,7 +15,7 @@
     <DialogContent>
         <div class="navigation-search" @ref="_root">
             <div class="search-input-row">
-                <MudIcon Icon="@ShellIcons.Search" Class="search-input-icon" />
+                <MoIcon Icon="@MoIcons.Search" Class="search-input-icon" />
                 <MudTextField T="string" Value="@_query" ValueChanged="SetQuery" Immediate="true" Variant="Variant.Text"
                               Underline="false" Class="search-input" Placeholder="@L["Search:Placeholder"]"
                               aria-label="@L["Search:Action"]" role="combobox" aria-autocomplete="list"
@@ -34,7 +34,7 @@
                 else if (_results.Count == 0)
                 {
                     <div class="search-empty">
-                        <MudIcon Icon="@ShellIcons.Search" />
+                        <MoIcon Icon="@MoIcons.Search" Size="24px" />
                         <h2>@L[_entries.Count == 0 ? "Search:EmptyTitle" : "Search:NoMatchesTitle"]</h2>
                         <p>@L[_entries.Count == 0 ? "Search:EmptyDescription" : "Search:NoMatchesDescription"]</p>
                     </div>
@@ -48,7 +48,7 @@
                         <button @key="entry.Item.Href" type="button" class="search-result @(index == _selectedIndex ? "is-selected" : null)"
                                 id="@ResultId(index)" data-search-result-index="@index" role="option" aria-selected="@(index == _selectedIndex ? "true" : "false")"
                                 @onclick="@(() => OpenResultAsync(entry, revision))">
-                            <span class="search-result-icon"><MudIcon Icon="@entry.Icon" /></span>
+                            <span class="search-result-icon"><MoIcon Icon="@entry.Icon" /></span>
                             <span class="search-result-copy"><span class="search-result-title">@entry.Title</span><span class="search-result-description">@entry.Description</span>
                                 @if (entry.CategoryBreadcrumb != entry.RootCategory)
                                 {

@@ -4,17 +4,16 @@ namespace Monica.Configuration.UI.Support;
 
 /// <summary>Determines whether a history comparison can safely expose a stored value.</summary>
 /// <remarks>
-/// Missing or mismatched schema identity and unresolved paths fail closed. Sensitivity is inherited from every
+/// Missing definitions and unresolved paths remain hidden unless the host enables full disclosure. Sensitivity is inherited from every
 /// ancestor and includes the complete target subtree, including dictionary and list templates.
 /// </remarks>
 internal static class ConfigurationHistoryValuePrivacy
 {
     internal static bool IsSensitive(ConfigurationValueHistory row,
-        IReadOnlyDictionary<string, ConfigurationDefinition> definitions)
+        IReadOnlyDictionary<string, ConfigurationDefinition> definitions, bool showSensitiveValues = false)
     {
-        if (!definitions.TryGetValue(row.DefinitionKey, out var definition)
-            || definition.SchemaVersion != row.SchemaVersion || string.IsNullOrWhiteSpace(row.SchemaHash)
-            || !string.Equals(definition.SchemaHash, row.SchemaHash, StringComparison.Ordinal)) return true;
+        if (showSensitiveValues) return false;
+        if (!definitions.TryGetValue(row.DefinitionKey, out var definition)) return true;
 
         // Preserve ConfigurationSchemaNavigator's ancestor semantics without broadening its internal core API.
         var current = definition.Root;

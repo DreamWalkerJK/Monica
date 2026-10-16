@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Localization;
 using Monica.ProjectUnits.Models;
 using Monica.Framework.UI.UIProjectUnits.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.Framework.UI.Localization;
@@ -197,7 +198,7 @@ public static class ProjectUnitsLocalizationExtensions
             {
                 text = unit.Owner,
                 color = "dark",
-                icon = Icons.Material.Filled.Person
+                icon = MoIcons.User
             });
         }
 
@@ -207,7 +208,7 @@ public static class ProjectUnitsLocalizationExtensions
             {
                 text = localizer.GetCountText(ProjectUnitsCountText.Dependency, unit.Dependencies.Count),
                 color = "info",
-                icon = Icons.Material.Filled.Link
+                icon = MoIcons.Link
             });
         }
 
@@ -217,7 +218,7 @@ public static class ProjectUnitsLocalizationExtensions
             {
                 text = localizer.GetCountText(ProjectUnitsCountText.DependedBy, unit.DependedByCount),
                 color = "success",
-                icon = Icons.Material.Filled.CallReceived
+                icon = MoIcons.ArrowDownLeft
             });
         }
 
@@ -227,7 +228,7 @@ public static class ProjectUnitsLocalizationExtensions
             {
                 text = localizer.GetCountText(ProjectUnitsCountText.Requirement, unit.RequirementCount),
                 color = "secondary",
-                icon = Icons.Material.Filled.AssignmentTurnedIn
+                icon = MoIcons.ClipboardCheck
             });
         }
 
@@ -237,7 +238,7 @@ public static class ProjectUnitsLocalizationExtensions
             {
                 text = localizer.GetCountText(ProjectUnitsCountText.Method, unit.MethodCount),
                 color = "primary",
-                icon = Icons.Material.Filled.Functions
+                icon = MoIcons.Sigma
             });
         }
 
@@ -253,7 +254,7 @@ public static class ProjectUnitsLocalizationExtensions
                 {
                     text = localizer.GetCountText(ProjectUnitsCountText.Error, errorCount),
                     color = "error",
-                    icon = Icons.Material.Filled.Error
+                    icon = MoIcons.Error
                 });
             }
 
@@ -263,7 +264,7 @@ public static class ProjectUnitsLocalizationExtensions
                 {
                     text = localizer.GetCountText(ProjectUnitsCountText.Warning, warningCount),
                     color = "warning",
-                    icon = Icons.Material.Filled.Warning
+                    icon = MoIcons.Warning
                 });
             }
 
@@ -273,7 +274,7 @@ public static class ProjectUnitsLocalizationExtensions
                 {
                     text = localizer.GetCountText(ProjectUnitsCountText.Info, infoCount),
                     color = "info",
-                    icon = Icons.Material.Filled.Info
+                    icon = MoIcons.Info
                 });
             }
         }

@@ -10,6 +10,7 @@ using Monica.Configuration.Serialization;
 using Monica.Configuration.UI.Models;
 using Monica.Configuration.UI.State;
 using Monica.Configuration.UI.Support;
+using Monica.UI.Icons;
 
 namespace Monica.Configuration.UI.Dialogs;
 
@@ -511,7 +512,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
         if (_operations.IsRetired) return Task.CompletedTask;
         var path = FieldPath(field, ownerPath, ownerSchema);
         var displayValue = result.DisplayValue ?? string.Empty;
-        if (field.IsSensitive && string.IsNullOrWhiteSpace(displayValue))
+        if (Visibility.ShouldMask(field.IsSensitive) && string.IsNullOrWhiteSpace(displayValue))
         {
             ClearError(path);
             return Task.CompletedTask;
@@ -520,7 +521,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
         if (!result.IsValid || result.StoredValue is null)
         {
             SetError(path, new ScalarValidationError(
-                field.IsSensitive ? L["State:Value:Sensitive"].Value : displayValue,
+                Visibility.ShouldMask(field.IsSensitive) ? L["State:Value:Sensitive"].Value : displayValue,
                 result.ValidationError ?? L["State:Editor:InvalidPattern"]));
             return Task.CompletedTask;
         }
@@ -539,7 +540,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
         if (!result.IsValid || result.StoredValue is null)
         {
             SetError(path, new ScalarValidationError(
-                IsSensitiveNode(collection)
+                Visibility.ShouldMask(IsSensitiveNode(collection))
                     ? L["State:Value:Sensitive"].Value
                     : result.InvalidDisplayValue ?? result.DisplayValue ?? string.Empty,
                 result.ValidationError ?? L["State:Editor:InvalidPattern"]));
@@ -812,7 +813,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             DefinitionKey = Definition.DefinitionKey,
             LogicalPath = path,
             ConfigurationPath = field.ConfigurationPath,
-            DisplayValue = field.IsSensitive ? null : ReadScalarDisplayValue(ReadNode(path), field),
+            DisplayValue = Visibility.ShouldMask(field.IsSensitive) ? null : ReadScalarDisplayValue(ReadNode(path), field),
             IsSensitive = field.IsSensitive,
             Version = _valueVersion,
             EffectiveSource = EffectiveValue?.EffectiveSource
@@ -838,7 +839,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             DefinitionKey = Definition.DefinitionKey,
             LogicalPath = path,
             ConfigurationPath = collection.ConfigurationPath,
-            DisplayValue = IsSensitiveNode(collection) ? null : value.ToJsonString(),
+            DisplayValue = Visibility.ShouldMask(IsSensitiveNode(collection)) ? null : value.ToJsonString(),
             IsSensitive = IsSensitiveNode(collection),
             Version = _valueVersion,
             EffectiveSource = EffectiveValue?.EffectiveSource
@@ -1120,14 +1121,14 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             return L["Value:States:Empty"];
         }
 
-        if (IsSensitiveNode(schema))
+        if (Visibility.ShouldMask(IsSensitiveNode(schema)))
         {
             return L["State:Value:Sensitive"];
         }
 
         return schema.NodeKind == ConfigurationNodeKind.Scalar
             ? ReadScalarDisplayValue(node, schema) ?? L["Value:States:Empty"]
-            : ConfigurationJsonDisplayFormatter.Format(node, schema, L["State:Value:Sensitive"]);
+            : ConfigurationJsonDisplayFormatter.Format(node, schema, L["State:Value:Sensitive"], Visibility.ShowSensitiveValues);
     }
 
     private static string? ReadScalarDisplayValue(JsonNode? node, ConfigurationNodeDefinition schema)
@@ -1186,8 +1187,8 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
     private string NestedCollectionIcon(ConfigurationNodeDefinition child)
     {
         return child.NodeKind == ConfigurationNodeKind.Dictionary
-            ? Icons.Material.Filled.DataObject
-            : Icons.Material.Filled.FormatListBulleted;
+            ? MoIcons.Braces
+            : MoIcons.List;
     }
 
     private enum EditorMode

@@ -32,11 +32,9 @@ Monica.UI/
         │   ├── roboto-regular.woff2
         │   ├── roboto-medium.woff2
         │   └── roboto-bold.woff2
-        ├── inter/
-        │   ├── inter-regular.woff2
-        │   └── inter-medium.woff2
-        └── icons/
-            └── material-icons.woff2
+        └── inter/
+            ├── inter-regular.woff2
+            └── inter-medium.woff2
 ```
 
 ### 3. No External CDN
@@ -200,28 +198,11 @@ python scripts/subset_ui_font.py --mode check
 
 The script defaults to `.tmp/monica-ui-font-sources/zcool_qingke_huangyou.ttf` and scans top-level `Monica*/Localization/**/*.json` resource files, excluding test projects. For non-default source storage, pass `--source-font <path>`. For text that is not in resource JSON yet, pass `--extra-text` or `--extra-text-file`.
 
-## MudBlazor Icons
+## Local SVG icons
 
-MudBlazor uses Material Design Icons. Ensure the icon font is bundled locally:
+`MoIcons` and MudBlazor's built-in Material SVG constants render inline SVG fragments; they do not require an icon font. Prefer the shared `Monica.UI.Icons` catalog for Monica-owned icon choices. See [MoIcon authoring](moicon-authoring.md) for source imports, offline generation, and license packaging, and the [consumer contract](../../monica-infra-ui/references/icons.md) for native rendering and Mud control slots.
 
-### Icon Font Location
-
-```
-wwwroot/
-└── fonts/
-    └── materialdesignicons-webfont.woff2
-```
-
-### Icon Font CSS
-
-```css
-@font-face {
-    font-family: 'Material Design Icons';
-    src: url('../fonts/materialdesignicons-webfont.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
-}
-```
+Importing an updated Lucide snapshot is an explicit development operation. The checked-in catalog compiles locally; builds and application rendering must not fetch icons, scripts, fonts, or sprites from an external service. An application that deliberately uses another font-based icon family must bundle and license that font separately.
 
 ## Static Asset Checklist
 
@@ -237,7 +218,7 @@ Before deploying, verify:
 - [ ] All CSS files are local (no external `@import`)
 - [ ] All JavaScript files are local
 - [ ] All images are local
-- [ ] All icon fonts are local
+- [ ] Icons use compiled local SVG fragments; any separately selected icon fonts are local
 - [ ] No external CDN references in HTML/Razor
 - [ ] No external CDN references in CSS
 - [ ] No external CDN references in JavaScript
@@ -286,12 +267,13 @@ Add entries to hosts file to block common CDNs:
 
 ### Issue: Missing Icons
 
-**Symptom:** Icons appear as empty boxes or text
+**Symptom:** An SVG icon is absent or invisible
 
 **Solution:**
-1. Verify icon font file exists
-2. Check `@font-face` rule for icon font
-3. Ensure correct font-family is used in CSS
+1. Confirm that the supplied fragment is nonblank and has no outer `<svg>` wrapper
+2. Inspect the rendered SVG's view box, dimensions, inherited color, and group paint
+3. Check that parent isolated CSS reaches the actual icon root and does not hide it
+4. If this is an explicitly selected font-based icon family, separately inspect its local font file and `@font-face` rule
 
 ### Issue: Broken Images
 
@@ -335,7 +317,7 @@ Any results should be reviewed and potentially replaced with local resources.
 
 ### Monica.UI
 
-Main UI module containing core themes and styles. All base fonts and icon fonts should be here.
+Main UI module containing core themes, styles, base fonts, and the compiled MoIcons SVG catalog. Original icon sources stay outside `wwwroot`.
 
 ### Monica.Framework.UI
 

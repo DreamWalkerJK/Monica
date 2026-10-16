@@ -17,7 +17,7 @@
 .schedule-editor__parsed-fields > div { display: grid; gap: 5px; min-width: 0; padding: 12px; background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface)); }
 .schedule-editor__parsed-fields span { color: var(--schedule-muted); font-size: .77rem; }
 .schedule-editor__timezone { display: flex; align-items: flex-start; gap: 12px; min-width: 0; padding: 20px; border: 1px solid color-mix(in srgb, var(--mud-palette-info) 35%, var(--mud-palette-lines-default)); border-radius: var(--mud-default-borderradius); background: color-mix(in srgb, var(--mud-palette-info) 5%, var(--mud-palette-surface)); }
-.schedule-editor__timezone ::deep > .mud-icon-root { color: color-mix(in srgb, var(--mud-palette-info) 25%, var(--mud-palette-text-primary)) !important; flex: 0 0 22px; }
+.schedule-editor__timezone ::deep > :is(.mud-icon-root, .mo-icon) { color: color-mix(in srgb, var(--mud-palette-info) 25%, var(--mud-palette-text-primary)) !important; flex: 0 0 22px; }
 .schedule-editor__timezone > div { display: grid; gap: 5px; min-width: 0; }
 .schedule-editor__boundaries { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
 .schedule-editor__builders { min-width: 0; }
@@ -47,10 +47,10 @@
 .schedule-editor__prospective { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; min-width: 0; padding: 20px; border: 1px solid color-mix(in srgb, var(--mud-palette-warning) 35%, var(--mud-palette-lines-default)); border-radius: var(--mud-default-borderradius); background: color-mix(in srgb, var(--mud-palette-warning) 5%, var(--mud-palette-surface)); }
 .schedule-editor__prospective > div { display: grid; gap: 6px; min-width: 0; }
 .schedule-editor__prospective small { color: var(--schedule-muted); font-size: .77rem; }
-.schedule-editor__prospective ::deep > .mud-icon-root { color: color-mix(in srgb, var(--mud-palette-warning) 25%, var(--mud-palette-text-primary)) !important; }
+.schedule-editor__prospective ::deep > :is(.mud-icon-root, .mo-icon) { color: color-mix(in srgb, var(--mud-palette-warning) 25%, var(--mud-palette-text-primary)) !important; }
 .schedule-editor ::deep .mud-alert-outlined-success { color: color-mix(in srgb, var(--mud-palette-success) 25%, var(--mud-palette-text-primary)); }
 .schedule-editor ::deep .mud-alert-outlined-error, .schedule-editor ::deep .mud-error-text { color: color-mix(in srgb, var(--mud-palette-error) 25%, var(--mud-palette-text-primary)) !important; }
 .schedule-editor ::deep .mud-alert-outlined-warning { color: color-mix(in srgb, var(--mud-palette-warning) 25%, var(--mud-palette-text-primary)); }
 .schedule-editor ::deep .mud-alert-text-info { color: color-mix(in srgb, var(--mud-palette-info) 25%, var(--mud-palette-text-primary)); }
 @container policy-schedule (max-width: 860px) { .schedule-editor__provenance, .schedule-editor__boundaries, .schedule-editor__examples { grid-template-columns: minmax(0, 1fr); } .schedule-editor__cadence-heading { display: grid; } }
-@container policy-schedule (max-width: 480px) { .schedule-editor__prospective { grid-template-columns: minmax(0, 1fr); } .schedule-editor__prospective ::deep > .mud-icon-root { transform: rotate(90deg); } .schedule-editor__tokens { grid-template-columns: minmax(0, 1fr); } .schedule-editor__column, .schedule-editor__timezone, .schedule-editor__examples > div, .schedule-editor__prospective, .schedule-editor__builders ::deep .mud-expand-panel-content { padding: 16px; } .schedule-editor th, .schedule-editor td { padding: 10px; } .schedule-editor td[colspan] { padding: 16px; } }
+@container policy-schedule (max-width: 480px) { .schedule-editor__prospective { grid-template-columns: minmax(0, 1fr); } .schedule-editor__prospective ::deep > :is(.mud-icon-root, .mo-icon) { transform: rotate(90deg); } .schedule-editor__tokens { grid-template-columns: minmax(0, 1fr); } .schedule-editor__column, .schedule-editor__timezone, .schedule-editor__examples > div, .schedule-editor__prospective, .schedule-editor__builders ::deep .mud-expand-panel-content { padding: 16px; } .schedule-editor th, .schedule-editor td { padding: 10px; } .schedule-editor td[colspan] { padding: 16px; } }

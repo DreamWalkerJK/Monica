@@ -12,7 +12,7 @@
     <div class="knowledge-workspace">
         @if (!PageState.IsInitialLoading && string.IsNullOrWhiteSpace(PageState.CatalogErrorMessage) && PageState.KnowledgeBases.Count == 0)
         {
-            <section class="knowledge-empty"><MudIcon Icon="@Icons.Material.Outlined.PlaylistPlay" /><h2>@L["KnowledgeWorkbench:FirstIndexSources"]</h2><p>@L["KnowledgeWorkbench:FirstIndexSourcesHint"]</p><MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="@KnowledgeBaseManagePage.PAGE_URL">@L["KnowledgeWorkbench:ManageSources"]</MudButton></section>
+            <section class="knowledge-empty"><MoIcon Icon="@MoIcons.ListVideo" Size="1.5rem" /><h2>@L["KnowledgeWorkbench:FirstIndexSources"]</h2><p>@L["KnowledgeWorkbench:FirstIndexSourcesHint"]</p><MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="@KnowledgeBaseManagePage.PAGE_URL">@L["KnowledgeWorkbench:ManageSources"]</MudButton></section>
         }
         else
         {
@@ -25,14 +25,14 @@
                 }
                 else if (PageState.SelectedKnowledgeBase is { } kb)
                 {
-                    <header class="indexing-identity"><span class="identity-label">@L["KnowledgeWorkbench:Collection"]</span><h2 @ref="_dossierHeading" tabindex="-1">@kb.Name</h2><code>@kb.Id</code>@if (!string.IsNullOrWhiteSpace(kb.Description)) { <p>@kb.Description</p> }<div class="identity-facts"><span>@L["KnowledgeWorkbench:DocumentCount", kb.DocumentCount]</span><span>@L["KnowledgeWorkbench:RecordedChunks", kb.ChunkCount]</span><a href="@KnowledgeBaseManagePage.PAGE_URL">@L["KnowledgeWorkbench:ManageSources"] <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" /></a></div></header>
+                    <header class="indexing-identity"><span class="identity-label">@L["KnowledgeWorkbench:Collection"]</span><h2 @ref="_dossierHeading" tabindex="-1">@kb.Name</h2><code>@kb.Id</code>@if (!string.IsNullOrWhiteSpace(kb.Description)) { <p>@kb.Description</p> }<div class="identity-facts"><span>@L["KnowledgeWorkbench:DocumentCount", kb.DocumentCount]</span><span>@L["KnowledgeWorkbench:RecordedChunks", kb.ChunkCount]</span><a href="@KnowledgeBaseManagePage.PAGE_URL">@L["KnowledgeWorkbench:ManageSources"] <MoIcon Icon="@MoIcons.ArrowRight" Size="1.5rem" /></a></div></header>
                     <section class="indexing-setup">
                         <div class="embedding-setup">
                             <div class="setup-heading">
                                 <div class="setup-heading-copy"><h3>@L["KnowledgeWorkbench:EmbeddingBinding"]</h3><span>@(RAGManagePageState.HasEmbeddingBinding(kb) ? L["KnowledgeWorkbench:ModelBound"] : L["RAG:RagSupport:DisabledStatus"])</span></div>
-                                <div class="setup-actions"><MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.FactCheck" OnClick="PageState.ShowEmbeddingDiagnosticsDialogAsync" Disabled="PageState.HasRagSupportActionInFlight">@L["RAG:EmbeddingDiagnostics:Open"]</MudButton>
-                                    @if (!RAGManagePageState.HasEmbeddingBinding(kb)) { <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Link" OnClick="PageState.EnableOrUpdateRagSupportAsync" Disabled="@(!PageState.CanEnableRagSupport)">@(PageState.IsRagSupportEnableActionInFlight ? L["RAG:RagSupport:Enabling"] : L["RAG:RagSupport:Enable"])</MudButton> }
-                                    else { <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Size="Size.Small" AriaLabel="@L["KnowledgeWorkbench:BindingActions"]"><MudMenuItem Icon="@Icons.Material.Outlined.LinkOff" IconColor="Color.Error" Disabled="@(!PageState.CanRemoveRagSupport)" OnClick="PageState.RemoveRagSupportAsync">@(PageState.IsRagSupportRemoveActionInFlight ? L["RAG:RagSupport:Removing"] : L["RAG:RagSupport:Remove"])</MudMenuItem></MudMenu> }
+                                <div class="setup-actions"><MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.ClipboardCheck" OnClick="PageState.ShowEmbeddingDiagnosticsDialogAsync" Disabled="PageState.HasRagSupportActionInFlight">@L["RAG:EmbeddingDiagnostics:Open"]</MudButton>
+                                    @if (!RAGManagePageState.HasEmbeddingBinding(kb)) { <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@MoIcons.Link" OnClick="PageState.EnableOrUpdateRagSupportAsync" Disabled="@(!PageState.CanEnableRagSupport)">@(PageState.IsRagSupportEnableActionInFlight ? L["RAG:RagSupport:Enabling"] : L["RAG:RagSupport:Enable"])</MudButton> }
+                                    else { <MudMenu Icon="@MoIcons.MoreHorizontal" Size="Size.Small" AriaLabel="@L["KnowledgeWorkbench:BindingActions"]"><MudMenuItem Icon="@MoIcons.Unlink" IconColor="Color.Error" Disabled="@(!PageState.CanRemoveRagSupport)" OnClick="PageState.RemoveRagSupportAsync">@(PageState.IsRagSupportRemoveActionInFlight ? L["RAG:RagSupport:Removing"] : L["RAG:RagSupport:Remove"])</MudMenuItem></MudMenu> }
                                 </div>
                             </div>
                             <EmbeddingModelSelector AvailableModels="PageState.AvailableModels" SelectedModelKey="@PageState.CurrentEmbeddingModelKey" SelectedModelKeyChanged="PageState.ChangeEmbeddingModelAsync" IsDisabled="@(PageState.HasActiveQueueWork || PageState.HasRagSupportActionInFlight)" />
@@ -50,12 +50,12 @@
                             }
                             else { <p>@L["KnowledgeWorkbench:Vectors:Unavailable"]</p> }
                             <p class="vector-scope-note">@L["KnowledgeWorkbench:Vectors:SampleNote"]</p>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Storage" OnClick="PageState.ShowVectorStoreDiagnosticsDialogAsync" Disabled="PageState.HasRagSupportActionInFlight">@L["RAG:VectorDiagnostics:Open"]</MudButton>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.Database" OnClick="PageState.ShowVectorStoreDiagnosticsDialogAsync" Disabled="PageState.HasRagSupportActionInFlight">@L["RAG:VectorDiagnostics:Open"]</MudButton>
                         </div>
                     </section>
                     <RAGManageDocumentQueueSection PageState="PageState" />
                 }
-                else { <div class="knowledge-empty"><MudIcon Icon="@Icons.Material.Outlined.PlaylistPlay" /><h2>@L["KnowledgeWorkbench:ChooseIndexCollection"]</h2><p>@L["KnowledgeWorkbench:ChooseIndexCollectionHint"]</p></div> }
+                else { <div class="knowledge-empty"><MoIcon Icon="@MoIcons.ListVideo" Size="1.5rem" /><h2>@L["KnowledgeWorkbench:ChooseIndexCollection"]</h2><p>@L["KnowledgeWorkbench:ChooseIndexCollectionHint"]</p></div> }
             </section>
         </div>
         }

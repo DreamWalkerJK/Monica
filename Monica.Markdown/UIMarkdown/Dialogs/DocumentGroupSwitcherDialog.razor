@@ -17,14 +17,14 @@
                               @bind-Value="_searchText"
                               Label="@L["MarkdownViewer:Placeholders:SearchKnowledgeBases"]"
                               Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              AdornmentIcon="@MoIcons.Search"
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Immediate="true"
                               Class="group-switcher-search" />
 
                 <MudTooltip Text="@L["MarkdownViewer:Actions:Refresh"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                    <MudIconButton Icon="@MoIcons.Refresh"
                                    Color="Color.Primary"
                                    Size="Size.Medium"
                                    Disabled="_refreshing"
@@ -45,15 +45,14 @@
                 }
                 else if (RefreshError is not null)
                 {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@RefreshError</MudAlert>
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@RefreshError</MudAlert>
                 }
                 else if (FilteredGroups.Count == 0)
                 {
                     <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="group-switcher-empty">
-                        <MudIcon Icon="@Icons.Material.Filled.SearchOff"
-                                 Size="Size.Large"
-                                 Color="Color.Default"
-                                 Class="group-switcher-empty-icon" />
+                        <MoIcon Icon="@MoIcons.SearchOff"
+                                 Size="2.25rem"
+                                 Class="group-switcher-empty-icon" Style="color:var(--mud-palette-text-secondary);" />
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
                             @GetEmptyStateText()
                         </MudText>

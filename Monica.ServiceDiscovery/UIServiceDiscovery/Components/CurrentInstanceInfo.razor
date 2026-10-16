@@ -7,14 +7,14 @@
         <div class="host-controls">
             <MudSwitch T="bool" Value="@State.AutoRefreshEnabled" ValueChanged="AutoRefreshChanged" Color="Color.Primary" Label="@L["Shared:Labels:AutoRefresh"]" />
             <div class="host-interval"><MudNumericField T="int" Value="@State.RefreshInterval" ValueChanged="IntervalChanged" Label="@L["Shared:Labels:RefreshIntervalSeconds"]" Min="1" Max="60" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(!State.AutoRefreshEnabled)" Immediate="true" /></div>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="RefreshAsync" Disabled="@_refreshing">@L["Shared:Actions:Refresh"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh" OnClick="RefreshAsync" Disabled="@_refreshing">@L["Shared:Actions:Refresh"]</MudButton>
         </div>
     </header>
 
     @if (_refreshing && Instance is null) { <MudProgressLinear Color="Color.Primary" Indeterminate="true" /> }
     @if (!string.IsNullOrEmpty(State.ErrorMessage))
     {
-        <MudAlert Severity="Severity.Warning" Class="host-read-error"><strong>@L["Workbench:CurrentHostReadFailed"]</strong><div>@State.ErrorMessage</div>@if (Instance is not null) { <div>@L["Workbench:LastSuccessfulCapture"]</div> }</MudAlert>
+        <MudAlert Severity="Severity.Warning" Class="host-read-error" Icon="@MoIcons.Warning"><strong>@L["Workbench:CurrentHostReadFailed"]</strong><div>@State.ErrorMessage</div>@if (Instance is not null) { <div>@L["Workbench:LastSuccessfulCapture"]</div> }</MudAlert>
     }
 
     @if (Instance is { } instance)
@@ -40,7 +40,7 @@
                 <div class="host-section-heading"><h3>@L["CurrentInstance:Sections:LeaderStatus"]</h3><p>@L["Workbench:LocalElectionScope"]</p></div>
                 @if (Snapshot is { IsLeaderElectionEnabled: true } snapshot)
                 {
-                    <MudChip T="string" Color="@snapshot.CurrentLeaderStatus.GetColor()" Icon="@snapshot.CurrentLeaderStatus.GetIcon()" Variant="Variant.Outlined">@snapshot.CurrentLeaderStatus.GetText(L)</MudChip>
+                    <MudChip T="string" Color="@snapshot.CurrentLeaderStatus.GetColor()" Icon="@snapshot.CurrentLeaderStatus.GetIcon()" Variant="Variant.Outlined" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@snapshot.CurrentLeaderStatus.GetText(L)</MudChip>
                     <dl class="host-facts"><div><dt>@L["CurrentInstance:Fields:LeaderBecomeTime"]</dt><dd>@Time(snapshot.LeaderBecomeTime)</dd></div><div><dt>@L["CurrentInstance:Fields:CurrentETag"]</dt><dd><code>@Value(snapshot.CurrentETag)</code></dd></div></dl>
                 }
                 else { <p class="host-empty-note">@L["CurrentInstance:States:LeaderElectionDisabled"]</p> }
@@ -54,5 +54,5 @@
             else { <dl class="host-metadata-list">@foreach (var item in instance.Metadata.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)) { <div><dt><code>@item.Key</code></dt><dd><code>@item.Value</code></dd></div> }</dl> }
         </section>
     }
-    else if (!_refreshing) { <div class="host-empty"><MudIcon Icon="@Icons.Material.Outlined.Dns" Size="Size.Large" /><h3>@L["Workbench:NoCurrentHostCapture"]</h3><p>@L["Workbench:NoCurrentHostCaptureHelp"]</p></div> }
+    else if (!_refreshing) { <div class="host-empty"><MoIcon Icon="@MoIcons.Server" Size="2.25rem" /><h3>@L["Workbench:NoCurrentHostCapture"]</h3><p>@L["Workbench:NoCurrentHostCaptureHelp"]</p></div> }
 </div>

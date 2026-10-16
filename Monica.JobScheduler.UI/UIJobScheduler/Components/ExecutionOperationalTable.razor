@@ -21,7 +21,7 @@
         <div class="execution-ledger__heading-actions">
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Primary"
-                       StartIcon="@Icons.Material.Outlined.Refresh"
+                       StartIcon="@MoIcons.Refresh"
                        Disabled="@(IsLoading || CommandsDisabled)"
                        OnClick="ReloadAsync">@L["Common:Refresh"]</MudButton>
         </div>
@@ -41,7 +41,7 @@
                        Label="@L["Executions:Sort:Field"]"
                        Disabled="@(IsLoading || CommandsDisabled)"
                        Variant="Variant.Outlined"
-                       Margin="Margin.Dense">
+                       Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 @foreach (var field in Enum.GetValues<JobExecutionSortField>())
                 {
                     <MudSelectItem T="JobExecutionSortField" Value="@field">@FormatSortField(field)</MudSelectItem>
@@ -56,7 +56,7 @@
                        Label="@L["Executions:Sort:Direction"]"
                        Disabled="@(IsLoading || CommandsDisabled)"
                        Variant="Variant.Outlined"
-                       Margin="Margin.Dense">
+                       Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 <MudSelectItem T="SortDirection" Value="@SortDirection.Descending">@L["Executions:Sort:Descending"]</MudSelectItem>
                 <MudSelectItem T="SortDirection" Value="@SortDirection.Ascending">@L["Executions:Sort:Ascending"]</MudSelectItem>
             </MudSelect>
@@ -71,7 +71,7 @@
                   Dense="false"
                   Hover="true"
                   Breakpoint="Breakpoint.Xs"
-                  AriaLabel="@L["Executions:Title"]"
+                  TableAttributes="@(new Dictionary<string, object?> { ["aria-label"] = L["Executions:Title"].Value })"
                   HorizontalScrollbar="true"
                   Elevation="0"
                   Square="true">
@@ -108,7 +108,7 @@
                 <MudTd Class="execution-ledger__state-cell" DataLabel="@L["Executions:Columns:StateAndRecorded"]">
                     <div class="execution-ledger__state-evidence">
                         <span class="execution-ledger__state" data-state="@execution.State.ToString().ToLowerInvariant()">
-                            <MudIcon Icon="@GetStateIcon(execution.State)" Size="Size.Small" />
+                            <MoIcon Icon="@GetStateIcon(execution.State)" Size="1.25rem" />
                             @L[$"ExecutionStates:{execution.State}"]
                         </span>
                         <dl class="execution-ledger__facts">
@@ -130,7 +130,7 @@
                 <MudTd Class="execution-ledger__actions-cell" DataLabel="@L["Executions:Columns:Actions"]">
                     <div class="execution-ledger__actions">
                         <MudTooltip Text="@L["Executions:Actions:Details"]">
-                            <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                            <MudIconButton Icon="@MoIcons.Info"
                                            Color="Color.Primary"
                                            Size="Size.Small"
                                            Disabled="@CommandsDisabled"
@@ -140,7 +140,7 @@
                         @if (!execution.IsTerminal || context.RetainCancellationOpener)
                         {
                             <MudTooltip Text="@L["Executions:Actions:Cancel"]">
-                                <MudIconButton Icon="@Icons.Material.Outlined.StopCircle"
+                                <MudIconButton Icon="@MoIcons.StopCircle"
                                                Color="Color.Warning"
                                                Size="Size.Small"
                                                Disabled="@CommandsDisabled"
@@ -158,7 +158,7 @@
             </LoadingContent>
             <NoRecordsContent>
                 <div class="execution-ledger__empty">
-                    <MudIcon Icon="@(IsQueryFailed ? Icons.Material.Outlined.CloudOff : Icons.Material.Outlined.ReceiptLong)" Size="Size.Large" />
+                    <MoIcon Icon="@(IsQueryFailed ? MoIcons.CloudOff : MoIcons.Receipt)" Size="2.25rem" />
                     <p>@(IsQueryFailed ? L["Executions:SnapshotUnavailable"] : HasLoadedSnapshot ? EmptyText ?? L["Executions:Empty"] : L["Executions:SnapshotPending"])</p>
                 </div>
             </NoRecordsContent>
@@ -167,7 +167,7 @@
                 {
                     <MudTablePager PageSizeOptions="@PageSizeOptions"
                                    RowsPerPageString="@L["Executions:Filters:PageSize"]"
-                                   InfoFormat="@L["Catalog:Pagination:Range"]" />
+                                   InfoFormat="@L["Catalog:Pagination:Range"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
                 }
             </PagerContent>
         </MudTable>

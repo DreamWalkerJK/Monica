@@ -12,7 +12,7 @@ public sealed class ConfigurationUnifiedVersionValuePrivacyTests
     [InlineData("version", false)] [InlineData("version", true)]
     [InlineData("payload", false)] [InlineData("payload", true)]
     [InlineData("duplicate", false)] [InlineData("duplicate", true)]
-    public void Comparison_WhenEitherSideIsUnproven_ShouldRedactBothValues(string failure, bool targetSide)
+    public void Comparison_WhenHistoricalSchemaDiffers_ShouldApplyCurrentFieldSensitivity(string failure, bool targetSide)
     {
         var comparison = UnifiedVersionPrivacyTestData.Comparison();
         var side = targetSide ? comparison.Target : comparison.Origin;
@@ -28,9 +28,10 @@ public sealed class ConfigurationUnifiedVersionValuePrivacyTests
         };
         comparison = targetSide ? comparison with { Target = side } : comparison with { Origin = side };
         var pair = Display(comparison, UnifiedVersionPrivacyTestData.Definition());
-        Assert.DoesNotContain("before-marker", pair.OriginText);
-        Assert.DoesNotContain("after-marker", pair.TargetText);
-        Assert.True(pair.HasHiddenChanges);
+        Assert.True(ConfigurationUnifiedVersionValuePrivacy.HasSchemaDrift(comparison, Assert.Single(comparison.Changes), UnifiedVersionPrivacyTestData.Definition()));
+        Assert.Contains("before-marker", pair.OriginText);
+        Assert.Contains("after-marker", pair.TargetText);
+        Assert.False(pair.HasHiddenChanges);
     }
 
     [Theory]
@@ -52,9 +53,9 @@ public sealed class ConfigurationUnifiedVersionValuePrivacyTests
     }
 
     [Fact]
-    public void Comparison_WhenAuthorityMissingOrBlank_ShouldRedactBothValues()
+    public void Comparison_WhenDefinitionMissing_ShouldRedactBothValues()
     {
-        foreach (var definition in new ConfigurationDefinition?[] { null, UnifiedVersionPrivacyTestData.Definition() with { SchemaHash = " " } })
+        foreach (var definition in new ConfigurationDefinition?[] { null })
         {
             var pair = Display(UnifiedVersionPrivacyTestData.Comparison(), definition);
             Assert.DoesNotContain("before-marker", pair.OriginText);
@@ -117,7 +118,7 @@ public sealed class ConfigurationUnifiedVersionValuePrivacyTests
     {
         var definition = UnifiedVersionPrivacyTestData.Definition();
         Assert.False(ConfigurationUnifiedVersionValuePrivacy.ShouldHidePath(definition, "Value", false));
-        Assert.True(ConfigurationUnifiedVersionValuePrivacy.ShouldHidePath(definition, "Value", true));
+        Assert.False(ConfigurationUnifiedVersionValuePrivacy.ShouldHidePath(definition, "Value", true));
         Assert.True(ConfigurationUnifiedVersionValuePrivacy.ShouldHidePath(null, "Value", false));
     }
 
@@ -151,14 +152,13 @@ public sealed class ConfigurationUnifiedVersionValuePrivacyTests
     {
         var change = Assert.Single(comparison.Changes);
         return ConfigurationUnifiedVersionJsonFormatter.FormatComparisonForDisplay(change.OriginJson, change.TargetJson,
-            definition, "sensitive", "hidden", "hidden before change", "hidden after change",
-            ConfigurationUnifiedVersionValuePrivacy.HasSchemaDrift(comparison, change, definition));
+            definition, "sensitive", "hidden", "hidden before change", "hidden after change");
     }
 }
 
 internal static class UnifiedVersionPrivacyTestData
 {
-    internal const string DefinitionKey = " owner:上海/config?revision=1#opaque%25 ";
+    internal const string DefinitionKey = " owner:涓婃捣/config?revision=1#opaque%25 ";
     internal static ConfigurationUnifiedVersionComparison Comparison(string origin = "{\"Value\":\"before-marker\"}",
         string target = "{\"Value\":\"after-marker\"}", long originVersion = 1, long targetVersion = 2) => new()
     {

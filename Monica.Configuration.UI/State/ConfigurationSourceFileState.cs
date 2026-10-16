@@ -12,7 +12,8 @@ internal sealed class ConfigurationSourceFileState : IAsyncDisposable
     private readonly Func<string, Task<Res<ConfigurationSourceFileView>>> _load;
 
     internal ConfigurationSourceFileState(ConfigurationFacade facade, string unavailableText,
-        ConfigurationOperationLifetime lifetime) : this(facade.GetSourceFileViewAsync, unavailableText, lifetime) { }
+        ConfigurationOperationLifetime lifetime, bool showSensitiveValues = false)
+        : this(key => facade.GetSourceFileViewAsync(key, showSensitiveValues), unavailableText, lifetime) { }
 
     internal ConfigurationSourceFileState(Func<string, Task<Res<ConfigurationSourceFileView>>> load,
         string unavailableText, ConfigurationOperationLifetime? lifetime = null)

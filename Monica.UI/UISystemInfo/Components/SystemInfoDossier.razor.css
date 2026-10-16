@@ -27,9 +27,9 @@
 .system-info-endpoint__inspect > span { display: grid; min-width: 0; gap: 7px; }
 .system-info-endpoint__inspect strong { font-family: var(--mo-font-family-mono); font-size: 13px; font-weight: 500; line-height: 1.65; overflow-wrap: anywhere; }
 .system-info-endpoint__inspect small { font-family: var(--mud-typography-default-family); font-size: 11px; color: var(--mud-palette-text-secondary); }
-.system-info-endpoint__inspect ::deep .mud-icon-root { flex: 0 0 auto; color: var(--mud-palette-text-secondary); }
+.system-info-endpoint__inspect ::deep :is(.mud-icon-root, .mo-icon) { flex: 0 0 auto; color: var(--mud-palette-text-secondary); }
 .system-info-endpoint__inspect:hover strong,
-.system-info-endpoint__inspect:hover ::deep .mud-icon-root { color: var(--mud-palette-primary); }
+.system-info-endpoint__inspect:hover ::deep :is(.mud-icon-root, .mo-icon) { color: var(--mud-palette-primary); }
 .system-info-endpoint__inspect:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 6px; border-radius: 2px; }
 @container system-dossier (max-width: 850px) {
     .system-info-dossier__canvas { grid-template-columns: 1fr; }

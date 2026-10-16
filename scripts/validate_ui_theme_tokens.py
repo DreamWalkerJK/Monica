@@ -34,6 +34,9 @@ THEME_DEFINITION_FILES = {
     REPO_ROOT / "Monica.UI" / "wwwroot" / "css" / "mo-theme-main.css",
 }
 ALLOWED_SEMANTIC_TOKENS = {
+    "--mo-color-scrollbar-thumb",
+    "--mo-color-scrollbar-thumb-hover",
+    "--mo-color-scrollbar-thumb-active",
     "--mo-color-brand-background",
     "--mo-color-brand-foreground",
     "--mo-color-brand-accent",

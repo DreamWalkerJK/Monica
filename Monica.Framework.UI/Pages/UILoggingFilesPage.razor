@@ -26,9 +26,9 @@
     }
     <section class="files-registry" aria-label="@L["Workbench:FilesTitle"]">
         <div class="files-controls">
-            <label class="files-search"><MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" /><input type="search" placeholder="@L["Workbench:FilesSearch"]" aria-label="@L["Workbench:FilesSearch"]" value="@_keyword" @oninput="SearchChanged" /></label>
+            <label class="files-search"><MoIcon Icon="@MoIcons.Search" Size="1.25rem" /><input type="search" placeholder="@L["Workbench:FilesSearch"]" aria-label="@L["Workbench:FilesSearch"]" value="@_keyword" @oninput="SearchChanged" /></label>
             <label class="files-sort"><span>@L["Workbench:Order"]</span><select value="@_order" @onchange="OrderChanged"><option value="modified">@L["Workbench:NewestModified"]</option><option value="name">@L["Workbench:FileName"]</option><option value="size">@L["Workbench:Largest"]</option></select></label>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@_busy" OnClick="RefreshAsync">@L["Workbench:RefreshFiles"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh" Disabled="@_busy" OnClick="RefreshAsync">@L["Workbench:RefreshFiles"]</MudButton>
         </div>
         <div class="files-results-summary"><span>@L["Workbench:FileResults", MatchingFiles.Count, _files.Count]</span><span>@L["Workbench:FileReadAt", _readAt?.ToLocalTime().ToString("HH:mm:ss") ?? "—"]</span></div>
         <div class="files-table-frame">
@@ -39,22 +39,22 @@
             }
             else if (MatchingFiles.Count == 0)
             {
-                <tr><td colspan="4" class="files-empty"><div role="status"><MudIcon Icon="@Icons.Material.Outlined.FolderOpen" /><strong>@L[_error is not null ? "Workbench:DirectoryUnavailable" : _files.Count == 0 ? "Workbench:NoArtifacts" : "Workbench:NoFileMatches"]</strong><p>@L[_error is not null ? "Workbench:DirectoryRetry" : _files.Count == 0 ? "Workbench:NoArtifactsHelp" : "Workbench:NoFileMatchesHelp"]</p></div></td></tr>
+                <tr><td colspan="4" class="files-empty"><div role="status"><MoIcon Icon="@MoIcons.FolderOpen" Size="1.5rem" /><strong>@L[_error is not null ? "Workbench:DirectoryUnavailable" : _files.Count == 0 ? "Workbench:NoArtifacts" : "Workbench:NoFileMatches"]</strong><p>@L[_error is not null ? "Workbench:DirectoryRetry" : _files.Count == 0 ? "Workbench:NoArtifactsHelp" : "Workbench:NoFileMatchesHelp"]</p></div></td></tr>
             }
             else
             {
                 @foreach (var file in PageFiles)
                 {
                     <tr @key="file.RelativePath" data-relative-path="@file.RelativePath" class="@(string.Equals(File, file.RelativePath, StringComparison.Ordinal) ? "is-current" : "")">
-                        <td class="artifact-name"><MudIcon Icon="@Icons.Material.Outlined.Description" Size="Size.Small" /><div><a href="@OpenUrl(file.RelativePath)">@file.FileName</a><code>@file.RelativePath</code>@if (string.Equals(File, file.RelativePath, StringComparison.Ordinal)) { <span class="current-source">@L["Workbench:LastSource"]</span> }</div></td>
+                        <td class="artifact-name"><MoIcon Icon="@MoIcons.FileText" Size="1.25rem" /><div><a href="@OpenUrl(file.RelativePath)">@file.FileName</a><code>@file.RelativePath</code>@if (string.Equals(File, file.RelativePath, StringComparison.Ordinal)) { <span class="current-source">@L["Workbench:LastSource"]</span> }</div></td>
                         <td class="artifact-size" data-bytes="@file.Size"><span class="mobile-label">@L["Workbench:Size"]</span><span>@FormatSize(file.Size)</span><small>@L["Workbench:ExactBytes", file.Size.ToString("N0")]</small></td>
                         <td class="artifact-modified"><span class="mobile-label">@L["Workbench:Modified"]</span><time datetime="@file.LastModified.ToString("O")">@file.LastModified.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</time></td>
-                        <td class="artifact-actions"><a href="@OpenUrl(file.RelativePath)" aria-label="@L["Workbench:OpenFile", file.FileName]">@L["Workbench:Open"]<MudIcon Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" /></a><button type="button" disabled="@_busy" @onclick="() => DownloadAsync(file.RelativePath)" aria-label="@L["Workbench:DownloadFile", file.FileName]"><MudIcon Icon="@Icons.Material.Outlined.Download" Size="Size.Small" /><span>@L["Workbench:Download"]</span></button></td>
+                        <td class="artifact-actions"><a href="@OpenUrl(file.RelativePath)" aria-label="@L["Workbench:OpenFile", file.FileName]">@L["Workbench:Open"]<MoIcon Icon="@MoIcons.ArrowUpRight" Size="1.25rem" /></a><button type="button" disabled="@_busy" @onclick="() => DownloadAsync(file.RelativePath)" aria-label="@L["Workbench:DownloadFile", file.FileName]"><MoIcon Icon="@MoIcons.Download" Size="1.25rem" /><span>@L["Workbench:Download"]</span></button></td>
                     </tr>
                 }
             }
             </tbody></table>
-            <footer class="files-pager"><span>@L["Workbench:FilePage", _page + 1, PageCount]</span><div><button type="button" @onclick="PreviousPage" disabled="@(_page == 0)" aria-label="@L["Workbench:PreviousPage"]"><MudIcon Icon="@Icons.Material.Outlined.ChevronLeft" /></button><button type="button" @onclick="NextPage" disabled="@(_page + 1 >= PageCount)" aria-label="@L["Workbench:NextPage"]"><MudIcon Icon="@Icons.Material.Outlined.ChevronRight" /></button></div></footer>
+            <footer class="files-pager"><span>@L["Workbench:FilePage", _page + 1, PageCount]</span><div><button type="button" @onclick="PreviousPage" disabled="@(_page == 0)" aria-label="@L["Workbench:PreviousPage"]"><MoIcon Icon="@MoIcons.ChevronLeft" Size="1.5rem" /></button><button type="button" @onclick="NextPage" disabled="@(_page + 1 >= PageCount)" aria-label="@L["Workbench:NextPage"]"><MoIcon Icon="@MoIcons.ChevronRight" Size="1.5rem" /></button></div></footer>
         </div>
         <p class="files-download-scope">@L["Workbench:DownloadScope"]</p>
     </section>

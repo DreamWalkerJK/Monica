@@ -1,7 +1,7 @@
 .runtime-plane { display: grid; align-content: start; gap: 24px; min-width: 0; padding: 20px; color: var(--mud-palette-surface); background: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)); container: runtime-plane / inline-size; }
 .runtime-plane__heading { display: flex; align-items: start; gap: 12px; min-width: 0; }
 .runtime-plane__heading > div { min-width: 0; }
-.runtime-plane__heading ::deep .mud-icon-root { flex: none; width: 28px; height: 28px; color: inherit !important; }
+.runtime-plane__heading ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 28px; height: 28px; color: inherit !important; }
 .runtime-plane h2 { margin: 0 0 5px; font-family: var(--mo-font-family-display); font-size: 26px; font-weight: 500; line-height: 1.35; }
 .runtime-plane p { margin: 0; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
 .runtime-plane__channels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; min-width: 0; }
@@ -11,7 +11,7 @@
 .runtime-plane h3 { margin: 0; font-size: 16px; font-weight: 500; line-height: 1.5; }
 .runtime-plane__state { --cycle-tone: var(--mud-palette-warning); display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 8px; border: 1px solid color-mix(in srgb, var(--cycle-tone) 45%, var(--mud-palette-text-primary)); border-radius: 5px; color: color-mix(in srgb, var(--cycle-tone) 25%, var(--mud-palette-text-primary)); background: var(--mud-palette-surface); font-size: 12px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
 .runtime-plane__state[data-ready="true"] { --cycle-tone: var(--mud-palette-success); }
-.runtime-plane__state ::deep .mud-icon-root { flex: none; width: 17px; height: 17px; color: color-mix(in srgb, var(--cycle-tone) 45%, var(--mud-palette-text-primary)) !important; }
+.runtime-plane__state ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 17px; height: 17px; color: color-mix(in srgb, var(--cycle-tone) 45%, var(--mud-palette-text-primary)) !important; }
 .runtime-plane__message { white-space: pre-wrap; }
 .runtime-plane__capacity { margin: 0; padding-block-start: 20px; border-block-start: 1px solid color-mix(in srgb, var(--mud-palette-surface) 30%, transparent); }
 .runtime-plane__capacity > div { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; }
@@ -19,7 +19,7 @@
 .runtime-plane__capacity dd { margin: 0; font-family: var(--mo-font-family-display); font-size: 38px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.3; }
 .runtime-plane__capacity dd span { font-size: 21px; font-weight: 400; }
 .runtime-plane__scope-note { display: flex; align-items: start; gap: 7px; }
-.runtime-plane__scope-note ::deep .mud-icon-root { flex: none; width: 18px; height: 18px; margin-block-start: 2px; color: inherit !important; }
+.runtime-plane__scope-note ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 18px; height: 18px; margin-block-start: 2px; color: inherit !important; }
 @container runtime-plane (max-width: 460px) {
     .runtime-plane__channels { grid-template-columns: minmax(0, 1fr); }
     .runtime-plane__channel + .runtime-plane__channel { padding-inline-start: 0; padding-block-start: 20px; border-inline-start: 0; border-block-start: 1px solid color-mix(in srgb, var(--mud-palette-surface) 30%, transparent); }

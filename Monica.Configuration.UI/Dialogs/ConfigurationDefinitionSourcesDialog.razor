@@ -29,7 +29,7 @@
             @if (_fileError is not null)
             {
                 <div class="configuration-sources-state" aria-live="polite">
-                    <MudAlert Severity="Severity.Error">@_fileError</MudAlert>
+                    <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_fileError</MudAlert>
                 </div>
             }
 
@@ -43,13 +43,13 @@
             else if (_error is not null)
             {
                 <div class="configuration-sources-state">
-                    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+                    <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert>
                 </div>
             }
             else if (_contributions.Count == 0)
             {
                 <div class="configuration-sources-state configuration-sources-empty">
-                    <MudIcon Icon="@Icons.Material.Outlined.AccountTree" aria-hidden="true" />
+                    <MoIcon Icon="@MoIcons.Workflow" aria-hidden="true" Size="1.5rem" />
                     <p>@L["Sources:Definition:Empty"]</p>
                 </div>
             }
@@ -58,7 +58,7 @@
                 <div class="configuration-sources-evidence">
                     <MudTable T="ConfigurationDefinitionSourceContribution"
                               Items="@_contributions"
-                              AriaLabel="@L["Sources:Definition:Subtitle", _definitionDisplayName]"
+                              TableAttributes="@(new Dictionary<string, object?> { ["aria-label"] = L["Sources:Definition:Subtitle", _definitionDisplayName].Value })"
                               Breakpoint="Breakpoint.Xs"
                               Dense="false"
                               Hover="true"
@@ -91,7 +91,7 @@
                                                            Color="Color.Primary"
                                                            Variant="Variant.Text"
                                                            Size="Size.Small"
-                                                           StartIcon="@Icons.Material.Outlined.Description"
+                                                           StartIcon="@MoIcons.FileText"
                                                            aria-label="@L["Sources:Actions:ViewFileFor", context.Source.DisplayName]"
                                                            Disabled="@FileButtonDisabled(context.Source)"
                                                            aria-disabled="@(_fileDialogOpen ? "true" : "false")"

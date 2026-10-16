@@ -208,13 +208,14 @@ public sealed class ConfigurationFacade(
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>
     /// <param name="logicalPath">The logical path.</param>
+    /// <param name="includeSensitive">Whether to include unmasked sensitive values; false by default. Callers own disclosure.</param>
     /// <returns>The effective value, if one exists.</returns>
-    public async Task<Res<ConfigurationEffectiveValue>> GetEffectiveValueAsync(string definitionKey, LogicalPath logicalPath)
+    public async Task<Res<ConfigurationEffectiveValue>> GetEffectiveValueAsync(string definitionKey, LogicalPath logicalPath, bool includeSensitive = false)
     {
         try
         {
             var definition = await definitionResolver.GetRequiredForReadAsync(definitionKey, CancellationToken.None);
-            return await effectiveStateReader.ReadValueAsync(definition, logicalPath, CancellationToken.None);
+            return await effectiveStateReader.ReadValueAsync(definition, logicalPath, CancellationToken.None, includeSensitive);
         }
         catch (Exception ex)
         {
@@ -226,13 +227,14 @@ public sealed class ConfigurationFacade(
     /// Gets one definition and all display-safe effective values required by the management state view.
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>
+    /// <param name="includeSensitive">Whether to include unmasked sensitive values; false by default. Callers own disclosure.</param>
     /// <returns>The definition state snapshot.</returns>
-    public async Task<Res<ConfigurationDefinitionState>> GetDefinitionStateAsync(string definitionKey)
+    public async Task<Res<ConfigurationDefinitionState>> GetDefinitionStateAsync(string definitionKey, bool includeSensitive = false)
     {
         try
         {
             var definition = await definitionResolver.GetRequiredForReadAsync(definitionKey, CancellationToken.None);
-            return Res.Ok(await effectiveStateReader.ReadDefinitionAsync(definition, CancellationToken.None));
+            return Res.Ok(await effectiveStateReader.ReadDefinitionAsync(definition, CancellationToken.None, includeSensitive));
         }
         catch (Exception ex)
         {
@@ -248,13 +250,14 @@ public sealed class ConfigurationFacade(
     /// catalog order, and each state's non-root values follow schema preorder so callers can flatten the snapshot without
     /// issuing per-definition or per-node reads.
     /// </remarks>
+    /// <param name="includeSensitive">Whether to include unmasked sensitive values; false by default. Callers own disclosure.</param>
     /// <returns>All definition state snapshots.</returns>
-    public async Task<Res<IReadOnlyList<ConfigurationDefinitionState>>> GetDefinitionStatesAsync()
+    public async Task<Res<IReadOnlyList<ConfigurationDefinitionState>>> GetDefinitionStatesAsync(bool includeSensitive = false)
     {
         try
         {
             var definitions = await definitionResolver.GetMergedDefinitionsAsync(CancellationToken.None);
-            return Res.Ok(await effectiveStateReader.ReadDefinitionsAsync(definitions, CancellationToken.None));
+            return Res.Ok(await effectiveStateReader.ReadDefinitionsAsync(definitions, CancellationToken.None, includeSensitive));
         }
         catch (Exception ex)
         {
@@ -516,12 +519,13 @@ public sealed class ConfigurationFacade(
     /// <summary>
     /// Gets managed configuration values supplied by each runtime Microsoft configuration source.
     /// </summary>
+    /// <param name="includeSensitive">Whether to include unmasked sensitive values; false by default. Callers own disclosure.</param>
     /// <returns>Source inventories ordered from highest priority to lowest priority.</returns>
-    public async Task<Res<IReadOnlyList<ConfigurationSourceInventory>>> GetConfigurationSourceInventoriesAsync()
+    public async Task<Res<IReadOnlyList<ConfigurationSourceInventory>>> GetConfigurationSourceInventoriesAsync(bool includeSensitive = false)
     {
         try
         {
-            return Res.Ok(await sourceInspector.GetSourceInventoriesAsync(CancellationToken.None));
+            return Res.Ok(await sourceInspector.GetSourceInventoriesAsync(CancellationToken.None, includeSensitive));
         }
         catch (Exception ex)
         {
@@ -558,8 +562,9 @@ public sealed class ConfigurationFacade(
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>
     /// <param name="logicalPath">The logical path.</param>
+    /// <param name="includeSensitive">Whether to include unmasked sensitive values; false by default. Callers own disclosure.</param>
     /// <returns>The source chain.</returns>
-    public Task<Res<ConfigurationSourceChain>> GetSourceChainAsync(string definitionKey, LogicalPath logicalPath)
+    public Task<Res<ConfigurationSourceChain>> GetSourceChainAsync(string definitionKey, LogicalPath logicalPath, bool includeSensitive = false)
     {
         try
         {
@@ -569,7 +574,7 @@ public sealed class ConfigurationFacade(
                     Res.Fail("Configuration source-chain inspection is only available for definitions scanned by the current process."));
             }
 
-            return Task.FromResult(Res.Ok(sourceInspector.GetSourceChain(definition, logicalPath)));
+            return Task.FromResult(Res.Ok(sourceInspector.GetSourceChain(definition, logicalPath, includeSensitive)));
         }
         catch (Exception ex)
         {
@@ -583,10 +588,11 @@ public sealed class ConfigurationFacade(
     /// </summary>
     /// <param name="definitionKey">The locally scanned definition key.</param>
     /// <param name="logicalPaths">The logical paths to inspect, in result order.</param>
+    /// <param name="includeSensitive">Whether to include unmasked sensitive values; false by default. Callers own disclosure.</param>
     /// <returns>One source chain for each requested path.</returns>
     public Task<Res<IReadOnlyList<ConfigurationSourceChain>>> GetSourceChainsAsync(
         string definitionKey,
-        IReadOnlyList<LogicalPath> logicalPaths)
+        IReadOnlyList<LogicalPath> logicalPaths, bool includeSensitive = false)
     {
         try
         {
@@ -596,7 +602,7 @@ public sealed class ConfigurationFacade(
                     Res.Fail("Configuration source-chain inspection is only available for definitions scanned by the current process."));
             }
 
-            return Task.FromResult(Res.Ok(sourceInspector.GetSourceChains(definition, logicalPaths)));
+            return Task.FromResult(Res.Ok(sourceInspector.GetSourceChains(definition, logicalPaths, includeSensitive)));
         }
         catch (Exception ex)
         {
@@ -609,12 +615,13 @@ public sealed class ConfigurationFacade(
     /// Gets a display-safe JSON file view for one source.
     /// </summary>
     /// <param name="sourceKey">The source key.</param>
+    /// <param name="includeSensitive">Whether to include unmasked sensitive values; false by default. Callers own disclosure.</param>
     /// <returns>The source file view.</returns>
-    public async Task<Res<ConfigurationSourceFileView>> GetSourceFileViewAsync(string sourceKey)
+    public async Task<Res<ConfigurationSourceFileView>> GetSourceFileViewAsync(string sourceKey, bool includeSensitive = false)
     {
         try
         {
-            return Res.Ok(await sourceInspector.GetSourceFileViewAsync(sourceKey, CancellationToken.None));
+            return Res.Ok(await sourceInspector.GetSourceFileViewAsync(sourceKey, CancellationToken.None, includeSensitive));
         }
         catch (Exception ex)
         {

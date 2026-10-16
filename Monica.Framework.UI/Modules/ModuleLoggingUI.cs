@@ -15,6 +15,7 @@ using Monica.Framework.UI.UILogging.State;
 using Monica.Framework.UI.UILogging.Support;
 using Monica.Framework.UI.Localization;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -52,7 +53,7 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
                 registry.RegisterLocalizedPage<UILoggingMonitorPage, LoggingResource>(
                     UILoggingMonitorPage.PAGE_URL,
                     "Pages:LoggingMonitor:Title",
-                    Icons.Material.Filled.Article,
+                    MoIcons.FileText,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 30,
@@ -60,7 +61,7 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
                 registry.RegisterLocalizedPage<UILoggingFilesPage, LoggingResource>(
                     UILoggingFilesPage.PAGE_URL,
                     "Pages:LoggingFiles:Title",
-                    Icons.Material.Outlined.FolderOpen,
+                    MoIcons.FolderOpen,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 31,

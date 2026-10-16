@@ -11,6 +11,7 @@ using Monica.JobScheduler.UI.UIJobScheduler.State;
 using Monica.JobScheduler.UI.UIJobScheduler.Support;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -51,7 +52,7 @@ public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOpti
         registry.RegisterLocalizedPage<SchedulerOverviewPage, JobSchedulerResource>(
             SchedulerOverviewPage.PAGE_URL,
             "Pages:Overview:Title",
-            Icons.Material.Filled.SpaceDashboard,
+            MoIcons.Dashboard,
             BuiltInNavigationCategoryIds.TaskScheduling,
             addToNav: true,
             navOrder: 99,
@@ -59,7 +60,7 @@ public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOpti
         registry.RegisterLocalizedPage<JobCatalogPage, JobSchedulerResource>(
             JobCatalogPage.PAGE_URL,
             "Pages:Catalog:Title",
-            Icons.Material.Filled.Inventory2,
+            MoIcons.Package,
             BuiltInNavigationCategoryIds.TaskScheduling,
             addToNav: true,
             navOrder: 100,
@@ -67,7 +68,7 @@ public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOpti
         registry.RegisterLocalizedPage<JobExecutionsPage, JobSchedulerResource>(
             JobExecutionsPage.PAGE_URL,
             "Pages:Executions:Title",
-            Icons.Material.Filled.ReceiptLong,
+            MoIcons.Receipt,
             BuiltInNavigationCategoryIds.TaskScheduling,
             addToNav: true,
             navOrder: 101,
@@ -75,7 +76,7 @@ public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOpti
         registry.RegisterLocalizedPage<SchedulerStatisticsPage, JobSchedulerResource>(
             SchedulerStatisticsPage.PAGE_URL,
             "Pages:Statistics:Title",
-            Icons.Material.Filled.QueryStats,
+            MoIcons.ChartTrend,
             BuiltInNavigationCategoryIds.TaskScheduling,
             addToNav: true,
             navOrder: 102,
@@ -83,7 +84,7 @@ public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOpti
         registry.RegisterLocalizedPage<JobDefinitionDetailPage, JobSchedulerResource>(
             JobDefinitionDetailPage.PAGE_URL,
             "Pages:JobDetail:Title",
-            Icons.Material.Filled.WorkHistory,
+            MoIcons.History,
             BuiltInNavigationCategoryIds.TaskScheduling,
             addToNav: false,
             navOrder: 103,
@@ -91,7 +92,7 @@ public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOpti
         registry.RegisterLocalizedPage<SchedulerRuntimePage, JobSchedulerResource>(
             SchedulerRuntimePage.PAGE_URL,
             "Pages:Runtime:Title",
-            Icons.Material.Filled.MonitorHeart,
+            MoIcons.HeartPulse,
             BuiltInNavigationCategoryIds.TaskScheduling,
             addToNav: true,
             navOrder: 104,

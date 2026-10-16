@@ -4,10 +4,10 @@
 <MudDialog Gutters="false" TitleClass="pa-0" ContentClass="pa-0" ActionsClass="pa-0">
     <TitleContent>
         <div class="execution-detail__dialog-title">
-            <MudIcon Icon="@Icons.Material.Outlined.FactCheck" />
+            <MoIcon Icon="@MoIcons.ClipboardCheck" Size="1.5rem" />
             <MoDialogHeading Text="@L["ExecutionDetail:Title"]" />
             <MudTooltip Text="@L["Common:Refresh"]">
-                <MudIconButton Icon="@Icons.Material.Outlined.Refresh" aria-disabled="@(_state is null || _state.IsLoading ? "true" : "false")"
+                <MudIconButton Icon="@MoIcons.Refresh" aria-disabled="@(_state is null || _state.IsLoading ? "true" : "false")"
                                OnClick="RefreshAsync" aria-label="@L["Common:Refresh"]" />
             </MudTooltip>
         </div>
@@ -23,23 +23,23 @@
             }
             else if (!state.IsAuthorized)
             {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">
                     @(state.Error ?? L["Access:DeniedDescription"].Value)
                 </MudAlert>
             }
             else if (state.Error is not null && !state.HasLoadedSnapshot)
             {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@state.Error</MudAlert>
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@state.Error</MudAlert>
             }
             else if (state.IsNotFound)
             {
                 <div class="execution-detail__empty" role="status">
-                    <MudIcon Icon="@Icons.Material.Outlined.FindInPage" Size="Size.Large" />
+                    <MoIcon Icon="@MoIcons.FileSearch" Size="2.25rem" />
                     <h3>@L["ExecutionDetail:NotFound"]</h3>
                     <code>@InstanceId</code>
                     @if (state.Error is not null)
                     {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@state.Error</MudAlert>
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@state.Error</MudAlert>
                     }
                 </div>
             }
@@ -52,17 +52,17 @@
                     }
                     @if (state.Error is not null)
                     {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">@L["ExecutionDetail:RefreshFailed", state.Error]</MudAlert>
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">@L["ExecutionDetail:RefreshFailed", state.Error]</MudAlert>
                     }
                     @if (execution.CancellationRequestedAtUtc.HasValue && !execution.IsTerminal)
                     {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">
                             @L["ExecutionDetail:CancellationPending", TimePresentation.FormatTimestamp(execution.CancellationRequestedAtUtc)]
                         </MudAlert>
                     }
                     <ExecutionDetailHero Execution="@execution" ObservedAtUtc="@observedAtUtc" />
                     <div class="execution-detail__tabs">
-                        <MudTabs Elevation="0" Rounded="false" Border="false" MinimumTabWidth="120px">
+                        <MudTabs Elevation="0" Rounded="false" Border="false" MinimumTabWidth="120px" PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight">
                             <MudTabPanel Text="@L["ExecutionDetail:Tabs:Evidence"]">
                                 <ExecutionEvidenceFacts Execution="@execution" ObservedAtUtc="@observedAtUtc" />
                             </MudTabPanel>
@@ -75,22 +75,22 @@
             }
             else
             {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@L["Executions:SnapshotUnavailable"]</MudAlert>
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@L["Executions:SnapshotUnavailable"]</MudAlert>
             }
         </div>
     </DialogContent>
     <DialogActions>
         <div class="execution-detail__actions">
             <div class="execution-detail__secondary-actions">
-                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.ContentCopy"
+                <MudButton Variant="Variant.Text" StartIcon="@MoIcons.Copy"
                            Disabled="@(_state?.Execution is null)" OnClick="CopyDiagnosticsAsync">
                     @L["ExecutionDetail:Actions:CopySnapshot"]
                 </MudButton>
-                <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" AriaLabel="@L["ExecutionDetail:Actions:More"]">
-                    <MudMenuItem Icon="@Icons.Material.Outlined.Refresh" Disabled="@(_state is null || _state.IsLoading)" OnClick="RefreshAsync">
+                <MudMenu Icon="@MoIcons.MoreHorizontal" AriaLabel="@L["ExecutionDetail:Actions:More"]">
+                    <MudMenuItem Icon="@MoIcons.Refresh" Disabled="@(_state is null || _state.IsLoading)" OnClick="RefreshAsync">
                         @L["Common:Refresh"]
                     </MudMenuItem>
-                    <MudMenuItem Icon="@Icons.Material.Outlined.Inventory2" OnClick="OpenJobDetails">
+                    <MudMenuItem Icon="@MoIcons.Package" OnClick="OpenJobDetails">
                         @L["ExecutionDetail:Actions:ViewCatalog"]
                     </MudMenuItem>
                 </MudMenu>

@@ -31,17 +31,17 @@
 
                     @if (!string.IsNullOrWhiteSpace(_error))
                     {
-                        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+                        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert>
                     }
                     @if (_review.ValidationIssues.Count > 0)
                     {
-                        <MudAlert Severity="Severity.Error">
+                        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">
                             @L["Dialogs:SaveGroup:Validation:BlockedSummary", _review.ValidationIssues.Count]
                         </MudAlert>
                     }
                     @if (ExternalChangeCount > 0)
                     {
-                        <MudAlert Severity="Severity.Warning">
+                        <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning">
                             @L["Dialogs:SaveGroup:ExternalTargetSummary", ExternalChangeCount]
                         </MudAlert>
                     }
@@ -58,7 +58,7 @@
                                                 UndoRequested="UndoReviewAsync" />
                 @if (_previewing)
                 {
-                    <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:PreviewPending"]</MudAlert>
+                    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Validation:PreviewPending"]</MudAlert>
                     <MudProgressLinear Indeterminate="true" />
                 }
                 else if (_validationPreview is not null)
@@ -68,7 +68,7 @@
                 }
                 else
                 {
-                    <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:PreviewRequired"]</MudAlert>
+                    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Validation:PreviewRequired"]</MudAlert>
                 }
             </section>
 
@@ -85,7 +85,7 @@
         </MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
-                   StartIcon="@Icons.Material.Filled.Save"
+                   StartIcon="@MoIcons.Save"
                    OnClick="SaveAsync"
                    Disabled="@(!CanSave)">
             @L["Group:SaveCount", _review.Changes.Count]

@@ -29,7 +29,7 @@
     }
     else
     {
-        <div class="memory-history-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.ShowChart" /><h2>@EmptyTitle</h2><p>@EmptyHelp</p></div>
+        <div class="memory-history-empty" role="status"><MoIcon Icon="@MoIcons.ChartLine" Size="1.5rem" /><h2>@EmptyTitle</h2><p>@EmptyHelp</p></div>
     }
     <p class="memory-history-note">@L["Trend:MeasurementHelp"]</p>
     <article class="memory-generation-lens">
@@ -62,12 +62,12 @@
                         <td data-label="@L["Trend:Recent:Columns:Allocation"]">@RuntimeMetricsDisplayFormatter.ReportedAllocationRate(point.AllocationRateBps)</td>
                         <td data-label="@L["Trend:Recent:Columns:GcTime"]">@MemoryAnalysisDisplayFormatter.Percent(point.TimeInGcPercent)</td>
                         <td data-label="@L["Trend:Recent:Columns:Fragmentation"]">@MemoryAnalysisDisplayFormatter.Percent(point.GcFragmentation)</td>
-                        <td class="memory-sample-action"><MudIconButton Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" Color="Color.Primary" aria-label="@L["Trend:Recent:Inspect", MemoryAnalysisDisplayFormatter.MachineTime(point.Timestamp)]" OnClick="@(() => InspectAsync(point))" Disabled="@(CapturedAt is null)" /></td>
+                        <td class="memory-sample-action"><MudIconButton Icon="@MoIcons.ArrowUpRight" Size="Size.Small" Color="Color.Primary" aria-label="@L["Trend:Recent:Inspect", MemoryAnalysisDisplayFormatter.MachineTime(point.Timestamp)]" OnClick="@(() => InspectAsync(point))" Disabled="@(CapturedAt is null)" /></td>
                     </tr>
                 }</tbody>
             </MudSimpleTable></div>
             <footer class="memory-ledger-footer"><span>@L["Trend:Recent:Range", (_page - 1) * PageSize + 1, Math.Min(_page * PageSize, Points.Count), Points.Count]</span>
-                @if (PageCount > 1) { <MudPagination Count="PageCount" Selected="_page" SelectedChanged="ChangePage" ShowFirstButton="true" ShowLastButton="true" Size="Size.Small" Color="Color.Default" aria-label="@L["Trend:Recent:Pagination"]" /> }</footer>
+                @if (PageCount > 1) { <MudPagination Count="PageCount" Selected="_page" SelectedChanged="ChangePage" ShowFirstButton="true" ShowLastButton="true" Size="Size.Small" Color="Color.Default" aria-label="@L["Trend:Recent:Pagination"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /> }</footer>
         }
         else { <div class="memory-ledger-empty">@L["Trend:Recent:Empty"]</div> }
     </article>

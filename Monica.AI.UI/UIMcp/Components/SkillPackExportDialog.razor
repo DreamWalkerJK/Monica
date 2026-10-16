@@ -40,7 +40,7 @@
                           Required="true"
                           RequiredError="@L["Common:Validation:Required"]"
                           HelperText="@L["Capabilities:Mcp:ExportSkill:TargetRootHint"]" />
-            @if (_error is not null) { <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert> }
+            @if (_error is not null) { <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@_error</MudAlert> }
         </div>
     </DialogContent>
     <DialogActions>

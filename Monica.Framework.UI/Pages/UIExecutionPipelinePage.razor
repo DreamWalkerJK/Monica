@@ -29,7 +29,7 @@
                 }
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Primary"
-                           StartIcon="@Icons.Material.Outlined.Refresh"
+                           StartIcon="@MoIcons.Refresh"
                            Disabled="@PageState.IsLoading"
                            OnClick="RefreshAsync">
                     @L["Page:Header:Refresh"]
@@ -39,7 +39,7 @@
 
         @if (!string.IsNullOrWhiteSpace(PageState.LoadError))
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined"
+            <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Variant="Variant.Outlined"
                       Class="execution-pipeline-page__error"
                       data-testid="execution-pipeline-load-error">
                 @L["Page:Messages:RefreshFailed", PageState.LoadError]
@@ -63,18 +63,18 @@
                     <MudProgressLinear Indeterminate="true" Color="Color.Primary"
                                        Class="execution-pipeline-page__refresh-progress" />
                 }
-                <MudTabs Rounded="false"
+                <MudTabs PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" Rounded="false"
                          Outlined="false"
                          Elevation="0"
                          ApplyEffectsToContainer="false"
                          Class="execution-pipeline-page__tabs mo-self-painted"
                          TabPanelsClass="execution-pipeline-page__tab-panel">
-                    <MudTabPanel Text="@L["Page:Tabs:PlansWithCount", catalog.Plans.Length]" Icon="@Icons.Material.Outlined.Route">
+                    <MudTabPanel Text="@L["Page:Tabs:PlansWithCount", catalog.Plans.Length]" Icon="@MoIcons.Route">
                         @if (catalog.Plans.IsDefaultOrEmpty)
                         {
                             <div class="execution-pipeline-page__state" data-testid="execution-pipeline-observed-empty">
                                 <span class="execution-pipeline-page__state-icon">
-                                    <MudIcon Icon="@Icons.Material.Outlined.Route" />
+                                    <MoIcon Icon="@MoIcons.Route" Size="1.5rem" />
                                 </span>
                                 <h2>@L["Page:States:NoObservedPlansTitle"]</h2>
                                 <p>@L["Page:States:NoObservedPlans"]</p>
@@ -88,7 +88,7 @@
                                                            PlanSelected="PageState.SelectPlan" />
                         }
                     </MudTabPanel>
-                    <MudTabPanel Text="@L["Page:Tabs:RegistrationsWithCount", catalog.Registrations.Length]" Icon="@Icons.Material.Outlined.Extension">
+                    <MudTabPanel Text="@L["Page:Tabs:RegistrationsWithCount", catalog.Registrations.Length]" Icon="@MoIcons.Puzzle">
                         <ExecutionPipelineRegistrationTable Registrations="@catalog.Registrations" />
                     </MudTabPanel>
                 </MudTabs>
@@ -96,7 +96,7 @@
         }
         else if (!PageState.IsLoading)
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="execution-pipeline-page__error">
+            <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Variant="Variant.Outlined" Class="execution-pipeline-page__error">
                 @L["Page:States:LoadFailed"]
             </MudAlert>
         }

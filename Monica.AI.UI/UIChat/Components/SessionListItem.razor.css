@@ -8,7 +8,8 @@
 .session-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pin-action, .archive-action { display: flex; align-items: center; justify-content: center; opacity: 0; }
 .session-row ::deep .mud-icon-button { padding: 4px; color: var(--mud-palette-text-secondary); }
-.session-row ::deep .mud-icon-button .mud-icon-root { font-size: 16px; }
+.pin-action ::deep .mud-icon-button[aria-pressed="true"]:not(:disabled) { color: var(--mud-palette-primary); }
+.session-row ::deep .mud-icon-button :is(.mud-icon-root, .mo-icon) { font-size: 16px; }
 .session-tail { display: grid; place-items: center; min-width: 0; }
 .session-time, .archive-action { grid-area: 1 / 1; }
 .session-time { color: var(--mud-palette-text-secondary); font-size: .6875rem; white-space: nowrap; font-variant-numeric: tabular-nums; }

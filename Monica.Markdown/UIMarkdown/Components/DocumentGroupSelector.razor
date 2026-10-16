@@ -21,18 +21,16 @@
 
                         @if (group.HasConfigurationError)
                         {
-                            <MudIcon Icon="@Icons.Material.Filled.Warning"
-                                     Size="Size.Small"
-                                     Color="Color.Warning"
-                                     Class="group-warning" />
+                            <MoIcon Icon="@MoIcons.Warning"
+                                     Size="1.25rem"
+                                     Class="group-warning" Style="color:var(--mud-palette-warning);" />
                         }
 
                         @if (isActive)
                         {
-                            <MudIcon Icon="@Icons.Material.Filled.Check"
-                                     Size="Size.Small"
-                                     Color="Color.Primary"
-                                     Class="group-selected" />
+                            <MoIcon Icon="@MoIcons.Check"
+                                     Size="1.25rem"
+                                     Class="group-selected" Style="color:var(--mud-palette-primary);" />
                         }
                     </div>
                 </div>

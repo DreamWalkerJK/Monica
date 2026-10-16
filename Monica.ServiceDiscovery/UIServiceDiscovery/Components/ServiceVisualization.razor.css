@@ -30,7 +30,7 @@
 .atlas-map__state { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 14px; padding: 32px; text-align: center; background: color-mix(in srgb, var(--mud-palette-surface) 96%, transparent); }
 .atlas-map__state strong { font-size: 17px; font-weight: 500; }
 .atlas-map__state p { margin: 0; max-width: 46ch; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); font-size: 13px; line-height: 1.65; }
-.atlas-map__state ::deep .mud-icon-root { color: var(--atlas-accent); }
+.atlas-map__state ::deep :is(.mud-icon-root, .mo-icon) { color: var(--atlas-accent); }
 .atlas-refreshing { position: absolute; top: 16px; left: 24px; padding: 7px 10px; border: 1px solid var(--mud-palette-divider); border-radius: 6px; background: var(--mud-palette-surface); color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); font-size: 11px; }
 .atlas-map__footer { border-top: 1px solid var(--mud-palette-divider); padding: 16px 24px 20px; }
 .atlas-map__footer p { margin: 0; font-size: 12px; line-height: 1.65; }
@@ -40,7 +40,7 @@
 .atlas-native__heading h3 { font-size: 17px; font-weight: 500; line-height: 1.35; margin: 7px 0 0; }
 .atlas-native__count { font-size: 21px; font-family: var(--mo-font-family-mono); font-weight: 400; color: var(--atlas-accent); }
 .atlas-native__intro { font-size: 12px; line-height: 1.6; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); padding: 0 22px; margin: 0 0 16px; }
-.atlas-roster, .atlas-ledger { padding: 0 12px; margin: 0; list-style: none; min-width: 0; max-height: 510px; overflow: auto; scrollbar-width: thin; overscroll-behavior: contain; }
+.atlas-roster, .atlas-ledger { padding: 0 12px; margin: 0; list-style: none; min-width: 0; max-height: 510px; overflow: auto; overscroll-behavior: contain; }
 .atlas-roster__row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px; border-top: 1px solid var(--mud-palette-divider); padding: 11px 4px; min-width: 0; }
 .atlas-roster__row:first-child { border-top: 0; }
 .atlas-record { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; text-align: start; min-width: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 8px; }

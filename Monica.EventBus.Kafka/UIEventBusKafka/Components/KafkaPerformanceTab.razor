@@ -2,7 +2,7 @@
 @inject IStringLocalizer<EventBusKafkaResource> L
 @{ var metrics = FilteredMetrics; }
 <div class="performance-workspace">
-    <KafkaWorkspaceHeader Icon="@Icons.Material.Outlined.MonitorHeart" Title="@L["Performance:Title"]" Subtitle="@LiveStatus" />
+    <KafkaWorkspaceHeader Icon="@MoIcons.HeartPulse" Title="@L["Performance:Title"]" Subtitle="@LiveStatus" />
     <section class="performance-sampling">
         <div class="performance-sampling-copy"><p>@L["Performance:Evidence:OffsetBased"]</p></div>
         <div class="performance-controls">
@@ -14,7 +14,7 @@
                                  Min="@KafkaPerformancePollingState.MinimumRefreshIntervalSeconds" Max="@KafkaPerformancePollingState.MaximumRefreshIntervalSeconds"
                                  Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(IsBusy || !State.CanAdminSelectedCluster || !State.IsPerformanceAutoRefreshEnabled)" />
             </div>
-            <KafkaPrimaryButton StartIcon="@Icons.Material.Outlined.MonitorHeart"
+            <KafkaPrimaryButton StartIcon="@MoIcons.HeartPulse"
                        Disabled="@(IsBusy || State.IsPerformanceSampling || !State.CanAdminSelectedCluster)" OnClick="OnCapture">
                 @if (State.IsPerformanceSampling) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
                 @L["Performance:Actions:Capture"]
@@ -23,42 +23,42 @@
     </section>
     @if (!string.IsNullOrWhiteSpace(State.PerformanceSamplingError ?? State.LatestPerformanceError))
     {
-        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@(State.PerformanceSamplingError ?? State.LatestPerformanceError)</MudAlert>
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@(State.PerformanceSamplingError ?? State.LatestPerformanceError)</MudAlert>
     }
     @if (State.LatestPerformance is { } latest)
     {
         <div class="performance-metrics">
-            <KafkaMetricCard Icon="@Icons.Material.Outlined.MarkEmailUnread" Label="@L["Performance:Columns:RetainedMessages"]" Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(latest.TotalRetainedMessageCount, L["Performance:Values:RetainedMessagesUnknown"])" AccentColor="Color.Info" />
-            <KafkaMetricCard Icon="@Icons.Material.Outlined.NorthEast" Label="@L["Performance:Columns:WriteRate"]" Value="@KafkaMetricDisplayFormatter.FormatRate(latest.MessageWriteRatePerSecond, L)" AccentColor="Color.Primary" />
-            <KafkaMetricCard Icon="@Icons.Material.Outlined.SouthWest" Label="@L["Performance:Columns:ConsumeRate"]" Value="@KafkaMetricDisplayFormatter.FormatRate(latest.MessageConsumeRatePerSecond, L)" AccentColor="Color.Secondary" />
-            <KafkaMetricCard Icon="@Icons.Material.Outlined.HourglassBottom" Label="@L["Performance:Columns:Lag"]" Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(latest.TotalLag, L["Performance:Values:LagUnknown"])" AccentColor="Color.Info" />
+            <KafkaMetricCard Icon="@MoIcons.MailUnread" Label="@L["Performance:Columns:RetainedMessages"]" Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(latest.TotalRetainedMessageCount, L["Performance:Values:RetainedMessagesUnknown"])" AccentColor="Color.Info" />
+            <KafkaMetricCard Icon="@MoIcons.ArrowUpRight" Label="@L["Performance:Columns:WriteRate"]" Value="@KafkaMetricDisplayFormatter.FormatRate(latest.MessageWriteRatePerSecond, L)" AccentColor="Color.Primary" />
+            <KafkaMetricCard Icon="@MoIcons.ArrowDownLeft" Label="@L["Performance:Columns:ConsumeRate"]" Value="@KafkaMetricDisplayFormatter.FormatRate(latest.MessageConsumeRatePerSecond, L)" AccentColor="Color.Secondary" />
+            <KafkaMetricCard Icon="@MoIcons.Hourglass" Label="@L["Performance:Columns:Lag"]" Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(latest.TotalLag, L["Performance:Values:LagUnknown"])" AccentColor="Color.Info" />
         </div>
         @if (!string.IsNullOrWhiteSpace(latest.Message))
         {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined"><strong>@L["Performance:Evidence:Diagnostic"]</strong><MudText Typo="Typo.body2">@latest.Message</MudText></MudAlert>
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@MoIcons.Info"><strong>@L["Performance:Evidence:Diagnostic"]</strong><MudText Typo="Typo.body2">@latest.Message</MudText></MudAlert>
         }
     }
     <div class="performance-filter">
         <MudTextField T="string" @bind-Value="_metricsFilter" Immediate="true" DebounceInterval="200"
                       Label="@L["Performance:MetricsFilter:Label"]" Placeholder="@L["Performance:MetricsFilter:Placeholder"]"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+                      Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" ClearIcon="@MoIcons.Close" />
     </div>
     @if (!State.CanAdminSelectedCluster)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Lock" Title="@L["Performance:Title"]" Description="@L["Performance:Unavailable"]" AccentColor="Color.Warning" />
+        <KafkaWorkspaceState Icon="@MoIcons.Lock" Title="@L["Performance:Title"]" Description="@L["Performance:Unavailable"]" AccentColor="Color.Warning" />
     }
     else if (State.LatestPerformance is null)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.QueryStats" Title="@L["Performance:Title"]" Description="@(string.IsNullOrWhiteSpace(State.PerformanceSamplingError) && string.IsNullOrWhiteSpace(State.LatestPerformanceError) ? L["Performance:Empty"] : L["Performance:CaptureUnavailable"])"
-                             ActionLabel="@L["Performance:Actions:Capture"]" ActionIcon="@Icons.Material.Outlined.MonitorHeart" ActionDisabled="@(IsBusy || State.IsPerformanceSampling)" OnAction="OnCapture" />
+        <KafkaWorkspaceState Icon="@MoIcons.ChartTrend" Title="@L["Performance:Title"]" Description="@(string.IsNullOrWhiteSpace(State.PerformanceSamplingError) && string.IsNullOrWhiteSpace(State.LatestPerformanceError) ? L["Performance:Empty"] : L["Performance:CaptureUnavailable"])"
+                             ActionLabel="@L["Performance:Actions:Capture"]" ActionIcon="@MoIcons.HeartPulse" ActionDisabled="@(IsBusy || State.IsPerformanceSampling)" OnAction="OnCapture" />
     }
     else if (State.LatestPerformance.ConsumerGroupMetrics.Count == 0)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.BarChart" Title="@L["Performance:Title"]" Description="@L["Performance:NoConsumerGroupMetrics"]" />
+        <KafkaWorkspaceState Icon="@MoIcons.ChartColumn" Title="@L["Performance:Title"]" Description="@L["Performance:NoConsumerGroupMetrics"]" />
     }
     else if (metrics.Count == 0)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.SearchOff" Title="@L["Performance:MetricsFilter:NoMatches"]" Description="@L["Performance:MetricsFilter:Placeholder"]"
+        <KafkaWorkspaceState Icon="@MoIcons.SearchOff" Title="@L["Performance:MetricsFilter:NoMatches"]" Description="@L["Performance:MetricsFilter:Placeholder"]"
                              ActionLabel="@L["Common:Actions:ResetFilters"]" OnAction="ResetFilter" />
     }
     else
@@ -76,10 +76,10 @@
                     </MudTd>
                     <MudTd DataLabel="@L["Performance:Columns:RetainedMessages"]">@KafkaMetricDisplayFormatter.FormatOptionalInt64(context.TotalRetainedMessageCount, L["Performance:Values:RetainedMessagesUnknown"])</MudTd>
                     <MudTd DataLabel="@($"{L["Performance:Columns:WriteRate"]} / {L["Performance:Columns:ConsumeRate"]}")"><div class="performance-rates"><span>@L["Performance:Columns:WriteRate"]: @KafkaMetricDisplayFormatter.FormatRate(context.WriteRatePerSecond, L)</span><span>@L["Performance:Columns:ConsumeRate"]: @KafkaMetricDisplayFormatter.FormatRate(context.ConsumeRatePerSecond, L)</span></div></MudTd>
-                    <MudTd DataLabel="@L["Performance:Columns:Lag"]"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@LagColor(context.TotalLag)">@KafkaMetricDisplayFormatter.FormatOptionalInt64(context.TotalLag, L["Performance:Values:LagUnknown"])</MudChip></MudTd>
-                    <MudTd DataLabel="@L["Common:Columns:Actions"]"><MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Analytics" Disabled="@IsBusy" aria-label="@L["Performance:Actions:ViewDetails", context.GroupId, context.TopicName]" OnClick="@(() => OnViewDetails.InvokeAsync(context))">@L["Performance:Actions:Details"]</MudButton></MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:Lag"]"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@LagColor(context.TotalLag)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@KafkaMetricDisplayFormatter.FormatOptionalInt64(context.TotalLag, L["Performance:Values:LagUnknown"])</MudChip></MudTd>
+                    <MudTd DataLabel="@L["Common:Columns:Actions"]"><MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.ChartTrend" Disabled="@IsBusy" aria-label="@L["Performance:Actions:ViewDetails", context.GroupId, context.TopicName]" OnClick="@(() => OnViewDetails.InvokeAsync(context))">@L["Performance:Actions:Details"]</MudButton></MudTd>
                 </RowTemplate>
-                <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Performance" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
+                <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Performance" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /></PagerContent>
             </MudTable>
         </KafkaTableSurface>
     }

@@ -41,7 +41,7 @@ public partial class ConfigurationDebugPage
     }
 
     private bool IsMatch(ConfigurationDebugLine line) => string.IsNullOrWhiteSpace(_searchText)
-        || line.SearchText.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
+        || (Visibility.ShowSensitiveValues ? line.RawText : line.SearchText).Contains(_searchText, StringComparison.OrdinalIgnoreCase);
 
     private void ToggleSensitiveLine(int lineIndex) => _state?.ToggleSensitiveLine(lineIndex);
 

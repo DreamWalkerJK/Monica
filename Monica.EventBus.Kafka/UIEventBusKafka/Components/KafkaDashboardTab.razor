@@ -4,14 +4,14 @@
 <div class="kafka-overview">
     <section class="overview-context">
         <div class="overview-provider">
-            <MudIcon Icon="@Icons.Material.Outlined.Hub" Size="Size.Large" />
+            <MoIcon Icon="@MoIcons.Network" Size="2.25rem" />
             <span class="overview-label">@L["Dashboard:Cards:Provider"]</span>
             <h2>@(State.HasLoadedConfiguration ? State.Integration.ActiveProviderName : L["Common:Values:Unavailable"].Value)</h2>
             <span class="overview-mode">@ModeLabel</span>
         </div>
         <div class="overview-cluster">
             <div class="overview-cluster-heading"><span class="overview-label">@L["Dashboard:SelectedCluster:Label"]</span>
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@ClusterStatusColor">@ClusterStatusText</MudChip>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@ClusterStatusColor" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@ClusterStatusText</MudChip>
             </div>
             <h2>@(State.SelectedCluster?.Config.DisplayName ?? (string.IsNullOrWhiteSpace(State.RequestedClusterId) ? L["Dashboard:SelectedCluster:None"].Value : State.RequestedClusterId))</h2>
             @if (State.SelectedCluster is { } cluster)
@@ -20,7 +20,7 @@
                     <div><dt>@L["Common:Labels:ClusterId"]</dt><dd>@cluster.Config.ClusterId</dd></div>
                     <div><dt>@L["Clusters:Fields:BootstrapServers"]</dt><dd>@(string.IsNullOrWhiteSpace(cluster.Config.BootstrapServers) ? L["Clusters:Values:ExternalBootstrap"].Value : cluster.Config.BootstrapServers)</dd></div>
                 </dl>
-                @if (!string.IsNullOrWhiteSpace(cluster.ErrorMessage)) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@cluster.ErrorMessage</MudAlert> }
+                @if (!string.IsNullOrWhiteSpace(cluster.ErrorMessage)) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@cluster.ErrorMessage</MudAlert> }
             }
             else if (!string.IsNullOrWhiteSpace(State.RequestedClusterId)) { <KafkaDialogContext ClusterId="@State.RequestedClusterId" /><p>@L["Common:Values:Unavailable"]</p> }
             else { <p>@L["Dashboard:SelectedCluster:NoneDescription"]</p> }
@@ -50,16 +50,16 @@
         <section class="overview-actions">
             <h3>@L["Dashboard:NextActions:Title"]</h3><p>@L["Dashboard:NextActions:Description"]</p>
             <div class="overview-route-actions">
-                <MudButton Href="@ClustersUrl" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Storage">@L["Dashboard:NextActions:Clusters"]</MudButton>
-                <MudButton Href="@TopicsUrl" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Topic">@L["Dashboard:NextActions:Topics"]</MudButton>
-                <MudButton Href="@ConsumerGroupsUrl" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Groups">@L["Dashboard:NextActions:ConsumerGroups"]</MudButton>
-                <KafkaPrimaryButton Href="@PerformanceUrl" StartIcon="@Icons.Material.Outlined.MonitorHeart">@L["Dashboard:NextActions:Performance"]</KafkaPrimaryButton>
+                <MudButton Href="@ClustersUrl" Variant="Variant.Outlined" StartIcon="@MoIcons.Database">@L["Dashboard:NextActions:Clusters"]</MudButton>
+                <MudButton Href="@TopicsUrl" Variant="Variant.Outlined" StartIcon="@MoIcons.Folder">@L["Dashboard:NextActions:Topics"]</MudButton>
+                <MudButton Href="@ConsumerGroupsUrl" Variant="Variant.Outlined" StartIcon="@MoIcons.Users">@L["Dashboard:NextActions:ConsumerGroups"]</MudButton>
+                <KafkaPrimaryButton Href="@PerformanceUrl" StartIcon="@MoIcons.HeartPulse">@L["Dashboard:NextActions:Performance"]</KafkaPrimaryButton>
             </div>
         </section>
     </div>
     @if (State.Integration.Messages.Count > 0)
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@MoIcons.Info">
             @foreach (var message in State.Integration.Messages) { <MudText Typo="Typo.body2">@message</MudText> }
         </MudAlert>
     }

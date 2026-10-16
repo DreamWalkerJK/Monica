@@ -4,12 +4,12 @@
 @inject IStringLocalizer<AIResource> L
 
 <div class="model-selector" title="@FullSelection" @onkeydown="HandleDismissalKeyAsync" @onkeydown:stopPropagation="true">
-    <MudMenu @ref="_menu" @bind-Open="_open" Dense="true" Disabled="@Disabled" Label="@TriggerLabel" AriaLabel="@($"{L["Model:Label"]}: {FullSelection}")" Size="Size.Small" EndIcon="@Icons.Material.Filled.ExpandMore" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight">
+    <MudMenu @ref="_menu" @bind-Open="_open" Dense="true" Disabled="@Disabled" Label="@TriggerLabel" AriaLabel="@($"{L["Model:Label"]}: {FullSelection}")" Size="Size.Small" EndIcon="@MoIcons.ChevronDown" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight">
         <ChildContent>
                         <div class="model-picker" @onkeydown="HandleDismissalKeyAsync" @onkeydown:stopPropagation="true">
                             <div class="current-selection"><strong>@ModelLabel</strong><span>@FullSelection</span></div>
                             <div class="model-search" @onkeydown="HandleDismissalKeyAsync" @onkeydown:stopPropagation="true">
-                                <MudTextField T="string" @bind-Value="_search" Immediate="true" Placeholder="@L["Workbench:SearchModels"]" aria-label="@L["Workbench:SearchModels"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" />
+                                <MudTextField ClearIcon="@MoIcons.Close" T="string" @bind-Value="_search" Immediate="true" Placeholder="@L["Workbench:SearchModels"]" aria-label="@L["Workbench:SearchModels"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Clearable="true" />
                             </div>
                             <div class="model-groups">
                                 @foreach (var group in MatchingGroups)
@@ -18,7 +18,7 @@
                                         <div class="provider-heading">@group.Provider.DisplayName</div>
                                         @foreach (var model in group.Models)
                                         {
-                                            <MudMenuItem Disabled="@(!group.Provider.IsValid || Disabled)" Icon="@(IsSelected(group.Provider, model) ? Icons.Material.Filled.Check : null)" OnClick="@(() => OnModelChanged.InvokeAsync((group.Provider.ProviderId, model.ModelName)))">
+                                            <MudMenuItem Disabled="@(!group.Provider.IsValid || Disabled)" Icon="@(IsSelected(group.Provider, model) ? MoIcons.Check : null)" OnClick="@(() => OnModelChanged.InvokeAsync((group.Provider.ProviderId, model.ModelName)))">
                                                 <span class="model-choice" title="@model.ModelName"><span class="choice-label">@(model.DisplayName ?? model.ModelName)</span>
                                                     <span class="model-capacity">@(model.ContextWindow is { } capacity ? $"{capacity / 1024d:0.#}K" : L["Workbench:DefaultContextCapacity", ChatContextCapacity.DefaultTokens / 1024])</span>
                                                 </span>

@@ -32,11 +32,11 @@
                     <summary>@L["Workbench:CompactionSettings"]</summary>
                     <MudNumericField T="double" @bind-Value="_thresholdPercent" Label="@L["Workbench:CompactionThreshold"]" Min="1" Max="99" Adornment="Adornment.End" AdornmentText="%" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
                     <MudNumericField T="int" @bind-Value="_retainedTurns" Label="@L["Workbench:RetainedTurns"]" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
-                    <MudNumericField T="int?" @bind-Value="_outputBudget" Label="@L["Workbench:OutputBudget"]" HelperText="@L["Workbench:OutputBudgetHelp"]" Min="1" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                    <MudNumericField ClearIcon="@MoIcons.Close" T="int?" @bind-Value="_outputBudget" Label="@L["Workbench:OutputBudget"]" HelperText="@L["Workbench:OutputBudgetHelp"]" Min="1" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
                     <MudText Typo="Typo.caption">@L["Workbench:CompactionSettingsHelp"]</MudText>
                     <MudButton Size="Size.Small" OnClick="SavePreferencesAsync" Disabled="@(Disabled || !PreferencesValid)">@L["Common:Actions:Save"]</MudButton>
                 </details>
-                <MudButton FullWidth="true" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Compress" Disabled="@Disabled" OnClick="@OnCompact">@L["Workbench:CompactNow"]</MudButton>
+                <MudButton FullWidth="true" Variant="Variant.Outlined" StartIcon="@MoIcons.Minimize" Disabled="@Disabled" OnClick="@OnCompact">@L["Workbench:CompactNow"]</MudButton>
             </div>
         </ChildContent>
     </MudMenu>

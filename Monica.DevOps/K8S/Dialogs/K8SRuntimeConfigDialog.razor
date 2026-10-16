@@ -5,7 +5,7 @@
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="3">
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@MoIcons.Info">
                 @L["RuntimeConfigDialog:Intro"]
             </MudAlert>
 
@@ -46,7 +46,7 @@
                           @bind-Value="_password"
                           InputType="@(_showPassword ? InputType.Text : InputType.Password)"
                           Adornment="Adornment.End"
-                          AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                          AdornmentIcon="@(_showPassword ? MoIcons.EyeOff : MoIcons.Eye)"
                           OnAdornmentClick="TogglePasswordVisibility"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
@@ -63,7 +63,7 @@
 
             @if (IsAllowAllNamespaces)
             {
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">
                     @L["RuntimeConfigDialog:AllowAllNamespacesWarning"]
                 </MudAlert>
             }
@@ -82,7 +82,7 @@
         <MudButton OnClick="Cancel" Variant="Variant.Text">
             @L["Common:Cancel"]
         </MudButton>
-        <MudButton OnClick="Save" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
+        <MudButton OnClick="Save" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Save">
             @L["RuntimeConfigDialog:Save"]
         </MudButton>
     </DialogActions>

@@ -11,7 +11,7 @@
             <MudText Typo="Typo.h6" HtmlTag="h2" id="job-health-heading">@L["JobDetail:Health:Title"]</MudText>
             <MudText Typo="Typo.body2">@L["JobDetail:Health:Description"]</MudText>
         </div>
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
             @L["JobDetail:Health:Window"]
         </MudChip>
     </header>
@@ -19,10 +19,10 @@
     <div class="job-health__score-grid">
         <article class="job-health__score" data-tone="success">
             <span class="job-health__score-label">
-                <MudIcon Icon="@Icons.Material.Outlined.FactCheck" Size="Size.Small" />
+                <MoIcon Icon="@MoIcons.ClipboardCheck" Size="1.25rem" />
                 @L["Analytics:Metrics:Reliability"]
                 <MudTooltip Text="@L["JobDetail:Health:ReliabilityFormulaHelp"]" Placement="Placement.Top" Arrow="true">
-                    <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                    <MudIconButton Icon="@MoIcons.Info"
                                    Size="Size.Small"
                                    aria-label="@L["JobDetail:Health:ReliabilityFormulaHelp"]" />
                 </MudTooltip>
@@ -36,10 +36,10 @@
         </article>
         <article class="job-health__score" data-tone="info">
             <span class="job-health__score-label">
-                <MudIcon Icon="@Icons.Material.Outlined.EventAvailable" Size="Size.Small" />
+                <MoIcon Icon="@MoIcons.CalendarCheck" Size="1.25rem" />
                 @L["Analytics:Metrics:ScheduleFulfillment"]
                 <MudTooltip Text="@L["JobDetail:Health:FulfillmentFormulaHelp"]" Placement="Placement.Top" Arrow="true">
-                    <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                    <MudIconButton Icon="@MoIcons.Info"
                                    Size="Size.Small"
                                    aria-label="@L["JobDetail:Health:FulfillmentFormulaHelp"]" />
                 </MudTooltip>
@@ -60,7 +60,7 @@
         </article>
         <article class="job-health__score" data-tone="primary">
             <span class="job-health__score-label">
-                <MudIcon Icon="@Icons.Material.Outlined.Speed" Size="Size.Small" />
+                <MoIcon Icon="@MoIcons.Gauge" Size="1.25rem" />
                 @L["Analytics:Metrics:Throughput"]
             </span>
             <strong>@Snapshot.ExecutedThroughputPerHour.ToString("N2", CultureInfo.CurrentCulture)</strong>
@@ -73,7 +73,7 @@
         {
             <article data-state="@state.ToString().ToLowerInvariant()">
                 <span class="job-health__outcome-icon" aria-hidden="true">
-                    <MudIcon Icon="@GetStateIcon(state)" Size="Size.Small" />
+                    <MoIcon Icon="@GetStateIcon(state)" Size="1.25rem" />
                 </span>
                 <span>@L[$"ExecutionStates:{state}"]</span>
                 <strong>@Snapshot.StateTotals.GetValueOrDefault(state).ToString("N0", CultureInfo.CurrentCulture)</strong>
@@ -128,7 +128,7 @@
     </dl>
 
     <footer class="job-health__note">
-        <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+        <MoIcon Icon="@MoIcons.Info" Size="1.25rem" />
         <span>@L["JobDetail:Health:CohortNote"]</span>
     </footer>
 </section>
@@ -179,12 +179,12 @@
 
     private static string GetStateIcon(JobExecutionState state) => state switch
     {
-        JobExecutionState.Queued => Icons.Material.Outlined.Schedule,
-        JobExecutionState.Running => Icons.Material.Outlined.PlayCircle,
-        JobExecutionState.Succeeded => Icons.Material.Outlined.CheckCircle,
-        JobExecutionState.Failed => Icons.Material.Outlined.Error,
-        JobExecutionState.Cancelled => Icons.Material.Outlined.Cancel,
-        JobExecutionState.Skipped => Icons.Material.Outlined.SkipNext,
-        _ => Icons.Material.Outlined.Help
+        JobExecutionState.Queued => MoIcons.Clock,
+        JobExecutionState.Running => MoIcons.PlayCircle,
+        JobExecutionState.Succeeded => MoIcons.Success,
+        JobExecutionState.Failed => MoIcons.Error,
+        JobExecutionState.Cancelled => MoIcons.Error,
+        JobExecutionState.Skipped => MoIcons.SkipNext,
+        _ => MoIcons.Help
     };
 }

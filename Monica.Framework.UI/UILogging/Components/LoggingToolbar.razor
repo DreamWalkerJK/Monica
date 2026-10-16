@@ -6,28 +6,28 @@
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                       StartIcon="@MoIcons.Play"
                        Disabled="@IsRunning"
                        OnClick="HandleStart">@L["Page:Components:Toolbar:Start"]</MudButton>
 
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Secondary"
-                       StartIcon="@Icons.Material.Filled.Pause"
+                       StartIcon="@MoIcons.Pause"
                        Disabled="@(!IsRunning)"
                        OnClick="HandlePause">@L["Page:Components:Toolbar:Pause"]</MudButton>
 
             <MudButton Variant="Variant.Text"
-                       StartIcon="@Icons.Material.Filled.Refresh"
+                       StartIcon="@MoIcons.Refresh"
                        OnClick="HandleRefresh">@L["Page:Components:Toolbar:Refresh"]</MudButton>
 
             <MudButton Variant="Variant.Text"
-                       StartIcon="@Icons.Material.Filled.Download"
+                       StartIcon="@MoIcons.Download"
                        OnClick="HandleExport">@L["Page:Components:Toolbar:Export"]</MudButton>
         </MudStack>
 
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
             <div class="logging-toolbar__line-limit">
-            <MudSelect T="int" Value="@SelectedLineLimit" ValueChanged="HandleLineLimitChanged" Dense="true" Label="@L["Page:Components:Toolbar:LineLimit"]">
+            <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="int" Value="@SelectedLineLimit" ValueChanged="HandleLineLimitChanged" Dense="true" Label="@L["Page:Components:Toolbar:LineLimit"]">
                 @foreach (var option in PresetLineCounts)
                 {
                     <MudSelectItem Value="@option">@option</MudSelectItem>

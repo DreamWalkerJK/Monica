@@ -9,7 +9,7 @@
             @if (!string.IsNullOrWhiteSpace(Version.Reason)) { <div><dt>@L["Group:Reason"]</dt><dd>@Version.Reason</dd></div> }
         </dl>
     </div></DialogContent>
-    <DialogActions><div class="configuration-saved-version-delete-actions"><MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Outlined.Delete" OnClick="Confirm">@L["Versions:Delete:Confirm"]</MudButton></div></DialogActions>
+    <DialogActions><div class="configuration-saved-version-delete-actions"><MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@MoIcons.Delete" OnClick="Confirm">@L["Versions:Delete:Confirm"]</MudButton></div></DialogActions>
 </MudDialog>
 @code {
     [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;

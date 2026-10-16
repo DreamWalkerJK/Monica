@@ -6,14 +6,14 @@
 <MudDialog Class="configuration-post-commit-issues-dialog">
     <DialogContent>
         <div class="configuration-post-commit-issues-dialog-body">
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+            <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined">
                 @Summary
             </MudAlert>
 
             <MudExpansionPanels MultiExpansion="true" Elevation="0" Dense="true">
                 @foreach (var issue in Issues)
                 {
-                    <MudExpansionPanel Text="@GetIssueTitle(issue)" Icon="@Icons.Material.Filled.WarningAmber">
+                    <MudExpansionPanel Text="@GetIssueTitle(issue)" Icon="@MoIcons.Warning">
                         <MudStack Spacing="2">
                             <MudText Typo="Typo.body2">@issue.Message</MudText>
                             <div class="configuration-post-commit-issue-detail">
@@ -22,7 +22,7 @@
                             <MudStack Row="true" Justify="Justify.FlexEnd">
                                 <MudButton Variant="Variant.Text"
                                            Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.ContentCopy"
+                                           StartIcon="@MoIcons.Copy"
                                            OnClick="@(() => CopyAsync(issue.Detail))">
                                     @L["Common:Actions:Copy"]
                                 </MudButton>
@@ -35,7 +35,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Text"
-                   StartIcon="@Icons.Material.Filled.ContentCopy"
+                   StartIcon="@MoIcons.Copy"
                    OnClick="CopyAllAsync">
             @L["Dialogs:PostCommitIssues:CopyAll"]
         </MudButton>

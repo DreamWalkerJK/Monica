@@ -27,6 +27,7 @@
 }
 
 .shell-page-state__icon {
+    --mo-icon-size: 28px;
     display: grid;
     place-items: center;
     width: 48px;
@@ -35,7 +36,6 @@
     background: color-mix(in srgb, var(--shell-state-accent) 13%, transparent);
     color: var(--shell-state-accent);
 }
-.shell-page-state__icon ::deep .mud-icon-root { font-size: 28px; }
 .shell-page-state__copy { min-width: 0; }
 .shell-page-state__copy h1 {
     margin: 0;
@@ -109,8 +109,7 @@
 }
 @container shell-state (max-width: 480px) {
     .shell-page-state__surface { grid-template-columns: minmax(0, 1fr); }
-    .shell-page-state__icon { width: 40px; height: 40px; margin-bottom: 20px; }
-    .shell-page-state__icon ::deep .mud-icon-root { font-size: 24px; }
+    .shell-page-state__icon { --mo-icon-size: 24px; width: 40px; height: 40px; margin-bottom: 20px; }
     .shell-page-state__copy h1 { font-size: 28px; line-height: 1.25; }
 }
 @keyframes shell-state-checking { to { transform: rotate(360deg); } }

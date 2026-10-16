@@ -17,7 +17,7 @@
             <div class="assembly-retry">
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
-                           StartIcon="@Icons.Material.Outlined.Refresh"
+                           StartIcon="@MoIcons.Refresh"
                            OnClick="@Session.EnsureAssemblyInventoryLoadedAsync">
                     @L["Actions:Retry"]
                 </MudButton>
@@ -36,7 +36,7 @@
             break;
         case ModuleSystemLazyLoadState.Failed:
             <div class="assembly-load-failure" role="alert">
-                <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+                <MoIcon Icon="@MoIcons.Error" Size="1.25rem" />
                 <span>@L["Discovery:Inventory:Failed"]</span>
             </div>
             break;
@@ -59,9 +59,9 @@
 
             <details class="assembly-configuration">
                 <summary>
-                    <span class="assembly-configuration__label"><MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Small" />@L["Discovery:Inventory:Configuration:Title"]</span>
+                    <span class="assembly-configuration__label"><MoIcon Icon="@MoIcons.Sliders" Size="1.25rem" />@L["Discovery:Inventory:Configuration:Title"]</span>
                     <span class="assembly-captured-at">@L["Discovery:Inventory:Configuration:CapturedAt", inventory.CapturedAtUtc.ToLocalTime().ToString("g")]</span>
-                    <span class="assembly-configuration__expand" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ExpandMore" Size="Size.Small" /></span>
+                    <span class="assembly-configuration__expand" aria-hidden="true"><MoIcon Icon="@MoIcons.ChevronDown" Size="1.25rem" /></span>
                 </summary>
                 <dl class="assembly-configuration-facts">
                     <div>
@@ -130,7 +130,7 @@
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
                                       Adornment="Adornment.Start"
-                                      AdornmentIcon="@Icons.Material.Outlined.Search" />
+                                      AdornmentIcon="@MoIcons.Search" ClearIcon="@MoIcons.Close" />
                     </div>
                 </div>
 
@@ -167,7 +167,7 @@
                                     {
                                         <MudTooltip Text="@L["Discovery:Inventory:Markers:EntryAssembly"]">
                                             <span class="assembly-marker" tabindex="0" aria-label="@L["Discovery:Inventory:Markers:EntryAssembly"]">
-                                                <MudIcon Icon="@Icons.Material.Outlined.Adjust" Size="Size.Small" />
+                                                <MoIcon Icon="@MoIcons.CircleDot" Size="1.25rem" />
                                             </span>
                                         </MudTooltip>
                                     }
@@ -207,7 +207,7 @@
                                    Selected="@Session.AssemblyPage"
                                    SelectedChanged="@SetAssemblyPage"
                                    ShowFirstButton="true"
-                                   ShowLastButton="true" />
+                                   ShowLastButton="true" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
                     <div class="assembly-page-size">
                         <MudSelect T="int"
                                    Label="@L["Common:RowsPerPage"]"
@@ -215,7 +215,7 @@
                                    ValueChanged="@SetAssemblyPageSize"
                                    Dense="true"
                                    Margin="Margin.Dense"
-                                   Variant="Variant.Outlined">
+                                   Variant="Variant.Outlined" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                             <MudSelectItem T="int" Value="10">10</MudSelectItem>
                             <MudSelectItem T="int" Value="25">25</MudSelectItem>
                             <MudSelectItem T="int" Value="50">50</MudSelectItem>

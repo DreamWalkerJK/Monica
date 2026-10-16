@@ -12,14 +12,14 @@
         </div>
         @if (Running)
         {
-            <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@Icons.Material.Outlined.StopCircle"
+            <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@MoIcons.StopCircle"
                        Disabled="@(!CanCancel)" OnClick="Cancel">
                 @(CancellationRequested ? L["States:CancellationRequested"] : L["Actions:Cancel"])
             </MudButton>
         }
         else
         {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PlayArrow"
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Play"
                        Disabled="@(!CanRun)" OnClick="Run">@L["Actions:Run"]</MudButton>
         }
     </div>

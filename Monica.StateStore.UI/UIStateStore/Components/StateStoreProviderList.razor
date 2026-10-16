@@ -5,7 +5,7 @@
         <div class="provider-list-panel__header">
             <MudText Typo="Typo.h6">@L["ProviderList:Labels:RegisteredProviders"]</MudText>
             <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.Refresh"
+                       StartIcon="@MoIcons.Refresh"
                        OnClick="OnRefresh"
                        Disabled="IsLoading">
                 @L["ProviderList:Actions:Refresh"]
@@ -20,7 +20,7 @@
     }
     else if (!Providers.Any())
     {
-            <MudAlert Severity="Severity.Info">
+            <MudAlert Severity="Severity.Info" Icon="@MoIcons.Info">
                 @L["ProviderList:Messages:NoProvidersFound"]
             </MudAlert>
     }

@@ -13,10 +13,6 @@ public sealed class MaterialDesign3Theme : ThemeDefinitionBase
 
     public override string Description => "Material Design 3 token-based theme with soft surfaces, rounded shapes, and expressive typography.";
 
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
-
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.AtomOneDark;
-
     public override MudTheme CreateTheme()
     {
         return new MudTheme
@@ -37,10 +33,11 @@ public sealed class MaterialDesign3Theme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteLight CreateLightPalette()
+    private static MudMarkdownPaletteLight CreateLightPalette()
     {
-        return new PaletteLight
+        return new MudMarkdownPaletteLight
         {
+            CodeHighlight = MudCodeHighlightThemes.Light.GitHub,
             Primary = "#6750a4",
             PrimaryLighten = "#7f67be",
             PrimaryDarken = "#4f378b",
@@ -122,10 +119,11 @@ public sealed class MaterialDesign3Theme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteDark CreateDarkPalette()
+    private static MudMarkdownPaletteDark CreateDarkPalette()
     {
-        return new PaletteDark
+        return new MudMarkdownPaletteDark
         {
+            CodeHighlight = MudCodeHighlightThemes.Dark.OneDark,
             Primary = "#d0bcff",
             PrimaryLighten = "#eaddff",
             PrimaryDarken = "#b69df8",

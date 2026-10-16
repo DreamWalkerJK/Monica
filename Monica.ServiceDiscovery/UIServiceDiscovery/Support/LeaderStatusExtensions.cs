@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Localization;
 using Monica.ServiceDiscovery.Localization;
 using Monica.ServiceDiscovery.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.ServiceDiscovery.UIServiceDiscovery.Support;
@@ -12,16 +13,16 @@ public static class LeaderStatusExtensions
 {
     private static readonly Dictionary<LeaderStatus, StatusDisplayInfo> Map = new()
     {
-        [LeaderStatus.Leader] = new(Color.Warning, "Shared:LeaderStatuses:Leader", Icons.Material.Filled.Star),
-        [LeaderStatus.Follower] = new(Color.Default, "Shared:LeaderStatuses:Follower", Icons.Material.Filled.Circle),
-        [LeaderStatus.Looking] = new(Color.Info, "Shared:LeaderStatuses:Looking", Icons.Material.Filled.Search),
+        [LeaderStatus.Leader] = new(Color.Warning, "Shared:LeaderStatuses:Leader", MoIcons.Star),
+        [LeaderStatus.Follower] = new(Color.Default, "Shared:LeaderStatuses:Follower", MoIcons.Circle),
+        [LeaderStatus.Looking] = new(Color.Info, "Shared:LeaderStatuses:Looking", MoIcons.Search),
     };
 
     /// <summary>
     /// Default display metadata for unmapped status values.
     /// </summary>
     private static readonly StatusDisplayInfo DefaultInfo =
-        new(Color.Default, "Shared:LeaderStatuses:Unknown", Icons.Material.Filled.Help);
+        new(Color.Default, "Shared:LeaderStatuses:Unknown", MoIcons.Help);
 
     /// <summary>
     /// Gets the display metadata for the status.

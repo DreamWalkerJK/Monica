@@ -6,6 +6,7 @@ using Monica.OpenTelemetry.UI.Localization;
 using Monica.OpenTelemetry.UI.UIOpenTelemetry.Pages;
 using Monica.OpenTelemetry.UI.UIOpenTelemetry.State;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -48,7 +49,7 @@ public class ModuleOpenTelemetryUI : MonicaModule<ModuleOpenTelemetryUIOption>, 
                 registry.RegisterLocalizedPage<UIOpenTelemetryDashboardPage, OpenTelemetryUIResource>(
                     UIOpenTelemetryDashboardPage.PAGE_URL,
                     "Pages:OpenTelemetryMetrics:Title",
-                    Icons.Material.Outlined.Sensors,
+                    MoIcons.Radio,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 12,

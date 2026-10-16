@@ -10,7 +10,7 @@
     <div class="eventbus-overview">
         <div class="eventbus-overview-lead">
             <section class="eventbus-registration">
-                <div class="eventbus-registration-top"><span class="eventbus-eyebrow">@L["Overview:RegistrationKicker"]</span><MudIcon Icon="@Icons.Material.Outlined.Hub" /></div>
+                <div class="eventbus-registration-top"><span class="eventbus-eyebrow">@L["Overview:RegistrationKicker"]</span><MoIcon Icon="@MoIcons.Network" Size="1.5rem" /></div>
                 <div class="eventbus-registration-headline"><strong>@stats.TotalSubscriptions</strong><div><h2>@L["Overview:RegisteredHandlers"]</h2><p>@L["Overview:RegistrationHelp"]</p></div></div>
                 <div class="eventbus-registration-distribution" aria-hidden="true">
                     @foreach (var state in Enum.GetValues<EventSubscriptionState>())
@@ -25,7 +25,7 @@
                     <div data-state="Pending"><span>@L.GetSubscriptionStateText(EventSubscriptionState.Pending)</span><strong>@stats.PendingSubscriptions</strong></div>
                     <div data-state="Disposed"><span>@L.GetSubscriptionStateText(EventSubscriptionState.Disposed)</span><strong>@stats.DisposedSubscriptions</strong></div>
                 </div>
-                <div class="eventbus-registration-footer"><span>@L["Overview:DiscoveryCounts", stats.AutoDiscoveredCount, stats.ManualSubscriptionCount]</span><MudButton Href="@UIEventBusSubscriptionsPage.PAGE_URL" EndIcon="@Icons.Material.Outlined.ArrowForward">@L["Overview:ExploreRegistry"]</MudButton></div>
+                <div class="eventbus-registration-footer"><span>@L["Overview:DiscoveryCounts", stats.AutoDiscoveredCount, stats.ManualSubscriptionCount]</span><MudButton Href="@UIEventBusSubscriptionsPage.PAGE_URL" EndIcon="@MoIcons.ArrowRight">@L["Overview:ExploreRegistry"]</MudButton></div>
             </section>
             <section class="eventbus-runtime-summary">
                 <span class="eventbus-eyebrow">@L["Overview:RuntimeKicker"]</span>
@@ -37,7 +37,7 @@
                     <div><span>@L["Overview:LocalHandlers"]</span><strong>@stats.LocalSubscriptions</strong></div>
                 </div>
                 <p class="eventbus-runtime-note">@L["Overview:CoverageHelp"]</p>
-                <MudButton Href="@UIEventBusProvidersPage.PAGE_URL" Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" EndIcon="@Icons.Material.Outlined.ArrowForward">@L["Overview:ExploreProviders", capture.Providers.Count]</MudButton>
+                <MudButton Href="@UIEventBusProvidersPage.PAGE_URL" Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" EndIcon="@MoIcons.ArrowRight">@L["Overview:ExploreProviders", capture.Providers.Count]</MudButton>
             </section>
         </div>
         <section class="eventbus-topic-ledger">
@@ -51,10 +51,10 @@
                         <MudTd DataLabel="@L["Registry:ReportedRuntime"]"><div class="eventbus-cell"><EventBusStatusBadge Tone="@EventBusPresentation.RuntimeColor(context.State)">@L.GetTopicRuntimeStateText(context.State)</EventBusStatusBadge></div></MudTd>
                         <MudTd DataLabel="@L["Overview:MatchedHandlers"]"><div class="eventbus-cell">@capture.Subscriptions.Count(row => row.Scope == EventSubscriptionScope.Distributed && row.ServiceKey == context.ServiceKey && row.TopicName == context.TopicName)</div></MudTd>
                         <MudTd DataLabel="@L["Overview:StateChanged"]"><div class="eventbus-cell"><time>@EventBusPresentation.Timestamp(context.StateChangedAt)</time></div></MudTd>
-                        <MudTd DataLabel="@L["SubscriptionTable:Columns:Actions"]"><div class="eventbus-cell"><MudIconButton Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" Color="Color.Primary" aria-label="@L["Overview:InspectTopic", context.TopicName]" title="@L["Overview:TopicInspector"]" OnClick="() => OnTopicClick.InvokeAsync(context)" /></div></MudTd>
+                        <MudTd DataLabel="@L["SubscriptionTable:Columns:Actions"]"><div class="eventbus-cell"><MudIconButton Icon="@MoIcons.ExternalLink" Size="Size.Small" Color="Color.Primary" aria-label="@L["Overview:InspectTopic", context.TopicName]" title="@L["Overview:TopicInspector"]" OnClick="() => OnTopicClick.InvokeAsync(context)" /></div></MudTd>
                     </RowTemplate>
                     <NoRecordsContent><div class="eventbus-empty">@L["Overview:NoReportedTopics"]</div></NoRecordsContent>
-                    <PagerContent><MudTablePager PageSizeOptions="@(new[] { 10, 20, 50 })" /></PagerContent>
+                    <PagerContent><MudTablePager FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" PageSizeOptions="@(new[] { 10, 20, 50 })" /></PagerContent>
                 </MudTable>
             </div>
         </section>
@@ -66,7 +66,7 @@
                         <HeaderContent><MudTh>@L["SubscriptionTable:Columns:EventType"]</MudTh><MudTh>@L["Overview:Handlers"]</MudTh></HeaderContent>
                         <RowTemplate><MudTd><div class="eventbus-cell"><MudButton Href="@RegistryLink("event", context.EventType)" Class="eventbus-group-link" title="@context.EventType">@context.EventTypeShortName</MudButton><code class="eventbus-muted">@context.EventType</code></div></MudTd><MudTd><div class="eventbus-cell"><strong>@context.Count</strong></div></MudTd></RowTemplate>
                         <NoRecordsContent><div class="eventbus-empty">@L["Overview:NoRegistrations"]</div></NoRecordsContent>
-                        <PagerContent><MudTablePager PageSizeOptions="@(new[] { 5, 10, 20 })" /></PagerContent>
+                        <PagerContent><MudTablePager FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" PageSizeOptions="@(new[] { 5, 10, 20 })" /></PagerContent>
                     </MudTable>
                 </div>
             </section>
@@ -77,7 +77,7 @@
                         <HeaderContent><MudTh>@L["SubscriptionTable:Columns:TopicName"]</MudTh><MudTh>@L["Overview:Handlers"]</MudTh></HeaderContent>
                         <RowTemplate><MudTd><div class="eventbus-cell"><MudButton Href="@RegistryLink("topic", context.TopicName)" Class="eventbus-group-link">@context.TopicName</MudButton></div></MudTd><MudTd><div class="eventbus-cell"><strong>@context.Count</strong></div></MudTd></RowTemplate>
                         <NoRecordsContent><div class="eventbus-empty">@L["Overview:NoRegistrations"]</div></NoRecordsContent>
-                        <PagerContent><MudTablePager PageSizeOptions="@(new[] { 5, 10, 20 })" /></PagerContent>
+                        <PagerContent><MudTablePager FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" PageSizeOptions="@(new[] { 5, 10, 20 })" /></PagerContent>
                     </MudTable>
                 </div>
             </section>

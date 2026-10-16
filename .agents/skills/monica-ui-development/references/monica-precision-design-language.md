@@ -54,6 +54,7 @@
 
 ## Preserve palette meaning
 
+- Default's scrollbar thumbs use translucent `TextSecondary` for quiet neutral chrome on both light and Zinc surfaces. Rest, hover, and drag progressively increase opacity while retaining the same hue and shared geometry.
 - Assign explicit roles for canvas, surface, border, primary text, secondary text, identity, focus, runtime, success, warning, error, and information.
 - Keep dark mode readable and layered rather than uniformly near-black. Adjacent structural surfaces must remain distinguishable without relying on shadows or glow.
 - Give semantic states visibly different token treatments when users must scan or compare them. Reinforce color with text, icon, shape, or position instead of making color the sole signal.

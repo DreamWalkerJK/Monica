@@ -16,14 +16,14 @@
     <header class="atlas-heading">
         <div class="atlas-heading__identity"><span class="atlas-kicker">@L["Atlas:Domains:Eyebrow"]</span><h2>@L["DomainGraph:Title"]</h2><p>@L["Atlas:Domains:Description"]</p></div>
         <div class="atlas-actions">
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="LoadDomainDataAsync" Disabled="@_loading">@L["Shared:Actions:Refresh"]</MudButton>
-            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Tune" OnClick="ToggleLayoutPanel" aria-expanded="@(_showLayoutPanel ? "true" : "false")">@L["Atlas:Shared:Layout"]</MudButton>
-            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.FilterAlt" OnClick="ToggleFilterPanel" aria-expanded="@(_showFilterPanel ? "true" : "false")">@L["Atlas:Shared:Filters"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@MoIcons.Refresh" OnClick="LoadDomainDataAsync" Disabled="@_loading">@L["Shared:Actions:Refresh"]</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.Sliders" OnClick="ToggleLayoutPanel" aria-expanded="@(_showLayoutPanel ? "true" : "false")">@L["Atlas:Shared:Layout"]</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.Filter" OnClick="ToggleFilterPanel" aria-expanded="@(_showFilterPanel ? "true" : "false")">@L["Atlas:Shared:Filters"]</MudButton>
         </div>
     </header>
     @if (_captureError is not null)
     {
-        <div class="atlas-notice atlas-notice--error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+        <div class="atlas-notice atlas-notice--error" role="alert"><MoIcon Icon="@MoIcons.Error" Size="1.25rem" />
             <div><strong>@L[_hasSnapshot ? "Atlas:Shared:RetainedSnapshot" : "Atlas:Shared:CaptureFailed"]</strong><p>@_captureError</p></div></div>
     }
     @if (_showLayoutPanel)
@@ -40,7 +40,7 @@
     <div class="atlas-workspace">
         <section class="atlas-map" aria-label="@L["Atlas:Domains:MapLabel"]">
             <header class="atlas-map__bar"><div><span class="atlas-scope">@L["Atlas:Domains:MapLabel"]</span><strong>@(_hasSnapshot ? L["Atlas:Domains:MapSummary", _filteredDomains.Count, _domains.Count, _filteredDependencies.Count, _dependencies.Count] : L["Shared:Values:NotAvailable"])</strong></div>
-                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.CenterFocusStrong" OnClick="ResetView" Disabled="@(!_graphAvailable)">@L["Atlas:Shared:FitView"]</MudButton></header>
+                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.Focus" OnClick="ResetView" Disabled="@(!_graphAvailable)">@L["Atlas:Shared:FitView"]</MudButton></header>
             <div class="atlas-map__stage">
                 <div id="@_graphContainerId" class="domain-discovery-visual__canvas" aria-hidden="true" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
                 @if (_loading && !_hasSnapshot)
@@ -49,7 +49,7 @@
                 }
                 else if (_graphError is not null)
                 {
-                    <div class="atlas-map__state" role="status"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" /><strong>@L["Atlas:Shared:GraphUnavailable"]</strong><p>@L["Atlas:Shared:NativeAlternative"]</p></div>
+                    <div class="atlas-map__state" role="status"><MoIcon Icon="@MoIcons.Workflow" Size="1.5rem" /><strong>@L["Atlas:Shared:GraphUnavailable"]</strong><p>@L["Atlas:Shared:NativeAlternative"]</p></div>
                 }
                 else if (!_hasSnapshot && _captureError is not null)
                 {
@@ -57,7 +57,7 @@
                 }
                 else if (_hasSnapshot && _filteredDomains.Count == 0)
                 {
-                    <div class="atlas-map__state" role="status"><MudIcon Icon="@Icons.Material.Outlined.Hub" /><strong>@L[_domains.Count == 0 ? "Atlas:Domains:Empty" : "Atlas:Shared:FilterMiss"]</strong><p>@L[_domains.Count == 0 ? "Atlas:Domains:EmptyHint" : "Atlas:Shared:FilterMissHint"]</p>
+                    <div class="atlas-map__state" role="status"><MoIcon Icon="@MoIcons.Network" Size="1.5rem" /><strong>@L[_domains.Count == 0 ? "Atlas:Domains:Empty" : "Atlas:Shared:FilterMiss"]</strong><p>@L[_domains.Count == 0 ? "Atlas:Domains:EmptyHint" : "Atlas:Shared:FilterMissHint"]</p>
                         @if (_domains.Count > 0) { <MudButton OnClick="@(() => ClearAllFiltersAsync(null))" Color="Color.Primary">@L["Shared:Actions:Clear"]</MudButton> }
                     </div>
                 }
@@ -87,8 +87,8 @@
                                 @if (_unlistedDomains.Contains(domain.Name)) { <span class="atlas-unlisted">@L["Atlas:Domains:Unlisted"]</span> }
                             </button>
                             <div class="atlas-record__actions">
-                                <MudTooltip Text="@L["DomainGraph:ContextMenu:FocusDomain"]"><MudIconButton Icon="@Icons.Material.Outlined.CenterFocusWeak" Size="Size.Small" aria-label="@L["DomainGraph:ContextMenu:FocusDomain"]" Disabled="@(!_graphAvailable)" OnClick="@(() => FocusOnDomainAsync(domain.Name))" /></MudTooltip>
-                                <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Size="Size.Small" AriaLabel="@L["Atlas:Shared:RecordActions", domain.Name]">
+                                <MudTooltip Text="@L["DomainGraph:ContextMenu:FocusDomain"]"><MudIconButton Icon="@MoIcons.Focus" Size="Size.Small" aria-label="@L["DomainGraph:ContextMenu:FocusDomain"]" Disabled="@(!_graphAvailable)" OnClick="@(() => FocusOnDomainAsync(domain.Name))" /></MudTooltip>
+                                <MudMenu Icon="@MoIcons.MoreHorizontal" Size="Size.Small" AriaLabel="@L["Atlas:Shared:RecordActions", domain.Name]">
                                     <MudMenuItem OnClick="@(() => ViewDomainDetailsAsync(domain.Name))">@L["DomainGraph:ContextMenu:ViewDomainDetails"]</MudMenuItem>
                                     <MudMenuItem OnClick="@(() => FilterByDomainAsync(domain.Name))">@L["DomainGraph:ContextMenu:FilterDomainServices"]</MudMenuItem>
                                     <MudMenuItem OnClick="@(() => ShowDependenciesAsync(domain.Name))">@L["DomainGraph:ContextMenu:ShowDependencies"]</MudMenuItem>
@@ -464,14 +464,14 @@
         var hasDependencies = _dependencies.Any(d => d.SourceDomain == domainName || d.TargetDomain == domainName);
         
         var builder = ContextMenuBuilder<string>.Create()
-            .AddItem(L["DomainGraph:ContextMenu:ViewDomainDetails"].Value, Icons.Material.Filled.Info, ViewDomainDetailsAsync)
-            .AddItem(L["DomainGraph:ContextMenu:FocusDomain"].Value, Icons.Material.Filled.CenterFocusStrong, FocusOnDomainAsync)
+            .AddItem(L["DomainGraph:ContextMenu:ViewDomainDetails"].Value, MoIcons.Info, ViewDomainDetailsAsync)
+            .AddItem(L["DomainGraph:ContextMenu:FocusDomain"].Value, MoIcons.Focus, FocusOnDomainAsync)
             .AddDivider()
-            .AddItemIf(hasServices, L["DomainGraph:ContextMenu:FilterDomainServices"].Value, Icons.Material.Filled.FilterAlt, FilterByDomainAsync)
-            .AddItemIf(hasDependencies, L["DomainGraph:ContextMenu:ShowDependencies"].Value, Icons.Material.Filled.AccountTree, ShowDependenciesAsync)
-            .AddItem(L["DomainGraph:ContextMenu:ClearFilters"].Value, Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
+            .AddItemIf(hasServices, L["DomainGraph:ContextMenu:FilterDomainServices"].Value, MoIcons.Filter, FilterByDomainAsync)
+            .AddItemIf(hasDependencies, L["DomainGraph:ContextMenu:ShowDependencies"].Value, MoIcons.Workflow, ShowDependenciesAsync)
+            .AddItem(L["DomainGraph:ContextMenu:ClearFilters"].Value, MoIcons.ClearList, ClearAllFiltersAsync)
             .AddDivider()
-            .AddItem(L["DomainGraph:ContextMenu:CopyDomainName"].Value, Icons.Material.Filled.ContentCopy, CopyDomainNameAsync);
+            .AddItem(L["DomainGraph:ContextMenu:CopyDomainName"].Value, MoIcons.Copy, CopyDomainNameAsync);
         
         return builder.Build();
     }

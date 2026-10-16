@@ -4,6 +4,7 @@ using Microsoft.Extensions.Localization;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Support;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.Components;
@@ -82,13 +83,13 @@ public partial class ExecutionFilterBar<TRange> : IAsyncDisposable where TRange 
 
     private static string GetStateIcon(JobExecutionState state) => state switch
     {
-        JobExecutionState.Queued => Icons.Material.Outlined.Schedule,
-        JobExecutionState.Running => Icons.Material.Outlined.PlayCircle,
-        JobExecutionState.Succeeded => Icons.Material.Outlined.CheckCircle,
-        JobExecutionState.Failed => Icons.Material.Outlined.ErrorOutline,
-        JobExecutionState.Cancelled => Icons.Material.Outlined.Cancel,
-        JobExecutionState.Skipped => Icons.Material.Outlined.SkipNext,
-        _ => Icons.Material.Outlined.HelpOutline
+        JobExecutionState.Queued => MoIcons.Clock,
+        JobExecutionState.Running => MoIcons.PlayCircle,
+        JobExecutionState.Succeeded => MoIcons.Success,
+        JobExecutionState.Failed => MoIcons.Error,
+        JobExecutionState.Cancelled => MoIcons.Error,
+        JobExecutionState.Skipped => MoIcons.SkipNext,
+        _ => MoIcons.Help
     };
 
     /// <inheritdoc />

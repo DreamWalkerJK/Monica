@@ -23,13 +23,13 @@
     min-height: 0;
 }
 .mo-body-content {
+    /* Anchor absolute page content inside its scroll owner. */
+    position: relative;
     flex: 1;
     min-width: 0;
     min-height: 0;
     overflow: auto;
     overscroll-behavior: contain;
-    scrollbar-color: var(--mud-palette-action-disabled) transparent;
-    scrollbar-width: thin;
 }
 #blazor-error-ui {
     position: fixed;
@@ -61,7 +61,6 @@
     padding-top: 3px;
     color: color-mix(in srgb, var(--mud-palette-error) 80%, var(--mud-palette-text-primary));
 }
-.blazor-error-ui__icon ::deep .mud-icon-root { font-size: 20px; }
 .blazor-error-ui__copy { min-width: 0; overflow-wrap: anywhere; }
 .blazor-error-ui__copy p { margin: 0; }
 .blazor-error-ui__copy p + p { margin-top: 4px; }

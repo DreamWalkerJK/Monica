@@ -37,7 +37,7 @@
                 <div class="topbar-left">
                     @if (PageState.ShowSessionList)
                     {
-                        <MudIconButton Icon="@Icons.Material.Outlined.Menu" Size="Size.Small" OnClick="ToggleSessionDrawer" aria-label="@L["Session:ToggleHistory"]"
+                        <MudIconButton Icon="@MoIcons.Menu" Size="Size.Small" OnClick="ToggleSessionDrawer" aria-label="@L["Session:ToggleHistory"]"
                                        aria-expanded="@(_sessionDrawerOpen ? "true" : "false")" />
                     }
                     <span class="conversation-title" title="@(PageState.CurrentSession?.Title ?? L["Pages:AIChat:Title"])">@(PageState.CurrentSession?.Title ?? L["Pages:AIChat:Title"])</span>
@@ -47,7 +47,7 @@
                     <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default" aria-pressed="@(_trajectory ? "true" : "false")" OnClick="@(() => _trajectory = true)">@L["Workbench:Trajectory"]</MudButton>
                 </div>
                 <div class="conversation-options">
-                    <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" AriaLabel="@L["Workbench:ConversationSettings"]" Dense="true">
+                    <MudMenu Icon="@MoIcons.MoreHorizontal" AriaLabel="@L["Workbench:ConversationSettings"]" Dense="true">
                         <MudMenuItem OnClick="@PageState.OpenPromptSettingsAsync" Disabled="@PageState.IsInputBlocked">@L["Provider:Settings:SystemPrompt"]</MudMenuItem>
                         <MudMenuItem Href="/ai-providers">@L["Workbench:ProviderSettings"]</MudMenuItem>
                         <MudMenuItem Href="@AgentCapabilityManagePage.PAGE_URL">@L["Pages:AICapabilities:Title"]</MudMenuItem>

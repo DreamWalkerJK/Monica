@@ -5,22 +5,22 @@
 @if (Subscription is { State: not EventSubscriptionState.Disposed })
 {
     <MudStack Row="true" Spacing="0">
-        <MudIconButton Icon="@Icons.Material.Outlined.Science" Color="@(IsTestListening ? Color.Success : Color.Info)" Size="Size.Small"
+        <MudIconButton Icon="@MoIcons.Flask" Color="@(IsTestListening ? Color.Success : Color.Info)" Size="Size.Small"
             aria-label="@L["SubscriptionLifecycle:Actions:Test"]" title="@L["SubscriptionLifecycle:Actions:Test"]" aria-disabled="@(IsBusy ? "true" : "false")"
             OnClick="() => DispatchAsync(OnTest)" />
         @if (Subscription.State == EventSubscriptionState.Active)
         {
-            <MudIconButton Icon="@Icons.Material.Outlined.PauseCircle" Color="Color.Warning" Size="Size.Small"
+            <MudIconButton Icon="@MoIcons.PauseCircle" Color="Color.Warning" Size="Size.Small"
                 aria-label="@L["SubscriptionLifecycle:Actions:Deactivate"]" title="@L["SubscriptionLifecycle:Actions:Deactivate"]" aria-disabled="@(IsBusy ? "true" : "false")"
                 OnClick="() => DispatchAsync(OnDeactivate)" />
         }
         else
         {
-            <MudIconButton Icon="@Icons.Material.Outlined.PlayCircle" Color="Color.Success" Size="Size.Small"
+            <MudIconButton Icon="@MoIcons.PlayCircle" Color="Color.Success" Size="Size.Small"
                 aria-label="@L["SubscriptionLifecycle:Actions:Activate"]" title="@L["SubscriptionLifecycle:Actions:Activate"]" aria-disabled="@(IsBusy ? "true" : "false")"
                 OnClick="() => DispatchAsync(OnActivate)" />
         }
-        <MudIconButton Icon="@Icons.Material.Outlined.Delete" Color="Color.Error" Size="Size.Small"
+        <MudIconButton Icon="@MoIcons.Delete" Color="Color.Error" Size="Size.Small"
             aria-label="@L["SubscriptionLifecycle:Actions:Remove"]" title="@L["SubscriptionLifecycle:Actions:Remove"]" aria-disabled="@(IsBusy ? "true" : "false")"
             OnClick="() => DispatchAsync(OnUnsubscribe)" />
     </MudStack>

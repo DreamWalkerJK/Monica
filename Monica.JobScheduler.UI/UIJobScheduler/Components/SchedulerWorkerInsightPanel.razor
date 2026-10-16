@@ -5,7 +5,7 @@
 
 <section class="runtime-workers" aria-labelledby="runtime-workers-heading">
     <header class="runtime-workers__heading">
-        <MudIcon Icon="@Icons.Material.Outlined.Devices" aria-hidden="true" />
+        <MoIcon Icon="@MoIcons.MonitorDevices" aria-hidden="true" Size="1.5rem" />
         <div>
             <h2 id="runtime-workers-heading">@L["Runtime:Workers:Title"]</h2>
             <p>@L["Runtime:Workers:Description"]</p>
@@ -22,7 +22,7 @@
     @if (!HasWorkerInsight)
     {
         <div class="runtime-workers__hint" role="note">
-            <MudIcon Icon="@Icons.Material.Outlined.Extension" aria-hidden="true" />
+            <MoIcon Icon="@MoIcons.Puzzle" aria-hidden="true" Size="1.5rem" />
             <div>
                 <p>@L["Runtime:Workers:Hint"]</p>
                 <code>AddJobSchedulerServiceDiscoveryInsight()</code>
@@ -34,7 +34,7 @@
         @if (IsWorkerInsightFailed)
         {
             <div class="runtime-workers__failure" data-retained="@HasLoadedWorkerInsight.ToString().ToLowerInvariant()">
-                <MudAlert Severity="@(HasLoadedWorkerInsight ? Severity.Warning : Severity.Error)" Variant="Variant.Outlined" Dense="true">
+                <MudAlert Severity="@(HasLoadedWorkerInsight ? Severity.Warning : Severity.Error)" Variant="Variant.Outlined" Dense="true" Icon="@(HasLoadedWorkerInsight ? MoIcons.Warning : MoIcons.Error)">
                     <p>@L["Runtime:Workers:LoadFailed", FailureMessage]</p>
                     @if (HasLoadedWorkerInsight)
                     {
@@ -48,7 +48,7 @@
             @if (!IsWorkerInsightFailed)
             {
                 <div class="runtime-workers__empty" role="status">
-                    <MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" aria-hidden="true" />
+                    <MoIcon Icon="@MoIcons.Hourglass" aria-hidden="true" Size="1.5rem" />
                     <p>@L["Runtime:Workers:Pending"]</p>
                 </div>
             }
@@ -90,7 +90,7 @@
                                             @if (context.IsLeader)
                                             {
                                                 <span class="runtime-workers__leader">
-                                                    <MudIcon Icon="@Icons.Material.Outlined.StarOutline" aria-hidden="true" />
+                                                    <MoIcon Icon="@MoIcons.Star" aria-hidden="true" Size="1.5rem" />
                                                     @L["Runtime:Workers:IsLeader"]
                                                 </span>
                                             }
@@ -106,7 +106,7 @@
                         <MudTd DataLabel="@L["Runtime:Workers:Status"]">
                             <div class="runtime-workers__observation">
                                 <span class="runtime-workers__status" data-status="@context.Status.ToString().ToLowerInvariant()">
-                                    <MudIcon Icon="@StatusIcon(context.Status)" aria-hidden="true" />
+                                    <MoIcon Icon="@StatusIcon(context.Status)" aria-hidden="true" Size="1.5rem" />
                                     @StatusText(context.Status)
                                 </span>
                                 <dl>
@@ -145,7 +145,7 @@
                     </RowTemplate>
                     <NoRecordsContent>
                         <div class="runtime-workers__empty">
-                            <MudIcon Icon="@Icons.Material.Outlined.Devices" aria-hidden="true" />
+                            <MoIcon Icon="@MoIcons.MonitorDevices" aria-hidden="true" Size="1.5rem" />
                             <p>@L["Runtime:Workers:Empty"]</p>
                         </div>
                     </NoRecordsContent>
@@ -201,9 +201,9 @@
 
     private static string StatusIcon(JobSchedulerWorkerInstanceStatus status) => status switch
     {
-        JobSchedulerWorkerInstanceStatus.Online => Icons.Material.Outlined.CheckCircle,
-        JobSchedulerWorkerInstanceStatus.Unhealthy => Icons.Material.Outlined.Schedule,
-        JobSchedulerWorkerInstanceStatus.Offline => Icons.Material.Outlined.CloudOff,
-        _ => Icons.Material.Outlined.HelpOutline
+        JobSchedulerWorkerInstanceStatus.Online => MoIcons.Success,
+        JobSchedulerWorkerInstanceStatus.Unhealthy => MoIcons.Clock,
+        JobSchedulerWorkerInstanceStatus.Offline => MoIcons.CloudOff,
+        _ => MoIcons.Help
     };
 }

@@ -4,6 +4,10 @@
 :root[data-theme="fluent-design-dark"],
 .mo-theme-fluent-design-light,
 .mo-theme-fluent-design-dark {
+    --mo-scrollbar-radius: 999px;
+    --mo-color-scrollbar-thumb: color-mix(in srgb, var(--mud-palette-text-primary) 28%, transparent);
+    --mo-color-scrollbar-thumb-hover: color-mix(in srgb, var(--mud-palette-text-primary) 48%, transparent);
+    --mo-color-scrollbar-thumb-active: color-mix(in srgb, var(--mud-palette-text-primary) 70%, transparent);
     --mo-fluent-font-text: "Segoe UI Variable", "Segoe UI", var(--mo-font-family-body);
     --mo-fluent-font-mono: "Cascadia Mono", Consolas, var(--mo-font-family-mono);
     --mo-fluent-radius-control: 4px;
@@ -80,8 +84,6 @@
     --mo-fluent-shadow-flyout: var(--mud-elevation-8);
     --mo-fluent-shadow-dialog: var(--mud-elevation-24);
     --mo-fluent-accent-subtle: rgba(0, 103, 192, 0.12);
-    --mo-fluent-scrollbar: rgba(0, 0, 0, 0.36);
-    --mo-fluent-scrollbar-hover: rgba(0, 0, 0, 0.54);
     --mo-appbar-background: rgba(243, 243, 243, 0.78);
     --mo-appbar-dark-background: var(--mo-appbar-background);
 }
@@ -108,8 +110,6 @@
     --mo-fluent-shadow-flyout: var(--mud-elevation-8);
     --mo-fluent-shadow-dialog: var(--mud-elevation-24);
     --mo-fluent-accent-subtle: rgba(96, 205, 255, 0.14);
-    --mo-fluent-scrollbar: rgba(255, 255, 255, 0.36);
-    --mo-fluent-scrollbar-hover: rgba(255, 255, 255, 0.56);
     --mo-appbar-background: rgba(32, 32, 32, 0.80);
     --mo-appbar-dark-background: var(--mo-appbar-background);
 }
@@ -528,23 +528,9 @@
     color: var(--mud-palette-text-primary);
 }
 
-.mo-theme-fluent-design-light :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root),
-.mo-theme-fluent-design-dark :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root) {
+.mo-theme-fluent-design-light :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar :is(.mud-icon-root, .mo-icon)),
+.mo-theme-fluent-design-dark :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar :is(.mud-icon-root, .mo-icon)) {
     color: inherit;
-}
-
-.mo-theme-fluent-design-light ::-webkit-scrollbar-thumb,
-.mo-theme-fluent-design-dark ::-webkit-scrollbar-thumb {
-    background: var(--mo-fluent-scrollbar);
-    border: 2px solid transparent;
-    border-radius: 999px;
-    background-clip: padding-box;
-}
-
-.mo-theme-fluent-design-light ::-webkit-scrollbar-thumb:hover,
-.mo-theme-fluent-design-dark ::-webkit-scrollbar-thumb:hover {
-    background: var(--mo-fluent-scrollbar-hover);
-    background-clip: padding-box;
 }
 
 @media (prefers-reduced-motion: reduce) {

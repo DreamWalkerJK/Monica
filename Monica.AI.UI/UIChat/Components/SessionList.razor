@@ -8,10 +8,10 @@
             <span>@L["Session:Conversations"]</span>
             @if (ShowClose)
             {
-                <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="OnClose" aria-label="@L["Session:CloseHistory"]" />
+                <MudIconButton Icon="@MoIcons.Close" Size="Size.Small" OnClick="OnClose" aria-label="@L["Session:CloseHistory"]" />
             }
         </div>
-        <MudButton @ref="_newChatButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.EditNote"
+        <MudButton @ref="_newChatButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.NotebookEdit"
                    Class="new-chat-button" Disabled="@(IsLoading || Disabled)" OnClick="@OnNewSession">
             @L["Session:NewChat"]
         </MudButton>
@@ -27,7 +27,7 @@
         else if (Sessions.Count == 0)
         {
             <div class="empty-sessions">
-                <MudIcon Icon="@Icons.Material.Outlined.ChatBubbleOutline" Size="Size.Medium" />
+                <MoIcon Icon="@MoIcons.Message" Size="1.5rem" />
                 <span>@L["Session:NoConversations"]</span>
                 <small>@L["Session:EmptyHint"]</small>
             </div>
@@ -54,7 +54,7 @@
         }
     </div>
     <div class="session-footer">
-        <MudButton Variant="Variant.Text" Color="Color.Default" StartIcon="@Icons.Material.Outlined.Archive"
+        <MudButton Variant="Variant.Text" Color="Color.Default" StartIcon="@MoIcons.Archive"
                    Class="archive-manager-button" Disabled="@(IsLoading || Disabled)" OnClick="@OnOpenArchive">
             <span>@L["Session:Archive:Title"]</span>
             @if (ArchivedCount > 0) { <span class="archive-count">@ArchivedCount</span> }

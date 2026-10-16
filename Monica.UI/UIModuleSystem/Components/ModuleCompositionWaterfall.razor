@@ -39,16 +39,16 @@
             </div>
             <div class="timeline-waterfall__zoom" aria-label="@L["Performance:Waterfall:Zoom"]">
                 <MudTooltip Text="@L["Performance:Waterfall:ZoomOut"]">
-                    <MudIconButton Icon="@Icons.Material.Outlined.ZoomOut" Size="Size.Small" Disabled="@(_zoomLevel == MIN_ZOOM_LEVEL)" OnClick="ZoomOut" aria-label="@L["Performance:Waterfall:ZoomOut"]" />
+                    <MudIconButton Icon="@MoIcons.ZoomOut" Size="Size.Small" Disabled="@(_zoomLevel == MIN_ZOOM_LEVEL)" OnClick="ZoomOut" aria-label="@L["Performance:Waterfall:ZoomOut"]" />
                 </MudTooltip>
                 <MudTooltip Text="@L["Performance:Waterfall:Fit"]">
-                    <MudIconButton Icon="@Icons.Material.Outlined.FitScreen" Size="Size.Small" OnClick="FitTimeline" aria-label="@L["Performance:Waterfall:Fit"]" />
+                    <MudIconButton Icon="@MoIcons.Scan" Size="Size.Small" OnClick="FitTimeline" aria-label="@L["Performance:Waterfall:Fit"]" />
                 </MudTooltip>
                 <MudTooltip Text="@L["Performance:Waterfall:FocusSelected"]">
-                    <MudIconButton Icon="@Icons.Material.Outlined.CenterFocusStrong" Size="Size.Small" Disabled="@(SelectedSpan is null)" OnClick="FocusSelected" aria-label="@L["Performance:Waterfall:FocusSelected"]" />
+                    <MudIconButton Icon="@MoIcons.Focus" Size="Size.Small" Disabled="@(SelectedSpan is null)" OnClick="FocusSelected" aria-label="@L["Performance:Waterfall:FocusSelected"]" />
                 </MudTooltip>
                 <MudTooltip Text="@L["Performance:Waterfall:ZoomIn"]">
-                    <MudIconButton Icon="@Icons.Material.Outlined.ZoomIn" Size="Size.Small" Disabled="@(_zoomLevel == MAX_ZOOM_LEVEL)" OnClick="ZoomIn" aria-label="@L["Performance:Waterfall:ZoomIn"]" />
+                    <MudIconButton Icon="@MoIcons.ZoomIn" Size="Size.Small" Disabled="@(_zoomLevel == MAX_ZOOM_LEVEL)" OnClick="ZoomIn" aria-label="@L["Performance:Waterfall:ZoomIn"]" />
                 </MudTooltip>
                 <span>@L["Performance:Waterfall:ZoomLevel", _zoomLevel]</span>
             </div>
@@ -57,7 +57,7 @@
         @if (TimelineRows.Count < snapshot.TraceSpans.Length)
         {
             <p class="timeline-waterfall__projection-note">
-                <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                <MoIcon Icon="@MoIcons.Info" Size="1.25rem" />
                 @L["Performance:Waterfall:Omitted", snapshot.TraceSpans.Length - TimelineRows.Count]
             </p>
         }
@@ -65,7 +65,7 @@
         @if (TimelineRows.Count == 0)
         {
             <div class="timeline-waterfall__empty">
-                <MudIcon Icon="@Icons.Material.Outlined.Timeline" Size="Size.Large" />
+                <MoIcon Icon="@MoIcons.ChartLine" Size="2.25rem" />
                 <p>@L["Performance:Waterfall:Empty"]</p>
             </div>
         }
@@ -138,7 +138,7 @@
 
             <div class="timeline-waterfall__table-alternative">
                 <MudExpansionPanels>
-                    <MudExpansionPanel Text="@L["Performance:Waterfall:TableAlternative"]">
+                    <MudExpansionPanel Text="@L["Performance:Waterfall:TableAlternative"]" Icon="@MoIcons.ChevronDown">
                         <div class="timeline-waterfall__table-wrapper" role="region" aria-label="@L["Performance:Waterfall:TableAlternative"]" tabindex="0">
                             <MudTable T="ModuleDiagnosticsTraceSpan" Items="@TimelineRows" Dense="true" Hover="true" FixedHeader="true" Breakpoint="Breakpoint.None" RowClassFunc="@TimelineRowClass">
                                 <HeaderContent>

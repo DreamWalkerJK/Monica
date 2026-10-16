@@ -16,7 +16,7 @@
     @if (_providerError is not null)
     {
         <div class="provider-discovery-error">
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">
                 @_providerError
                 <MudButton Color="Color.Error" Variant="Variant.Text" OnClick="LoadProvidersAsync">
                     @L["Dashboard:Actions:Retry"]
@@ -39,7 +39,7 @@
         @if (_providerError is null)
         {
             <section class="provider-empty-state" role="status">
-                <MudIcon Icon="@Icons.Material.Outlined.Storage" Color="Color.Primary" />
+                <MoIcon Icon="@MoIcons.Database" Size="1.5rem" Style="color:var(--mud-palette-primary);" />
                 <div>
                     <h2>@L["Dashboard:Messages:NoProviders"]</h2>
                     <p>@L["Dashboard:Messages:NoProvidersDescription"]</p>

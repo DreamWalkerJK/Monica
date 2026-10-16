@@ -206,6 +206,10 @@ internal sealed record PublishedDefinitionCandidate
             AddChange(changes, nameof(Category), NullIfWhiteSpace(current.Category), Category);
             AddChange(changes, nameof(ReloadBehavior), current.ReloadBehavior, ReloadBehavior);
             AddChange(changes, nameof(SchemaHash), current.SchemaHash, SchemaHash);
+            var previousContract = ReadValidationContract(current.SchemaJson);
+            var newContract = ReadValidationContract(SchemaJson);
+            AddChange(changes, "ValidationContract.Capability", previousContract.Capability.ToString(), newContract.Capability.ToString());
+            AddChange(changes, "ValidationContract.Revision", previousContract.Revision, newContract.Revision);
             AddChange(
                 changes,
                 $"{nameof(SchemaJson)}Fingerprint",
@@ -216,6 +220,17 @@ internal sealed record PublishedDefinitionCandidate
         return JsonSerializer.Serialize(
             new SchemaPublishChangeSummaryDto(changeKind.ToString(), changes),
             ConfigurationPersistedJsonOptions.CompactSchema);
+    }
+
+    private static ConfigurationValidationContract ReadValidationContract(string schemaJson)
+    {
+        using var schema = JsonDocument.Parse(schemaJson, new JsonDocumentOptions
+        {
+            MaxDepth = ConfigurationPersistedJsonOptions.CompactSchema.MaxDepth
+        });
+        return schema.RootElement.TryGetProperty(nameof(ConfigurationDefinition.ValidationContract), out var contract)
+            ? contract.Deserialize<ConfigurationValidationContract>(ConfigurationPersistedJsonOptions.CompactSchema) ?? new()
+            : new();
     }
 
     private static void AddChange(

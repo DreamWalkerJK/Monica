@@ -20,18 +20,18 @@
             <p>@L["Atlas:Services:Description"]</p>
         </div>
         <div class="atlas-actions">
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Refresh"
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@MoIcons.Refresh"
                        OnClick="LoadServiceDataAsync" Disabled="@_loading">@L["Shared:Actions:Refresh"]</MudButton>
-            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Tune"
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.Sliders"
                        OnClick="ToggleLayoutPanel" aria-expanded="@(_showLayoutPanel ? "true" : "false")">@L["Atlas:Shared:Layout"]</MudButton>
-            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.FilterAlt"
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.Filter"
                        OnClick="ToggleFilterPanel" aria-expanded="@(_showFilterPanel ? "true" : "false")">@L["Atlas:Shared:Filters"]</MudButton>
         </div>
     </header>
     @if (_captureError is not null)
     {
         <div class="atlas-notice atlas-notice--error" role="alert">
-            <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.Error" Size="1.25rem" />
             <div><strong>@L[_hasSnapshot ? "Atlas:Shared:RetainedSnapshot" : "Atlas:Shared:CaptureFailed"]</strong><p>@_captureError</p></div>
         </div>
     }
@@ -50,7 +50,7 @@
         <section class="atlas-map" aria-label="@L["Atlas:Services:MapLabel"]">
             <header class="atlas-map__bar">
                 <div><span class="atlas-scope">@L["Atlas:Services:MapLabel"]</span><strong>@(_hasSnapshot ? L["ServiceGraph:Summary:ShowingServices", _filteredServices.Count, _allServices.Count] : L["Shared:Values:NotAvailable"])</strong></div>
-                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.CenterFocusStrong"
+                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.Focus"
                            OnClick="ResetView" Disabled="@(!_graphAvailable)">@L["Atlas:Shared:FitView"]</MudButton>
             </header>
             <div class="atlas-map__stage">
@@ -61,7 +61,7 @@
                 }
                 else if (_graphError is not null)
                 {
-                    <div class="atlas-map__state" role="status"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" /><strong>@L["Atlas:Shared:GraphUnavailable"]</strong><p>@L["Atlas:Shared:NativeAlternative"]</p></div>
+                    <div class="atlas-map__state" role="status"><MoIcon Icon="@MoIcons.Workflow" Size="1.5rem" /><strong>@L["Atlas:Shared:GraphUnavailable"]</strong><p>@L["Atlas:Shared:NativeAlternative"]</p></div>
                 }
                 else if (!_hasSnapshot && _captureError is not null)
                 {
@@ -69,7 +69,7 @@
                 }
                 else if (_filteredServices.Count == 0 && _hasSnapshot)
                 {
-                    <div class="atlas-map__state" role="status"><MudIcon Icon="@Icons.Material.Outlined.CloudQueue" /><strong>@L[_allServices.Count == 0 ? "Atlas:Services:Empty" : "Atlas:Shared:FilterMiss"]</strong>
+                    <div class="atlas-map__state" role="status"><MoIcon Icon="@MoIcons.Cloud" Size="1.5rem" /><strong>@L[_allServices.Count == 0 ? "Atlas:Services:Empty" : "Atlas:Shared:FilterMiss"]</strong>
                         <p>@L[_allServices.Count == 0 ? "Atlas:Services:EmptyHint" : "Atlas:Shared:FilterMissHint"]</p>
                         @if (_allServices.Count > 0) { <MudButton OnClick="@(() => ClearAllFiltersAsync(null))" Color="Color.Primary">@L["Shared:Actions:Clear"]</MudButton> }
                     </div>
@@ -91,9 +91,9 @@
                             <span class="atlas-status atlas-status--@service.OverallStatus.ToString().ToLowerInvariant()">@service.OverallStatus.GetText(L)</span>
                         </button>
                         <div class="atlas-record__actions">
-                            <MudTooltip Text="@L["ServiceGraph:ContextMenu:FocusService"]"><MudIconButton Icon="@Icons.Material.Outlined.CenterFocusWeak" Size="Size.Small"
+                            <MudTooltip Text="@L["ServiceGraph:ContextMenu:FocusService"]"><MudIconButton Icon="@MoIcons.Focus" Size="Size.Small"
                                 aria-label="@L["ServiceGraph:ContextMenu:FocusService"]" Disabled="@(!_graphAvailable)" OnClick="@(() => FocusOnServiceAsync(service))" /></MudTooltip>
-                            <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Size="Size.Small" AriaLabel="@L["Atlas:Shared:RecordActions", service.AppName]">
+                            <MudMenu Icon="@MoIcons.MoreHorizontal" Size="Size.Small" AriaLabel="@L["Atlas:Shared:RecordActions", service.AppName]">
                                 <MudMenuItem OnClick="@(() => ViewServiceDetailsAsync(service))">@L["ServiceGraph:ContextMenu:ViewServiceDetails"]</MudMenuItem>
                                 <MudMenuItem OnClick="@(() => FilterByStatusAsync(service))">@L["ServiceGraph:ContextMenu:FilterSameStatus"]</MudMenuItem>
                                 <MudMenuItem OnClick="@(() => FilterByDomainAsync(service))">@L["ServiceGraph:ContextMenu:FilterSameDomain"]</MudMenuItem>
@@ -483,16 +483,16 @@
     private List<ContextMenuItem<RegisteredServiceStatus>> BuildContextMenuItems(RegisteredServiceStatus service)
     {
         var builder = ContextMenuBuilder<RegisteredServiceStatus>.Create()
-            .AddItem(L["ServiceGraph:ContextMenu:ViewServiceDetails"].Value, Icons.Material.Filled.Info, ViewServiceDetailsAsync)
-            .AddItem(L["ServiceGraph:ContextMenu:FocusService"].Value, Icons.Material.Filled.CenterFocusStrong, FocusOnServiceAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:ViewServiceDetails"].Value, MoIcons.Info, ViewServiceDetailsAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:FocusService"].Value, MoIcons.Focus, FocusOnServiceAsync)
             .AddDivider()
-            .AddItem(L["ServiceGraph:ContextMenu:FilterSameStatus"].Value, Icons.Material.Filled.FilterAlt, FilterByStatusAsync)
-            .AddItem(L["ServiceGraph:ContextMenu:FilterSameDomain"].Value, Icons.Material.Filled.Domain, FilterByDomainAsync)
-            .AddItemIf(!string.IsNullOrEmpty(service.ProjectName), L["ServiceGraph:ContextMenu:FilterSameProject"].Value, Icons.Material.Filled.Folder, FilterByProjectAsync)
-            .AddItem(L["ServiceGraph:ContextMenu:ClearFilters"].Value, Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:FilterSameStatus"].Value, MoIcons.Filter, FilterByStatusAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:FilterSameDomain"].Value, MoIcons.Building, FilterByDomainAsync)
+            .AddItemIf(!string.IsNullOrEmpty(service.ProjectName), L["ServiceGraph:ContextMenu:FilterSameProject"].Value, MoIcons.Folder, FilterByProjectAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:ClearFilters"].Value, MoIcons.ClearList, ClearAllFiltersAsync)
             .AddDivider()
-            .AddItem(L["ServiceGraph:ContextMenu:CopyServiceId"].Value, Icons.Material.Filled.ContentCopy, CopyServiceIdAsync)
-            .AddItem(L["ServiceGraph:ContextMenu:CopyServiceName"].Value, Icons.Material.Filled.ContentCopy, CopyServiceNameAsync);
+            .AddItem(L["ServiceGraph:ContextMenu:CopyServiceId"].Value, MoIcons.Copy, CopyServiceIdAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:CopyServiceName"].Value, MoIcons.Copy, CopyServiceNameAsync);
         
         return builder.Build();
     }

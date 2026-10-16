@@ -5,7 +5,7 @@
     <MudPaper Square="true" Elevation="0" Class="connection-status-surface">
         <header class="connection-status-heading">
             <h2 id="@_headingId">@L["UISignalR:ConnectionStatus:Title"]</h2>
-            <MudChip T="string" Color="@GetConnectionStatusColor()" Size="Size.Small" Icon="@GetConnectionStatusIcon()">@GetConnectionStatusText()</MudChip>
+            <MudChip T="string" Color="@GetConnectionStatusColor()" Size="Size.Small" Icon="@GetConnectionStatusIcon()" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@GetConnectionStatusText()</MudChip>
         </header>
 
         <dl class="connection-status-facts">
@@ -34,7 +34,7 @@
         </dl>
         @if (IsServerSideAnonymous && ConnectionState.IsConnected)
         {
-            <div class="connection-status-registry-note"><MudAlert Severity="Severity.Warning" Dense="true">@L["UISignalR:ConnectionStatus:AnonymousWarning"]</MudAlert></div>
+            <div class="connection-status-registry-note"><MudAlert Severity="Severity.Warning" Dense="true" Icon="@MoIcons.Warning">@L["UISignalR:ConnectionStatus:AnonymousWarning"]</MudAlert></div>
         }
     </MudPaper>
 </section>
@@ -71,9 +71,9 @@
 
     private string GetConnectionStatusIcon() => ConnectionState.Status switch
     {
-        "Connected" => Icons.Material.Outlined.CheckCircle,
-        "Connecting" or "Reconnecting" => Icons.Material.Outlined.Sync,
-        _ => Icons.Material.Outlined.PowerOff
+        "Connected" => MoIcons.Success,
+        "Connecting" or "Reconnecting" => MoIcons.Refresh,
+        _ => MoIcons.Unplug
     };
 
     private string GetConnectionStatusText() => ConnectionState.Status switch

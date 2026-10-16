@@ -11,17 +11,16 @@
     {
         <div class="center-state">
             <MudStack AlignItems="AlignItems.Center" Spacing="4">
-                <MudIcon Icon="@Icons.Material.Filled.Warning"
-                         Size="Size.Large"
-                         Color="Color.Warning"
-                         Class="state-icon state-icon-warning" />
+                <MoIcon Icon="@MoIcons.Warning"
+                         Size="2.25rem"
+                         Class="state-icon state-icon-warning" Style="color:var(--mud-palette-warning);" />
                 <MudText Typo="Typo.h6" Color="Color.Warning">
                     @L["MarkdownViewer:States:GroupUnavailable"]
                 </MudText>
                 <MudText Typo="Typo.body2" Align="Align.Center" Class="state-copy">
                     @L["MarkdownViewer:States:GroupUnavailableDescription"]
                 </MudText>
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">
                     <MudText Typo="Typo.body2" Class="state-path">
                         @invalidGroup.BasePath
                     </MudText>
@@ -33,10 +32,9 @@
     {
         <div class="center-state">
             <MudStack AlignItems="AlignItems.Center" Spacing="4">
-                <MudIcon Icon="@Icons.Material.Filled.RuleFolder"
-                         Size="Size.Large"
-                         Color="Color.Warning"
-                         Class="state-icon state-icon-warning" />
+                <MoIcon Icon="@MoIcons.FolderCheck"
+                         Size="2.25rem"
+                         Class="state-icon state-icon-warning" Style="color:var(--mud-palette-warning);" />
                 <MudText Typo="Typo.h6" Color="Color.Warning">
                     @L["MarkdownViewer:States:MultilingualLayoutInvalid"]
                 </MudText>
@@ -46,7 +44,7 @@
 
                 @if (layoutErrorGroup.MultilingualLayoutErrorPaths.Count > 0)
                 {
-                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">
                         <MudText Typo="Typo.caption" Class="state-path-list-caption">
                             @L["MarkdownViewer:States:InvalidLanguageLayoutPaths"]
                         </MudText>
@@ -74,7 +72,7 @@
     else if (!string.IsNullOrWhiteSpace(ContentError))
     {
         <div class="center-state" role="status">
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">
                 <MudText Typo="Typo.h6">@L["MarkdownViewer:States:ContentFailed"]</MudText>
                 <div class="state-path">@ContentError</div>
             </MudAlert>
@@ -84,10 +82,9 @@
     {
         <div class="center-state">
             <MudStack AlignItems="AlignItems.Center" Spacing="4">
-                <MudIcon Icon="@Icons.Material.Filled.Translate"
-                         Size="Size.Large"
-                         Color="Color.Warning"
-                         Class="state-icon state-icon-warning" />
+                <MoIcon Icon="@MoIcons.Languages"
+                         Size="2.25rem"
+                         Class="state-icon state-icon-warning" Style="color:var(--mud-palette-warning);" />
                 <MudText Typo="Typo.h6" Color="Color.Warning">
                     @L["MarkdownViewer:States:DocumentLanguageMissing", GetMissingTranslationLanguageLabel()]
                 </MudText>
@@ -101,10 +98,9 @@
     {
         <div class="center-state">
             <MudStack AlignItems="AlignItems.Center" Spacing="4">
-                <MudIcon Icon="@Icons.Material.Filled.Article"
-                         Size="Size.Large"
-                         Color="Color.Default"
-                         Class="state-icon state-icon-muted" />
+                <MoIcon Icon="@MoIcons.FileText"
+                         Size="2.25rem"
+                         Class="state-icon state-icon-muted" Style="color:var(--mud-palette-text-secondary);" />
                 <MudText Typo="Typo.h6" Color="Color.Default" Class="state-copy state-copy-muted">
                     @L["MarkdownViewer:States:NoDocumentSelected"]
                 </MudText>
@@ -128,7 +124,7 @@
                                     <a href="@item.Href">
                                         @if (!string.IsNullOrWhiteSpace(item.Icon))
                                         {
-                                            <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                                            <MoIcon Icon="@item.Icon" Size="1.25rem" />
                                         }
 
                                         @item.Text
@@ -139,7 +135,7 @@
                                     <span class="content-breadcrumb-label">
                                         @if (!string.IsNullOrWhiteSpace(item.Icon))
                                         {
-                                            <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                                            <MoIcon Icon="@item.Icon" Size="1.25rem" />
                                         }
 
                                         @item.Text

@@ -29,6 +29,30 @@ The theme token is generated from `MonicaThemeKind.ToCssToken()`, for example:
 - CSS should define theme tokens, surfaces, borders, typography accents, and shared component structure
 - Color palettes, typography defaults, and MudBlazor tokens should still be rooted in the `MudTheme` returned by the C# definition
 
+### Markdown and code highlighting
+
+`ThemeProviderHost` uses `MudMarkdownThemeProvider` with the active `MudTheme` and
+dark-mode state. Theme definitions return `MudMarkdownPaletteLight` and
+`MudMarkdownPaletteDark` through `MudTheme.PaletteLight` and `PaletteDark`, and set
+each palette's `CodeHighlight` from `MudCodeHighlightThemes.Light` or `.Dark`:
+
+```csharp
+PaletteLight = new MudMarkdownPaletteLight
+{
+    CodeHighlight = MudCodeHighlightThemes.Light.GitHub
+},
+PaletteDark = new MudMarkdownPaletteDark
+{
+    CodeHighlight = MudCodeHighlightThemes.Dark.GitHub
+}
+```
+
+The provider emits native Markdown and code-highlight theme variables when the
+theme or mode changes. Keep syntax colors in these palettes; put Monica-specific
+Markdown layout and presentation in the owning CSS and import it through
+`mo-theme-main.css`. Verify code blocks after switching themes and
+light/dark mode, including content rendered after the switch.
+
 ### Shared typography roles
 
 `Monica.UI/wwwroot/css/mo-fonts.css` owns shared local font faces and the public typography roles. `--mo-font-family-body` resolves from the active MudBlazor `--mud-typography-default-family`; `--mo-font-family-display` resolves from `--mud-typography-h1-family`. Their offline baseline stacks are fallbacks when MudBlazor has not supplied those variables. Theme definitions remain the source of the selected families; do not repeat a theme's font list in feature CSS or add per-theme public-role overrides. `--mo-font-family-mono` retains its purpose-specific diagnostic/code family.
@@ -36,6 +60,16 @@ The theme token is generated from `MonicaThemeKind.ToCssToken()`, for example:
 Use the body role for interface text and the display role for deliberate page identity. The shared faces retain existing CSS aliases even when a licensed derivative has a different internal family name. Both `MoGroveSerifSC` and `Noto Serif SC` reference one complete variable CJK asset; `MoM3Text` and `MoM3Display` likewise share one Roboto asset. Keep each face's weight range consistent with its actual variation axes. See [offline font requirements](offline-requirements.md) for coverage, provenance and licensing.
 
 During native theme switching, inspect the computed family on the element that paints the visible glyphs, then verify the realized font and local resource request. A correct ancestor family or successful `document.fonts.load()` does not prove which font painted a child or whether CJK silently used a fallback. Include both Latin and Chinese text, cold and warm loading, and both theme modes when the affected theme supports them. Complete source coverage still has limits: codepoints absent from that source use the declared fallback stack.
+
+### Shared scrollbars
+
+`ThemeProviderHost` sets `MudMarkdownThemeProvider.DefaultScrollbar="true"` to stop MudBlazor from injecting its fixed grey `html, body *` scrollbar rule. Monica's shared stylesheet supplies the theme treatment instead; do not fight that injected rule with stronger selectors or `!important`.
+
+`components/mo-scrollbar.css`, imported by `mo-theme-main.css`, owns scrolling chrome for the viewport, navigation drawers, overlays, and nested panels. Each theme defines `--mo-color-scrollbar-thumb`, `--mo-color-scrollbar-thumb-hover`, `--mo-color-scrollbar-thumb-active`, and `--mo-scrollbar-radius` on both its root and wrapper selectors. Derive the colors from the active Mud palette so light/dark switching also updates portals outside the wrapper. The shared track is transparent; normal pointers have an 8px target with a 4px painted core, while coarse pointers retain that core inside a 12px target. Forced-color mode retains native scrollbars.
+
+Keep overflow, overscroll, and stable gutters with their component owners. Remove local scrollbar colors and `scrollbar-width: thin` overrides when adopting the shared renderer; preserve deliberate `scrollbar-width: none` on hidden navigation rails. Browsers supporting WebKit scrollbar pseudo-elements receive the shared geometry and thumb hover/active states. Other browsers use standard thin, theme-colored scrollbars, with emphasis when their scroll host is hovered or focused. Non-auto standard scrollbar properties suppress pseudo-element styling in Chromium; the shared renderer resets them in that branch. See the [scrollbar-color reference](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scrollbar-color).
+
+Verify native Appearance changes across every theme and mode, an open temporary drawer at a narrow viewport, vertical and horizontal nested scrolling, thumb dragging, and forced-color mode. Check the actual scroll host's computed properties and pseudo-element paint; an inherited token alone does not prove that a local standard scrollbar property has not overridden the renderer. MudBlazor's textarea thumb and size rules have component specificity; the shared renderer matches those selectors so multiline editors also receive theme paint and the coarse-pointer target.
 
 ## Theme Authoring Workflow
 
@@ -45,7 +79,7 @@ During native theme switching, inspect the computed family on the element that p
 4. Add localized name and description entries for theme selection UI under `Theme:Options:{EnumValue}:Name` and `Theme:Options:{EnumValue}:Description`.
 5. Create `Monica.UI/wwwroot/css/themes/mo-theme-{theme-token}.css`.
 6. Import the new CSS file from `Monica.UI/wwwroot/css/mo-theme-main.css`.
-7. If the theme needs a custom markdown/code-block presentation, add the corresponding markdown CSS file and register the code-block theme through the definition.
+7. Set the light/dark Markdown palettes' `CodeHighlight` presets. If the theme needs additional Markdown layout or presentation, include it in the theme stylesheet imported by `mo-theme-main.css`.
 8. Verify persisted theme switching through `ThemeState` and browser storage.
 
 ## CSS Structure Rules
@@ -147,6 +181,12 @@ Verify open and closed temporary drawers, both shell layouts, and a narrow viewp
 ### Hidden measurement elements can enlarge the document
 
 Keep navigation measurement rails rendered at their natural width so overflow decisions remain accurate, but position the whole rail outside the viewport horizontally as well as vertically. `visibility: hidden` and an offscreen `top` do not prevent a wide absolute element from expanding the document's horizontal scroll area. Verify document width with a collapsed Sidebar near the desktop breakpoint and a wide or monospace theme, then confirm Topbar still moves destinations into More as space decreases.
+
+### Absolute page content belongs to the page scroll owner
+
+The shell's `.mo-body-content` establishes a positioned containing block as well as owning page overflow. An absolutely positioned descendant, including a one-pixel screen-reader label, can enlarge the browser document if its containing block is outside that scroll host. A theme wrapper's `position: relative` can expose this even while the shell has a fixed viewport height and clips its own overflow. Keep this positioning with the shared scroll owner; component-owned absolute layers still need their nearest deliberate local anchor.
+
+Verify a long populated page with hidden accessibility text, such as the OpenTelemetry sample ledger. Compare document and body client/scroll dimensions, the label's `offsetParent`, shell bounds, and main scrolling before and after moving to the end of the page. Repeat in Sidebar and Topbar, wide and narrow viewports, and every theme/mode. Native provider portals remain outside the page scroll owner and retain their own positioning contract.
 
 ### `MudTabs` with `ApplyEffectsToContainer="true"`
 

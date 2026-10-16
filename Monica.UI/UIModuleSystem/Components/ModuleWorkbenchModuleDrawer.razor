@@ -25,7 +25,7 @@
             <MudFocusTrap Class="module-drawer-focus" DefaultFocus="DefaultFocus.FirstChild">
                 <MudDrawerHeader>
                     <div class="drawer-header-content">
-                        <MudIconButton Class="drawer-close" Icon="@Icons.Material.Outlined.Close"
+                        <MudIconButton Class="drawer-close" Icon="@MoIcons.Close"
                                        OnClick="@(() => OpenChanged.InvokeAsync(false))"
                                        aria-label="@L["Aria:CloseModuleDrawer"]" />
                         <div class="drawer-identity">
@@ -38,7 +38,7 @@
                 <MudTabs Class="module-inspector-tabs" ActivePanelIndex="@Session.ModuleDrawerTabIndex"
                          ActivePanelIndexChanged="@OnTabChangedAsync"
                          MinimumTabWidth="0"
-                         Rounded="false">
+                         Rounded="false" PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight">
                     <MudTabPanel Text="@L["ModuleDrawer:Tabs:Summary"]">
                         <div class="drawer-section-stack">
                             <section class="drawer-cost" aria-label="@L["ModuleDrawer:Performance:Recorded"]">
@@ -69,17 +69,17 @@
                                     <dt>@L["ModuleDrawer:Fields:FullType"]</dt><dd class="mo-vl-mono">@module.FullTypeName</dd>
                                     <dt>@L["ModuleDrawer:Capabilities:Title"]</dt>
                                     <dd class="capability-chips">
-                                        @if (module.IsUiModule) { <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">@L["ModuleDrawer:Capabilities:UI"]</MudChip> }
-                                        @if (module.IsWebModule) { <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary">@L["ModuleDrawer:Capabilities:Web"]</MudChip> }
-                                        @if (module.RequiresWebHost) { <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">@L["ModuleDrawer:Capabilities:WebHost"]</MudChip> }
-                                        @if (!module.IsUiModule && !module.IsWebModule && !module.RequiresWebHost) { <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">@L["ModuleDrawer:Capabilities:Core"]</MudChip> }
+                                        @if (module.IsUiModule) { <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@L["ModuleDrawer:Capabilities:UI"]</MudChip> }
+                                        @if (module.IsWebModule) { <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@L["ModuleDrawer:Capabilities:Web"]</MudChip> }
+                                        @if (module.RequiresWebHost) { <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@L["ModuleDrawer:Capabilities:WebHost"]</MudChip> }
+                                        @if (!module.IsUiModule && !module.IsWebModule && !module.RequiresWebHost) { <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@L["ModuleDrawer:Capabilities:Core"]</MudChip> }
                                     </dd>
                                     <dt>@L["ModuleDrawer:Fields:Errors"]</dt><dd class="mo-vl-mono">@module.ErrorCount</dd>
                                 </dl>
                             </section>
                             @if (!string.IsNullOrWhiteSpace(module.DisabledReason))
                             {
-                                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@module.DisabledReason</MudAlert>
+                                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@MoIcons.Info">@module.DisabledReason</MudAlert>
                             }
                             <RelationshipList Title="@L["Dependencies:Selected:Requires"]" Modules="@RequiredModules(module, snapshot)"
                                               Compact="true" ModuleSelected="@ModuleSelected" />
@@ -125,7 +125,7 @@
                                               Modules="@DependentModules(module, snapshot)" Compact="true" ModuleSelected="@ModuleSelected" />
                             <MudButton Class="drawer-explorer-button" Variant="Variant.Outlined"
                                        Color="Color.Primary"
-                                       StartIcon="@Icons.Material.Filled.AccountTree"
+                                       StartIcon="@MoIcons.Workflow"
                                        OnClick="@NavigateToDependencies">
                                 @L["ModuleDrawer:Dependencies:OpenExplorer"]
                             </MudButton>
@@ -144,7 +144,7 @@
                                     </div>
                                     break;
                                 case ModuleSystemLazyLoadState.Failed:
-                                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">
                                         @L["ModuleDrawer:Options:Failed"]
                                         <MudButton Variant="Variant.Text" OnClick="@RetryOptionsAsync">@L["Actions:Retry"]</MudButton>
                                     </MudAlert>
@@ -167,7 +167,7 @@
                             }
                             @if (!snapshot.Findings.Any(finding => finding.RelatedModules.Contains(module.ModuleKey)))
                             {
-                                <div class="drawer-empty"><MudIcon Icon="@Icons.Material.Outlined.FactCheck" />@L["ModuleDrawer:Errors:Empty"]</div>
+                                <div class="drawer-empty"><MoIcon Size="1.5rem" Icon="@MoIcons.ClipboardCheck" />@L["ModuleDrawer:Errors:Empty"]</div>
                             }
                         </div>
                     </MudTabPanel>

@@ -11,6 +11,7 @@ using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
 using Monica.UI.Shell.Models;
 using Monica.Framework.UI.UIObservableInstance.Support;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -49,18 +50,18 @@ public class ModuleObservableInstanceUI : MonicaModule<ModuleObservableInstanceU
                 registry.RegisterLocalizedPage<UIObservableInstanceMonitorPage, ObservableInstanceResource>(
                     UIObservableInstanceMonitorPage.PAGE_URL,
                     "Pages:ObservableInstance:Title",
-                    Icons.Material.Outlined.Inventory2,
+                    MoIcons.Package,
                     BuiltInNavigationCategoryIds.Debug,
                     addToNav: true,
                     navOrder: 50);
                 registry.RegisterLocalizedPage<UIObservableInstanceRegistryPage, ObservableInstanceResource>(
-                    UIObservableInstanceRegistryPage.PAGE_URL, "Workbench:InstancesTitle", Icons.Material.Outlined.Inventory2,
+                    UIObservableInstanceRegistryPage.PAGE_URL, "Workbench:InstancesTitle", MoIcons.Package,
                     BuiltInNavigationCategoryIds.Debug, addToNav: true, navOrder: 51);
                 registry.RegisterLocalizedPage<UIObservableInstanceGroupsPage, ObservableInstanceResource>(
-                    UIObservableInstanceGroupsPage.PAGE_URL, "Workbench:GroupsTitle", Icons.Material.Outlined.Workspaces,
+                    UIObservableInstanceGroupsPage.PAGE_URL, "Workbench:GroupsTitle", MoIcons.Workspace,
                     BuiltInNavigationCategoryIds.Debug, addToNav: true, navOrder: 52);
                 registry.RegisterLocalizedPage<UIObservableInstanceExceptionsPage, ObservableInstanceResource>(
-                    UIObservableInstanceExceptionsPage.PAGE_URL, "Workbench:ExceptionsTitle", Icons.Material.Outlined.ErrorOutline,
+                    UIObservableInstanceExceptionsPage.PAGE_URL, "Workbench:ExceptionsTitle", MoIcons.Error,
                     BuiltInNavigationCategoryIds.Debug, addToNav: true, navOrder: 53);
             }));
     }

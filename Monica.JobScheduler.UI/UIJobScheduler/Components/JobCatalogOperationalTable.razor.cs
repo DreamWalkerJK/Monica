@@ -11,6 +11,7 @@ using Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
 using Monica.JobScheduler.UI.UIJobScheduler.Support;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.Components;
@@ -444,25 +445,25 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
         if (!IsRecurring(summary))
         {
             return summary.Definition.IsDisabled
-                ? Icons.Material.Filled.PauseCircle
-                : Icons.Material.Filled.CheckCircle;
+                ? MoIcons.PauseCircle
+                : MoIcons.Success;
         }
 
         if (IsOperatorPaused(summary))
         {
-            return Icons.Material.Filled.PauseCircle;
+            return MoIcons.PauseCircle;
         }
 
         if (IsDebugSuppressed(summary))
         {
-            return Icons.Material.Filled.BugReport;
+            return MoIcons.Bug;
         }
 
         return summary.RecurringScheduleStatus switch
         {
-            JobRecurringScheduleStatus.AwaitingSynchronization => Icons.Material.Filled.Sync,
-            JobRecurringScheduleStatus.Exhausted => Icons.Material.Filled.EventBusy,
-            _ => Icons.Material.Filled.Schedule
+            JobRecurringScheduleStatus.AwaitingSynchronization => MoIcons.Refresh,
+            JobRecurringScheduleStatus.Exhausted => MoIcons.CalendarX,
+            _ => MoIcons.Clock
         };
     }
 
@@ -485,13 +486,13 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
 
     private static string GetStateIcon(JobExecutionState state) => state switch
     {
-        JobExecutionState.Queued => Icons.Material.Filled.Schedule,
-        JobExecutionState.Running => Icons.Material.Filled.PlayCircle,
-        JobExecutionState.Succeeded => Icons.Material.Filled.CheckCircle,
-        JobExecutionState.Failed => Icons.Material.Filled.Error,
-        JobExecutionState.Cancelled => Icons.Material.Filled.Cancel,
-        JobExecutionState.Skipped => Icons.Material.Filled.SkipNext,
-        _ => Icons.Material.Filled.Circle
+        JobExecutionState.Queued => MoIcons.Clock,
+        JobExecutionState.Running => MoIcons.PlayCircle,
+        JobExecutionState.Succeeded => MoIcons.Success,
+        JobExecutionState.Failed => MoIcons.Error,
+        JobExecutionState.Cancelled => MoIcons.Error,
+        JobExecutionState.Skipped => MoIcons.SkipNext,
+        _ => MoIcons.Circle
     };
 
     private static string GetDetailHref(JobOperationalSummary summary) =>

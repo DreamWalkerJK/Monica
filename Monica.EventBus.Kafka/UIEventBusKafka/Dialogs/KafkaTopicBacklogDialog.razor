@@ -7,13 +7,13 @@
         <div class="kafka-dialog-body">
             <MudStack Spacing="3">
                 <KafkaDialogContext ClusterId="@(ClusterId ?? Snapshot.ClusterId)" TopicName="@Snapshot.TopicName" />
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@MoIcons.Info">
                     @L["Topics:BacklogDialog:Summary", Snapshot.TotalRetainedMessageCount, FormatCapturedAt()]
                 </MudAlert>
 
                 @if (Snapshot.Partitions.Count == 0)
                 {
-                    <KafkaWorkspaceState Icon="@Icons.Material.Filled.TableRows"
+                    <KafkaWorkspaceState Icon="@MoIcons.Rows"
                                          Title="@L["Topics:Actions:Backlog"]"
                                          Description="@L["Topics:BacklogDialog:Empty"]"
                                          AccentColor="Color.Info" />
@@ -41,7 +41,7 @@
                                 <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:LatestOffset"]">@context.LatestOffset</MudTd>
                                 <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:RetainedMessages"]">@context.RetainedMessageCount</MudTd>
                             </RowTemplate>
-                            <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
+                            <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /></PagerContent>
                         </MudTable>
                     </KafkaTableSurface>
                 }

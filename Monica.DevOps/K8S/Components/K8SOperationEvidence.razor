@@ -3,14 +3,14 @@
 @inject IStringLocalizer<K8SResource> L
 
 <div class="k8s-operation-evidence">
-    <MudAlert Severity="@(Failure is null ? Severity.Success : Severity.Error)" Variant="Variant.Outlined">
+    <MudAlert Severity="@(Failure is null ? Severity.Success : Severity.Error)" Variant="Variant.Outlined" Icon="@(Failure is null ? MoIcons.Success : MoIcons.Error)">
         <strong>@L[Failure is null ? "Workbench:Operation:Completed" : "Workbench:Operation:Failed"]</strong>
         <div class="operation-context">@Namespace · @Scope · @CompletedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</div>
         <p>@(Failure ?? L["Workbench:Operation:Readiness"].Value)</p>
         @if (Failure is not null) { <p>@L["Workbench:Operation:Partial"]</p> }
         @if (Failure is null)
         {
-            <MudExpansionPanels Elevation="0"><MudExpansionPanel Text="@L["Workbench:Operation:Details"]">
+            <MudExpansionPanels Elevation="0"><MudExpansionPanel Text="@L["Workbench:Operation:Details"]" Icon="@MoIcons.ChevronDown">
                 <div class="operation-details">
                     <div><h3>@L["Workbench:Operation:Targets"]</h3>@foreach (var target in Restart?.AffectedTargets ?? Scale?.AffectedTargets ?? []) { <div>@target</div> }</div>
                     <div><h3>@L["Workbench:Operation:Workloads"]</h3>

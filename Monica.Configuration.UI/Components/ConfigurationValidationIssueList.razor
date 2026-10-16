@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using Monica.Configuration.UI.Localization
 @inject IStringLocalizer<ConfigurationUIResource> L
 
@@ -36,7 +37,7 @@
                                 </MudStack>
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudTooltip Text="@RuleTip(issue)" Placement="Placement.Left">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                        <MudIconButton Icon="@MoIcons.Info"
                                                        Size="Size.Small"
                                                        aria-label="@RuleTip(issue)"
                                                        Color="Color.Info" />
@@ -44,7 +45,7 @@
                                     @if (ShowSourceChain && ShowSourceFor(issue) && !string.IsNullOrWhiteSpace(issue.ConfigurationPath))
                                     {
                                         <MudTooltip Text="@L["State:RuntimeValidation:Actions:SourceChain"]">
-                                            <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
+                                            <MudIconButton Icon="@MoIcons.Workflow"
                                                            Size="Size.Small"
                                                            Color="Color.Primary"
                                                            Variant="Variant.Outlined"
@@ -58,7 +59,7 @@
                                         <MudButton Variant="Variant.Outlined"
                                                    Color="Color.Primary"
                                                    Size="Size.Small"
-                                                   StartIcon="@Icons.Material.Filled.NearMe"
+                                                   StartIcon="@MoIcons.Navigation"
                                                    Disabled="ActionsDisabled"
                                                    OnClick="() => JumpRequested.InvokeAsync(issue)">
                                             @L["Common:Actions:Jump"]
@@ -117,7 +118,7 @@
     [Parameter] public string? ValueLabel { get; set; }
     [Parameter] public string? ReasonLabel { get; set; }
     [Parameter] public string? UndoLabel { get; set; }
-    [Parameter] public string UndoIcon { get; set; } = Icons.Material.Filled.Undo;
+    [Parameter] public string UndoIcon { get; set; } = MoIcons.Undo;
     [Parameter] public Color UndoColor { get; set; } = Color.Warning;
     [Parameter] public bool ActionsDisabled { get; set; }
     [Parameter] public EventCallback<ConfigurationValidationIssue> JumpRequested { get; set; }
@@ -158,7 +159,7 @@
             return L["State:RuntimeValidation:MissingValue"].Value;
         }
 
-        if (issue.IsSensitive)
+        if (Visibility.ShouldMask(issue.IsSensitive))
         {
             return L["State:Value:Sensitive"].Value;
         }

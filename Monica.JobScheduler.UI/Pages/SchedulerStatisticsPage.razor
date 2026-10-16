@@ -22,14 +22,14 @@
         <div class="statistics-page">
             @if (state.Error is not null)
             {
-                <MudAlert Severity="@(state.HasLoadedSnapshot ? Severity.Warning : Severity.Error)" Variant="Variant.Outlined" Dense="true">
+                <MudAlert Severity="@(state.HasLoadedSnapshot ? Severity.Warning : Severity.Error)" Variant="Variant.Outlined" Dense="true" Icon="@(state.HasLoadedSnapshot ? MoIcons.Warning : MoIcons.Error)">
                     @(state.HasLoadedSnapshot ? L["Analytics:RefreshFailed", state.Error] : state.Error)
                 </MudAlert>
             }
             @if (!state.AccessChecked && state.IsQueryFailed && !state.IsLoading)
             {
                 <div class="statistics-page__unavailable" role="status">
-                    <MudIcon Icon="@Icons.Material.Outlined.QueryStats" aria-hidden="true" />
+                    <MoIcon Icon="@MoIcons.ChartTrend" aria-hidden="true" Size="1.5rem" />
                     <h2>@L["Analytics:Window:Unavailable"]</h2>
                     <p>@L["Analytics:Window:UnavailableDescription"]</p>
                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="RefreshAsync">@L["Common:Retry"]</MudButton>
@@ -77,7 +77,7 @@
                                 }
                             </div>
                             <button type="button" class="statistics-window__refresh" disabled="@state.IsLoading" @onclick="RefreshAsync">
-                                <MudIcon Icon="@Icons.Material.Outlined.Refresh" Size="Size.Small" aria-hidden="true" />
+                                <MoIcon Icon="@MoIcons.Refresh" Size="1.25rem" aria-hidden="true" />
                                 <span>@L["Common:Refresh"]</span>
                             </button>
                         </div>
@@ -92,7 +92,7 @@
                     else if (!state.HasLoadedSnapshot && state.IsQueryFailed)
                     {
                         <div class="statistics-page__unavailable" role="status">
-                            <MudIcon Icon="@Icons.Material.Outlined.QueryStats" aria-hidden="true" />
+                            <MoIcon Icon="@MoIcons.ChartTrend" aria-hidden="true" Size="1.5rem" />
                             <h2>@L["Analytics:Window:Unavailable"]</h2>
                             <p>@L["Analytics:Window:UnavailableDescription"]</p>
                             <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="RefreshAsync">@L["Common:Retry"]</MudButton>

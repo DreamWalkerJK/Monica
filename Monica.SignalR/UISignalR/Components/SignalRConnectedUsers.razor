@@ -14,13 +14,13 @@
                     <span class="connected-users-capture">@L["UISignalR:ConnectedUsers:CapturedAt", FormatUtc(capturedAt)]</span>
                 }
             </div>
-            <MudButton OnClick="RefreshAsync" StartIcon="@Icons.Material.Outlined.Refresh" Color="Color.Primary"
+            <MudButton OnClick="RefreshAsync" StartIcon="@MoIcons.Refresh" Color="Color.Primary"
                        Size="Size.Small" Variant="Variant.Outlined" Disabled="IsLoading">@L["UISignalR:ConnectedUsers:Refresh"]</MudButton>
         </header>
 
         @if (LoadFailed)
         {
-            <div class="connected-users-feedback"><MudAlert Severity="Severity.Warning" Dense="true">@L[DataLoaded ? "UISignalR:ConnectedUsers:LoadFailedRetained" : "UISignalR:ConnectedUsers:LoadFailed"]</MudAlert></div>
+            <div class="connected-users-feedback"><MudAlert Severity="Severity.Warning" Dense="true" Icon="@MoIcons.Warning">@L[DataLoaded ? "UISignalR:ConnectedUsers:LoadFailedRetained" : "UISignalR:ConnectedUsers:LoadFailed"]</MudAlert></div>
         }
         @if (IsLoading)
         {
@@ -31,13 +31,13 @@
         {
             @if (!IsLoading && !LoadFailed)
             {
-                <div class="connected-users-empty"><MudIcon Icon="@Icons.Material.Outlined.Group" Size="Size.Large" /><p>@L["UISignalR:ConnectedUsers:NotLoaded"]</p></div>
+                <div class="connected-users-empty"><MoIcon Icon="@MoIcons.Users" Size="2.25rem" /><p>@L["UISignalR:ConnectedUsers:NotLoaded"]</p></div>
             }
         }
         else if (ConnectedUsers.Count == 0)
         {
             <div class="connected-users-empty">
-                <MudIcon Icon="@Icons.Material.Outlined.Group" Size="Size.Large" />
+                <MoIcon Icon="@MoIcons.Users" Size="2.25rem" />
                 <h3>@L["UISignalR:ConnectedUsers:Empty"]</h3>
                 <p>@L["UISignalR:ConnectedUsers:EmptyHelp"]</p>
             </div>
@@ -47,16 +47,16 @@
             <div class="connected-users-query">
                 <MudTextField T="string" Value="@_query" ValueChanged="ChangeQuery" Immediate="true" Clearable="true"
                               Label="@L["UISignalR:ConnectedUsers:Search"]" Placeholder="@L["UISignalR:ConnectedUsers:SearchPlaceholder"]"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" ClearIcon="@MoIcons.Close" />
                 <span>@L["UISignalR:ConnectedUsers:SearchSummary", MatchingCount, ConnectedUsers.Count]</span>
             </div>
             <div class="connected-users-table-owner">
                 <MudTable T="SignalRConnectedUserInfo" @ref="_table" Items="@ConnectedUsers" Filter="MatchesQuery"
                           Dense="true" Hover="true" Square="true" Elevation="0" Breakpoint="Breakpoint.Xs" RowsPerPage="10">
                     <HeaderContent>
-                        <MudTh Class="connection-id-cell"><MudTableSortLabel T="SignalRConnectedUserInfo" SortBy="@(user => user.ConnectionId)">@L["UISignalR:ConnectedUsers:Columns:ConnectionId"]</MudTableSortLabel></MudTh>
-                        <MudTh Class="connection-user-cell"><MudTableSortLabel T="SignalRConnectedUserInfo" SortBy="@(user => user.UserName ?? string.Empty)">@L["UISignalR:ConnectedUsers:Columns:UserName"]</MudTableSortLabel></MudTh>
-                        <MudTh Class="connection-tracking-cell"><MudTableSortLabel T="SignalRConnectedUserInfo" SortBy="@(user => user.ConnectionTime)" InitialDirection="SortDirection.Descending">@L["UISignalR:ConnectedUsers:Columns:ConnectionTime"]</MudTableSortLabel></MudTh>
+                        <MudTh Class="connection-id-cell"><MudTableSortLabel T="SignalRConnectedUserInfo" SortBy="@(user => user.ConnectionId)" SortIcon="@MoIcons.ArrowUp">@L["UISignalR:ConnectedUsers:Columns:ConnectionId"]</MudTableSortLabel></MudTh>
+                        <MudTh Class="connection-user-cell"><MudTableSortLabel T="SignalRConnectedUserInfo" SortBy="@(user => user.UserName ?? string.Empty)" SortIcon="@MoIcons.ArrowUp">@L["UISignalR:ConnectedUsers:Columns:UserName"]</MudTableSortLabel></MudTh>
+                        <MudTh Class="connection-tracking-cell"><MudTableSortLabel T="SignalRConnectedUserInfo" SortBy="@(user => user.ConnectionTime)" InitialDirection="SortDirection.Descending" SortIcon="@MoIcons.ArrowUp">@L["UISignalR:ConnectedUsers:Columns:ConnectionTime"]</MudTableSortLabel></MudTh>
                         <MudTh Class="connection-actions-cell">@L["UISignalR:ConnectedUsers:Columns:Actions"]</MudTh>
                     </HeaderContent>
                     <RowTemplate>
@@ -73,7 +73,7 @@
                         <MudTd Class="connection-tracking-cell" DataLabel="@L["UISignalR:ConnectedUsers:Columns:ConnectionTime"]">
                             <div class="connection-cell">
                                 <time datetime="@context.ConnectionTime.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)">@FormatUtc(context.ConnectionTime)</time>
-                                <MudChip T="string" Size="Size.Small" Color="@(context.IsAuthenticated ? Color.Success : Color.Default)">
+                                <MudChip T="string" Size="Size.Small" Color="@(context.IsAuthenticated ? Color.Success : Color.Default)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                     @L[context.IsAuthenticated ? "UISignalR:Common:Authenticated" : "UISignalR:Common:Unauthenticated"]
                                 </MudChip>
                             </div>
@@ -87,14 +87,14 @@
                     </RowTemplate>
                     <NoRecordsContent>
                         <div class="connected-users-empty">
-                            <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Size="Size.Large" />
+                            <MoIcon Icon="@MoIcons.SearchOff" Size="2.25rem" />
                             <h3>@L["UISignalR:ConnectedUsers:NoMatches"]</h3>
                             <p>@L["UISignalR:ConnectedUsers:NoMatchesHelp"]</p>
                             <MudButton Color="Color.Primary" Variant="Variant.Text" OnClick="@(() => ChangeQuery(string.Empty))">@L["UISignalR:ConnectedUsers:ClearSearch"]</MudButton>
                         </div>
                     </NoRecordsContent>
                     <PagerContent>
-                        <MudTablePager PageSizeOptions="@PageSizes" RowsPerPageString="@L["UISignalR:ConnectedUsers:RowsPerPage"]" InfoFormat="@L["UISignalR:ConnectedUsers:PageInfo"]" />
+                        <MudTablePager PageSizeOptions="@PageSizes" RowsPerPageString="@L["UISignalR:ConnectedUsers:RowsPerPage"]" InfoFormat="@L["UISignalR:ConnectedUsers:PageInfo"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
                     </PagerContent>
                 </MudTable>
             </div>
@@ -121,7 +121,7 @@
                         <div><dt>@L["UISignalR:ConnectedUsers:Columns:ConnectionId"]</dt><dd><code>@selected.ConnectionId</code></dd></div>
                         <div><dt>@L["UISignalR:ConnectedUsers:Columns:UserName"]</dt><dd>@DisplayValue(selected.UserName)</dd></div>
                         <div><dt>@L["UISignalR:ConnectedUsers:Columns:UserId"]</dt><dd><code>@DisplayValue(selected.UserId)</code></dd></div>
-                        <div><dt>@L["UISignalR:ConnectedUsers:Columns:AuthenticationStatus"]</dt><dd><MudChip T="string" Size="Size.Small" Color="@(selected.IsAuthenticated ? Color.Success : Color.Default)">@L[selected.IsAuthenticated ? "UISignalR:Common:Authenticated" : "UISignalR:Common:Unauthenticated"]</MudChip></dd></div>
+                        <div><dt>@L["UISignalR:ConnectedUsers:Columns:AuthenticationStatus"]</dt><dd><MudChip T="string" Size="Size.Small" Color="@(selected.IsAuthenticated ? Color.Success : Color.Default)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@L[selected.IsAuthenticated ? "UISignalR:Common:Authenticated" : "UISignalR:Common:Unauthenticated"]</MudChip></dd></div>
                         <div><dt>@L["UISignalR:ConnectedUsers:Columns:ConnectionTime"]</dt><dd><time datetime="@selected.ConnectionTime.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)">@FormatUtc(selected.ConnectionTime)</time></dd></div>
                     </dl>
                 </section>
@@ -129,7 +129,7 @@
                     <h3>@L["UISignalR:ConnectedUsers:ClaimsTitle", selected.Claims.Count]</h3>
                     @if (selected.Claims.Count == 0)
                     {
-                        <MudAlert Severity="Severity.Info" Dense="true">@L["UISignalR:ConnectedUsers:ClaimsEmpty"]</MudAlert>
+                        <MudAlert Severity="Severity.Info" Dense="true" Icon="@MoIcons.Info">@L["UISignalR:ConnectedUsers:ClaimsEmpty"]</MudAlert>
                     }
                     else
                     {

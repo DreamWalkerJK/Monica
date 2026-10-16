@@ -24,14 +24,14 @@
                 @if (_state.Snapshot is { } headerSnapshot)
                 {
                     <time class="di-header__capture" datetime="@headerSnapshot.CapturedAt.ToString("O")">
-                        <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.Clock" Size="1.25rem" />
                         @L["Page:Header:GeneratedAt", headerSnapshot.CapturedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")]
                     </time>
                 }
             </div>
             <div class="di-header__actions">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                           StartIcon="@Icons.Material.Outlined.Refresh"
+                           StartIcon="@MoIcons.Refresh"
                            OnClick="RefreshAsync" Disabled="@_state.IsLoading">
                     @L["Page:Header:Refresh"]
                 </MudButton>
@@ -43,7 +43,7 @@
             <section class="di-composition" aria-label="@L["Page:Summary:AriaLabel"]">
                 <div class="di-composition__identity">
                     <div class="di-composition__label">
-                        <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.Workflow" Size="1.25rem" />
                         <span>@L["Page:Composition:RegistryLabel"]</span>
                     </div>
                     <div class="di-composition__total">
@@ -97,7 +97,7 @@
 
         @if (!string.IsNullOrWhiteSpace(_state.LoadError))
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+            <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Variant="Variant.Outlined">
                 @L["Page:Messages:RefreshFailed", _state.LoadError]
             </MudAlert>
         }
@@ -119,11 +119,11 @@
             }
             else if (!_state.HasData)
             {
-                <div class="di-state-shell"><MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@L["Page:States:LoadFailed"]</MudAlert></div>
+                <div class="di-state-shell"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Variant="Variant.Outlined">@L["Page:States:LoadFailed"]</MudAlert></div>
             }
             else if (_state.FilteredDescriptors.Count == 0)
             {
-                <div class="di-state-shell"><MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Page:States:Empty"]</MudAlert></div>
+                <div class="di-state-shell"><MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Variant="Variant.Outlined">@L["Page:States:Empty"]</MudAlert></div>
             }
             else
             {

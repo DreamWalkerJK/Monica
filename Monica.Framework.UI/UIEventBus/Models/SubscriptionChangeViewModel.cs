@@ -1,4 +1,5 @@
 using Monica.EventBus.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIEventBus.Models;
@@ -30,11 +31,11 @@ public class SubscriptionChangeViewModel
     /// </summary>
     public string ChangeTypeIcon => ChangeType switch
     {
-        EventSubscriptionChangeType.Added => Icons.Material.Filled.AddCircle,
-        EventSubscriptionChangeType.Activated => Icons.Material.Filled.PlayCircle,
-        EventSubscriptionChangeType.Deactivated => Icons.Material.Filled.PauseCircle,
-        EventSubscriptionChangeType.Removed => Icons.Material.Filled.RemoveCircle,
-        _ => Icons.Material.Filled.Circle
+        EventSubscriptionChangeType.Added => MoIcons.AddCircle,
+        EventSubscriptionChangeType.Activated => MoIcons.PlayCircle,
+        EventSubscriptionChangeType.Deactivated => MoIcons.PauseCircle,
+        EventSubscriptionChangeType.Removed => MoIcons.MinusCircle,
+        _ => MoIcons.Circle
     };
 
     /// <summary>

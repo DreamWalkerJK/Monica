@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using Monica.Configuration.UI.Localization
 @inject IStringLocalizer<ConfigurationUIResource> L
 
@@ -49,7 +50,7 @@
         @if (AllowJsonEdit)
         {
             <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.DataObject"
+                       StartIcon="@MoIcons.Braces"
                        OnClick="EditJson">
                 @L["Common:Actions:EditJson"]
             </MudButton>
@@ -93,7 +94,7 @@
             Definition.DefinitionKey,
             EffectiveValue?.DisplayValue,
             pendingChanges);
-        return ConfigurationJsonDisplayFormatter.Format(node, Node, L["State:Value:Sensitive"]);
+        return ConfigurationJsonDisplayFormatter.Format(node, Node, L["State:Value:Sensitive"], Visibility.ShowSensitiveValues);
     }
 
     private void Close()

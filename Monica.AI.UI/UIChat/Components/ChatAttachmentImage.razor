@@ -12,13 +12,13 @@
         <span class="image-preview">
             @if (_source is not null) { <img src="@_source" alt="@Attachment.FileName" loading="lazy" decoding="async" /> }
             else if (_loading) { <MudProgressCircular Indeterminate="true" Size="Size.Small" /> }
-            else { <MudIcon Icon="@Icons.Material.Outlined.BrokenImage" /> }
+            else { <MoIcon Icon="@MoIcons.ImageOff" Size="1.5rem" /> }
         </span>
         <span class="image-name">@Attachment.FileName</span>
     </MudButton>
     @if (Removable)
     {
-        <span class="image-remove"><MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Disabled="@Disabled" OnClick="OnRemove" aria-label="@L["Workbench:RemoveAttachment", Attachment.FileName]" /></span>
+        <span class="image-remove"><MudIconButton Icon="@MoIcons.Close" Size="Size.Small" Disabled="@Disabled" OnClick="OnRemove" aria-label="@L["Workbench:RemoveAttachment", Attachment.FileName]" /></span>
     }
 </div>
 

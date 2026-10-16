@@ -11,7 +11,7 @@
 .dossier-facts code { font: 12px/1.6 var(--mo-font-family-mono); }
 .dossier-overflow { display: flex; align-items: flex-start; gap: 10px; padding: 18px 28px; background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface)); }
 .dossier-overflow p { margin: 0; font-size: 12px; line-height: 1.7; color: var(--telemetry-ink); }
-.dossier-overflow ::deep .mud-icon-root { color: var(--telemetry-ink); margin-top: 2px; }
+.dossier-overflow ::deep :is(.mud-icon-root, .mo-icon) { color: var(--telemetry-ink); margin-top: 2px; }
 .dossier-series-heading, .section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 .dossier-series-heading { padding: 24px 28px 16px; }
 .dossier-series-heading h3, .section-heading h3, .series-ledger-heading h3 { margin: 7px 0 0; font-size: 16px; font-weight: 500; }
@@ -53,11 +53,11 @@
 .sample-table th:nth-child(2) { width: 27%; }
 .sample-table th:nth-child(3) { width: 25%; }
 .sample-inspect ::deep .mud-button-root { gap: 6px; padding: 2px 0; font-size: 11px; }
-.sample-inspect ::deep .mud-icon-root { width: 16px; height: 16px; }
+.sample-inspect ::deep :is(.mud-icon-root, .mo-icon) { width: 16px; height: 16px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .dossier-empty, .dossier-no-series { padding: 28px; }
 .dossier-empty { min-height: 250px; }
-.dossier-empty ::deep .mud-icon-root { color: var(--telemetry-ink); }
+.dossier-empty ::deep :is(.mud-icon-root, .mo-icon) { color: var(--telemetry-ink); }
 .dossier-empty h2 { margin: 20px 0 10px; font-size: 21px; font-weight: 500; }
 .dossier-no-series h3 { margin: 0 0 8px; font-size: 17px; font-weight: 500; }
 .dossier-empty p, .dossier-no-series p, .ledger-empty { margin: 0; font-size: 13px; line-height: 1.8; color: var(--telemetry-muted); }

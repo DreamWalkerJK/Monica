@@ -17,7 +17,7 @@
 .execution-history__rail::after { position: absolute; top: 32px; bottom: 0; width: 1px; background: var(--mud-palette-lines-default); content: ""; }
 .execution-history__entry:last-child .execution-history__rail::after { display: none; }
 .execution-history__node { position: relative; z-index: 1; display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid color-mix(in srgb, var(--history-tone) 30%, var(--mud-palette-lines-default)); border-radius: 50%; background: color-mix(in srgb, var(--history-tone) 8%, var(--mud-palette-surface)); color: color-mix(in srgb, var(--history-tone) 25%, var(--mud-palette-text-primary)); }
-.execution-history__node ::deep .mud-icon-root { color: inherit; }
+.execution-history__node ::deep :is(.mud-icon-root, .mo-icon) { color: inherit; }
 .execution-history__entry > article { display: grid; gap: 10px; min-width: 0; margin: 0 0 20px 16px; padding: 2px 0 20px; border-bottom: 1px solid var(--mud-palette-lines-default); }
 .execution-history__entry:last-child > article { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
 .execution-history__entry-heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px; min-width: 0; }
@@ -31,7 +31,7 @@
 .execution-history__message { min-width: 0; margin: 0; color: var(--mud-palette-text-primary); font-size: .84rem; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .execution-history__metadata { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 16px; color: var(--history-muted); font-size: .75rem; line-height: 1.6; }
 .execution-history__metadata > span { display: flex; align-items: flex-start; gap: 6px; min-width: 0; }
-.execution-history__metadata ::deep .mud-icon-root { flex: none; }
+.execution-history__metadata ::deep :is(.mud-icon-root, .mo-icon) { flex: none; }
 .execution-history__metadata code { min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; font-family: var(--mo-font-family-mono); }
 @container execution-history (max-width: 450px) {
     .execution-history__heading, .execution-history__empty, .execution-history__timeline { padding: 16px; }

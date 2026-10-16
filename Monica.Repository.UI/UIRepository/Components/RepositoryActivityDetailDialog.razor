@@ -19,7 +19,7 @@
                     <MudText Typo="Typo.h6">@L["Workbench:Activity:Inspector:SessionHeading", Value(_row.BackendId)]</MudText>
                     <MudText Typo="Typo.body2">@L["Workbench:Activity:Inspector:SnapshotDescription"]</MudText>
                 </div>
-                <MudChip T="string" Color="Color.Default" Variant="Variant.Outlined">@Value(_row.State)</MudChip>
+                <MudChip T="string" Color="Color.Default" Variant="Variant.Outlined" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@Value(_row.State)</MudChip>
             </div>
 
             <section class="activity-detail__section">
@@ -41,7 +41,7 @@
                         <MudText Typo="Typo.body2" Class="activity-detail__note">@L["Workbench:Activity:Inspector:QueryDescription"]</MudText>
                     </div>
                     <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                               StartIcon="@Icons.Material.Outlined.ContentCopy"
+                               StartIcon="@MoIcons.Copy"
                                Disabled="@(_retired || string.IsNullOrWhiteSpace(_row.Query))"
                                aria-disabled="@(_copying || _retired || string.IsNullOrWhiteSpace(_row.Query) ? "true" : "false")"
                                OnClick="CopyQueryAsync">@L["Workbench:Activity:Inspector:CopyQuery"]</MudButton>
@@ -68,7 +68,7 @@
                 <div class="activity-detail__table-boundary">
                     <MudTable T="EvidenceField" Items="@SessionFields" Dense="true" Hover="true"
                               Square="true" Elevation="0" Breakpoint="Breakpoint.Xs"
-                              AriaLabel="@L["Workbench:Activity:Inspector:EvidenceTitle"].Value">
+                              TableAttributes="@(new Dictionary<string, object?> { ["aria-label"] = L["Workbench:Activity:Inspector:EvidenceTitle"].Value })">
                         <HeaderContent>
                             <MudTh>@L["Workbench:Activity:Inspector:Field"]</MudTh>
                             <MudTh>@L["Workbench:Activity:Inspector:Value"]</MudTh>
@@ -87,7 +87,7 @@
     </DialogContent>
     <DialogActions>
         <div class="activity-detail__actions">
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.ContentCopy"
+            <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Copy"
                        Disabled="_retired" aria-disabled="@(_copying || _retired ? "true" : "false")"
                        OnClick="CopyEvidenceAsync">
                 @L["Workbench:Activity:Inspector:CopyEvidence"]

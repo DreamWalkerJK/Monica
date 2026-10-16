@@ -11,9 +11,9 @@
             <p class="job-detail-header__eyebrow">@L["JobDetail:Header:Eyebrow"]</p>
             <div class="job-detail-header__title-row">
                 <span class="job-detail-header__symbol" aria-hidden="true">
-                    <MudIcon Icon="@(Definition.Declaration.JobType == JobType.Recurring
-                                        ? Icons.Material.Outlined.Update
-                                        : Icons.Material.Outlined.Bolt)" />
+                    <MoIcon Icon="@(Definition.Declaration.JobType == JobType.Recurring
+                                        ? MoIcons.History
+                                        : MoIcons.Zap)" Size="1.5rem" />
                 </span>
                 <MudText Typo="Typo.h5" HtmlTag="h2">@Definition.EffectiveConfiguration.JobName</MudText>
             </div>
@@ -30,21 +30,21 @@
             <div class="job-detail-header__chips">
                 <span class="job-detail-header__status" data-tone="primary">@L[$"JobTypes:{Definition.Declaration.JobType}"]</span>
                 <span class="job-detail-header__status" data-tone="@(IsPolicyDisabled ? "warning" : "success")">
-                    <MudIcon Icon="@(IsPolicyDisabled ? Icons.Material.Outlined.PauseCircle : Icons.Material.Outlined.CheckCircle)" />
+                    <MoIcon Icon="@(IsPolicyDisabled ? MoIcons.PauseCircle : MoIcons.Success)" Size="1.5rem" />
                     @(IsPolicyDisabled ? L["Catalog:Policy:Paused"] : L["Catalog:Policy:Enabled"])
                 </span>
                 @if (IsDebugSuppressed)
                 {
                     <MudTooltip Text="@L["Catalog:Lifecycle:DebugSuppressedDescription"]" Placement="Placement.Top" Arrow="true">
                         <span class="job-detail-header__status" data-tone="info">
-                            <MudIcon Icon="@Icons.Material.Outlined.BugReport" />@L["Catalog:Lifecycle:DebugSuppressed"]
+                            <MoIcon Icon="@MoIcons.Bug" Size="1.5rem" />@L["Catalog:Lifecycle:DebugSuppressed"]
                         </span>
                     </MudTooltip>
                 }
                 @if (!Definition.IsPresent)
                 {
                     <span class="job-detail-header__status" data-tone="warning">
-                        <MudIcon Icon="@Icons.Material.Outlined.CloudOff" />@L["JobDetail:Header:OwnerAbsent"]
+                        <MoIcon Icon="@MoIcons.CloudOff" Size="1.5rem" />@L["JobDetail:Header:OwnerAbsent"]
                     </span>
                 }
             </div>
@@ -52,7 +52,7 @@
                 @if (Definition.Declaration.JobType == JobType.Triggered)
                 {
                     <span class="job-detail-header__primary-action">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.PlayArrow"
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Play"
                                    Disabled="@(!Definition.IsPresent || Definition.IsDisabled || IsMutating)" OnClick="OnTrigger">
                             @L["Catalog:Actions:Trigger"]
                         </MudButton>
@@ -62,26 +62,26 @@
                 {
                     <MudTooltip Text="@(IsDebugSuppressed ? L["Catalog:Actions:RunDuringDebug"] : L["Catalog:Actions:Run"])" Placement="Placement.Top" Arrow="true">
                         <span class="job-detail-header__primary-action">
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.PlayArrow"
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Play"
                                        Disabled="@(!Definition.IsPresent || IsMutating)" OnClick="OnRunNow">@L["Catalog:Actions:Run"]</MudButton>
                         </span>
                     </MudTooltip>
                     <MudTooltip Text="@ToggleDisabledTooltip" Placement="Placement.Top" Arrow="true">
                         <span class="job-detail-header__semantic-action" data-tone="@(IsOperatorPaused ? "success" : "warning")">
                             <MudButton Variant="Variant.Outlined" Color="Color.Default"
-                                       StartIcon="@(IsOperatorPaused ? Icons.Material.Outlined.PlayCircle : Icons.Material.Outlined.PauseCircle)"
+                                       StartIcon="@(IsOperatorPaused ? MoIcons.PlayCircle : MoIcons.PauseCircle)"
                                        Disabled="@IsMutating" OnClick="OnToggleDisabled">
                                 @(IsOperatorPaused ? L["Catalog:Actions:Resume"] : L["Catalog:Actions:Pause"])
                             </MudButton>
                         </span>
                     </MudTooltip>
-                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.EventRepeat"
+                    <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.CalendarSync"
                                Disabled="@IsMutating" OnClick="OnInspectSchedule">@L["JobDetail:Actions:InspectSchedule"]</MudButton>
                 }
-                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Tune"
+                <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Sliders"
                            Disabled="@IsMutating" OnClick="OnEditPolicy">@L["Catalog:Actions:Policy"]</MudButton>
                 <MudTooltip Text="@L["Common:Refresh"]">
-                    <MudIconButton Icon="@Icons.Material.Outlined.Refresh" Variant="Variant.Outlined"
+                    <MudIconButton Icon="@MoIcons.Refresh" Variant="Variant.Outlined"
                                    Disabled="@IsRefreshing" OnClick="OnRefresh" aria-label="@L["Common:Refresh"]" />
                 </MudTooltip>
             </div>
@@ -91,9 +91,9 @@
         <p>@L["JobDetail:Header:LedgerScope"]</p>
         <dl class="job-detail-header__evidence" aria-label="@L["JobDetail:Header:EvidenceAriaLabel"]">
             <div data-metric="active"><dt>@L["JobDetail:Header:ActiveExecutions"]</dt><dd>@Summary.ActiveExecutionCount</dd></div>
-            <div data-metric="queued" data-tone="info"><dt><MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" />@L["JobDetail:Header:QueuedExecutions"]</dt><dd>@Summary.QueuedExecutionCount</dd></div>
-            <div data-metric="running" data-tone="primary"><dt><MudIcon Icon="@Icons.Material.Outlined.PlayCircle" />@L["JobDetail:Header:RunningExecutions"]</dt><dd>@Summary.RunningExecutionCount</dd></div>
-            <div data-metric="presence" data-tone="@(Definition.IsPresent ? "success" : "warning")"><dt><MudIcon Icon="@Icons.Material.Outlined.Dns" />@L["JobDetail:Header:OwnerPresence"]</dt><dd>@(Definition.IsPresent ? L["JobDetail:Header:OwnerPresent"] : L["JobDetail:Header:OwnerAbsent"])</dd></div>
+            <div data-metric="queued" data-tone="info"><dt><MoIcon Icon="@MoIcons.Hourglass" Size="1.5rem" />@L["JobDetail:Header:QueuedExecutions"]</dt><dd>@Summary.QueuedExecutionCount</dd></div>
+            <div data-metric="running" data-tone="primary"><dt><MoIcon Icon="@MoIcons.PlayCircle" Size="1.5rem" />@L["JobDetail:Header:RunningExecutions"]</dt><dd>@Summary.RunningExecutionCount</dd></div>
+            <div data-metric="presence" data-tone="@(Definition.IsPresent ? "success" : "warning")"><dt><MoIcon Icon="@MoIcons.Server" Size="1.5rem" />@L["JobDetail:Header:OwnerPresence"]</dt><dd>@(Definition.IsPresent ? L["JobDetail:Header:OwnerPresent"] : L["JobDetail:Header:OwnerAbsent"])</dd></div>
         </dl>
     </div>
 </header>

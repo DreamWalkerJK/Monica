@@ -9,11 +9,11 @@
     <DialogContent>
         <div class="attachment-preview">
             @if (_loading) { <MudProgressLinear Indeterminate="true" /> }
-            else if (_error is not null) { <MudAlert Severity="Severity.Error">@_error</MudAlert> }
+            else if (_error is not null) { <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert> }
             else if (_imageSource is not null) { <img src="@_imageSource" alt="@Attachment.FileName" /> }
             else if (_text is not null) { <pre>@_text</pre> }
             <MudText Typo="Typo.caption">@Attachment.MediaType · @($"{Attachment.Size:N0}") @L["Workbench:Bytes"]</MudText>
-            @if (Attachment.Kind == ChatAttachmentKind.Document) { <MudAlert Severity="Severity.Info" Dense="true">@L["Workbench:DocumentDelivery"]</MudAlert> }
+            @if (Attachment.Kind == ChatAttachmentKind.Document) { <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Workbench:DocumentDelivery"]</MudAlert> }
         </div>
     </DialogContent>
     <DialogActions><MudButton OnClick="@(() => Dialog.Close())">@L["Common:Actions:Close"]</MudButton></DialogActions>

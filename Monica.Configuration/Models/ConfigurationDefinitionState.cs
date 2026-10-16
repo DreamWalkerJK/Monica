@@ -1,7 +1,7 @@
 namespace Monica.Configuration.Models;
 
 /// <summary>
-/// Provides one configuration definition together with the display-safe effective values needed by management views.
+/// Provides one configuration definition and its effective values, with sensitive values masked by default.
 /// </summary>
 public sealed record ConfigurationDefinitionState
 {
@@ -17,8 +17,8 @@ public sealed record ConfigurationDefinitionState
     public long? EffectiveValueVersion { get; init; }
 
     /// <summary>
-    /// Gets display-safe effective values for every statically declared non-root schema node in preorder.
-    /// Aggregate values whose schema subtree contains sensitive data are redacted as a whole.
+    /// Gets effective values for every statically declared non-root schema node in preorder.
+    /// Aggregate values containing sensitive data are masked unless the read explicitly requests disclosure.
     /// </summary>
     public IReadOnlyList<ConfigurationEffectiveValue> EffectiveValues { get; init; } = [];
 }

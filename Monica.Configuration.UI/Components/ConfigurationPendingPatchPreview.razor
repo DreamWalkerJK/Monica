@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using Monica.Configuration.UI.Localization
 @using System.Text.Json.Nodes
 @using Monica.UI.UIDiffHighlight.Models
@@ -5,7 +6,7 @@
 
 @if (Changes.Count == 0)
 {
-    <MudAlert Severity="Severity.Info" Dense="true">@L["Dialogs:ComplexEditor:NoPatch"]</MudAlert>
+    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Dialogs:ComplexEditor:NoPatch"]</MudAlert>
 }
 else
 {
@@ -52,7 +53,7 @@ else
 
     private JsonNode? BuildSnapshotValue(PendingChange change, bool useOriginal)
     {
-        if (change.IsSensitive)
+        if (Visibility.ShouldMask(change.IsSensitive))
         {
             return JsonValue.Create(L["State:Value:Sensitive"].Value);
         }

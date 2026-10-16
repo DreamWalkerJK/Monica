@@ -12,7 +12,7 @@
 .configuration-definition-list-scroll ::deep .mud-list-item { padding: 14px 12px; min-width: 0; border-radius: var(--mud-default-borderradius); border: 1px solid transparent; }
 .configuration-definition-list-scroll ::deep .mud-list-item.selected-definition { border-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-divider)); background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface)); }
 .configuration-definition-list-scroll ::deep .mud-list-item-icon { min-width: 28px; color: var(--mud-palette-text-secondary); }
-.configuration-definition-list-scroll ::deep .mud-list-item-icon .mud-icon-root { width: 18px; height: 18px; }
+.configuration-definition-list-scroll ::deep .mud-list-item-icon :is(.mud-icon-root, .mo-icon) { width: 18px; height: 18px; }
 .configuration-definition-list-scroll ::deep .mud-list-item-text { min-width: 0; }
 .configuration-definition-title { flex-wrap: wrap; }
 .configuration-definition-title ::deep .mud-typography { font-weight: 500; overflow-wrap: anywhere; }
@@ -22,5 +22,5 @@
 .configuration-node-match-list ::deep .configuration-node-match-button { text-align: start; justify-content: flex-start; max-width: 100%; }
 .configuration-node-match-text { min-width: 0; }
 .configuration-definition-list-footer { display: flex; gap: 8px; align-items: flex-start; padding: 16px 20px; border-top: 1px solid var(--mud-palette-lines-default); color: var(--mud-palette-text-secondary); font-size: 11px; line-height: 1.6; }
-.configuration-definition-list-footer ::deep .mud-icon-root { flex-shrink: 0; }
+.configuration-definition-list-footer ::deep :is(.mud-icon-root, .mo-icon) { flex-shrink: 0; }
 @media (max-width: 800px) { .configuration-definition-list-scroll { max-height: 320px; min-height: 0; } }

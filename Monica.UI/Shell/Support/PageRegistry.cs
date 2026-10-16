@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Components;
 using Monica.Core.Localization.Abstractions;
+using Monica.UI.Icons;
 using Monica.UI.Localization;
 using Monica.UI.Shell.Components;
 using Monica.UI.Shell.Models;
@@ -26,25 +27,25 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
     /// </summary>
     public PageRegistry()
     {
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.AI, "NavBar:Categories:AI", 100, ShellIcons.Sparkle,
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.AI, "NavBar:Categories:AI", 100, MoIcons.Sparkle,
             "NavBar:CategoryDescriptions:AI");
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.KnowledgeRetrieval, "NavBar:Categories:KnowledgeRetrieval", 200, ShellIcons.BookSearch,
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.KnowledgeRetrieval, "NavBar:Categories:KnowledgeRetrieval", 200, MoIcons.BookSearch,
             "NavBar:CategoryDescriptions:KnowledgeRetrieval");
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Documentation, "NavBar:Categories:Documentation", 300, ShellIcons.Book,
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Documentation, "NavBar:Categories:Documentation", 300, MoIcons.Book,
             "NavBar:CategoryDescriptions:Documentation");
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Configuration, "NavBar:Categories:Configuration", 400, ShellIcons.Sliders,
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Configuration, "NavBar:Categories:Configuration", 400, MoIcons.Sliders,
             "NavBar:CategoryDescriptions:Configuration");
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Infrastructure, "NavBar:Categories:Infrastructure", 500, ShellIcons.Server,
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Infrastructure, "NavBar:Categories:Infrastructure", 500, MoIcons.Server,
             "NavBar:CategoryDescriptions:Infrastructure");
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Module, "NavBar:Categories:Module", 600, ShellIcons.Cube,
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Module, "NavBar:Categories:Module", 600, MoIcons.Cube,
             "NavBar:CategoryDescriptions:Module");
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.TaskScheduling, "NavBar:Categories:TaskScheduling", 700, ShellIcons.CalendarCheck,
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.TaskScheduling, "NavBar:Categories:TaskScheduling", 700, MoIcons.CalendarCheck,
             "NavBar:CategoryDescriptions:TaskScheduling");
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Monitor, "NavBar:Categories:Monitor", 800, ShellIcons.Pulse,
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Monitor, "NavBar:Categories:Monitor", 800, MoIcons.Pulse,
             "NavBar:CategoryDescriptions:Monitor");
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Debug, "NavBar:Categories:Debug", 900, ShellIcons.Bug,
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Debug, "NavBar:Categories:Debug", 900, MoIcons.Bug,
             "NavBar:CategoryDescriptions:Debug");
-        AddBuiltInCategory(BuiltInNavigationCategoryIds.Uncategorized, "NavBar:Categories:Uncategorized", 1_000, ShellIcons.Folder,
+        AddBuiltInCategory(BuiltInNavigationCategoryIds.Uncategorized, "NavBar:Categories:Uncategorized", 1_000, MoIcons.Folder,
             "NavBar:CategoryDescriptions:Uncategorized");
     }
 

@@ -33,7 +33,7 @@
                     <h3>@summary.Title</h3>
                     <code>@summary.Key</code>
                     <div class="pu-dossier__metadata" data-declared="@summary.HasExplicitMetadata.ToString().ToLowerInvariant()">
-                        <MudIcon Icon="@(summary.HasExplicitMetadata ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Info)" Size="Size.Small" />
+                        <MoIcon Icon="@(summary.HasExplicitMetadata ? MoIcons.Success : MoIcons.Info)" Size="1.25rem" />
                         @(summary.HasExplicitMetadata ? L["ProjectUnitDetailDialog:Badges:MetadataDeclared"] : L["ProjectUnitDetailDialog:Badges:MetadataMissing"])
                     </div>
                     @if (!string.IsNullOrWhiteSpace(summary.Description))
@@ -66,7 +66,7 @@
                                     <div>
                                         @if (requirement.IsResolved)
                                         {
-                                            <a href="@requirement.Href" target="_blank" rel="noopener noreferrer">@requirement.Title <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" /></a>
+                                            <a href="@requirement.Href" target="_blank" rel="noopener noreferrer">@requirement.Title <MoIcon Icon="@MoIcons.ExternalLink" Size="1.25rem" /></a>
                                         }
                                         else
                                         {
@@ -94,7 +94,7 @@
                                 <ul class="pu-dossier__references">
                                     @foreach (var reference in summary.Dependencies)
                                     {
-                                        <li><button type="button" @onclick="@(() => InspectRelatedUnitAsync(reference.Key))"><span><strong>@reference.Title</strong><code>@reference.Key</code><small>@L.GetProjectUnitTypeText(reference.UnitType)</small></span><MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></button></li>
+                                        <li><button type="button" @onclick="@(() => InspectRelatedUnitAsync(reference.Key))"><span><strong>@reference.Title</strong><code>@reference.Key</code><small>@L.GetProjectUnitTypeText(reference.UnitType)</small></span><MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" /></button></li>
                                     }
                                 </ul>
                             }
@@ -106,7 +106,7 @@
                                 <ul class="pu-dossier__references">
                                     @foreach (var reference in _detail.Dependents)
                                     {
-                                        <li><button type="button" @onclick="@(() => InspectRelatedUnitAsync(reference.Key))"><span><strong>@reference.Title</strong><code>@reference.Key</code><small>@L.GetProjectUnitTypeText(reference.UnitType)</small></span><MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></button></li>
+                                        <li><button type="button" @onclick="@(() => InspectRelatedUnitAsync(reference.Key))"><span><strong>@reference.Title</strong><code>@reference.Key</code><small>@L.GetProjectUnitTypeText(reference.UnitType)</small></span><MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" /></button></li>
                                     }
                                 </ul>
                             }
@@ -116,14 +116,14 @@
                 @if (_detail.Configuration is not null)
                 {
                     <section class="pu-dossier__section pu-dossier__configuration">
-                        <header><MudIcon Icon="@Icons.Material.Outlined.Settings" Size="Size.Small" /><div><h4>@L["ProjectUnitDetailDialog:Sections:Configuration"]</h4><p>@L["ProjectUnitDetailDialog:Sections:ConfigurationHint"]</p></div></header>
+                        <header><MoIcon Icon="@MoIcons.Settings" Size="1.25rem" /><div><h4>@L["ProjectUnitDetailDialog:Sections:Configuration"]</h4><p>@L["ProjectUnitDetailDialog:Sections:ConfigurationHint"]</p></div></header>
                         <dl><div><dt>@L["ProjectUnitDetailDialog:Fields:DefinitionKey"]</dt><dd><code>@_detail.Configuration.DefinitionKey</code></dd></div><div><dt>@L["ProjectUnitDetailDialog:Fields:ConfigurationMode"]</dt><dd>@L.GetConfigurationModeText(_detail.Configuration.IsOffline)</dd></div></dl>
                         @if (_detail.Configuration.Usages.Count != 0)
                         {
                             <ul class="pu-dossier__references">
                                 @foreach (var usage in _detail.Configuration.Usages)
                                 {
-                                        <li><button type="button" @onclick="@(() => InspectRelatedUnitAsync(usage.Unit.Key))"><span><strong>@usage.Unit.Title</strong><code>@usage.Unit.Key</code><small>@L.GetConfigurationUsageText(usage.UsageType)</small></span><MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></button></li>
+                                        <li><button type="button" @onclick="@(() => InspectRelatedUnitAsync(usage.Unit.Key))"><span><strong>@usage.Unit.Title</strong><code>@usage.Unit.Key</code><small>@L.GetConfigurationUsageText(usage.UsageType)</small></span><MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" /></button></li>
                                 }
                             </ul>
                         }
@@ -160,7 +160,7 @@
                 }
                 @if (summary.Alerts.Count != 0)
                 {
-                    <section class="pu-dossier__section"><header><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" /><h4>@L["ProjectUnitDetailDialog:Fields:Alerts"]</h4><span class="pu-dossier__section-count">@summary.Alerts.Count</span></header>
+                    <section class="pu-dossier__section"><header><MoIcon Icon="@MoIcons.Info" Size="1.25rem" /><h4>@L["ProjectUnitDetailDialog:Fields:Alerts"]</h4><span class="pu-dossier__section-count">@summary.Alerts.Count</span></header>
                         <ul class="pu-dossier__alerts">
                             @foreach (var alert in summary.Alerts)
                             {
@@ -178,7 +178,7 @@
         <div class="pu-dossier__actions">
             @if (_detail is not null && OnNodeFocus.HasDelegate)
             {
-                <MudButton Class="pu-dossier__focus" Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.CenterFocusStrong" OnClick="FocusCurrentAsync">@L["ProjectUnitDetailDialog:Actions:FocusInGraph"]</MudButton>
+                <MudButton Class="pu-dossier__focus" Variant="Variant.Text" StartIcon="@MoIcons.Focus" OnClick="FocusCurrentAsync">@L["ProjectUnitDetailDialog:Actions:FocusInGraph"]</MudButton>
             }
             <MudButton @ref="_closeButton" Class="pu-dossier__close" Variant="Variant.Filled" Color="Color.Primary" OnClick="CloseAsync">@L["Shared:Actions:Close"]</MudButton>
         </div>

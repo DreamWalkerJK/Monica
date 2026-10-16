@@ -10,15 +10,15 @@
         <Actions>
             @if (CatalogKind == AgentCapabilityKind.Mcp)
             {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" aria-disabled="@BusyAttribute" OnClick="ShowAddMcpProfileDialogAsync">@L["Capabilities:Mcp:Add"]</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Add" aria-disabled="@BusyAttribute" OnClick="ShowAddMcpProfileDialogAsync">@L["Capabilities:Mcp:Add"]</MudButton>
             }
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" aria-disabled="@BusyAttribute" OnClick="RefreshAsync">@L["Capabilities:Refresh"]</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh" aria-disabled="@BusyAttribute" OnClick="RefreshAsync">@L["Capabilities:Refresh"]</MudButton>
         </Actions>
     </AIAdministrationHeader>
     @if (_state?.Error is { } error)
     {
         <div class="page-feedback" role="alert">
-            <MudAlert Severity="Severity.Error" Dense="true">@error</MudAlert>
+            <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@error</MudAlert>
             @if (_state.Management is not null) { <MudText Typo="Typo.body2">@L["Capabilities:Administration:PreviousData"]</MudText> }
             <MudButton Variant="Variant.Text" aria-disabled="@BusyAttribute" OnClick="RefreshAsync">@L["Capabilities:Administration:Retry"]</MudButton>
         </div>
@@ -43,18 +43,18 @@
             <aside class="@($"catalog-index {(_catalogOpen ? "catalog-open" : "catalog-closed")}")" aria-label="@L["Capabilities:Administration:Catalog"]">
                 <button type="button" class="compact-catalog-toggle" aria-expanded="@(_catalogOpen ? "true" : "false")" aria-controls="capability-catalog-body" @onclick="ToggleCatalog">
                     <span><strong>@(_state.SelectedEntry?.Title ?? L["Capabilities:Administration:Catalog"])</strong><small>@ResultCount</small></span>
-                    <span>@L["Capabilities:Administration:ChangeEntry"] <MudIcon Icon="@(_catalogOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" /></span>
+                    <span>@L["Capabilities:Administration:ChangeEntry"] <MoIcon Icon="@(_catalogOpen ? MoIcons.ChevronUp : MoIcons.ChevronDown)" Size="1.5rem" /></span>
                 </button>
                 <div class="catalog-body" id="capability-catalog-body">
                     <div class="catalog-heading"><h2>@L["Capabilities:Administration:Catalog"]</h2><span>@ResultCount</span></div>
-                    <MudTextField T="string" Value="@_state.Query" ValueChanged="SetQuery" Label="@L["Capabilities:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" />
+                    <MudTextField T="string" Value="@_state.Query" ValueChanged="SetQuery" Label="@L["Capabilities:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Immediate="true" />
                     <div class="catalog-filters">
-                        <MudSelect T="string" Value="@EffectiveFilter" ValueChanged="SetEffectiveFilter" Label="@L["Capabilities:Administration:EffectiveFilter"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string" Value="@EffectiveFilter" ValueChanged="SetEffectiveFilter" Label="@L["Capabilities:Administration:EffectiveFilter"]" Variant="Variant.Outlined" Margin="Margin.Dense">
                             <MudSelectItem T="string" Value='@("all")'>@L["Capabilities:Administration:AllEntries"]</MudSelectItem>
                             <MudSelectItem T="string" Value='@("available")'>@L["Capabilities:Administration:Available"]</MudSelectItem>
                             <MudSelectItem T="string" Value='@("unavailable")'>@L["Capabilities:Administration:Unavailable"]</MudSelectItem>
                         </MudSelect>
-                        <MudSelect T="string" Value="@SourceFilter" ValueChanged="SetSourceFilter" Label="@L["Capabilities:Administration:SourceFilter"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string" Value="@SourceFilter" ValueChanged="SetSourceFilter" Label="@L["Capabilities:Administration:SourceFilter"]" Variant="Variant.Outlined" Margin="Margin.Dense">
                             <MudSelectItem T="string" Value='@("all")'>@L["Capabilities:Administration:AllSources"]</MudSelectItem>
                             @if (_state.ActiveKind == AgentCapabilityKind.Skill)
                             {
@@ -72,7 +72,7 @@
                         @foreach (var catalogEntry in _state.VisibleEntries)
                         {
                             <button type="button" class="@(catalogEntry.Key == _state.SelectedEntry?.Key ? "entry-button selected" : "entry-button")" aria-pressed="@(catalogEntry.Key == _state.SelectedEntry?.Key ? "true" : "false")" data-entry-key="@catalogEntry.Key" @onclick="@(() => SelectEntry(catalogEntry))" @key="catalogEntry.Key">
-                                <span class="entry-identity"><MudIcon Icon="@GetEntryIcon(catalogEntry)" Size="Size.Small" /><strong>@catalogEntry.Title</strong></span>
+                                <span class="entry-identity"><MoIcon Icon="@GetEntryIcon(catalogEntry)" Size="1.25rem" /><strong>@catalogEntry.Title</strong></span>
                                 @if (catalogEntry.Title != catalogEntry.Name) { <span class="technical entry-name">@catalogEntry.Name</span> }
                                 <span class="entry-description">@catalogEntry.Description</span>
                                 <span class="entry-meta"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(catalogEntry)" Variant="Variant.Outlined">@GetStatusText(catalogEntry)</MudChip><span>@catalogEntry.Tools.Count @L["Capabilities:Tools"]</span></span>
@@ -86,17 +86,17 @@
             <div class="entry-dossier">
                 @if (_state.SelectedEntry is { } entry)
                 {
-                    @if (!_state.VisibleEntries.Any(item => item.Key == entry.Key)) { <MudAlert Severity="Severity.Info" Dense="true">@L["Capabilities:Administration:FilteredSelection"]</MudAlert> }
+                    @if (!_state.VisibleEntries.Any(item => item.Key == entry.Key)) { <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Capabilities:Administration:FilteredSelection"]</MudAlert> }
                     @RenderDetail(entry)
                 }
-                else { <MudAlert Severity="Severity.Info">@L["Capabilities:SelectPrompt"]</MudAlert> }
+                else { <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["Capabilities:SelectPrompt"]</MudAlert> }
             </div>
         </div>
     </div>;
 
     private RenderFragment RenderDetail(AgentCapabilityEntryInfo entry) => @<article class="detail-panel" @key="entry.Key">
         <header class="detail-header" data-entry-key="@entry.Key">
-            <span class="identity-emblem"><MudIcon Icon="@GetEntryIcon(entry)" /></span>
+            <span class="identity-emblem"><MoIcon Icon="@GetEntryIcon(entry)" Size="1.5rem" /></span>
             <div class="detail-heading"><h2 tabindex="-1" id="@(_focusVisit + "-detail-title")">@entry.Title</h2><span class="technical">@entry.Name</span><p>@entry.Description</p></div>
             <MudSwitch T="bool" Value="@entry.IsEntryEnabled" ValueChanged="@((bool value) => SetEntryEnabledAsync(entry, value))" ReadOnly="@Busy" aria-disabled="@BusyAttribute" Color="Color.Primary" Label="@L["Capabilities:Administration:EntryEnabled"]" />
         </header>
@@ -108,7 +108,7 @@
                 <div><dt>@L["Capabilities:Administration:ImplementationGate"]</dt><dd>@BooleanText(entry.IsBuiltInEnabled)</dd></div>
                 <div><dt>@L["Capabilities:Administration:EffectiveAvailability"]</dt><dd><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(entry)" Variant="Variant.Outlined">@GetStatusText(entry)</MudChip></dd></div>
             </dl>
-            @if (!string.IsNullOrWhiteSpace(entry.DisabledReason)) { <MudAlert Severity="@(GetStatusColor(entry) == Color.Default ? Severity.Info : Severity.Warning)" Dense="true">@FormatDisabledReason(entry.DisabledReason)</MudAlert> }
+            @if (!string.IsNullOrWhiteSpace(entry.DisabledReason)) { <MudAlert Icon="@(GetStatusColor(entry) == Color.Default ? MoIcons.Info : MoIcons.Warning)" Severity="@(GetStatusColor(entry) == Color.Default ? Severity.Info : Severity.Warning)" Dense="true">@FormatDisabledReason(entry.DisabledReason)</MudAlert> }
         </section>
         <section class="detail-section">
             <h3>@L["Capabilities:Administration:Registration"]</h3>
@@ -124,7 +124,7 @@
             <section class="detail-section exposure-section">
                 <h3>@L["Capabilities:Skill:McpServerTitle"]</h3><p>@L["Capabilities:Skill:McpServerDescription", entry.SkillMcpServerName ?? entry.Name]</p>
                 <MudSwitch T="bool" Value="@entry.IsMcpServerExposureEnabled" ValueChanged="@((bool value) => SetSkillMcpServerEnabledAsync(entry, value))" ReadOnly="@Busy" aria-disabled="@BusyAttribute" Color="Color.Primary" Label="@L["Capabilities:Skill:McpServerToggle"]" />
-                @if (entry.McpServerExposureRequiresRestart) { <MudAlert Severity="Severity.Info" Dense="true">@L["Capabilities:Skill:McpServerRestartHint"]</MudAlert> }
+                @if (entry.McpServerExposureRequiresRestart) { <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Capabilities:Skill:McpServerRestartHint"]</MudAlert> }
             </section>
         }
         @if (entry.Kind == AgentCapabilityKind.Mcp)
@@ -144,15 +144,15 @@
                     @if (!string.IsNullOrWhiteSpace(entry.McpDisplayUrl)) { <div class="full-evidence"><dt>@L["Capabilities:Administration:DisplayUrl"]</dt><dd class="technical">@entry.McpDisplayUrl</dd></div> }
                 </dl>
                 <div class="connection-actions">
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.NetworkPing" aria-disabled="@BusyAttribute" OnClick="@(() => TestMcpAsync(entry))">@L["Capabilities:Mcp:Test"]</MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@MoIcons.Pulse" aria-disabled="@BusyAttribute" OnClick="@(() => TestMcpAsync(entry))">@L["Capabilities:Mcp:Test"]</MudButton>
                     <MudTooltip Text="@L[CanCopyMcpConfig(entry) ? "Capabilities:Mcp:CopyConfigTooltip" : "Capabilities:Mcp:CopyConfigUnavailable"]">
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.ContentCopy" Disabled="@(!CanCopyMcpConfig(entry))" aria-disabled="@((Busy || _clipboardBusy || !CanCopyMcpConfig(entry)) ? "true" : "false")" OnClick="@(() => CopyMcpConfigAsync(entry))">@L[entry.McpExternalProfile?.Headers.Count > 0 ? "Capabilities:Administration:CopyIncludingHeaders" : "Capabilities:Mcp:CopyConfig"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@MoIcons.Copy" Disabled="@(!CanCopyMcpConfig(entry))" aria-disabled="@((Busy || _clipboardBusy || !CanCopyMcpConfig(entry)) ? "true" : "false")" OnClick="@(() => CopyMcpConfigAsync(entry))">@L[entry.McpExternalProfile?.Headers.Count > 0 ? "Capabilities:Administration:CopyIncludingHeaders" : "Capabilities:Mcp:CopyConfig"]</MudButton>
                     </MudTooltip>
-                    @if (CanExportSkillPack(entry)) { <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Download" aria-disabled="@BusyAttribute" OnClick="@(() => ShowSkillPackExportDialogAsync(entry))">@L["Capabilities:Mcp:ExportSkill:Action"]</MudButton> }
+                    @if (CanExportSkillPack(entry)) { <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@MoIcons.Download" aria-disabled="@BusyAttribute" OnClick="@(() => ShowSkillPackExportDialogAsync(entry))">@L["Capabilities:Mcp:ExportSkill:Action"]</MudButton> }
                     @if (entry.IsUserManaged)
                     {
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit" aria-disabled="@BusyAttribute" OnClick="@(() => ShowEditMcpProfileDialogAsync(entry))">@L["Common:Edit"]</MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" StartIcon="@Icons.Material.Filled.Delete" aria-disabled="@BusyAttribute" OnClick="@(() => DeleteMcpProfileAsync(entry))">@L["Common:Delete"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@MoIcons.Edit" aria-disabled="@BusyAttribute" OnClick="@(() => ShowEditMcpProfileDialogAsync(entry))">@L["Common:Edit"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" StartIcon="@MoIcons.Delete" aria-disabled="@BusyAttribute" OnClick="@(() => DeleteMcpProfileAsync(entry))">@L["Common:Delete"]</MudButton>
                     }
                 </div>
                 <div class="probe-evidence" role="status" aria-live="polite">
@@ -161,14 +161,14 @@
                     {
                         @if (probe.Result is { } result)
                         {
-                            <MudAlert Severity="@(result.Success ? Severity.Success : Severity.Error)" Dense="true">@FormatConnectivityMessage(result)</MudAlert>
+                            <MudAlert Icon="@(result.Success ? MoIcons.Success : MoIcons.Error)" Severity="@(result.Success ? Severity.Success : Severity.Error)" Dense="true">@FormatConnectivityMessage(result)</MudAlert>
                             <dl class="probe-facts">
                                 <div><dt>@L["Capabilities:Administration:TestedAt"]</dt><dd title="@result.TestedAt.ToLocalTime().ToString("O")">@result.TestedAt.ToLocalTime().ToString("g")</dd></div>
                                 <div><dt>@L["Capabilities:Administration:Duration", result.Duration.TotalMilliseconds.ToString("0")]</dt><dd>@L["Capabilities:Administration:ToolCount", result.ToolCount]</dd></div>
                             </dl>
                             @if (result.ToolNames is { Count: > 0 } toolNames) { <p class="technical">@string.Join(", ", toolNames)</p> }
                         }
-                        else { <MudAlert Severity="Severity.Error" Dense="true">@probe.Error</MudAlert> }
+                        else { <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@probe.Error</MudAlert> }
                     }
                     else { <p>@L["Capabilities:Administration:NoCheck"]</p> }
                 </div>
@@ -176,11 +176,11 @@
         }
         @if (!string.IsNullOrWhiteSpace(entry.Content))
         {
-            <MudExpansionPanels Elevation="0" Dense="true" Class="content-panels"><MudExpansionPanel Text="@L["Capabilities:Content"]" Icon="@Icons.Material.Filled.Article"><pre class="diagnostic-block">@entry.Content</pre></MudExpansionPanel></MudExpansionPanels>
+            <MudExpansionPanels Elevation="0" Dense="true" Class="content-panels"><MudExpansionPanel Text="@L["Capabilities:Content"]" Icon="@MoIcons.FileText"><pre class="diagnostic-block">@entry.Content</pre></MudExpansionPanel></MudExpansionPanels>
         }
         <section class="detail-section tools-section">
             <h3>@L["Capabilities:Sections:Tools"] <span class="section-count">@entry.Tools.Count</span></h3>
-            @if (!string.IsNullOrWhiteSpace(entry.DiscoveryError)) { <MudAlert Severity="Severity.Error" Dense="true"><strong>@L["Capabilities:Administration:DiscoveryFailed"]</strong><div>@SanitizeDiagnostic(entry, entry.DiscoveryError)</div></MudAlert> }
+            @if (!string.IsNullOrWhiteSpace(entry.DiscoveryError)) { <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true"><strong>@L["Capabilities:Administration:DiscoveryFailed"]</strong><div>@SanitizeDiagnostic(entry, entry.DiscoveryError)</div></MudAlert> }
             @if (entry.Tools.Count == 0)
             {
                 @if (string.IsNullOrWhiteSpace(entry.DiscoveryError)) { <MudText Typo="Typo.body2">@L["Capabilities:NoTools"]</MudText> }
@@ -208,7 +208,7 @@
                                 }
                                 @if (!string.IsNullOrWhiteSpace(context.ParametersSchemaJson))
                                 {
-                                    <MudExpansionPanels Elevation="0" Dense="true" Class="schema-panels"><MudExpansionPanel Text="@L["Capabilities:Tool:Schema"]" Icon="@Icons.Material.Filled.DataObject"><pre class="diagnostic-block">@context.ParametersSchemaJson</pre></MudExpansionPanel></MudExpansionPanels>
+                                    <MudExpansionPanels Elevation="0" Dense="true" Class="schema-panels"><MudExpansionPanel Text="@L["Capabilities:Tool:Schema"]" Icon="@MoIcons.Braces"><pre class="diagnostic-block">@context.ParametersSchemaJson</pre></MudExpansionPanel></MudExpansionPanels>
                                 }
                             </MudTd>
                         </RowTemplate>
@@ -258,5 +258,5 @@
     </details>;
     }
 
-    private RenderFragment RenderIssues(IReadOnlyList<string> issues) => @<MudAlert Severity="Severity.Warning" Dense="true"><ul class="issue-list">@foreach (var issue in issues) { <li>@issue</li> }</ul></MudAlert>;
+    private RenderFragment RenderIssues(IReadOnlyList<string> issues) => @<MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Dense="true"><ul class="issue-list">@foreach (var issue in issues) { <li>@issue</li> }</ul></MudAlert>;
 }

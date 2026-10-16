@@ -6,7 +6,7 @@
         class="mo-markdown-code @(_copied is true ? "mo-markdown-code--copied" : _copied is false ? "mo-markdown-code--failed" : null)"
         title="@(_copied is null ? L["Markdown:CopyHint"].Value : Feedback)"
         aria-label="@L["Markdown:CopyCode", Text]"
-        @onclick="CopyAsync"><code>@Text<MudIcon Icon="@CopyIcon" Class="mo-markdown-code__icon" /></code><span class="mud-sr-only" role="status">@Feedback</span></button>
+        @onclick="CopyAsync"><code>@Text<MoIcon Size="1.5rem" Icon="@CopyIcon" Class="mo-markdown-code__icon" /></code><span class="mud-sr-only" role="status">@Feedback</span></button>
 
 @code {
     /// <summary>The displayed code and exact clipboard payload; Markdown syntax delimiters are excluded.</summary>
@@ -27,9 +27,9 @@
 
     private string CopyIcon => _copied switch
     {
-        true => Icons.Material.Filled.Check,
-        false => Icons.Material.Filled.ErrorOutline,
-        _ => Icons.Material.Filled.ContentCopy
+        true => MoIcons.Check,
+        false => MoIcons.Error,
+        _ => MoIcons.Copy
     };
 
     protected override void OnParametersSet()

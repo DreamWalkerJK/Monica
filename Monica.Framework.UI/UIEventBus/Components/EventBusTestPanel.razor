@@ -10,7 +10,7 @@
 
 <section class="event-test-bench">
     <header class="test-bench-scope">
-        <div class="test-bench-scope-icon"><MudIcon Icon="@Icons.Material.Outlined.CloudQueue" /></div>
+        <div class="test-bench-scope-icon"><MoIcon Icon="@MoIcons.Cloud" Size="1.5rem" /></div>
         <div><span class="test-bench-kicker">@L["TestBench:Eyebrow"]</span><h2>@L["TestBench:Title"]</h2><p>@L["TestBench:Scope"]</p></div>
         <div class="test-bench-contract"><span>@L["TestBench:EventContract"]</span><code>@nameof(TestEventMessage)</code></div>
     </header>
@@ -21,8 +21,8 @@
                 <MudTextField T="string" @bind-Value="_publishTopicName" Label="@L["TestPanel:Publish:TopicName"]" Variant="Variant.Outlined" Immediate="true" Disabled="@(_retired || _commandBusy)" />
                 <MudTextField T="string" @bind-Value="_publishMessage" Label="@L["TestPanel:Publish:MessageContent"]" Placeholder="@L["TestPanel:Publish:MessagePlaceholder"]" Variant="Variant.Outlined" Immediate="true" Lines="6" Disabled="@(_retired || _commandBusy)" />
                 <p class="test-bench-help">@L["TestBench:AcceptanceHelp"]</p>
-                <div class="test-bench-publish-actions"><MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Send" OnClick="PublishMessageAsync" Disabled="@_retired" aria-disabled="@BusyAttribute" aria-busy="@(_publishing ? "true" : "false")">@(_publishing ? L["TestPanel:Publish:Sending"] : L["TestPanel:Publish:Send"])</MudButton></div>
-                @if (_accepted) { <p class="test-bench-accepted" role="status"><MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" />@L["TestBench:Accepted"]</p> }
+                <div class="test-bench-publish-actions"><MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@MoIcons.Send" OnClick="PublishMessageAsync" Disabled="@_retired" aria-disabled="@BusyAttribute" aria-busy="@(_publishing ? "true" : "false")">@(_publishing ? L["TestPanel:Publish:Sending"] : L["TestPanel:Publish:Send"])</MudButton></div>
+                @if (_accepted) { <p class="test-bench-accepted" role="status"><MoIcon Icon="@MoIcons.Success" Size="1.25rem" />@L["TestBench:Accepted"]</p> }
             </div>
         </section>
         <section class="test-bench-receive">
@@ -30,14 +30,14 @@
             <div class="test-bench-listener">
                 <MudTextField T="string" @bind-Value="_subscribeTopicName" Label="@L["TestPanel:Subscribe:TopicName"]" Variant="Variant.Outlined" Immediate="true" Disabled="@(_retired || _commandBusy || _ownsSubscription || !_listenerReady)" />
                 <div class="test-bench-listener-actions">
-                    <MudButton Color="@(_ownsSubscription ? Color.Warning : Color.Primary)" Variant="Variant.Outlined" StartIcon="@(_ownsSubscription ? Icons.Material.Outlined.StopCircle : Icons.Material.Outlined.PlayArrow)" OnClick="ToggleListeningAsync" Disabled="@_retired" aria-disabled="@ListenerBusyAttribute" aria-busy="@(_listenerBusy ? "true" : "false")">@(_ownsSubscription ? L["TestPanel:Subscribe:Stop"] : L["TestPanel:Subscribe:Start"])</MudButton>
+                    <MudButton Color="@(_ownsSubscription ? Color.Warning : Color.Primary)" Variant="Variant.Outlined" StartIcon="@(_ownsSubscription ? MoIcons.StopCircle : MoIcons.Play)" OnClick="ToggleListeningAsync" Disabled="@_retired" aria-disabled="@ListenerBusyAttribute" aria-busy="@(_listenerBusy ? "true" : "false")">@(_ownsSubscription ? L["TestPanel:Subscribe:Stop"] : L["TestPanel:Subscribe:Start"])</MudButton>
                     <MudButton Color="Color.Default" OnClick="ClearMessages" Disabled="@_retired" aria-disabled="@(_commandBusy || !_listenerReady || _messages.Count == 0 ? "true" : "false")">@L["TestPanel:Subscribe:Clear"]</MudButton>
                 </div>
             </div>
             <div class="test-bench-receipt-heading"><span>@L["TestBench:Retained", _messages.Count]</span><span>@L["TestBench:Retention"]</span></div>
             @if (_messages.Count == 0)
             {
-                <div class="test-bench-empty"><MudIcon Icon="@Icons.Material.Outlined.Inbox" /><h4>@L["TestPanel:Subscribe:NoMessages"]</h4><p>@L["TestBench:EmptyHelp"]</p></div>
+                <div class="test-bench-empty"><MoIcon Icon="@MoIcons.Inbox" Size="1.5rem" /><h4>@L["TestPanel:Subscribe:NoMessages"]</h4><p>@L["TestBench:EmptyHelp"]</p></div>
             }
             else
             {
@@ -45,14 +45,14 @@
                     @foreach (var message in _messages.AsEnumerable().Reverse())
                     {
                         <li @key="message">
-                            <header><span class="test-bench-received-mark"><MudIcon Icon="@Icons.Material.Outlined.CallReceived" Size="Size.Small" />@L["TestBench:Received"]</span><time>@message.ReceivedAt.ToString("HH:mm:ss.fff")</time></header>
+                            <header><span class="test-bench-received-mark"><MoIcon Icon="@MoIcons.ArrowDownLeft" Size="1.25rem" />@L["TestBench:Received"]</span><time>@message.ReceivedAt.ToString("HH:mm:ss.fff")</time></header>
                             <p class="test-bench-message">@message.EventData.Message</p>
                             <dl><div><dt>@L["TestPanel:Publish:TopicName"]</dt><dd><code>@message.TopicName</code></dd></div><div><dt>@L["TestBench:MessageId"]</dt><dd><code>@message.EventData.MessageId</code></dd></div><div><dt>@L["TestBench:CreatedUtc"]</dt><dd><time>@message.EventData.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss.fff")</time></dd></div></dl>
                         </li>
                     }
                 </ol>
             }
-            <footer class="test-bench-listener-help"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" /><p>@L["TestBench:ListenerLifetime"]</p></footer>
+            <footer class="test-bench-listener-help"><MoIcon Icon="@MoIcons.Info" Size="1.25rem" /><p>@L["TestBench:ListenerLifetime"]</p></footer>
         </section>
     </div>
 </section>

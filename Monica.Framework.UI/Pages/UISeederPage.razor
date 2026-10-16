@@ -19,7 +19,7 @@
     else if (!_isAuthorized || _session?.IsAccessDenied == true)
     {
         <div class="seeder-page-state" role="alert">
-            <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Large" />
+            <MoIcon Icon="@MoIcons.Lock" Style="color:var(--mud-palette-warning)" Size="2.25rem" />
             <MudText Typo="Typo.h5">@L["Access:DeniedTitle"]</MudText>
             <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Access:DeniedDescription"]</MudText>
         </div>
@@ -32,12 +32,12 @@
                     <span class="seeder-page-eyebrow">@L["Page:Eyebrow"]</span>
                     <h1>@L["Page:Heading"]</h1>
                     <p>@L["Page:Subtitle"]</p>
-                    <div class="seeder-page-host"><MudIcon Icon="@Icons.Material.Outlined.Dns" Size="Size.Small" /><span>@L["Page:CurrentHost", session.HostName]</span></div>
+                    <div class="seeder-page-host"><MoIcon Icon="@MoIcons.Server" Size="1.25rem" /><span>@L["Page:CurrentHost", session.HostName]</span></div>
                 </div>
                 <div class="seeder-page-actions">
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Primary"
-                               StartIcon="@Icons.Material.Outlined.Refresh"
+                               StartIcon="@MoIcons.Refresh"
                                Disabled="@session.IsRefreshing"
                                OnClick="@(() => RefreshAsync(session))">
                         @L["Actions:Refresh"]
@@ -47,7 +47,7 @@
 
             @if (session.RefreshError is { } refreshError)
             {
-                <MudAlert Severity="Severity.Warning"
+                <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning"
                           Variant="Variant.Outlined"
                           Dense="true"
                           Class="seeder-page-refresh-alert"
@@ -69,7 +69,7 @@
                     break;
                 case SeederPageLoadState.Failed:
                     <div class="seeder-page-state" role="alert">
-                        <MudIcon Icon="@Icons.Material.Filled.CloudOff" Color="Color.Error" Size="Size.Large" />
+                        <MoIcon Icon="@MoIcons.CloudOff" Style="color:var(--mud-palette-error)" Size="2.25rem" />
                         <MudText Typo="Typo.h6">@L["State:LoadFailed"]</MudText>
                         <MudText Typo="Typo.body2"
                                  Color="Color.Secondary"
@@ -78,7 +78,7 @@
                         </MudText>
                         <MudButton Variant="Variant.Outlined"
                                    Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.Refresh"
+                                   StartIcon="@MoIcons.Refresh"
                                    OnClick="@(() => RefreshAsync(session))">
                             @L["Actions:Retry"]
                         </MudButton>

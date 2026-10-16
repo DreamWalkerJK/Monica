@@ -4,6 +4,7 @@ using Microsoft.Extensions.Localization;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.Executions.Support;
@@ -78,12 +79,12 @@ internal static class ExecutionUiPresentation
 
     internal static string GetStateIcon(JobExecutionState state) => state switch
     {
-        JobExecutionState.Queued => Icons.Material.Filled.Schedule,
-        JobExecutionState.Running => Icons.Material.Filled.PlayCircle,
-        JobExecutionState.Succeeded => Icons.Material.Filled.CheckCircle,
-        JobExecutionState.Failed => Icons.Material.Filled.Error,
-        JobExecutionState.Cancelled => Icons.Material.Filled.Cancel,
-        JobExecutionState.Skipped => Icons.Material.Filled.SkipNext,
-        _ => Icons.Material.Filled.Circle
+        JobExecutionState.Queued => MoIcons.Clock,
+        JobExecutionState.Running => MoIcons.PlayCircle,
+        JobExecutionState.Succeeded => MoIcons.Success,
+        JobExecutionState.Failed => MoIcons.Error,
+        JobExecutionState.Cancelled => MoIcons.Error,
+        JobExecutionState.Skipped => MoIcons.SkipNext,
+        _ => MoIcons.Circle
     };
 }

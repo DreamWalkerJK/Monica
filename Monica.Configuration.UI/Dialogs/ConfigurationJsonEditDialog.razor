@@ -8,7 +8,7 @@
     <TitleContent><MoDialogHeading Text="@L["ImportExport:JsonEditor:Title"]" /></TitleContent>
     <DialogContent>
         <div class="configuration-json-edit-dialog">
-        <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:FragmentNotice"]</MudAlert>
+        <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Validation:FragmentNotice"]</MudAlert>
         <MudStack Spacing="3">
             <MudPaper Square="true" Elevation="0" Class="configuration-json-identity">
                 <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
@@ -34,11 +34,11 @@
 
             @if (_blockedByPendingState)
             {
-                <MudAlert Severity="Severity.Warning">@L["ImportExport:JsonEditor:PendingStateUnavailable"]</MudAlert>
+                <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning">@L["ImportExport:JsonEditor:PendingStateUnavailable"]</MudAlert>
             }
             else if (!_editorDocument.CanAnalyze)
             {
-                <MudAlert Severity="Severity.Warning">@L["ImportExport:JsonEditor:BaselineUnavailable"]</MudAlert>
+                <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning">@L["ImportExport:JsonEditor:BaselineUnavailable"]</MudAlert>
             }
 
             @if (CanAnalyze)
@@ -55,7 +55,7 @@
 
             @if (_draft is { IsJsonValid: false })
             {
-                <MudAlert Severity="Severity.Error">@_draft.ParseError</MudAlert>
+                <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_draft.ParseError</MudAlert>
             }
             else if (_draft is not null)
             {
@@ -73,7 +73,7 @@
                             <MudText Typo="Typo.subtitle2">@L["ImportExport:Diagnostics:Title"]</MudText>
                             @foreach (var diagnostic in _draft.Diagnostics)
                             {
-                                <MudAlert Severity="@DiagnosticSeverity(diagnostic)" Dense="true">
+                                <MudAlert Icon="@((DiagnosticSeverity(diagnostic)) switch { Severity.Success => MoIcons.Success, Severity.Warning => MoIcons.Warning, Severity.Error => MoIcons.Error, _ => MoIcons.Info })" Severity="@DiagnosticSeverity(diagnostic)" Dense="true">
                                     @diagnostic.Message
                                 </MudAlert>
                             }
@@ -90,7 +90,7 @@
                 }
                 else if (_draft.ValidationIssues.Count == 0)
                 {
-                    <MudAlert Severity="Severity.Info">@L["ImportExport:JsonEditor:NoState"]</MudAlert>
+                    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["ImportExport:JsonEditor:NoState"]</MudAlert>
                 }
             }
         </MudStack>
@@ -100,14 +100,14 @@
         <div class="configuration-json-actions">
         <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
         <MudButton Variant="Variant.Outlined"
-                   StartIcon="@Icons.Material.Outlined.Rule"
+                   StartIcon="@MoIcons.ListChecks"
                    Disabled="@(!CanAnalyze)"
                    OnClick="Analyze">
             @L["Common:Actions:Analyze"]
         </MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
-                   StartIcon="@Icons.Material.Outlined.PlaylistAddCheck"
+                   StartIcon="@MoIcons.ListChecks"
                    Disabled="@(!CanApply)"
                    OnClick="Apply">
             @L["Common:Actions:Apply"]

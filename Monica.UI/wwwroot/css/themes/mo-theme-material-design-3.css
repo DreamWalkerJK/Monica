@@ -11,6 +11,10 @@
 :root[data-theme="material-design-3-dark"],
 .mo-theme-material-design-3-light,
 .mo-theme-material-design-3-dark {
+    --mo-scrollbar-radius: 999px;
+    --mo-color-scrollbar-thumb: color-mix(in srgb, var(--mud-palette-secondary) 34%, transparent);
+    --mo-color-scrollbar-thumb-hover: color-mix(in srgb, var(--mud-palette-secondary) 58%, transparent);
+    --mo-color-scrollbar-thumb-active: color-mix(in srgb, var(--mud-palette-secondary) 82%, transparent);
     --mo-m3-font-text: 'MoM3Text', Roboto, sans-serif;
     --mo-m3-font-display: 'MoM3Display', 'MoM3Text', Roboto, sans-serif;
     --mo-m3-font-mono: 'MoM3Mono', 'Geist Mono', monospace;
@@ -356,18 +360,7 @@
     color: var(--mo-m3-inverse-on-surface);
 }
 
-.mo-theme-material-design-3-light :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root),
-.mo-theme-material-design-3-dark :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root) {
+.mo-theme-material-design-3-light :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar :is(.mud-icon-root, .mo-icon)),
+.mo-theme-material-design-3-dark :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar :is(.mud-icon-root, .mo-icon)) {
     color: inherit;
-}
-
-.mo-theme-material-design-3-light ::-webkit-scrollbar-thumb,
-.mo-theme-material-design-3-dark ::-webkit-scrollbar-thumb {
-    background: var(--mo-m3-outline-variant);
-    border-radius: var(--mo-m3-shape-full);
-}
-
-.mo-theme-material-design-3-light ::-webkit-scrollbar-thumb:hover,
-.mo-theme-material-design-3-dark ::-webkit-scrollbar-thumb:hover {
-    background: var(--mo-m3-outline);
 }

@@ -3,8 +3,8 @@
 <section class="telemetry-registry" aria-label="@L["Registry:Title"]">
     <header class="registry-heading"><div><span class="registry-eyebrow">@L["Registry:Eyebrow"]</span><h2>@L["Registry:Title"]</h2></div><span class="registry-count">@Instruments.Count</span></header>
     <div class="registry-filters">
-        <div><MudTextField T="string" Value="@NameFilter" ValueChanged="OnNameFilter" Immediate="true" Placeholder="@L["Registry:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" aria-label="@L["Filter:InstrumentName"]" /></div>
-        <div><MudSelect T="string" Value="@MeterFilter" ValueChanged="OnMeterFilter" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" aria-label="@L["Filter:MeterPrefix"]"><MudSelectItem T="string" Value="@string.Empty">@L["Filter:AllMeters"]</MudSelectItem>@foreach (var meter in MeterNames) { <MudSelectItem T="string" Value="@meter">@meter</MudSelectItem> }</MudSelect></div>
+        <div><MudTextField T="string" Value="@NameFilter" ValueChanged="OnNameFilter" Immediate="true" Placeholder="@L["Registry:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" aria-label="@L["Filter:InstrumentName"]" /></div>
+        <div><MudSelect T="string" Value="@MeterFilter" ValueChanged="OnMeterFilter" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" aria-label="@L["Filter:MeterPrefix"]" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp"><MudSelectItem T="string" Value="@string.Empty">@L["Filter:AllMeters"]</MudSelectItem>@foreach (var meter in MeterNames) { <MudSelectItem T="string" Value="@meter">@meter</MudSelectItem> }</MudSelect></div>
     </div>
     @if (Instruments.Count == 0)
     {
@@ -19,11 +19,11 @@
                 <button type="button" class="registry-row @(selected ? "is-selected" : null)" data-instrument-id="@instrument.InstrumentId" data-instrument-name="@instrument.Name" aria-pressed="@(selected ? "true" : "false")" @onclick="@(() => OnSelect.InvokeAsync(instrument))">
                     <span class="registry-row-meta"><span>@instrument.Kind</span><span>@instrument.TagSets.Count @L["Registry:Series"]</span></span>
                     <strong>@instrument.Name</strong><span class="registry-meter">@instrument.MeterName @if (!string.IsNullOrEmpty(instrument.MeterVersion)) { <span>· @instrument.MeterVersion</span> }</span>
-                    @if (instrument.Overflow) { <span class="registry-overflow"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />@L["Registry:Dropped", instrument.DroppedSamples]</span> }
+                    @if (instrument.Overflow) { <span class="registry-overflow"><MoIcon Icon="@MoIcons.Info" Size="1.25rem" />@L["Registry:Dropped", instrument.DroppedSamples]</span> }
                 </button>
             }
         </div>
-        <footer class="registry-footer"><span>@L["Registry:Shown", (_page - 1) * PageSize + 1, Math.Min(_page * PageSize, Instruments.Count), Instruments.Count]</span>@if (PageCount > 1) { <MudPagination Count="@PageCount" Selected="_page" SelectedChanged="SetPage" ShowFirstButton="true" ShowLastButton="true" Color="Color.Default" Size="Size.Small" /> }</footer>
+        <footer class="registry-footer"><span>@L["Registry:Shown", (_page - 1) * PageSize + 1, Math.Min(_page * PageSize, Instruments.Count), Instruments.Count]</span>@if (PageCount > 1) { <MudPagination Count="@PageCount" Selected="_page" SelectedChanged="SetPage" ShowFirstButton="true" ShowLastButton="true" Color="Color.Default" Size="Size.Small" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /> }</footer>
     }
 </section>
 

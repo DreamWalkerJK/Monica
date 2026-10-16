@@ -5,11 +5,11 @@
         <MudTextField T="string" Value="@Session.NameFilter" ValueChanged="@Session.SetNameFilterAsync"
                       Placeholder="@L["Filters:NamePlaceholder"]" aria-label="@L["Filters:NameLabel"]"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Clearable="true"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Class="health-search" />
+                      Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Class="health-search" ClearIcon="@MoIcons.Close" />
         <div class="health-tag-control">
             <MudSelect T="string" Value="@Session.TagFilter" ValueChanged="@Session.SetTagFilterAsync"
                    Label="@L["Filters:TagLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                   Clearable="true" Class="health-tag-filter">
+                   Clearable="true" Class="health-tag-filter" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" ClearIcon="@MoIcons.Close">
             @foreach (var tag in Session.AvailableTags)
             {
                 <MudSelectItem T="string" Value="@tag">@tag</MudSelectItem>

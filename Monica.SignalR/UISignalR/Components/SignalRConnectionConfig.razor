@@ -5,7 +5,7 @@
 <section class="signalr-connection-config" aria-labelledby="@_headingId" aria-busy="@(IsLoading ? "true" : "false")">
     <MudPaper Square="true" Elevation="0" Class="connection-config-surface">
         <header class="connection-config-heading">
-            <span class="connection-config-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Cable" /></span>
+            <span class="connection-config-icon" aria-hidden="true"><MoIcon Icon="@MoIcons.Cable" Size="1.5rem" /></span>
             <div>
                 <h2 id="@_headingId">@L["UISignalR:ConnectionConfig:Title"]</h2>
                 <p>@L["UISignalR:ConnectionConfig:Intro"]</p>
@@ -15,7 +15,7 @@
         <div class="connection-config-body">
             @if (LoadFailed)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true">@L[DataLoaded ? "UISignalR:ConnectionConfig:LoadFailedRetained" : "UISignalR:ConnectionConfig:LoadFailed"]</MudAlert>
+                <MudAlert Severity="Severity.Warning" Dense="true" Icon="@MoIcons.Warning">@L[DataLoaded ? "UISignalR:ConnectionConfig:LoadFailedRetained" : "UISignalR:ConnectionConfig:LoadFailed"]</MudAlert>
             }
             @if (IsLoading)
             {
@@ -23,18 +23,18 @@
             }
             else if (!DataLoaded && !LoadFailed)
             {
-                <MudAlert Severity="Severity.Info" Dense="true">@L["UISignalR:ConnectionConfig:NotLoaded"]</MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true" Icon="@MoIcons.Info">@L["UISignalR:ConnectionConfig:NotLoaded"]</MudAlert>
             }
             else if (DataLoaded && AvailableHubs.Count == 0 && !LoadFailed)
             {
-                <MudAlert Severity="Severity.Info" Dense="true">@L["UISignalR:ConnectionConfig:NoHubs"]</MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true" Icon="@MoIcons.Info">@L["UISignalR:ConnectionConfig:NoHubs"]</MudAlert>
             }
 
             <div class="connection-config-fields">
                 <MudSelect T="string" Value="@SelectedHubRoute" ValueChanged="ChangeSelectedRouteAsync"
                            Label="@L[IsConnected ? "UISignalR:ConnectionConfig:DraftHubLabel" : "UISignalR:ConnectionConfig:HubUrlLabel"]"
                            HelperText="@L[IsConnected ? "UISignalR:ConnectionConfig:DraftHubHelper" : "UISignalR:ConnectionConfig:HubUrlHelper"]"
-                           Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(IsConnecting || IsLoading || !DataLoaded || AvailableHubs.Count == 0)">
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(IsConnecting || IsLoading || !DataLoaded || AvailableHubs.Count == 0)" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                     @foreach (var hub in AvailableHubs)
                     {
                         <MudSelectItem Value="@hub.Route">@hub.HubName (@hub.Route)</MudSelectItem>
@@ -55,11 +55,11 @@
                     }
                     else
                     {
-                        <MudIcon Icon="@Icons.Material.Outlined.Cable" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.Cable" Size="1.25rem" />
                         <span>@L[IsConnected ? "UISignalR:ConnectionConfig:Reconnect" : "UISignalR:ConnectionConfig:Connect"]</span>
                     }
                 </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.PowerOff"
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@MoIcons.Unplug"
                            OnClick="DisconnectAsync" Disabled="@(!IsConnected || IsConnecting)" Class="connection-config-action">
                     @L["UISignalR:ConnectionConfig:Disconnect"]
                 </MudButton>
@@ -68,7 +68,7 @@
             <div class="connection-config-test-user">
                 @if (CanGenerateTestToken)
                 {
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Science"
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Flask"
                                OnClick="TestUserConnectAsync" Disabled="@ConnectionActionsDisabled" Class="connection-config-action">
                         @L["UISignalR:ConnectionConfig:TestUserConnect"]
                     </MudButton>
@@ -82,7 +82,7 @@
         </div>
 
         <footer class="connection-config-footer">
-            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Refresh"
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@MoIcons.Refresh"
                        OnClick="RefreshHubsAsync" Disabled="@(IsLoading || IsConnecting)">@L["UISignalR:ConnectionConfig:RefreshHubInfo"]</MudButton>
             @if (CapturedAtUtc is { } capturedAt)
             {

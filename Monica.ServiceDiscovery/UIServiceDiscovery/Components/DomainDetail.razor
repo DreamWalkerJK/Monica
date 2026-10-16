@@ -17,14 +17,14 @@
                     <div class="domain-detail__header-main">
                         <MudButton Class="domain-detail__back"
                                    Variant="Variant.Text"
-                                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                                   StartIcon="@MoIcons.ArrowLeft"
                                    OnClick="OnBackClick">
                             @L["DomainDetail:Actions:BackToList"]
                         </MudButton>
                         <MudDivider Class="domain-detail__header-divider" Vertical="true" FlexItem="false" />
                         <div class="domain-detail__identity">
                             <MudAvatar Class="@GetDomainAvatarClass()">
-                                <MudIcon Icon="@Icons.Material.Filled.Domain" />
+                                <MoIcon Icon="@MoIcons.Building" Size="1.5rem" />
                             </MudAvatar>
                             <div class="domain-detail__copy">
                                 <MudText Typo="Typo.h5" Class="domain-detail__title">@(_domainDetail.Domain.DisplayName ?? _domainDetail.Domain.Name)</MudText>
@@ -40,7 +40,7 @@
                                Color="Color.Primary"
                                OnClick="RefreshDomainDetailAsync"
                                Disabled="@_isLoading">
-                        <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
+                        <MoIcon Icon="@MoIcons.Refresh" Class="mr-1" Size="1.5rem" />
                         @L["Shared:Actions:Refresh"]
                     </MudButton>
                 </div>
@@ -63,15 +63,15 @@
                                 </MudStack>
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" Class="domain-detail__field-row">
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DomainDetail:Fields:OwnedServices"]</MudText>
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Text="@L["DomainDetail:Counts:Services", GetOwnedServicesCount()]" />
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Text="@L["DomainDetail:Counts:Services", GetOwnedServicesCount()]" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" />
                                 </MudStack>
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" Class="domain-detail__field-row">
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DomainDetail:Fields:DependentServices"]</MudText>
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@L["DomainDetail:Counts:Services", GetDependentServicesCount()]" />
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@L["DomainDetail:Counts:Services", GetDependentServicesCount()]" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" />
                                 </MudStack>
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" Class="domain-detail__field-row">
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">@L["DomainDetail:Fields:RunningServices"]</MudText>
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="@L["DomainDetail:Counts:Services", GetRunningServicesCount()]" />
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="@L["DomainDetail:Counts:Services", GetRunningServicesCount()]" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" />
                                 </MudStack>
                             </MudStack>
                         </MudStack>
@@ -81,7 +81,7 @@
                 <MudItem xs="12" md="8">
                     <MudPaper Class="pa-4 domain-detail__section">
                         <MudStack Spacing="3">
-                            <MudTabs Elevation="0" Rounded="true" TabPanelsClass="pa-0" Class="domain-detail__tabs">
+                            <MudTabs Elevation="0" Rounded="true" TabPanelsClass="pa-0" Class="domain-detail__tabs" PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight">
                                 <MudTabPanel Text="@L["DomainDetail:Tabs:OwnedServices", GetOwnedServicesCount()]">
                                     <MudStack Spacing="3" Class="mt-3">
                                         @if (_isLoading)
@@ -264,10 +264,10 @@
                 <div class="domain-service-card__main">
                     <div class="domain-service-card__heading">
                         <MudText Typo="Typo.h6" Class="domain-service-card__title">@service.AppName</MudText>
-                        <MudChip T="string" Size="Size.Small" Color="@service.OverallStatus.GetColor()" Text="@service.OverallStatus.GetText(L)" />
+                        <MudChip T="string" Size="Size.Small" Color="@service.OverallStatus.GetColor()" Text="@service.OverallStatus.GetText(L)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" />
                         @if (!isOwnedService)
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@L["DomainDetail:ServiceCard:ExternalDependency"]" />
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@L["DomainDetail:ServiceCard:ExternalDependency"]" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" />
                         }
                     </div>
                     <div class="domain-service-card__metadata">
@@ -293,7 +293,7 @@
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["DomainDetail:ServiceCard:DependentSubDomains"]</MudText>
                             @foreach (var subDomain in service.DependentSubDomains)
                             {
-                                <MudChip T="string" Size="Size.Small" Color="@(subDomain == DomainName ? Color.Warning : Color.Surface)" Text="@subDomain" />
+                                <MudChip T="string" Size="Size.Small" Color="@(subDomain == DomainName ? Color.Warning : Color.Surface)" Text="@subDomain" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" />
                             }
                         </div>
                     }

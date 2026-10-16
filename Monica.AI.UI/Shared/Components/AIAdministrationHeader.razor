@@ -15,13 +15,13 @@
     </header>
     <MoWorkbenchNavigation Label="@L["Administration:Navigation"]">
         <a href="@ProviderManagePage.PAGE_URL" aria-current="@(IsProviderPage ? "page" : null)">
-            <MudIcon Icon="@Icons.Material.Outlined.Hub" />@L["Administration:Providers"]
+            <MoIcon Icon="@MoIcons.Network" Size="1.5rem" />@L["Administration:Providers"]
         </a>
         <a href="@AgentCapabilityManagePage.PAGE_URL" aria-current="@(!IsProviderPage && !IsMcpPage ? "page" : null)">
-            <MudIcon Icon="@Icons.Material.Outlined.Extension" />@L["Administration:Skills"]
+            <MoIcon Icon="@MoIcons.Puzzle" Size="1.5rem" />@L["Administration:Skills"]
         </a>
         <a href="@McpCapabilityManagePage.PAGE_URL" aria-current="@(!IsProviderPage && IsMcpPage ? "page" : null)">
-            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" />@L["Administration:Mcp"]
+            <MoIcon Icon="@MoIcons.Workflow" Size="1.5rem" />@L["Administration:Mcp"]
         </a>
     </MoWorkbenchNavigation>
 </div>

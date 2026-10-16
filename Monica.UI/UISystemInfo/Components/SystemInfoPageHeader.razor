@@ -19,13 +19,13 @@
                 <time datetime="@snapshot.CapturedAtUtc.ToString("O")" title="@SystemInfoDisplayFormatter.FormatDateTime(snapshot.CapturedAtUtc, CultureInfo.CurrentCulture)">@SystemInfoDisplayFormatter.FormatTime(snapshot.CapturedAtUtc, CultureInfo.CurrentCulture)</time>
             </div>
         }
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh"
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Refresh"
                    Disabled="@IsRefreshing" OnClick="RefreshRequested" Class="system-info-action">
             @L["Page:Actions:Refresh"]
         </MudButton>
         @if (EnableRestart)
         {
-            <MudButton Variant="Variant.Text" Color="Color.Default" StartIcon="@Icons.Material.Outlined.RestartAlt"
+            <MudButton Variant="Variant.Text" Color="Color.Default" StartIcon="@MoIcons.Restart"
                        Disabled="@RestartRequested" OnClick="RestartRequestedCallback" Class="system-info-action">
                 @L["Page:Actions:Restart"]
             </MudButton>

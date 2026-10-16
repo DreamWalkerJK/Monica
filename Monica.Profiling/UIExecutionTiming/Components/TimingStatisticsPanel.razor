@@ -12,9 +12,9 @@
         <div class="timing-ledger-controls">
             <div><MudTextField T="string" @ref="_searchField" Value="_query" ValueChanged="SearchChanged" Immediate="true" DebounceInterval="180"
                               Label="@L["Statistics:Search"]" Placeholder="@L["Statistics:SearchPlaceholder"]" Variant="Variant.Outlined"
-                              Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" /></div>
+                              Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" /></div>
             <div><MudSelect T="StatisticsOrder" Value="_order" ValueChanged="OrderChanged" Label="@L["Common:Order"]"
-                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                           Variant="Variant.Outlined" Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 <MudSelectItem Value="@StatisticsOrder.Mean">@L["Statistics:Ordering:Mean"]</MudSelectItem>
                 <MudSelectItem Value="@StatisticsOrder.Latest">@L["Statistics:Ordering:Latest"]</MudSelectItem>
                 <MudSelectItem Value="@StatisticsOrder.Samples">@L["Statistics:Ordering:Samples"]</MudSelectItem>
@@ -22,7 +22,7 @@
             </MudSelect></div>
             @if (_query.Length != 0)
             {
-                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Close" OnClick="ClearSearchAsync">@L["Common:Clear"]</MudButton>
+                <MudButton Variant="Variant.Text" StartIcon="@MoIcons.Close" OnClick="ClearSearchAsync">@L["Common:Clear"]</MudButton>
             }
         </div>
     }
@@ -63,7 +63,7 @@
                                 <div><span>@L["Columns:AverageMemory"]</span><strong>@ExecutionTimingDisplayFormatter.FormatMemory(item.AverageMemoryBytes)</strong></div>
                                 <div><span>@L["Columns:LastMemory"]</span><strong>@ExecutionTimingDisplayFormatter.FormatMemory(item.LastMemoryBytes)</strong></div>
                             </div></td>
-                            <td class="timing-action-column"><MudIconButton Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small"
+                            <td class="timing-action-column"><MudIconButton Icon="@MoIcons.ArrowRight" Size="Size.Small"
                                 Color="Color.Primary" aria-label="@L["Common:Inspect", item.OperationKey]"
                                 OnClick="@(() => OnInspect.InvokeAsync(new TimingCompletedEvidence(item, CapturedAt)))" /></td>
                         </tr>
@@ -74,7 +74,7 @@
     }
     else
     {
-        <div class="timing-empty" role="status"><MudIcon Icon="@(Statistics.Count == 0 ? Icons.Material.Outlined.QueryStats : Icons.Material.Outlined.SearchOff)" />
+        <div class="timing-empty" role="status"><MoIcon Icon="@(Statistics.Count == 0 ? MoIcons.ChartTrend : MoIcons.SearchOff)" Size="1.5rem" />
             <div><strong>@(Statistics.Count == 0 ? L["Statistics:Empty"] : L["Common:NoMatches"])</strong>
                 <p>@(Statistics.Count == 0 ? L["Statistics:EmptyHelp"] : L["Common:NoMatchesHelp"])</p></div></div>
     }
@@ -83,7 +83,7 @@
         @if (PageCount > 1)
         {
             <MudPagination Count="@PageCount" Selected="_page" SelectedChanged="ChangePage" ShowFirstButton="true" ShowLastButton="true"
-                           Size="Size.Small" Color="Color.Primary" aria-label="@L["Statistics:Pagination"]" />
+                           Size="Size.Small" Color="Color.Primary" aria-label="@L["Statistics:Pagination"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
         }
         <span>@L["Common:PageRange", FirstVisible, LastVisible, Matches.Count]</span>
     </footer>

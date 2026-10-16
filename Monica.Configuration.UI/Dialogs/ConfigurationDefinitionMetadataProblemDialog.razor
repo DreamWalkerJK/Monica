@@ -3,7 +3,7 @@
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="3">
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+            <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined">
                 @L["State:Definitions:ProblemSummary"]
             </MudAlert>
 
@@ -35,7 +35,7 @@
                 <div class="configuration-definition-problem-message">@Diagnostic.Message</div>
             </MudStack>
 
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Variant="Variant.Outlined">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.subtitle2">@L["State:Definitions:RepairTitle"]</MudText>
                     <MudText Typo="Typo.body2">

@@ -12,7 +12,7 @@ h2 { font-size: 18px; line-height: 1.4; font-weight: 500; margin: 0; }
 .cap-notice { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px; padding: 4px 16px; font-size: 12px; line-height: 1.6; background: color-mix(in srgb, var(--mud-palette-info) 6%, var(--mud-palette-surface)); }
 .cap-notice ::deep .mud-button { min-height:44px; color:var(--mud-palette-text-primary); text-decoration:underline; }
 .retained-note { margin: 0; padding: 12px 16px; }
-.inventory-list { max-height: var(--file-inventory-height, 480px); overflow-y: auto; min-width: 0; overscroll-behavior: contain; scrollbar-width: thin; }
+.inventory-list { max-height: var(--file-inventory-height, 480px); overflow-y: auto; min-width: 0; overscroll-behavior: contain; }
 .inventory-list:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: -3px; }
 .inventory-owner ::deep .mud-table { background: var(--mud-palette-surface); border: 0; border-radius: 0; min-width: 0; }
 .inventory-owner ::deep .mud-table-container { width: 100%; min-width: 0; border: 0; border-radius: 0; box-sizing: border-box; overflow: visible; }
@@ -32,7 +32,7 @@ h2 { font-size: 18px; line-height: 1.4; font-weight: 500; margin: 0; }
 .inventory-owner ::deep .entry-selected { background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface)); box-shadow: inset 3px 0 0 var(--mud-palette-primary); }
 .inventory-owner ::deep .mud-table-row:last-child .mud-table-cell { border-bottom: 0; }
 .entry-identity { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
-.entry-identity > ::deep .mud-icon-root { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 13px; }
+.entry-identity > ::deep :is(.mud-icon-root, .mo-icon) { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 13px; }
 .entry-identity ::deep .entry-open { padding: 3px 0; min-height: 44px; min-width: 0; justify-content: flex-start; text-transform: none; text-align: start; font-size: 13px; line-height: 1.5; font-weight: 400; color: var(--mud-palette-text-primary); overflow-wrap: anywhere; }
 .inventory-owner ::deep .entry-selected .entry-open { font-weight: 500; }
 .entry-identity ::deep .entry-open .mud-button-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
@@ -53,7 +53,7 @@ h2 { font-size: 18px; line-height: 1.4; font-weight: 500; margin: 0; }
 @container file-workspace (max-width:600px) { .inventory-toolbar { padding: 16px 20px; } .toolbar-actions { width: 100%; margin-inline-start: 0; } .empty-state { padding: 24px 20px; } .entry-metadata { margin-inline-start: 0; } .entry-identity { gap: 6px; } .entry-indicators { margin-inline-start: 0; } }
 
 .inventory-toolbar ::deep .inventory-sort .mud-button { min-width:44px; min-height:44px; padding:6px 8px; white-space:normal; font-size:12px; font-weight:500; }
-.inventory-toolbar ::deep .inventory-sort .mud-icon-root { width:18px; height:18px; }
+.inventory-toolbar ::deep .inventory-sort :is(.mud-icon-root, .mo-icon) { width:18px; height:18px; }
 .selection-band { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; padding:8px 16px; border-bottom:1px solid var(--mud-palette-lines-default); background:color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-surface)); }
 .selection-band ::deep .mud-button { min-height:44px; font-size:12px; font-weight:500; }
 .selection-band ::deep .mud-button-outlined-error:not(:disabled):not([aria-disabled="true"]) {

@@ -26,11 +26,13 @@ public sealed class ConfigurationEffectiveStateReader(
     /// <param name="definition">The definition that owns the value.</param>
     /// <param name="logicalPath">The logical path to read.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="includeSensitive">Whether to include annotated sensitive values; false masks them by default.</param>
     /// <returns>The display-safe effective value.</returns>
     public async Task<ConfigurationEffectiveValue> ReadValueAsync(
         ConfigurationDefinition definition,
         LogicalPath logicalPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeSensitive = false)
     {
         var document = await effectiveValueStore.GetAsync(definition.DefinitionKey, cancellationToken);
         var targetNode = ConfigurationSchemaNavigator.ResolveNode(definition.Root, logicalPath);
@@ -38,7 +40,7 @@ public sealed class ConfigurationEffectiveStateReader(
         var storedValue = documentEditor.ReadValue(definition, snapshotJson, logicalPath);
         var runtimeSourceValue = definition.Origin == ConfigurationDefinitionOrigin.LocalScan
                                  && targetNode?.NodeKind == ConfigurationNodeKind.Scalar
-            ? sourceInspector.GetSourceChain(definition, logicalPath).Values.FirstOrDefault(value => value.IsEffective)
+            ? sourceInspector.GetSourceChain(definition, logicalPath, includeSensitive).Values.FirstOrDefault(value => value.IsEffective)
             : null;
         return MaterializeValue(
             definition,
@@ -46,7 +48,8 @@ public sealed class ConfigurationEffectiveStateReader(
             targetNode,
             document,
             storedValue,
-            runtimeSourceValue);
+            runtimeSourceValue,
+            includeSensitive);
     }
 
     /// <summary>
@@ -54,13 +57,15 @@ public sealed class ConfigurationEffectiveStateReader(
     /// </summary>
     /// <param name="definition">The definition to read.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="includeSensitive">Whether to include annotated sensitive values; false masks them by default.</param>
     /// <returns>The definition and its display-safe effective values.</returns>
     public async Task<ConfigurationDefinitionState> ReadDefinitionAsync(
         ConfigurationDefinition definition,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeSensitive = false)
     {
         var document = await effectiveValueStore.GetAsync(definition.DefinitionKey, cancellationToken);
-        return MaterializeDefinition(definition, document);
+        return MaterializeDefinition(definition, document, includeSensitive);
     }
 
     /// <summary>
@@ -68,10 +73,12 @@ public sealed class ConfigurationEffectiveStateReader(
     /// </summary>
     /// <param name="definitions">The definitions to read, in required result order.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="includeSensitive">Whether to include annotated sensitive values; false masks them by default.</param>
     /// <returns>Definition states in the same order as <paramref name="definitions"/>.</returns>
     public async Task<IReadOnlyList<ConfigurationDefinitionState>> ReadDefinitionsAsync(
         IReadOnlyList<ConfigurationDefinition> definitions,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeSensitive = false)
     {
         if (definitions.Count == 0)
         {
@@ -90,7 +97,7 @@ public sealed class ConfigurationEffectiveStateReader(
         var states = new ConfigurationDefinitionState[definitions.Count];
         for (var index = 0; index < definitions.Count; index++)
         {
-            states[index] = MaterializeDefinition(definitions[index], documents[index]);
+            states[index] = MaterializeDefinition(definitions[index], documents[index], includeSensitive);
         }
 
         return states;
@@ -98,7 +105,8 @@ public sealed class ConfigurationEffectiveStateReader(
 
     private ConfigurationDefinitionState MaterializeDefinition(
         ConfigurationDefinition definition,
-        ConfigurationEffectiveValueDocument? document)
+        ConfigurationEffectiveValueDocument? document,
+        bool includeSensitive)
     {
         var stateNodes = EnumerateNodes(definition.Root)
             .Where(static node => node.RelativePath.Depth > 0)
@@ -108,7 +116,7 @@ public sealed class ConfigurationEffectiveStateReader(
             definition,
             snapshotJson,
             stateNodes.Select(static node => node.RelativePath).ToArray());
-        var runtimeSourceValues = ReadRuntimeSourceValues(definition, stateNodes);
+        var runtimeSourceValues = ReadRuntimeSourceValues(definition, stateNodes, includeSensitive);
         var values = new ConfigurationEffectiveValue[stateNodes.Length];
         for (var index = 0; index < stateNodes.Length; index++)
         {
@@ -118,7 +126,8 @@ public sealed class ConfigurationEffectiveStateReader(
                 stateNodes[index],
                 document,
                 storedValues[index],
-                runtimeSourceValues?[index]);
+                runtimeSourceValues?[index],
+                includeSensitive);
         }
 
         return new ConfigurationDefinitionState
@@ -144,7 +153,8 @@ public sealed class ConfigurationEffectiveStateReader(
         ConfigurationNodeDefinition? targetNode,
         ConfigurationEffectiveValueDocument? document,
         ConfigurationStoredValue? snapshotStoredValue,
-        ConfigurationSourceValue? runtimeSourceValue)
+        ConfigurationSourceValue? runtimeSourceValue,
+        bool includeSensitive)
     {
         var isSensitive = ConfigurationSchemaNavigator.IsSensitivePath(definition.Root, logicalPath)
                           || targetNode is not null && ContainsSensitiveValue(targetNode);
@@ -158,7 +168,7 @@ public sealed class ConfigurationEffectiveStateReader(
                 DefinitionKey = definition.DefinitionKey,
                 LogicalPath = logicalPath,
                 ConfigurationPath = configurationPath,
-                DisplayValue = isSensitive || runtimeSourceValue.IsSensitive
+                DisplayValue = !includeSensitive && (isSensitive || runtimeSourceValue.IsSensitive)
                     ? null
                     : runtimeSourceValue.DisplayValue,
                 IsSensitive = isSensitive || runtimeSourceValue.IsSensitive,
@@ -174,7 +184,7 @@ public sealed class ConfigurationEffectiveStateReader(
             DefinitionKey = definition.DefinitionKey,
             LogicalPath = logicalPath,
             ConfigurationPath = configurationPath,
-            DisplayValue = isSensitive ? null : ToDisplayValue(snapshotStoredValue, targetNode),
+            DisplayValue = isSensitive && !includeSensitive ? null : ToDisplayValue(snapshotStoredValue, targetNode),
             IsSensitive = isSensitive,
             Version = document?.Version,
             EffectiveSource = definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata
@@ -186,7 +196,8 @@ public sealed class ConfigurationEffectiveStateReader(
 
     private ConfigurationSourceValue?[]? ReadRuntimeSourceValues(
         ConfigurationDefinition definition,
-        IReadOnlyList<ConfigurationNodeDefinition> stateNodes)
+        IReadOnlyList<ConfigurationNodeDefinition> stateNodes,
+        bool includeSensitive)
     {
         if (definition.Origin != ConfigurationDefinitionOrigin.LocalScan)
         {
@@ -204,7 +215,7 @@ public sealed class ConfigurationEffectiveStateReader(
 
         var sourceChains = sourceInspector.GetSourceChains(
             definition,
-            scalarNodes.Select(static item => item.Node.RelativePath).ToArray());
+            scalarNodes.Select(static item => item.Node.RelativePath).ToArray(), includeSensitive);
         if (sourceChains.Count != scalarNodes.Length)
         {
             throw new InvalidOperationException(

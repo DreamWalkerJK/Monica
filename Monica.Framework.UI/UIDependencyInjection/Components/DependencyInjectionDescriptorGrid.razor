@@ -3,7 +3,7 @@
 @inject IStringLocalizer<DependencyInjectionResource> L
 
 <div class="di-grid-root">
-    <MudDataGrid T="DependencyInjectionDescriptorInfo"
+    <MudDataGrid DragIndicatorIcon="@MoIcons.GripVertical" SortIcon="@MoIcons.ArrowUp" FilterIconEmpty="@MoIcons.Filter" FilterIconFilled="@MoIcons.Filter" FilterIconClear="@MoIcons.FilterOff" ColumnOptionsIcon="@MoIcons.MoreVertical" T="DependencyInjectionDescriptorInfo"
                  Items="Items"
                  Dense="true"
                  Hover="true"
@@ -36,21 +36,21 @@
                             @if (HasIssue(context.Item, DependencyInjectionDiagnosticSeverity.Warning))
                             {
                                 <MudTooltip Text="@L["Page:Grid:Badges:Warning"]">
-                                    <MudIcon Icon="@Icons.Material.Outlined.Warning" Color="Color.Warning" Size="Size.Small" />
+                                    <MoIcon Icon="@MoIcons.Warning" Style="color:var(--mud-palette-warning)" Size="1.25rem" />
                                 </MudTooltip>
                             }
 
                             @if (HasIssue(context.Item, DependencyInjectionDiagnosticSeverity.Error))
                             {
                                 <MudTooltip Text="@L["Page:Grid:Badges:Error"]">
-                                    <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Color="Color.Error" Size="Size.Small" />
+                                    <MoIcon Icon="@MoIcons.Error" Style="color:var(--mud-palette-error)" Size="1.25rem" />
                                 </MudTooltip>
                             }
 
                             @if (context.Item.IsKeyedService)
                             {
                                 <MudTooltip Text="@L["Page:Grid:Badges:Keyed"]">
-                                    <MudIcon Icon="@Icons.Material.Outlined.Key" Color="Color.Info" Size="Size.Small" />
+                                    <MoIcon Icon="@MoIcons.Key" Style="color:var(--mud-palette-info)" Size="1.25rem" />
                                 </MudTooltip>
                             }
 

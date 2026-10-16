@@ -13,7 +13,7 @@
         <div class="domain-list__header-row">
             <MudText Typo="Typo.h6">@L["DomainList:Title"]</MudText>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshDomainsAsync" Disabled="@_isLoading">
-                <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
+                <MoIcon Icon="@MoIcons.Refresh" Class="mr-1" Size="1.5rem" />
                 @L["Shared:Actions:Refresh"]
             </MudButton>
         </div>
@@ -52,17 +52,17 @@
                                 <div class="domain-card__header">
                                     <div class="domain-card__identity">
                                         <span class="domain-card__icon" aria-hidden="true">
-                                            <MudIcon Icon="@Icons.Material.Filled.Domain" />
+                                            <MoIcon Icon="@MoIcons.Building" Size="1.5rem" />
                                         </span>
                                         <MudText Typo="Typo.h6" Class="domain-card__title">
                                             @(domain.DisplayName ?? domain.Name)
                                         </MudText>
                                     </div>
                                     <div class="domain-card__counts">
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Text="@L["DomainList:Counts:OwnedServices", GetOwnedServiceCount(domain.Name)]" />
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Text="@L["DomainList:Counts:OwnedServices", GetOwnedServiceCount(domain.Name)]" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" />
                                         @if (GetRelatedServiceCount(domain.Name) > 0)
                                         {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@L["DomainList:Counts:RelatedDependencies", GetRelatedServiceCount(domain.Name)]" />
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@L["DomainList:Counts:RelatedDependencies", GetRelatedServiceCount(domain.Name)]" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close" />
                                         }
                                     </div>
                                 </div>

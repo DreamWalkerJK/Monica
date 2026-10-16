@@ -14,6 +14,7 @@ using Monica.Markdown.UIMarkdown.State;
 using Monica.Markdown.UIMarkdown.Support;
 using Monica.UI.Shared.Components.Markdown;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -52,7 +53,7 @@ public class ModuleMarkdownUI : MonicaModule<ModuleMarkdownUIOption>, IWebHostRe
                 registry.RegisterLocalizedPage<UIMarkdownPage, MarkdownResource>(
                     MarkdownViewerLocation.PAGE_URL,
                     "Pages:MarkdownDocuments:Title",
-                    Icons.Material.Filled.MenuBook,
+                    MoIcons.Book,
                     BuiltInNavigationCategoryIds.Documentation,
                     addToNav: true,
                     navOrder: 50));

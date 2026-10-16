@@ -14,7 +14,7 @@
         <span>@L["UISignalR:MethodListener:TotalReceived", HubMethods.Sum(method => method.ReceivedCount)]</span>
     </div>
     <div class="signalr-listener-actions">
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.ManageSearch"
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.TextSearch"
                    OnClick="OpenManageDialog" Disabled="@(HubMethods.Count == 0)">
             @L["UISignalR:MethodListener:Manage"]
         </MudButton>
@@ -51,7 +51,7 @@
                         <code>@FormatSignature(method)</code>
                         <span>@L["UISignalR:MethodListener:ReceivedCount", method.ReceivedCount]</span>
                     </div>
-                    <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" Color="Color.Default" Class="signalr-listener-remove"
+                    <MudIconButton Icon="@MoIcons.Close" Size="Size.Small" Color="Color.Default" Class="signalr-listener-remove"
                                    Disabled="@(!IsConnected || _isUpdating)" OnClick="@(() => ToggleMethodListenerAsync(method, false))"
                                    title="@L["UISignalR:MethodListener:StopListening"]"
                                    aria-label="@($"{L["UISignalR:MethodListener:StopListening"]}: {method.Name}")" />
@@ -73,7 +73,7 @@
                     <MudTextField T="string" Value="@_searchText" ValueChanged="ChangeSearchAsync"
                                   Immediate="true" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Label="@L["UISignalR:MethodListener:SearchPlaceholder"]"
-                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+                                  Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" ClearIcon="@MoIcons.Close" />
                 </div>
                 <div class="signalr-listener-dialog-actions">
                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="EnableAllListenersAsync"
@@ -105,7 +105,7 @@
                             <li @key="method.Name" class="signalr-listener-choice">
                                 <MudCheckBox T="bool" Value="@GetListenerValue(method)" Label="@method.DisplayName"
                                              Color="Color.Primary" Disabled="@(!IsConnected || _isUpdating)"
-                                             ValueChanged="@((bool listening) => ToggleMethodListenerAsync(method, listening))" />
+                                             ValueChanged="@((bool listening) => ToggleMethodListenerAsync(method, listening))" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" />
                                 <code>@L["UISignalR:MethodListener:Parameters", FormatSignature(method)]</code>
                                 <span>@L["UISignalR:MethodListener:ReceivedCount", method.ReceivedCount]</span>
                             </li>

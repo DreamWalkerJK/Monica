@@ -17,21 +17,21 @@
         </div>
         <div class="enum-info-viewer__refresh">
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="LoadAllEnumsAsync"
-                       StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@_loading">@L["Shared:Actions:Refresh"]</MudButton>
+                       StartIcon="@MoIcons.Refresh" Disabled="@_loading">@L["Shared:Actions:Refresh"]</MudButton>
         </div>
     </header>
     <div class="enum-info-viewer__toolbar">
         <div class="enum-info-viewer__search-input">
-            <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchTextChanged" Immediate="true" Clearable="true"
+            <MudTextField ClearIcon="@MoIcons.Close" T="string" Value="@_searchText" ValueChanged="OnSearchTextChanged" Immediate="true" Clearable="true"
                           Variant="Variant.Outlined" Label="@L["EnumInfoViewer:Desk:SearchLabel"]"
                           Placeholder="@L["EnumInfoViewer:Search:Placeholder"]" Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Outlined.Search" Disabled="@(_loading || _enumGroups.Count == 0)" />
+                          AdornmentIcon="@MoIcons.Search" Disabled="@(_loading || _enumGroups.Count == 0)" />
         </div>
         <div class="enum-info-viewer__toolbar-actions">
             <span class="enum-info-viewer__search-summary" role="status">@GetSearchSummary()</span>
-            <MudIconButton Icon="@Icons.Material.Outlined.ArrowUpward" aria-label="@L["Shared:Actions:PreviousMatch"]"
+            <MudIconButton Icon="@MoIcons.ArrowUp" aria-label="@L["Shared:Actions:PreviousMatch"]"
                            OnClick="GoToPreviousMatchAsync" Disabled="@(_loading || !HasSearchMatches)" />
-            <MudIconButton Icon="@Icons.Material.Outlined.ArrowDownward" aria-label="@L["Shared:Actions:NextMatch"]"
+            <MudIconButton Icon="@MoIcons.ArrowDown" aria-label="@L["Shared:Actions:NextMatch"]"
                            OnClick="GoToNextMatchAsync" Disabled="@(_loading || !HasSearchMatches)" />
         </div>
         <p>@L["EnumInfoViewer:Search:Hint"]</p>

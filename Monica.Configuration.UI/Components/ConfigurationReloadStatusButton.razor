@@ -25,14 +25,14 @@
             <MudStack Spacing="2">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        <MudIcon Icon="@StatusIcon" Color="@StatusColor" />
+                        <MoIcon Icon="@StatusIcon" Style="@StatusIconStyle" Size="1.5rem" />
                         <MudStack Spacing="0">
                             <MudText Typo="Typo.subtitle1">@L["State:ReloadStatus:Title"]</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@StatusSummary</MudText>
                         </MudStack>
                     </MudStack>
                     <MudTooltip Text="@L["Common:Actions:Close"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                        <MudIconButton Icon="@MoIcons.Close"
                                        Size="Size.Small"
                                        OnClick="ClosePopover"
                                        aria-label="@L["Common:Actions:Close"]" />
@@ -48,7 +48,7 @@
                 }
                 else if (_report is null)
                 {
-                    <MudAlert Severity="Severity.Warning">@L["State:ReloadStatus:Unavailable"]</MudAlert>
+                    <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning">@L["State:ReloadStatus:Unavailable"]</MudAlert>
                 }
                 else
                 {
@@ -73,15 +73,15 @@
 
                     @if (!_report.Runtime.IsProviderActive)
                     {
-                        <MudAlert Severity="Severity.Warning">@L["State:ReloadStatus:ProviderInactive"]</MudAlert>
+                        <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning">@L["State:ReloadStatus:ProviderInactive"]</MudAlert>
                     }
                     else if (_report.IsCurrent)
                     {
-                        <MudAlert Severity="Severity.Success">@L["State:ReloadStatus:DefinitionsCurrent"]</MudAlert>
+                        <MudAlert Icon="@MoIcons.Success" Severity="Severity.Success">@L["State:ReloadStatus:DefinitionsCurrent"]</MudAlert>
                     }
                     else
                     {
-                        <MudAlert Severity="Severity.Error">@L["State:ReloadStatus:DriftDefinitions", DriftCount]</MudAlert>
+                        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@L["State:ReloadStatus:DriftDefinitions", DriftCount]</MudAlert>
                         <div class="configuration-reload-version-list">
                             @foreach (var item in DriftDefinitions)
                             {
@@ -119,7 +119,7 @@
 
                     @if (!string.IsNullOrWhiteSpace(_report.Runtime.LastFailureMessage))
                     {
-                        <MudAlert Severity="Severity.Warning">
+                        <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning">
                             @L["State:ReloadStatus:LastFailure", FormatTime(_report.Runtime.LastFailedAt), _report.Runtime.LastFailureMessage]
                         </MudAlert>
                     }
@@ -128,7 +128,7 @@
                 <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1">
                     <MudButton Variant="Variant.Text"
                                Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Refresh"
+                               StartIcon="@MoIcons.Refresh"
                                Disabled="@(_loading || _reloading)"
                                OnClick="RefreshAsync">
                         @L["State:ReloadStatus:RefreshStatus"]
@@ -136,7 +136,7 @@
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Primary"
                                Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Sync"
+                               StartIcon="@MoIcons.Refresh"
                                Disabled="@(_loading || _reloading || _broadcasting)"
                                OnClick="ReloadAsync">
                         @(_reloading ? L["State:ReloadStatus:Reloading"] : L["State:ReloadStatus:ManualReload"])
@@ -144,7 +144,7 @@
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Secondary"
                                Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Campaign"
+                               StartIcon="@MoIcons.Megaphone"
                                Disabled="@(_loading || _reloading || _broadcasting)"
                                OnClick="BroadcastReloadAllAsync">
                         @(_broadcasting ? L["State:ReloadStatus:Broadcasting"] : L["State:ReloadStatus:BroadcastReloadAll"])
@@ -186,14 +186,21 @@
                     ? Color.Success
                     : Color.Error;
 
+    private string StatusIconStyle => StatusColor switch
+    {
+        Color.Success => "color:var(--mud-palette-success)",
+        Color.Error => "color:var(--mud-palette-error)",
+        _ => "color:var(--mud-palette-warning)"
+    };
+
     private string StatusIcon =>
         _report is null
-            ? Icons.Material.Filled.Help
+            ? MoIcons.Help
             : !_report.Runtime.IsProviderActive
-                ? Icons.Material.Filled.Warning
+                ? MoIcons.Warning
                 : _report.IsCurrent
-                    ? Icons.Material.Filled.Sync
-                    : Icons.Material.Filled.SyncProblem;
+                    ? MoIcons.Refresh
+                    : MoIcons.SyncOff;
 
     private string StatusSummary =>
         _report is null

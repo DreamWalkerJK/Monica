@@ -11,10 +11,10 @@
 @implements IDisposable
 
 <div class="service-registry-frame">
-    <div class="registry-order"><span>@L["Workbench:ObservedInstanceHelp"]</span><div><MudSelect T="string" Value="_sortField" ValueChanged="SetSortAsync" Label="@L["Workbench:SortBy"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+    <div class="registry-order"><span>@L["Workbench:ObservedInstanceHelp"]</span><div><MudSelect T="string" Value="_sortField" ValueChanged="SetSortAsync" Label="@L["Workbench:SortBy"]" Variant="Variant.Outlined" Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
         <MudSelectItem Value="@("AppName")">@L["ServiceList:Columns:ServiceName"]</MudSelectItem><MudSelectItem Value="@("AppId")">@L["ServiceList:Columns:AppId"]</MudSelectItem><MudSelectItem Value="@("ProjectName")">@L["ServiceList:Columns:ProjectName"]</MudSelectItem><MudSelectItem Value="@("DomainName")">@L["ServiceList:Columns:Domain"]</MudSelectItem><MudSelectItem Value="@("TotalInstanceCount")">@L["ServiceList:Columns:InstanceCount"]</MudSelectItem><MudSelectItem Value="@("OverallStatus")">@L["ServiceList:Columns:OverallStatus"]</MudSelectItem><MudSelectItem Value="@("AssemblyVersion")">@L["ServiceList:Columns:AssemblyVersion"]</MudSelectItem><MudSelectItem Value="@("BuildTime")">@L["ServiceList:Columns:BuildTime"]</MudSelectItem><MudSelectItem Value="@("LastHeartbeatTime")">@L["ServiceList:Columns:LastHeartbeat"]</MudSelectItem>
-    </MudSelect><MudIconButton Icon="@(_descending ? Icons.Material.Outlined.ArrowDownward : Icons.Material.Outlined.ArrowUpward)" OnClick="ReverseSortAsync" aria-label="@L["Workbench:ReverseSort"]" /></div></div>
-    <MudDataGrid @ref="_grid" T="RegisteredServiceStatus" Items="@Services" Square="true" Breakpoint="Breakpoint.None" Hover="true" Dense="false" Loading="@IsLoading" Elevation="0" Class="service-registry-grid" RowsPerPage="10" SortDefinitions="_sortDefinitions">
+    </MudSelect><MudIconButton Icon="@(_descending ? MoIcons.ArrowDown : MoIcons.ArrowUp)" OnClick="ReverseSortAsync" aria-label="@L["Workbench:ReverseSort"]" /></div></div>
+    <MudDataGrid @ref="_grid" T="RegisteredServiceStatus" Items="@Services" Square="true" Breakpoint="Breakpoint.None" Hover="true" Dense="false" Loading="@IsLoading" Elevation="0" Class="service-registry-grid" RowsPerPage="10" SortDefinitions="_sortDefinitions" SortIcon="@MoIcons.ArrowUp" DragIndicatorIcon="@MoIcons.GripVertical" FilterIconEmpty="@MoIcons.Filter" FilterIconFilled="@MoIcons.Filter" FilterIconClear="@MoIcons.FilterOff" ColumnOptionsIcon="@MoIcons.MoreVertical">
         <Columns>
             <TemplateColumn Title="@L["ServiceList:Columns:ServiceName"]" Sortable="false">
                 <CellTemplate><div class="registry-service-identity"><button type="button" @onclick="() => InspectAsync(context.Item)">@context.Item.AppName</button><code>@context.Item.AppId</code><span>@Value(context.Item.ProjectName)</span></div></CellTemplate>
@@ -37,7 +37,7 @@
                 <TemplateColumn Title="@key" Sortable="false"><CellTemplate><div class="registry-metadata"><MetadataValueDisplay Value="@Value(context.Item.GetValidInstanceInfo()?.Metadata.GetValueOrDefault(key))" IsCompactMode="true" /></div></CellTemplate></TemplateColumn>
             }
             <TemplateColumn Title="@L["Workbench:Actions"]" Sortable="false">
-                <CellTemplate><div class="registry-service-actions"><MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" OnClick="() => CopyAsync(context.Item.AppId)" aria-label="@L["Workbench:CopyId", context.Item.AppId]" /><MudIconButton Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" OnClick="() => InspectAsync(context.Item)" aria-label="@L["Workbench:InspectService", context.Item.AppName]" /></div></CellTemplate>
+                <CellTemplate><div class="registry-service-actions"><MudIconButton Icon="@MoIcons.Copy" Size="Size.Small" OnClick="() => CopyAsync(context.Item.AppId)" aria-label="@L["Workbench:CopyId", context.Item.AppId]" /><MudIconButton Icon="@MoIcons.ArrowUpRight" Size="Size.Small" OnClick="() => InspectAsync(context.Item)" aria-label="@L["Workbench:InspectService", context.Item.AppName]" /></div></CellTemplate>
             </TemplateColumn>
         </Columns>
         <PagerContent><MudDataGridPager T="RegisteredServiceStatus" PageSizeOptions="@(new[] { 10, 25, 50 })" /></PagerContent>

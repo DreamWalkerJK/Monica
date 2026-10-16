@@ -6,18 +6,18 @@
 <div class="model-capabilities">
     @if (Model.Kind == AIModelKind.Embedding)
     {
-        <span class="capability-badge embedding"><MudIcon Icon="@Icons.Material.Outlined.DataArray" />@L["Settings:Embedding"]</span>
+        <span class="capability-badge embedding"><MoIcon Icon="@MoIcons.Brackets" Size="1.5rem" />@L["Settings:Embedding"]</span>
     }
     else
     {
-        <span class="capability-badge"><MudIcon Icon="@Icons.Material.Outlined.TextFields" />@L["Settings:TextInput"]</span>
-        @if (Model.SupportsImage == true) { <span class="capability-badge image"><MudIcon Icon="@Icons.Material.Outlined.Image" />@L["Settings:ImageInput"]</span> }
-        @if (Model.SupportsDocuments == true) { <span class="capability-badge document"><MudIcon Icon="@Icons.Material.Outlined.Description" />@L["Settings:NativeDocuments"]</span> }
-        @if (Model.SupportsTools == true) { <span class="capability-badge tool"><MudIcon Icon="@Icons.Material.Outlined.Build" />@L["Settings:FunctionTools"]</span> }
-        @if (Model.SupportsReasoning == true) { <span class="capability-badge reasoning"><MudIcon Icon="@Icons.Material.Outlined.Psychology" />@L["Workbench:Reasoning"]</span> }
+        <span class="capability-badge"><MoIcon Icon="@MoIcons.Type" Size="1.5rem" />@L["Settings:TextInput"]</span>
+        @if (Model.SupportsImage == true) { <span class="capability-badge image"><MoIcon Icon="@MoIcons.Image" Size="1.5rem" />@L["Settings:ImageInput"]</span> }
+        @if (Model.SupportsDocuments == true) { <span class="capability-badge document"><MoIcon Icon="@MoIcons.FileText" Size="1.5rem" />@L["Settings:NativeDocuments"]</span> }
+        @if (Model.SupportsTools == true) { <span class="capability-badge tool"><MoIcon Icon="@MoIcons.Wrench" Size="1.5rem" />@L["Settings:FunctionTools"]</span> }
+        @if (Model.SupportsReasoning == true) { <span class="capability-badge reasoning"><MoIcon Icon="@MoIcons.Brain" Size="1.5rem" />@L["Workbench:Reasoning"]</span> }
         @if (Model.SupportsImage is null || Model.SupportsDocuments is null || Model.SupportsTools is null || Model.SupportsReasoning is null)
         {
-            <MudTooltip Text="@L["Settings:UnknownCapabilitiesHelp"]"><span class="unknown-capabilities"><MudIcon Icon="@Icons.Material.Outlined.Info" />@L["Settings:PartiallyKnown"]</span></MudTooltip>
+            <MudTooltip Text="@L["Settings:UnknownCapabilitiesHelp"]"><span class="unknown-capabilities"><MoIcon Icon="@MoIcons.Info" Size="1.5rem" />@L["Settings:PartiallyKnown"]</span></MudTooltip>
         }
     }
 </div>

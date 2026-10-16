@@ -6,10 +6,10 @@
 
 <div class="execution-pipeline-technical-identity" data-testid="execution-pipeline-technical-identity">
     <MudExpansionPanels Elevation="0" Outlined="true" Dense="true">
-        <MudExpansionPanel KeepContentAlive="false">
+        <MudExpansionPanel Icon="@MoIcons.ChevronDown" KeepContentAlive="false">
             <TitleContent>
                 <span class="execution-pipeline-technical-identity__title">
-                    <MudIcon Icon="@Icons.Material.Outlined.DataObject" Size="Size.Small" />
+                    <MoIcon Icon="@MoIcons.Braces" Size="1.25rem" />
                     <span>@L["Page:Diagnostics:Title"]</span>
                 </span>
             </TitleContent>
@@ -20,7 +20,7 @@
                         <MudButton Variant="Variant.Outlined"
                                    Color="Color.Primary"
                                    Size="Size.Small"
-                                   StartIcon="@Icons.Material.Outlined.ContentCopy"
+                                   StartIcon="@MoIcons.Copy"
                                    OnClick="CopyAsync">
                             @L["Page:Diagnostics:Copy"]
                         </MudButton>

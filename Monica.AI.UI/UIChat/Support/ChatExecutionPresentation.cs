@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Localization;
 using Monica.AI.Chat.Models;
 using Monica.AI.UI.Localization;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.AI.UI.UIChat.Support;
@@ -33,11 +34,19 @@ internal static class ChatExecutionPresentation
         _ => Color.Info
     };
 
+    internal static string StatusIconStyle(ChatExecutionStatus status) => StatusColor(status) switch
+    {
+        Color.Success => "color:var(--mud-palette-success)",
+        Color.Error => "color:var(--mud-palette-error)",
+        Color.Warning => "color:var(--mud-palette-warning)",
+        _ => "color:var(--mud-palette-info)"
+    };
+
     internal static string Icon(ChatExecutionStepKind kind) => kind switch
     {
-        ChatExecutionStepKind.Tool => Icons.Material.Outlined.Build,
-        ChatExecutionStepKind.Compaction => Icons.Material.Outlined.Compress,
-        _ => Icons.Material.Outlined.AutoAwesome
+        ChatExecutionStepKind.Tool => MoIcons.Wrench,
+        ChatExecutionStepKind.Compaction => MoIcons.Minimize,
+        _ => MoIcons.Sparkle
     };
 
     internal static string Duration(TimeSpan? duration) => duration is { } value

@@ -11,7 +11,7 @@
 <div class="kb-list-panel">
     <div class="panel-header">
         <div class="panel-title-group">
-            <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Class="panel-title-icon" />
+            <MoIcon Icon="@MoIcons.Database" Size="1.25rem" Class="panel-title-icon" />
             <MudText Typo="Typo.subtitle1" Class="panel-title">@L["RAG:KnowledgeBase:Title"]</MudText>
         </div>
     </div>
@@ -75,7 +75,7 @@
         @if (PageState.KnowledgeBases.Count == 0)
         {
             <div class="kb-empty-state">
-                <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Secondary" />
+                <MoIcon Icon="@MoIcons.FolderOpen" Size="2.25rem" Style="color:var(--mud-palette-secondary)" />
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     @L["RAG:KnowledgeBase:EmptyHint"]
                 </MudText>

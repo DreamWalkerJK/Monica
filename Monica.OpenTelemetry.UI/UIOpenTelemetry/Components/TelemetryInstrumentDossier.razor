@@ -5,13 +5,13 @@
 <section class="telemetry-dossier" aria-label="@L["Dossier:Title"]">
     @if (Instrument is not { } instrument)
     {
-        <div class="dossier-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Large" /><h2>@L["Dossier:ChooseTitle"]</h2><p>@L["Dossier:Choose"]</p></div>
+        <div class="dossier-empty" role="status"><MoIcon Icon="@MoIcons.Sliders" Size="2.25rem" /><h2>@L["Dossier:ChooseTitle"]</h2><p>@L["Dossier:Choose"]</p></div>
     }
     else
     {
         <header class="dossier-heading"><span class="dossier-eyebrow">@L["Dossier:Eyebrow"]</span><code class="dossier-meter">@instrument.MeterName @if (!string.IsNullOrEmpty(instrument.MeterVersion)) { <span>· @instrument.MeterVersion</span> }</code><h2>@instrument.Name</h2>@if (!string.IsNullOrEmpty(instrument.Description)) { <p>@instrument.Description</p> }</header>
         <dl class="dossier-facts"><div><dt>@L["Dossier:Kind"]</dt><dd>@instrument.Kind</dd></div><div><dt>@L["Instrument:Unit"]</dt><dd><code>@(string.IsNullOrEmpty(instrument.Unit) ? L["Series:Unitless"].Value : instrument.Unit)</code></dd></div><div><dt>@L["Dossier:Collection"]</dt><dd>@L[instrument.IsObservable ? "Dossier:Observable" : "Dossier:Recorded"]</dd></div><div><dt>@L["Instrument:TagSets"]</dt><dd>@instrument.TagSets.Count</dd></div></dl>
-        @if (instrument.Overflow) { <div class="dossier-overflow" role="note"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" /><p>@L["Dossier:Overflow", instrument.DroppedSamples]</p></div> }
+        @if (instrument.Overflow) { <div class="dossier-overflow" role="note"><MoIcon Icon="@MoIcons.Info" Size="1.25rem" /><p>@L["Dossier:Overflow", instrument.DroppedSamples]</p></div> }
         @if (instrument.TagSets.Count == 0)
         {
             <div class="dossier-no-series" role="status"><h3>@L["Dossier:UnmeasuredTitle"]</h3><p>@L["Dossier:Unmeasured"]</p></div>
@@ -27,7 +27,7 @@
                         <tr class="@(selected ? "is-selected" : null)"><td data-label="@L["Table:Tags"]"><button type="button" class="series-choice" aria-pressed="@(selected ? "true" : "false")" data-series-key="@tagSet.Key" @onclick="@(() => OnSelectSeries.InvokeAsync(tagSet))">@if (tagSet.Tags.Count == 0) { <span>@L["Series:Untagged"]</span> } else { @foreach (var tag in tagSet.Tags) { <span><code>@tag.Key</code><span>=</span><code>@tag.Value</code></span> } }</button></td><td data-label="@L["Table:Current"]"><code title="@Raw(tagSet.CurrentValue)">@(tagSet.Samples.Count == 0 ? "—" : Format(tagSet.CurrentValue))</code></td><td data-label="@L["Table:Samples"]"><code>@tagSet.Samples.Count</code></td></tr>
                     }
                 </tbody></table>
-                <footer class="dossier-pager"><span>@L["Registry:Shown", (_seriesPage - 1) * SeriesPageSize + 1, Math.Min(_seriesPage * SeriesPageSize, instrument.TagSets.Count), instrument.TagSets.Count]</span>@if (SeriesPageCount > 1) { <MudPagination Count="@SeriesPageCount" Selected="_seriesPage" SelectedChanged="SetSeriesPage" Color="Color.Default" Size="Size.Small" /> }</footer>
+                <footer class="dossier-pager"><span>@L["Registry:Shown", (_seriesPage - 1) * SeriesPageSize + 1, Math.Min(_seriesPage * SeriesPageSize, instrument.TagSets.Count), instrument.TagSets.Count]</span>@if (SeriesPageCount > 1) { <MudPagination Count="@SeriesPageCount" Selected="_seriesPage" SelectedChanged="SetSeriesPage" Color="Color.Default" Size="Size.Small" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /> }</footer>
             </div>
             @if (Series is { } series)
             {
@@ -41,9 +41,9 @@
                     <div class="sample-frame"><table class="sample-table"><thead><tr><th scope="col">@L["Ledger:Timestamp"] · UTC</th><th scope="col">@L["Ledger:Raw"]</th><th scope="col">@L["Ledger:Value"]</th><th scope="col"><span class="visually-hidden">@L["Inspector:Open"]</span></th></tr></thead><tbody>
                         @foreach (var row in series.Samples.Select((point, index) => (point, index)).Skip((_samplePage - 1) * SamplePageSize).Take(SamplePageSize))
                         {
-                            <tr data-sample-index="@row.index"><td data-label="@L["Ledger:Timestamp"]"><time datetime="@row.point.TimestampUtc.ToString("O")" title="@row.point.TimestampUtc.ToString("O")">@row.point.TimestampUtc.ToString("MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)</time></td><td data-label="@L["Ledger:Raw"]"><code data-raw-value="@Raw(row.point.Value)">@Raw(row.point.Value)</code></td><td data-label="@L["Ledger:Value"]">@Format(row.point.Value)</td><td class="sample-inspect"><MudButton Variant="Variant.Text" Color="Color.Default" OnClick="@(() => OnInspect.InvokeAsync(new TelemetrySampleRequest(series, row.index)))" aria-label="@L["Inspector:OpenSample", row.point.TimestampUtc.ToString("O")]">@L["Inspector:Open"]<MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></MudButton></td></tr>
+                            <tr data-sample-index="@row.index"><td data-label="@L["Ledger:Timestamp"]"><time datetime="@row.point.TimestampUtc.ToString("O")" title="@row.point.TimestampUtc.ToString("O")">@row.point.TimestampUtc.ToString("MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)</time></td><td data-label="@L["Ledger:Raw"]"><code data-raw-value="@Raw(row.point.Value)">@Raw(row.point.Value)</code></td><td data-label="@L["Ledger:Value"]">@Format(row.point.Value)</td><td class="sample-inspect"><MudButton Variant="Variant.Text" Color="Color.Default" OnClick="@(() => OnInspect.InvokeAsync(new TelemetrySampleRequest(series, row.index)))" aria-label="@L["Inspector:OpenSample", row.point.TimestampUtc.ToString("O")]">@L["Inspector:Open"]<MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" /></MudButton></td></tr>
                         }
-                    </tbody></table><footer class="dossier-pager"><span>@L["Registry:Shown", (_samplePage - 1) * SamplePageSize + 1, Math.Min(_samplePage * SamplePageSize, series.Samples.Count), series.Samples.Count]</span>@if (SamplePageCount > 1) { <MudPagination Count="@SamplePageCount" Selected="_samplePage" SelectedChanged="SetSamplePageAsync" ShowFirstButton="true" ShowLastButton="true" Color="Color.Default" Size="Size.Small" /> }</footer></div>
+                    </tbody></table><footer class="dossier-pager"><span>@L["Registry:Shown", (_samplePage - 1) * SamplePageSize + 1, Math.Min(_samplePage * SamplePageSize, series.Samples.Count), series.Samples.Count]</span>@if (SamplePageCount > 1) { <MudPagination Count="@SamplePageCount" Selected="_samplePage" SelectedChanged="SetSamplePageAsync" ShowFirstButton="true" ShowLastButton="true" Color="Color.Default" Size="Size.Small" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /> }</footer></div>
                 }
             }
             else { <p class="dossier-no-series" role="status">@L["Series:Choose"]</p> }

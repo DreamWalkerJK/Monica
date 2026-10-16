@@ -35,7 +35,7 @@
                           ValueChanged="SearchState.OnQueryChanged"
                           Label="@L["MarkdownViewer:Dialogs:Search:InputPlaceholder"]"
                           Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          AdornmentIcon="@MoIcons.Search"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Immediate="true"
@@ -65,7 +65,7 @@
             <div class="document-search-results">
                 @if (!string.IsNullOrWhiteSpace(SearchState.ErrorMessage))
                 {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">
                         @L["MarkdownViewer:Dialogs:Search:SearchFailed", SearchState.ErrorMessage]
                     </MudAlert>
                 }
@@ -79,10 +79,9 @@
                 {
                     <div class="document-search-state">
                         <MudStack AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.TravelExplore"
-                                     Size="Size.Large"
-                                     Color="Color.Default"
-                                     Class="document-search-empty-icon" />
+                            <MoIcon Icon="@MoIcons.Globe"
+                                     Size="2.25rem"
+                                     Class="document-search-empty-icon" Style="color:var(--mud-palette-text-secondary);" />
                             <MudText Typo="Typo.body1">@L["MarkdownViewer:Dialogs:Search:Hint"]</MudText>
                         </MudStack>
                     </div>
@@ -91,10 +90,9 @@
                 {
                     <div class="document-search-state">
                         <MudStack AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.SearchOff"
-                                     Size="Size.Large"
-                                     Color="Color.Default"
-                                     Class="document-search-empty-icon" />
+                            <MoIcon Icon="@MoIcons.SearchOff"
+                                     Size="2.25rem"
+                                     Class="document-search-empty-icon" Style="color:var(--mud-palette-text-secondary);" />
                             <MudText Typo="Typo.body1">@L["MarkdownViewer:Dialogs:Search:NoResults"]</MudText>
                         </MudStack>
                     </div>

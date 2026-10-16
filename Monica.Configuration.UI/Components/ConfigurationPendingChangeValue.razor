@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using Monica.Configuration.UI.Localization
 @inject IStringLocalizer<ConfigurationUIResource> L
 
@@ -16,7 +17,7 @@
     {
         get
         {
-            if (Change.IsSensitive)
+            if (Visibility.ShouldMask(Change.IsSensitive))
             {
                 return L["State:Value:Sensitive"];
             }

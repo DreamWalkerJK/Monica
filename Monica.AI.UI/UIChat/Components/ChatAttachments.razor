@@ -15,8 +15,8 @@
         }
         else
         {
-        <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Disabled="@Disabled"
-                 Icon="@(attachment.Kind == ChatAttachmentKind.Image ? Icons.Material.Outlined.Image : Icons.Material.Outlined.Description)"
+        <MudChip CloseIcon="@MoIcons.Close" T="string" Variant="Variant.Outlined" Size="Size.Small" Disabled="@Disabled"
+                 Icon="@(attachment.Kind == ChatAttachmentKind.Image ? MoIcons.Image : MoIcons.FileText)"
                  OnClick="@(() => PreviewAsync(originSession, attachment))" OnClose="@(Removable ? EventCallback.Factory.Create<MudChip<string>>(this, () => OnRemove.InvokeAsync(attachment)) : default)">
             @attachment.FileName <span class="attachment-size">@($"{attachment.Size / 1024d:0.#} KB")</span>
         </MudChip>

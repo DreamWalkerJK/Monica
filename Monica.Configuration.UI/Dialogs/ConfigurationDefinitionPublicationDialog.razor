@@ -14,9 +14,9 @@
                         {
                             <MudTooltip Text="@Definition.Description">
                                 <span class="configuration-description-icon">
-                                    <MudIcon Icon="@Icons.Material.Filled.Info"
-                                             Size="Size.Small"
-                                             Color="Color.Info" />
+                                    <MoIcon Icon="@MoIcons.Info"
+                                             Size="1.25rem"
+                                             Style="color:var(--mud-palette-info)" />
                                 </span>
                             </MudTooltip>
                         }
@@ -48,27 +48,27 @@
 
             @if (Overview is null)
             {
-                <MudAlert Severity="Severity.Info">@L["DefinitionPublication:Unavailable"]</MudAlert>
+                <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["DefinitionPublication:Unavailable"]</MudAlert>
             }
             else
             {
                 @if (Overview.LifecycleState == ConfigurationDefinitionLifecycleState.Retired)
                 {
-                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                    <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined">
                         @L["DefinitionPublication:RetiredNotice"]
                     </MudAlert>
                 }
                 <div class="configuration-definition-publication-tabs">
-                    <MudTabs @bind-ActivePanelIndex="_activeTabIndex"
+                    <MudTabs PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" @bind-ActivePanelIndex="_activeTabIndex"
                              Rounded="true"
                              ApplyEffectsToContainer="true"
                              TabPanelsClass="pa-3">
                         <MudTabPanel Text="@L["DefinitionPublication:Tabs:RevisionHistory"]"
-                                     Icon="@Icons.Material.Filled.History">
+                                     Icon="@MoIcons.History">
                             @RevisionHistoryContent
                         </MudTabPanel>
                         <MudTabPanel Text="@L["DefinitionPublication:Tabs:ReloadContributors"]"
-                                     Icon="@Icons.Material.Filled.AccountTree">
+                                     Icon="@MoIcons.Workflow">
                             @ReloadContributorsContent
                         </MudTabPanel>
                     </MudTabs>
@@ -127,7 +127,7 @@
 
         @if (OrderedHistories.Count == 0)
         {
-            <MudAlert Severity="Severity.Info">@L["DefinitionPublication:RevisionHistory:Empty"]</MudAlert>
+            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["DefinitionPublication:RevisionHistory:Empty"]</MudAlert>
         }
         else
         {
@@ -224,7 +224,7 @@
                                         <MudText Typo="Typo.subtitle2">@L["DefinitionPublication:RevisionHistory:ChangeSummary"]</MudText>
                                         @if (SelectedChanges.Count == 0)
                                         {
-                                            <MudAlert Severity="Severity.Info" Dense="true">@L["DefinitionPublication:RevisionHistory:NoSummary"]</MudAlert>
+                                            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["DefinitionPublication:RevisionHistory:NoSummary"]</MudAlert>
                                         }
                                         else
                                         {
@@ -248,12 +248,11 @@
                                     <div class="configuration-definition-publication-section">
                                         @if (_selectedHistory.ChangeKind == ConfigurationDefinitionPublishChangeKind.MetadataChanged)
                                         {
-                                            <MudAlert Severity="Severity.Info" Dense="true">
+                                            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">
                                                 @L["DefinitionPublication:RevisionHistory:SchemaUnchanged", _selectedHistory.NewSchemaVersion, _selectedHistory.DefinitionRevision]
                                             </MudAlert>
                                         }
-                                        else
-                                        {
+                                        <div>
                                             <MudText Typo="Typo.subtitle2">@L["DefinitionPublication:RevisionHistory:SchemaDiff"]</MudText>
                                             <div class="configuration-definition-publication-diff">
                                                 <DiffViewer OriginText="@FormatJson(_selectedHistory.PreviousSchemaJson)"
@@ -261,7 +260,7 @@
                                                             Options="@_diffOptions"
                                                             ViewMode="EDiffViewMode.Unified" />
                                             </div>
-                                        }
+                                        </div>
                                     </div>
                                 </div>
                             }
@@ -274,7 +273,7 @@
 
     private RenderFragment ReloadContributorsContent => @<div class="configuration-definition-publication-tab-content">
         <div class="configuration-definition-publication-contributor-summary">
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Variant="Variant.Outlined">
                 <MudText Typo="Typo.body2">
                     @L["DefinitionPublication:ReloadContributors:EffectiveSummary", ConfigurationReloadBehaviorFormatter.Label(Overview!.ReloadBehavior, L)]
                 </MudText>
@@ -286,7 +285,7 @@
 
         @if (OrderedPublisherStates.Count == 0)
         {
-            <MudAlert Severity="Severity.Info">@L["DefinitionPublication:ReloadContributors:Empty"]</MudAlert>
+            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["DefinitionPublication:ReloadContributors:Empty"]</MudAlert>
         }
         else
         {
@@ -374,10 +373,10 @@
     {
         return kind switch
         {
-            ConfigurationDefinitionPublishChangeKind.Created => Icons.Material.Filled.Add,
-            ConfigurationDefinitionPublishChangeKind.SchemaChanged => Icons.Material.Filled.DataObject,
-            ConfigurationDefinitionPublishChangeKind.MetadataChanged => Icons.Material.Filled.Edit,
-            _ => Icons.Material.Filled.Timeline
+            ConfigurationDefinitionPublishChangeKind.Created => MoIcons.Add,
+            ConfigurationDefinitionPublishChangeKind.SchemaChanged => MoIcons.Braces,
+            ConfigurationDefinitionPublishChangeKind.MetadataChanged => MoIcons.Edit,
+            _ => MoIcons.ChartLine
         };
     }
 
@@ -422,8 +421,8 @@
     private static string LifecycleIcon(ConfigurationDefinitionLifecycleState lifecycleState)
     {
         return lifecycleState == ConfigurationDefinitionLifecycleState.Retired
-            ? Icons.Material.Filled.Inventory2
-            : Icons.Material.Filled.CheckCircle;
+            ? MoIcons.Package
+            : MoIcons.Success;
     }
 
     private string ReportedBehaviorText(ConfigurationDefinitionPublisherState state)

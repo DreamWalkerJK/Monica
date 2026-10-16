@@ -8,6 +8,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -55,35 +56,35 @@ public sealed class ModuleConfigurationUI : MonicaModule<ModuleConfigurationUIOp
         registry.RegisterLocalizedPage<ConfigurationStatePage, ConfigurationUIResource>(
             ConfigurationUiRoutes.STATE_ROUTE,
             "Pages:ConfigurationState:Title",
-            Icons.Material.Filled.Tune,
+            MoIcons.Sliders,
             BuiltInNavigationCategoryIds.Configuration,
             addToNav: true,
             navOrder: 10);
         registry.RegisterLocalizedPage<ConfigurationHistoryPage, ConfigurationUIResource>(
             ConfigurationUiRoutes.HISTORY_ROUTE,
             "Pages:ConfigurationHistory:Title",
-            Icons.Material.Filled.History,
+            MoIcons.History,
             BuiltInNavigationCategoryIds.Configuration,
             addToNav: true,
             navOrder: 20);
         registry.RegisterLocalizedPage<ConfigurationVersionsPage, ConfigurationUIResource>(
             ConfigurationUiRoutes.VERSIONS_ROUTE,
             "Pages:ConfigurationVersions:Title",
-            Icons.Material.Filled.SettingsBackupRestore,
+            MoIcons.Restore,
             BuiltInNavigationCategoryIds.Configuration,
             addToNav: true,
             navOrder: 25);
         registry.RegisterLocalizedPage<ConfigurationDebugPage, ConfigurationUIResource>(
             ConfigurationUiRoutes.DEBUG_ROUTE,
             "Pages:ConfigurationDebug:Title",
-            Icons.Material.Filled.BugReport,
+            MoIcons.Bug,
             BuiltInNavigationCategoryIds.Configuration,
             addToNav: true,
             navOrder: 30);
         registry.RegisterLocalizedPage<ConfigurationStoragePage, ConfigurationUIResource>(
             ConfigurationUiRoutes.STORAGE_ROUTE,
             "Pages:ConfigurationStorage:Title",
-            Icons.Material.Filled.Storage,
+            MoIcons.Database,
             BuiltInNavigationCategoryIds.Configuration,
             addToNav: true,
             navOrder: 40);
@@ -97,6 +98,7 @@ public sealed class ModuleConfigurationUI : MonicaModule<ModuleConfigurationUIOp
         services.AddScoped<ConfigurationPendingChangeCompactor>();
         services.AddScoped<ConfigurationJsonDraftService>();
         services.AddScoped<ConfigurationParameterPackageService>();
+        services.AddSingleton<ConfigurationValueVisibility>();
     }
 }
 
@@ -105,6 +107,17 @@ public sealed class ModuleConfigurationUI : MonicaModule<ModuleConfigurationUIOp
 /// </summary>
 public class ModuleConfigurationUIOption : ModuleOptions<ModuleConfigurationUI>
 {
+    /// <summary>
+    /// Gets or sets whether the operator UI displays all configuration values without sensitive-value masking.
+    /// </summary>
+    /// <remarks>
+    /// Disabled by default. Enabling this reveals annotated values, historical and unknown-schema values,
+    /// JSON editors and previews, source inventories and files, exports, and raw diagnostics. It also allows
+    /// copying sensitive text. This is a host configuration setting, not a per-user reveal preference.
+    /// It does not alter stored values, sensitivity annotations, validation, or write authorization.
+    /// </remarks>
+    public bool ShowSensitiveValues { get; set; }
+
     /// <summary>
     /// Gets or sets whether saving a configuration mutation group requires an additional confirmation that lists
     /// the logical services affected by the changed definitions.

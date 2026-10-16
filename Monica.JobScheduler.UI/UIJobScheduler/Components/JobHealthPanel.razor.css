@@ -10,7 +10,7 @@
 .job-health__score[data-tone="success"] { --score-tone: var(--mud-palette-success); }
 .job-health__score[data-tone="info"] { --score-tone: var(--mud-palette-info); }
 .job-health__score-label { display: flex; align-items: flex-start; gap: 7px; min-width: 0; color: var(--score-ink); font-size: .8rem; font-weight: 500; line-height: 1.45; }
-.job-health__score-label ::deep .mud-icon-root { flex-shrink: 0; }
+.job-health__score-label ::deep :is(.mud-icon-root, .mo-icon) { flex-shrink: 0; }
 .job-health__score-label ::deep .mud-icon-button { flex: 0 0 26px; width: 26px; height: 26px; margin-inline-start: auto; padding: 4px; color: var(--score-ink); }
 .job-health__score-label ::deep .mud-icon-button:hover, .job-health__score-label ::deep .mud-icon-button:focus-visible { background: color-mix(in srgb, var(--score-tone) 8%, transparent); }
 .job-health__score small { color: var(--health-muted); font-size: .78rem; line-height: 1.5; overflow-wrap: anywhere; }
@@ -34,7 +34,7 @@
 .job-health__statistics dt, .job-health__duration dt { color: var(--health-muted); font-size: .78rem; line-height: 1.4; }
 .job-health__statistics dd, .job-health__duration dd { min-width: 0; margin: 0; color: var(--mud-palette-text-primary); font-family: var(--mo-font-family-mono); font-size: .84rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; line-height: 1.5; }
 .job-health__note { display: flex; align-items: flex-start; gap: 8px; color: var(--health-muted); font-size: .78rem; line-height: 1.5; }
-.job-health__note ::deep .mud-icon-root { flex-shrink: 0; }
+.job-health__note ::deep :is(.mud-icon-root, .mo-icon) { flex-shrink: 0; }
 @container job-health (max-width: 1000px) { .job-health__outcomes, .job-health__duration { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @container job-health (max-width: 700px) { .job-health__heading { display: grid; } .job-health__score-grid { grid-template-columns: minmax(0, 1fr); } .job-health__statistics, .job-health__outcomes, .job-health__duration { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .job-health, .job-health__score { padding: 16px; } }

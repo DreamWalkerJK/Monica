@@ -26,7 +26,7 @@
     }
     else if (Step is not { } step)
     {
-        <div class="inspector-empty"><MudIcon Icon="@Icons.Material.Outlined.TouchApp" /><span>@L["Workbench:SelectStep"]</span></div>
+        <div class="inspector-empty"><MoIcon Icon="@MoIcons.PointerMouse" Size="1.5rem" /><span>@L["Workbench:SelectStep"]</span></div>
     }
     else
     {
@@ -51,7 +51,7 @@
                     </dl>
                     <MudText Typo="Typo.caption">@L["Workbench:SpeedHelp"]</MudText>
                 }
-                @if (step.Error is { } error) { <MudAlert Severity="Severity.Error" Dense="true">@error</MudAlert> }
+                @if (step.Error is { } error) { <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@error</MudAlert> }
                 @if (step.Compaction is { } compacted)
                 {
                     <MudText Typo="Typo.body2">@L["Workbench:CompactionSummary", compacted.BeforeTokens, compacted.AfterTokens]</MudText>

@@ -14,15 +14,15 @@
             <div class="catalog-page">
                 @if (_state.Error is not null)
                 {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_state.Error</MudAlert>
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@_state.Error</MudAlert>
                 }
                 @if (_state.FacetsError is not null)
                 {
-                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Catalog:FacetLoadFailed", _state.FacetsError]</MudAlert>
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["Catalog:FacetLoadFailed", _state.FacetsError]</MudAlert>
                 }
                 @if (_state.PresentFilter == false)
                 {
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Catalog:AbsentViewNotice"]</MudAlert>
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@MoIcons.Info">@L["Catalog:AbsentViewNotice"]</MudAlert>
                 }
                 <JobCatalogOperationalTable @ref="_catalogTable"
                                             ServerData="@_state.LoadTableAsync"
@@ -98,7 +98,7 @@
 
     private RenderFragment RenderSelectionToolbar(JobCatalogPageState state) => @<section class="catalog-selection" role="region" aria-label="@L["Catalog:Selection:ToolbarLabel"]">
         <div class="catalog-selection__copy">
-            <MudIcon Icon="@Icons.Material.Outlined.Checklist" />
+            <MoIcon Icon="@MoIcons.ListChecks" Size="1.5rem" />
             <div>
                 <p class="catalog-selection__title">@L["Catalog:Selection:Count", state.SelectedRecurringSummaries.Count]</p>
                 <p>@L["Catalog:Selection:Description"]</p>
@@ -110,9 +110,9 @@
         </div>
         <div class="catalog-selection__actions">
             <MudButton Variant="Variant.Text" Disabled="@state.IsMutating" OnClick="@(() => SetAllRecurringSelection(false))">@L["Catalog:Selection:Clear"]</MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@Icons.Material.Outlined.PauseCircleOutline"
+            <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@MoIcons.PauseCircle"
                        Disabled="@state.IsMutating" OnClick="@(() => ApplyBatchDisabledAsync(true))">@L["Catalog:Actions:PauseSelected"]</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Outlined.PlayCircleOutline"
+            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@MoIcons.PlayCircle"
                        Disabled="@state.IsMutating" OnClick="@(() => ApplyBatchDisabledAsync(false))">@L["Catalog:Actions:ResumeSelected"]</MudButton>
         </div>
     </section>;

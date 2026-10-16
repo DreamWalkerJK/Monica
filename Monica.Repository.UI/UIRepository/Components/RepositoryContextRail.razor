@@ -2,8 +2,8 @@
 @inject IStringLocalizer<RepositoryUIResource> L
 
 <aside class="repository-context-rail" aria-label="@L["ContextRail:Title"]">
-    <header class="rail-header"><div><span>@L["ContextRail:Eyebrow"]</span><h3>@L["ContextRail:Title"]</h3><p>@L["ContextRail:Subtitle", Contexts.Count]</p></div><MudIconButton Icon="@Icons.Material.Outlined.Refresh" aria-label="@L["Common:Actions:Refresh"]" Size="Size.Small" Disabled="IsLoading" OnClick="OnRefresh" /></header>
-    <MudTextField T="string" @bind-Value="_search" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="@L["Workbench:ContextSearch"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Clearable="true" />
+    <header class="rail-header"><div><span>@L["ContextRail:Eyebrow"]</span><h3>@L["ContextRail:Title"]</h3><p>@L["ContextRail:Subtitle", Contexts.Count]</p></div><MudIconButton Icon="@MoIcons.Refresh" aria-label="@L["Common:Actions:Refresh"]" Size="Size.Small" Disabled="IsLoading" OnClick="OnRefresh" /></header>
+    <MudTextField T="string" @bind-Value="_search" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="@L["Workbench:ContextSearch"]" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Clearable="true" ClearIcon="@MoIcons.Close" />
     @if (IsLoading && Contexts.Count == 0)
     {
         <div class="rail-state"><MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />@L["ContextRail:Loading"]</div>

@@ -27,7 +27,7 @@
 .state-filters ::deep .mud-button-outlined-error { --filter-hue: var(--mud-palette-error); color: color-mix(in srgb, var(--mud-palette-error) 35%, var(--git-ink)); }
 .state-filters ::deep .state-filter.selected { background: color-mix(in srgb, var(--filter-hue) 8%, var(--git-surface)); border-color: color-mix(in srgb, var(--filter-hue) 55%, var(--git-ink)) !important; box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--filter-hue) 55%, var(--git-ink)); }
 .filter-count { margin-inline-start: 8px; font-variant-numeric: tabular-nums; }
-.repository-list { display: grid; margin-top: 12px; padding: 4px; max-height: clamp(160px, var(--git-catalog-list-height, calc(100dvh - var(--mo-appbar-height, 56px) - 520px)), 512px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--mud-palette-action-disabled) var(--git-surface); scroll-padding-block: 4px; }
+.repository-list { display: grid; margin-top: 12px; padding: 4px; max-height: clamp(160px, var(--git-catalog-list-height, calc(100dvh - var(--mo-appbar-height, 56px) - 520px)), 512px); overflow-y: auto; overscroll-behavior: contain; scroll-padding-block: 4px; }
 .repository-row { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; justify-items: stretch; align-items: start; gap: 8px; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--git-line); background: var(--git-surface); color: var(--git-ink); font: inherit; font-size: 13px; line-height: 1.6; text-align: start; cursor: pointer; }
 .repository-row:last-child { border-bottom: 0; }
 .repository-row:hover { background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--git-surface)); }

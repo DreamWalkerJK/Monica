@@ -19,7 +19,7 @@
         </div>
         <div class="event-desk__refresh">
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="LoadDomainEventsAsync"
-                       StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@(_loading || _publishing)">
+                       StartIcon="@MoIcons.Refresh" Disabled="@(_loading || _publishing)">
                 @L["DomainEventTester:Actions:Refresh"]
             </MudButton>
         </div>
@@ -79,7 +79,7 @@
                     <p>@L["DomainEventTester:Desk:DraftHint"]</p>
                     <div>
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="PublishEventAsync"
-                                   StartIcon="@Icons.Material.Outlined.Send" Disabled="@(_loading || _publishing || string.IsNullOrWhiteSpace(selected.EventKey))">
+                                   StartIcon="@MoIcons.Send" Disabled="@(_loading || _publishing || string.IsNullOrWhiteSpace(selected.EventKey))">
                             @(_publishing ? L["DomainEventTester:Actions:Publishing"] : L["DomainEventTester:Actions:Publish"])
                         </MudButton>
                     </div>
@@ -88,7 +88,7 @@
             else
             {
                 <div class="event-payload__unselected">
-                    <MudIcon Icon="@Icons.Material.Outlined.DataObject" />
+                    <MoIcon Icon="@MoIcons.Braces" Size="1.5rem" />
                     <p>@L["DomainEventTester:States:NoSelection"]</p>
                 </div>
             }

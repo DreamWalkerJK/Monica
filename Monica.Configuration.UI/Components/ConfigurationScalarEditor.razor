@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using System.Globalization
 @using Monica.Configuration.UI.Localization
 @inject IStringLocalizer<ConfigurationUIResource> L
@@ -28,7 +29,7 @@
     }
     else if (Node.ValueKind == ConfigurationValueKind.DateTime)
     {
-        <MudDatePicker @key="EditorInstanceKey"
+        <MudDatePicker AdornmentIcon="@MoIcons.Calendar" PreviousIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" @key="EditorInstanceKey"
                        Date="@_dateValue"
                        DateChanged="OnDateChanged"
                        aria-label="@EditorLabel"
@@ -54,7 +55,7 @@
                               Placeholder="@L["State:Editor:TimeSpanPlaceholder"]"
                               Error="@HasError"
                               Adornment="Adornment.End"
-                              AdornmentIcon="@Icons.Material.Filled.Schedule"
+                              AdornmentIcon="@MoIcons.Clock"
                               OnAdornmentClick="OpenTimePicker"
                               Disabled="@Disabled" />
                 <MudPopover Open="@_timePickerOpen"
@@ -62,7 +63,7 @@
                             TransformOrigin="Origin.TopRight"
                             Class="configuration-time-picker-popover">
                     <MudStack Spacing="2" Class="configuration-time-picker-menu">
-                        <MudTimePicker PickerVariant="PickerVariant.Static"
+                        <MudTimePicker AdornmentIcon="@MoIcons.Clock" PickerVariant="PickerVariant.Static"
                                        Time="@_pickerDraftTime"
                                        TimeChanged="OnTimePickerDraftChanged"
                                        TimeFormat="HH:mm"
@@ -93,7 +94,7 @@
     }
     else if (EnumValues.Count > 0)
     {
-        <MudSelect @key="EditorInstanceKey"
+        <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" @key="EditorInstanceKey"
                    T="string"
                    aria-label="@EditorLabel"
                    Value="@_textValue"
@@ -121,18 +122,18 @@
                       InputType="@TextInputType"
                       Placeholder="@Placeholder"
                       Error="@HasError"
-                      Adornment="@(Node.IsSensitive ? Adornment.End : Adornment.None)"
+                      Adornment="@(Visibility.ShouldMask(Node.IsSensitive) ? Adornment.End : Adornment.None)"
                       AdornmentIcon="@SensitiveAdornmentIcon"
                       OnAdornmentClick="ToggleSensitiveVisibility"
-                      oncopy="@(Node.IsSensitive ? "return false" : null)"
-                      oncut="@(Node.IsSensitive ? "return false" : null)"
+                      oncopy="@(Visibility.ShouldMask(Node.IsSensitive) ? "return false" : null)"
+                      oncut="@(Visibility.ShouldMask(Node.IsSensitive) ? "return false" : null)"
                       Disabled="@Disabled" />
         @if (Node.IsRegexPatternText)
         {
             <div class="configuration-regex-hint">
                 <MudTooltip Text="@L["State:Editor:RegexPatternTooltip"]">
                     <span class="configuration-regex-badge">
-                        <MudIcon Icon="@Icons.Material.Filled.Functions" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.Sigma" Size="1.25rem" />
                         <span>@L["State:Editor:RegexPattern"]</span>
                     </span>
                 </MudTooltip>
@@ -159,7 +160,7 @@
             <div class="configuration-editor-hint">
                 <MudTooltip Text="@L["State:Editor:EditorHintTooltip", Node.EditorHint]">
                     <span class="configuration-editor-hint-badge">
-                        <MudIcon Icon="@Icons.Material.Filled.EditAttributes" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.ToggleLeft" Size="1.25rem" />
                         <span>@Node.EditorHint</span>
                     </span>
                 </MudTooltip>
@@ -204,13 +205,13 @@
     private IReadOnlyList<string> EnumValues =>
         ConfigurationScalarValueCodec.GetAllowedValues(Node);
 
-    private InputType TextInputType => Node.IsSensitive && !_showSensitive ? InputType.Password : InputType.Text;
+    private InputType TextInputType => Visibility.ShouldMask(Node.IsSensitive) && !_showSensitive ? InputType.Password : InputType.Text;
 
     private string? ActiveError => _error ?? ValidationIssue?.ValidationError;
 
     private bool HasError => !string.IsNullOrWhiteSpace(ActiveError);
 
-    private bool CanShowRegexPreview => !Node.IsSensitive || _showSensitive;
+    private bool CanShowRegexPreview => !Visibility.ShouldMask(Node.IsSensitive) || _showSensitive;
 
     private IReadOnlyList<ConfigurationRegexPatternToken> RegexPreviewTokens =>
         ConfigurationRegexPatternHighlighter.Tokenize(_textValue, _showDecodedRegexPreview);
@@ -239,10 +240,10 @@
     private string EditorInstanceKey => $"{Node.RelativePath.ToCanonicalString()}:{Node.ValueKind}:{_editorResetVersion}";
 
     private string? SensitiveAdornmentIcon => Node.IsSensitive
-        ? _showSensitive ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility
+        ? _showSensitive ? MoIcons.EyeOff : MoIcons.Eye
         : null;
 
-    private string? Placeholder => Node.IsSensitive && string.IsNullOrWhiteSpace(_textValue)
+    private string? Placeholder => Visibility.ShouldMask(Node.IsSensitive) && string.IsNullOrWhiteSpace(_textValue)
         ? L["State:Editor:SensitivePlaceholder"].Value
         : null;
 
@@ -349,7 +350,7 @@
 
     private void SyncFromValidationIssue(ConfigurationValidationIssue issue)
     {
-        var displayValue = issue.IsSensitive ? string.Empty : issue.InvalidDisplayValue ?? string.Empty;
+        var displayValue = Visibility.ShouldMask(issue.IsSensitive) ? string.Empty : issue.InvalidDisplayValue ?? string.Empty;
         SyncScalarFields(displayValue);
         _error = issue.ValidationError;
         _hasInvalidLocalEdit = true;

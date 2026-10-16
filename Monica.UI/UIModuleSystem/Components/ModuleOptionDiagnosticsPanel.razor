@@ -6,7 +6,7 @@
 <section class="option-diagnostics" aria-label="@L["Aria:OptionDiagnostics"]">
     @if (Diagnostics.ExposureMode == ModuleOptionDiagnosticsExposureMode.RevealSensitive)
     {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true">
+        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true" Icon="@MoIcons.Error">
             <div class="option-policy-message">
                 <strong>@L["ModuleDrawer:Options:RevealPolicyTitle"]</strong>
                 <span>@L["ModuleDrawer:Options:RevealPolicy"]</span>
@@ -15,7 +15,7 @@
     }
     else
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Info">
             <div class="option-policy-message">
                 <strong>@L["ModuleDrawer:Options:RedactedPolicyTitle"]</strong>
                 <span>@L["ModuleDrawer:Options:RedactedPolicy"]</span>
@@ -33,7 +33,7 @@
             }
         </div>
         <div class="option-projection-metrics" aria-label="@L["ModuleDrawer:Options:ProjectionSummary"]">
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                 @L["ModuleDrawer:Options:VisibleCount", DisplayedEntryCount]
             </MudChip>
             @if (Diagnostics.SensitiveEntryCount > 0)
@@ -41,13 +41,13 @@
                 <MudChip T="string"
                          Size="Size.Small"
                          Variant="Variant.Outlined"
-                         Color="@(Diagnostics.ContainsRevealedSensitiveValues ? Color.Error : Color.Warning)">
+                         Color="@(Diagnostics.ContainsRevealedSensitiveValues ? Color.Error : Color.Warning)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                     @L["ModuleDrawer:Options:SensitiveCount", Diagnostics.SensitiveEntryCount]
                 </MudChip>
             }
             @if (Diagnostics.IsTruncated)
             {
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                     @L["ModuleDrawer:Options:ProjectionTruncated"]
                 </MudChip>
             }
@@ -58,7 +58,7 @@
     {
         <div class="option-empty-state option-empty-state--pending" role="status">
             <span class="option-empty-state__icon">
-                <MudIcon Icon="@Icons.Material.Filled.HourglassTop" Size="Size.Large" />
+                <MoIcon Icon="@MoIcons.Hourglass" Size="2.25rem" />
             </span>
             <div>
                 <strong>@L["ModuleDrawer:Options:UnfinalizedTitle"]</strong>
@@ -70,7 +70,7 @@
     {
         <div class="option-empty-state" role="status">
             <span class="option-empty-state__icon">
-                <MudIcon Icon="@Icons.Material.Filled.FilterAltOff" Size="Size.Large" />
+                <MoIcon Icon="@MoIcons.FilterOff" Size="2.25rem" />
             </span>
             <div>
                 <strong>@L["ModuleDrawer:Options:EmptyTitle"]</strong>

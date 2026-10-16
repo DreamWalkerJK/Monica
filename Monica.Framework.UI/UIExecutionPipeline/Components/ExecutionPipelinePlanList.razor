@@ -11,7 +11,7 @@
         @if (Plans.Count == 0)
         {
             <div class="execution-pipeline-plan-list__empty" data-testid="execution-pipeline-filter-empty">
-                <MudIcon Icon="@Icons.Material.Outlined.FilterAltOff" />
+                <MoIcon Icon="@MoIcons.FilterOff" Size="1.5rem" />
                 <p>@L["Page:States:NoFilteredPlans"]</p>
             </div>
         }
@@ -25,7 +25,7 @@
                         aria-pressed="@(SelectedPlan?.Id == plan.Id ? "true" : "false")"
                         @onclick="() => PlanSelected.InvokeAsync(plan)">
                     <span class="execution-pipeline-plan-list__icon" aria-hidden="true">
-                        <MudIcon Icon="@ExecutionPipelinePresentation.GetStatusIcon(plan.Status)" Size="Size.Small" />
+                        <MoIcon Icon="@ExecutionPipelinePresentation.GetStatusIcon(plan.Status)" Size="1.25rem" />
                     </span>
                     <span class="execution-pipeline-plan-list__content">
                         <strong title="@plan.Descriptor.FullName">@plan.Descriptor.Name</strong>
@@ -43,7 +43,7 @@
                         </span>
                     </span>
                     <span class="execution-pipeline-plan-list__chevron" aria-hidden="true">
-                        <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.ChevronRight" Size="1.25rem" />
                     </span>
                 </button>
             }

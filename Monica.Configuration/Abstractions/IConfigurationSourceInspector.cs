@@ -25,18 +25,20 @@ public interface IConfigurationSourceInspector
     /// </summary>
     /// <param name="definition">The definition.</param>
     /// <param name="logicalPath">The logical path.</param>
+    /// <param name="includeSensitive">Whether to return sensitive values without masking; false by default.</param>
     /// <returns>The source chain.</returns>
-    ConfigurationSourceChain GetSourceChain(ConfigurationDefinition definition, LogicalPath logicalPath);
+    ConfigurationSourceChain GetSourceChain(ConfigurationDefinition definition, LogicalPath logicalPath, bool includeSensitive = false);
 
     /// <summary>
     /// Gets source chains for several paths while sharing one runtime-provider snapshot.
     /// </summary>
     /// <param name="definition">The managed definition.</param>
     /// <param name="logicalPaths">The logical paths to inspect, in result order.</param>
+    /// <param name="includeSensitive">Whether to return sensitive values without masking; false by default.</param>
     /// <returns>One source chain for each requested path.</returns>
     IReadOnlyList<ConfigurationSourceChain> GetSourceChains(
         ConfigurationDefinition definition,
-        IReadOnlyList<LogicalPath> logicalPaths);
+        IReadOnlyList<LogicalPath> logicalPaths, bool includeSensitive = false);
 
     /// <summary>
     /// Gets an opaque revision of one runtime provider's schema-visible contribution to a definition.
@@ -58,15 +60,17 @@ public interface IConfigurationSourceInspector
     /// Gets all managed configuration values supplied by each runtime source.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="includeSensitive">Whether to return sensitive values without masking; false by default.</param>
     /// <returns>Source inventories ordered by provider priority from highest to lowest.</returns>
     Task<IReadOnlyList<ConfigurationSourceInventory>> GetSourceInventoriesAsync(
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, bool includeSensitive = false);
 
     /// <summary>
     /// Gets a display-safe JSON file view for one source.
     /// </summary>
     /// <param name="sourceKey">The source key.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="includeSensitive">Whether to return sensitive values without masking; false by default.</param>
     /// <returns>The source file view.</returns>
-    Task<ConfigurationSourceFileView> GetSourceFileViewAsync(string sourceKey, CancellationToken cancellationToken);
+    Task<ConfigurationSourceFileView> GetSourceFileViewAsync(string sourceKey, CancellationToken cancellationToken, bool includeSensitive = false);
 }

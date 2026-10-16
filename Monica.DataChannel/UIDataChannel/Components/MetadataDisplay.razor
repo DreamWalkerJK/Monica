@@ -4,7 +4,7 @@
 
 @if (!string.IsNullOrEmpty(Metadata?.CaptureError))
 {
-    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">
         <strong>@L["Metadata:CaptureFailed"]</strong>
         <p>@Metadata.CaptureError</p>
     </MudAlert>
@@ -21,7 +21,7 @@ else if (_items.Count > 0)
                     {
                         <div class="metadata-structured">
                             <MudExpansionPanels Elevation="0" Dense="true">
-                                <MudExpansionPanel Text="@L["Metadata:ComplexValue"]" Icon="@Icons.Material.Outlined.DataObject">
+                                <MudExpansionPanel Text="@L["Metadata:ComplexValue"]" Icon="@MoIcons.Braces">
                                     <pre class="metadata-code">@item.Value</pre>
                                 </MudExpansionPanel>
                             </MudExpansionPanels>

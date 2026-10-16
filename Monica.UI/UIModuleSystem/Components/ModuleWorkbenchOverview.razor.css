@@ -49,7 +49,7 @@
 .finding-diagnostics code { display: block; margin-top: 6px; padding: 6px 8px; border-radius: 5px; background: var(--mud-palette-surface); color: var(--mud-palette-text-secondary); white-space: normal; overflow-wrap: anywhere; }
 .finding-overflow-list { display: grid; gap: 10px; }
 .compact-empty-state { display: flex; align-items: center; gap: 10px; padding: 12px 4px; margin: 0; color: var(--mud-palette-text-secondary); font-size: 13px; line-height: 1.7; }
-.compact-empty-state ::deep .mud-icon-root { flex: none; }
+.compact-empty-state ::deep :is(.mud-icon-root, .mo-icon) { flex: none; }
 .depth-body { padding: 0 24px 24px; }
 @container module-workbench (max-width: 1060px) {
     .score-feature { grid-template-columns: minmax(230px, .75fr) minmax(0, 1.5fr); }

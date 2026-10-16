@@ -9,10 +9,11 @@
 @import url('./layout/mo-navbar.css');
 @import url('./layout/mo-page-shell.css');
 
-/* Shared opt-in component primitives */
+/* Shared component primitives */
 @import url('./components/mo-card-surface.css');
 @import url('./components/mo-context-menu.css');
 @import url('./components/mo-navigation-search.css');
+@import url('./components/mo-scrollbar.css');
 
 /* 0. Introduce the baseline MudBlazor-compatible theme hook */
 @import url('./themes/mo-theme-mud-blazor.css');
@@ -293,31 +294,6 @@ html {
 ) {
     color: var(--mud-palette-text-primary);
     opacity: 1;
-}
-
-/* Custom scroll bar style */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--mud-palette-action-disabled);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--mud-palette-action-default);
-}
-
-/* Firefox scroll bars */
-* {
-    scrollbar-width: thin;
-    scrollbar-color: var(--mud-palette-action-disabled) transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

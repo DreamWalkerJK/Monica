@@ -16,8 +16,8 @@
     <header class="log-viewer-header">
         <div class="log-viewer-heading"><h2>@L["Workbench:Viewer:Heading"]</h2><span>@L["Workbench:Viewer:Scope", PageStartDisplay, PageEnd, CurrentLines.Count]</span></div>
         <div class="log-viewer-commands">
-            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.KeyboardArrowUp" OnClick="LoadEarlierAsync" Disabled="@(!CanLoadEarlier || _isLoadingMore)">@L["Workbench:Viewer:Earlier"]</MudButton>
-            <MudButton @ref="_newestButton" Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.KeyboardArrowDown" OnClick="GoToNewestAsync">@L["Workbench:Viewer:Newest"]</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.ChevronUp" OnClick="LoadEarlierAsync" Disabled="@(!CanLoadEarlier || _isLoadingMore)">@L["Workbench:Viewer:Earlier"]</MudButton>
+            <MudButton @ref="_newestButton" Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.ChevronDown" OnClick="GoToNewestAsync">@L["Workbench:Viewer:Newest"]</MudButton>
         </div>
     </header>
     @if (_isLoadingMore)
@@ -28,8 +28,8 @@
     {
         <div class="match-navigation-bar"><span>@L["Workbench:Viewer:Match", _currentMatchIndex + 1, _matchedLineIndices.Count]</span>
             <div class="match-navigation-actions">
-                <MudIconButton Icon="@Icons.Material.Outlined.KeyboardArrowUp" Size="Size.Small" OnClick="GoToPreviousMatchAsync" title="@L["Workbench:Viewer:PreviousMatch"]" aria-label="@L["Workbench:Viewer:PreviousMatch"]" />
-                <MudIconButton Icon="@Icons.Material.Outlined.KeyboardArrowDown" Size="Size.Small" OnClick="GoToNextMatchAsync" title="@L["Workbench:Viewer:NextMatch"]" aria-label="@L["Workbench:Viewer:NextMatch"]" />
+                <MudIconButton Icon="@MoIcons.ChevronUp" Size="Size.Small" OnClick="GoToPreviousMatchAsync" title="@L["Workbench:Viewer:PreviousMatch"]" aria-label="@L["Workbench:Viewer:PreviousMatch"]" />
+                <MudIconButton Icon="@MoIcons.ChevronDown" Size="Size.Small" OnClick="GoToNextMatchAsync" title="@L["Workbench:Viewer:NextMatch"]" aria-label="@L["Workbench:Viewer:NextMatch"]" />
             </div>
         </div>
     }
@@ -37,7 +37,7 @@
     <div class="log-viewer-scroll" @ref="_scrollContainer" @onscroll="OnNativeScrollAsync">
         @if (CurrentLines.Count == 0)
         {
-            <div class="log-viewer-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.Subject" /><p>@L[Filter?.IsActive == true ? "Workbench:Viewer:FilterEmpty" : "Workbench:Viewer:Empty"]</p></div>
+            <div class="log-viewer-empty" role="status"><MoIcon Icon="@MoIcons.Text" Size="1.5rem" /><p>@L[Filter?.IsActive == true ? "Workbench:Viewer:FilterEmpty" : "Workbench:Viewer:Empty"]</p></div>
         }
         else
         {
@@ -53,12 +53,12 @@
                         <div class="log-entry__message">@((MarkupString)BuildMessageMarkup(line))</div>
                     </div>
                     <div class="log-entry__actions">
-                        <MudIconButton Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" OnClick="@(() => InspectAsync(reference))" title="@InspectLabel(line)" aria-label="@InspectLabel(line)" />
-                        <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Size="Size.Small" AriaLabel="@L["Workbench:Viewer:Actions"]" Dense="true" DropShadow="false">
-                            <MudMenuItem Icon="@Icons.Material.Outlined.Article" OnClick="@(() => ShowContextAsync(reference))" Disabled="@(!OnShowContext.HasDelegate || !line.AbsoluteLineNumber.HasValue)">@L["Page:Components:Viewer:ContextMenu:ShowContext"]</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.FilterAlt" OnClick="@(() => FilterSeverityAsync(reference))" Disabled="@(!OnFilterSeverity.HasDelegate)">@L["Page:Components:Viewer:ContextMenu:FilterSeverity"]</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.Search" OnClick="@(() => FindSelectionAsync(reference))" Disabled="@(!OnApplyFilter.HasDelegate)">@L["Page:Components:Viewer:ContextMenu:FindSelection"]</MudMenuItem>
-                            <MudMenu Label="@L["Page:Components:Viewer:ContextMenu:Copy"]" AriaLabel="@L["Page:Components:Viewer:ContextMenu:Copy"]" StartIcon="@Icons.Material.Outlined.ContentCopy" Dense="true" DropShadow="false">
+                        <MudIconButton Icon="@MoIcons.ExternalLink" Size="Size.Small" OnClick="@(() => InspectAsync(reference))" title="@InspectLabel(line)" aria-label="@InspectLabel(line)" />
+                        <MudMenu Icon="@MoIcons.MoreHorizontal" Size="Size.Small" AriaLabel="@L["Workbench:Viewer:Actions"]" Dense="true" DropShadow="false">
+                            <MudMenuItem Icon="@MoIcons.FileText" OnClick="@(() => ShowContextAsync(reference))" Disabled="@(!OnShowContext.HasDelegate || !line.AbsoluteLineNumber.HasValue)">@L["Page:Components:Viewer:ContextMenu:ShowContext"]</MudMenuItem>
+                            <MudMenuItem Icon="@MoIcons.Filter" OnClick="@(() => FilterSeverityAsync(reference))" Disabled="@(!OnFilterSeverity.HasDelegate)">@L["Page:Components:Viewer:ContextMenu:FilterSeverity"]</MudMenuItem>
+                            <MudMenuItem Icon="@MoIcons.Search" OnClick="@(() => FindSelectionAsync(reference))" Disabled="@(!OnApplyFilter.HasDelegate)">@L["Page:Components:Viewer:ContextMenu:FindSelection"]</MudMenuItem>
+                            <MudMenu Label="@L["Page:Components:Viewer:ContextMenu:Copy"]" AriaLabel="@L["Page:Components:Viewer:ContextMenu:Copy"]" StartIcon="@MoIcons.Copy" Dense="true" DropShadow="false">
                                 <MudMenuItem OnClick="@(() => CopyLineAsync(reference, LogCopyFormat.Raw))">@L["Page:Components:Viewer:ContextMenu:CopyRaw"]</MudMenuItem>
                                 <MudMenuItem OnClick="@(() => CopyLineAsync(reference, LogCopyFormat.MessageOnly))">@L["Page:Components:Viewer:ContextMenu:CopyMessage"]</MudMenuItem>
                                 <MudMenuItem OnClick="@(() => CopyLineAsync(reference, LogCopyFormat.WithTimestamp))">@L["Page:Components:Viewer:ContextMenu:CopyTimestamp"]</MudMenuItem>
@@ -72,8 +72,8 @@
     </div>
     <footer class="log-viewer-footer"><span>@L["Workbench:Viewer:Page", _page + 1, PageCount]@if (_browsingEarlier) { <span class="log-viewer-browse-hint"> · @L["Workbench:Viewer:BrowseHint"]</span> }</span>
         <div class="log-viewer-pager">
-            <MudIconButton Icon="@Icons.Material.Outlined.ChevronLeft" Size="Size.Small" OnClick="PreviousPageAsync" Disabled="@(_page == 0)" title="@L["Workbench:Viewer:PreviousPage"]" aria-label="@L["Workbench:Viewer:PreviousPage"]" />
-            <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" OnClick="NextPageAsync" Disabled="@(_page >= PageCount - 1)" title="@L["Workbench:Viewer:NextPage"]" aria-label="@L["Workbench:Viewer:NextPage"]" />
+            <MudIconButton Icon="@MoIcons.ChevronLeft" Size="Size.Small" OnClick="PreviousPageAsync" Disabled="@(_page == 0)" title="@L["Workbench:Viewer:PreviousPage"]" aria-label="@L["Workbench:Viewer:PreviousPage"]" />
+            <MudIconButton Icon="@MoIcons.ChevronRight" Size="Size.Small" OnClick="NextPageAsync" Disabled="@(_page >= PageCount - 1)" title="@L["Workbench:Viewer:NextPage"]" aria-label="@L["Workbench:Viewer:NextPage"]" />
         </div>
     </footer>
 </section>
@@ -506,17 +506,17 @@
     {
         _menuCulture = CultureInfo.CurrentUICulture.Name;
         _contextMenuItems = ContextMenuBuilder<ViewerLineReference>.Create()
-            .AddItem(L["Page:Components:Viewer:ContextMenu:LineInfo"], Icons.Material.Outlined.Info, InspectAsync)
-            .AddItem(L["Page:Components:Viewer:ContextMenu:FilterSeverity"], Icons.Material.Outlined.FilterAlt, FilterSeverityAsync)
-            .AddItem(L["Page:Components:Viewer:ContextMenu:FindSelection"], Icons.Material.Outlined.Search, FindSelectionAsync)
-            .AddItem(L["Page:Components:Viewer:ContextMenu:ShowContext"], Icons.Material.Outlined.Article, ShowContextAsync)
+            .AddItem(L["Page:Components:Viewer:ContextMenu:LineInfo"], MoIcons.Info, InspectAsync)
+            .AddItem(L["Page:Components:Viewer:ContextMenu:FilterSeverity"], MoIcons.Filter, FilterSeverityAsync)
+            .AddItem(L["Page:Components:Viewer:ContextMenu:FindSelection"], MoIcons.Search, FindSelectionAsync)
+            .AddItem(L["Page:Components:Viewer:ContextMenu:ShowContext"], MoIcons.FileText, ShowContextAsync)
             .AddDivider()
-            .AddSubMenu(L["Page:Components:Viewer:ContextMenu:Copy"], Icons.Material.Outlined.ContentCopy, builder => builder
+            .AddSubMenu(L["Page:Components:Viewer:ContextMenu:Copy"], MoIcons.Copy, builder => builder
                 .AddItem(L["Page:Components:Viewer:ContextMenu:CopyRaw"], onClick: item => CopyLineAsync(item, LogCopyFormat.Raw))
                 .AddItem(L["Page:Components:Viewer:ContextMenu:CopyMessage"], onClick: item => CopyLineAsync(item, LogCopyFormat.MessageOnly))
                 .AddItem(L["Page:Components:Viewer:ContextMenu:CopyTimestamp"], onClick: item => CopyLineAsync(item, LogCopyFormat.WithTimestamp))
                 .AddItem(L["Page:Components:Viewer:ContextMenu:CopyLineNumber"], onClick: item => CopyLineAsync(item, LogCopyFormat.WithLineNumber)))
-            .AddSubMenu(L["Page:Components:Viewer:ContextMenu:Navigate"], Icons.Material.Outlined.Navigation, builder => builder
+            .AddSubMenu(L["Page:Components:Viewer:ContextMenu:Navigate"], MoIcons.Navigation, builder => builder
                 .AddItem(L["Page:Components:Viewer:ContextMenu:Top"], onClick: _ => ChangePageAsync(0))
                 .AddItem(L["Page:Components:Viewer:ContextMenu:Bottom"], onClick: _ => GoToNewestAsync()))
             .Build();

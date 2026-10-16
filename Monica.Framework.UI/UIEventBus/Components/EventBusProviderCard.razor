@@ -12,7 +12,7 @@
         @if (Provider.HasOptionDiagnostics) { <span>@L["Providers:Capabilities:HasOptions"]</span> }
     </div>
     <p class="provider-card-note">@L["ProviderDirectory:CountsHelp"]</p>
-    <MudButton Color="Color.Primary" EndIcon="@Icons.Material.Outlined.ArrowForward" OnClick="() => OnViewDetailsClicked.InvokeAsync(Provider)">@L["Providers:Card:ViewDetails"]</MudButton>
+    <MudButton Color="Color.Primary" EndIcon="@MoIcons.ArrowRight" OnClick="() => OnViewDetailsClicked.InvokeAsync(Provider)">@L["Providers:Card:ViewDetails"]</MudButton>
 </article>
 
 @code {

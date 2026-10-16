@@ -16,7 +16,7 @@
         <MudStack Spacing="3">
             <!-- Title -->
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Color="Color.Info" />
+                <MoIcon Icon="@MoIcons.Dashboard" Style="color:var(--mud-palette-info)" Size="1.5rem" />
                 <MudText Typo="Typo.h6">@L["Statistics:Title"]</MudText>
             </MudStack>
 
@@ -28,7 +28,7 @@
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:TotalInstances"]</MudText>
-                                <MudIcon Icon="@Icons.Material.Filled.Inventory" Color="Color.Primary" />
+                                <MoIcon Icon="@MoIcons.ClipboardList" Style="color:var(--mud-palette-primary)" Size="1.5rem" />
                             </MudStack>
                             <MudText Typo="Typo.h4">@Statistics.TotalInstances</MudText>
                         </MudStack>
@@ -41,7 +41,7 @@
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:HealthyInstances"]</MudText>
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                <MoIcon Icon="@MoIcons.Success" Style="color:var(--mud-palette-success)" Size="1.5rem" />
                             </MudStack>
                             <MudText Typo="Typo.h4" Color="Color.Success">@Statistics.HealthyCount</MudText>
                         </MudStack>
@@ -54,7 +54,7 @@
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:UnhealthyInstances"]</MudText>
-                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" />
+                                <MoIcon Icon="@MoIcons.Warning" Style="color:var(--mud-palette-error)" Size="1.5rem" />
                             </MudStack>
                             <MudText Typo="Typo.h4" Color="Color.Error">@Statistics.UnhealthyCount</MudText>
                         </MudStack>
@@ -67,7 +67,7 @@
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:UnknownHealth"]</MudText>
-                                <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Color="Color.Default" />
+                                <MoIcon Icon="@MoIcons.Help" Style="color:var(--mud-palette-text-secondary)" Size="1.5rem" />
                             </MudStack>
                             <MudText Typo="Typo.h4">@Statistics.UnknownHealthCount</MudText>
                         </MudStack>
@@ -80,7 +80,7 @@
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:TotalStateChanges"]</MudText>
-                                <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Color="Color.Info" />
+                                <MoIcon Icon="@MoIcons.ArrowLeftRight" Style="color:var(--mud-palette-info)" Size="1.5rem" />
                             </MudStack>
                             <MudText Typo="Typo.h4">@Statistics.TotalStateChanges</MudText>
                         </MudStack>
@@ -93,7 +93,7 @@
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:TotalExceptions"]</MudText>
-                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" />
+                                <MoIcon Icon="@MoIcons.Warning" Style="color:var(--mud-palette-warning)" Size="1.5rem" />
                             </MudStack>
                             <MudText Typo="Typo.h4" Color="@(Statistics.TotalExceptions > 0 ? Color.Warning : Color.Default)">@Statistics.TotalExceptions</MudText>
                         </MudStack>

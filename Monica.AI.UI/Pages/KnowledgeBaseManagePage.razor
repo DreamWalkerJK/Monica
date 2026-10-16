@@ -9,12 +9,12 @@
 <PageTitle>@L["KnowledgeBase:Navigation:Manage"]</PageTitle>
 <div class="knowledge-base-manage-page">
     <KnowledgeRagHeader Title="@L["KnowledgeWorkbench:Knowledge"]" Description="@L["KnowledgeWorkbench:KnowledgeDescription"]" CurrentRoute="@PAGE_URL">
-        <Actions><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add" OnClick="PageState.ShowCreateKnowledgeBaseDialogAsync">@L["Common:Create"]</MudButton></Actions>
+        <Actions><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Add" OnClick="PageState.ShowCreateKnowledgeBaseDialogAsync">@L["Common:Create"]</MudButton></Actions>
     </KnowledgeRagHeader>
     <div class="knowledge-workspace">
         @if (!PageState.IsInitialLoading && string.IsNullOrWhiteSpace(PageState.CatalogErrorMessage) && PageState.KnowledgeBases.Count == 0)
         {
-            <section class="knowledge-empty"><MudIcon Icon="@Icons.Material.Outlined.LibraryBooks" /><h2>@L["KnowledgeWorkbench:FirstCollection"]</h2><p>@L["KnowledgeWorkbench:FirstCollectionHint"]</p><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add" OnClick="PageState.ShowCreateKnowledgeBaseDialogAsync">@L["Common:Create"]</MudButton></section>
+            <section class="knowledge-empty"><MoIcon Icon="@MoIcons.Library" Size="1.5rem" /><h2>@L["KnowledgeWorkbench:FirstCollection"]</h2><p>@L["KnowledgeWorkbench:FirstCollectionHint"]</p><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Add" OnClick="PageState.ShowCreateKnowledgeBaseDialogAsync">@L["Common:Create"]</MudButton></section>
         }
         else
         {
@@ -30,18 +30,18 @@
                     <header class="collection-identity">
                         <div class="collection-identity-top">
                             <div class="collection-copy"><span class="collection-label">@L["KnowledgeWorkbench:Collection"]</span><h2 @ref="_dossierHeading" tabindex="-1">@kb.Name</h2><code>@kb.Id</code></div>
-                            <div class="collection-actions"><MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="PageState.ShowEditKnowledgeBaseDialogAsync">@L["Common:Edit"]</MudButton><MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" AriaLabel="@L["KnowledgeWorkbench:CollectionActions"]"><MudMenuItem Icon="@Icons.Material.Outlined.Delete" IconColor="Color.Error" OnClick="PageState.DeleteSelectedKnowledgeBaseAsync">@L["Common:Delete"]</MudMenuItem></MudMenu></div>
+                            <div class="collection-actions"><MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.Edit" OnClick="PageState.ShowEditKnowledgeBaseDialogAsync">@L["Common:Edit"]</MudButton><MudMenu Icon="@MoIcons.MoreHorizontal" AriaLabel="@L["KnowledgeWorkbench:CollectionActions"]"><MudMenuItem Icon="@MoIcons.Delete" IconColor="Color.Error" OnClick="PageState.DeleteSelectedKnowledgeBaseAsync">@L["Common:Delete"]</MudMenuItem></MudMenu></div>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(kb.Description)) { <p class="collection-description">@kb.Description</p> }
                         <div class="collection-facts"><span>@L["KnowledgeWorkbench:DocumentCount", kb.DocumentCount]</span><span>@L["KnowledgeWorkbench:RecordedChunks", kb.ChunkCount]</span><span class="binding-state">@(KnowledgeBaseManagePageState.IsRagEnabled(kb) ? L["KnowledgeWorkbench:ModelBound"] : L["KnowledgeBase:RagStatus:LookupOnly"])</span></div>
-                        @if (KnowledgeBaseManagePageState.IsRagEnabled(kb)) { <div class="collection-binding"><MudIcon Icon="@Icons.Material.Outlined.Memory" /><span>@kb.EmbeddingModelName <small>@PageState.GetProviderDisplayLabel(kb.EmbeddingProviderId, kb.EmbeddingModelName)</small></span></div> }
+                        @if (KnowledgeBaseManagePageState.IsRagEnabled(kb)) { <div class="collection-binding"><MoIcon Icon="@MoIcons.Cpu" Size="1.5rem" /><span>@kb.EmbeddingModelName <small>@PageState.GetProviderDisplayLabel(kb.EmbeddingProviderId, kb.EmbeddingModelName)</small></span></div> }
                     </header>
                     <KnowledgeBaseImportActions PageState="PageState" />
                     <KnowledgeBaseDocumentInventorySection PageState="PageState" />
                 }
                 else
                 {
-                    <div class="knowledge-empty"><MudIcon Icon="@Icons.Material.Outlined.LibraryBooks" /><h2>@L["KnowledgeWorkbench:ChooseCollection"]</h2><p>@L["KnowledgeWorkbench:ChooseCollectionHint"]</p></div>
+                    <div class="knowledge-empty"><MoIcon Icon="@MoIcons.Library" Size="1.5rem" /><h2>@L["KnowledgeWorkbench:ChooseCollection"]</h2><p>@L["KnowledgeWorkbench:ChooseCollectionHint"]</p></div>
                 }
             </section>
         </div>

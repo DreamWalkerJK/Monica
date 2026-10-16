@@ -1,0 +1,76 @@
+/* Shared scrollbar geometry; theme files own the thumb's palette and silhouette. */
+:root {
+    --mo-scrollbar-size: 8px;
+    --mo-scrollbar-inset: 2px;
+    --mo-scrollbar-radius: 999px;
+    --mo-color-scrollbar-thumb: color-mix(in srgb, var(--mud-palette-primary) 34%, transparent);
+    --mo-color-scrollbar-thumb-hover: color-mix(in srgb, var(--mud-palette-primary) 60%, transparent);
+    --mo-color-scrollbar-thumb-active: color-mix(in srgb, var(--mud-palette-primary) 84%, transparent);
+}
+
+/* Let the operating system paint forced-color scrollbars. */
+@media (forced-colors: none) {
+    :where(*) {
+        scrollbar-width: thin;
+        scrollbar-color: var(--mo-color-scrollbar-thumb) transparent;
+    }
+
+    :where(*:hover, *:focus-visible) {
+        scrollbar-color: var(--mo-color-scrollbar-thumb-hover) transparent;
+    }
+
+    /* Non-auto standard properties suppress WebKit pseudo-element styling in Chromium. */
+    @supports selector(::-webkit-scrollbar) {
+        :where(*) {
+            scrollbar-width: auto;
+            scrollbar-color: auto;
+        }
+
+        ::-webkit-scrollbar,
+        .mud-input > textarea.mud-input-root::-webkit-scrollbar {
+            width: var(--mo-scrollbar-size);
+            height: var(--mo-scrollbar-size);
+            cursor: auto;
+        }
+
+        ::-webkit-scrollbar-track,
+        ::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+
+        /* Match the native textarea rule so editors share the same paint and geometry. */
+        ::-webkit-scrollbar-thumb,
+        .mud-input > textarea.mud-input-root::-webkit-scrollbar-thumb {
+            min-height: 32px;
+            min-width: 32px;
+            border: var(--mo-scrollbar-inset) solid transparent;
+            border-radius: var(--mo-scrollbar-radius);
+            background-color: var(--mo-color-scrollbar-thumb);
+            background-clip: padding-box;
+        }
+
+        ::-webkit-scrollbar-thumb:hover,
+        .mud-input > textarea.mud-input-root::-webkit-scrollbar-thumb:hover {
+            background-color: var(--mo-color-scrollbar-thumb-hover);
+        }
+
+        ::-webkit-scrollbar-thumb:active,
+        .mud-input > textarea.mud-input-root::-webkit-scrollbar-thumb:active {
+            background-color: var(--mo-color-scrollbar-thumb-active);
+        }
+
+        ::-webkit-scrollbar-button {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+    }
+}
+
+/* Keep the same quiet painted core with a larger target on touch-capable primary pointers. */
+@media (pointer: coarse) {
+    :root {
+        --mo-scrollbar-size: 12px;
+        --mo-scrollbar-inset: 4px;
+    }
+}

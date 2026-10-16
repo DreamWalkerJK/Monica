@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
 using Monica.Framework.UI.UIObservableInstance.Support;
 using Monica.Tool.Extensions;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIObservableInstance.Models;
@@ -155,10 +156,10 @@ public class ObservableStateHistoryViewModel
     /// </summary>
     public string HistoryEntryIcon => (IsException, IsStateTransition) switch
     {
-        (true, true) => Icons.Material.Filled.WarningAmber,     // State change with exception
-        (true, false) => Icons.Material.Filled.Error,           // Exception without state change
-        (false, true) => Icons.Material.Filled.SwapHoriz,       // Normal state change
-        (false, false) => Icons.Material.Filled.Info           // Message only
+        (true, true) => MoIcons.Warning,     // State change with exception
+        (true, false) => MoIcons.Error,           // Exception without state change
+        (false, true) => MoIcons.ArrowLeftRight,       // Normal state change
+        (false, false) => MoIcons.Info           // Message only
     };
 
     #endregion

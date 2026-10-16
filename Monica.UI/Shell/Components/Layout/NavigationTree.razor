@@ -20,7 +20,7 @@
     }
     @foreach (var child in Group.Children)
     {
-        <MudNavGroup @key="child.Id" Title="@child.DisplayName" Icon="@(ShowPageIcons ? child.Icon : null)" ExpandIcon="@ShellIcons.ChevronDown"
+        <MudNavGroup @key="child.Id" Title="@child.DisplayName" Icon="@(ShowPageIcons ? child.Icon : null)" ExpandIcon="@MoIcons.ChevronDown"
                      Expanded="@ContainsActive(child)">
             <NavigationTree Group="@child" ActiveItem="@ActiveItem" ShowPageIcons="@ShowPageIcons" />
         </MudNavGroup>

@@ -12,11 +12,11 @@
 <DiscoveryWorkbench View="Registry">
     <section class="discovery-registry-summary" aria-label="@L["Workbench:RegistryScope"]">
         <div class="registry-summary-copy"><span>@L["Workbench:Membership"]</span><strong>@(State.CapturedAt is null ? L["Shared:Values:NotAvailable"] : L["Workbench:RegistryComposition", State.Services.Count(s => s.TotalInstanceCount > 0), State.Services.Sum(s => s.TotalInstanceCount)])</strong><p>@L["Workbench:MembershipHelp"]</p></div>
-        <div class="registry-summary-stamp"><span>@L["Workbench:CapturedUTC"]</span><time>@(State.CapturedAt?.ToString("HH:mm:ss") ?? L["Shared:Values:NotAvailable"].Value)</time><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@State.IsLoading" OnClick="() => RefreshAsync()">@L["Shared:Actions:Refresh"]</MudButton></div>
+        <div class="registry-summary-stamp"><span>@L["Workbench:CapturedUTC"]</span><time>@(State.CapturedAt?.ToString("HH:mm:ss") ?? L["Shared:Values:NotAvailable"].Value)</time><MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh" Disabled="@State.IsLoading" OnClick="() => RefreshAsync()">@L["Shared:Actions:Refresh"]</MudButton></div>
     </section>
     @if (State.ErrorMessage is not null)
     {
-        <div class="registry-notice registry-notice--error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" /><div><strong>@L["Workbench:RegistryReadFailed"]</strong><p>@State.ErrorMessage</p>@if (State.CapturedAt is not null) { <p>@L["Workbench:LastSuccessfulCapture"]</p> }</div></div>
+        <div class="registry-notice registry-notice--error" role="alert"><MoIcon Icon="@MoIcons.Error" Size="1.5rem" /><div><strong>@L["Workbench:RegistryReadFailed"]</strong><p>@State.ErrorMessage</p>@if (State.CapturedAt is not null) { <p>@L["Workbench:LastSuccessfulCapture"]</p> }</div></div>
     }
     <section class="registry-work-area">
         <header class="registry-work-heading"><div><span>@L["Workbench:RegistryScope"]</span><h2>@L["Workbench:RegistryTitle"]</h2><p>@(State.CapturedAt is null ? L["Shared:Values:NotAvailable"] : L["Workbench:ExpectedCount", State.Services.Count(s => s.TotalInstanceCount == 0)])</p></div><div class="registry-polling"><MudSwitch T="bool" @bind-Value="State.AutoRefreshEnabled" Label="@L["Shared:Labels:AutoRefresh"]" Color="Color.Primary" /><MudNumericField T="int" Value="State.RefreshInterval" ValueChanged="SetInterval" Min="1" Max="60" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(!State.AutoRefreshEnabled)" Label="@L["Shared:Labels:RefreshIntervalSeconds"]" /></div></header>
@@ -27,11 +27,11 @@
         }
         else if (State.CapturedAt is not null && State.Services.Count == 0)
         {
-            <div class="registry-empty"><MudIcon Icon="@Icons.Material.Outlined.Dns" /><h3>@L["Workbench:EmptyRegistry"]</h3><p>@L["Workbench:EmptyRegistryHelp"]</p></div>
+            <div class="registry-empty"><MoIcon Icon="@MoIcons.Server" Size="1.5rem" /><h3>@L["Workbench:EmptyRegistry"]</h3><p>@L["Workbench:EmptyRegistryHelp"]</p></div>
         }
         else if (State.CapturedAt is not null && State.FilteredServices.Count == 0)
         {
-            <div class="registry-empty"><MudIcon Icon="@Icons.Material.Outlined.SearchOff" /><h3>@L["Workbench:FilterMiss"]</h3><p>@L["Workbench:FilterMissHelp"]</p><MudButton OnClick="ResetFilters" Color="Color.Primary">@L["Workbench:ResetFilters"]</MudButton></div>
+            <div class="registry-empty"><MoIcon Icon="@MoIcons.SearchOff" Size="1.5rem" /><h3>@L["Workbench:FilterMiss"]</h3><p>@L["Workbench:FilterMissHelp"]</p><MudButton OnClick="ResetFilters" Color="Color.Primary">@L["Workbench:ResetFilters"]</MudButton></div>
         }
         else if (State.CapturedAt is not null)
         {

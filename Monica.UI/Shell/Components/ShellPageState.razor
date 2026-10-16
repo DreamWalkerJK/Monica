@@ -1,7 +1,7 @@
 <div class="shell-page-state" data-tone="@Tone">
     <section class="shell-page-state__surface" aria-labelledby="@HeadingId" aria-busy="@(IsChecking ? "true" : "false")">
         <span class="shell-page-state__icon" aria-hidden="true">
-            <MudIcon Icon="@Icon" />
+            <MoIcon Icon="@Icon" />
         </span>
 
         <div class="shell-page-state__copy">
@@ -22,7 +22,7 @@
         @if (!string.IsNullOrEmpty(HomeLabel))
         {
             <div class="shell-page-state__action">
-                <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Home">
+                <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Home">
                     @HomeLabel
                 </MudButton>
             </div>
