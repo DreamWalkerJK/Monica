@@ -1,7 +1,7 @@
 .group-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     min-width: 0;
     font-family: var(--mud-typography-default-family, var(--mo-font-family-body));
 }
@@ -13,8 +13,8 @@
     width: 100%;
     min-width: 0;
     padding: 16px;
-    border: 1px solid transparent;
-    border-radius: var(--mud-default-borderradius);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
     background: var(--mud-palette-surface);
     color: var(--mud-palette-text-primary);
     font: inherit;
@@ -23,6 +23,7 @@
 }
 
 .group-item:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-lines-default));
     background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface));
 }
 
@@ -39,8 +40,8 @@
 .group-mark {
     display: grid;
     place-items: center;
-    width: 40px;
-    height: 44px;
+    width: 36px;
+    height: 40px;
     flex: 0 0 auto;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 8px;
@@ -78,7 +79,7 @@
 .group-name {
     flex: 1;
     min-width: 0;
-    font-size: 1rem;
+    font-size: .95rem;
     font-weight: 600;
     line-height: 1.45;
     overflow-wrap: anywhere;
@@ -91,6 +92,10 @@
 }
 
 .group-count {
+    align-self: flex-start;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--mud-palette-background-gray);
     font-size: .75rem;
     line-height: 1.5;
     color: color-mix(in srgb, var(--mud-palette-text-primary) 75%, var(--mud-palette-text-secondary));
@@ -105,5 +110,4 @@
 
 @media (max-width: 520px) {
     .group-item { gap: 12px; padding: 14px 10px; }
-    .group-mark { width: 36px; height: 40px; }
 }
