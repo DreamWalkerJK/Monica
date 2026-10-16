@@ -12,7 +12,7 @@
         <span class="breadcrumb-category">@ActiveCategory?.DisplayName</span>
         @if (ActiveItem is not null)
         {
-            <MoIcon Icon="@MoIcons.ChevronRight" Size="20px" />
+            <span class="breadcrumb-divider" aria-hidden="true">/</span>
             <span class="breadcrumb-page">@ActiveItem.ResolveText(LocalizationCatalog)</span>
         }
     </div>
