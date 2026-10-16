@@ -52,6 +52,8 @@ color: color-mix(in srgb, var(--mud-palette-info) 70%, var(--mud-palette-text-pr
 
 Percentages are starting points; measure the rendered pair in both modes and every theme. A theme may supply named soft or wash tokens when a mix fails its palette.
 
+When a component derives fills and inks from a shared role variable such as `--mo-vl-role`, declare the fallback default with `:where()` so its specificity stays zero and any single-class role modifier (`mo-vl-role--info`, `mo-vl-role--warning`, …) wins regardless of rule order. An `:is()` default carries class-level specificity and silently repaints every mark, callout, chip, and status dot of a page in the primary hue, flattening the role map the page was designed around.
+
 ### Gradient policy
 
 Allowed:

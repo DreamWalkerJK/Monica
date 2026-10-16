@@ -1,0 +1,324 @@
+/* Startup timeline: lanes on a real time axis with brackets, a ready marker,
+   and a hover crosshair. Colors resolve through MudBlazor palette variables. */
+
+.startup-timeline {
+    container-type: inline-size;
+    font-variant-numeric: tabular-nums;
+}
+
+.tl-frame {
+    --tl-label-w: 196px;
+    --tl-pad-x: 32px;
+    padding: 18px var(--tl-pad-x) 6px;
+}
+
+.tl-axis,
+.tl-bracket-row,
+.tl-lane {
+    display: grid;
+    grid-template-columns: var(--tl-label-w) minmax(0, 1fr);
+    align-items: center;
+    width: 100%;
+}
+
+.tl-track {
+    position: relative;
+    display: block;
+    height: 100%;
+}
+
+.tl-axis {
+    height: 24px;
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.6875rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.tl-tick {
+    position: absolute;
+    top: 4px;
+    transform: translateX(-50%);
+}
+
+.tl-tick:first-child {
+    transform: none;
+}
+
+.tl-body {
+    position: relative;
+}
+
+.tl-bracket-row {
+    height: 30px;
+}
+
+.tl-bracket {
+    position: absolute;
+    top: 6px;
+    height: 18px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 55%, transparent);
+    border-bottom: 0;
+    border-radius: 6px 6px 0 0;
+}
+
+.tl-bracket span {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0 8px;
+    background: var(--mud-palette-surface);
+    font-size: 0.71875rem;
+    font-weight: 500;
+    line-height: 14px;
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    white-space: nowrap;
+}
+
+.tl-bracket-work {
+    border-color: color-mix(in srgb, var(--mud-palette-info) 55%, transparent);
+}
+
+.tl-bracket-work span {
+    color: color-mix(in srgb, var(--mud-palette-info) 70%, var(--mud-palette-text-primary));
+}
+
+.tl-lane {
+    height: 38px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color 150ms ease-out;
+}
+
+.tl-lane:hover,
+.tl-lane:focus-visible {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.tl-lane.is-active {
+    background: var(--mud-palette-table-striped);
+}
+
+.tl-lane.is-active .tl-name {
+    color: var(--mud-palette-text-primary);
+    font-weight: 500;
+}
+
+.tl-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 16px 0 10px;
+    min-width: 0;
+}
+
+.tl-name {
+    font-size: 0.8125rem;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tl-dur {
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    flex: none;
+}
+
+.tl-bar {
+    position: absolute;
+    top: 50%;
+    height: 14px;
+    transform: translateY(-50%);
+    border-radius: 4px;
+    min-width: 3px;
+    pointer-events: auto;
+}
+
+.tl-k-host {
+    background: var(--mud-palette-lines-inputs);
+}
+
+.tl-k-compose {
+    background: var(--mud-palette-primary);
+}
+
+.tl-k-work {
+    background: var(--mud-palette-info);
+}
+
+.tl-k-alt {
+    background: color-mix(in srgb, var(--mud-palette-info) 72%, var(--mud-palette-surface));
+}
+
+.tl-k-warn {
+    background: var(--mud-palette-warning);
+}
+
+.tl-seg-label {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.65625rem;
+    font-weight: 500;
+    color: var(--mud-palette-info-text);
+    white-space: nowrap;
+    pointer-events: none;
+    padding-left: 6px;
+    overflow: hidden;
+}
+
+.tl-overlay {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--tl-label-w);
+    right: 0;
+    pointer-events: none;
+}
+
+.tl-grid {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
+}
+
+.tl-ready {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1.5px dashed var(--mud-palette-text-primary);
+}
+
+.tl-ready-flag {
+    position: absolute;
+    top: -2px;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.71875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--mud-palette-surface);
+    background: var(--mud-palette-text-primary);
+}
+
+.tl-cursor {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: color-mix(in srgb, var(--mud-palette-primary) 70%, transparent);
+    opacity: 0;
+    transition: opacity 120ms ease-out;
+}
+
+.startup-timeline.is-hovering .tl-cursor {
+    opacity: 1;
+}
+
+.tl-cursor span {
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.6875rem;
+    color: var(--mud-palette-primary-text);
+    background: var(--mud-palette-primary);
+    white-space: nowrap;
+}
+
+.tl-caption {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 18px var(--tl-pad-x) 0;
+    padding: 14px 0 20px;
+    border-top: 1px solid var(--mud-palette-divider);
+    font-size: 0.8125rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.tl-caption strong {
+    color: var(--mud-palette-text-primary);
+    font-weight: 500;
+}
+
+.tl-caption-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex: none;
+}
+
+.tl-dot-compose {
+    background: var(--mud-palette-primary);
+}
+
+.tl-dot-work {
+    background: var(--mud-palette-info);
+}
+
+.tl-dot-host {
+    background: var(--mud-palette-lines-inputs);
+}
+
+@container (max-width: 600px) {
+    .tl-frame {
+        --tl-label-w: 0px;
+        --tl-pad-x: 18px;
+        padding-top: 14px;
+    }
+
+    .tl-axis,
+    .tl-bracket-row {
+        grid-template-columns: 0 minmax(0, 1fr);
+    }
+
+    .tl-lane {
+        grid-template-columns: minmax(0, 1fr);
+        height: auto;
+        padding: 6px 0;
+        row-gap: 4px;
+    }
+
+    .tl-label {
+        padding: 0 4px;
+    }
+
+    .tl-lane .tl-track {
+        height: 18px;
+    }
+
+    .tl-seg-label {
+        display: none;
+    }
+
+    .tl-bracket {
+        display: none;
+    }
+
+    .tl-caption {
+        margin-top: 14px;
+    }
+}

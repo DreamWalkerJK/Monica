@@ -12,8 +12,7 @@
   },
   "Page": {
     "Eyebrow": "MONICA / COMPOSITION FLIGHT RECORDER",
-    "Title": "Module workbench",
-    "Subtitle": "Explain startup health, timing causality, discovery, and topology from one immutable revision."
+    "Title": "Module workbench"
   },
   "Access": {
     "Checking": "Checking diagnostics access…",
@@ -23,6 +22,7 @@
   "Actions": {
     "ImportBaseline": "Compare",
     "Export": "Export",
+    "Refresh": "Refresh",
     "RemoveBaseline": "Remove baseline",
     "Retry": "Retry",
     "Reset": "Reset"
@@ -31,7 +31,6 @@
     "SectionNavigation": "Module workbench sections",
     "SnapshotIdentity": "Diagnostics snapshot identity",
     "SummaryMetrics": "Composition summary metrics",
-    "Refresh": "Refresh diagnostics snapshot",
     "OpenHelp": "Open diagnostics help",
     "CloseHelp": "Close diagnostics help",
     "ModuleCatalog": "Module catalog",
@@ -48,6 +47,7 @@
     "Live": "Live",
     "Revision": "Revision",
     "Section": "Section",
+    "CapturedAt": "Captured {0}",
     "RowsPerPage": "Rows per page",
     "Unknown": "Unknown",
     "NotAvailable": "N/A",
@@ -97,43 +97,108 @@
   },
   "Overview": {
     "Kpis": {
-      "StartupTiming": "Startup timing",
-      "ApplicationStartup": "Application startup",
-      "Tracked": "Tracked",
-      "StartupBoundary": "Start marker → ready",
       "Composition": "Module composition",
-      "CompositionShare": "Composition share",
-      "CompositionShareAria": "Module composition is {0} of application startup.",
-      "RemainingStartup": "Remaining startup",
       "ActiveModules": "Active modules",
       "Declared": "{0} declared",
       "ServiceRegistration": "Service registration",
-      "Exact": "Exact",
-      "FinalCompositionInterval": "Final composition interval",
-      "CompositionShareValue": "{0} of module composition",
-      "TypeDiscovery": "Type discovery",
-      "Queries": "{0} distinct queries",
-      "Matches": "{0} compiled matches",
-      "Errors": "{0} errors",
-      "Warnings": "{0} warnings"
+      "TypeDiscovery": "Type discovery"
     },
     "CriticalPath": {
       "Eyebrow": "CAUSAL STARTUP CHAIN",
       "Title": "Critical-path ribbon",
       "Hint": "Select evidence to synchronize timeline, module, and dependency context.",
       "Count": "{0} causal intervals",
+      "Legend": "Amber = barrier wait · Blue = startup work",
       "Empty": "No causal blocking path was recorded.",
       "SpanDescription": "{0}; {1}; duration {2}."
     },
     "Findings": {
-      "Eyebrow": "STRUCTURED EVIDENCE",
       "Title": "Findings",
+      "Sub": "{0} findings · {1} error(s)",
       "Empty": "No structural or configured-budget findings.",
       "Remaining": "Show {0} more findings"
     },
-    "Hotspots": {
-      "Eyebrow": "AGGREGATE COST",
-      "Title": "Module hotspots"
+    "Score": {
+      "Eyebrow": {
+        "Startup": "Startup spectrum · process start to application ready",
+        "Composition": "Composition spectrum · module composition interval"
+      },
+      "Display": {
+        "Aria": "Recorded duration {0}"
+      },
+      "Lede": {
+        "OfWhich": "Of which ",
+        "Joiner": ", "
+      },
+      "Mark": {
+        "Composition": "Monica composition {0}",
+        "Work": "startup work {0}"
+      },
+      "Longest": {
+        "Prefix": ". The longest item is startup work of ",
+        "Suffix": "."
+      }
+    },
+    "Ledger": {
+      "Title": "Module contributions",
+      "Sub": "Ranked by registration callback + startup-work duration · {0} declared",
+      "SearchPlaceholder": "Name or assembly",
+      "FilterAria": "Capability filters",
+      "Filter": {
+        "HasStartupWork": "Has startup work",
+        "Web": "Web",
+        "Ui": "UI",
+        "Disabled": "Disabled"
+      },
+      "Aria": "Ranked module contributions",
+      "Column": {
+        "Rank": "#",
+        "Name": "Module",
+        "Recorded": "Recorded duration",
+        "Total": "Total"
+      },
+      "Cap": {
+        "Callback": "callbacks {0}",
+        "Work": "work {0}"
+      },
+      "Badge": {
+        "Disabled": "Disabled"
+      },
+      "Empty": "No module matches “{0}”",
+      "ShowMore": "Show remaining modules",
+      "ShowLess": "Collapse",
+      "Filtered": "Showing {0} of {1} modules",
+      "FullRegistry": "The full registry lives in the Modules section.",
+      "Legend": {
+        "Callback": "Registration callbacks",
+        "Work": "Startup work"
+      }
+    },
+    "Depth": {
+      "Title": "Dependency depth",
+      "Sub": "Level distribution of {0} active modules",
+      "Empty": "No active modules."
+    }
+  },
+  "Timeline": {
+    "Ready": "Ready",
+    "Caption": {
+      "Share": "{0} of the ready instant"
+    },
+    "Lane": {
+      "Aria": "{0}, {1}",
+      "Barriers": "Barrier waits",
+      "Work": "Startup work"
+    },
+    "Note": {
+      "Barriers": "Serial waits imposed by startup-work barriers, {0} in total.",
+      "WorkAggregate": "Concurrent items shown as an aggregate serial view; the serial sum is {0}.",
+      "WorkSerial": "Shown at real recorded intervals."
+    },
+    "Bracket": {
+      "Composition": "Monica composition · {0}",
+      "Work": "Startup work · {0}",
+      "WorkAggregate": "Startup work · serial sum {0}"
     }
   },
   "Performance": {
@@ -581,8 +646,7 @@
   "Atlas": {
     "Overview": {
       "StartupNotTracked": "Application startup was not tracked in this host.",
-      "DirectDependencies": "Direct dependencies",
-      "ContributionHint": "Callback and startup-work cost; values can overlap in wall-clock time."
+      "DirectDependencies": "Direct dependencies"
     }
   }
 }

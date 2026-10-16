@@ -142,6 +142,19 @@
                         <span class="mo-vl-meter__seg mo-vl-meter__seg--info" style="@WidthStyle(secondaryWidth)"></span>
                     }
                 </span>
+                @if (row.MeterPrimaryCaption is not null || row.MeterSecondaryCaption is not null)
+                {
+                    <span class="mo-vl-meter-cap">
+                        @if (row.MeterPrimaryCaption is not null)
+                        {
+                            <span class="mo-vl-meter-cap--primary"><i aria-hidden="true"></i>@row.MeterPrimaryCaption</span>
+                        }
+                        @if (row.MeterSecondaryCaption is not null)
+                        {
+                            <span class="mo-vl-meter-cap--info"><i aria-hidden="true"></i>@row.MeterSecondaryCaption</span>
+                        }
+                    </span>
+                }
             }
         </span>
         <span class="mo-vl-ledger-total @(row.TotalWarn ? "mo-vl-ledger-total--warn" : null)">@row.Total</span>

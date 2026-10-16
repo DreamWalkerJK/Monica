@@ -11,6 +11,8 @@ public sealed record MoLedgerRow(
     double PrimaryValue = 0,
     double SecondaryValue = 0,
     double MeterScale = 0,
+    string? MeterPrimaryCaption = null,
+    string? MeterSecondaryCaption = null,
     string? Total = null,
     bool TotalWarn = false,
     bool Disabled = false);

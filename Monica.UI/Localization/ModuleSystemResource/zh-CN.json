@@ -12,8 +12,7 @@
   },
   "Page": {
     "Eyebrow": "MONICA / 组合过程飞行记录器",
-    "Title": "模块工作台",
-    "Subtitle": "基于一个不可变修订解释启动健康、耗时因果、类型发现和模块拓扑。"
+    "Title": "模块工作台"
   },
   "Access": {
     "Checking": "正在检查诊断访问权限…",
@@ -23,6 +22,7 @@
   "Actions": {
     "ImportBaseline": "对比",
     "Export": "导出",
+    "Refresh": "刷新",
     "RemoveBaseline": "移除基线",
     "Retry": "重试",
     "Reset": "重置"
@@ -31,7 +31,6 @@
     "SectionNavigation": "模块工作台分区",
     "SnapshotIdentity": "诊断快照标识",
     "SummaryMetrics": "组合摘要指标",
-    "Refresh": "刷新诊断快照",
     "OpenHelp": "打开诊断帮助",
     "CloseHelp": "关闭诊断帮助",
     "ModuleCatalog": "模块目录",
@@ -48,6 +47,7 @@
     "Live": "进行中",
     "Revision": "修订",
     "Section": "分区",
+    "CapturedAt": "采集于 {0}",
     "RowsPerPage": "每页行数",
     "Unknown": "未知",
     "NotAvailable": "不适用",
@@ -97,43 +97,108 @@
   },
   "Overview": {
     "Kpis": {
-      "StartupTiming": "启动耗时",
-      "ApplicationStartup": "应用启动",
-      "Tracked": "已记录",
-      "StartupBoundary": "计时起点 → 就绪",
       "Composition": "模块组合",
-      "CompositionShare": "组合占比",
-      "CompositionShareAria": "模块组合占应用启动的 {0}。",
-      "RemainingStartup": "其余启动时间",
       "ActiveModules": "活动模块",
       "Declared": "共声明 {0} 个",
       "ServiceRegistration": "服务注册",
-      "Exact": "精确值",
-      "FinalCompositionInterval": "最终组合区间",
-      "CompositionShareValue": "占模块组合的 {0}",
-      "TypeDiscovery": "类型发现",
-      "Queries": "{0} 个不同查询",
-      "Matches": "{0} 次编译匹配",
-      "Errors": "{0} 个错误",
-      "Warnings": "{0} 个警告"
+      "TypeDiscovery": "类型发现"
     },
     "CriticalPath": {
       "Eyebrow": "启动因果链",
       "Title": "关键路径带",
       "Hint": "选择证据可同步时间线、模块和依赖上下文。",
       "Count": "{0} 个因果区间",
+      "Legend": "琥珀 = 阻塞等待 · 蓝 = 启动任务",
       "Empty": "没有记录因果阻塞路径。",
       "SpanDescription": "{0}；{1}；耗时 {2}。"
     },
     "Findings": {
-      "Eyebrow": "结构化证据",
       "Title": "诊断发现",
+      "Sub": "{0} 条发现 · {1} 项错误",
       "Empty": "没有结构问题或已配置预算的告警。",
       "Remaining": "显示其余 {0} 条诊断发现"
     },
-    "Hotspots": {
-      "Eyebrow": "聚合成本",
-      "Title": "模块热点"
+    "Score": {
+      "Eyebrow": {
+        "Startup": "启动谱 · 进程启动至应用就绪",
+        "Composition": "组合谱 · 模块组合区间"
+      },
+      "Display": {
+        "Aria": "记录耗时 {0}"
+      },
+      "Lede": {
+        "OfWhich": "其中",
+        "Joiner": "，"
+      },
+      "Mark": {
+        "Composition": "Monica 组合 {0}",
+        "Work": "启动任务 {0}"
+      },
+      "Longest": {
+        "Prefix": "。最长单项是 ",
+        "Suffix": " 的启动任务。"
+      }
+    },
+    "Ledger": {
+      "Title": "模块贡献",
+      "Sub": "按注册回调 + 启动任务耗时排序 · 已声明 {0} 个模块",
+      "SearchPlaceholder": "名称或程序集",
+      "FilterAria": "能力筛选",
+      "Filter": {
+        "HasStartupWork": "含启动任务",
+        "Web": "Web",
+        "Ui": "UI",
+        "Disabled": "已禁用"
+      },
+      "Aria": "模块贡献排名",
+      "Column": {
+        "Rank": "#",
+        "Name": "模块",
+        "Recorded": "记录耗时",
+        "Total": "合计"
+      },
+      "Cap": {
+        "Callback": "回调 {0}",
+        "Work": "任务 {0}"
+      },
+      "Badge": {
+        "Disabled": "已禁用"
+      },
+      "Empty": "没有匹配“{0}”的模块",
+      "ShowMore": "显示其余模块",
+      "ShowLess": "收起",
+      "Filtered": "显示 {0} / {1} 个模块",
+      "FullRegistry": "完整注册表在“模块”分区。",
+      "Legend": {
+        "Callback": "注册回调",
+        "Work": "启动任务"
+      }
+    },
+    "Depth": {
+      "Title": "依赖深度",
+      "Sub": "{0} 个活跃模块的层级分布",
+      "Empty": "没有活跃模块。"
+    }
+  },
+  "Timeline": {
+    "Ready": "就绪",
+    "Caption": {
+      "Share": "占就绪时刻 {0}"
+    },
+    "Lane": {
+      "Aria": "{0}，{1}",
+      "Barriers": "阻塞等待",
+      "Work": "启动任务"
+    },
+    "Note": {
+      "Barriers": "启动任务屏障造成的串行等待，合计 {0}。",
+      "WorkAggregate": "并发任务按聚合串行视图展示，串行合计 {0}。",
+      "WorkSerial": "按真实发生区间展示。"
+    },
+    "Bracket": {
+      "Composition": "Monica 组合 · {0}",
+      "Work": "启动任务 · {0}",
+      "WorkAggregate": "启动任务 · 串行合计 {0}"
     }
   },
   "Performance": {
@@ -581,8 +646,7 @@
   "Atlas": {
     "Overview": {
       "StartupNotTracked": "当前主机未记录完整的应用启动区间。",
-      "DirectDependencies": "直接依赖关系",
-      "ContributionHint": "回调与启动工作耗时；并发工作不代表互斥的启动时间占比。"
+      "DirectDependencies": "直接依赖关系"
     }
   }
 }

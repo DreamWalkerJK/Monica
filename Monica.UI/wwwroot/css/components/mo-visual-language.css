@@ -9,7 +9,9 @@
 
 /* ---------- Shared role derivation ---------- */
 /* Modifier classes set --mo-vl-role to one palette color; fills and inks are
-   derived from it so a theme only needs its palette to restyle a page. */
+   derived from it so a theme only needs its palette to restyle a page.
+   The fallback uses :where so any single-class modifier wins regardless of
+   rule order. */
 .mo-vl-role--primary { --mo-vl-role: var(--mud-palette-primary); }
 .mo-vl-role--info { --mo-vl-role: var(--mud-palette-info); }
 .mo-vl-role--secondary { --mo-vl-role: var(--mud-palette-secondary); }
@@ -18,7 +20,7 @@
 .mo-vl-role--error { --mo-vl-role: var(--mud-palette-error); }
 .mo-vl-role--neutral { --mo-vl-role: var(--mud-palette-lines-inputs); }
 
-:is(.mo-vl-mark, .mo-vl-callout, .mo-vl-chip, .mo-vl-swatch, .mo-vl-spine-node, .mo-vl-dots) {
+:where(.mo-vl-mark, .mo-vl-callout, .mo-vl-chip, .mo-vl-swatch, .mo-vl-spine-node, .mo-vl-dots, .mo-vl-status) {
     --mo-vl-role: var(--mud-palette-primary);
 }
 
@@ -124,7 +126,7 @@
     margin: 0;
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--mud-palette-text-secondary);
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 55%, var(--mud-palette-text-primary));
     letter-spacing: 0.02em;
 }
 .mo-vl-display {
@@ -159,6 +161,7 @@
     padding: 1px 6px;
     border-radius: 5px;
     font-weight: 500;
+    white-space: nowrap;
     color: color-mix(in srgb, var(--mo-vl-role) 70%, var(--mud-palette-text-primary));
     background: color-mix(in srgb, var(--mo-vl-role) 14%, var(--mud-palette-surface));
 }
@@ -171,17 +174,19 @@
 }
 
 /* ---------- Fact grid ---------- */
-/* Contiguous facts share one border with hairline internal separators. */
+/* Contiguous facts share one border with hairline internal separators;
+   the 1px gap lets the hairlines survive column wrapping. */
 .mo-vl-facts {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(var(--mo-vl-facts-min, 128px), 1fr));
+    gap: 1px;
     margin: 0;
     border: 1px solid var(--mud-palette-divider);
     border-radius: 12px;
-    background: color-mix(in srgb, var(--mud-palette-surface) 80%, transparent);
+    background: var(--mud-palette-divider);
+    overflow: hidden;
 }
-.mo-vl-fact { padding: 14px 20px; min-width: 0; }
-.mo-vl-fact + .mo-vl-fact { border-left: 1px solid var(--mud-palette-divider); }
+.mo-vl-fact { padding: 14px 20px; min-width: 0; background: var(--mud-palette-surface); }
 .mo-vl-fact dt {
     font-size: 0.75rem;
     color: var(--mud-palette-text-secondary);
