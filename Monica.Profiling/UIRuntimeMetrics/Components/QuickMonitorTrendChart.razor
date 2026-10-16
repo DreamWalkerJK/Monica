@@ -1,5 +1,4 @@
 @using System.Globalization
-@using MudBlazor.Charts
 @using Monica.Profiling.RuntimeMetrics.Models
 @using Monica.Profiling.UIRuntimeMetrics.Support
 @inject IStringLocalizer<RuntimeMetricsResource> L
@@ -34,14 +33,14 @@
                 {
                     <article class="runtime-history-chart" data-metric="cpu" data-unit="%" aria-label="@L["Trend:CpuChart"]">
                         <header><h3>@L["Vitals:Cpu"]</h3><span>@L["Trend:UtcPercent"]</span></header>
-                        <div class="runtime-chart-canvas"><MudChart T="double" ChartType="ChartType.Timeseries" ChartSeries="_cpuSeries" ChartOptions="_cpuOptions" MatchBoundsToSize="true" Width="100%" Height="240px" /></div>
+                        <RuntimeTrendPlot Points="Points" Metric="RuntimeTrendMetric.Cpu" SeriesLabel="@L["Trend:Series:Cpu"]" />
                     </article>
                 }
                 @if (_selectedMetrics.Contains("memory"))
                 {
                     <article class="runtime-history-chart" data-metric="memory" data-unit="MB" aria-label="@L["Trend:MemoryChart"]">
                         <header><h3>@L["Vitals:WorkingSet"]</h3><span>@L["Trend:UtcMegabytes"]</span></header>
-                        <div class="runtime-chart-canvas"><MudChart T="double" ChartType="ChartType.Timeseries" ChartSeries="_memorySeries" ChartOptions="_memoryOptions" MatchBoundsToSize="true" Width="100%" Height="240px" /></div>
+                        <RuntimeTrendPlot Points="Points" Metric="RuntimeTrendMetric.WorkingSetMegabytes" SeriesLabel="@L["Trend:Series:WorkingSet"]" />
                     </article>
                 }
             </div>
@@ -110,10 +109,6 @@
     private const int PageSize = 12;
     private int _page = 1;
     private IReadOnlyCollection<string> _selectedMetrics = new[] { "cpu", "memory" };
-    private List<ChartSeries<double>> _cpuSeries = [];
-    private List<ChartSeries<double>> _memorySeries = [];
-    private TimeSeriesChartOptions _cpuOptions = new();
-    private TimeSeriesChartOptions _memoryOptions = new();
     private IReadOnlyList<RuntimeMetricsPoint> Points => TrendData?.DataPoints ?? [];
     private int PageCount => Math.Max(1, (Points.Count + PageSize - 1) / PageSize);
     private IEnumerable<RuntimeMetricsPoint> VisiblePoints => Points.Reverse().Skip((_page - 1) * PageSize).Take(PageSize);
@@ -130,22 +125,7 @@
     protected override void OnParametersSet()
     {
         _page = Math.Min(_page, PageCount);
-        _cpuSeries = [new ChartSeries<double> { Name = L["Trend:Series:Cpu"], Data = Points.Select(point => (point.Timestamp.ToUniversalTime(), point.CpuUsagePercent)).ToArray() }];
-        _memorySeries = [new ChartSeries<double> { Name = L["Trend:Series:WorkingSet"], Data = Points.Select(point => (point.Timestamp.ToUniversalTime(), point.WorkingSetMB)).ToArray() }];
-        var span = TrendData?.StartTime is { } start && TrendData.EndTime is { } end ? (end - start).TotalSeconds : 0;
-        var spacing = TimeSpan.FromSeconds(Math.Max(1, Math.Ceiling(span / 4)));
-        _cpuOptions = Options(spacing, "%", "var(--mud-palette-primary)", Points.Count == 0 ? 0 : Points.Max(point => point.CpuUsagePercent));
-        _memoryOptions = Options(spacing, "MB", "var(--mud-palette-info)", Points.Count == 0 ? 0 : Points.Max(point => point.WorkingSetMB));
     }
-    private static TimeSeriesChartOptions Options(TimeSpan spacing, string unit, string palette, double maximum) => new()
-    {
-        ShowLegend = false, ChartPalette = [palette], TimeLabelFormat = "HH:mm:ss",
-        TimeLabelSpacing = spacing, TimeLabelSpacingRounding = false, TooltipTimeLabelFormat = "yyyy-MM-dd HH:mm:ss.fff 'UTC'",
-        TooltipTitleFormat = "{{X_VALUE}}", TooltipSubtitleFormat = "{{Y_VALUE}} " + unit,
-        YAxisToStringFunc = value => value.ToString("0.#", CultureInfo.CurrentCulture),
-        YAxisTicks = (int)Math.Max(1, Math.Ceiling(maximum / 4)), MaxNumYAxisTicks = 5, YAxisRequireZeroPoint = true,
-        LineStrokeWidth = 2, ShowDataMarkers = false, InterpolationOption = InterpolationOption.Straight
-    };
     private void OnMetricSelectionChanged(IReadOnlyCollection<string> selectedValues) => _selectedMetrics = selectedValues;
     private void ChangePage(int value) => _page = Math.Clamp(value, 1, PageCount);
     private static string? MachineTime(DateTime? timestamp) => timestamp is { } value ? RuntimeMetricsDisplayFormatter.MachineTime(value) : null;

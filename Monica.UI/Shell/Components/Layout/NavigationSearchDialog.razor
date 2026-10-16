@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Extensions.DependencyInjection
 @using Monica.UI.Localization
+@using Monica.UI.Shared.Components.Dialogs
 @using Monica.UI.Shell.Support
 @inject NavigationSearchCatalog Catalog
 @inject PageAccessEvaluator PageAccess
@@ -22,7 +23,7 @@
                 <MudButton Variant="Variant.Text" OnClick="Close" Class="search-close" aria-label="@L["Search:Close"]"><kbd>Esc</kbd></MudButton>
             </div>
             <div class="search-results-heading">
-                <span>@L["Search:Registry"]</span>
+                <MoDialogHeading Text="@L["Search:Title"]" />
                 <span aria-live="polite">@L["Search:ResultCount", _results.Count]</span>
             </div>
             <div class="search-results" id="@_listId" role="listbox" aria-label="@L["Search:Registry"]">
@@ -43,9 +44,10 @@
                     @for (var index = 0; index < _results.Count; index++)
                     {
                         var entry = _results[index];
+                        var revision = _entriesRevision;
                         <button @key="entry.Item.Href" type="button" class="search-result @(index == _selectedIndex ? "is-selected" : null)"
                                 id="@ResultId(index)" data-search-result-index="@index" role="option" aria-selected="@(index == _selectedIndex ? "true" : "false")"
-                                @onclick="@(() => OpenResultAsync(entry))">
+                                @onclick="@(() => OpenResultAsync(entry, revision))">
                             <span class="search-result-icon"><MudIcon Icon="@entry.Icon" /></span>
                             <span class="search-result-copy"><span class="search-result-title">@entry.Title</span><span class="search-result-description">@entry.Description</span>
                                 @if (entry.CategoryBreadcrumb != entry.RootCategory)
@@ -69,18 +71,18 @@
 
 @code {
     [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
-    private readonly CancellationTokenSource _lifetime = new();
     private readonly ComponentRenderTracker _renders = new();
     private readonly object _disposeSync = new();
     private readonly string _listId = $"mo-search-{Guid.NewGuid():N}";
     private ElementReference _root;
     private NavigationSearchInteropSession<NavigationSearchDialog>? _interop;
+    private NavigationSearchDialogSession? _session;
     private AuthenticationStateProvider? _authentication;
     private IReadOnlyList<NavigationSearchEntry> _entries = [];
     private IReadOnlyList<NavigationSearchEntry> _results = [];
     private string _query = string.Empty;
     private int _selectedIndex;
-    private int _refreshVersion;
+    private long _entriesRevision;
     private bool _loading = true;
     private bool _scrollSelection;
     private bool _disposed;
@@ -90,6 +92,10 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _session = new NavigationSearchDialogSession(
+            Catalog.CreateEntriesAsync,
+            (entry, token) => PageAccess.IsAuthorizedAsync(entry.Item, token),
+            action => InvokeAsync(action));
         _authentication = Services.GetService<AuthenticationStateProvider>();
         if (_authentication is not null)
         {
@@ -100,42 +106,39 @@
 
     private async Task RefreshAsync()
     {
-        var version = ++_refreshVersion;
+        if (_disposed || _session is not { } session) return;
         _loading = true;
-        try
+        var snapshot = await session.RefreshAsync();
+        if (_disposed || snapshot is null || !session.IsCurrent(snapshot.Revision))
         {
-            var entries = await Catalog.CreateEntriesAsync(_lifetime.Token);
-            if (_disposed || version != _refreshVersion)
-            {
-                return;
-            }
-            _entries = entries;
-            _loading = false;
-            SetQuery(_query);
+            return;
         }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
-        {
-            // Teardown cancels policy work before it can publish a stale search snapshot.
-        }
+
+        _entries = snapshot.Entries;
+        _entriesRevision = snapshot.Revision;
+        _loading = false;
+        SetQuery(_query);
     }
 
-    private void HandleAuthenticationChanged(Task<AuthenticationState> state) => _renders.Queue(() => InvokeAsync(async () =>
+    private void HandleAuthenticationChanged(Task<AuthenticationState> state)
     {
-        if (_disposed) return;
-        ++_refreshVersion;
-        _entries = [];
-        _results = [];
-        _loading = true;
-        StateHasChanged();
-        try { await state.WaitAsync(_lifetime.Token); }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { return; }
-        catch { /* Access evaluation fails closed through the registered page policies. */ }
-        if (!_disposed)
+        if (_disposed || _session is not { } session) return;
+        var revision = session.InvalidateAuthentication();
+        _renders.Queue(() => InvokeAsync(async () =>
         {
+            if (_disposed || !session.IsCurrent(revision)) return;
+            _entries = [];
+            _results = [];
+            _loading = true;
+            StateHasChanged();
+            try { await state.WaitAsync(session.LifetimeToken); }
+            catch (OperationCanceledException) when (session.LifetimeToken.IsCancellationRequested) { return; }
+            catch { /* Access evaluation fails closed through the registered page policies. */ }
+            if (_disposed || !session.IsCurrent(revision)) return;
             await RefreshAsync();
             if (!_disposed) StateHasChanged();
-        }
-    }));
+        }));
+    }
 
     private void SetQuery(string? query)
     {
@@ -168,7 +171,7 @@
         if (_disposed || _results.Count == 0) return;
         if (key == "Enter")
         {
-            await OpenResultAsync(_results[_selectedIndex]);
+            await OpenResultAsync(_results[_selectedIndex], _entriesRevision);
         }
         else if (key is "ArrowDown" or "ArrowUp")
         {
@@ -178,52 +181,61 @@
         }
     });
 
-    private async Task OpenResultAsync(NavigationSearchEntry entry)
+    private async Task OpenResultAsync(NavigationSearchEntry entry, long revision)
     {
-        try
+        if (_disposed || _session is not { } session) return;
+        var result = await session.ActivateAsync(entry, revision, accepted =>
         {
-            if (!_disposed && await PageAccess.IsAuthorizedAsync(entry.Item, _lifetime.Token) && !_disposed)
-            {
-                Dialog.Close(DialogResult.Ok(entry));
-            }
-            else if (!_disposed)
-            {
-                await RefreshAsync();
-            }
-        }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
+            if (!_disposed) Dialog.Close(DialogResult.Ok(accepted));
+        });
+        if (!_disposed && result == NavigationSearchDialogSession.ActivationResult.Denied && session.IsCurrent(revision))
         {
-            // Closing the palette cancels pending access evaluation.
+            await RefreshAsync();
+            if (!_disposed) StateHasChanged();
         }
     }
 
-    private void Close() => Dialog.Cancel();
+    private async Task Close()
+    {
+        var retirement = DisposeAsync().AsTask();
+        Dialog.Cancel();
+        await retirement;
+    }
 
     public ValueTask DisposeAsync()
     {
+        TaskCompletionSource completion;
         lock (_disposeSync)
         {
+            if (_disposeTask is { } disposal) return new ValueTask(disposal);
             _disposed = true;
-            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _disposeTask = completion.Task;
         }
+
+        _ = DisposeCoreAsync(completion);
+        return new ValueTask(completion.Task);
     }
 
-    private async Task DisposeCoreAsync()
+    private async Task DisposeCoreAsync(TaskCompletionSource completion)
     {
-        ++_refreshVersion;
-        _lifetime.Cancel();
-        if (_authentication is not null)
+        try
         {
-            _authentication.AuthenticationStateChanged -= HandleAuthenticationChanged;
-        }
-        try { await _renders.CompleteAsync(); }
-        finally
-        {
-            try
+            if (_authentication is not null)
             {
-                if (_interop is { } interop) await interop.DisposeAsync();
+                _authentication.AuthenticationStateChanged -= HandleAuthenticationChanged;
             }
-            finally { _lifetime.Dispose(); }
+
+            // Start both owners before awaiting either: observer callbacks can be awaiting access evaluation.
+            var policies = _session?.DisposeAsync().AsTask() ?? Task.CompletedTask;
+            var observer = _interop?.DisposeAsync().AsTask() ?? Task.CompletedTask;
+            var renders = _renders.CompleteAsync().AsTask();
+            await Task.WhenAll(policies, observer, renders);
+            completion.TrySetResult();
+        }
+        catch (Exception exception)
+        {
+            completion.TrySetException(exception);
         }
     }
 }

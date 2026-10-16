@@ -134,17 +134,9 @@
                         </MudTabPanel>
                         <MudTabPanel Text="@L["Exceptions:Details:Tabs:StackTrace"]">
                             <div class="exception-inspector__tab">
-                                <h4>@L["Exceptions:Details:StackTraceTitle"]</h4>
-                                @if (string.IsNullOrWhiteSpace(selected.StackTrace))
-                                {
-                                    <p class="exception-details-help">@L["Exceptions:Details:NoStackTrace"]</p>
-                                }
-                                else
-                                {
-                                    <div class="exception-stack">
-                                        <StackTraceViewer Message="@selected.StackTrace" />
-                                    </div>
-                                }
+                                <div class="exception-stack">
+                                    <StackTraceViewer Message="@selected.StackTrace" />
+                                </div>
                             </div>
                         </MudTabPanel>
                     </MudTabs>

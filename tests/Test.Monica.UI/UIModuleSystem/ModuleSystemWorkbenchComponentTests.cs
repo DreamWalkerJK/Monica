@@ -208,7 +208,7 @@ public sealed class ModuleSystemWorkbenchComponentTests
     }
 
     [Fact]
-    public async Task Overview_metrics_keep_semantic_accents_without_repeating_the_status_rail()
+    public async Task Overview_metrics_render_as_one_contiguous_fact_grid()
     {
         await using var context = new ModuleSystemWorkbenchUiTestContext();
         await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls());
@@ -217,14 +217,11 @@ public sealed class ModuleSystemWorkbenchComponentTests
         var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
             .Add(component => component.Session, session));
 
-        var cards = cut.FindAll(".kpi-strip > article.mo-card-surface");
+        var facts = cut.FindAll(".mo-vl-facts > .mo-vl-fact");
 
-        cards.Should().HaveCount(5);
-        cards.Should().AllSatisfy(card =>
-        {
-            card.GetAttribute("data-mo-card-tone").Should().NotBeNullOrWhiteSpace();
-            card.QuerySelector(".mo-card-surface__rail").Should().BeNull();
-        });
+        facts.Should().HaveCount(4);
+        facts.Should().AllSatisfy(fact => fact.QuerySelector(".mo-card-surface").Should().BeNull());
+        cut.Find(".overview-score .startup-timeline").Should().NotBeNull();
     }
 
     [Fact]
@@ -549,13 +546,11 @@ public sealed class ModuleSystemWorkbenchComponentTests
     }
 
     [Theory]
-    [InlineData("en-US", "Application startup", "Tracked", "Start marker → ready")]
-    [InlineData("zh-CN", "应用启动", "已记录", "计时起点 → 就绪")]
-    public async Task Overview_ShouldRenderCombinedApplicationStartupTimingFromBilingualResources(
+    [InlineData("en-US", "Startup spectrum · process start to application ready")]
+    [InlineData("zh-CN", "启动谱 · 进程启动至应用就绪")]
+    public async Task Overview_ShouldRenderStartupSpectrumFromBilingualResources(
         string cultureName,
-        string expectedLabel,
-        string expectedTrackedBadge,
-        string expectedBoundary)
+        string expectedEyebrow)
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Logging.ClearProviders();
@@ -575,19 +570,17 @@ public sealed class ModuleSystemWorkbenchComponentTests
         var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
             .Add(component => component.Session, session));
 
-        cut.Markup.Should().Contain(expectedLabel);
-        cut.Markup.Should().Contain(expectedTrackedBadge);
-        cut.Markup.Should().Contain(expectedBoundary);
+        cut.Markup.Should().Contain(expectedEyebrow);
         cut.Markup.Should().Contain("36.1250 ms");
-        cut.FindAll(".startup-kpi-card").Should().ContainSingle();
-        cut.FindAll(".kpi-card").Should().HaveCount(4);
-        cut.Find(".startup-share__bar").GetAttribute("aria-label").Should().Contain("66.4%");
-        cut.Find(".startup-share__composition").GetAttribute("width").Should().Be("66.436");
-        cut.FindAll(".startup-share__badge").Should().ContainSingle();
+        cut.Find(".mo-vl-display__value").TextContent.Trim().Should().Be("36.1");
+        cut.Find(".mo-vl-display__unit").TextContent.Trim().Should().Be("ms");
+        cut.FindAll(".mo-vl-fact").Should().HaveCount(4);
+        cut.Find(".overview-score .startup-timeline").Should().NotBeNull();
+        cut.FindAll(".score-note").Should().BeEmpty();
     }
 
     [Fact]
-    public async Task Overview_WithoutStartupMarker_ShouldRenderOnlyNormalWidthCompositionCard()
+    public async Task Overview_WithoutStartupMarker_ShouldUseCompositionSpectrumWithUntrackedNote()
     {
         await using var context = new ModuleSystemWorkbenchUiTestContext();
         var snapshot = ModuleSystemWorkbenchTestData.Snapshot(applicationStartupDurationMs: null);
@@ -598,17 +591,16 @@ public sealed class ModuleSystemWorkbenchComponentTests
         var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
             .Add(component => component.Session, session));
 
-        cut.FindAll(".startup-kpi-card").Should().BeEmpty();
-        cut.FindAll(".kpi-card--composition").Should().ContainSingle();
-        cut.Find(".kpi-strip").ClassList.Should().Contain("kpi-strip--untracked");
-        cut.Markup.Should().NotContain("Overview:Kpis:ApplicationStartup");
-        cut.Markup.Should().NotContain("Overview:Kpis:Tracked");
-        cut.Find(".kpi-card--composition .kpi-value").TextContent.Should().Be("24.0000 ms");
-        cut.Find(".kpi-card--registration .kpi-value").TextContent.Should().Be("18.0000 ms");
+        cut.FindAll(".score-note").Should().ContainSingle();
+        cut.Markup.Should().NotContain("Overview:Score:Eyebrow:Startup");
+        cut.Find(".mo-vl-display__value").TextContent.Trim().Should().Be("24.0");
+        cut.Find(".mo-vl-display__unit").TextContent.Trim().Should().Be("ms");
+        cut.Find(".score-exact").TextContent.Trim().Should().Be("24.0000 ms");
+        cut.FindAll(".mo-vl-fact").Should().HaveCount(4);
     }
 
     [Fact]
-    public async Task Overview_StartupShare_ShouldUseInvariantSvgWidthInCommaDecimalCultures()
+    public async Task Overview_TimelineGeometry_ShouldUseInvariantPercentagesInCommaDecimalCultures()
     {
         using var culture = new CultureScope("fr-FR");
         await using var context = new ModuleSystemWorkbenchUiTestContext();
@@ -618,7 +610,10 @@ public sealed class ModuleSystemWorkbenchComponentTests
         var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
             .Add(component => component.Session, session));
 
-        cut.Find(".startup-share__composition").GetAttribute("width").Should().Be("66.436");
+        var bracketStyle = cut.Find(".overview-score .tl-bracket").GetAttribute("style");
+
+        bracketStyle.Should().MatchRegex(@"left:\d+(\.\d+)?%;width:\d+(\.\d+)?%");
+        bracketStyle.Should().NotContain(",");
     }
 
     [Fact]
@@ -632,7 +627,7 @@ public sealed class ModuleSystemWorkbenchComponentTests
         var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
             .Add(component => component.Session, session));
 
-        cut.Find(".kpi-badge--comparison").TextContent.Should().Contain("6.1250 ms");
+        cut.Find(".score-delta").TextContent.Should().Contain("6.1250 ms");
     }
 
     [Theory]
@@ -656,7 +651,7 @@ public sealed class ModuleSystemWorkbenchComponentTests
         var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
             .Add(component => component.Session, session));
 
-        cut.FindAll(".kpi-badge--comparison").Should().BeEmpty();
+        cut.FindAll(".score-delta").Should().BeEmpty();
     }
 
     [Fact]

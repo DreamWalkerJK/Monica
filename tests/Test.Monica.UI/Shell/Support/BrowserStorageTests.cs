@@ -2,12 +2,25 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.JSInterop;
 using Monica.UI.Shell.Support;
+using Monica.UI.Theming;
 using Xunit;
 
 namespace Test.Monica.UI.Shell.Support;
 
 public sealed class BrowserStorageTests
 {
+    [Fact]
+    public async Task TrySetAsync_WhenPersistingThemePreference_ShouldKeepExistingKeyAndNumericCamelCaseJson()
+    {
+        var module = new TestJsModule();
+        await using var storage = CreateStorage(module);
+
+        var result = await storage.TrySetAsync(ThemePreference.StorageKey, new ThemePreference(MonicaThemeKind.Grove, true));
+
+        result.Succeeded.Should().BeTrue();
+        module.LastArguments.Should().Equal("local", "mo:theme:data", "{\"themeKind\":11,\"isDarkMode\":true}");
+    }
+
     [Fact]
     public async Task TrySetAsync_WhenWriteSucceeds_ShouldReturnSuccessAndPrefixKey()
     {

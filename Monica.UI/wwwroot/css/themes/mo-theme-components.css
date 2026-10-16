@@ -129,6 +129,13 @@
     color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
 }
 
+/* Focused captions use readable text; native borders and rings retain the theme accent. */
+:where(:root[data-theme], [class*="mo-theme-"])
+    .mud-input:focus-within
+    ~ label.mud-input-label.mud-input-label-inputcontrol:where(:not(.mud-disabled):not(.mud-input-error)) {
+    color: var(--mud-palette-text-primary);
+}
+
 /* Overlay depth is separate from panel paint; the shell owns its navigation popovers. */
 :root[data-theme] .mud-popover:not(.mo-navbar-menu-popover):not(.mud-tooltip) {
     box-shadow: var(--mud-elevation-8) !important;

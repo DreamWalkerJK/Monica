@@ -1,198 +1,113 @@
-@using Microsoft.Extensions.Localization
-@using Monica.UI.Localization
-@using Monica.UI.UIStackTrace.Models
-@using StackTraceParser = Monica.UI.UIStackTrace.Support.StackTraceParser
+@using Microsoft.Extensions.Logging
+@using Monica.UI.UIStackTrace.Support
+@implements IAsyncDisposable
 @inject StackTraceParser ParserService
 @inject IJSRuntime JS
+@inject ILogger<StackTraceViewer> Logger
 @inject IStringLocalizer<SharedResource> L
 
-<div class="stack-trace-container">
-    @if (!string.IsNullOrWhiteSpace(Message))
-    {
-        <div class="copy-button-wrapper">
-            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                           Size="Size.Small"
-                           OnClick="CopyToClipboard"
-                           title="@L["StackTrace:CopyTooltip"]" />
+<div class="stack-trace-viewer @(_wrapLines ? "" : "is-unwrapped")">
+    <div class="trace-toolbar">
+        <span class="trace-caption">@L["StackTrace:Caption"]</span>
+        <div class="trace-actions">
+            <button type="button" class="trace-button trace-wrap" aria-pressed="@(_wrapLines ? "true" : "false")"
+                    aria-disabled="@(HasSource ? "false" : "true")" @onclick="ToggleWrap">@L["StackTrace:WrapLines"]</button>
+            <button type="button" class="trace-button trace-copy" aria-label="@L["StackTrace:CopyLabel"]"
+                    aria-disabled="@(CopyState.CanCopy ? "false" : "true")" aria-busy="@(CopyState.IsCopying ? "true" : "false")"
+                    @onclick="CopyToClipboard">
+                <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" aria-hidden="true" />
+                <span>@L["StackTrace:Copy"]</span>
+            </button>
         </div>
-    }
-    @if (_parseResult?.Success == true && _parseResult.Lines.Count > 0)
+    </div>
+    <div class="trace-feedback" role="status" aria-live="polite" aria-atomic="true">@CopyFeedback</div>
+    @if (!HasSource)
     {
-        @foreach (var (line, level) in GetLinesWithLevel(_parseResult.Lines))
-        {
-            @if (line.LineType == StackLineType.ExceptionHeader)
-            {
-                <div class="exception-header" style="@GetInnerExceptionIndentForLevel(level)">
-                    <span class="exception-type">@line.ExceptionType:</span>
-                    <span class="exception-message">@line.Message</span>
-                </div>
-            }
-            else if (line.LineType == StackLineType.StackFrame)
-            {
-                <div class="stack-frame" style="@GetInnerExceptionIndentForLevel(level)">
-                    <span class="at-keyword">at</span>
-
-                    @if (!string.IsNullOrEmpty(line.Namespace))
-                    {
-                        <span class="namespace-part">@line.Namespace.</span>
-                    }
-                    @if (!string.IsNullOrEmpty(line.ClassName))
-                    {
-                        <span class="classname-part">@line.ClassName.</span>
-                    }
-                    @if (!string.IsNullOrEmpty(line.MethodName))
-                    {
-                        <span class="method-name">@line.MethodName</span>
-                    }
-
-                    @if (!string.IsNullOrEmpty(line.Parameters))
-                    {
-                        <span class="param-bracket">(</span>
-                        @if (line.ParsedParameters.Count > 0)
-                        {
-                            @for (int i = 0; i < line.ParsedParameters.Count; i++)
-                            {
-                                if (i > 0)
-                                {
-                                    <span class="param-separator">,</span>
-                                    <span class="param-space"> </span>
-                                }
-                                <span class="param-type">@line.ParsedParameters[i].Type</span>
-                                @if (!string.IsNullOrEmpty(line.ParsedParameters[i].Name))
-                                {
-                                    <span class="param-space"> </span>
-                                    <span class="param-name">@line.ParsedParameters[i].Name</span>
-                                }
-                            }
-                        }
-                        <span class="param-bracket">)</span>
-                    }
-
-                    @if (!string.IsNullOrEmpty(line.FilePath))
-                    {
-                        <span class="in-keyword"> in </span>
-                        @if (line.FilePath.Length > line.FileName?.Length)
-                        {
-                            <span class="file-path-dir">@line.FilePath.Substring(0, line.FilePath.Length - (line.FileName?.Length ?? 0))</span>
-                        }
-                        @if (!string.IsNullOrEmpty(line.FileName))
-                        {
-                            <span class="file-name">@line.FileName</span>
-                        }
-                    }
-
-                    @if (line.LineNumber.HasValue)
-                    {
-                        <span class="line-info">:line</span>
-                        <span class="line-number"> @line.LineNumber</span>
-                    }
-                </div>
-            }
-            else if (line.LineType == StackLineType.InnerException)
-            {
-                <div class="inner-exception-header" style="@GetInnerExceptionIndentForLevel(level)">
-                    <span class="inner-exception-label">@line.RawContent</span>
-                </div>
-            }
-            else if (line.LineType == StackLineType.PlainText)
-            {
-                <div class="plain-text-line" style="@GetInnerExceptionIndentForLevel(level)">
-                    @if (IsEndOfInnerException(line.RawContent))
-                    {
-                        <span class="inner-exception-end">@line.RawContent</span>
-                    }
-                    else
-                    {
-                        @line.RawContent
-                    }
-                </div>
-            }
-            else if (line.LineType == StackLineType.ParseError)
-            {
-                <div class="parse-error">
-                    <span class="error-icon">⚠</span>
-                    <span class="error-message">@line.ErrorMessage</span>
-                </div>
-            }
-        }
-    }
-    else if (_parseResult?.Success == false)
-    {
-        <div class="parse-error">
-            <span class="error-icon">⚠</span>
-            <span class="error-message">@_parseResult.ErrorMessage</span>
-        </div>
-        <div class="fallback-text">
-            <pre>@_parseResult.OriginalText</pre>
-        </div>
+        <p class="trace-note">@L["StackTrace:NotProvided"]</p>
     }
     else
     {
-        <div class="empty-message">@L["StackTrace:NoStackTrace"]</div>
+        @if (string.IsNullOrWhiteSpace(_source))
+        {
+            <p class="trace-note">@L["StackTrace:WhitespaceOnly"]</p>
+        }
+        <div class="trace-evidence">
+            <pre class="trace-source" tabindex="0" aria-label="@L["StackTrace:SourceLabel"]"><code>@SourceContent</code></pre>
+        </div>
     }
 </div>
 
 @code {
+    /// <summary>
+    /// Gets or sets the complete diagnostic source. All text is encoded and retained in source order;
+    /// copy uses this exact string. Null or empty input shows a neutral absence, while whitespace is
+    /// retained and copyable. Replacing source resets wrapping and invalidates pending copy feedback.
+    /// </summary>
     [Parameter]
     public string? Message { get; set; }
 
-    private ParseResult? _parseResult;
+    private StackTraceCopySession? _copy;
+    private string? _source;
+    private IReadOnlyList<StackTraceSourceSpan> _spans = [];
+    private bool _wrapLines = true;
+    private bool _retired;
+    private bool HasSource => !string.IsNullOrEmpty(_source);
+    private StackTraceCopyState CopyState => _copy?.State ?? default;
+    private string CopyFeedback => CopyState.Feedback switch
+    {
+        StackTraceCopyFeedback.Copied => L["StackTrace:Copied"],
+        StackTraceCopyFeedback.Failed => L["StackTrace:CopyFailed"],
+        _ => string.Empty
+    };
+
+    protected override void OnInitialized() => _copy = new(JS, Logger);
 
     protected override void OnParametersSet()
     {
-        if (!string.IsNullOrWhiteSpace(Message))
-        {
-            _parseResult = ParserService.Parse(Message);
-        }
-        else
-        {
-            _parseResult = new ParseResult { Success = false, ErrorMessage = L["StackTrace:NotProvided"] };
-        }
+        if (_retired || _copy?.SetSource(Message) != true) return;
+        _source = Message;
+        _wrapLines = true;
+        _spans = StackTraceSourcePresentation.Create(_source, ParserService);
     }
 
-    private IEnumerable<(StackTraceLine line, int level)> GetLinesWithLevel(List<StackTraceLine> lines)
+    private RenderFragment SourceContent => builder =>
     {
-        int level = 0;
-        foreach (var line in lines)
+        if (_source is not { } source) return;
+        foreach (var span in _spans)
         {
-            if (line.LineType == StackLineType.InnerException)
+            var text = source.Substring(span.Start, span.Length);
+            if (span.Role == StackTraceSourceRole.Plain)
             {
-                level++;
-                yield return (line, level - 1);
-            }
-            else if (line.LineType == StackLineType.PlainText && line.RawContent?.Contains("--- End of inner exception") == true)
-            {
-                yield return (line, level);
-                if (level > 0)
-                {
-                    level--;
-                }
+                builder.AddContent(0, text);
             }
             else
             {
-                yield return (line, level);
+                builder.OpenElement(1, "span");
+                builder.AddAttribute(2, "class", span.Role switch
+                {
+                    StackTraceSourceRole.ExceptionType => "trace-token-type",
+                    StackTraceSourceRole.Method => "trace-token-method",
+                    StackTraceSourceRole.Location => "trace-token-location",
+                    _ => "trace-token-muted"
+                });
+                builder.AddContent(3, text);
+                builder.CloseElement();
             }
         }
+    };
+
+    private void ToggleWrap()
+    {
+        if (!_retired && HasSource) _wrapLines = !_wrapLines;
     }
 
-    private string GetInnerExceptionIndentForLevel(int level)
-    {
-        if (level <= 0)
-            return "";
+    private Task CopyToClipboard() => !_retired && CopyState.CanCopy && _copy is { } copy
+        ? copy.CopyAsync() : Task.CompletedTask;
 
-        return $"margin-left: {level * 16}px; border-left: 2px dashed var(--mud-palette-warning);";
-    }
-
-    private bool IsEndOfInnerException(string? content)
+    /// <summary>Retires this viewer and drains its admitted clipboard write without disposing the borrowed runtime.</summary>
+    public ValueTask DisposeAsync()
     {
-        return content?.Contains("--- End of inner exception") == true;
-    }
-
-    private async Task CopyToClipboard()
-    {
-        if (!string.IsNullOrEmpty(Message))
-        {
-            await JS.InvokeAsync<bool>("MoClipboard.copyText", Message);
-        }
+        _retired = true;
+        return _copy?.DisposeAsync() ?? ValueTask.CompletedTask;
     }
 }

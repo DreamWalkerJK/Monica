@@ -1,0 +1,185 @@
+@using System.Globalization
+@using Monica.Profiling.RuntimeMetrics.Models
+@using Monica.Profiling.UIRuntimeMetrics.Support
+@inject IStringLocalizer<RuntimeMetricsResource> L
+
+@{
+    var renderedProjection = _projection;
+    var activeSample = _selection.ActiveSample;
+    var rangeSample = _selection.RangeSample;
+    var axisLabels = RuntimeMetricsDisplayFormatter.AxisLabels(_projection.YTicks.Select(tick => tick.Value).ToArray());
+    var labeledYTicks = _projection.YTicks.Select((tick, index) => (Y: tick.Y, Label: axisLabels[index])).ToArray();
+}
+
+<div class="runtime-trend-plot" data-metric="@(Metric == RuntimeTrendMetric.Cpu ? "cpu" : "memory")"
+     data-unit="@_projection.Unit" data-sample-count="@_projection.Samples.Count"
+     data-invalid-count="@_projection.InvalidValueCount" data-domain-min="@RuntimeMetricsDisplayFormatter.Raw(_projection.MinimumValue)"
+     data-domain-max="@RuntimeMetricsDisplayFormatter.Raw(_projection.MaximumValue)">
+    <span id="@(_id + "-series")" class="runtime-plot-visually-hidden">@SeriesLabel</span>
+    <div class="runtime-plot-grid" dir="ltr">
+        <div class="runtime-plot-y-axis" aria-hidden="true">
+            @foreach (var tick in labeledYTicks)
+            {
+                <span class="runtime-plot-axis-sizer">@tick.Label</span>
+                <span class="runtime-plot-y-label" style="@FractionStyle("y", tick.Y)">@tick.Label</span>
+            }
+        </div>
+        <div class="runtime-plot-surface">
+            <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" role="img"
+                 aria-labelledby="@(_id + "-title")" aria-describedby="@(_id + "-description")">
+                <title id="@(_id + "-title")">@SeriesLabel</title>
+                <desc id="@(_id + "-description")">@L["Trend:Plot:Description"]</desc>
+                @foreach (var tick in labeledYTicks)
+                {
+                    <line class="runtime-plot-grid-line" x1="0" x2="1000" y1="@Coordinate(tick.Y)" y2="@Coordinate(tick.Y)" vector-effect="non-scaling-stroke" />
+                }
+                @for (var index = 0; index < _projection.TimeTicks.Count; index++)
+                {
+                    var tick = _projection.TimeTicks[index];
+                    <line class="runtime-plot-grid-line @TimeTickClass(index)" x1="@Coordinate(tick.X)" x2="@Coordinate(tick.X)" y1="0" y2="1000" vector-effect="non-scaling-stroke" />
+                }
+                @foreach (var segment in _projection.Segments)
+                {
+                    <polyline class="runtime-plot-line" points="@PolylinePoints(segment)" data-vertex-count="@segment.Count" vector-effect="non-scaling-stroke" />
+                }
+                @if (activeSample is not null)
+                {
+                    <line class="runtime-plot-crosshair" x1="@Coordinate(activeSample.X)" x2="@Coordinate(activeSample.X)" y1="0" y2="1000" vector-effect="non-scaling-stroke" />
+                }
+                @foreach (var region in _projection.HitRegions)
+                {
+                    var sample = region.Sample;
+                    <rect class="runtime-plot-hit-region" x="@Coordinate(region.StartX)" y="0"
+                          width="@Coordinate(region.EndX - region.StartX)" height="1000" aria-hidden="true" focusable="false"
+                          data-source-index="@sample.SourceIndex" data-sample-timestamp="@RuntimeMetricsDisplayFormatter.MachineTime(sample.UtcTimestamp)"
+                          data-sample-value="@RuntimeMetricsDisplayFormatter.Raw(sample.Value)" data-raw-value="@RuntimeMetricsDisplayFormatter.Raw(sample.RawValue)"
+                          data-x="@RuntimeMetricsDisplayFormatter.Raw(sample.X)" data-y="@(sample.Y is { } y ? RuntimeMetricsDisplayFormatter.Raw(y) : null)"
+                          @onpointerenter="@((PointerEventArgs args) => PreviewSample(sample, args))"
+                          @onpointerleave="@((PointerEventArgs args) => LeaveSample(sample, args))" />
+                }
+            </svg>
+            @if (activeSample?.Y is { } activeY)
+            {
+                <span class="runtime-plot-active-marker" style="@PointStyle(activeSample.X, activeY)" aria-hidden="true"></span>
+            }
+        </div>
+        <div class="runtime-plot-time-axis @(CrossesUtcDate ? "runtime-plot-time-axis--dated" : null) @(Span.Ticks is > 0 and < 4 * TimeSpan.TicksPerSecond ? "runtime-plot-time-axis--fractional" : null) @(Span.Ticks is > 0 and < 4 * TimeSpan.TicksPerMillisecond ? "runtime-plot-time-axis--precise" : null)" aria-hidden="true">
+            @for (var index = 0; index < _projection.TimeTicks.Count; index++)
+            {
+                var tick = _projection.TimeTicks[index];
+                var isEndpoint = index == 0 || index == _projection.TimeTicks.Count - 1;
+                <time class="runtime-plot-time-label @TimeTickClass(index)" style="@FractionStyle("x", tick.X)"
+                      datetime="@RuntimeMetricsDisplayFormatter.MachineTime(tick.UtcTimestamp)" title="@RuntimeMetricsDisplayFormatter.MachineTime(tick.UtcTimestamp)">
+                    <span>@RuntimeMetricsDisplayFormatter.UtcAxisTime(tick.UtcTimestamp, Span)</span>
+                    @if (CrossesUtcDate && isEndpoint)
+                    {
+                        <span>@RuntimeMetricsDisplayFormatter.UtcDate(tick.UtcTimestamp)</span>
+                    }
+                </time>
+            }
+        </div>
+        <div class="runtime-plot-readout" data-active-sample="@(activeSample is null ? null : RuntimeMetricsDisplayFormatter.MachineTime(activeSample.UtcTimestamp))">
+            @if (activeSample is not null)
+            {
+                <time datetime="@RuntimeMetricsDisplayFormatter.MachineTime(activeSample.UtcTimestamp)" title="@RuntimeMetricsDisplayFormatter.MachineTime(activeSample.UtcTimestamp)">@RuntimeMetricsDisplayFormatter.UtcDateTime(activeSample.UtcTimestamp)</time>
+                <strong>@SampleValue(activeSample)</strong>
+                @if (_selection.WasEvicted && _selection.PointerSample is null && _selection.HasFocus)
+                {
+                    <p dir="auto">@L["Trend:Plot:Evicted"]</p>
+                }
+            }
+            else
+            {
+                <p dir="auto">@L["Trend:Plot:Idle"]</p>
+            }
+        </div>
+        <div class="runtime-plot-browser">
+            <label id="@(_id + "-browser-label")" for="@(_id + "-browser")" dir="auto">@L["Trend:Plot:BrowseSamples"]</label>
+            <input id="@(_id + "-browser")" type="range" min="0" max="@Math.Max(0, _projection.Samples.Count - 1)" step="1"
+                   @bind:get="_selection.RangeIndex" @bind:set="@(value => SelectRange(renderedProjection, value))" @bind:event="oninput"
+                   disabled="@(_projection.Samples.Count == 0)" aria-labelledby="@(_id + "-series " + _id + "-browser-label")"
+                   aria-describedby="@(_id + "-keyboard-help")" aria-valuetext="@RangeValueText(rangeSample)"
+                   data-selected-timestamp="@(rangeSample is null ? null : RuntimeMetricsDisplayFormatter.MachineTime(rangeSample.UtcTimestamp))"
+                   @onfocus="_selection.FocusRange" @onblur="_selection.BlurRange" @onkeydown="OnRangeKeyDown" />
+        </div>
+        <p id="@(_id + "-keyboard-help")" class="runtime-plot-help" dir="auto">@L["Trend:Plot:KeyboardHelp"]</p>
+        @if (_projection.InvalidValueCount > 0)
+        {
+            <p class="runtime-plot-help" dir="auto">@L["Trend:Plot:Gaps", _projection.InvalidValueCount]</p>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the borrowed retained observations in source order. Rendering neither mutates nor samples them.
+    /// The parent owns retention and uses its existing empty/single-observation presentation before mounting this plot.
+    /// </summary>
+    /// <remarks>
+    /// Transient browsing uses each observation's object reference as its identity;
+    /// timestamps and values do not need to be unique. Provide a distinct instance for each observation.
+    /// A refreshed list may replace its container while reusing retained observation instances to preserve selection.
+    /// Equal-valued replacement instances are treated as new observations. When a previously browsed instance
+    /// disappears from a nonempty list, the browser selects that list's first observation and clears its pointer
+    /// preview without moving keyboard focus. The parent continues to own retention and frozen inspection.
+    /// </remarks>
+    [Parameter, EditorRequired] public IReadOnlyList<RuntimeMetricsPoint> Points { get; set; } = [];
+
+    /// <summary>Gets or sets the fixed measurement, unit and palette role. Defaults to process CPU percentage.</summary>
+    [Parameter] public RuntimeTrendMetric Metric { get; set; } = RuntimeTrendMetric.Cpu;
+
+    /// <summary>Gets or sets the localized measurement name used by the plot and sample browser.</summary>
+    [Parameter, EditorRequired] public string SeriesLabel { get; set; } = string.Empty;
+
+    private readonly string _id = $"runtime-trend-{Guid.NewGuid():N}";
+    private readonly RuntimeTrendPlotSelection _selection = new();
+    private RuntimeTrendPlotProjection _projection = RuntimeTrendPlotProjection.Create([], RuntimeTrendMetric.Cpu);
+    private TimeSpan Span => _projection.StartUtc is { } start && _projection.EndUtc is { } end ? end - start : TimeSpan.Zero;
+    private bool CrossesUtcDate => _projection.StartUtc?.Date != _projection.EndUtc?.Date;
+
+    protected override void OnParametersSet()
+    {
+        _projection = RuntimeTrendPlotProjection.Create(Points, Metric);
+        _selection.Reconcile(_projection);
+    }
+
+    private string SampleValue(RuntimeTrendPlotSample sample) => sample.IsFinite
+        ? RuntimeMetricsDisplayFormatter.PlotValue(sample.Value, Metric)
+        : L["Trend:Plot:InvalidValue", sample.RawValue.ToString("G", CultureInfo.CurrentCulture), _projection.RawUnit];
+
+    private string RangeValueText(RuntimeTrendPlotSample? sample) => sample is null ? L["Common:Unavailable"]
+        : L["Trend:Plot:SampleValue", sample.SourceIndex + 1, _projection.Samples.Count,
+            RuntimeMetricsDisplayFormatter.MachineTime(sample.UtcTimestamp), SampleValue(sample)];
+
+    private void SelectRange(RuntimeTrendPlotProjection renderedProjection, int index) =>
+        _selection.TrySelectRange(renderedProjection, index);
+
+    private void PreviewSample(RuntimeTrendPlotSample sample, PointerEventArgs args)
+    {
+        if (args.PointerType != "touch") _selection.TryPreview(sample);
+    }
+
+    private void LeaveSample(RuntimeTrendPlotSample sample, PointerEventArgs args)
+    {
+        if (args.PointerType != "touch") _selection.ClearPointer(sample);
+    }
+
+    private void OnRangeKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape") _selection.Dismiss();
+    }
+
+    private string TimeTickClass(int index)
+    {
+        if (_projection.TimeTicks.Count == 1) return "runtime-plot-tick--single";
+        if (index == 0) return "runtime-plot-tick--first";
+        if (index == _projection.TimeTicks.Count - 1) return "runtime-plot-tick--last";
+        return index == _projection.TimeTicks.Count / 2 ? "runtime-plot-tick--middle" : "runtime-plot-tick--detail";
+    }
+
+    private static string Coordinate(double fraction) => RuntimeMetricsDisplayFormatter.Raw(fraction * 1000);
+    private static string FractionStyle(string axis, double fraction) => $"--plot-{axis}: {RuntimeMetricsDisplayFormatter.Raw(fraction)}";
+    private static string PointStyle(double x, double y) => $"{FractionStyle("x", x)}; {FractionStyle("y", y)}";
+    private static string PolylinePoints(IReadOnlyList<RuntimeTrendPlotSample> segment) =>
+        string.Join(" ", segment.Select(sample => $"{Coordinate(sample.X)},{Coordinate(sample.Y!.Value)}"));
+}

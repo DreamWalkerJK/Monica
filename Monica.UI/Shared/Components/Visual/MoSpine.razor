@@ -1,0 +1,44 @@
+@* Spine: ordered nodes colored by role, joined by a 1.5px connector, each with a name, a sublabel, and a duration. *@
+<ol class="mo-vl-spine @Class" role="list" aria-label="@AriaLabel">
+    @foreach (var item in Items)
+    {
+        <li class="mo-vl-spine-item">
+            @if (OnItemSelected.HasDelegate)
+            {
+                <button type="button"
+                        class="mo-vl-spine-node @item.Role.ToCssClass()"
+                        aria-label="@item.Name"
+                        @onclick="() => OnItemSelected.InvokeAsync(item)"></button>
+            }
+            else
+            {
+                <span class="mo-vl-spine-node @item.Role.ToCssClass()" aria-hidden="true"></span>
+            }
+            <span class="mo-vl-spine-name">
+                @item.Name
+                @if (!string.IsNullOrWhiteSpace(item.Sublabel))
+                {
+                    <small>@item.Sublabel</small>
+                }
+            </span>
+            @if (!string.IsNullOrWhiteSpace(item.Detail))
+            {
+                <span class="mo-vl-spine-detail">@item.Detail</span>
+            }
+        </li>
+    }
+</ol>
+
+@code {
+    /// <summary>Gets or sets the ordered spine items.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<MoSpineItem> Items { get; set; } = [];
+
+    /// <summary>Gets or sets the localized accessible name for the whole spine.</summary>
+    [Parameter, EditorRequired] public string AriaLabel { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the selection callback; nodes render as static dots without it.</summary>
+    [Parameter] public EventCallback<MoSpineItem> OnItemSelected { get; set; }
+
+    /// <summary>Gets or sets an optional identification class.</summary>
+    [Parameter] public string? Class { get; set; }
+}

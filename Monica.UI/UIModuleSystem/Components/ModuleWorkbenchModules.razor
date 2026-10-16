@@ -1,4 +1,5 @@
 @using Microsoft.Extensions.Localization
+@using System.Globalization
 @using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.State
@@ -7,22 +8,18 @@
 
 <section class="modules-layout" aria-labelledby="module-catalog-title">
     <header class="module-catalog-heading">
+        <div class="module-catalog-total" aria-label="@L["Overview:Kpis:Declared", Session.Snapshot?.Modules.Length ?? 0]">
+            <span>@(Session.Snapshot?.Modules.Length ?? 0)</span>
+            <small>@L["Modules:Columns:Module"]</small>
+        </div>
         <div class="module-catalog-heading__copy">
             <span class="module-catalog-eyebrow">@L["Modules:Eyebrow"]</span>
             <h2 id="module-catalog-title">@L["Modules:Title"]</h2>
         </div>
-        <span class="module-catalog-result" aria-live="polite">
-            @L["Modules:ResultCount", Session.FilteredModules.Count, Session.Snapshot?.Modules.Length ?? 0]
-        </span>
     </header>
 
     <div class="module-catalog-context">
-        <dl class="module-summary" aria-label="@L["Modules:Summary:Label"]">
-            <div><dt>@L["Modules:Summary:Active"]</dt><dd>@ActiveModuleCount</dd></div>
-            <div><dt>@L["Modules:Summary:Ui"]</dt><dd>@UiModuleCount</dd></div>
-            <div><dt>@L["Modules:Summary:Web"]</dt><dd>@WebModuleCount</dd></div>
-            <div><dt>@L["Modules:Summary:MaximumDepth"]</dt><dd>@MaximumDependencyDepth</dd></div>
-        </dl>
+        <MoFactGrid Facts="@SummaryFacts" />
         <p class="module-summary-hint">@L["Modules:Summary:ScopeHint"]</p>
     </div>
 
@@ -112,9 +109,10 @@
             }
         </div>
         <div class="module-cost-context">
-            <div class="module-cost-legend" aria-label="@L["Modules:Cost:Legend"]">
-                <span class="module-cost-legend__callbacks">@L["Modules:Cost:Callbacks"]</span>
-                <span class="module-cost-legend__startup">@L["Modules:Cost:StartupWork"]</span>
+            <span class="module-catalog-result" aria-live="polite">@L["Modules:ResultCount", Session.FilteredModules.Count, Session.Snapshot?.Modules.Length ?? 0]</span>
+            <div class="mo-vl-legend" aria-label="@L["Modules:Cost:Legend"]">
+                <span><i class="mo-vl-swatch mo-vl-role--primary"></i>@L["Modules:Cost:Callbacks"]</span>
+                <span><i class="mo-vl-swatch mo-vl-role--info"></i>@L["Modules:Cost:StartupWork"]</span>
             </div>
             <p>@L["Modules:Cost:ScaleHint"]</p>
         </div>
@@ -130,18 +128,22 @@
                   RowClassFunc="@ModuleRowClass">
             <HeaderContent>
                 <MudTh>@L["Modules:Columns:Module"]</MudTh>
-                <MudTh>@L["Modules:Columns:Assembly"]</MudTh>
                 <MudTh>@L["Modules:Columns:Dependencies"]</MudTh>
                 <MudTh>@L["Modules:Columns:Cost"]</MudTh>
                 <MudTh>@L["Modules:Columns:Actions"]</MudTh>
             </HeaderContent>
             <RowTemplate Context="module">
                 <MudTd DataLabel="@L["Modules:Columns:Module"]">
-                    <div class="module-name-cell">
-                        <span class="module-glyph" aria-hidden="true"><MudIcon Icon="@ModuleIcon(module)" Size="Size.Small" /></span>
+                    <div class="module-name-cell" @key="module.ModuleKey">
+                        <span class="module-glyph @(module.IsUiModule ? "module-glyph--ui" : module.IsWebModule ? "module-glyph--web" : null)" aria-hidden="true"><MudIcon Icon="@ModuleIcon(module)" Size="Size.Small" /></span>
                         <div class="module-name-cell__identity">
-                            <strong class="module-type-name">@module.TypeName</strong>
+                            <button type="button" class="module-type-name" title="@module.FullTypeName" aria-label="@L["Aria:InspectModule", module.TypeName]" @onclick="@(() => ModuleSelected.InvokeAsync(module))">@module.TypeName</button>
                             <div class="module-full-identity"><IdentifierValue Value="@module.FullTypeName" /></div>
+                            <div class="module-source-cell">
+                                <code title="@L["Modules:Columns:Assembly"]">@module.AssemblyName</code>
+                                <span>@L["Modules:Columns:Depth"] <b>@module.DependencyDepth</b></span>
+                                <span>@L["ModuleDrawer:Fields:Order"] <b>@(module.RegistrationOrder?.ToString() ?? L["Common:NotAvailable"].Value)</b></span>
+                            </div>
                             <div class="module-identity-facts">
                                 <span class="module-state @(module.IsActive ? "module-state--active" : "module-state--disabled")"
                                       title="@L["Modules:Columns:State"]">
@@ -150,11 +152,11 @@
                                 <span class="module-capabilities">
                                     @if (module.IsUiModule)
                                     {
-                                        <span>@L["Enums:CatalogCapability:Ui"]</span>
+                                        <span class="module-capability--ui">@L["Enums:CatalogCapability:Ui"]</span>
                                     }
                                     @if (module.IsWebModule)
                                     {
-                                        <span>@L["Enums:CatalogCapability:Web"]</span>
+                                        <span class="module-capability--web">@L["Enums:CatalogCapability:Web"]</span>
                                     }
                                     @if (module.RequiresWebHost)
                                     {
@@ -165,15 +167,6 @@
                         </div>
                     </div>
                 </MudTd>
-                <MudTd DataLabel="@L["Modules:Columns:Assembly"]">
-                    <div class="module-source-cell">
-                        <code>@module.AssemblyName</code>
-                        <dl class="module-source-facts">
-                            <div><dt>@L["Modules:Columns:Depth"]</dt><dd>@module.DependencyDepth</dd></div>
-                            <div><dt>@L["ModuleDrawer:Fields:Order"]</dt><dd>@(module.RegistrationOrder?.ToString() ?? L["Common:NotAvailable"].Value)</dd></div>
-                        </dl>
-                    </div>
-                </MudTd>
                 <MudTd DataLabel="@L["Modules:Columns:Dependencies"]">
                     <dl class="module-relationships" aria-label="@L["Modules:DependencyCounts", module.DirectDependencyCount, module.DirectDependentCount]">
                         <div><dt>@L["Dependencies:Legend:Requires"]</dt><dd>@module.DirectDependencyCount</dd></div>
@@ -182,14 +175,23 @@
                 </MudTd>
                 <MudTd DataLabel="@L["Modules:Columns:Cost"]">
                     <div class="module-record-cost">
-                        <ModuleCostBreakdownBar ModuleName="@module.TypeName"
-                                                CallbackDurationMs="@module.SerialCallbackDurationMs"
-                                                StartupWorkDurationMs="@module.StartupWorkDurationMs"
-                                                MaximumDurationMs="@MaximumModuleCost" />
-                        <dl class="module-cost-parts">
-                            <div><dt>@L["Modules:Cost:Callbacks"]</dt><dd>@ModuleDiagnosticsDisplay.Duration(module.SerialCallbackDurationMs)</dd></div>
-                            <div><dt>@L["Modules:Cost:StartupWork"]</dt><dd>@ModuleDiagnosticsDisplay.Duration(module.StartupWorkDurationMs)</dd></div>
-                        </dl>
+                        <strong class="module-record-total">@ModuleDiagnosticsDisplay.Duration(ModuleCost(module))</strong>
+                        @{
+                            string? workCaption = null;
+                            if (module.StartupWorkDurationMs > 0)
+                            {
+                                workCaption = L["Overview:Ledger:Cap:Work", ModuleDiagnosticsDisplay.Duration(module.StartupWorkDurationMs)];
+                            }
+                        }
+                        <MoTwoRoleMeter PrimaryValue="@module.SerialCallbackDurationMs"
+                                        SecondaryValue="@module.StartupWorkDurationMs"
+                                        ScaleMaximum="@MaximumModuleCost"
+                                        PrimaryCaption="@L["Overview:Ledger:Cap:Callback", ModuleDiagnosticsDisplay.Duration(module.SerialCallbackDurationMs)]"
+                                        SecondaryCaption="@workCaption"
+                                        AccessibleDescription="@L["Modules:Cost:MeterAria",
+                                            module.TypeName,
+                                            ModuleDiagnosticsDisplay.Duration(module.SerialCallbackDurationMs),
+                                            ModuleDiagnosticsDisplay.Duration(module.StartupWorkDurationMs)]" />
                     </div>
                 </MudTd>
                 <MudTd DataLabel="@L["Modules:Columns:Actions"]">
@@ -232,6 +234,14 @@
 @code {
     [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
     [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    private IReadOnlyList<MoFact> SummaryFacts =>
+    [
+        new(L["Modules:Summary:Active"], ActiveModuleCount.ToString(CultureInfo.InvariantCulture)),
+        new(L["Modules:Summary:Ui"], UiModuleCount.ToString(CultureInfo.InvariantCulture)),
+        new(L["Modules:Summary:Web"], WebModuleCount.ToString(CultureInfo.InvariantCulture)),
+        new(L["Modules:Summary:MaximumDepth"], MaximumDependencyDepth.ToString(CultureInfo.InvariantCulture)),
+    ];
 
     private void SetSearch(string? value) => SetFilters(search: value ?? string.Empty);
     private void SetStateFilter(ModuleCatalogStateFilter value) => SetFilters(state: value);

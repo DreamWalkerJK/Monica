@@ -68,6 +68,8 @@ A source identity contains the full path, relative path, and an opaque observed 
 
 `LogLineRequest` freezes the source, physical number, and verbatim target text. `ReadContextAsync` verifies the current observed generation and actual target text before returning detached surrounding complete lines; source switches, unavailable/changed content, or a changed target fail instead of reusing its number in a different file. Appending is allowed. Context inspection does not replace the reader buffer or stop following; its frozen context remains visible independently of subsequent reader updates. The legacy absolute-path `LogFileQueryService.ReadContextAsync` remains directory-contained but has no source-generation proof and should not be used by reader pages.
 
+The reader's cursor menu captures the admitted physical line and callbacks before awaiting an action. Copy uses that retained line; filtering, position navigation and context inspection retain their existing source checks. Every admitted right-click advances the opening revision, so an older completion cannot dismiss a replacement menu. The shared [cursor-menu contract](../../monica-infra-ui/references/shell-and-access.md) owns native transitions and page coordinates; it does not replace the reader session, source-generation validation, or inspector ownership.
+
 Missing (`FileExists = false`), existing but empty, and failed/stale reads are different states. Read failures retain the last successful source, lines, and read time while exposing `Error`; a later successful read clears it. Parsed log timestamps are separate evidence from the reader's read time.
 
 ## Export and HTTP contracts

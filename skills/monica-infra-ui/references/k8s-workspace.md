@@ -19,7 +19,39 @@ builder.AddMonica(monica =>
 
 `executionNode`, `sshUser` and `sshPassword` are host-supplied connection settings; obtain credentials through the host's own secret configuration. `AddK8SUI()` requires K8S, Localization and Shell. Complete the web host with `UseMonica()` and `MapMonica()`; see [Shell and access](shell-and-access.md). The K8S route family declares no built-in access policy. Both destinations are owned by `UIK8SPage`, so the shell evaluates every distinct registered policy for that component before rendering either workbench. An effective host policy guarding the inventory component also guards runtime configuration. The host owns authentication and authorization for connection settings and remote mutations, including any enabled K8S Minimal APIs. Hiding a navigation item is not access control. Shell navigation contributions append registrations; duplicate routes fail rather than overriding an existing page's policy.
 
-The production provider is `SshRemoteKubectlProvider`. It connects by SSH password authentication and runs kubectl on `ExecutionNode`; it does not use a browser-side Kubernetes client. `ModuleK8SOption` defaults to SSH port `22`, command and connection timeout `30` seconds, and executable text `kubectl`. These provider options are host registration settings, not fields in the runtime editor. The configured master and worker addresses are metadata and execution-node fallbacks, not discovered topology or health evidence.
+The operations provider is `SshRemoteKubectlProvider`. It connects by SSH password authentication and runs kubectl on `ExecutionNode`; it does not use a browser-side Kubernetes client. `ModuleK8SOption` defaults to SSH port `22`, command and connection timeout `30` seconds, and executable text `kubectl`. These provider options are host registration settings, not fields in the runtime editor. The configured master and worker addresses are metadata and execution-node fallbacks, not discovered topology or health evidence.
+
+## Publish the current Service's NodePort addresses
+
+For a host running inside Kubernetes, opt in to publishing its Service's external NodePort addresses to a process environment variable:
+
+```csharp
+builder.AddMonica(monica =>
+{
+    monica.AddK8S(options => options.NodePortAddresses.Enabled = true);
+});
+```
+
+`ModuleK8SOption.NodePortAddresses` is a `K8SNodePortAddressOptions` value with these defaults:
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `Enabled` | `false` | Starts one background initialization attempt when the host starts. |
+| `ServiceNameEnvironmentVariable` | `K8S_SERVICE_NAME` | Contains the exact name of this application's Kubernetes Service. |
+| `BaseAddressEnvironmentVariable` | `K8S_HOST_IP` | Contains the externally reachable host or IP combined with each NodePort. |
+| `ListeningAddressesEnvironmentVariable` | `K8S_LISTENING_ADDRESSES` | Receives the semicolon-separated result. |
+
+Supply the Service name and base-address environment variables in the workload. Initialization reads `KUBERNETES_SERVICE_HOST` and `KUBERNETES_SERVICE_PORT_HTTPS`, the mounted ServiceAccount token and CA certificate, and the namespace file under `/var/run/secrets/kubernetes.io/serviceaccount/`; the namespace falls back to `default` when its file is absent. The reader trims the token before setting the Bearer header so trailing whitespace in the mounted file does not invalidate the request. The Pod's actual ServiceAccount must already have `get` permission for the target Service in that namespace. Check the account selected by the workload against the RBAC binding; a binding for `default` does not grant access to a custom ServiceAccount. Migrating an initializer that already reads this same Service needs no additional Kubernetes permission.
+
+This capability calls the Kubernetes API directly with the workload's ServiceAccount. It uses neither SSH credentials nor the runtime editor's connection settings and does not require `AddK8SUI()` or service discovery. The result contains `http://{baseAddress}:{nodePort}` for each port of a `NodePort` Service, in returned order, joined with `;`. A successful attempt replaces the configured output environment variable. A present but empty `ports` array is a successful empty result: publication clears the output environment variable, preserving the previous initializer's behavior.
+
+Missing settings, inaccessible files, request failures, unsupported Service types, or malformed responses leave the previous output value intact. These failures are logged; a response missing `spec`, `type`, or `ports` is ignored without publication. Initialization runs once and does not track later Service changes.
+
+The host starts the initializer as a one-shot `BackgroundService` and does not wait for the Kubernetes query before continuing startup. Shutdown cancels an in-flight query, and a canceled result is not published. There is no publication-order guarantee relative to other hosted services: service discovery may register before the output is available and picks it up on a later heartbeat under its [address metadata contract](../../monica-infra-hosting/references/service-discovery.md#address-and-environment-metadata). Publication changes address metadata without changing Kestrel bindings, `IServerAddressesFeature`, or the system-information page's captured listening endpoints.
+
+When moving an existing application initializer into `AddK8S`, map its existing enabled value and all three environment-variable names to `NodePortAddresses`; do not replace application defaults with the module's opt-in default. Keep any existing service-discovery metadata and display allow lists under that contract.
+
+For cluster acceptance, start without a prefilled output environment variable: preserving a previous value after failure must not be mistaken for a successful query. Verify that the expected NodePort addresses appear, then observe `LastHeartbeatTime` advance and confirm that the registration still contains the address metadata. Reader replacements in automated tests do not verify the cluster's mounted credentials, network access, or RBAC.
 
 ## Inventory and runtime configuration
 

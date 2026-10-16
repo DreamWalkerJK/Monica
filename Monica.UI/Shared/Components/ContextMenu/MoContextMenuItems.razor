@@ -19,6 +19,7 @@
             <MoContextMenuItems TItem="TItem"
                                 Items="@GetSubItems(item)"
                                 ContextItem="ContextItem"
+                                OnItemRequested="OnItemRequested"
                                 OnItemSelected="OnItemSelected" />
         </MudMenu>
     }
@@ -42,8 +43,18 @@
     [Parameter, EditorRequired]
     public IReadOnlyList<ContextMenuItem<TItem>> Items { get; set; } = [];
 
+    /// <summary>The retained context used by the default leaf-action pipeline.</summary>
     [Parameter]
     public TItem? ContextItem { get; set; }
+
+    /// <summary>Optionally owns selection instead of the default leaf action and selected notification.</summary>
+    /// <remarks>
+    /// When supplied, this callback is responsible for executing the action and any completion notifications.
+    /// MoContextMenu uses it to bind selection to the exact rendered opening. Without it, the existing
+    /// OnClick(ContextItem), then OnItemSelected order and fault propagation are preserved.
+    /// </remarks>
+    [Parameter]
+    public EventCallback<ContextMenuItem<TItem>> OnItemRequested { get; set; }
 
     [Parameter]
     public EventCallback<ContextMenuItem<TItem>> OnItemSelected { get; set; }
@@ -53,16 +64,18 @@
 
     private async Task SelectAsync(ContextMenuItem<TItem> item)
     {
-        if (item.Disabled)
+        if (item.Disabled || item.IsDivider || item.HasSubMenu) return;
+        var requested = OnItemRequested;
+        if (requested.HasDelegate)
         {
+            await requested.InvokeAsync(item);
             return;
         }
 
-        if (item.OnClick is not null)
-        {
-            await item.OnClick(ContextItem);
-        }
-
-        await OnItemSelected.InvokeAsync(item);
+        var context = ContextItem;
+        var action = item.OnClick;
+        var callback = OnItemSelected;
+        if (action is not null) await action(context);
+        await callback.InvokeAsync(item);
     }
 }

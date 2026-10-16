@@ -12,8 +12,7 @@
   },
   "Page": {
     "Eyebrow": "MONICA / 组合过程飞行记录器",
-    "Title": "模块工作台",
-    "Subtitle": "基于一个不可变修订解释启动健康、耗时因果、类型发现和模块拓扑。"
+    "Title": "模块工作台"
   },
   "Access": {
     "Checking": "正在检查诊断访问权限…",
@@ -23,15 +22,16 @@
   "Actions": {
     "ImportBaseline": "对比",
     "Export": "导出",
+    "Refresh": "刷新",
     "RemoveBaseline": "移除基线",
     "Retry": "重试",
-    "Reset": "重置"
+    "Reset": "重置",
+    "CopyCompositionId": "复制完整组合 ID"
   },
   "Aria": {
     "SectionNavigation": "模块工作台分区",
     "SnapshotIdentity": "诊断快照标识",
     "SummaryMetrics": "组合摘要指标",
-    "Refresh": "刷新诊断快照",
     "OpenHelp": "打开诊断帮助",
     "CloseHelp": "关闭诊断帮助",
     "ModuleCatalog": "模块目录",
@@ -48,6 +48,7 @@
     "Live": "进行中",
     "Revision": "修订",
     "Section": "分区",
+    "CapturedAt": "采集于 {0}",
     "RowsPerPage": "每页行数",
     "Unknown": "未知",
     "NotAvailable": "不适用",
@@ -55,7 +56,10 @@
     "Null": "空值",
     "Yes": "是",
     "No": "否",
-    "None": "无"
+    "None": "无",
+    "PagerInfo": "{first_item}-{last_item} / {all_items} 条",
+    "Copied": "已复制",
+    "CopyFailed": "复制失败"
   },
   "Sections": {
     "Overview": "概览",
@@ -97,51 +101,132 @@
   },
   "Overview": {
     "Kpis": {
-      "StartupTiming": "启动耗时",
-      "ApplicationStartup": "应用启动",
-      "Tracked": "已记录",
-      "StartupBoundary": "计时起点 → 就绪",
       "Composition": "模块组合",
-      "CompositionShare": "组合占比",
-      "CompositionShareAria": "模块组合占应用启动的 {0}。",
-      "RemainingStartup": "其余启动时间",
       "ActiveModules": "活动模块",
       "Declared": "共声明 {0} 个",
       "ServiceRegistration": "服务注册",
-      "Exact": "精确值",
-      "FinalCompositionInterval": "最终组合区间",
-      "CompositionShareValue": "占模块组合的 {0}",
-      "TypeDiscovery": "类型发现",
-      "Queries": "{0} 个不同查询",
-      "Matches": "{0} 次编译匹配",
-      "Errors": "{0} 个错误",
-      "Warnings": "{0} 个警告"
+      "TypeDiscovery": "类型发现"
     },
     "CriticalPath": {
-      "Eyebrow": "启动因果链",
-      "Title": "关键路径带",
+      "Title": "因果序列",
       "Hint": "选择证据可同步时间线、模块和依赖上下文。",
       "Count": "{0} 个因果区间",
       "Empty": "没有记录因果阻塞路径。",
       "SpanDescription": "{0}；{1}；耗时 {2}。"
     },
     "Findings": {
-      "Eyebrow": "结构化证据",
       "Title": "诊断发现",
+      "Sub": "{0} 条发现 · {1} 项错误",
       "Empty": "没有结构问题或已配置预算的告警。",
-      "Remaining": "显示其余 {0} 条诊断发现"
+      "Remaining": "显示其余 {0} 条诊断发现",
+      "BudgetTitle": "{0}超出预算",
+      "BudgetEvidence": "记录 {0}，配置预算 {1}。",
+      "DiagnosticCode": "诊断代码",
+      "RegistrationFailed": "模块注册失败",
+      "StartupWorkFailed": "启动任务失败",
+      "StartupWorkCommitFailed": "启动任务提交失败",
+      "CompositionFailed": "模块组合失败",
+      "Unknown": "未识别的诊断发现"
     },
-    "Hotspots": {
-      "Eyebrow": "聚合成本",
-      "Title": "模块热点"
+    "Score": {
+      "Eyebrow": {
+        "Startup": "应用启动耗时",
+        "Composition": "模块组合耗时"
+      },
+      "Display": {
+        "Aria": "记录耗时 {0}"
+      },
+      "Lede": {
+        "OfWhich": "分别记录：",
+        "Joiner": "；"
+      },
+      "Mark": {
+        "Composition": "Monica 组合 {0}",
+        "Work": "启动任务累计 {0}"
+      },
+      "Longest": {
+        "Prefix": "。启动任务累计耗时最多：",
+        "Suffix": "。"
+      }
+    },
+    "Ledger": {
+      "Title": "模块贡献",
+      "Sub": "按注册回调 + 启动任务耗时排序 · 已声明 {0} 个模块",
+      "SearchPlaceholder": "名称或程序集",
+      "FilterAria": "能力筛选",
+      "Filter": {
+        "HasStartupWork": "含启动任务",
+        "Web": "Web",
+        "Ui": "UI",
+        "Disabled": "已禁用"
+      },
+      "Aria": "模块贡献排名",
+      "Column": {
+        "Rank": "#",
+        "Name": "模块",
+        "Recorded": "记录耗时",
+        "Total": "合计"
+      },
+      "Cap": {
+        "Callback": "回调 {0}",
+        "Work": "任务 {0}"
+      },
+      "Badge": {
+        "Disabled": "已禁用"
+      },
+      "Empty": "没有匹配“{0}”的模块",
+      "ShowMore": "显示其余模块",
+      "ShowLess": "收起",
+      "Filtered": "显示 {0} / {1} 个模块",
+      "FullRegistry": "完整注册表在“模块”分区。",
+      "Legend": {
+        "Callback": "注册回调",
+        "Work": "启动任务"
+      }
+    },
+    "Depth": {
+      "Title": "依赖深度",
+      "Sub": "{0} 个活跃模块的层级分布",
+      "Empty": "没有活跃模块。"
+    },
+    "Trace": {
+      "Eyebrow": "启动轨迹",
+      "Title": "启动过程，一目了然",
+      "Count": "{0} 条记录"
     }
+  },
+  "Timeline": {
+    "Origin": "自组合开始的经过时间",
+    "Expand": "展开 {0} 个阶段",
+    "Collapse": "合并阶段",
+    "Lane": {
+      "Aria": "{0}，{1}",
+      "AggregateAria": "{0}，{1} 个记录区间，累计时长 {2}",
+      "Framework": "框架阶段",
+      "Discovery": "类型发现",
+      "Registration": "服务注册回调",
+      "Lifecycle": "生命周期回调",
+      "Barriers": "阻塞等待",
+      "Work": "启动任务"
+    },
+    "Detail": {
+      "Select": "检查记录区间",
+      "Aggregate": "{0} 个区间 · 累计 {1}",
+      "Interval": "{0} → {1}",
+      "Duration": "时长 {0}"
+    },
+    "Note": {
+      "Intervals": "条形按实际记录偏移绘制，重叠区间不能相加作为经过时间。"
+    },
+    "Empty": "尚未记录启动区间。"
   },
   "Performance": {
     "Budgets": {
       "Eyebrow": "已配置限制",
       "Title": "性能预算",
       "Measurement": "实际 {0} / 上限 {1}",
-      "Utilization": "利用率 {0}"
+      "Utilization": "利用率 {0}",
+      "MeterAria": "{0}：实际 {1}，预算 {2}。"
     },
     "Waterfall": {
       "Eyebrow": "启动时间线",
@@ -184,7 +269,8 @@
     },
     "Discovery": {
       "Eyebrow": "一次类型发现编译",
-      "Title": "强类型发现阶段"
+      "Title": "强类型发现阶段",
+      "StageAria": "{0}，{1}。"
     },
     "StartupWork": {
       "Eyebrow": "调度的启动工作",
@@ -217,10 +303,9 @@
       "Callbacks": "串行回调",
       "StartupWork": "启动工作",
       "ScaleHint": "进度条宽度相对于记录成本最高的模块；颜色区分串行回调与启动工作。",
-      "Breakdown": "{0}：总计 {1}；串行回调 {2}；启动工作 {3}；为最高模块记录成本的 {4}%。"
+      "MeterAria": "{0}：回调 {1}，启动任务 {2}。"
     },
     "Summary": {
-      "Label": "模块目录摘要",
       "Active": "活动模块",
       "Ui": "UI 模块",
       "Web": "Web 模块",
@@ -271,7 +356,6 @@
       "Radial": "径向深度"
     },
     "Overview": {
-      "Label": "可见拓扑摘要",
       "Modules": "模块",
       "Edges": "直接边",
       "Depth": "最大深度",
@@ -290,8 +374,6 @@
     "Graph": {
       "Rendering": "正在渲染模块拓扑…",
       "Failed": "无法渲染依赖图。",
-      "Nodes": "{0} 个节点",
-      "Edges": "{0} 条边",
       "FullHostMode": "完整宿主模式",
       "NeighborhoodMode": "{0} 跳邻域"
     },
@@ -396,7 +478,7 @@
     }
   },
   "ModuleDrawer": {
-    "Eyebrow": "选中模块",
+    "Eyebrow": "模块详情",
     "Tabs": {
       "Summary": "摘要",
       "Performance": "性能",
@@ -410,7 +492,8 @@
       "Order": "注册顺序",
       "Depth": "依赖深度",
       "Assembly": "程序集",
-      "Errors": "错误"
+      "Errors": "错误",
+      "FullType": "完整类型"
     },
     "Capabilities": {
       "Title": "能力",
@@ -421,7 +504,11 @@
     },
     "Performance": {
       "Spans": "记录区间",
-      "Empty": "没有记录模块所属区间。"
+      "Empty": "没有记录模块所属区间。",
+      "Recorded": "累计记录耗时",
+      "RecordedValue": "累计记录耗时 {0}",
+      "Breakdown": "回调 {0}；启动任务 {1}；累计记录耗时 {2}。",
+      "SpanIdentity": "区间 ID"
     },
     "Dependencies": {
       "OpenExplorer": "打开邻域浏览器",
@@ -456,7 +543,8 @@
     },
     "Errors": {
       "Empty": "没有与此模块关联的结构化诊断发现。"
-    }
+    },
+    "Identity": "身份"
   },
   "Help": {
     "Eyebrow": "如何阅读工作台",
@@ -581,8 +669,7 @@
   "Atlas": {
     "Overview": {
       "StartupNotTracked": "当前主机未记录完整的应用启动区间。",
-      "DirectDependencies": "直接依赖关系",
-      "ContributionHint": "回调与启动工作耗时；并发工作不代表互斥的启动时间占比。"
+      "DirectDependencies": "直接依赖关系"
     }
   }
 }

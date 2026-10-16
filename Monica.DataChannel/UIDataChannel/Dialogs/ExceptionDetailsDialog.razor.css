@@ -285,21 +285,7 @@
 
 .exception-stack {
     min-width: 0;
-    max-height: 340px;
-    overflow: auto;
-    padding: 16px;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 6px;
-    background: var(--mud-palette-background-gray);
-}
-
-.exception-stack ::deep .stack-trace-container {
-    min-width: 0;
-    white-space: pre;
-}
-
-.exception-stack ::deep :is(.file-path-dir, .param-name) {
-    color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+    max-width: 100%;
 }
 
 .exception-capture-error {

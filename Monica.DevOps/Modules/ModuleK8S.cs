@@ -10,6 +10,7 @@ using Monica.Core.Results;
 using Monica.DevOps.K8S.Abstractions;
 using Monica.DevOps.K8S.Facades;
 using Monica.DevOps.K8S.Models;
+using Monica.DevOps.K8S.Providers.InCluster;
 using Monica.DevOps.K8S.Providers.SshRemoteKubectl;
 using Monica.DevOps.K8S.Services;
 using Monica.DevOps.K8S.Services.Support;
@@ -36,6 +37,13 @@ public class ModuleK8S : MonicaModule<ModuleK8SOption>, IWebModule
         services.AddScoped<K8SRestartService>();
         services.AddScoped<K8SScaleService>();
         services.AddScoped<K8SFacade>();
+
+        if (Option.NodePortAddresses.Enabled)
+        {
+            services.AddSingleton<IK8SInClusterServiceReader, K8SInClusterServiceReader>();
+            services.AddSingleton<K8SNodePortAddressResolver>();
+            services.AddHostedService<K8SNodePortAddressInitializer>();
+        }
     }
 
     public override void ConfigureEndpoints(WebModuleContext<ModuleK8SOption> context)
@@ -301,6 +309,13 @@ public static class ModuleK8SBuilderExtensions
 
 public class ModuleK8SOption : MinimalApiModuleOptions<ModuleK8S>
 {
+    /// <summary>
+    /// Gets or sets optional in-cluster NodePort address publication. Disabled by default; when enabled,
+    /// one attempt runs in the background without delaying host startup. Addresses published after initial
+    /// registration are collected by service discovery on a subsequent heartbeat when configured as metadata.
+    /// </summary>
+    public K8SNodePortAddressOptions NodePortAddresses { get; set; } = new();
+
     public K8SRuntimeConfig RuntimeConfig { get; set; } = new();
 
     public int SshPort { get; set; } = 22;

@@ -1,0 +1,58 @@
+.runtime-trend-plot {
+    --runtime-plot-accent: var(--mud-palette-primary);
+    container-type: inline-size;
+    min-width: 0;
+    padding: 0 12px;
+}
+
+.runtime-trend-plot[data-metric="memory"] { --runtime-plot-accent: var(--mud-palette-info); }
+.runtime-plot-grid { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 12px; min-width: 0; }
+.runtime-plot-y-axis, .runtime-plot-surface { height: 180px; margin: 9px 0; min-width: 0; position: relative; }
+.runtime-plot-y-axis, .runtime-plot-time-axis, .runtime-plot-readout time, .runtime-plot-readout strong {
+    font-family: var(--mo-font-family-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+}
+.runtime-plot-y-axis, .runtime-plot-time-axis { color: var(--runtime-muted-ink); }
+.runtime-plot-axis-sizer { display: block; height: 0; line-height: 0; visibility: hidden; white-space: nowrap; }
+.runtime-plot-y-label { position: absolute; top: calc(var(--plot-y) * 100%); right: 0; transform: translateY(-50%); white-space: nowrap; }
+.runtime-plot-surface svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.runtime-plot-grid-line { stroke: var(--mud-palette-lines-default); stroke-width: 1; }
+.runtime-plot-line { fill: none; stroke: var(--runtime-plot-accent); stroke-width: 2; stroke-linejoin: round; }
+.runtime-plot-crosshair { stroke: var(--runtime-muted-ink); stroke-width: 1; stroke-dasharray: 3 4; pointer-events: none; }
+.runtime-plot-hit-region { fill: transparent; pointer-events: all; }
+.runtime-plot-active-marker { position: absolute; left: calc(var(--plot-x) * 100%); top: calc(var(--plot-y) * 100%); width: 8px; height: 8px; transform: translate(-50%, -50%); border: 2px solid var(--runtime-plot-accent); border-radius: 50%; background: var(--mud-palette-surface); pointer-events: none; }
+.runtime-plot-time-axis { position: relative; grid-column: 2; min-width: 0; min-height: 28px; }
+.runtime-plot-time-axis--dated { min-height: 46px; }
+.runtime-plot-time-label { position: absolute; top: 0; left: calc(var(--plot-x) * 100%); transform: translateX(-50%); white-space: nowrap; text-align: center; }
+.runtime-plot-time-label span { display: block; }
+.runtime-plot-time-label.runtime-plot-tick--first { transform: none; text-align: left; }
+.runtime-plot-time-label.runtime-plot-tick--last { transform: translateX(-100%); text-align: right; }
+.runtime-plot-time-axis--precise .runtime-plot-tick--detail, .runtime-plot-time-axis--precise .runtime-plot-tick--middle { display: none; }
+.runtime-plot-readout { grid-column: 1 / -1; min-width: 0; min-height: 54px; display: grid; align-content: center; gap: 2px; padding-top: 4px; }
+.runtime-plot-readout time, .runtime-plot-readout strong { color: var(--mud-palette-text-primary); overflow-wrap: anywhere; font-weight: 400; }
+.runtime-plot-readout p { color: var(--runtime-muted-ink); font-size: 12px; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
+.runtime-plot-browser { grid-column: 1 / -1; min-width: 0; min-height: 44px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.runtime-plot-browser label { color: var(--runtime-muted-ink); font-size: 11px; line-height: 1.5; }
+.runtime-plot-browser input { accent-color: var(--runtime-plot-accent); min-width: 0; width: 100%; min-height: 44px; margin: 0; }
+.runtime-plot-help { grid-column: 1 / -1; min-width: 0; margin: 0; font-size: 11px; line-height: 1.6; color: var(--runtime-muted-ink); overflow-wrap: anywhere; }
+.runtime-plot-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@container (max-width: 480px) {
+    .runtime-plot-tick--detail { display: none; }
+}
+
+@container (max-width: 360px) {
+    .runtime-plot-time-axis--fractional .runtime-plot-tick--middle { display: none; }
+    .runtime-plot-time-axis--precise { min-height: 48px; }
+    .runtime-plot-time-axis--precise .runtime-plot-tick--last { top: 24px; }
+}
+
+@container (max-width: 300px) {
+    .runtime-plot-tick--middle { display: none; }
+    .runtime-plot-time-axis { min-height: 48px; }
+    .runtime-plot-time-label.runtime-plot-tick--last { top: 24px; }
+    .runtime-plot-time-axis--dated { min-height: 84px; }
+    .runtime-plot-time-axis--dated .runtime-plot-tick--last { top: 42px; }
+}

@@ -154,6 +154,7 @@
                InitialX="@_contextMenuX" 
                InitialY="@_contextMenuY"
                ContextItem="@_contextMenuDomainName"
+               OpeningRevision="@_contextMenuOpeningRevision"
                OnItemClick="@OnContextMenuItemClick"
                OnClose="@CloseContextMenu" />
 
@@ -161,6 +162,7 @@
     [Parameter] public EventCallback<string> OnDomainClick { get; set; }
 
     private const string JS_MODULE_PATH = "./_content/Monica.ServiceDiscovery/UIServiceDiscovery/domainDependencyGraph.js";
+    private long _contextMenuOpeningRevision;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly SemaphoreSlim _captureGate = new(1, 1);
     private readonly SemaphoreSlim _interopGate = new(1, 1);
@@ -420,6 +422,7 @@
         _contextMenuX = x;
         _contextMenuY = y;
         _contextMenuItems = BuildContextMenuItems(domainName);
+        ++_contextMenuOpeningRevision;
         _contextMenuOpen = true;
         StateHasChanged();
     }
@@ -450,6 +453,7 @@
     
     private void CloseContextMenu()
     {
+        if (_disposed) return;
         _contextMenuOpen = false;
     }
     
@@ -474,6 +478,7 @@
     
     private Task OnContextMenuItemClick(ContextMenuItem<string> item)
     {
+        if (_disposed) return Task.CompletedTask;
         _contextMenuOpen = false;
         StateHasChanged();
         return Task.CompletedTask;
@@ -481,6 +486,7 @@
     
     private async Task ViewDomainDetailsAsync(string? domainName)
     {
+        if (_disposed) return;
         var domain = _domains.FirstOrDefault(d => string.Equals(d.Name, domainName, StringComparison.OrdinalIgnoreCase));
         if (domain is null) return;
         if (!_unlistedDomains.Contains(domain.Name) && OnDomainClick.HasDelegate)
@@ -489,7 +495,7 @@
             return;
         }
         await FocusOnDomainAsync(domain.Name);
-        Snackbar.Add(L["Atlas:Domains:UnlistedSummary", domain.Name].Value, Severity.Info);
+        if (!_disposed) Snackbar.Add(L["Atlas:Domains:UnlistedSummary", domain.Name].Value, Severity.Info);
     }
 
     private async Task FocusOnDomainAsync(string? domainName)
@@ -502,19 +508,19 @@
     
     private async Task FilterByDomainAsync(string? domainName)
     {
-        if (!string.IsNullOrEmpty(domainName))
+        if (!_disposed && !string.IsNullOrEmpty(domainName))
         {
             _allDomainsSelected = false;
             _selectedDomainsFilter = new HashSet<string> { domainName };
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add(L["DomainGraph:Messages:FilteredDomain", domainName].Value, Severity.Info);
+            if (!_disposed) Snackbar.Add(L["DomainGraph:Messages:FilteredDomain", domainName].Value, Severity.Info);
         }
     }
     
     private async Task ShowDependenciesAsync(string? domainName)
     {
-        if (!string.IsNullOrEmpty(domainName))
+        if (!_disposed && !string.IsNullOrEmpty(domainName))
         {
             var relatedDomains = new HashSet<string> { domainName };
             var domainDeps = _dependencies.Where(d => d.SourceDomain == domainName || d.TargetDomain == domainName);
@@ -530,7 +536,7 @@
             _showOnlyWithDependencies = true;
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add(L["DomainGraph:Messages:ShowingDependencies", domainName].Value, Severity.Info);
+            if (!_disposed) Snackbar.Add(L["DomainGraph:Messages:ShowingDependencies", domainName].Value, Severity.Info);
         }
     }
     

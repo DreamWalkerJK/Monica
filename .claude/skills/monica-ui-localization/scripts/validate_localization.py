@@ -158,9 +158,13 @@ class LocalizationValidator:
         except ValueError:
             return True
 
-        return any(
-            part.casefold() in EXCLUDED_RELATIVE_DIRECTORIES
-            for part in relative_path.parts
+        relative_parts = tuple(part.casefold() for part in relative_path.parts)
+        return (
+            any(part in EXCLUDED_RELATIVE_DIRECTORIES for part in relative_parts)
+            or (
+                '.ui-design' in relative_parts
+                and 'evidence' in relative_parts[relative_parts.index('.ui-design') + 1:]
+            )
         )
 
     def _discover_ui_projects(self) -> List[Path]:
@@ -1242,7 +1246,7 @@ def main() -> None:
         default='zh-CN,en-US',
         help='Comma-separated cultures',
     )
-    parser.add_argument('--root', type=str, default='.', help='Repository root path')
+    parser.add_argument('--root', type=str, default='.', help='Repository or project root path')
     args = parser.parse_args()
 
     root_path = Path(args.root).resolve()
@@ -1250,9 +1254,9 @@ def main() -> None:
     if not root_path.exists():
         print(f'Error: Root path does not exist: {root_path}', file=sys.stderr)
         sys.exit(1)
-    if not any(root_path.glob('*.slnx')) and not any(root_path.glob('*.sln')):
+    if not any(any(root_path.glob(pattern)) for pattern in ('*.slnx', '*.sln', '*.csproj')):
         print(
-            f'{Colors.RED}Error: Run from a repository root containing a .slnx or .sln file.{Colors.END}',
+            f'{Colors.RED}Error: Use a root containing a .slnx, .sln, or .csproj file.{Colors.END}',
             file=sys.stderr,
         )
         sys.exit(1)

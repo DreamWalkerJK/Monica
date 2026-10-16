@@ -260,7 +260,7 @@ class ProjectUnitGraph {
             event.stopPropagation();
             if (this.disposed) return;
             this.selectNode(node.id);
-            this.invokeDotNet('OnNodeRightClick', node.id, event.clientX, event.clientY);
+            this.invokeDotNet('OnNodeRightClick', node.id, event.pageX, event.pageY);
         }).on('mouseenter', (event, node) => {
             if (!this.disposed) this.highlightNode(node.id);
         }).on('mouseleave', () => {

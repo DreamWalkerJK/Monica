@@ -1,15 +1,55 @@
-.exception-list ::deep .full-width {
+.exception-summary {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
     width: 100%;
-}
-
-.exception-list ::deep .truncate {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    max-width: 100%;
 }
 
-.exception-list ::deep .scroll-panel-lg {
-    max-height: 500px;
-    overflow-y: auto;
+.exception-summary-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.exception-summary-content {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.exception-summary-identity {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    min-width: 0;
+}
+
+.exception-summary-content ::deep .exception-summary-type {
+    height: auto;
+    min-height: 24px;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    white-space: normal;
+    line-height: 1.4;
+}
+
+.exception-summary-type-text,
+.exception-summary-message,
+.exception-summary-meta {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.exception-list,
+.exception-evidence {
+    min-width: 0;
+    max-width: 100%;
 }

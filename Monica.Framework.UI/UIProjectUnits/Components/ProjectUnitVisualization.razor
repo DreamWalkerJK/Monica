@@ -193,7 +193,7 @@
 </section>
 
 <ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible" SelectedUnit="_selectedUnit" OnNodeFocus="HandleNodeFocusFromDialog" />
-<MoContextMenu TItem="ProjectUnitSummary" Items="@_contextMenuItems" Visible="@_contextMenuOpen" InitialX="@_contextMenuX" InitialY="@_contextMenuY" ContextItem="@_contextMenuUnit" OnItemClick="@OnContextMenuItemClick" OnClose="@CloseContextMenu" />
+<MoContextMenu TItem="ProjectUnitSummary" Items="@_contextMenuItems" Visible="@_contextMenuOpen" InitialX="@_contextMenuX" InitialY="@_contextMenuY" ContextItem="@_contextMenuUnit" OpeningRevision="@_contextMenuOpeningRevision" OnItemClick="@OnContextMenuItemClick" OnClose="@CloseContextMenu" />
 
 @code {
     private const string JS_MODULE_PATH = "./_content/Monica.Framework.UI/UIProjectUnits/projectUnitGraph.js";
@@ -201,6 +201,7 @@
     private readonly SemaphoreSlim _interopGate = new(1, 1);
     private readonly object _disposeSync = new();
     private readonly string _graphContainerId = $"project-unit-graph-{Guid.NewGuid():N}";
+    private long _contextMenuOpeningRevision;
     private IJSObjectReference? _graphController;
     private DotNetObjectReference<ProjectUnitVisualization>? _dotNetReference;
     private Task? _disposeTask;
@@ -606,6 +607,7 @@
         _contextMenuX = x;
         _contextMenuY = y;
         _contextMenuItems = BuildContextMenuItems(_contextMenuUnit);
+        ++_contextMenuOpeningRevision;
         _contextMenuOpen = true;
         StateHasChanged();
     }
@@ -640,6 +642,7 @@
 
     private void CloseContextMenu()
     {
+        if (_disposed) return;
         _contextMenuOpen = false;
     }
 
@@ -676,6 +679,7 @@
 
     private Task OnContextMenuItemClick(ContextMenuItem<ProjectUnitSummary> item)
     {
+        if (_disposed) return Task.CompletedTask;
         _contextMenuOpen = false;
         StateHasChanged();
         return Task.CompletedTask;
@@ -774,6 +778,7 @@
 
     private Task ClearRelatedFilterAsync(ProjectUnitSummary? unit)
     {
+        if (_disposed) return Task.CompletedTask;
         _relatedToNodeId = null;
         return ApplyFilters();
     }

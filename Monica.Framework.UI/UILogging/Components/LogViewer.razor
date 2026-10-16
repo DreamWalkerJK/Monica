@@ -77,7 +77,7 @@
         </div>
     </footer>
 </section>
-<MoContextMenu TItem="ViewerLineReference" Items="@_contextMenuItems" Visible="@_contextMenuVisible" InitialX="@_contextMenuX" InitialY="@_contextMenuY" ContextItem="@_contextReference" OnClose="CloseContextMenu" />
+<MoContextMenu TItem="ViewerLineReference" Items="@_contextMenuItems" Visible="@_contextMenuVisible" InitialX="@_contextMenuX" InitialY="@_contextMenuY" ContextItem="@_contextReference" OpeningRevision="@_contextMenuOpeningRevision" OnClose="CloseContextMenu" />
 
 @code {
     /// <summary>Gets or sets all visible physical lines. Pagination retains access to every supplied line.</summary>
@@ -153,6 +153,7 @@
     private long? _pendingRestorationLine;
     private double _pendingRestorationOffset;
     private bool _contextMenuVisible;
+    private long _contextMenuOpeningRevision;
     private double _contextMenuX;
     private double _contextMenuY;
     private ViewerLineReference? _contextReference;
@@ -523,7 +524,7 @@
     private Task OpenContextMenuAsync(MouseEventArgs args, ViewerLineReference reference) => RunOwned(async () =>
     {
         if (_disposed) return;
-        _contextReference = reference; _selectedReference = reference; _selectedLineIndex = reference.Index; _contextMenuX = args.ClientX; _contextMenuY = args.ClientY; _contextMenuVisible = true;
+        _contextReference = reference; _selectedReference = reference; _selectedLineIndex = reference.Index; _contextMenuX = args.PageX; _contextMenuY = args.PageY; ++_contextMenuOpeningRevision; _contextMenuVisible = true;
         StateHasChanged();
         await CapturePositionCoreAsync();
     });

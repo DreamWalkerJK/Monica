@@ -14,6 +14,7 @@
 kbd { display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; min-width: 23px; border: 1px solid var(--mud-palette-divider); border-radius: 4px; font-family: var(--mo-font-family-mono); font-size: 11px; line-height: 1.5; color: var(--mud-palette-text-secondary); background: var(--mud-palette-background-gray); }
 .search-close kbd { padding: 6px 10px; font-size: 13px; }
 .search-results-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 26px 12px; font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--mud-palette-text-secondary); }
+.search-results-heading ::deep .mo-dialog-heading { font-size: inherit; font-weight: inherit; line-height: inherit; letter-spacing: inherit; color: inherit; }
 .search-results { max-height: min(62vh, 580px); min-height: 160px; overflow: auto; padding: 0 14px 14px; scroll-behavior: auto; }
 .search-result { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 82px; padding: 14px 12px; text-align: start; border: 1px solid transparent; border-radius: 6px; background: transparent; color: inherit; font-family: inherit; cursor: pointer; }
 .search-result:hover { background: var(--mud-palette-action-default-hover); }
@@ -26,6 +27,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; paddin
 .search-result-description { font-size: 12px; font-weight: 400; line-height: 1.5; color: var(--mud-palette-text-secondary); overflow-wrap: anywhere; }
 .search-result-breadcrumb { font-size: 10px; line-height: 1.4; color: var(--mud-palette-text-secondary); }
 .search-result-category { flex-shrink: 0; max-width: 140px; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mud-palette-text-secondary); text-align: end; overflow-wrap: anywhere; }
+.search-result.is-selected :is(.search-result-description, .search-result-category, .search-result-breadcrumb) { color: color-mix(in srgb, var(--mud-palette-text-secondary) 85%, var(--mud-palette-text-primary)); }
 .search-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 210px; padding: 30px; text-align: center; color: var(--mud-palette-text-secondary); }
 .search-empty h2 { margin: 0; color: var(--mud-palette-text-primary); font-size: 16px; font-weight: 500; }
 .search-empty p { margin: 0; font-size: 13px; line-height: 1.5; }

@@ -48,8 +48,9 @@
                 <div class="workbench-desktop-sections">
                     @foreach (var workbenchSection in Sections)
                     {
-                        <MudButton Variant="@(workbenchSection == _session.Section ? Variant.Filled : Variant.Text)"
-                                   Color="@(workbenchSection == _session.Section ? Color.Primary : Color.Default)"
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Default"
+                                   Class="@(workbenchSection == _session.Section ? "is-active" : null)"
                                    StartIcon="@SectionIcon(workbenchSection)"
                                    aria-current="@(workbenchSection == _session.Section ? "page" : null)"
                                    OnClick="@(() => NavigateToSection(workbenchSection))">
@@ -107,6 +108,7 @@
 
             <ModuleWorkbenchModuleDrawer Session="@_session"
                                          OpenChanged="@OnModuleDrawerOpenChanged"
+                                         ModuleSelected="@SelectModule"
                                          NavigateToDependencies="@OpenSelectedDependencies" />
             <ModuleWorkbenchHelpDrawer Session="@_session" OpenChanged="@OnHelpOpenChanged" />
         </MudDrawerContainer>

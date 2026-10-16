@@ -21,18 +21,26 @@
                 <MudExpansionPanels>
                     <MudExpansionPanel>
                         <TitleContent>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="full-width">
-                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
-                                <MudChip T="string" Color="Color.Error" Size="Size.Small">
-                                    @exception.ExceptionType
-                                </MudChip>
-                                <MudText Typo="Typo.body2" Class="truncate flex-grow-1">
-                                    @exception.ExceptionMessage
-                                </MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @L.FormatRelativeTime(exception.Timestamp)
-                                </MudText>
-                            </MudStack>
+                            <div class="exception-summary">
+                                <span class="exception-summary-icon" aria-hidden="true">
+                                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                                </span>
+                                <div class="exception-summary-content">
+                                    <div class="exception-summary-identity">
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Class="exception-summary-type">
+                                            <span class="exception-summary-type-text">@exception.ExceptionType</span>
+                                        </MudChip>
+                                        <div class="exception-summary-meta">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @L.FormatRelativeTime(exception.Timestamp)
+                                            </MudText>
+                                        </div>
+                                    </div>
+                                    <div class="exception-summary-message">
+                                        <MudText Typo="Typo.body2">@exception.ExceptionMessage</MudText>
+                                    </div>
+                                </div>
+                            </div>
                         </TitleContent>
                         <ChildContent>
                             <MudPaper Class="pa-3" Elevation="0" Outlined="true">
@@ -61,9 +69,9 @@
                                     {
                                         <div>
                                             <MudText Typo="Typo.subtitle2" Class="mb-2">@L["Shared:Fields:StackTrace"]</MudText>
-                                            <MudPaper Class="pa-3 scroll-panel-lg" Elevation="0" Outlined="true">
+                                            <div class="exception-evidence">
                                                 <StackTraceViewer Message="@exception.ExceptionStackTrace" />
-                                            </MudPaper>
+                                            </div>
                                         </div>
                                     }
 
