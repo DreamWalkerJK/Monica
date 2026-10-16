@@ -61,6 +61,16 @@ Use the body role for interface text and the display role for deliberate page id
 
 During native theme switching, inspect the computed family on the element that paints the visible glyphs, then verify the realized font and local resource request. A correct ancestor family or successful `document.fonts.load()` does not prove which font painted a child or whether CJK silently used a fallback. Include both Latin and Chinese text, cold and warm loading, and both theme modes when the affected theme supports them. Complete source coverage still has limits: codepoints absent from that source use the declared fallback stack.
 
+### Shared scrollbars
+
+`ThemeProviderHost` sets `MudMarkdownThemeProvider.DefaultScrollbar="true"` to stop MudBlazor from injecting its fixed grey `html, body *` scrollbar rule. Monica's shared stylesheet supplies the theme treatment instead; do not fight that injected rule with stronger selectors or `!important`.
+
+`components/mo-scrollbar.css`, imported by `mo-theme-main.css`, owns scrolling chrome for the viewport, navigation drawers, overlays, and nested panels. Each theme defines `--mo-color-scrollbar-thumb`, `--mo-color-scrollbar-thumb-hover`, `--mo-color-scrollbar-thumb-active`, and `--mo-scrollbar-radius` on both its root and wrapper selectors. Derive the colors from the active Mud palette so light/dark switching also updates portals outside the wrapper. The shared track is transparent; normal pointers have an 8px target with a 4px painted core, while coarse pointers retain that core inside a 12px target. Forced-color mode retains native scrollbars.
+
+Keep overflow, overscroll, and stable gutters with their component owners. Remove local scrollbar colors and `scrollbar-width: thin` overrides when adopting the shared renderer; preserve deliberate `scrollbar-width: none` on hidden navigation rails. Browsers supporting WebKit scrollbar pseudo-elements receive the shared geometry and thumb hover/active states. Other browsers use standard thin, theme-colored scrollbars, with emphasis when their scroll host is hovered or focused. Non-auto standard scrollbar properties suppress pseudo-element styling in Chromium; the shared renderer resets them in that branch. See the [scrollbar-color reference](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scrollbar-color).
+
+Verify native Appearance changes across every theme and mode, an open temporary drawer at a narrow viewport, vertical and horizontal nested scrolling, thumb dragging, and forced-color mode. Check the actual scroll host's computed properties and pseudo-element paint; an inherited token alone does not prove that a local standard scrollbar property has not overridden the renderer. MudBlazor's textarea thumb and size rules have component specificity; the shared renderer matches those selectors so multiline editors also receive theme paint and the coarse-pointer target.
+
 ## Theme Authoring Workflow
 
 1. Add a new `MonicaThemeKind` enum value.

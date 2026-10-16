@@ -1,14 +1,13 @@
 /* MudBlazor baseline keeps its component geometry and uses the shared density and identity contract. */
 
-/* Light Theme Placeholder */
 :root[data-theme="mud-blazor-light"],
-.mo-theme-mud-blazor-light {
-    --mo-brand-frame-radius: 6px;
-}
-
-/* Dark Theme Placeholder */
 :root[data-theme="mud-blazor-dark"],
+.mo-theme-mud-blazor-light,
 .mo-theme-mud-blazor-dark {
+    --mo-scrollbar-radius: 4px;
+    --mo-color-scrollbar-thumb: color-mix(in srgb, var(--mud-palette-text-secondary) 38%, transparent);
+    --mo-color-scrollbar-thumb-hover: color-mix(in srgb, var(--mud-palette-text-secondary) 62%, transparent);
+    --mo-color-scrollbar-thumb-active: color-mix(in srgb, var(--mud-palette-text-secondary) 85%, transparent);
     --mo-brand-frame-radius: 6px;
 }
 

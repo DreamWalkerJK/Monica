@@ -32,6 +32,10 @@
 :root[data-theme="vibe-usage-matrix-dark"],
 .mo-theme-vibe-usage-matrix-light,
 .mo-theme-vibe-usage-matrix-dark {
+    --mo-scrollbar-radius: 0;
+    --mo-color-scrollbar-thumb: color-mix(in srgb, var(--mud-palette-primary) 38%, transparent);
+    --mo-color-scrollbar-thumb-hover: color-mix(in srgb, var(--mud-palette-primary) 66%, transparent);
+    --mo-color-scrollbar-thumb-active: color-mix(in srgb, var(--mud-palette-primary) 88%, transparent);
     --mo-vibe-font: 'Geist Mono', 'Microsoft YaHei UI', 'PingFang SC', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     --mo-vibe-panel-blur: 10px;
     --mo-card-border-radius: 0px;
@@ -562,16 +566,4 @@
 .mo-theme-vibe-usage-matrix-light .mud-tooltip.mud-tooltip-arrow::after,
 .mo-theme-vibe-usage-matrix-dark .mud-tooltip.mud-tooltip-arrow::after {
     border-top-color: var(--mo-vibe-panel-strong);
-}
-
-.mo-theme-vibe-usage-matrix-light ::-webkit-scrollbar-thumb,
-.mo-theme-vibe-usage-matrix-dark ::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--mo-vibe-ink) 38%, transparent);
-    border-radius: 0;
-    border: 1px solid color-mix(in srgb, var(--mo-vibe-ink) 26%, transparent);
-}
-
-.mo-theme-vibe-usage-matrix-light ::-webkit-scrollbar-thumb:hover,
-.mo-theme-vibe-usage-matrix-dark ::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in srgb, var(--mo-vibe-ink) 54%, transparent);
 }
