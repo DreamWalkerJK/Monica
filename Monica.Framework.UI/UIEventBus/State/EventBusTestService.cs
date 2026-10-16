@@ -24,6 +24,11 @@ namespace Monica.Framework.UI.UIEventBus.State;
 /// <summary>
 /// Event bus test service for managing test publishing, listener sessions, and message collection.
 /// </summary>
+/// <remarks>
+/// The DI scope owns this service and its row-level listener handles. Row start, stop, and scope cleanup operations
+/// serialize; failed removal retains the exact handle for retry. Scope retirement rejects new row starts and drains
+/// already admitted starts before cleanup. Components borrow the service and must not dispose it when a dialog closes.
+/// </remarks>
 public sealed class EventBusTestService(
     IServiceScopeFactory serviceScopeFactory,
     IDistributedEventBus distributedEventBus,
@@ -37,12 +42,20 @@ public sealed class EventBusTestService(
     private const int DEFAULT_LEGACY_MESSAGE_COUNT = 100;
 
     private readonly ConcurrentDictionary<EventSubscriptionId, RuntimeListenerState> _runtimeListeners = new();
+    private readonly SemaphoreSlim _runtimeListenerGate = new(1, 1);
+    private int _runtimeListenersRetired;
     private readonly ConcurrentQueue<ReceivedTestMessage> _receivedMessages = new();
     private readonly object _legacySubscriptionLock = new();
+    private readonly SemaphoreSlim _legacySubscriptionGate = new(1, 1);
+    private readonly SemaphoreSlim _standaloneLeaseGate = new(1, 1);
+    private readonly CancellationTokenSource _standaloneRetirement = new();
     private IEventSubscription? _activeSubscription;
+    private EventBusStandaloneListenerLease? _standaloneLease;
+    private string? _currentTopicName;
+    private bool _standaloneRetired;
 
     /// <summary>
-    /// Have you subscribed through the standalone test panel.
+    /// Gets whether this scoped service owns a standalone test subscription, including one whose removal failed.
     /// </summary>
     public bool IsSubscribed
     {
@@ -56,9 +69,99 @@ public sealed class EventBusTestService(
     }
 
     /// <summary>
-    /// The topic currently subscribed by the standalone test panel.
+    /// Gets the standalone subscription's topic, retained until its exact registry handle is successfully removed.
     /// </summary>
-    public string? CurrentTopicName { get; private set; }
+    public string? CurrentTopicName
+    {
+        get
+        {
+            lock (_legacySubscriptionLock)
+            {
+                return _currentTopicName;
+            }
+        }
+    }
+
+    /// <summary>Acquires exclusive standalone-listener control for one mounted component.</summary>
+    /// <param name="cancellationToken">Cancels waiting or rejects acquisition after the component has retired.</param>
+    /// <returns>A component-owned lease that adopts an exact listener retained after a previous owner's failed stop.</returns>
+    /// <remarks>
+    /// Waits until the previous lease releases ownership. Cancel and await a pending acquisition during component
+    /// retirement; a returned lease must always be disposed. The service serializes listener operations separately,
+    /// so acquisition cannot race a previous owner's admitted start/stop. Scoped-service disposal cancels waiters and
+    /// rejects new leases. Legacy unleased start/stop calls cannot interrupt an active component lease.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">Acquisition was cancelled by the caller or scoped-service retirement.</exception>
+    /// <exception cref="ObjectDisposedException">The scoped service has already retired.</exception>
+    public async Task<EventBusStandaloneListenerLease> AcquireStandaloneListenerLeaseAsync(CancellationToken cancellationToken)
+    {
+        CancellationTokenSource admission;
+        lock (_legacySubscriptionLock)
+        {
+            ObjectDisposedException.ThrowIf(_standaloneRetired, this);
+            admission = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _standaloneRetirement.Token);
+        }
+
+        using (admission)
+        {
+            await _standaloneLeaseGate.WaitAsync(admission.Token);
+            try
+            {
+                await _legacySubscriptionGate.WaitAsync(admission.Token);
+                try
+                {
+                    lock (_legacySubscriptionLock)
+                    {
+                        admission.Token.ThrowIfCancellationRequested();
+                        ObjectDisposedException.ThrowIf(_standaloneRetired, this);
+                        var lease = new EventBusStandaloneListenerLease(this);
+                        _standaloneLease = lease;
+                        return lease;
+                    }
+                }
+                finally { _legacySubscriptionGate.Release(); }
+            }
+            catch
+            {
+                _standaloneLeaseGate.Release();
+                throw;
+            }
+        }
+    }
+
+    internal EventBusStandaloneListenerSnapshot? GetStandaloneListenerSnapshot(EventBusStandaloneListenerLease lease)
+    {
+        lock (_legacySubscriptionLock)
+        {
+            return ReferenceEquals(_standaloneLease, lease) && !lease.IsRetired && !_standaloneRetired
+                && _activeSubscription is { } subscription && _currentTopicName is { } topic
+                    ? new EventBusStandaloneListenerSnapshot(subscription.Id, topic)
+                    : null;
+        }
+    }
+
+    internal async Task ReleaseStandaloneLeaseAsync(EventBusStandaloneListenerLease lease)
+    {
+        await _legacySubscriptionGate.WaitAsync();
+        try
+        {
+            lock (_legacySubscriptionLock)
+            {
+                if (ReferenceEquals(_standaloneLease, lease)) _standaloneLease = null;
+            }
+        }
+        finally
+        {
+            _legacySubscriptionGate.Release();
+            _standaloneLeaseGate.Release();
+        }
+    }
+
+    internal Task<Res<IEventSubscription>> SubscribeForLeaseAsync(EventBusStandaloneListenerLease lease, string topicName) =>
+        SubscribeToTestTopicCoreAsync(topicName, lease);
+
+    internal Task<Res> UnsubscribeForLeaseAsync(EventBusStandaloneListenerLease lease) =>
+        UnsubscribeFromTestTopicCoreAsync(lease);
 
     /// <summary>
     /// Creates a formatted JSON example for the event type behind a subscription.
@@ -121,12 +224,17 @@ public sealed class EventBusTestService(
     }
 
     /// <summary>
-    /// Publishes a JSON payload through the exact bus scope and service key of the selected subscription.
+    /// Injects a JSON test payload immediately through the selected subscription's transport or local dispatcher.
+    /// The selected contract, topic, scope, and service key are preserved, including for Outbox-marked events.
+    /// This diagnostic operation does not stage an Outbox message or require a publishing transaction.
     /// </summary>
     /// <param name="subscriptionId">Selected subscription id.</param>
     /// <param name="json">JSON payload to publish.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A result describing whether the publish succeeded.</returns>
+    /// <returns>
+    /// Success after local handlers complete or the distributed transport accepts the message; distributed
+    /// success does not acknowledge consumer completion. Preparation and delivery failures return an error result.
+    /// </returns>
     public async Task<Res> PublishRuntimePayloadAsync(
         EventSubscriptionId subscriptionId,
         string json,
@@ -146,13 +254,29 @@ public sealed class EventBusTestService(
             }
 
             var eventBusResult = GetEventBus(subscription);
-            if (eventBusResult.IsFailed(out var providerError, out var eventBus))
+            if (eventBusResult.IsFailed(out var providerError, out _))
             {
                 return providerError;
             }
 
             var payload = DeserializePayload(subscription.EventType, json);
-            await eventBus.PublishAsync(subscription.EventType, payload, subscription.TopicName, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            await using var scope = serviceScopeFactory.CreateAsyncScope();
+            var services = scope.ServiceProvider;
+            var message = services.GetRequiredService<IEventMessageFactory>().Prepare(
+                subscription.EventType, payload, subscription.Scope, subscription.TopicName, subscription.ServiceKey);
+
+            if (subscription.Scope == EventSubscriptionScope.Local)
+            {
+                await services.GetRequiredService<IEventReceiveDispatcher>().DispatchAsync(message, cancellationToken);
+            }
+            else
+            {
+                var transport = subscription.ServiceKey is null
+                    ? services.GetRequiredService<IEventTransport>()
+                    : services.GetRequiredKeyedService<IEventTransport>(subscription.ServiceKey);
+                await transport.SendAsync(message, cancellationToken);
+            }
 
             logger.LogInformation(
                 "Published EventBus UI runtime test payload for {EventType} on {TopicName} ({Scope}, ServiceKey: {ServiceKey})",
@@ -174,11 +298,18 @@ public sealed class EventBusTestService(
     /// Starts a background listener for the selected subscription.
     /// </summary>
     /// <param name="subscriptionId">Selected subscription id.</param>
-    /// <returns>A result containing the current listener snapshot.</returns>
+    /// <returns>The existing or newly owned listener snapshot, or a failure when startup fails or the scope has retired.</returns>
+    /// <remarks>
+    /// The scoped service owns one listener per source subscription, using its exact event type, topic, service key,
+    /// and bus scope. Closing a dialog does not stop it. Starts serialize with stops and scope cleanup, preventing
+    /// duplicate registry handles. This operation has no cancellation argument; components must drain admitted work.
+    /// </remarks>
     public async Task<Res<RuntimeTestListenerSnapshot>> StartRuntimeListenerAsync(EventSubscriptionId subscriptionId)
     {
+        await _runtimeListenerGate.WaitAsync();
         try
         {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _runtimeListenersRetired) != 0, this);
             var subscription = GetSourceSubscription(subscriptionId);
             if (subscription is null)
             {
@@ -214,12 +345,9 @@ public sealed class EventBusTestService(
 
             var listenerSubscription = await subscriptionRegistry.SubscribeAsync(descriptor);
             state.AttachSubscription(listenerSubscription);
-
-            if (!_runtimeListeners.TryAdd(subscriptionId, state))
-            {
-                await subscriptionRegistry.UnsubscribeAsync(listenerSubscription.Id);
-                return _runtimeListeners[subscriptionId].CreateSnapshot();
-            }
+            // The gate owns admission through adoption, including a handle returned after scope retirement began.
+            // Cleanup waits behind this operation and therefore cannot overlook the newly owned exact handle.
+            _runtimeListeners[subscriptionId] = state;
 
             logger.LogInformation(
                 "Started EventBus UI runtime listener {ListenerSubscriptionId} for source subscription {SourceSubscriptionId}",
@@ -233,14 +361,36 @@ public sealed class EventBusTestService(
             logger.LogError(ex, "Failed to start EventBus UI runtime listener for {SubscriptionId}", subscriptionId);
             return Res.Fail(localizer["Services:Test:StartRuntimeListenerFailed", ex.GetMessageRecursively()]);
         }
+        finally
+        {
+            _runtimeListenerGate.Release();
+        }
     }
 
     /// <summary>
     /// Stops the background listener for the selected subscription.
     /// </summary>
     /// <param name="subscriptionId">Selected subscription id.</param>
-    /// <returns>A success result when the listener is stopped or did not exist.</returns>
+    /// <returns>Success when removal completes or no listener is owned; otherwise a retryable failure.</returns>
+    /// <remarks>
+    /// Serializes with starts and scope cleanup. Failed registry removal retains the same listener handle and its
+    /// messages, and a later stop or repeated scope disposal may retry it. This operation remains available after
+    /// scope retirement for exact-handle cleanup and has no cancellation argument; callers must drain admitted work.
+    /// </remarks>
     public async Task<Res> StopRuntimeListenerAsync(EventSubscriptionId subscriptionId)
+    {
+        await _runtimeListenerGate.WaitAsync();
+        try
+        {
+            return await StopRuntimeListenerCoreAsync(subscriptionId);
+        }
+        finally
+        {
+            _runtimeListenerGate.Release();
+        }
+    }
+
+    private async Task<Res> StopRuntimeListenerCoreAsync(EventSubscriptionId subscriptionId)
     {
         try
         {
@@ -340,10 +490,21 @@ public sealed class EventBusTestService(
     }
 
     /// <summary>
-    /// Subscribe standalone test panel to a test topic.
+    /// Subscribes the standalone test panel to a topic on the default distributed bus.
     /// </summary>
-    public async Task<Res<IEventSubscription>> SubscribeToTestTopicAsync(string topicName)
+    /// <param name="topicName">The exact topic to subscribe to; an empty or whitespace topic is rejected.</param>
+    /// <returns>The owned subscription, or a failure if another subscription is owned or this service has retired.</returns>
+    /// <remarks>
+    /// Standalone start and stop operations serialize. The scoped service owns the resulting handle until successful
+    /// registry removal. This API does not accept cancellation; a retiring component must await its admitted operation.
+    /// </remarks>
+    public Task<Res<IEventSubscription>> SubscribeToTestTopicAsync(string topicName) =>
+        SubscribeToTestTopicCoreAsync(topicName, null);
+
+    private async Task<Res<IEventSubscription>> SubscribeToTestTopicCoreAsync(
+        string topicName, EventBusStandaloneListenerLease? lease)
     {
+        await _legacySubscriptionGate.WaitAsync();
         try
         {
             if (string.IsNullOrWhiteSpace(topicName))
@@ -353,6 +514,8 @@ public sealed class EventBusTestService(
 
             lock (_legacySubscriptionLock)
             {
+                ObjectDisposedException.ThrowIf(_standaloneRetired, this);
+                EnsureStandaloneOwner(lease);
                 if (_activeSubscription != null)
                 {
                     return Res.Fail(localizer["Services:Test:ActiveSubscriptionExists"]);
@@ -385,38 +548,56 @@ public sealed class EventBusTestService(
             lock (_legacySubscriptionLock)
             {
                 _activeSubscription = subscription;
-                CurrentTopicName = topicName;
+                _currentTopicName = topicName;
             }
 
             logger.LogInformation("已订阅测试主题: {TopicName}", topicName);
-            return Res.Ok(_activeSubscription);
+            return Res.Ok(subscription);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "订阅测试主题失败");
             return Res.Fail(localizer["Services:Test:SubscribeFailed", ex.GetMessageRecursively()]);
         }
+        finally
+        {
+            _legacySubscriptionGate.Release();
+        }
     }
 
     /// <summary>
-    /// Unsubscribe standalone test panel from its test topic.
+    /// Removes the exact standalone test subscription from the registry.
     /// </summary>
-    public async Task<Res> UnsubscribeFromTestTopicAsync()
+    /// <returns>Success when removal completes or no subscription is owned; otherwise a retryable failure.</returns>
+    /// <remarks>
+    /// Start and stop operations serialize. A failed removal retains the handle and topic, preventing a replacement
+    /// start from silently abandoning it. Call this method again to retry. The operation has no cancellation parameter.
+    /// </remarks>
+    public Task<Res> UnsubscribeFromTestTopicAsync() => UnsubscribeFromTestTopicCoreAsync(null);
+
+    private async Task<Res> UnsubscribeFromTestTopicCoreAsync(
+        EventBusStandaloneListenerLease? lease, bool forceScopeCleanup = false)
     {
+        await _legacySubscriptionGate.WaitAsync();
         try
         {
             IEventSubscription? subscription;
 
             lock (_legacySubscriptionLock)
             {
+                if (!forceScopeCleanup) EnsureStandaloneOwner(lease);
                 subscription = _activeSubscription;
-                _activeSubscription = null;
-                CurrentTopicName = null;
             }
 
             if (subscription != null)
             {
                 await subscriptionRegistry.UnsubscribeAsync(subscription.Id);
+                lock (_legacySubscriptionLock)
+                {
+                    _activeSubscription = null;
+                    _currentTopicName = null;
+                }
+
                 logger.LogInformation("已取消订阅测试主题");
             }
 
@@ -426,6 +607,10 @@ public sealed class EventBusTestService(
         {
             logger.LogError(ex, "取消订阅失败");
             return Res.Fail(localizer["Services:Test:UnsubscribeFailed", ex.GetMessageRecursively()]);
+        }
+        finally
+        {
+            _legacySubscriptionGate.Release();
         }
     }
 
@@ -447,18 +632,55 @@ public sealed class EventBusTestService(
     }
 
     /// <summary>
-    /// Release resources.
+    /// Retires new listener starts and attempts to release all listener subscriptions owned by this scope.
     /// </summary>
+    /// <remarks>
+    /// Waits for admitted row and standalone start/stop operations through their respective owner gates. Failed
+    /// removals retain exact ownership handles for a later stop or repeated disposal attempt. Queued or late row
+    /// starts are rejected; an in-flight registry start is adopted before cleanup so its handle cannot be abandoned.
+    /// Components separately drain their admitted commands before their borrowed service scope is released.
+    /// </remarks>
     public async ValueTask DisposeAsync()
     {
-        foreach (var sourceSubscriptionId in _runtimeListeners.Keys.ToList())
+        Interlocked.Exchange(ref _runtimeListenersRetired, 1);
+        bool firstRetirement;
+        lock (_legacySubscriptionLock)
         {
-            await StopRuntimeListenerAsync(sourceSubscriptionId);
+            firstRetirement = !_standaloneRetired;
+            _standaloneRetired = true;
         }
 
-        await UnsubscribeFromTestTopicAsync();
+        if (firstRetirement) _standaloneRetirement.Cancel();
+
+        await _runtimeListenerGate.WaitAsync();
+        try
+        {
+            foreach (var sourceSubscriptionId in _runtimeListeners.Keys.ToList())
+            {
+                await StopRuntimeListenerCoreAsync(sourceSubscriptionId);
+            }
+        }
+        finally
+        {
+            _runtimeListenerGate.Release();
+        }
+
+        await UnsubscribeFromTestTopicCoreAsync(null, forceScopeCleanup: true);
+        if (firstRetirement) _standaloneRetirement.Dispose();
         _receivedMessages.Clear();
         logger.LogInformation("EventBusTestService 已释放");
+    }
+
+    private void EnsureStandaloneOwner(EventBusStandaloneListenerLease? lease)
+    {
+        if (lease is not null)
+        {
+            ObjectDisposedException.ThrowIf(lease.IsRetired || !ReferenceEquals(_standaloneLease, lease), lease);
+        }
+        else if (_standaloneLease is not null)
+        {
+            throw new InvalidOperationException("Standalone listener control is held by a component-owned lease.");
+        }
     }
 
     private IEventSubscription? GetSourceSubscription(EventSubscriptionId subscriptionId)
@@ -526,6 +748,16 @@ public sealed class EventBusTestService(
         if (type == typeof(DateTimeOffset))
         {
             return DateTimeOffset.UnixEpoch;
+        }
+
+        if (type == typeof(DateOnly))
+        {
+            return DateOnly.FromDateTime(DateTime.UnixEpoch);
+        }
+
+        if (type == typeof(TimeOnly))
+        {
+            return TimeOnly.MinValue;
         }
 
         if (type == typeof(TimeSpan))

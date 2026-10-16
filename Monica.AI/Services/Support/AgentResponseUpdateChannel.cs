@@ -8,6 +8,7 @@ namespace Monica.AI.Services.Support;
 /// </summary>
 internal sealed class AgentResponseUpdateChannel
 {
+    internal ChatRunContext? RunContext { get; init; }
     private readonly Channel<AgentResponseUpdate> _channel = Channel.CreateUnbounded<AgentResponseUpdate>(
         new UnboundedChannelOptions
         {

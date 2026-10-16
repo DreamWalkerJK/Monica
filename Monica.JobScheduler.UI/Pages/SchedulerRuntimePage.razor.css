@@ -1,26 +1,38 @@
-.runtime-page {
-    display: grid;
-    gap: 16px;
-}
+.runtime-page { display: grid; gap: var(--mo-page-section-gap); width: 100%; min-width: 0; }
 
-.runtime-page__loading {
-    display: grid;
-    justify-items: center;
-    gap: 10px;
-    padding: 48px;
-    color: var(--mud-palette-text-secondary);
+.runtime-observation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+    min-width: 0;
 }
+.runtime-observation dl { display: flex; flex: 1; flex-wrap: wrap; gap: 16px 32px; min-width: 0; margin: 0; }
+.runtime-observation dl > div { display: grid; gap: 5px; min-width: 0; }
+.runtime-observation dt { font-size: .75rem; color: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary)); }
+.runtime-observation dd { margin: 0; font-family: var(--mo-font-family-mono); font-size: .8125rem; line-height: 1.5; overflow-wrap: anywhere; }
+.runtime-observation ::deep .mud-button { min-height: 36px; }
 
 .runtime-page__host-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
-    gap: 16px;
-    align-items: start;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    min-width: 0;
+    overflow: clip;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
 }
+.runtime-page__host-grid ::deep .runtime-plane,
+.runtime-page__host-grid ::deep .runtime-identity { min-width: 0; height: 100%; }
+.runtime-page__unavailable { display: grid; justify-items: start; align-content: start; gap: 12px; padding: 24px; min-width: 0; border: 1px solid var(--mud-palette-lines-default); border-radius: var(--mud-default-borderradius); background: var(--mud-palette-surface); }
+.runtime-page__unavailable h2 { margin: 0; font-size: 1.125rem; font-weight: 500; }
+.runtime-page__unavailable p { margin: 0; color: var(--mud-palette-text-secondary); line-height: 1.65; }
 
-.runtime-page__freshness {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--mud-palette-text-secondary);
+@media (max-width: 1050px) {
+    .runtime-page__host-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+    .runtime-observation dl { flex-basis: 100%; gap: 12px 20px; }
+    .runtime-page__unavailable { padding: 20px 16px; }
 }

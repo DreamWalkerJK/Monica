@@ -17,7 +17,6 @@ public sealed class ServiceDiscoveryDomainColorResolver
     private const string DefaultColorRole = "default";
     private readonly object _syncRoot = new();
     private readonly Dictionary<string, string> _domainColors = new(StringComparer.OrdinalIgnoreCase);
-    private List<string> _cachedDomainNames = [];
 
     public IReadOnlyDictionary<string, string> AssignColors(IEnumerable<DomainInfo> domains)
     {
@@ -30,14 +29,11 @@ public sealed class ServiceDiscoveryDomainColorResolver
 
         lock (_syncRoot)
         {
-            if (!_cachedDomainNames.SequenceEqual(domainNames, StringComparer.OrdinalIgnoreCase))
+            foreach (var name in domainNames)
             {
-                _cachedDomainNames = domainNames;
-                _domainColors.Clear();
-
-                for (var i = 0; i < domainNames.Count; i++)
+                if (!_domainColors.ContainsKey(name))
                 {
-                    _domainColors[domainNames[i]] = DomainRoles[i % DomainRoles.Length];
+                    _domainColors[name] = DomainRoles[_domainColors.Count % DomainRoles.Length];
                 }
             }
 

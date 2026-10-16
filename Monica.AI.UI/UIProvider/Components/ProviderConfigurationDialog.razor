@@ -1,0 +1,122 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.Configuration.Models
+@using Monica.AI.Chat.Models
+@using Monica.AI.Providers
+@using Monica.AI.UI.Localization
+@using Monica.Core.Results
+@using Monica.UI.Shared.Components.Dialogs
+@inject IStringLocalizer<AIResource> L
+@inject IDialogService DialogService
+@implements IAsyncDisposable
+
+<MudDialog Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px" Gutters="false" TitleClass="pa-0" ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent>
+        <div class="provider-dialog-heading">
+            <MoDialogHeading Text="@(Provider is null ? L["Settings:AddProvider"] : L["Settings:EditProvider"])" />
+            <p>@L["Settings:Dialog:ProviderScope"]</p>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="provider-form">
+            <MudText Typo="Typo.body2">@L["Settings:ProviderHelp"]</MudText>
+            <fieldset class="connection-fields" disabled="@(_saving || _editingModel)">
+                <section class="form-section">
+                    <h3>@L["Settings:Dialog:Identity"]</h3>
+                    <div class="form-grid">
+                        <MudTextField T="string" @ref="_idField" @bind-Value="_id" Immediate="true" Label="@L["Settings:ProviderId"]" Required="true" RequiredError="@L["Common:Validation:Required"]" Disabled="@(Provider is not null || _saving || _editingModel)" Variant="Variant.Outlined" />
+                        <MudTextField Disabled="@(_saving || _editingModel)" T="string" @bind-Value="_name" Label="@L["Settings:DisplayName"]" Variant="Variant.Outlined" />
+                    </div>
+                    <MudSelect Disabled="@(_saving || _editingModel)" T="EAIProviderType" @bind-Value="_type" Label="@L["Settings:Protocol"]" Variant="Variant.Outlined">
+                        <MudSelectItem T="EAIProviderType" Value="@EAIProviderType.OpenAI">OpenAI</MudSelectItem>
+                        <MudSelectItem T="EAIProviderType" Value="@EAIProviderType.Anthropic">Anthropic</MudSelectItem>
+                    </MudSelect>
+                    <div class="switches"><MudSwitch Disabled="@(_saving || _editingModel)" T="bool" @bind-Value="_enabled" Label="@L["Settings:Enabled"]" Color="Color.Primary" /><MudSwitch Disabled="@(_saving || _editingModel)" T="bool" @bind-Value="_default" Label="@L["Settings:DefaultProvider"]" Color="Color.Primary" /></div>
+                </section>
+                <section class="form-section">
+                    <h3>@L["Settings:Dialog:Connection"]</h3>
+                    <MudTextField Disabled="@(_saving || _editingModel)" T="string" @ref="_urlField" @bind-Value="_url" Immediate="true" Label="@L["Settings:BaseUrl"]" HelperText="@L["Settings:BaseUrlHelp"]" Variant="Variant.Outlined" />
+                    <MudNumericField Disabled="@(_saving || _editingModel)" T="int" @bind-Value="_timeout" Label="@L["Settings:Timeout"]" Min="1" Variant="Variant.Outlined" />
+                    <MudTextField Disabled="@(_saving || _editingModel)" T="string" @bind-Value="_key" Immediate="true" Label="@L["Settings:ApiKey"]" InputType="InputType.Password" autocomplete="new-password"
+                                  HelperText="@(Provider?.HasApiKey == true ? L["Settings:KeyPresent"] : L["Settings:KeyHelp"])" Variant="Variant.Outlined" />
+                    @if (Provider?.HasApiKey == true) { <MudCheckBox Disabled="@(_saving || _editingModel)" T="bool" @bind-Value="_clearKey" Label="@L["Settings:ClearKey"]" /> }
+                    @if (_type == EAIProviderType.OpenAI)
+                    {
+                        <div class="form-grid">
+                            <MudSelect Disabled="@(_saving || _editingModel)" T="OpenAIProviderApiMode" @bind-Value="_apiMode" Label="@L["Settings:ApiMode"]" Variant="Variant.Outlined">
+                                <MudSelectItem T="OpenAIProviderApiMode" Value="@OpenAIProviderApiMode.Chat">Chat Completions</MudSelectItem>
+                                <MudSelectItem T="OpenAIProviderApiMode" Value="@OpenAIProviderApiMode.Responses">Responses</MudSelectItem>
+                            </MudSelect>
+                            <MudSelect Disabled="@(_saving || _editingModel)" T="OpenAIProtocolProfile" @bind-Value="_profile" Label="@L["Settings:ProtocolProfile"]" HelperText="@L["Settings:ProtocolProfileHelp"]" Variant="Variant.Outlined">
+                                <MudSelectItem T="OpenAIProtocolProfile" Value="@OpenAIProtocolProfile.Auto">@L["Settings:ProfileAuto"]</MudSelectItem>
+                                <MudSelectItem T="OpenAIProtocolProfile" Value="@OpenAIProtocolProfile.Standard">@L["Settings:ProfileStandard"]</MudSelectItem>
+                                <MudSelectItem T="OpenAIProtocolProfile" Value="@OpenAIProtocolProfile.DeepSeek">DeepSeek</MudSelectItem>
+                            </MudSelect>
+                        </div>
+                    }
+                </section>
+                <section class="form-section">
+                    <h3>@L["Settings:Dialog:RequestDefaults"]</h3>
+                    <MudTextField Disabled="@(_saving || _editingModel)" T="string" @bind-Value="_prompt" Label="@L["Provider:Settings:SystemPrompt"]" Lines="3" Variant="Variant.Outlined" />
+                </section>
+            </fieldset>
+            <section class="draft-models">
+                <div class="models-heading" @ref="_modelsHeading" tabindex="-1">
+                    <MudText Typo="Typo.subtitle1">@L["Settings:Dialog:DraftModels"]</MudText>
+                    <div class="model-buttons">
+                        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.Search" OnClick="FetchModelsAsync" aria-disabled="@((_discovering || _saving || _editingModel).ToString().ToLowerInvariant())">@L["Settings:FetchAvailableModels"]</MudButton>
+                        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => EditModelAsync(null))" aria-disabled="@((_discovering || _saving || _editingModel).ToString().ToLowerInvariant())">@L["Settings:AddModel"]</MudButton>
+                    </div>
+                </div>
+                <MudText Typo="Typo.caption">@L["Settings:DraftModelsHelp"]</MudText>
+                @if (_discovering)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                    <MudButton Size="Size.Small" OnClick="CancelDiscovery">@L["Settings:CancelDiscovery"]</MudButton>
+                }
+                @if (_discoveryError is not null) { <MudAlert Severity="Severity.Error" Dense="true">@_discoveryError</MudAlert> }
+                @if (_hasDiscovered && !DiscoveryMatches)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">@L["Settings:DraftConnectionChanged"]</MudAlert>
+                }
+                @if (_hasDiscovered && DiscoveryMatches)
+                {
+                    <div class="discovery-context">
+                    <div class="discovery-toolbar">
+                        <MudTextField T="string" @bind-Value="_query" Immediate="true" Placeholder="@L["Settings:SearchModels"]" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+                        <MudButton Size="Size.Small" OnClick="SelectVisible" Disabled="@(_discovering || _saving || _editingModel)">@L["Settings:SelectVisibleModels"]</MudButton>
+                    </div>
+                    <div class="draft-discovery-list">
+                        <Virtualize Items="@FilteredDiscovery" Context="model" ItemSize="56">
+                            <div class="discovered-model" @key="model.ModelName">
+                                <MudCheckBox T="bool" Value="@_selectedModels.Contains(model.ModelName)" ValueChanged="@(value => SelectModel(model.ModelName, value))" Disabled="@(_discovering || _saving || _editingModel)" aria-label="@L["Settings:SelectModel", model.ModelName]" />
+                                <div class="discovered-identity"><strong>@model.ModelName</strong><span>@ModelSummary(model)</span></div>
+                            </div>
+                        </Virtualize>
+                        @if (_discovered.Count == 0) { <MudText Typo="Typo.body2" Class="discovery-empty">@L["Settings:NoDiscoveredModels"]</MudText> }
+                        else if (FilteredDiscovery.Count == 0) { <MudText Typo="Typo.body2" Class="discovery-empty">@L["Settings:NoModelMatches"]</MudText> }
+                    </div>
+                    <div class="models-heading"><MudText Typo="Typo.caption">@L["Settings:DiscoveredModelCount", _discovered.Count]</MudText><MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="ImportSelected" aria-disabled="@((_selectedModels.Count == 0 || _discovering || _saving || _editingModel).ToString().ToLowerInvariant())">@L["Settings:ImportSelectedModels", _selectedModels.Count]</MudButton></div>
+                    </div>
+                }
+                <div class="draft-configured-list">
+                    @foreach (var model in _models)
+                    {
+                        <div class="configured-model" @key="model.ModelName">
+                            <div class="discovered-identity"><strong>@model.ModelName</strong><span>@ModelSummary(model)</span></div>
+                            <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" OnClick="@(() => EditModelAsync(model))" aria-disabled="@((_discovering || _saving || _editingModel).ToString().ToLowerInvariant())" aria-label="@L["Settings:EditModel"]" />
+                            <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" OnClick="@(() => RemoveModel(model))" Disabled="@(_discovering || _saving || _editingModel)" aria-label="@L["Settings:DeleteModel"]" />
+                        </div>
+                    }
+                </div>
+                @if (_models.Count > 0)
+                {
+                    <MudSelect T="string" @bind-Value="_defaultModel" Label="@L["Settings:DefaultChatModel"]" Disabled="@(_saving || _discovering || _editingModel)" Clearable="true" Variant="Variant.Outlined">
+                        @foreach (var model in _models.Where(model => model.Kind == AIModelKind.Chat)) { <MudSelectItem T="string" Value="@model.ModelName">@model.ModelName</MudSelectItem> }
+                    </MudSelect>
+                }
+            </section>
+            @if (_error is not null) { <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert> }
+        </div>
+    </DialogContent>
+    <DialogActions><div class="provider-dialog-actions"><MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" aria-disabled="@((_saving || _discovering || _editingModel).ToString().ToLowerInvariant())">@L["Settings:Dialog:SaveProvider"]</MudButton></div></DialogActions>
+</MudDialog>

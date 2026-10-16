@@ -4,25 +4,28 @@ using Monica.Markdown.Models;
 namespace Monica.AI.RAG.Services.Support;
 
 /// <summary>
-/// Resolves markdown documents by relative path.
+/// Resolves markdown documents within their recorded source group.
 /// </summary>
 internal sealed class MarkdownDocumentResolver(IMarkdownDocumentCatalog markdownService)
 {
-    public async Task<MarkdownDocument?> FindByPathAsync(string documentPath, CancellationToken ct = default)
+    /// <summary>
+    /// Returns the matching document only from the recorded group. Missing group metadata or a missing path
+    /// returns null; an unavailable group propagates the catalog failure rather than borrowing another source.
+    /// </summary>
+    public async Task<MarkdownDocument?> FindByPathAsync(
+        string documentPath,
+        string? sourceGroupKey,
+        CancellationToken ct = default)
     {
-        var groups = await markdownService.GetAllDocumentGroupsAsync();
-        foreach (var group in groups)
+        ct.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(sourceGroupKey))
         {
-            ct.ThrowIfCancellationRequested();
-            var documents = await markdownService.GetDocumentsAsync(group.Key);
-            var matched = documents.FirstOrDefault(doc =>
-                string.Equals(doc.RelativePath, documentPath, StringComparison.OrdinalIgnoreCase));
-            if (matched is not null)
-            {
-                return matched;
-            }
+            return null;
         }
 
-        return null;
+        var documents = await markdownService.GetDocumentsAsync(sourceGroupKey);
+        ct.ThrowIfCancellationRequested();
+        return documents.FirstOrDefault(doc =>
+            string.Equals(doc.RelativePath, documentPath, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -1,0 +1,63 @@
+@using Monica.UI.Theming
+
+<span class="@IconClass" data-theme="@PreviewTheme" style="@PreviewStyle" aria-hidden="true">
+    <svg viewBox="0 0 40 40" focusable="false">
+        <rect class="brand-field" x="1" y="1" width="38" height="38" />
+        <path class="brand-grid" d="M8 12H32M8 20H32M8 28H32M12 8V32M20 8V32M28 8V32" />
+        <path class="brand-monogram" d="M11 28V12L20 22L29 12V28" />
+        <path class="brand-leaf" d="M25 31C25 27 29 26 33 26C33 30 29 33 25 31ZM25 31L30 28" />
+        <path class="brand-heart" d="M29 28C25 25 26 21 29 23C32 21 33 25 29 28Z" />
+        <path class="brand-spark" d="M32 5L33 9L37 10L33 11L32 15L31 11L27 10L31 9Z" />
+        <path class="brand-seal" d="M28 28H34V34H28ZM30 29V33M31 30H33M31 32H33" />
+    </svg>
+</span>
+
+@code {
+    /// <summary>
+    /// Gets or sets an optional theme for a standalone preview. When absent, the icon inherits its surrounding theme.
+    /// </summary>
+    [Parameter] public MonicaThemeKind? ThemeKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the preview's color mode. Explicit theme previews default to light mode.
+    /// </summary>
+    [Parameter] public bool? IsDarkMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the icon's CSS size. Defaults to 32 pixels.
+    /// </summary>
+    [Parameter] public string Size { get; set; } = "32px";
+
+    /// <summary>
+    /// Gets or sets additional presentation classes. The icon remains decorative; its owner supplies accessible text.
+    /// </summary>
+    [Parameter] public string? Class { get; set; }
+
+    private string? PreviewTheme => ThemeKind is { } kind
+        ? $"{kind.ToCssToken()}-{(IsDarkMode == true ? "dark" : "light")}" : null;
+
+    private string IconClass => $"mo-brand-icon {Class}";
+
+    private string PreviewStyle
+    {
+        get
+        {
+            var size = $"--mo-brand-icon-size:{Size};";
+            if (ThemeKind is not { } kind)
+            {
+                return size;
+            }
+
+            var theme = ThemeCatalog.GetTheme(kind).CreateTheme();
+            Palette palette = IsDarkMode == true ? theme.PaletteDark : theme.PaletteLight;
+            return size +
+                $"--mud-palette-primary:{palette.Primary};--mud-palette-primary-text:{palette.PrimaryContrastText};" +
+                $"--mud-palette-secondary:{palette.Secondary};--mud-palette-secondary-text:{palette.SecondaryContrastText};" +
+                $"--mud-palette-tertiary:{palette.Tertiary};--mud-palette-tertiary-text:{palette.TertiaryContrastText};" +
+                $"--mud-palette-error:{palette.Error};--mud-palette-error-text:{palette.ErrorContrastText};" +
+                $"--mud-palette-surface:{palette.Surface};--mud-palette-background:{palette.Background};" +
+                $"--mud-palette-text-primary:{palette.TextPrimary};--mud-palette-divider:{palette.Divider};" +
+                $"--mud-palette-dark:{palette.Dark};--mud-palette-dark-text:{palette.DarkContrastText};";
+        }
+    }
+}

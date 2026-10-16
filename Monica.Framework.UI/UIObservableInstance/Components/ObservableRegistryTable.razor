@@ -1,0 +1,47 @@
+@using Monica.Core.ObservableInstance.Models
+@using Monica.Framework.UI.UIObservableInstance.Models
+@inject IStringLocalizer<ObservableInstanceResource> L
+
+<div class="registry-frame">
+    <table class="registry-table">
+        <thead><tr><th scope="col">@L["Workbench:Identity"]</th><th scope="col">@L["Workbench:CurrentEvidence"]</th><th scope="col">@L["Workbench:Records"]</th><th scope="col">@L["Workbench:Inspect"]</th></tr></thead>
+        <tbody>
+        @if (Instances.Count == 0)
+        {
+            <tr><td colspan="4" class="registry-empty"><MudIcon Icon="@Icons.Material.Outlined.Inventory2" /><strong>@L["Workbench:NoMatches"]</strong><span>@L["Workbench:NoMatchesHelp"]</span></td></tr>
+        }
+        @foreach (var instance in Instances.Skip(_page * PageSize).Take(PageSize))
+        {
+            var health = ObservableInstanceCapture.Health(instance);
+            <tr @key="instance.Identity" data-instance-id="@instance.Identity.InstanceId">
+                <td class="registry-identity"><strong>@instance.InstanceName</strong><code>@instance.Identity.InstanceId</code><span>@(instance.InstanceTypeName ?? L["Workbench:NoType"].Value)</span><small>@(string.IsNullOrEmpty(instance.GroupId) ? L["Shared:Labels:Ungrouped"].Value : instance.GroupId)@if (instance.InstanceKey is not null) { <span> · @instance.InstanceKey</span> }</small></td>
+                <td class="registry-state"><span class="state-badge is-@health.ToString().ToLowerInvariant()"><i aria-hidden="true"></i>@L[$"Shared:HealthStates:{health}"]</span><p title="@instance.CurrentState.Text">@(instance.CurrentState.CaptureError is not null ? L["Workbench:ValueUnavailable"].Value : instance.CurrentState.Text ?? L["Workbench:NoState"].Value)</p><small>@L[$"Shared:LogLevels:{instance.CurrentLogLevel?.ToString() ?? "Unknown"}"]</small></td>
+                <td class="registry-records"><span><strong>@instance.History.Count</strong> @L["Workbench:Retained"]</span><small>@L["Workbench:ExceptionPair", instance.History.Count(e => e.Exception is not null), instance.TotalExceptions]</small><small>@L["Workbench:LifetimePair", instance.TotalRecords]</small><time datetime="@(instance.TotalRecords > 0 ? instance.LastRecordedAt.ToString("O") : null)">@(instance.TotalRecords > 0 ? instance.LastRecordedAt.ToLocalTime().ToString("MM-dd HH:mm:ss") : "—")</time></td>
+                <td class="registry-actions"><button type="button" @onclick="() => Inspect.InvokeAsync(instance)" aria-label="@L["Workbench:InspectNamed", instance.InstanceName]">@L["Workbench:Inspect"]<MudIcon Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" /></button>@if (ClearHistory.HasDelegate) { <button type="button" class="clear-history" disabled="@(Busy || instance.History.Count == 0)" @onclick="() => ClearHistory.InvokeAsync(instance)" aria-label="@L["Workbench:ClearNamed", instance.InstanceName]">@L["Shared:Actions:ClearHistory"]</button> }</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    <footer class="registry-pager"><span>@L["Workbench:PageCount", _page + 1, PageCount, Instances.Count]</span><div><button type="button" disabled="@(_page == 0)" @onclick="() => _page--" aria-label="@L["Workbench:Previous"]"><MudIcon Icon="@Icons.Material.Outlined.ChevronLeft" /></button><button type="button" disabled="@(_page + 1 >= PageCount)" @onclick="() => _page++" aria-label="@L["Workbench:Next"]"><MudIcon Icon="@Icons.Material.Outlined.ChevronRight" /></button></div></footer>
+</div>
+
+@code {
+    /// <summary>Gets or sets the complete filtered registration ledger.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<ObservableInstanceSnapshot> Instances { get; set; } = [];
+    /// <summary>Opens the supplied frozen registration capture.</summary>
+    [Parameter] public EventCallback<ObservableInstanceSnapshot> Inspect { get; set; }
+    /// <summary>Requests confirmed source-qualified history clearing from the owning page.</summary>
+    [Parameter] public EventCallback<ObservableInstanceSnapshot> ClearHistory { get; set; }
+    /// <summary>Disables destructive commands while the owner is processing a command.</summary>
+    [Parameter] public bool Busy { get; set; }
+    private const int PageSize = 15;
+    private int _page;
+    private string? _signature;
+    private int PageCount => Math.Max(1, (Instances.Count + PageSize - 1) / PageSize);
+    protected override void OnParametersSet()
+    {
+        var signature = string.Join('|', Instances.Select(i => i.Identity));
+        if (_signature != signature) { _page = 0; _signature = signature; }
+        _page = Math.Min(_page, PageCount - 1);
+    }
+}

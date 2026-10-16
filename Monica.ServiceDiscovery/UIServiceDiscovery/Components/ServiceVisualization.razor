@@ -12,92 +12,107 @@
 @inject IStringLocalizer<ServiceDiscoveryResource> L
 @implements IAsyncDisposable
 
-<section class="service-discovery-visual">
-    <header class="service-discovery-visual__header">
-        <div class="service-discovery-visual__identity">
-            <span class="service-discovery-visual__icon" aria-hidden="true">
-                <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
-            </span>
-            <div>
-                <MudText Typo="Typo.h6">@L["ServiceGraph:Title"]</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ServiceGraph:Description"]</MudText>
-            </div>
+<section class="service-discovery-visual discovery-atlas" aria-busy="@(_loading ? "true" : "false")">
+    <header class="atlas-heading">
+        <div class="atlas-heading__identity">
+            <span class="atlas-kicker">@L["Atlas:Services:Eyebrow"]</span>
+            <h2>@L["ServiceGraph:Title"]</h2>
+            <p>@L["Atlas:Services:Description"]</p>
         </div>
-        <div class="service-discovery-visual__actions">
-            <MudTooltip Text="@L["ServiceGraph:Tooltips:RefreshData"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                               Color="Color.Primary"
-                               OnClick="LoadServiceDataAsync"
-                               Disabled="@_loading" />
-            </MudTooltip>
-            <MudTooltip Text="@L["ServiceGraph:Tooltips:ResetView"]">
-                <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
-                               Color="Color.Secondary"
-                               OnClick="ResetView"
-                               Disabled="@_loading" />
-            </MudTooltip>
-            <MudTooltip Text="@L["ServiceGraph:Tooltips:LayoutSettings"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Dashboard"
-                               Color="Color.Info"
-                               OnClick="ToggleLayoutPanel" />
-            </MudTooltip>
-            <MudTooltip Text="@L["ServiceGraph:Tooltips:FilterSettings"]">
-                <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
-                               Color="Color.Tertiary"
-                               OnClick="ToggleFilterPanel" />
-            </MudTooltip>
+        <div class="atlas-actions">
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Refresh"
+                       OnClick="LoadServiceDataAsync" Disabled="@_loading">@L["Shared:Actions:Refresh"]</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Tune"
+                       OnClick="ToggleLayoutPanel" aria-expanded="@(_showLayoutPanel ? "true" : "false")">@L["Atlas:Shared:Layout"]</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.FilterAlt"
+                       OnClick="ToggleFilterPanel" aria-expanded="@(_showFilterPanel ? "true" : "false")">@L["Atlas:Shared:Filters"]</MudButton>
         </div>
     </header>
-    <div class="service-discovery-visual__body">
-        @if (_showLayoutPanel)
-        {
-            <ServiceLayoutPanel CurrentLayout="_currentLayout"
-                                ForceDistance="_forceDistance"
-                                ForceStrength="_forceStrength"
-                                CurrentLayoutChanged="OnLayoutChanged"
-                                ForceDistanceChanged="OnForceDistanceChanged"
-                                ForceStrengthChanged="OnForceStrengthChanged" />
-        }
-        
-        @if (_showFilterPanel)
-        {
-            <ServiceFilterPanel @bind-FilterText="_filterText"
-                                @bind-SelectedStatuses="_selectedStatuses"
-                                @bind-SelectedDomains="_selectedDomains"
-                                @bind-ShowOnlyWithInstances="_showOnlyWithInstances"
-                                OnFiltersChanged="ApplyFilters"
-                                AllServices="_allServices" />
-        }
-
-        <MudPaper Class="visualization-container" Elevation="0" Outlined="true">
-            @if (_loading)
-            {
-                <MudOverlay Visible="true" DarkBackground="false" Absolute="true">
-                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
-                </MudOverlay>
-            }
-            <div id="@_graphContainerId" class="service-discovery-visual__canvas" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
-        </MudPaper>
-
-        <MudPaper Class="service-discovery-visual__legend" Elevation="0" Outlined="true">
-            <MudGrid>
-                <MudItem xs="12" sm="6">
-                    <MudText Typo="Typo.caption">
-                        @L["ServiceGraph:Summary:ShowingServices", _filteredServices.Count, _allServices.Count]
-                    </MudText>
-                </MudItem>
-                <MudItem xs="12" sm="6" Class="service-discovery-visual__legend-items">
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle" 
-                             Color="Color.Success" Class="mr-1 mb-1">@L["Shared:ServiceStatuses:Running"]</MudChip>
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Update" 
-                             Color="Color.Info" Class="mr-1 mb-1">@L["Shared:ServiceStatuses:Updating"]</MudChip>
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.CloudOff" 
-                             Color="Color.Default" Class="mr-1 mb-1">@L["Shared:ServiceStatuses:Offline"]</MudChip>
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Error" 
-                             Color="Color.Error" Class="mr-1 mb-1">@L["Shared:ServiceStatuses:Error"]</MudChip>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
+    @if (_captureError is not null)
+    {
+        <div class="atlas-notice atlas-notice--error" role="alert">
+            <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+            <div><strong>@L[_hasSnapshot ? "Atlas:Shared:RetainedSnapshot" : "Atlas:Shared:CaptureFailed"]</strong><p>@_captureError</p></div>
+        </div>
+    }
+    @if (_showLayoutPanel)
+    {
+        <div class="atlas-shelf"><ServiceLayoutPanel CurrentLayout="_currentLayout" ForceDistance="_forceDistance" ForceStrength="_forceStrength"
+            CurrentLayoutChanged="OnLayoutChanged" ForceDistanceChanged="OnForceDistanceChanged" ForceStrengthChanged="OnForceStrengthChanged" /></div>
+    }
+    @if (_showFilterPanel)
+    {
+        <div class="atlas-shelf"><ServiceFilterPanel @ref="_filterPanel" @bind-FilterText="_filterText" @bind-SelectedStatuses="_selectedStatuses"
+            @bind-SelectedDomains="_selectedDomains" @bind-ShowOnlyWithInstances="_showOnlyWithInstances"
+            DomainSelectionIntentChanged="OnDomainSelectionIntentChanged" OnFiltersChanged="ApplyFilters" AllServices="_allServices" /></div>
+    }
+    <div class="atlas-workspace">
+        <section class="atlas-map" aria-label="@L["Atlas:Services:MapLabel"]">
+            <header class="atlas-map__bar">
+                <div><span class="atlas-scope">@L["Atlas:Services:MapLabel"]</span><strong>@(_hasSnapshot ? L["ServiceGraph:Summary:ShowingServices", _filteredServices.Count, _allServices.Count] : L["Shared:Values:NotAvailable"])</strong></div>
+                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.CenterFocusStrong"
+                           OnClick="ResetView" Disabled="@(!_graphAvailable)">@L["Atlas:Shared:FitView"]</MudButton>
+            </header>
+            <div class="atlas-map__stage">
+                <div id="@_graphContainerId" class="service-discovery-visual__canvas" aria-hidden="true" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
+                @if (_loading && !_hasSnapshot)
+                {
+                    <div class="atlas-map__state" role="status"><MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Medium" /><strong>@L["Atlas:Shared:Loading"]</strong></div>
+                }
+                else if (_graphError is not null)
+                {
+                    <div class="atlas-map__state" role="status"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" /><strong>@L["Atlas:Shared:GraphUnavailable"]</strong><p>@L["Atlas:Shared:NativeAlternative"]</p></div>
+                }
+                else if (!_hasSnapshot && _captureError is not null)
+                {
+                    <div class="atlas-map__state" role="status"><strong>@L["Atlas:Shared:CaptureFailed"]</strong><p>@L["Atlas:Shared:RetryHint"]</p></div>
+                }
+                else if (_filteredServices.Count == 0 && _hasSnapshot)
+                {
+                    <div class="atlas-map__state" role="status"><MudIcon Icon="@Icons.Material.Outlined.CloudQueue" /><strong>@L[_allServices.Count == 0 ? "Atlas:Services:Empty" : "Atlas:Shared:FilterMiss"]</strong>
+                        <p>@L[_allServices.Count == 0 ? "Atlas:Services:EmptyHint" : "Atlas:Shared:FilterMissHint"]</p>
+                        @if (_allServices.Count > 0) { <MudButton OnClick="@(() => ClearAllFiltersAsync(null))" Color="Color.Primary">@L["Shared:Actions:Clear"]</MudButton> }
+                    </div>
+                }
+                @if (_loading && _hasSnapshot) { <div class="atlas-refreshing" role="status">@L["Atlas:Shared:Refreshing"]</div> }
+            </div>
+            <footer class="atlas-map__footer"><p>@L["Atlas:Services:NoEdges"]</p><span>@L["Atlas:Shared:GestureHint"]</span></footer>
+        </section>
+        <section class="atlas-native" aria-label="@L["Atlas:Services:Roster"]">
+            <header class="atlas-native__heading"><div><span class="atlas-kicker">@L["Atlas:Shared:NativeEvidence"]</span><h3>@L["Atlas:Services:Roster"]</h3></div><span class="atlas-native__count">@(_hasSnapshot ? _filteredServices.Count.ToString() : L["Shared:Values:NotAvailable"].Value)</span></header>
+            <p class="atlas-native__intro">@L["Atlas:Services:RosterHint"]</p>
+            <ul class="atlas-roster">
+                @foreach (var service in _filteredServices.OrderBy(s => s.AppName, StringComparer.CurrentCultureIgnoreCase))
+                {
+                    <li @key="service.AppId" class="atlas-roster__row">
+                        <button type="button" class="atlas-record" @onclick="@(() => ViewServiceDetailsAsync(service))">
+                            <span class="atlas-record__name">@service.AppName</span><code>@service.AppId</code>
+                            <span class="atlas-record__meta">@GetServiceDomainName(service)<span>·</span>@L["Atlas:Services:InstanceCount", service.TotalInstanceCount]</span>
+                            <span class="atlas-status atlas-status--@service.OverallStatus.ToString().ToLowerInvariant()">@service.OverallStatus.GetText(L)</span>
+                        </button>
+                        <div class="atlas-record__actions">
+                            <MudTooltip Text="@L["ServiceGraph:ContextMenu:FocusService"]"><MudIconButton Icon="@Icons.Material.Outlined.CenterFocusWeak" Size="Size.Small"
+                                aria-label="@L["ServiceGraph:ContextMenu:FocusService"]" Disabled="@(!_graphAvailable)" OnClick="@(() => FocusOnServiceAsync(service))" /></MudTooltip>
+                            <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Size="Size.Small" AriaLabel="@L["Atlas:Shared:RecordActions", service.AppName]">
+                                <MudMenuItem OnClick="@(() => ViewServiceDetailsAsync(service))">@L["ServiceGraph:ContextMenu:ViewServiceDetails"]</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => FilterByStatusAsync(service))">@L["ServiceGraph:ContextMenu:FilterSameStatus"]</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => FilterByDomainAsync(service))">@L["ServiceGraph:ContextMenu:FilterSameDomain"]</MudMenuItem>
+                                @if (!string.IsNullOrWhiteSpace(service.ProjectName)) { <MudMenuItem OnClick="@(() => FilterByProjectAsync(service))">@L["ServiceGraph:ContextMenu:FilterSameProject"]</MudMenuItem> }
+                                <MudMenuItem OnClick="@(() => ClearAllFiltersAsync(service))">@L["ServiceGraph:ContextMenu:ClearFilters"]</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => CopyServiceIdAsync(service))">@L["ServiceGraph:ContextMenu:CopyServiceId"]</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => CopyServiceNameAsync(service))">@L["ServiceGraph:ContextMenu:CopyServiceName"]</MudMenuItem>
+                            </MudMenu>
+                        </div>
+                    </li>
+                }
+            </ul>
+            @if (_hasSnapshot && _filteredServices.Count == 0) { <p class="atlas-native__empty">@L[_allServices.Count == 0 ? "Atlas:Services:Empty" : "Atlas:Shared:FilterMiss"]</p> }
+            <footer class="atlas-native__footer"><span>@L["Atlas:Shared:Captured"]</span><time>@(_capturedAt?.ToLocalTime().ToString("HH:mm:ss") ?? L["Shared:Values:NotAvailable"].Value)</time></footer>
+        </section>
+    </div>
+    <div class="atlas-legend" aria-label="@L["Atlas:Shared:StatusLegend"]">
+        @foreach (var status in Enum.GetValues<ServiceStatus>()) { <span class="atlas-status atlas-status--@status.ToString().ToLowerInvariant()">@status.GetText(L)</span> }
+        <span class="atlas-legend__note">@L["Atlas:Services:MembershipHint"]</span>
     </div>
 </section>
 
@@ -108,6 +123,7 @@
                InitialX="@_contextMenuX" 
                InitialY="@_contextMenuY"
                ContextItem="@_contextMenuService"
+               OpeningRevision="@_contextMenuOpeningRevision"
                OnItemClick="@OnContextMenuItemClick"
                OnClose="@CloseContextMenu" />
 
@@ -115,28 +131,37 @@
     [Parameter] public EventCallback<RegisteredServiceStatus> OnServiceClick { get; set; }
 
     private const string JS_MODULE_PATH = "./_content/Monica.ServiceDiscovery/UIServiceDiscovery/serviceGraph.js";
+    private long _contextMenuOpeningRevision;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SemaphoreSlim _captureGate = new(1, 1);
     private readonly SemaphoreSlim _interopGate = new(1, 1);
     private readonly object _disposeSync = new();
     private readonly string _graphContainerId = $"service-graph-{Guid.NewGuid():N}";
     private IJSObjectReference? _graphController;
     private DotNetObjectReference<ServiceVisualization>? _dotNetReference;
+    private ServiceFilterPanel? _filterPanel;
     private Task? _disposeTask;
     private List<RegisteredServiceStatus> _allServices = new();
     private List<RegisteredServiceStatus> _filteredServices = new();
-    private bool _loading = false;
+    private bool _loading = true;
+    private bool _hasSnapshot;
+    private bool _graphAvailable;
+    private string? _captureError;
+    private string? _graphError;
+    private DateTimeOffset? _capturedAt;
+    private bool _allDomainsSelected = true;
     private bool _showOfflineServices = true;
     
     // Filter-related fields
     private bool _showFilterPanel = false;
     private bool _showLayoutPanel = false;
     private string _filterText = string.Empty;
-    private IReadOnlyCollection<ServiceStatus> _selectedStatuses = new HashSet<ServiceStatus>();
+    private IReadOnlyCollection<ServiceStatus> _selectedStatuses = Enum.GetValues<ServiceStatus>();
     private IReadOnlyCollection<string> _selectedDomains = new HashSet<string>();
     private bool _showOnlyWithInstances = false;
     
     // Layout-related fields
-    private ServiceLayoutType _currentLayout = ServiceLayoutType.Force;
+    private ServiceLayoutType _currentLayout = ServiceLayoutType.Grid;
     private int _forceDistance = 150;
     private int _forceStrength = -500;
     
@@ -148,26 +173,30 @@
     private List<ContextMenuItem<RegisteredServiceStatus>> _contextMenuItems = new();
     private volatile bool _disposed;
 
+    protected override Task OnInitializedAsync() => LoadServiceDataAsync(initialLoad: true);
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
+        if (!firstRender) return;
         try
         {
             await InitializeGraphAsync();
             if (!_disposed)
             {
-                await LoadServiceDataAsync();
+                _graphAvailable = true;
+                await UpdateGraph();
+                StateHasChanged();
             }
         }
-        catch (OperationCanceledException) when (_disposed)
+        catch (OperationCanceledException) when (_disposed) { }
+        catch (JSDisconnectedException) when (_disposed) { }
+        catch (JSException)
         {
-        }
-        catch (JSDisconnectedException) when (_disposed)
-        {
+            if (!_disposed)
+            {
+                _graphError = L["Atlas:Shared:GraphUnavailable"].Value;
+                StateHasChanged();
+            }
         }
     }
 
@@ -222,104 +251,76 @@
         }
     }
 
-    private async Task LoadServiceDataAsync()
-    {
-        _loading = true;
-        if (!_disposed)
-        {
-            StateHasChanged();
-        }
+    private Task LoadServiceDataAsync() => LoadServiceDataAsync(initialLoad: false);
 
+    private async Task LoadServiceDataAsync(bool initialLoad)
+    {
+        if (_disposed || (_loading && !initialLoad)) return;
+        var ownsCapture = false;
         try
         {
-            // Get merged service statuses
-            if (!(await ServiceDiscoveryFacade.GetMergedServicesStatusAsync()).IsFailed(out var error, out var services))
+            ownsCapture = await _captureGate.WaitAsync(0, _lifetimeCancellation.Token);
+            if (!ownsCapture || _disposed) return;
+            _loading = true;
+            _captureError = null;
+            if (!initialLoad) StateHasChanged();
+
+            var result = await ServiceDiscoveryFacade.CaptureServicesAsync(_lifetimeCancellation.Token);
+            if (_disposed) return;
+            if (result.IsFailed(out var error, out var services))
             {
-                _allServices = services ?? new List<RegisteredServiceStatus>();
-                
-                // Initialize filter state
-                InitializeFilters();
-                
-                // Load domain info and assign colors
-                await AssignDomainColors();
-                
-                // Apply filters
-                await ApplyFilters();
+                _captureError = error.Message ?? L["Atlas:Shared:CaptureFailed"].Value;
+                return;
             }
-            else
+
+            _allServices = services ?? [];
+            var currentDomains = _allServices.Select(GetServiceDomainName).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (_allDomainsSelected)
             {
-                Snackbar.Add(L["ServiceGraph:Messages:LoadFailed", error.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Error);
+                _selectedDomains = currentDomains;
             }
+
+            DomainColorResolver.AssignColors(currentDomains.Select(name => new DomainInfo { Name = name }));
+            _hasSnapshot = true;
+            _capturedAt = DateTimeOffset.UtcNow;
+            await ApplyFilters();
         }
-        catch (OperationCanceledException) when (_disposed)
-        {
-        }
+        catch (OperationCanceledException) when (_disposed) { }
         catch (Exception ex)
         {
-            Snackbar.Add(L["ServiceGraph:Messages:LoadException", ex.Message].Value, Severity.Error);
+            if (!_disposed) _captureError = L["ServiceGraph:Messages:LoadException", ex.Message].Value;
         }
         finally
         {
-            _loading = false;
-            if (!_disposed)
+            if (ownsCapture)
             {
-                StateHasChanged();
+                _loading = false;
+                _captureGate.Release();
+                if (!_disposed) StateHasChanged();
             }
         }
     }
 
-    private async Task AssignDomainColors()
-    {
-        try
-        {
-            // Load domains first so the shared resolver can assign a stable color map.
-            if (!(await ServiceDiscoveryFacade.GetDomainsAsync()).IsFailed(out var error, out var domains))
-            {
-                DomainColorResolver.AssignColors(domains ?? []);
-            }
-            else
-            {
-                Snackbar.Add(L["ServiceGraph:Messages:GetDomainColorsFailed", error.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Warning);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["ServiceGraph:Messages:GetDomainColorsException", ex.Message].Value, Severity.Warning);
-        }
-    }
-
-    private void InitializeFilters()
-    {
-        // Initialize selected statuses
-        if (!_selectedStatuses.Any())
-        {
-            _selectedStatuses = new HashSet<ServiceStatus>(
-                Enum.GetValues<ServiceStatus>()
-            );
-        }
-        
-        // Initialize selected domains
-        if (!_selectedDomains.Any())
-        {
-            var allDomains = _allServices.Select(GetServiceDomainName).Distinct().ToList();
-            _selectedDomains = new HashSet<string>(allDomains);
-        }
-    }
-    
     private void ToggleFilterPanel()
     {
         _showFilterPanel = !_showFilterPanel;
+        if (!_showFilterPanel) _filterPanel = null;
         if (_showFilterPanel) _showLayoutPanel = false;
     }
     
     private void ToggleLayoutPanel()
     {
         _showLayoutPanel = !_showLayoutPanel;
-        if (_showLayoutPanel) _showFilterPanel = false;
+        if (_showLayoutPanel)
+        {
+            _showFilterPanel = false;
+            _filterPanel = null;
+        }
     }
 
     private async Task ApplyFilters()
     {
+        if (_disposed) return;
         _filteredServices = _allServices.Where(service =>
         {
             // Status filter
@@ -328,7 +329,7 @@
                 
             // Domain filter
             var serviceDomain = GetServiceDomainName(service);
-            if (!_selectedDomains.Contains(serviceDomain))
+            if (!_selectedDomains.Contains(serviceDomain, StringComparer.OrdinalIgnoreCase))
                 return false;
                 
             // Text filter
@@ -359,21 +360,16 @@
 
     private async Task UpdateGraph()
     {
-        await InvokeGraphAsync("updateGraph", PrepareGraphData());
-
-        // Apply current layout settings
-        await SetLayout(_currentLayout);
-        if (_currentLayout == ServiceLayoutType.Force)
-        {
-            await InvokeGraphAsync("setForceDistance", _forceDistance);
-            await InvokeGraphAsync("setForceStrength", _forceStrength);
-        }
+        await InvokeGraphAsync("updateGraph", PrepareGraphData(), GetLayoutName(_currentLayout), _forceDistance, _forceStrength);
     }
     
     private async Task SetLayout(ServiceLayoutType layoutType)
     {
         _currentLayout = layoutType;
-        var layoutName = layoutType switch
+        await InvokeGraphAsync("setLayout", GetLayoutName(layoutType));
+    }
+
+    private static string GetLayoutName(ServiceLayoutType layoutType) => layoutType switch
         {
             ServiceLayoutType.Force => "force",
             ServiceLayoutType.Hierarchy => "hierarchy",
@@ -381,8 +377,8 @@
             ServiceLayoutType.Grid => "grid",
             _ => "force"
         };
-        await InvokeGraphAsync("setLayout", layoutName);
-    }
+
+    private void OnDomainSelectionIntentChanged(bool selectAll) => _allDomainsSelected = selectAll;
     
     private Task OnLayoutChanged(ServiceLayoutType layoutType) => SetLayout(layoutType);
     
@@ -410,7 +406,7 @@
             runningInstances = service.RunningInstanceCount,
             totalInstances = service.TotalInstanceCount,
             colorRole = DomainColorResolver.GetDomainColorRole(GetServiceDomainName(service)),
-            instanceInfo = service.GetValidInstanceInfo()
+            version = service.GetValidInstanceInfo()?.AssemblyVersion
         }).ToList();
 
         // Do not build inter-service dependencies yet, because the current model does not contain this information.
@@ -427,7 +423,7 @@
             return;
         }
 
-        var service = _allServices.FirstOrDefault(s => s.AppId == nodeId);
+        var service = _allServices.FirstOrDefault(s => string.Equals(s.AppId, nodeId, StringComparison.OrdinalIgnoreCase));
         if (service != null && OnServiceClick.HasDelegate)
         {
             await OnServiceClick.InvokeAsync(service);
@@ -442,12 +438,13 @@
             return;
         }
 
-        _contextMenuService = _allServices.FirstOrDefault(s => s.AppId == nodeId);
+        _contextMenuService = _allServices.FirstOrDefault(s => string.Equals(s.AppId, nodeId, StringComparison.OrdinalIgnoreCase));
         if (_contextMenuService != null)
         {
             _contextMenuX = x;
             _contextMenuY = y;
             _contextMenuItems = BuildContextMenuItems(_contextMenuService);
+            ++_contextMenuOpeningRevision;
             _contextMenuOpen = true;
             StateHasChanged();
         }
@@ -479,6 +476,7 @@
     
     private void CloseContextMenu()
     {
+        if (_disposed) return;
         _contextMenuOpen = false;
     }
     
@@ -501,6 +499,7 @@
     
     private Task OnContextMenuItemClick(ContextMenuItem<RegisteredServiceStatus> item)
     {
+        if (_disposed) return Task.CompletedTask;
         _contextMenuOpen = false;
         StateHasChanged();
         return Task.CompletedTask;
@@ -508,7 +507,7 @@
     
     private async Task ViewServiceDetailsAsync(RegisteredServiceStatus? service)
     {
-        if (service != null && OnServiceClick.HasDelegate)
+        if (!_disposed && service != null && OnServiceClick.HasDelegate)
         {
             await OnServiceClick.InvokeAsync(service);
         }
@@ -524,55 +523,67 @@
     
     private async Task FilterByStatusAsync(RegisteredServiceStatus? service)
     {
-        if (service != null)
+        if (!_disposed && service != null)
         {
             _selectedStatuses = new HashSet<ServiceStatus> { service.OverallStatus };
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add(L["ServiceGraph:Messages:FilteredStatus", service.OverallStatus.GetText(L)].Value, Severity.Info);
+            if (!_disposed) Snackbar.Add(L["ServiceGraph:Messages:FilteredStatus", service.OverallStatus.GetText(L)].Value, Severity.Info);
         }
     }
     
     private async Task FilterByDomainAsync(RegisteredServiceStatus? service)
     {
-        if (service != null)
+        if (!_disposed && service != null)
         {
             var domainName = GetServiceDomainName(service);
+            _allDomainsSelected = false;
             _selectedDomains = new HashSet<string> { domainName };
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add(L["ServiceGraph:Messages:FilteredDomain", domainName].Value, Severity.Info);
+            if (!_disposed) Snackbar.Add(L["ServiceGraph:Messages:FilteredDomain", domainName].Value, Severity.Info);
         }
     }
     
     private async Task FilterByProjectAsync(RegisteredServiceStatus? service)
     {
-        if (service != null && !string.IsNullOrEmpty(service.ProjectName))
+        if (!_disposed && service != null && !string.IsNullOrEmpty(service.ProjectName))
         {
             _filterText = service.ProjectName;
             _showFilterPanel = true;
-            await ApplyFilters();
-            Snackbar.Add(L["ServiceGraph:Messages:FilteredProject", service.ProjectName].Value, Severity.Info);
+            await SynchronizeSearchAndApplyFiltersAsync();
+            if (!_disposed) Snackbar.Add(L["ServiceGraph:Messages:FilteredProject", service.ProjectName].Value, Severity.Info);
         }
     }
     
     private async Task ClearAllFiltersAsync(RegisteredServiceStatus? service)
     {
+        if (_disposed) return;
         _filterText = string.Empty;
+        _allDomainsSelected = true;
         _selectedStatuses = new HashSet<ServiceStatus>(Enum.GetValues<ServiceStatus>());
         var allDomains = _allServices.Select(GetServiceDomainName).Distinct().ToList();
         _selectedDomains = new HashSet<string>(allDomains);
         _showOnlyWithInstances = false;
-        await ApplyFilters();
-        Snackbar.Add(L["ServiceGraph:Messages:ClearedFilters"].Value, Severity.Info);
+        await SynchronizeSearchAndApplyFiltersAsync();
+        if (!_disposed) Snackbar.Add(L["ServiceGraph:Messages:ClearedFilters"].Value, Severity.Info);
+    }
+
+    private async Task SynchronizeSearchAndApplyFiltersAsync()
+    {
+        if (_disposed) return;
+        if (_showFilterPanel && _filterPanel is not null)
+            await _filterPanel.SetSearchAsync(_filterText);
+        else
+            await ApplyFilters();
     }
     
     private async Task CopyServiceIdAsync(RegisteredServiceStatus? service)
     {
         if (service != null)
         {
-            await CopyToClipboardAsync(service.AppId);
-            Snackbar.Add(L["ServiceGraph:Messages:CopiedServiceId"].Value, Severity.Success);
+            if (await CopyToClipboardAsync(service.AppId))
+                Snackbar.Add(L["ServiceGraph:Messages:CopiedServiceId"].Value, Severity.Success);
         }
     }
     
@@ -580,13 +591,13 @@
     {
         if (service != null)
         {
-            await CopyToClipboardAsync(service.AppName);
-            Snackbar.Add(L["ServiceGraph:Messages:CopiedServiceName"].Value, Severity.Success);
+            if (await CopyToClipboardAsync(service.AppName))
+                Snackbar.Add(L["ServiceGraph:Messages:CopiedServiceName"].Value, Severity.Success);
         }
     }
 
     private string GetServiceDomainName(RegisteredServiceStatus service)
-        => service.DomainName ?? L["Shared:Values:Unknown"].Value;
+        => string.IsNullOrWhiteSpace(service.DomainName) ? L["Shared:Values:Unknown"].Value : service.DomainName;
 
     private object GetGraphTexts() => new
     {
@@ -607,6 +618,7 @@
             updating = L["Shared:ServiceStatuses:Updating"].Value,
             offline = L["Shared:ServiceStatuses:Offline"].Value,
             error = L["Shared:ServiceStatuses:Error"].Value,
+            unhealthy = L["Shared:ServiceStatuses:Unhealthy"].Value,
             unknown = L["Shared:ServiceStatuses:Unknown"].Value
         }
     };
@@ -628,6 +640,11 @@
     {
         _disposed = true;
         await _lifetimeCancellation.CancelAsync();
+
+        // Providers can finish work that does not accept cancellation. Wait for the actual read and its
+        // continuation to settle before releasing resources owned by this retired component.
+        await _captureGate.WaitAsync();
+        _captureGate.Release();
 
         await _interopGate.WaitAsync();
         try
@@ -676,13 +693,22 @@
         catch (JSDisconnectedException) when (_disposed)
         {
         }
+        catch (JSException)
+        {
+            if (!_disposed)
+            {
+                _graphAvailable = false;
+                _graphError = L["Atlas:Shared:GraphUnavailable"].Value;
+                StateHasChanged();
+            }
+        }
     }
 
-    private async Task CopyToClipboardAsync(string value)
+    private async Task<bool> CopyToClipboardAsync(string value)
     {
         if (_disposed)
         {
-            return;
+            return false;
         }
 
         try
@@ -691,6 +717,7 @@
                 "navigator.clipboard.writeText",
                 _lifetimeCancellation.Token,
                 value);
+            return !_disposed;
         }
         catch (OperationCanceledException) when (_disposed)
         {
@@ -698,6 +725,11 @@
         catch (JSDisconnectedException) when (_disposed)
         {
         }
+        catch (JSException)
+        {
+            if (!_disposed) Snackbar.Add(L["Atlas:Shared:ClipboardFailed"].Value, Severity.Error);
+        }
+        return false;
     }
 
     private static async ValueTask DisposeGraphControllerAsync(IJSObjectReference? graphController)

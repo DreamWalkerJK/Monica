@@ -219,7 +219,7 @@ public sealed partial class GuideWorkspaceService
     /// global-first guide-skill exclusion, so interactive surfaces can preview the closure
     /// before any plan exists.
     /// </summary>
-    public IReadOnlyList<string> ProfileClosureSkills(string profile)
+    public IReadOnlyList<string> ProfileClosureSkills(string profile, IReadOnlyList<string>? capabilities = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(profile);
         if (_catalog is null)
@@ -231,7 +231,8 @@ public sealed partial class GuideWorkspaceService
             _catalog,
             profile,
             [],
-            AgentGuideService.WorkspaceGuideSkillExclusion(_definition, _productPaths));
+            AgentGuideService.WorkspaceGuideSkillExclusion(_definition, _productPaths),
+            capabilities);
         return closure is null
             ? []
             : closure.Select(static skill => skill.Name).Order(StringComparer.Ordinal).ToArray();
@@ -287,7 +288,8 @@ public sealed partial class GuideWorkspaceService
                                        && string.Equals(config.Profile, entry.Profile, StringComparison.Ordinal)
                                        && (instructionsVersion is null
                                            || entry.InstructionBlockVersion == instructionsVersion);
-            var (installed, profileCount) = CountWorkspaceSkills(entry.Workspace, entry.Profile);
+            var (installed, profileCount) = CountWorkspaceSkills(
+                entry.Workspace, config?.Profile ?? entry.Profile, config?.Capabilities ?? entry.Capabilities);
             var instructionsCurrent = false;
             var instructionsComparable = false;
             if (config is not null)
@@ -317,6 +319,10 @@ public sealed partial class GuideWorkspaceService
             {
                 issues.Add("The managed instruction block is stale; update the workspace to converge it.");
             }
+            if (exists && _catalog?.ManagedInstructions is { } instructions
+                && GuideInstructionBlock.State(ReadText(Path.Combine(entry.Workspace, CLAUDE_FILE_NAME)), instructions.Markers)
+                   != GuideInstructionBlockStatus.Absent)
+                issues.Add($"Root {CLAUDE_FILE_NAME} carries a legacy product instruction span; update the workspace to converge it.");
 
             if (exists && profileCount > 0 && installed < profileCount)
             {
@@ -389,14 +395,16 @@ public sealed partial class GuideWorkspaceService
     }
 
     /// <summary>Compares this workspace's recorded installations against its profile closure.</summary>
-    private (int Installed, int ProfileCount) CountWorkspaceSkills(string workspace, string profile)
+    private (int Installed, int ProfileCount) CountWorkspaceSkills(
+        string workspace, string profile, IReadOnlyList<string> capabilities)
     {
         var closure = _catalog is not null
             ? AgentGuideService.SelectProfileClosure(
                 _catalog,
                 profile,
                 new List<GuideCheck>(),
-                AgentGuideService.WorkspaceGuideSkillExclusion(_definition, _productPaths))
+                AgentGuideService.WorkspaceGuideSkillExclusion(_definition, _productPaths),
+                capabilities)
             : null;
         if (closure is null || !File.Exists(_enginePaths.GuideLedgerFile))
         {
@@ -433,7 +441,7 @@ public sealed partial class GuideWorkspaceService
             return;
         }
 
-        var (installed, profileCount) = CountWorkspaceSkills(root, config.Profile);
+        var (installed, profileCount) = CountWorkspaceSkills(root, config.Profile, config.Capabilities);
         if (profileCount == 0)
         {
             checks.Add(Check("workspace.skills", GuideCheckStatus.Warning,
@@ -503,6 +511,9 @@ public sealed partial class GuideWorkspaceService
                 $"Root {AGENTS_FILE_NAME} contains malformed or duplicate guide markers."));
             return;
         }
+        var claudePath = Path.Combine(root, CLAUDE_FILE_NAME);
+        var claudeText = ReadText(claudePath);
+        if (!ValidateClaudeInstructions(claudeText, checks)) return;
 
         var changed = false;
         var agentsAfter = GuideInstructionBlock.Upsert(
@@ -520,31 +531,9 @@ public sealed partial class GuideWorkspaceService
             changed = true;
         }
 
-        var wantsClaude = WantsClaudeImport();
-        var claudePath = Path.Combine(root, CLAUDE_FILE_NAME);
-        var claudeText = ReadText(claudePath);
-        if (wantsClaude)
-        {
-            var claudeAfter = GuideInstructionBlock.EnsureClaudeImport(claudeText);
-            if (!string.Equals(claudeText, claudeAfter, StringComparison.Ordinal))
-            {
-                GuideMutations.AddLocalWrite(
-                    "workspace.instructions.claude",
-                    claudePath,
-                    GuidePlanning.Utf8(claudeAfter),
-                    $"Ensure the minimal {CLAUDE_IMPORT_LINE} import in {CLAUDE_FILE_NAME}.",
-                    mutations);
-                changed = true;
-            }
-        }
-        else if (config.ManagedClaudeImport && claudeText.Length > 0)
-        {
-            var claudeAfter = GuideInstructionBlock.RemoveClaudeImport(claudeText);
-            if (!string.Equals(claudeText, claudeAfter, StringComparison.Ordinal))
-            {
-                changed = AddClaudeImportRemoval(claudePath, claudeAfter, mutations) || changed;
-            }
-        }
+        var wantsClaude = WantsClaudeImport(config);
+        changed = ConvergeClaudeInstructions(
+            claudePath, claudeText, wantsClaude, config.ManagedClaudeImport, mutations) || changed;
 
         if (changed)
         {
@@ -739,11 +728,7 @@ public sealed partial class GuideWorkspaceService
 
         var claudePath = Path.Combine(root, CLAUDE_FILE_NAME);
         var claudeText = ReadText(claudePath);
-        if (GuideInstructionBlock.ClaudeImportState(claudeText) == GuideClaudeImportStatus.Duplicate)
-        {
-            blockers.Add(Check("workspace.claude-import", GuideCheckStatus.Error,
-                $"Refusing to modify {CLAUDE_FILE_NAME} because it contains duplicate {CLAUDE_IMPORT_LINE} imports."));
-        }
+        ValidateClaudeInstructions(claudeText, blockers);
 
         // Rule switches validate before the write plan, so an unknown id blocks initialization
         // exactly like an unknown profile or capability; re-init preserves previously
@@ -753,7 +738,7 @@ public sealed partial class GuideWorkspaceService
         if (blockers.Count == 0)
         {
             var instructionsChanged = false;
-            var wantsClaude = WantsClaudeImport();
+            var wantsClaude = WantsClaudeImport(config);
             var nextConfig = new GuideWorkspaceStore.GuideWorkspaceConfig(
                 GuideWorkspaceStore.GuideWorkspaceConfig.CurrentSchemaVersion,
                 _definition.ProductId,
@@ -796,28 +781,8 @@ public sealed partial class GuideWorkspaceService
                 instructionsChanged = true;
             }
 
-            if (wantsClaude)
-            {
-                var claudeAfter = GuideInstructionBlock.EnsureClaudeImport(claudeText);
-                if (!string.Equals(claudeText, claudeAfter, StringComparison.Ordinal))
-                {
-                    GuideMutations.AddLocalWrite(
-                        "workspace.instructions.claude",
-                        claudePath,
-                        GuidePlanning.Utf8(claudeAfter),
-                        $"Ensure the minimal {CLAUDE_IMPORT_LINE} import in {CLAUDE_FILE_NAME}.",
-                        mutations);
-                    instructionsChanged = true;
-                }
-            }
-            else if (config?.ManagedClaudeImport == true && claudeText.Length > 0)
-            {
-                var claudeAfter = GuideInstructionBlock.RemoveClaudeImport(claudeText);
-                if (!string.Equals(claudeText, claudeAfter, StringComparison.Ordinal))
-                {
-                    instructionsChanged = AddClaudeImportRemoval(claudePath, claudeAfter, mutations) || instructionsChanged;
-                }
-            }
+            instructionsChanged = ConvergeClaudeInstructions(
+                claudePath, claudeText, wantsClaude, config?.ManagedClaudeImport == true, mutations) || instructionsChanged;
 
             if (instructionsChanged)
             {
@@ -1028,6 +993,48 @@ public sealed partial class GuideWorkspaceService
             claudePath,
             GuidePlanning.Utf8(claudeAfter),
             $"Remove the guide-owned {CLAUDE_IMPORT_LINE} import from {CLAUDE_FILE_NAME}.",
+            mutations);
+        return true;
+    }
+
+    private bool ValidateClaudeInstructions(string text, ICollection<GuideCheck> checks)
+    {
+        if (GuideInstructionBlock.State(text, Instructions.Markers) == GuideInstructionBlockStatus.Malformed)
+        {
+            checks.Add(Check("workspace.instructions.claude", GuideCheckStatus.Error,
+                $"Root {CLAUDE_FILE_NAME} contains malformed or duplicate product guide markers."));
+            return false;
+        }
+        if (GuideInstructionBlock.ClaudeImportState(text) == GuideClaudeImportStatus.Duplicate)
+        {
+            checks.Add(Check("workspace.claude-import", GuideCheckStatus.Error,
+                $"Refusing to modify {CLAUDE_FILE_NAME} because it contains duplicate {CLAUDE_IMPORT_LINE} imports."));
+            return false;
+        }
+        return true;
+    }
+
+    private bool ConvergeClaudeInstructions(
+        string claudePath, string text, bool wantsClaude, bool managedImport, List<GuidePlannedMutation> mutations)
+    {
+        // This product's current block lives in AGENTS.md; a legacy Claude copy must not
+        // override it. Other products' spans and all user-owned content stay untouched.
+        var after = GuideInstructionBlock.Remove(text, Instructions.Markers);
+        var removedLegacySpan = !string.Equals(text, after, StringComparison.Ordinal);
+        after = wantsClaude
+            ? GuideInstructionBlock.EnsureClaudeImport(after)
+            : managedImport ? GuideInstructionBlock.RemoveClaudeImport(after) : after;
+        if (removedLegacySpan)
+        {
+            var newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+            after = after.TrimEnd('\r', '\n');
+            if (after.Length > 0) after += newline;
+        }
+        if (string.Equals(text, after, StringComparison.Ordinal)) return false;
+        if (!wantsClaude && managedImport) return AddClaudeImportRemoval(claudePath, after, mutations);
+        GuideMutations.AddLocalWrite(
+            "workspace.instructions.claude", claudePath, GuidePlanning.Utf8(after),
+            $"Remove this product's legacy instruction span and converge the minimal {CLAUDE_IMPORT_LINE} import in {CLAUDE_FILE_NAME}.",
             mutations);
         return true;
     }
@@ -1695,8 +1702,11 @@ public sealed partial class GuideWorkspaceService
            ?? throw new InvalidOperationException(
                "The installed catalog declares no workspace profiles; install a current release bundle.");
 
-    private bool WantsClaudeImport()
+    private bool WantsClaudeImport(GuideWorkspaceStore.GuideWorkspaceConfig? config = null)
     {
+        if (config?.EffectiveSkillTargets().Any(static target =>
+                string.Equals(target.Replace('\\', '/').TrimEnd('/'), ".claude/skills", StringComparison.OrdinalIgnoreCase)) == true)
+            return true;
         if (!File.Exists(_enginePaths.GuideLedgerFile))
         {
             return false;
@@ -1833,8 +1843,15 @@ public sealed partial class GuideWorkspaceService
                 break;
         }
 
-        var claudeState = GuideInstructionBlock.ClaudeImportState(ReadText(Path.Combine(root, CLAUDE_FILE_NAME)));
-        var claudeRequired = WantsClaudeImport();
+        var claudeText = ReadText(Path.Combine(root, CLAUDE_FILE_NAME));
+        var claudeState = GuideInstructionBlock.ClaudeImportState(claudeText);
+        var claudeRequired = WantsClaudeImport(config);
+        var claudeProductSpan = GuideInstructionBlock.State(claudeText, Instructions.Markers);
+        if (claudeProductSpan != GuideInstructionBlockStatus.Absent)
+            checks.Add(Check("workspace.instructions.claude",
+                claudeProductSpan == GuideInstructionBlockStatus.Malformed ? GuideCheckStatus.Error : GuideCheckStatus.Warning,
+                $"Root {CLAUDE_FILE_NAME} carries a legacy product instruction span.",
+                "Run guide configure for this workspace; malformed markers need correction before apply."));
         if (claudeState == GuideClaudeImportStatus.Duplicate)
         {
             checks.Add(Check("workspace.claude-import", GuideCheckStatus.Error,

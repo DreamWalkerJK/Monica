@@ -654,13 +654,14 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         var installations = previous?.Installations.ToList() ?? [];
         foreach (var planned in plannedTargets)
         {
+            var targetSkills = planned.Skills;
             var environment = planned.Environment;
             var target = planned.Target;
             var targetRoot = planned.TargetRoot;
             var targetName = TargetCheckName(target, targetRoot);
             ReportPhase(progress, $"configure.skills.{environment.Selector}.{targetName}",
-                $"Planning the {targetName} skill projection in {environment.Selector} ({selected.Count} skills)…");
-            var skillDirectories = selected
+                $"Planning the {targetName} skill projection in {environment.Selector} ({targetSkills.Count} skills)…");
+            var skillDirectories = targetSkills
                 .Select(skill => JoinEnvironmentPath(environment, targetRoot, skill.Name))
                 .ToArray();
             // The install root itself anchors observation: global roots sit below the user
@@ -696,7 +697,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             }
 
             var blocked = false;
-            foreach (var skill in selected)
+            foreach (var skill in targetSkills)
             {
                 var skillDirectory = JoinEnvironmentPath(environment, targetRoot, skill.Name);
                 var redirected = tree.Paths.TryGetValue(skillDirectory, out var skillObservation)
@@ -727,7 +728,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                 environment,
                 targetRoot,
                 $"{StagingPrefix}{Guid.NewGuid():N}");
-            foreach (var skill in selected)
+            foreach (var skill in targetSkills)
             {
                 var files = filesBySkill[skill.Name];
                 var action = new GuidePlanAction(
@@ -745,7 +746,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                 EqEnv(item.Environment, environment)
                 && SameRoot(item.TargetRoot, targetRoot));
             foreach (var staleTree in (previousInstallation?.Trees ?? [])
-                         .Where(tree => selected.All(skill => skill.Name != tree.Name)))
+                         .Where(tree => targetSkills.All(skill => skill.Name != tree.Name)))
             {
                 var action = new GuidePlanAction(
                     $"skills.{environment.Selector}.{targetName}.remove-obsolete.{staleTree.Name}",
@@ -762,7 +763,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                 target,
                 targetRoot,
                 planned.WorkspaceRoot,
-                selected
+                targetSkills
                     .Select(skill => new GuideSkillTree(skill.Name, verificationDigests[skill.Name]))
                     .ToArray()));
         }
@@ -957,6 +958,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         CancellationToken cancellationToken)
     {
         var preparedTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var changedTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var stagingRoots = new List<(GuideEnvironment Environment, string Path)>();
         try
         {
@@ -970,6 +972,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                 switch (mutation)
                 {
                     case GuideSkillReplace replace:
+                        changedTargets.Add($"{replace.Environment.Selector}:{NormalizeRoot(replace.TargetRoot)}");
                         await PrepareStagingRootAsync(replace.Environment, replace.TargetRoot, replace.StagingRoot, preparedTargets, stagingRoots, cancellationToken);
                         var stagingSkill = JoinEnvironmentPath(replace.Environment, replace.StagingRoot, replace.SkillName);
                         await _runtime.WriteFilesAsync(
@@ -983,6 +986,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                         await _runtime.MoveDirectoryAsync(replace.Environment, stagingSkill, finalSkillDirectory, cancellationToken);
                         break;
                     case GuideSkillRemove remove:
+                        changedTargets.Add($"{remove.Environment.Selector}:{NormalizeRoot(remove.TargetRoot)}");
                         await PrepareStagingRootAsync(remove.Environment, remove.TargetRoot, null, preparedTargets, stagingRoots, cancellationToken);
                         foreach (var skillName in remove.SkillNames)
                         {
@@ -1014,10 +1018,11 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             ReportPhase(progress, "apply.verify", "Verifying installed skill trees…");
             if (plannedState is not null)
             {
-                foreach (var installation in plannedState.Installations)
+                foreach (var installation in plannedState.Installations.Where(installation =>
+                             changedTargets.Contains($"{installation.Environment.Selector}:{NormalizeRoot(installation.TargetRoot)}")))
                 {
-                    // Post-apply verification checks the written trees against the planned
-                    // state only; release comparison belongs to the status flow.
+                    // Verify only targets changed by this plan against their planned state.
+                    // Drift in untouched installations remains a status/doctor finding.
                     var installationChecks = await InspectInstallationAsync(installation, null, progress, cancellationToken);
                     var catalogCheck = installationChecks.FirstOrDefault(check =>
                         check.Id == $"skills.{installation.Environment.Selector}.{TargetCheckName(installation.Target, installation.TargetRoot)}.catalog");
@@ -1402,28 +1407,11 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                     "Choose skill names exactly as the packaged catalog lists them."));
                 return null;
             }
-            return request.Skills
-                .Distinct(StringComparer.Ordinal)
-                .Select(name => byName[name])
-                .OrderBy(static skill => skill.Name, StringComparer.Ordinal)
-                .ToArray();
+            return RequiredSkillClosure(catalog, request.Skills, checks);
         }
         if (request.Profile is not null)
         {
-            var inProfile = catalog.Skills
-                .Where(skill => skill.Profiles?.Contains(request.Profile, StringComparer.Ordinal) == true)
-                .OrderBy(static skill => skill.Name, StringComparer.Ordinal)
-                .ToArray();
-            if (inProfile.Length == 0)
-            {
-                checks.Add(Check(
-                    "skills.selection",
-                    GuideCheckStatus.Error,
-                    $"The catalog declares no skills for profile '{request.Profile}'.",
-                    "Choose a profile the packaged catalog declares on its skills."));
-                return null;
-            }
-            return inProfile;
+            return SelectProfileClosure(catalog, request.Profile, checks);
         }
         return catalog.Skills.ToArray();
     }
@@ -1459,7 +1447,8 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         GuideEnvironment Environment,
         GuideTarget Target,
         string TargetRoot,
-        string? WorkspaceRoot);
+        string? WorkspaceRoot,
+        IReadOnlyList<SkillCatalogEntry> Skills);
 
     /// <summary>
     /// Resolves what a configure installs and where. A workspace request installs the
@@ -1502,7 +1491,8 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             }
 
             var profile = request.Profile ?? config.Profile;
-            var selected = SelectProfileClosure(catalog, profile, checks, WorkspaceGuideSkillExclusion());
+            var selected = SelectProfileClosure(
+                catalog, profile, checks, WorkspaceGuideSkillExclusion(), config.Capabilities);
             if (selected is null)
             {
                 return (null, [], null);
@@ -1523,7 +1513,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
 
             var environment = NativeEnvironment();
             var planned = roots
-                .Select(root => new PlannedTarget(environment, GuideTarget.Project, root, workspaceRoot))
+                .Select(root => new PlannedTarget(environment, GuideTarget.Project, root, workspaceRoot, selected))
                 .ToList();
             return (selected, planned, workspaceRoot);
         }
@@ -1540,7 +1530,8 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             .Where(item => seen.Add($"{item.Environment.Selector}:{item.Target}"))
             .OrderBy(static item => item.Environment.Selector, StringComparer.OrdinalIgnoreCase)
             .ThenBy(static item => (int)item.Target)
-            .Select(item => new PlannedTarget(item.Environment, item.Target, TargetRoot(item.Environment, item.Target), null))
+            .Select(item => new PlannedTarget(
+                item.Environment, item.Target, TargetRoot(item.Environment, item.Target), null, selectedSkills))
             .ToList();
         if (selections.Count > 0)
         {
@@ -1548,13 +1539,33 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         }
 
         seen.Clear();
-        var recorded = (previous?.Installations ?? [])
+        var recorded = new List<PlannedTarget>();
+        foreach (var installation in (previous?.Installations ?? [])
             .Where(item => seen.Add($"{item.Environment.Selector}:{NormalizeRoot(item.TargetRoot)}"))
             .OrderBy(static item => item.Environment.Selector, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(static item => NormalizeRoot(item.TargetRoot), StringComparer.OrdinalIgnoreCase)
-            .Select(static item => new PlannedTarget(item.Environment, item.Target, item.TargetRoot, item.WorkspaceRoot))
-            .ToList();
-        return (selectedSkills, recorded, null);
+            .ThenBy(static item => NormalizeRoot(item.TargetRoot), StringComparer.OrdinalIgnoreCase))
+        {
+            var selection = selectedSkills;
+            if (installation.WorkspaceRoot is { } recordedWorkspace)
+            {
+                var config = GuideWorkspaceStore.LoadConfig(recordedWorkspace, out var issue);
+                if (config is null)
+                {
+                    checks.Add(Check("workspace.config", GuideCheckStatus.Error,
+                        issue ?? $"The recorded workspace is no longer initialized: {recordedWorkspace}."));
+                    return (null, [], null);
+                }
+                selection = SelectProfileClosure(
+                    catalog, config.Profile, checks, WorkspaceGuideSkillExclusion(), config.Capabilities);
+                if (selection is null) return (null, [], null);
+            }
+            recorded.Add(new PlannedTarget(installation.Environment, installation.Target,
+                installation.TargetRoot, installation.WorkspaceRoot, selection));
+        }
+        var union = recorded.SelectMany(static target => target.Skills)
+            .DistinctBy(static skill => skill.Name, StringComparer.Ordinal)
+            .OrderBy(static skill => skill.Name, StringComparer.Ordinal).ToArray();
+        return (union, recorded, null);
     }
 
     /// <summary>Selects the profile closure shared by workspace configure and inspection.</summary>
@@ -1562,13 +1573,19 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         SkillCatalog catalog,
         string profile,
         ICollection<GuideCheck> checks,
-        string? excludedSkill = null)
+        string? excludedSkill = null,
+        IReadOnlyList<string>? capabilities = null)
     {
-        var inProfile = catalog.Skills
-            .Where(skill => skill.Profiles?.Contains(profile, StringComparer.Ordinal) == true)
-            .OrderBy(static skill => skill.Name, StringComparer.Ordinal)
-            .ToArray();
-        if (inProfile.Length == 0)
+        var selection = catalog.ProfileSelections?.GetValueOrDefault(profile);
+        var roots = catalog.ProfileSelections is null
+            ? catalog.Skills.Where(skill => skill.Profiles?.Contains(profile, StringComparer.Ordinal) == true)
+                .Select(static skill => skill.Name).ToArray()
+            : selection is null ? [] : selection.Required.Concat(selection.Recommended)
+                .Concat(selection.Conditional
+                    .Where(condition => capabilities?.Contains(condition.Capability, StringComparer.Ordinal) == true)
+                    .SelectMany(static condition => condition.Skills))
+                .Distinct(StringComparer.Ordinal).ToArray();
+        if (roots.Length == 0)
         {
             checks.Add(Check(
                 "skills.selection",
@@ -1577,6 +1594,9 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                 "Choose a profile the packaged catalog declares on its skills."));
             return null;
         }
+
+        var inProfile = RequiredSkillClosure(catalog, roots, checks);
+        if (inProfile is null) return null;
 
         if (excludedSkill is null)
         {
@@ -1592,6 +1612,26 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         return filtered.Length == 0
             ? inProfile
             : filtered;
+    }
+
+    private static IReadOnlyList<SkillCatalogEntry>? RequiredSkillClosure(
+        SkillCatalog catalog, IEnumerable<string> roots, ICollection<GuideCheck> checks)
+    {
+        var byName = catalog.Skills.ToDictionary(static skill => skill.Name, StringComparer.Ordinal);
+        var selected = new HashSet<string>(StringComparer.Ordinal);
+        var pending = new Stack<string>(roots);
+        while (pending.TryPop(out var name))
+        {
+            if (!selected.Add(name)) continue;
+            if (!byName.TryGetValue(name, out var skill))
+            {
+                checks.Add(Check("skills.selection", GuideCheckStatus.Error,
+                    $"The selected skill closure references an unpackaged skill: {name}."));
+                return null;
+            }
+            foreach (var dependency in skill.Dependencies) pending.Push(dependency);
+        }
+        return selected.Select(name => byName[name]).OrderBy(static skill => skill.Name, StringComparer.Ordinal).ToArray();
     }
 
     /// <summary>

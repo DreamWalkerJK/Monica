@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Monica.AI.Chat.Models;
 using Monica.AI.Models;
 
@@ -6,145 +5,37 @@ namespace Monica.AI.Chat.Services;
 
 internal static class ChatSessionSnapshotMapper
 {
-    public static ChatTurnSnapshot ToSnapshot(ChatTurn turn) => new()
+    internal static ChatTurnSnapshot ToSnapshot(ChatTurn turn) => new()
     {
-        UserMessage = ToSnapshot(turn.UserMessage),
-        AssistantMessage = turn.AssistantMessage is null ? null : ToSnapshot(turn.AssistantMessage),
-        ErrorMessages = turn.ErrorMessages.Select(ToSnapshot).ToArray(),
-        HistoryCheckpoint = turn.HistoryCheckpoint
+        Id = turn.Id, Status = turn.Status, StartedAt = turn.StartedAt, CompletedAt = turn.CompletedAt,
+        ContextMessages = turn.ContextMessages, UserMessage = Capture(turn.UserMessage),
+        AssistantMessage = turn.AssistantMessage is null ? null : Capture(turn.AssistantMessage),
+        ErrorMessages = turn.ErrorMessages.Select(Capture).ToArray()
     };
 
-    public static ChatTurn FromSnapshot(ChatTurnSnapshot snapshot)
+    internal static ChatTurn FromSnapshot(ChatTurnSnapshot snapshot)
     {
-        var turn = new ChatTurn(FromSnapshot(snapshot.UserMessage), snapshot.HistoryCheckpoint)
+        var turn = new ChatTurn(Restore(snapshot.UserMessage))
         {
-            AssistantMessage = snapshot.AssistantMessage is null
-                ? null
-                : FromSnapshot(snapshot.AssistantMessage)
+            Id = snapshot.Id, StartedAt = snapshot.StartedAt, CompletedAt = snapshot.CompletedAt,
+            Status = snapshot.Status is ChatExecutionStatus.Running or ChatExecutionStatus.AwaitingApproval
+                ? ChatExecutionStatus.Interrupted : snapshot.Status,
+            ContextMessages = snapshot.ContextMessages,
+            AssistantMessage = snapshot.AssistantMessage is null ? null : Restore(snapshot.AssistantMessage)
         };
-        turn.RestoreErrors(snapshot.ErrorMessages.Select(FromSnapshot));
+        turn.RestoreErrors(snapshot.ErrorMessages.Select(Restore));
         return turn;
     }
 
-    private static ChatMessageSnapshot ToSnapshot(AIChatMessage message) => new()
+    private static ChatMessageSnapshot Capture(AIChatMessage message) => new()
     {
-        Id = message.Id,
-        Role = message.Role,
-        Kind = message.Kind,
-        Content = message.Content,
-        CreatedAt = message.CreatedAt,
-        ModelName = message.ModelName,
-        ProviderId = message.ProviderId,
-        Usage = message.Usage is null ? null : ToSnapshot(message.Usage),
-        RequestUsages = message.RequestUsages?.Select(ToSnapshot).ToArray() ?? [],
-        ReasoningContent = message.ReasoningContent,
-        ReasoningDurationSeconds = message.ReasoningDurationSeconds,
-        ToolCalls = message.ToolCalls?.Select(ToSnapshot).ToArray() ?? []
+        Id = message.Id, Role = message.Role, Kind = message.Kind, Parts = message.Parts,
+        CreatedAt = message.CreatedAt, ModelName = message.ModelName, ProviderId = message.ProviderId
     };
 
-    private static AIChatMessage FromSnapshot(ChatMessageSnapshot message) => new()
+    private static AIChatMessage Restore(ChatMessageSnapshot message) => new()
     {
-        Id = message.Id,
-        Role = message.Role,
-        Kind = message.Kind,
-        Content = message.Content,
-        CreatedAt = message.CreatedAt,
-        ModelName = message.ModelName,
-        ProviderId = message.ProviderId,
-        Usage = message.Usage is null ? null : FromSnapshot(message.Usage),
-        RequestUsages = message.RequestUsages.Select(FromSnapshot).ToList(),
-        ReasoningContent = message.ReasoningContent,
-        ReasoningDurationSeconds = message.ReasoningDurationSeconds,
-        ToolCalls = message.ToolCalls.Select(FromSnapshot).ToList()
+        Id = message.Id, Role = message.Role, Kind = message.Kind, Parts = message.Parts,
+        CreatedAt = message.CreatedAt, ModelName = message.ModelName, ProviderId = message.ProviderId
     };
-
-    private static ChatTokenUsageSnapshot ToSnapshot(TokenUsage usage) => new(
-        usage.InputTokens,
-        usage.OutputTokens,
-        usage.ReasoningTokens,
-        usage.CachedInputTokens,
-        usage.TotalTokens);
-
-    private static TokenUsage FromSnapshot(ChatTokenUsageSnapshot usage) => new()
-    {
-        InputTokens = usage.InputTokens,
-        OutputTokens = usage.OutputTokens,
-        ReasoningTokens = usage.ReasoningTokens,
-        CachedInputTokens = usage.CachedInputTokens,
-        TotalTokens = usage.TotalTokens
-    };
-
-    private static ChatRequestUsageSnapshot ToSnapshot(AIChatRequestUsage usage) => new(
-        usage.Sequence,
-        usage.CreatedAt,
-        usage.ResponseId,
-        usage.MessageId,
-        ToSnapshot(usage.Usage));
-
-    private static AIChatRequestUsage FromSnapshot(ChatRequestUsageSnapshot usage) => new()
-    {
-        Sequence = usage.Sequence,
-        CreatedAt = usage.CreatedAt,
-        ResponseId = usage.ResponseId,
-        MessageId = usage.MessageId,
-        Usage = FromSnapshot(usage.Usage)
-    };
-
-    private static ChatToolCallSnapshot ToSnapshot(ToolCallInfo toolCall) => new()
-    {
-        ToolName = toolCall.ToolName,
-        CallId = toolCall.CallId,
-        Arguments = SerializeArguments(toolCall.Arguments),
-        ArgumentsText = toolCall.ArgumentsText,
-        ResultText = toolCall.ResultText,
-        ExceptionMessage = toolCall.ExceptionMessage,
-        Status = toolCall.Status,
-        StartedAt = toolCall.StartedAt,
-        CompletedAt = toolCall.CompletedAt
-    };
-
-    private static ToolCallInfo FromSnapshot(ChatToolCallSnapshot toolCall) => new()
-    {
-        ToolName = toolCall.ToolName,
-        CallId = toolCall.CallId,
-        Arguments = DeserializeArguments(toolCall.Arguments),
-        ArgumentsText = toolCall.ArgumentsText,
-        ResultText = toolCall.ResultText,
-        ExceptionMessage = toolCall.ExceptionMessage,
-        Status = toolCall.Status,
-        StartedAt = toolCall.StartedAt,
-        CompletedAt = toolCall.CompletedAt
-    };
-
-    private static JsonElement? SerializeArguments(IDictionary<string, object?>? arguments)
-    {
-        if (arguments is null)
-        {
-            return null;
-        }
-
-        try
-        {
-            return JsonSerializer.SerializeToElement(arguments);
-        }
-        catch (NotSupportedException)
-        {
-            // ArgumentsText remains the authoritative display representation when a tool uses
-            // runtime-only argument values that System.Text.Json cannot serialize.
-            return null;
-        }
-    }
-
-    private static IDictionary<string, object?>? DeserializeArguments(JsonElement? arguments)
-    {
-        if (arguments is not { ValueKind: JsonValueKind.Object } value)
-        {
-            return null;
-        }
-
-        return value.EnumerateObject().ToDictionary(
-            static property => property.Name,
-            static property => (object?)property.Value.Clone(),
-            StringComparer.Ordinal);
-    }
 }

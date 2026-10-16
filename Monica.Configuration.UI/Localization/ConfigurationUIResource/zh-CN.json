@@ -103,19 +103,15 @@
     },
     "Footer": {
       "PendingCount": "暂存修改",
-      "ValidationIssueCount": "验证异常",
       "SaveBlockedMetadata": "至少有一个暂存配置定义不再具备完整的权威元数据，因此当前无法保存。请先修复并刷新该定义。"
     },
     "RuntimeValidation": {
-      "Title": "运行时验证",
-      "Valid": "运行时配置验证通过。",
       "ValidSummary": "未发现运行时验证异常。",
       "InvalidSummary": "发现 {0} 个运行时验证异常，涉及 {1} 个配置定义。",
       "WarningTitle": "运行时配置需要处理",
       "WarningMessage": "发现 {0} 个验证异常，涉及 {1} 个配置定义。服务仍在运行，但在修正配置前，受影响的功能可能无法正常工作。",
       "ViewIssues": "查看问题",
       "Unavailable": "运行时验证诊断不可用。",
-      "IssueCount": "运行时验证异常",
       "DefinitionIssueCount": "该配置定义的运行时验证异常",
       "CurrentValue": "当前值",
       "Problem": "问题",
@@ -175,7 +171,6 @@
       }
     },
     "Actions": {
-      "SaveGroup": "保存修改组",
       "UndoAll": "撤销全部",
       "Undo": "撤销",
       "PreviewValue": "预览当前值",
@@ -438,7 +433,6 @@
       "TimelineRowSubtitle": "{0} · {1}",
       "CollapsedTimelineSubtitle": "{0} 个字段变更 · {1}",
       "Version": "v{0}",
-      "TargetKind": "目标类型",
       "Target": "修改目标",
       "SourceProvider": "来源 Provider",
       "SourceConfigurationPath": "来源配置路径",
@@ -450,7 +444,38 @@
       "Operator": "操作人",
       "DiffDirection": "旧值 -> 新值",
       "RollbackDirection": "当前目标值 -> 回滚目标值",
-      "NoPreview": "没有可用于差异预览的历史记录。"
+      "NoPreview": "没有可用于差异预览的历史记录。",
+      "Definition": "定义",
+      "LogicalPath": "逻辑路径",
+      "HistoryRecord": "历史记录",
+      "MutationGroup": "变更组"
+    },
+    "Workbench": {
+      "Evidence": "持久化变更证据",
+      "Records": "变更账本",
+      "EvidenceHelp": "查看修改内容、写入目标和审计上下文，追踪每次变更与保存组之间的关系。",
+      "Scope": "持久化记录 · 当前主机",
+      "Filters": "历史筛选",
+      "FilterHelp": "点击查询应用筛选。路径与目标仅筛选修改记录；定义与日期同时筛选修改组。",
+      "Changes": "修改记录",
+      "Groups": "保存的修改组",
+      "LoadedChanges": "已加载 {0} 条记录 · {1} 个展示行",
+      "LoadedGroups": "已加载 {0} 个修改组",
+      "EmptyHelp": "当前查询范围内没有持久化记录。可调整筛选，或在保存配置修改后返回查看。",
+      "Configuration": "修改配置",
+      "Audit": "时间与审计上下文",
+      "MutationCount": "{0} 条成功修改",
+      "Root": "完整定义",
+      "UnknownOperator": "未记录操作人",
+      "QueryPending": "等待查询成功。",
+      "AllDefinitions": "全部定义",
+      "AllDates": "全部日期",
+      "DateRange": "{0} — {1}（本地时间）",
+      "OpenStart": "起始",
+      "OpenEnd": "至今",
+      "Actions": "操作",
+      "OpenFrom": "选择开始日期",
+      "OpenTo": "选择结束日期"
     }
   },
   "Group": {
@@ -485,35 +510,33 @@
     "AppliedWithIssues": "回滚值已保存，但重新加载、通知、审计或验证的后续处理出现问题。"
   },
   "Versions": {
-    "Subtitle": "查看当前统一配置版本，并将历史版本与当前版本对比后按需恢复。",
+    "Subtitle": "查看自动捕获记录，比较保留快照，并针对当前生效值预览恢复方案。",
     "Empty": "未找到统一配置版本。",
     "Current": {
-      "Title": "当前版本",
+      "Title": "最新捕获快照",
       "DefinitionCount": "{0} 个定义"
     },
     "List": {
-      "Title": "历史版本",
-      "Empty": "暂无可与当前版本对比的历史版本。",
-      "ComparedToCurrent": "对比当前 {0}"
+      "Title": "快照目录"
     },
     "Compare": {
-      "AgainstCurrent": "{0} -> 当前 {1}",
+      "AgainstCurrent": "{0} → 最新保存 {1}",
       "AgainstPrevious": "{0} -> {1}",
-      "CurrentOnly": "历史版本列表中的对比均以当前版本作为目标版本。",
-      "PreviousPair": "该对比来自历史版本项的上一版本对比操作。",
-      "NoSelection": "选择一个历史版本",
-      "Unavailable": "无法加载该版本与当前版本的差异。"
+      "CurrentOnly": "目标是最新保存的快照，不是实时生效配置。",
+      "PreviousPair": "原始是前一个保留快照；已删除的版本可能使编号不连续。",
+      "NoSelection": "选择原始与目标快照",
+      "Unavailable": "无法加载所选快照的比较结果。"
     },
     "Definitions": {
       "Empty": "未捕获配置定义。"
     },
     "Actions": {
-      "ComparePrevious": "与上一版本对比",
-      "Delete": "删除历史版本"
+      "ComparePrevious": "与前一个保留快照比较",
+      "Delete": "删除保存快照"
     },
     "Delete": {
       "ConfirmTitle": "删除 {0}？",
-      "ConfirmMessage": "确定永久删除 {0} 的历史快照吗？此操作不会修改当前版本或任何生效配置值。",
+      "ConfirmMessage": "永久删除保存的快照 {0}？生效值和最新保存的快照保持不变。",
       "Confirm": "删除版本",
       "Messages": {
         "Succeeded": "已删除 {0}。",
@@ -530,7 +553,9 @@
         "Added": "新增",
         "Removed": "移除",
         "Modified": "修改"
-      }
+      },
+      "Origin": "原始快照",
+      "Target": "目标快照"
     },
     "Rollback": {
       "Title": "回滚 {0}",
@@ -566,7 +591,15 @@
         "CompositeSourceConflict": "该容器还接收来自 {0} 的值；整体替换会产生未经确认的覆盖值",
         "LowerPriorityFallback": "移除后将暴露低优先级来源 {0}",
         "NoWritableTarget": "没有可写目标",
-        "DiffDirection": "当前生效值 -> 回滚目标值"
+        "DiffDirection": "当前生效值 -> 回滚目标值",
+        "PreviewFingerprint": "已审阅方案指纹",
+        "CapturedSchemaHash": "快照架构哈希",
+        "CurrentSchemaHash": "当前架构哈希",
+        "CurrentSchemaVersion": "当前架构版本",
+        "SourceKey": "来源键",
+        "ExpectedValueVersion": "预期存储版本",
+        "ExpectedSourceRevision": "预期来源修订",
+        "ExpectedSourceChainRevision": "预期来源链修订"
       },
       "MutationKinds": {
         "Set": "设置",
@@ -593,6 +626,33 @@
         "LowerPriorityFallback": "低优先级值回退",
         "UnsupportedSource": "不支持的来源"
       }
+    },
+    "Workbench": {
+      "LatestHelp": "纳入捕获范围的配置变更完成后自动保存。这份历史快照与当前生效值是不同的数据。",
+      "CapturedAt": "捕获时间",
+      "CaptureGroup": "捕获变更组",
+      "CapturedDefinitions": "捕获范围",
+      "TriggeredBy": "触发定义",
+      "RetainedEvidence": "已保留证据",
+      "LedgerHelp": "查看已加载快照的完整标识、捕获定义和操作审计。",
+      "Loaded": "已加载 {0} 个快照",
+      "Filter": "筛选已加载快照",
+      "Matched": "显示 {0} / {1} 个已加载快照",
+      "Snapshot": "快照",
+      "Audit": "捕获审计",
+      "Actions": "操作",
+      "LatestBadge": "最新捕获",
+      "CompareSnapshot": "与最新保存的快照比较",
+      "LatestProtected": "最新保存的快照不能删除。",
+      "NoMatches": "没有匹配的快照",
+      "NoMatchesHelp": "调整或清空筛选条件，查看已加载的快照。",
+      "LoadedLimit": "此视图加载最新的 200 个保留快照。已加载数量不代表全部保留数量。",
+      "EmptyHelp": "主机配置纳入捕获范围的定义，在其变更组成功保存后自动生成快照。此处不提供手动捕获操作。",
+      "Comparison": "快照比较",
+      "SavedEvidence": "已保存快照比较",
+      "ComparisonHelp": "选择两个保留快照，比较其中捕获的生效值。原始和目标的顺序决定比较方向。",
+      "Compare": "比较快照",
+      "PairHelp": "仅比较已保存的值。定义和敏感性依据当前加载的架构检查。"
     }
   },
   "Debug": {
@@ -603,10 +663,20 @@
     "RevealSensitive": "显示敏感值",
     "HideSensitive": "隐藏敏感值",
     "RevealSensitiveAria": "显示 {0} 的敏感配置值",
-    "HideSensitiveAria": "隐藏 {0} 的敏感配置值"
+    "HideSensitiveAria": "隐藏 {0} 的敏感配置值",
+    "Workbench": {
+      "Scope": "主机原始配置及提供程序来源。凭据特征隐藏不能覆盖所有敏感值。",
+      "LoadedLines": "已加载行",
+      "SensitiveLines": "疑似凭据行",
+      "MatchingLines": "匹配行",
+      "AcceptedAt": "接收时间",
+      "SearchLabel": "搜索安全调试文本",
+      "SearchHelp": "隐藏的凭据值不参与搜索。显示某行不会改变搜索范围。",
+      "NoMatches": "没有调试行匹配此搜索。"
+    }
   },
   "Storage": {
-    "Subtitle": "查看当前配置存储组合及其运行状态。",
+    "Subtitle": "查看运行时来源贡献、已注册存储能力和已记录的操作。",
     "Empty": "未注册配置存储。",
     "Roles": {
       "EffectiveValues": "有效值",
@@ -619,15 +689,42 @@
       "Metadata": "元数据"
     },
     "State": {
-      "Succeeded": "正常",
-      "Failed": "失败",
+      "Succeeded": "最近操作成功",
+      "Failed": "最近操作失败",
       "Unknown": "尚无存储操作记录。"
     },
     "Notifications": {
       "Title": "变更通知",
-      "Subtitle": "跨服务热重载需要注册通知实现。",
+      "Subtitle": "通知器注册信息描述当前组成，不代表消息已送达或消费者已经应用。",
       "Registered": "已注册",
       "NotRegistered": "未注册"
+    },
+    "Workbench": {
+      "SourcesTab": "运行时来源",
+      "StoresTab": "存储实现",
+      "AcceptedAt": "接收时间",
+      "SourceCount": "{0} 个运行时来源",
+      "OverviewHelp": "注册信息描述能力；操作记录描述最近报告的结果。",
+      "Supported": "支持",
+      "NotSupported": "不支持",
+      "StoreKey": "存储标识",
+      "Kind": "技术类型",
+      "WriteAccess": "写入能力",
+      "LatestOperation": "最近记录的操作",
+      "OperationTime": "记录时间",
+      "OperationError": "记录的失败信息",
+      "NotAvailable": "不可用",
+      "SourceOptional": "文件要求",
+      "Reload": "重载行为",
+      "ReadOnlyReason": "只读原因",
+      "Description": "注册描述",
+      "RowsPerPage": "每页值数量",
+      "Optional": "可选",
+      "Required": "必需",
+      "SearchSources": "搜索来源",
+      "SourcesShowing": "显示 {0} / {1} 个已加载来源",
+      "NoSourcesMatch": "没有来源匹配此搜索。",
+      "OperationEvidenceHelp": "操作结果独立于存储注册详情显示。"
     }
   },
   "Sources": {
@@ -639,7 +736,7 @@
     "Effective": "生效中",
     "Runtime": {
       "Title": "运行时配置来源",
-      "Subtitle": "配置来源按优先级从高到低显示。最后一个提供 Key 的 Provider 生效。"
+      "Subtitle": "提供程序按优先级排列。即使更高优先级来源或容器屏障使值不再生效，仍可查看其提供的值。"
     },
     "Inventory": {
       "SuppliedCount": "提供 {0}",
@@ -654,13 +751,16 @@
       "FieldColumn": "字段",
       "ValueColumn": "值",
       "StateColumn": "状态",
-      "Overridden": "被覆盖",
+      "Overridden": "未生效",
       "OverriddenTooltip": "被 {0}（优先级 {1}）覆盖。来源：{2}",
-      "OverriddenUnknownTooltip": "被更高优先级 Provider 覆盖。"
+      "OverriddenUnknownTooltip": "无法确认此来源生效。更高优先级值、容器屏障或未检查的别名可能决定运行时值。"
     },
     "Definition": {
       "Title": "配置来源",
-      "Subtitle": "{0} 的配置来源汇总。"
+      "Subtitle": "{0} 的配置来源汇总。",
+      "PriorityHelp": "优先级数字越大，优先级越高。",
+      "CountsHelp": "“提供项”统计各来源为此定义提供的已注册标量值，“生效项”统计其中当前运行时仍采用的值。",
+      "Empty": "未找到此定义的来源贡献。"
     },
     "Chain": {
       "Title": "来源链路",
@@ -673,7 +773,6 @@
     "Columns": {
       "Priority": "优先级",
       "Source": "来源",
-      "State": "状态",
       "Supplied": "提供项",
       "Effective": "生效项"
     },
@@ -684,11 +783,18 @@
     },
     "Actions": {
       "ViewFile": "查看文件",
-      "EditSource": "编辑来源"
+      "EditSource": "编辑来源",
+      "ViewFileFor": "查看 {0} 的文件"
     },
     "File": {
       "Title": "配置文件 - {0}",
-      "Redacted": "敏感值已脱敏"
+      "Redacted": "敏感值已脱敏",
+      "SourceKey": "来源标识",
+      "PhysicalPath": "物理路径",
+      "DeclaredPath": "声明的来源路径",
+      "ProviderType": "提供程序类型",
+      "Content": "规范化 JSON",
+      "RedactionHelp": "已注册定义中的已知敏感路径已隐藏，其他文件内容仍会显示。"
     },
     "Edit": {
       "Title": "编辑来源值",
@@ -846,7 +952,6 @@
     },
     "Import": {
       "Title": "导入配置",
-      "Subtitle": "上传 Monica 配置包，查看导入报告，然后将检测到的修改暂存。",
       "Upload": "点击上传配置包",
       "InvalidPackage": "选择的文件不是有效的 Monica 配置包。",
       "PackageMeta": "导出时间 {0}；导出人 {1}；系统版本 {2}。",
@@ -863,6 +968,8 @@
     "JsonEditor": {
       "Title": "编辑 JSON",
       "Json": "JSON",
+      "BaselineUnavailable": "无法安全确认当前对象或集合的结构，暂不可编辑 JSON。请改为逐项编辑已知的标量值。",
+      "PendingStateUnavailable": "无法在此安全保留已暂存的敏感或结构修改。请先保存或撤销这些修改，再编辑 JSON。",
       "NoState": "当前 JSON 不会产生暂存修改或验证异常。"
     },
     "Report": {
@@ -921,6 +1028,10 @@
     "Errors": {
       "LoadFailed": "加载失败",
       "InvalidPath": "逻辑路径无效"
+    },
+    "Pagination": {
+      "RowsPerPage": "每页快照数",
+      "InfoFormat": "第 {first_item}-{last_item} 项，共 {all_items} 项"
     }
   },
   "ValidationRules": {
@@ -933,5 +1044,76 @@
     "NoMinimum": "无下限",
     "NoMaximum": "无上限",
     "Unknown": "未知验证规则。"
+  },
+  "Validation": {
+    "FragmentNotice": "此编辑仅检查当前片段和可移植的架构规则。保存分组前，会对最终生效的完整配置执行对象代码规则。",
+    "Coverage": "验证覆盖范围",
+    "Complete": "完整验证",
+    "SchemaOnly": "仅架构检查",
+    "Failed": "验证未能完成",
+    "Valid": "完整配置满足当前规则。",
+    "Invalid": "完整配置存在验证问题。",
+    "SchemaValid": "可移植的架构检查通过，但尚未确认完整对象有效。",
+    "SchemaInvalid": "可移植的架构检查发现问题，且尚未确认完整对象有效。",
+    "FailedNotice": "绑定、规则执行或验证契约失败。请处理所报告的问题后重试。",
+    "Revision": "所有者验证版本：{0}",
+    "RevisionUnavailable": "所有者验证版本不可用。",
+    "Fragment": "配置片段",
+    "CompleteAggregate": "完整生效配置",
+    "ActualOptions": "实际默认选项",
+    "Scope": "验证输入：{0}",
+    "RuleSchema": "可移植架构规则",
+    "RuleCode": "对象代码规则",
+    "RuleContract": "验证契约失败",
+    "RuleExecution": "验证执行失败",
+    "PreviewRequired": "请先验证最终分组再保存。修改草稿会使预览失效。",
+    "PreviewPending": "正在验证最终生效的完整配置…",
+    "PreviewBlocked": "此操作无法应用。请查看下方各配置的完整报告和执行计划问题。",
+    "PreviewRefresh": "刷新验证",
+    "SourceTitle": "当前生效来源",
+    "OptionsTitle": "最近观测的默认选项",
+    "OptionsNotice": "这些诊断描述 Configure 和 PostConfigure 后最近一次观测的实际创建，不代表所有使用者或缓存实例。刷新此视图不会创建选项。",
+    "NoObserved": "尚未观测到实际默认选项实例。",
+    "ObservedAt": "观测时间：{0}",
+    "Attempt": "创建尝试：{0}",
+    "DefaultName": "默认选项名称",
+    "Unavailable": "验证诊断不可用。",
+    "Pending": "等待验证。",
+    "SchemaOnlySummary": "无法执行完整验证。",
+    "FailedSummary": "验证执行失败。",
+    "Capability": "所有者验证能力：{0}",
+    "CapabilityUnknown": "未知",
+    "CapabilityPortableOnly": "仅可移植架构规则",
+    "CapabilityObjectCode": "对象代码规则",
+    "NotApplied": "提交的修改未能应用。请检查当前配置，并刷新预览后重试。",
+    "StoredDocument": "物理目标中保存的文档",
+    "EffectiveAggregate": "最终生效的完整配置",
+    "MaskedChange": "此写入被其他来源覆盖，或不会改变生效配置。保存的文档仍必须满足自身的完整契约。"
+  },
+  "Workbench": {
+    "Eyebrow": "MONICA / 配置管理",
+    "Navigation": "配置工作区",
+    "State": "配置值",
+    "History": "变更记录",
+    "Versions": "版本",
+    "Storage": "存储",
+    "Debug": "诊断",
+    "Catalog": "配置定义",
+    "DefinitionCount": "已注册 {0} 项",
+    "ScalarFields": "{0} 个标量配置项",
+    "CatalogHelp": "搜索名称、配置定义与具体配置项。",
+    "Editor": "配置编辑区",
+    "Pending": "待保存变更审阅",
+    "PendingCount": "{0} 项待保存变更",
+    "PendingHelp": "先审阅并验证，再保存草稿中的变更。",
+    "DraftIssues": "{0} 项草稿问题",
+    "Review": "审阅并保存",
+    "SaveHelp": "审阅最终配置，填写审计标签，并在保存前完成验证。",
+    "LabelRequired": "请填写审计标签。",
+    "ImportStage": "暂存所选变更",
+    "ImportHelp": "分析 JSON 配置包，审阅变更与问题，将所选项目加入草稿。",
+    "AuditDetails": "审计信息",
+    "ChangeReview": "变更审阅",
+    "Validation": "最终配置验证"
   }
 }

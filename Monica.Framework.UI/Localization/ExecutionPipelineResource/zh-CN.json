@@ -8,19 +8,24 @@
     "PageTitle": "执行管线",
     "Header": {
       "Title": "执行管线",
-      "Description": "查看已观测操作最终应用的行为链，并对照宿主中全部候选行为注册项。",
+      "Description": "查看已观测操作应用的行为策略，并对照宿主注册项与每个计划的真实构建信息。",
       "Refresh": "刷新",
-      "CapturedAt": "快照采集于 {0}"
+      "Eyebrow": "基础设施 / 执行策略",
+      "CaptureLabel": "目录快照",
+      "LocalTime": "本地时间"
     },
     "Summary": {
       "Registrations": "行为注册",
       "Plans": "已观测计划",
       "ExecutionPoints": "执行点",
-      "Faults": "失败计划"
+      "Faults": "构建失败",
+      "AriaLabel": "执行目录概览",
+      "Scope": "执行目录",
+      "Description": "宿主中的注册行为与已观测操作计划。"
     },
     "Tabs": {
-      "Plans": "已观测计划",
-      "Registrations": "注册行为"
+      "PlansWithCount": "已观测计划 · {0}",
+      "RegistrationsWithCount": "注册行为 · {0}"
     },
     "States": {
       "Loading": "正在加载执行管线目录……",
@@ -29,8 +34,10 @@
       "NoFilteredPlans": "没有符合当前筛选条件的执行计划。",
       "NoRegistrations": "当前没有注册执行行为。",
       "SelectPlan": "请选择一个已观测计划以查看其应用的行为链。",
-      "NoAppliedBehaviors": "此操作没有应用任何行为，会直接调用终端处理程序。",
-      "NotAvailable": "暂无"
+      "NoAppliedBehaviors": "这个已就绪计划没有应用任何行为，其操作直接连接到终端处理程序。",
+      "NotAvailable": "暂无",
+      "NoObservedPlansTitle": "等待观测到操作",
+      "PlanBuilding": "采集此快照时，计划的行为链仍在构建中。请刷新目录以查看最新构建状态。"
     },
     "Common": {
       "Yes": "是",
@@ -51,16 +58,16 @@
       "All": "全部",
       "BusinessOnly": "仅业务操作",
       "NonBusinessOnly": "仅非业务操作",
-      "Showing": "正在显示 {0} / {1} 个已观测计划"
+      "Showing": "正在显示 {0} / {1} 个已观测计划",
+      "Clear": "清除筛选"
     },
     "Plans": {
       "Title": "已观测操作计划",
       "Component": "组件",
-      "Behaviors": "行为数",
-      "OverviewTitle": "操作概览",
-      "OverviewDescription": "用便于阅读的执行元数据说明什么内容进入管线，以及会应用哪些策略。",
+      "OverviewTitle": "操作信息",
+      "OverviewDescription": "执行边界策略、调用类型标识，以及此缓存计划的构建时间。",
       "DetailTitle": "应用行为链",
-      "DetailDescription": "最终位置按最外层到最内层执行；配置顺序是对匹配注册项进行排序时使用的值。",
+      "DetailDescription": "位置表示行为链由最外层到最内层的排列；配置顺序决定候选行为的排序。",
       "Order": "顺序 {0}",
       "ResolvedType": "解析行为",
       "RegisteredType": "注册类型",
@@ -68,26 +75,37 @@
       "Method": "入口方法",
       "Input": "输入",
       "Result": "结果",
-      "StartedAt": "计划开始时间",
-      "CompletedAt": "计划完成时间",
+      "StartedAt": "开始构建",
+      "CompletedAt": "完成构建",
       "Business": "业务操作",
       "Transaction": "事务模式",
       "Fault": "计划构建失败",
-      "ExceptionType": "异常类型"
+      "ExceptionType": "异常类型",
+      "SelectedOperation": "当前操作",
+      "MaterializationStatus": "计划构建状态",
+      "AppliedCount": "已应用 {0} 个行为",
+      "EvidenceBoundary": "边界策略",
+      "EvidenceCallable": "调用标识",
+      "EvidenceMaterialization": "计划构建",
+      "TerminalTitle": "终端处理程序",
+      "TerminalDescription": "调用操作时，只有前序行为继续传递，才会到达入口方法；行为也可以提前结束调用链。"
     },
     "Registrations": {
       "Title": "已注册行为",
-      "Description": "这里列出宿主中的全部候选行为，并按执行顺序排列。行为只有在类型匹配且通过描述符筛选后，才会进入具体操作的计划。",
+      "Description": "宿主中的候选行为按配置顺序与类型排列。行为是否进入计划取决于类型匹配和描述符筛选；此目录不记录未匹配的原因。",
       "Behavior": "行为",
       "Order": "顺序",
       "Lifetime": "生命周期",
       "Source": "来源",
       "OpenGeneric": "开放泛型",
-      "DescriptorFilter": "描述符筛选器"
+      "DescriptorFilter": "描述符筛选器",
+      "Eyebrow": "宿主策略注册",
+      "PolicyColumn": "生命周期与来源",
+      "ApplicabilityColumn": "适用条件"
     },
     "Diagnostics": {
       "Title": "开发者诊断",
-      "Description": "这里保留用于支持和关联分析的精确机器标识，并特意从日常阅读流程中隐藏。",
+      "Description": "用于支持与关联分析的精确标识。可一起复制计划与操作键、程序集限定类型及方法签名。",
       "Copy": "复制诊断信息",
       "CopySucceeded": "执行诊断信息已复制。",
       "CopyFailed": "无法复制执行诊断信息。",
@@ -110,7 +128,7 @@
         "BusinessOperation": "适配器是否将此执行标记为应用业务工作；行为可据此决定是否应用。",
         "TransactionMode": "此边界是否允许已注册的工作单元行为自动包裹整个执行；“无”仍可显式开启事务。",
         "PlanStatus": "行为链状态：构建中表示正在匹配，就绪表示链已可用，失败表示构建错误已缓存。",
-        "BehaviorOrder": "注册时配置的排序值；值越小越靠外、越先执行，同值按类型标识稳定排序。",
+        "BehaviorOrder": "注册时配置的排序值；值越小越靠外，同值按类型标识稳定排序。",
         "Lifetime": "行为实例的依赖注入生命周期：单例、作用域或瞬时。",
         "Source": "提供该注册的 Monica 模块；“应用 / 宿主”表示由宿主直接注册。"
       },
@@ -128,7 +146,7 @@
         "Result": "行为链返回的结果类型；无返回值操作使用内部占位类型。",
         "StartedAt": "行为链计划开始构建的时间，不是业务操作开始执行的时间。",
         "CompletedAt": "行为链计划构建完成或失败的时间，不是业务操作完成时间。",
-        "AppliedChain": "此操作实际执行的行为链，按最外层到最内层排列，最后进入终端处理程序。",
+        "AppliedChain": "缓存计划中已匹配的行为，按最外层到最内层排列。这不是调用记录；行为可能在到达终端处理程序前提前结束调用链。",
         "BehaviorPosition": "行为在最终应用链中的从 1 开始的位置。",
         "ResolvedType": "为此操作解析出的具体行为类型；开放泛型会显示闭合后的类型。",
         "RegisteredType": "宿主最初注册的行为类型；可能是开放泛型。",
@@ -154,6 +172,9 @@
       "Singleton": "单例",
       "Scoped": "作用域",
       "Transient": "瞬时"
+    },
+    "Catalog": {
+      "AriaLabel": "执行目录视图"
     }
   }
 }

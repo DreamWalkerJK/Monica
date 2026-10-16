@@ -29,13 +29,15 @@ public interface IAIProvider : IDisposable
     AIProviderInfo Info { get; }
 
     /// <summary>
-    /// Gets an IChatClient instance for the specified model.
+    /// Gets a borrowed chat client for a configured model. The enclosing provider lease owns its lifetime;
+    /// callers must not dispose the client separately or retain it after the lease ends.
     /// </summary>
     IChatClient GetChatClient(string? modelName = null);
 
     /// <summary>
     /// Gets an embedding generator for the specified model.
     /// If modelName is null, uses the first EmbeddingModelInfo from the provider's resolved models.
+    /// The returned shared generator is borrowed for the enclosing provider lease; do not dispose it separately.
     /// </summary>
     /// <exception cref="NotSupportedException">
     /// Thrown when the provider does not support embedding generation
@@ -70,8 +72,4 @@ public interface IAIProvider : IDisposable
     /// </summary>
     bool SupportsRemoteModelListing => true;
 
-    /// <summary>
-    /// Updates the provider's default system prompt.
-    /// </summary>
-    void UpdateSystemPrompt(string? systemPrompt);
 }

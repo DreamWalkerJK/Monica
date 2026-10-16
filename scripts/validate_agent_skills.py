@@ -11,7 +11,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 try:
     import jsonschema
@@ -24,12 +24,14 @@ try:
         validate_revision_history,
     )
     from agent_skill_file_manifest import digest_files
+    from agent_skill_references import validate_entrypoint_budget, validate_reference_navigation
 except ModuleNotFoundError:  # pragma: no cover - supports import-by-path test runners
     from scripts.agent_skill_release_contract import (
         ReleaseContractError,
         validate_revision_history,
     )
     from scripts.agent_skill_file_manifest import digest_files
+    from scripts.agent_skill_references import validate_entrypoint_budget, validate_reference_navigation
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -43,6 +45,7 @@ SKILL_REFERENCE_PATTERN = re.compile(r"\$((?:monica|mo)-[a-z0-9-]+)")
 FRONTMATTER_PATTERN = re.compile(r"\A---\r?\n(?P<body>.*?)\r?\n---\r?\n", re.DOTALL)
 TOP_LEVEL_YAML_KEY_PATTERN = re.compile(r"^([A-Za-z0-9_-]+):(?:\s|$)")
 SHA256_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
+SOURCE_SCAN_CHUNK_SIZE = 64 * 1024
 TEXT_SOURCE_SUFFIXES = {
     ".bat",
     ".cmd",
@@ -142,8 +145,9 @@ def find_retired_alias_occurrences(
     alias_list = sorted(set(aliases), key=len, reverse=True)
     if not alias_list:
         return []
-    alias_pattern = re.compile(
-        rf"(?<![a-z0-9-])({'|'.join(re.escape(alias) for alias in alias_list)})(?![a-z0-9-])"
+    token_pattern = re.compile(
+        rf"(?<![a-z0-9-])(?P<alias>{'|'.join(re.escape(alias) for alias in alias_list)})(?![a-z0-9-])"
+        r"|(?P<newline>[\n\v\f\x1c-\x1e\x85\u2028\u2029])"
     )
     allowed_file_set = {path.resolve() for path in allowed_files}
     allowed_root_set = {path.resolve() for path in allowed_roots}
@@ -160,11 +164,45 @@ def find_retired_alias_occurrences(
         for part in path.relative_to(root).parts:
             if part in alias_list:
                 occurrences.append(f"{relative}:path:{part}")
-        text = path.read_text(encoding="utf-8", errors="replace")
-        for line_number, line in enumerate(text.splitlines(), start=1):
-            for match in alias_pattern.finditer(line):
-                occurrences.append(f"{relative}:{line_number}:{match.group(1)}")
+        for line_number, alias in source_alias_matches(path, token_pattern, len(alias_list[0])):
+            occurrences.append(f"{relative}:{line_number}:{alias}")
     return occurrences
+
+
+def source_alias_matches(
+    path: Path, token_pattern: re.Pattern[str], maximum_alias_length: int
+) -> Iterator[tuple[int, str]]:
+    """Scan bounded text windows, retaining alias and boundary context between reads.
+
+    Universal newline decoding handles CR and CRLF; the remaining separators match
+    str.splitlines(). Memory stays bounded even for a source file with one giant line.
+    """
+
+    line_number = 1
+    buffer = ""
+    scan_start = 0
+    with path.open(encoding="utf-8", errors="replace") as source:
+        while True:
+            chunk = source.read(SOURCE_SCAN_CHUNK_SIZE)
+            buffer += chunk
+            # Defer starts whose alias or right boundary could cross the next read.
+            cutoff = max(0, len(buffer) - maximum_alias_length - 1) if chunk else len(buffer)
+            consumed_end = scan_start
+            for match in token_pattern.finditer(buffer, scan_start):
+                if match.start() >= cutoff:
+                    break
+                consumed_end = match.end()
+                if match.lastgroup == "newline":
+                    line_number += 1
+                else:
+                    yield line_number, match.group("alias")
+            if not chunk:
+                break
+            if cutoff:
+                # Keep one preceding character for the negative lookbehind, and
+                # do not rescan any tail of an already emitted overlapping alias.
+                buffer = buffer[cutoff - 1:]
+                scan_start = max(1, consumed_end - cutoff + 1)
 
 
 def validate_schema(
@@ -483,6 +521,9 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
         frontmatter_name, _ = parse_frontmatter(skill_file, validation)
         validation.check(frontmatter_name == skill_name, f"{skill_file}: name must match directory")
         parse_openai_yaml(skill_path / "agents" / "openai.yaml", skill_name, validation)
+        if skill_name.startswith("monica-infra-"):
+            validation.errors.extend(validate_entrypoint_budget(skill_file))
+            validation.errors.extend(validate_reference_navigation(skill_path, REPOSITORY_ROOT))
 
         dependencies = entry.get("dependencies", {})
         local_buckets = [

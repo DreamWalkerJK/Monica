@@ -1,8 +1,13 @@
 @typeparam TItem
+@using Monica.UI.Shared.Components.ContextMenu.Support
+@implements IAsyncDisposable
 
+@{
+    var opening = _session?.RenderedOpening;
+}
 <MudMenu @ref="_menu"
          Class="mo-context-menu-root"
-         PopoverClass="mo-context-menu-popover"
+         PopoverClass="mo-context-menu-popover mo-context-menu-root-popover"
          ListClass="mo-context-menu-list"
          PositionAtCursor="true"
          PopoverFixed="true"
@@ -10,80 +15,87 @@
          DropShadow="false"
          Modal="true"
          OpenChanged="HandleOpenChangedAsync">
-    <MoContextMenuItems TItem="TItem"
-                        Items="Items"
-                        ContextItem="ContextItem"
-                        OnItemSelected="HandleItemSelectedAsync" />
+    @if (opening is not null)
+    {
+        <MudFocusTrap @key="opening.PresentationRevision" DefaultFocus="DefaultFocus.Element">
+            <MoContextMenuItems TItem="TItem"
+                                Items="opening.Items"
+                                ContextItem="opening.Context"
+                                OnItemRequested="@(item => HandleItemSelectedAsync(opening, item))" />
+        </MudFocusTrap>
+    }
 </MudMenu>
 
 @code {
+    /// <summary>Actions displayed for the retained context. Nested items use native menus.</summary>
     [Parameter] public List<ContextMenuItem<TItem>> Items { get; set; } = [];
+
+    /// <summary>Caller-owned visibility. Clear this value when OnClose is invoked.</summary>
     [Parameter] public bool Visible { get; set; }
+
+    /// <summary>Cursor X coordinate in document/page space, normally MouseEventArgs.PageX.</summary>
     [Parameter] public double InitialX { get; set; }
+
+    /// <summary>Cursor Y coordinate in document/page space, normally MouseEventArgs.PageY.</summary>
     [Parameter] public double InitialY { get; set; }
+
+    /// <summary>The exact retained context supplied to a selected leaf's action.</summary>
     [Parameter] public TItem? ContextItem { get; set; }
+
+    /// <summary>Increment for every admitted opening, including the same context at the same coordinates.</summary>
+    /// <remarks>
+    /// Defaults to 0 for existing consumers: rendered hidden-to-visible transitions and changed
+    /// item-list/context inputs establish an opening automatically. That fallback cannot distinguish
+    /// an identical admission coalesced into one visible render. Supply a monotonically increasing
+    /// revision for precise reopening; ordinary rendering and dismissal do not increment it.
+    /// </remarks>
+    [Parameter] public long OpeningRevision { get; set; }
+
+    /// <summary>Runs after the selected leaf succeeds, before OnClose, while its opening remains current.</summary>
     [Parameter] public EventCallback<ContextMenuItem<TItem>> OnItemClick { get; set; }
+
+    /// <summary>Requests caller dismissal after successful selection or native dismissal.</summary>
+    /// <remarks>Actions and item callbacks propagate faults; failure does not imply successful close.</remarks>
     [Parameter] public EventCallback OnClose { get; set; }
 
     private MudMenu? _menu;
-    private double _renderedX = double.NaN;
-    private double _renderedY = double.NaN;
-    private bool _menuOpen;
-    private bool _repositioning;
+    private ContextMenuSession<TItem>? _session;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnInitialized()
+        => _session = new ContextMenuSession<TItem>(OpenNativeAsync, CloseNativeAsync);
+
+    protected override void OnParametersSet()
     {
-        if (_menu is null)
-        {
-            return;
-        }
-
-        if (!Visible)
-        {
-            if (_menuOpen)
-            {
-                await _menu.CloseMenuAsync();
-            }
-
-            return;
-        }
-
-        var positionChanged = _renderedX != InitialX || _renderedY != InitialY;
-        if (_menuOpen && positionChanged)
-        {
-            _repositioning = true;
-            await _menu.CloseMenuAsync();
-        }
-
-        if (!_menuOpen || positionChanged)
-        {
-            _renderedX = InitialX;
-            _renderedY = InitialY;
-            await _menu.OpenMenuAsync(new MouseEventArgs
-            {
-                PageX = InitialX,
-                PageY = InitialY,
-                ClientX = InitialX,
-                ClientY = InitialY,
-                Button = 2
-            });
-        }
-
-        _repositioning = false;
+        var itemCallback = OnItemClick;
+        var closeCallback = OnClose;
+        _session?.SetParameters(Visible, OpeningRevision, new ContextMenuPosition(InitialX, InitialY),
+            Items, ContextItem, item => itemCallback.InvokeAsync(item), () => closeCallback.InvokeAsync());
     }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+        => _menu is null ? Task.CompletedTask : _session?.ReconcileAsync() ?? Task.CompletedTask;
+
+    private Task OpenNativeAsync(ContextMenuPosition position)
+        => _menu?.OpenMenuAsync(new MouseEventArgs
+        {
+            PageX = position.PageX,
+            PageY = position.PageY,
+            Button = 2
+        }) ?? Task.CompletedTask;
+
+    private Task CloseNativeAsync() => _menu?.CloseMenuAsync() ?? Task.CompletedTask;
 
     private async Task HandleOpenChangedAsync(bool isOpen)
     {
-        _menuOpen = isOpen;
-        if (!isOpen && Visible && !_repositioning)
-        {
-            await OnClose.InvokeAsync();
-        }
+        if (_session is not { } session) return;
+        await session.NativeOpenChangedAsync(isOpen);
+        if (!session.IsRetired) StateHasChanged();
     }
 
-    private async Task HandleItemSelectedAsync(ContextMenuItem<TItem> item)
-    {
-        await OnItemClick.InvokeAsync(item);
-        await OnClose.InvokeAsync();
-    }
+    private Task HandleItemSelectedAsync(ContextMenuOpening<TItem> opening, ContextMenuItem<TItem> item)
+        => _session?.SelectAsync(opening, item) ?? Task.CompletedTask;
+
+    /// <summary>Seals admission and observes native transitions already started by this wrapper.</summary>
+    /// <remarks>Caller actions retain their owning caller's lifetime; the renderer owns MudMenu disposal.</remarks>
+    public ValueTask DisposeAsync() => _session?.DisposeAsync() ?? ValueTask.CompletedTask;
 }

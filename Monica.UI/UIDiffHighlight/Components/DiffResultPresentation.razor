@@ -1,0 +1,128 @@
+@using System.Globalization
+@using Monica.UI.UIDiffHighlight.Models
+@inject IStringLocalizer<SharedResource> L
+
+<section class="diff-result" aria-labelledby="@(EffectiveHeadingId + "-title")" data-format="@Result.Options.OutputFormat"
+         data-view="@_view" data-display="@_display" data-current="@(IsCurrent ? "true" : "false")"
+         data-continuous="@(Continuous ? "true" : "false")">
+    <header class="diff-result__heading" id="@EffectiveHeadingId" tabindex="-1" aria-labelledby="@(EffectiveHeadingId + "-title")">
+        <h2 id="@(EffectiveHeadingId + "-title")">@L["DiffViewer:Title"]</h2>
+        @Actions
+    </header>
+    <div class="diff-result__provenance">
+        @if (ComparedAt is { } receipt)
+        {
+            <span class="diff-result__receipt" title="@FullReceipt(receipt)">@L["DiffViewer:ComparedAt", receipt.ToString("T", CultureInfo.CurrentCulture)]</span>
+        }
+        <span class="diff-result__accepted-settings">@L[$"DiffHighlightPage:Modes:{Result.Options.Mode}"] · @L[$"DiffHighlightPage:Formats:{Result.Options.OutputFormat}"]</span>
+        <span class="diff-result__current">@(IsCurrent ? CurrentInputsLabel ?? L["DiffViewer:Current"] : EarlierInputsLabel ?? L["DiffViewer:Stale"])</span>
+        <div class="diff-result__rules">
+            @if (!Result.Options.IgnoreWhitespace && !Result.Options.IgnoreCase)
+            {
+                <span>@L["DiffViewer:ExactMatching"]</span>
+            }
+            @if (Result.Options.IgnoreWhitespace) { <span>@L["DiffViewer:AcceptedWhitespace"]</span> }
+            @if (Result.Options.IgnoreCase) { <span>@L["DiffViewer:AcceptedCase"]</span> }
+            @if (Result.Options.Mode is EDiffHighlightMode.Character or EDiffHighlightMode.Mixed)
+            {
+                <span>@L["DiffViewer:CharacterLimit", Result.Options.MaxCharacterDiffLength]</span>
+            }
+        </div>
+    </div>
+    <div class="diff-result__toolbar">
+        <dl class="diff-result__statistics" aria-label="@L["DiffViewer:Scope"]">
+            <div><dt>@L["DiffViewer:Changes"]</dt><dd>@Result.Statistics.TotalChanges</dd></div>
+            <div data-kind="added" data-nonzero="@(Result.Statistics.AddedLines > 0 ? "true" : "false")"><dt>+ @L["DiffViewer:Added"]</dt><dd>@Result.Statistics.AddedLines</dd></div>
+            <div data-kind="deleted" data-nonzero="@(Result.Statistics.DeletedLines > 0 ? "true" : "false")"><dt>− @L["DiffViewer:Deleted"]</dt><dd>@Result.Statistics.DeletedLines</dd></div>
+            <div data-kind="modified" data-nonzero="@(Result.Statistics.ModifiedLines > 0 ? "true" : "false")"><dt>~ @L["DiffViewer:Modified"]</dt><dd>@Result.Statistics.ModifiedLines</dd></div>
+            <div><dt>@L["DiffViewer:ProcessingTime"]</dt><dd>@(Result.ProcessingTimeMs)ms</dd></div>
+        </dl>
+        @if (Result.Options.OutputFormat == EDiffOutputFormat.Html)
+        {
+            <div class="diff-result__choices">
+                <MudSelect T="EDiffViewMode" Value="@_view" ValueChanged="ViewChanged" Label="@L["DiffViewer:Layout"]"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Class="diff-result__view-choice">
+                    <MudSelectItem T="EDiffViewMode" Value="EDiffViewMode.Unified">@L["DiffViewer:ViewModes:Unified"]</MudSelectItem>
+                    <MudSelectItem T="EDiffViewMode" Value="EDiffViewMode.Split">@L["DiffViewer:ViewModes:Split"]</MudSelectItem>
+                </MudSelect>
+                @if (_view == EDiffViewMode.Unified)
+                {
+                    <MudSelect T="EDiffDisplayMode" Value="@_display" ValueChanged="DisplayChanged" Label="@L["DiffViewer:Display"]"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="diff-result__display-choice">
+                        <MudSelectItem T="EDiffDisplayMode" Value="EDiffDisplayMode.Compare">@L["DiffViewer:DisplayModes:Compare"]</MudSelectItem>
+                        <MudSelectItem T="EDiffDisplayMode" Value="EDiffDisplayMode.NewOnly">@L["DiffViewer:DisplayModes:NewValue"]</MudSelectItem>
+                        <MudSelectItem T="EDiffDisplayMode" Value="EDiffDisplayMode.OldOnly">@L["DiffViewer:DisplayModes:OldValue"]</MudSelectItem>
+                    </MudSelect>
+                }
+            </div>
+        }
+        <p class="diff-result__scope">@L["DiffViewer:Scope"]</p>
+    </div>
+    @if (InputsEmpty)
+    {
+        <p class="diff-result__notice" data-notice="empty">@L["DiffViewer:BothEmpty"]</p>
+    }
+    else if (!Result.HasChanges)
+    {
+        <p class="diff-result__notice" data-notice="unchanged">@L["DiffViewer:NoDifferences"]</p>
+    }
+    <div class="diff-result__body">
+        @if (Result.Options.OutputFormat == EDiffOutputFormat.Html)
+        {
+            <DiffContent DiffResult="@Result" Options="@Result.Options" ViewMode="@_view" DisplayMode="@_display" />
+        }
+        else
+        {
+            <pre class="diff-result__serialized"><code>@Result.HighlightedContent</code></pre>
+        }
+    </div>
+</section>
+
+@code {
+    /// <summary>
+    /// Required accepted-result projection, including its accepted options and full-scope statistics.
+    /// The caller owns snapshot detachment; this component reads the projection and never computes or mutates it.
+    /// </summary>
+    [Parameter, EditorRequired] public DiffHighlightResult Result { get; set; } = null!;
+    /// <summary>False preserves the shared 38rem reading bound; the standalone page opts into shell flow.</summary>
+    [Parameter] public bool Continuous { get; set; }
+    /// <summary>Whether this evidence matches the current supplied inputs. Defaults to true; only provenance changes.</summary>
+    [Parameter] public bool IsCurrent { get; set; } = true;
+    /// <summary>Optional caller-owned current-input caption. Null uses the localized neutral "Content compared" label.</summary>
+    [Parameter] public string? CurrentInputsLabel { get; set; }
+    /// <summary>Optional caller-owned earlier-input caption. Null uses the localized neutral earlier-comparison label.</summary>
+    [Parameter] public string? EarlierInputsLabel { get; set; }
+    /// <summary>Whether both accepted inputs were empty. Defaults to false; supplies the explicit empty-pair notice.</summary>
+    [Parameter] public bool InputsEmpty { get; set; }
+    /// <summary>Optional caller-owned local acceptance receipt. Null omits time; this is not backend history.</summary>
+    [Parameter] public DateTimeOffset? ComparedAt { get; set; }
+    /// <summary>
+    /// Optional unique DOM id of the entire focusable heading band; null uses a component-owned unique id.
+    /// Callers own any focus/reveal policy and can locate the title with this id plus "-title".
+    /// </summary>
+    [Parameter] public string? HeadingId { get; set; }
+    /// <summary>Optional caller-owned heading actions. Null renders no actions; callbacks belong to the caller.</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+    /// <summary>
+    /// Initial or genuinely changed parent view, Unified by default; unrelated rerenders preserve local selection.
+    /// Local layout/display choices affect HTML presentation only and never request computation.
+    /// </summary>
+    [Parameter] public EDiffViewMode ViewMode { get; set; } = EDiffViewMode.Unified;
+
+    private readonly string _defaultHeadingId = $"diff-result-{Guid.NewGuid():N}";
+    private EDiffViewMode? _requestedView;
+    private EDiffViewMode _view = EDiffViewMode.Unified;
+    private EDiffDisplayMode _display = EDiffDisplayMode.Compare;
+    private string EffectiveHeadingId => HeadingId ?? _defaultHeadingId;
+
+    protected override void OnParametersSet()
+    {
+        if (_requestedView == ViewMode) return;
+        _requestedView = ViewMode;
+        _view = ViewMode;
+    }
+    private void ViewChanged(EDiffViewMode value) => _view = value;
+    private void DisplayChanged(EDiffDisplayMode value) => _display = value;
+    private static string FullReceipt(DateTimeOffset value) => value.ToString("F", CultureInfo.CurrentCulture)
+        + value.ToString(" zzz", CultureInfo.InvariantCulture);
+}

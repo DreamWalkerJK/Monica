@@ -1,54 +1,102 @@
 @using Monica.Configuration.UI.Localization
+@using Monica.UI.Shared.Components.Dialogs
 @inject ConfigurationFacade Facade
 @inject IStringLocalizer<ConfigurationUIResource> L
+@implements IAsyncDisposable
 
-<MudDialog>
+<MudDialog ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent><MoDialogHeading Text="@L["Sources:Edit:Title"]" /></TitleContent>
     <DialogContent>
+        <div class="configuration-source-edit">
         <MudStack Spacing="3">
             @if (!SourceValue.IsEffective)
             {
                 <MudAlert Severity="Severity.Warning">@L["Sources:Edit:LowerPriorityWarning"]</MudAlert>
             }
-            <MudStack Spacing="0">
-                <MudText Typo="Typo.subtitle2">@NodeLabel</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@SourceValue.Source.DisplayName</MudText>
-            </MudStack>
+            <header class="configuration-source-identity">
+                <h3>@NodeLabel</h3>
+                <p>@Definition.DisplayName</p>
+                <dl>
+                    <div><dt>@L["Mutation:DefinitionKey"]</dt><dd><code>@Definition.DefinitionKey</code></dd></div>
+                    <div><dt>@L["Mutation:LogicalPath"]</dt><dd><code>@Node.RelativePath.ToCanonicalString()</code></dd></div>
+                    <div><dt>@L["Sources:Columns:Source"]</dt><dd>@SourceValue.Source.DisplayName<code>@SourceValue.Source.SourceKey</code><code>@(SourceValue.Source.PhysicalPath ?? SourceValue.Source.SourcePath ?? SourceValue.Source.ProviderType)</code></dd></div>
+                </dl>
+            </header>
             <ConfigurationScalarEditor Node="@Node"
                                        EffectiveValue="@EditorValue"
                                        IsModified="@(_editResult is { IsValid: true })"
+                                       Disabled="@(_saving || !CanEdit)"
                                        ValueChanged="OnValueChanged" />
+            @if (!CanEdit)
+            {
+                <MudAlert Severity="Severity.Warning">@(SourceValue.Source.ReadOnlyReason ?? L["Sources:ReadOnly"].Value)</MudAlert>
+            }
             @if (_editResult is { IsValid: false })
             {
                 <MudText Typo="Typo.caption" Color="Color.Error">@_editResult.ValidationError</MudText>
+            }
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+            }
+            @if (_previewing)
+            {
+                <MudProgressLinear Indeterminate="true" />
+                <MudText Typo="Typo.caption">@L["Validation:PreviewPending"]</MudText>
+            }
+            else if (_validationPreview is not null)
+            {
+                <ConfigurationMutationValidationPreview Preview="_validationPreview" />
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:PreviewRequired"]</MudAlert>
             }
             <MudTextField T="string"
                           @bind-Value="_reason"
                           Label="@L["Group:Reason"]"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
+                          Disabled="@(_saving || !CanEdit)"
                           Lines="2" />
         </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        <div class="configuration-source-actions">
+        <MudButton OnClick="Cancel" Disabled="_saving">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton OnClick="RefreshValidationAsync" Disabled="@(_saving || _previewing || !CanEdit || _editResult?.IsValid != true)">
+            @L["Validation:PreviewRefresh"]
+        </MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    Disabled="@(!CanSave)"
                    OnClick="SaveAsync">
             @L["Common:Actions:Save"]
         </MudButton>
+            </div>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    /// <summary>Gets the authoritative schema owner used for complete aggregate validation.</summary>
     [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
+    /// <summary>Gets the exact scalar logical path written by the reviewed mutation.</summary>
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
+    /// <summary>Gets the captured physical source identity and capability; only writable JSON sources are editable.</summary>
     [Parameter, EditorRequired] public ConfigurationSourceValue SourceValue { get; set; } = null!;
 
     private ConfigurationScalarEditResult? _editResult;
     private string? _reason;
     private bool _saving;
+    private string? _error;
+    private bool _previewing;
+    private long _previewGeneration;
+    private readonly ConfigurationOperationLifetime _operations = new();
+    private CancellationTokenSource? _previewCancellation;
+    private ConfigurationMutationGroupValidationPreview? _validationPreview;
+    private ConfigurationMutationGroupApplyRequest? _previewRequest;
 
     private ConfigurationEffectiveValue EditorValue => new()
     {
@@ -61,51 +109,179 @@
 
     private string NodeLabel => string.IsNullOrWhiteSpace(Node.DisplayName) ? Node.Name : Node.DisplayName!;
 
-    private bool CanSave => !_saving && _editResult is { IsValid: true, StoredValue: not null };
+    private bool CanEdit => !_operations.IsRetired && SourceValue.Source.IsWritable
+        && SourceValue.Source.Kind == ConfigurationSourceKind.JsonFile;
 
-    private Task OnValueChanged(ConfigurationScalarEditResult result)
+    private bool CanSave => CanEdit && !_saving && !_previewing
+        && _editResult is { IsValid: true, StoredValue: not null }
+        && _previewRequest is not null && _validationPreview?.CanApply == true;
+
+    private async Task OnValueChanged(ConfigurationScalarEditResult result)
     {
+        if (_saving || !CanEdit) return;
         _editResult = result;
-        return Task.CompletedTask;
+        await RefreshValidationAsync();
+    }
+
+    private async Task RefreshValidationAsync()
+    {
+        if (_saving || !CanEdit) return;
+        var generation = ++_previewGeneration;
+        var previous = _previewCancellation;
+        _previewCancellation = null;
+        previous?.Cancel(); // Its actual producer owns disposal after completion.
+        _previewRequest = null;
+        _validationPreview = null;
+        _error = null;
+        _previewing = false;
+        if (_editResult is not { IsValid: true, StoredValue: { } storedValue }) return;
+
+        // Freeze exact physical target and draft before the first incomplete await.
+        var definition = Definition;
+        var node = Node;
+        var source = SourceValue.Source;
+        var label = L["Sources:Edit:Title"].Value;
+        _previewing = true;
+        try
+        {
+            await _operations.RunAsync(async token =>
+            {
+                using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
+                if (!_operations.TryApply(() => _previewCancellation = cancellation)) return;
+                try
+                {
+                    var revisionResult = await Facade.GetSourceRevisionAsync(source.SourceKey);
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    if (generation != _previewGeneration) return;
+                    if (revisionResult.IsFailed(out var revisionError, out var revision))
+                    {
+                        _operations.TryApply(() => _error = revisionError.Message);
+                        return;
+                    }
+                    var request = new ConfigurationMutationGroupApplyRequest
+                    {
+                        Label = label,
+                        Commands = [new ConfigurationMutationCommand
+                        {
+                            RequestId = Guid.NewGuid().ToString("N"),
+                            DefinitionKey = definition.DefinitionKey,
+                            LogicalPath = node.RelativePath,
+                            MutationKind = ConfigurationMutationKind.Set,
+                            Value = storedValue,
+                            ExpectedSchemaVersion = definition.SchemaVersion,
+                            ExpectedSchemaHash = definition.SchemaHash,
+                            Target = new ConfigurationExternalSourceMutationTarget
+                            {
+                                SourceKey = source.SourceKey,
+                                ExpectedRevision = revision
+                            }
+                        }]
+                    };
+                    var result = await Facade.PreviewMutationGroupAsync(request, cancellation.Token);
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    if (generation != _previewGeneration) return;
+                    _operations.TryApply(() =>
+                    {
+                        if (result.IsFailed(out var error, out var preview))
+                        {
+                            _error = error.Message;
+                            _validationPreview = result.Data;
+                        }
+                        else
+                        {
+                            _validationPreview = preview;
+                            _previewRequest = request;
+                        }
+                    });
+                }
+                catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+                finally
+                {
+                    _operations.TryApply(() =>
+                    {
+                        if (ReferenceEquals(_previewCancellation, cancellation)) _previewCancellation = null;
+                        if (generation == _previewGeneration) _previewing = false;
+                    });
+                }
+            });
+        }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+        catch (Exception) when (!_operations.IsRetired)
+        {
+            if (generation == _previewGeneration) { _error = L["Validation:FailedNotice"].Value; _previewing = false; }
+        }
     }
 
     private async Task SaveAsync()
     {
-        if (_editResult is not { IsValid: true, StoredValue: { } storedValue })
+        if (!CanSave || _previewRequest is null || _validationPreview is null) return;
+        var request = _previewRequest with
         {
-            return;
-        }
-
+            Reason = _reason,
+            Context = new ConfigurationMutationContext { Reason = _reason },
+            ExpectedValidationFingerprint = _validationPreview.ValidationFingerprint
+        };
+        var options = MudDialog.Options;
         _saving = true;
-        var revisionResult = await Facade.GetSourceRevisionAsync(SourceValue.Source.SourceKey);
-        var expectedRevision = revisionResult.IsFailed(out _, out var revision) ? null : revision;
-        var result = await Facade.MutateSourceAsync(new ConfigurationSourceMutationRequest
+        _error = null;
+        try
         {
-            SourceKey = SourceValue.Source.SourceKey,
-            DefinitionKey = Definition.DefinitionKey,
-            LogicalPath = Node.RelativePath,
-            MutationKind = ConfigurationMutationKind.Set,
-            Value = storedValue,
-            ExpectedSchemaVersion = Definition.SchemaVersion,
-            ExpectedSourceRevision = expectedRevision,
-            Context = new ConfigurationMutationContext
+            await _operations.RunAsync(async token =>
             {
-                Reason = _reason
-            }
-        });
-        _saving = false;
-
-        if (result.IsFailed(out var error, out _))
-        {
-            _editResult = _editResult with { ValidationError = error.Message };
-            return;
+                var closed = false;
+                try
+                {
+                    // Keep ordinary native dismissal from discarding a persistence outcome mid-save.
+                    await MudDialog.SetOptionsAsync(options with { BackdropClick = false, CloseOnEscapeKey = false, CloseButton = false });
+                    token.ThrowIfCancellationRequested();
+                    // Apply is deliberately tokenless: retirement drains its actual durable outcome.
+                    var result = await Facade.ApplyMutationGroupAsync(request);
+                    if (_operations.IsRetired) return;
+                    if (result.IsFailed(out var error, out var applied))
+                    {
+                        _operations.TryApply(() =>
+                        {
+                            _error = error.Message;
+                            _validationPreview = result.Data?.ValidationPreview;
+                            _previewRequest = null;
+                        });
+                        return;
+                    }
+                    if (!applied.Outcomes.Any(outcome => outcome.Status == ConfigurationMutationOutcomeStatus.Applied))
+                    {
+                        var notApplied = L["Validation:NotApplied"].Value;
+                        _operations.TryApply(() =>
+                        {
+                            _error = notApplied;
+                            _validationPreview = applied.ValidationPreview;
+                            _previewRequest = null;
+                        });
+                        return;
+                    }
+                    // Forward the complete outcome, including partial application and post-commit issues.
+                    MudDialog.Close(DialogResult.Ok(applied));
+                    closed = true;
+                }
+                finally
+                {
+                    if (!_operations.IsRetired && !closed)
+                    {
+                        _saving = false;
+                        await MudDialog.SetOptionsAsync(options);
+                    }
+                }
+            });
         }
-
-        MudDialog.Close(DialogResult.Ok(true));
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+        catch (Exception) when (!_operations.IsRetired) { _error = L["Validation:FailedNotice"].Value; }
     }
 
     private void Cancel()
     {
-        MudDialog.Cancel();
+        if (!_saving && !_operations.IsRetired) MudDialog.Cancel();
     }
+
+    /// <summary>Retires previews and joins every actual revision, validation and persistence operation.</summary>
+    /// <remarks>A persisted facade operation is not cancelled or reversed; no UI is adopted after retirement.</remarks>
+    public ValueTask DisposeAsync() => _operations.RetireAsync();
 }

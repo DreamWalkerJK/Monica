@@ -1,0 +1,175 @@
+@using Monica.JobScheduler.UI.Localization
+
+<section class="execution-ledger @(HasLoadedSnapshot ? null : "execution-ledger--unavailable")" aria-labelledby="execution-ledger-title">
+    <header class="execution-ledger__heading">
+        <div>
+            <span class="execution-ledger__eyebrow">@L["Executions:LedgerEyebrow"]</span>
+            <h2 id="execution-ledger-title">@L["Executions:Title"]</h2>
+            @if (HasLoadedSnapshot)
+            {
+                <p>@L["Executions:Count", TotalCount]</p>
+                @if (ObservedAtUtc.HasValue)
+                {
+                    <p class="execution-ledger__observation">@L["Executions:LastRefreshed", TimePresentation.FormatTimestamp(ObservedAtUtc)]</p>
+                }
+            }
+            else
+            {
+                <p>@L[IsQueryFailed ? "Executions:SnapshotUnavailable" : "Executions:SnapshotPending"]</p>
+            }
+        </div>
+        <div class="execution-ledger__heading-actions">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Outlined.Refresh"
+                       Disabled="@(IsLoading || CommandsDisabled)"
+                       OnClick="ReloadAsync">@L["Common:Refresh"]</MudButton>
+        </div>
+    </header>
+
+    @if (FilterContent is not null)
+    {
+        <div class="execution-ledger__filters">@FilterContent</div>
+    }
+
+    <div class="execution-ledger__ordering">
+        <div class="execution-ledger__sort-field">
+            <MudSelect T="JobExecutionSortField"
+                       Value="@_sortField"
+                       ValueChanged="ChangeSortFieldAsync"
+                       ToStringFunc="FormatSortField"
+                       Label="@L["Executions:Sort:Field"]"
+                       Disabled="@(IsLoading || CommandsDisabled)"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                @foreach (var field in Enum.GetValues<JobExecutionSortField>())
+                {
+                    <MudSelectItem T="JobExecutionSortField" Value="@field">@FormatSortField(field)</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+        <div class="execution-ledger__sort-direction">
+            <MudSelect T="SortDirection"
+                       Value="@_sortDirection"
+                       ValueChanged="ChangeSortDirectionAsync"
+                       ToStringFunc="FormatSortDirection"
+                       Label="@L["Executions:Sort:Direction"]"
+                       Disabled="@(IsLoading || CommandsDisabled)"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                <MudSelectItem T="SortDirection" Value="@SortDirection.Descending">@L["Executions:Sort:Descending"]</MudSelectItem>
+                <MudSelectItem T="SortDirection" Value="@SortDirection.Ascending">@L["Executions:Sort:Ascending"]</MudSelectItem>
+            </MudSelect>
+        </div>
+    </div>
+
+    <div class="execution-ledger__data">
+        <MudTable @ref="_table"
+                  T="ExecutionPresentationRow"
+                  ServerData="LoadServerDataAsync"
+                  RowsPerPage="@PageSize"
+                  Dense="false"
+                  Hover="true"
+                  Breakpoint="Breakpoint.Xs"
+                  AriaLabel="@L["Executions:Title"]"
+                  HorizontalScrollbar="true"
+                  Elevation="0"
+                  Square="true">
+            <ColGroup>
+                <col class="execution-ledger__identity-column" />
+                <col class="execution-ledger__state-column" />
+                <col class="execution-ledger__evidence-column" />
+                <col class="execution-ledger__actions-column" />
+            </ColGroup>
+            <HeaderContent>
+                <MudTh>@L["Executions:Columns:Definition"]</MudTh>
+                <MudTh>@L["Executions:Columns:StateAndRecorded"]</MudTh>
+                <MudTh>@L["Executions:Columns:AttemptEvidence"]</MudTh>
+                <MudTh Class="execution-ledger__actions-heading">@L["Executions:Columns:Actions"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                @if (HasLoadedSnapshot)
+                {
+                var execution = context.Capture;
+                <MudTd Class="execution-ledger__identity-cell" DataLabel="@L["Executions:Columns:Definition"]">
+                    <div class="execution-ledger__identity">
+                        <button type="button"
+                                class="execution-ledger__name"
+                                disabled="@CommandsDisabled"
+                                aria-label="@L["Executions:Actions:OpenDetailsFor", JobSchedulerUiPresentation.GetJobDisplayName(execution.Template), execution.InstanceId]"
+                                @onclick="@(() => InspectAsync(execution))">@JobSchedulerUiPresentation.GetJobDisplayName(execution.Template)</button>
+                        <code class="execution-ledger__instance" title="@execution.InstanceId">@execution.InstanceId</code>
+                        <dl class="execution-ledger__identity-facts">
+                            <div><dt>@L["ExecutionDetail:Job"]</dt><dd><code>@execution.Template.JobKey</code></dd></div>
+                            <div><dt>@L["ExecutionDetail:Owner"]</dt><dd><code>@execution.Template.OwnerKey</code></dd></div>
+                        </dl>
+                    </div>
+                </MudTd>
+                <MudTd Class="execution-ledger__state-cell" DataLabel="@L["Executions:Columns:StateAndRecorded"]">
+                    <div class="execution-ledger__state-evidence">
+                        <span class="execution-ledger__state" data-state="@execution.State.ToString().ToLowerInvariant()">
+                            <MudIcon Icon="@GetStateIcon(execution.State)" Size="Size.Small" />
+                            @L[$"ExecutionStates:{execution.State}"]
+                        </span>
+                        <dl class="execution-ledger__facts">
+                            <div><dt>@L["Executions:Columns:Created"]</dt><dd><time datetime="@execution.CreatedAtUtc.ToString("O")">@TimePresentation.FormatTimestamp(execution.CreatedAtUtc)</time></dd></div>
+                            <div><dt>@L["ExecutionDetail:Origin"]</dt><dd>@L[$"ExecutionOrigins:{execution.Origin}"]</dd></div>
+                        </dl>
+                    </div>
+                </MudTd>
+                <MudTd Class="execution-ledger__evidence-cell" DataLabel="@L["Executions:Columns:AttemptEvidence"]">
+                    <div class="execution-ledger__claim-counts">
+                        <dl><dt>@L["Executions:Evidence:Claims"]</dt><dd class="execution-ledger__count">@execution.ExecutionAttempt</dd></dl>
+                        <dl><dt>@L["Executions:Evidence:ConsumedFailures"]</dt><dd class="execution-ledger__count">@execution.RetryAttempt</dd></dl>
+                    </div>
+                    <dl class="execution-ledger__facts">
+                        <div><dt>@L["Executions:Columns:Worker"]</dt><dd><code>@(execution.RunningWorkerInstanceId ?? L["Executions:Evidence:NoCurrentWorker"])</code></dd></div>
+                        <div><dt>@L["Executions:Columns:Duration"]</dt><dd>@FormatDuration(execution)</dd></div>
+                    </dl>
+                </MudTd>
+                <MudTd Class="execution-ledger__actions-cell" DataLabel="@L["Executions:Columns:Actions"]">
+                    <div class="execution-ledger__actions">
+                        <MudTooltip Text="@L["Executions:Actions:Details"]">
+                            <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           Disabled="@CommandsDisabled"
+                                           OnClick="@(() => InspectAsync(execution))"
+                                           aria-label="@L["Executions:Actions:OpenDetailsFor", JobSchedulerUiPresentation.GetJobDisplayName(execution.Template), execution.InstanceId]" />
+                        </MudTooltip>
+                        @if (!execution.IsTerminal || context.RetainCancellationOpener)
+                        {
+                            <MudTooltip Text="@L["Executions:Actions:Cancel"]">
+                                <MudIconButton Icon="@Icons.Material.Outlined.StopCircle"
+                                               Color="Color.Warning"
+                                               Size="Size.Small"
+                                               Disabled="@CommandsDisabled"
+                                               aria-disabled="@((CommandsDisabled || execution.IsTerminal) ? "true" : "false")"
+                                               OnClick="@(() => RequestCancellationAsync(context, execution))"
+                                               aria-label="@L["Executions:Actions:CancelFor", execution.InstanceId]" />
+                            </MudTooltip>
+                        }
+                    </div>
+                </MudTd>
+                }
+            </RowTemplate>
+            <LoadingContent>
+                <div class="execution-ledger__empty"><p>@L["Executions:SnapshotPending"]</p></div>
+            </LoadingContent>
+            <NoRecordsContent>
+                <div class="execution-ledger__empty">
+                    <MudIcon Icon="@(IsQueryFailed ? Icons.Material.Outlined.CloudOff : Icons.Material.Outlined.ReceiptLong)" Size="Size.Large" />
+                    <p>@(IsQueryFailed ? L["Executions:SnapshotUnavailable"] : HasLoadedSnapshot ? EmptyText ?? L["Executions:Empty"] : L["Executions:SnapshotPending"])</p>
+                </div>
+            </NoRecordsContent>
+            <PagerContent>
+                @if (HasLoadedSnapshot)
+                {
+                    <MudTablePager PageSizeOptions="@PageSizeOptions"
+                                   RowsPerPageString="@L["Executions:Filters:PageSize"]"
+                                   InfoFormat="@L["Catalog:Pagination:Range"]" />
+                }
+            </PagerContent>
+        </MudTable>
+    </div>
+</section>

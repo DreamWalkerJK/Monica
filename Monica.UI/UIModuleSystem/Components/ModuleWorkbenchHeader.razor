@@ -1,55 +1,58 @@
-@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Localization
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
 @using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.State
 @using Monica.UI.UIModuleSystem.Support
 @inject IStringLocalizer<ModuleSystemResource> L
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
 
-<header class="workbench-header">
-    <div class="workbench-title-block">
-        <MudText Typo="Typo.overline">@L["Page:Eyebrow"]</MudText>
-        <div class="workbench-title-line">
-            <MudText Typo="Typo.h4" HtmlTag="h1">@L["Page:Title"]</MudText>
-            @if (Session.Snapshot is { } snapshot)
-            {
-                <MudChip T="string"
-                         Size="Size.Small"
-                         Variant="Variant.Filled"
-                         Color="@OutcomeColor(snapshot.Outcome)">
-                    @(snapshot.IsFinal ? L["Common:Final"] : L["Common:Live"])
-                    · @ModuleDiagnosticsDisplay.Outcome(snapshot.Outcome, L)
-                </MudChip>
-            }
-        </div>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+<header class="mo-vl-masthead">
+    <div class="mo-vl-masthead__identity">
+        <p class="mo-vl-crumb">@L["Page:Eyebrow"]</p>
+        <h1 class="mo-vl-title">@L["Page:Title"]</h1>
+        @if (Session.Snapshot is { } current)
+        {
+            <div class="mo-vl-meta" aria-label="@L["Aria:SnapshotIdentity"]">
+                <span class="mo-vl-status @OutcomeRoleClass(current.Outcome)">
+                    <span class="mo-vl-status-dot" aria-hidden="true"></span>
+                    @(current.IsFinal ? L["Common:Final"] : L["Common:Live"]) · @ModuleDiagnosticsDisplay.Outcome(current.Outcome, L)
+                </span>
+                <span class="mo-vl-sep" aria-hidden="true"></span>
+                <span>@L["Common:Revision"] <span class="mo-vl-mono">#@current.Revision</span></span>
+                <span class="mo-vl-sep" aria-hidden="true"></span>
+                <MudTooltip Text="@current.CompositionId">
+                    <button type="button" class="mo-vl-id-chip" aria-label="@L["Actions:CopyCompositionId"]" @onclick="() => CopyCompositionIdAsync(current.CompositionId)">
+                        <span class="mo-vl-mono">@ShortIdentity(current.CompositionId)</span>
+                        <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" />
+                    </button>
+                </MudTooltip>
+                <span class="mo-vl-sep" aria-hidden="true"></span>
+                <span>@L["Common:CapturedAt", current.CapturedAtUtc.ToLocalTime().ToString("t", CultureInfo.CurrentCulture)]</span>
+            </div>
+        }
     </div>
 
-    @if (Session.Snapshot is { } current)
-    {
-        <div class="workbench-identity" aria-label="@L["Aria:SnapshotIdentity"]">
-            <span>@L["Common:Revision"]</span>
-            <strong>#@current.Revision</strong>
-            <IdentifierValue Value="@current.CompositionId" />
-        </div>
-    }
-
-    <div class="workbench-actions">
+    <div class="mo-vl-actions">
         <label class="baseline-file-button">
-            <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Outlined.CompareArrows" Size="Size.Small" />
             <span>@L["Actions:ImportBaseline"]</span>
             <InputFile OnChange="@BaselineSelected" accept="application/json,.json" />
         </label>
         <MudButton Variant="Variant.Outlined"
-                   StartIcon="@Icons.Material.Filled.Download"
+                   StartIcon="@Icons.Material.Outlined.Download"
                    OnClick="@ExportRequested">
             @L["Actions:Export"]
         </MudButton>
-        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                       Color="Color.Primary"
-                       OnClick="@RefreshRequested"
-                       Disabled="@(Session.LoadState == ModuleSystemWorkbenchLoadState.Refreshing)"
-                       aria-label="@L["Aria:Refresh"]" />
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Outlined.Refresh"
+                   OnClick="@RefreshRequested"
+                   Disabled="@(Session.LoadState == ModuleSystemWorkbenchLoadState.Refreshing)">
+            @L["Actions:Refresh"]
+        </MudButton>
         <MudIconButton Icon="@Icons.Material.Outlined.HelpOutline"
                        OnClick="@HelpRequested"
                        aria-label="@L["Aria:OpenHelp"]" />
@@ -98,12 +101,38 @@ else if (Session.BaselineError != ModuleDiagnosticsBaselineError.None)
     [Parameter] public EventCallback<InputFileChangeEventArgs> BaselineSelected { get; set; }
     [Parameter] public EventCallback HelpRequested { get; set; }
 
-    private static Color OutcomeColor(ModuleCompositionOutcome? outcome) => outcome switch
+    private static string ShortIdentity(string identity) => identity.Length > 16
+        ? $"{identity[..8]}…{identity[^4..]}"
+        : identity;
+
+    private async Task CopyCompositionIdAsync(string identity)
     {
-        ModuleCompositionOutcome.Succeeded => Color.Success,
-        ModuleCompositionOutcome.Degraded => Color.Warning,
-        ModuleCompositionOutcome.Failed => Color.Error,
-        _ => Color.Info
+        try
+        {
+            if (await JS.InvokeAsync<bool>("MoClipboard.copyText", identity))
+            {
+                Snackbar.Add(L["Common:Copied"], Severity.Success);
+                return;
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            return;
+        }
+        catch (Exception exception) when (exception is JSException or TaskCanceledException)
+        {
+            // A denied browser clipboard write receives the same localized feedback as a refused copy.
+        }
+
+        Snackbar.Add(L["Common:CopyFailed"], Severity.Error);
+    }
+
+    private static string OutcomeRoleClass(ModuleCompositionOutcome? outcome) => outcome switch
+    {
+        ModuleCompositionOutcome.Succeeded => "mo-vl-role--success",
+        ModuleCompositionOutcome.Degraded => "mo-vl-role--warning",
+        ModuleCompositionOutcome.Failed => "mo-vl-role--error",
+        _ => "mo-vl-role--info"
     };
 
     private static string SignedDuration(double duration) =>

@@ -1,84 +1,15 @@
-.message-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    margin: 0 auto;
-    width: 100%;
-}
-
-.welcome-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    text-align: center;
-    padding: 24px 12px;
-}
-
-.welcome-icon {
-    width: 132px;
-    height: 132px;
-    border-radius: 0;
-    background-color: transparent;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.welcome-icon ::deep .mud-icon-root {
-    font-size: 72px;
-}
-
-.welcome-subtitle {
-    max-width: 420px;
-    color: var(--mud-palette-text-secondary);
-}
-
-.welcome-grid {
-    width: 100%;
-    max-width: 700px;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 16px;
-}
-
-.welcome-grid ::deep .welcome-card {
-    padding: 16px;
-    border-radius: 12px;
-    background-color: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-lines-default);
-}
-
-@media (max-width: 768px) {
-    .message-list {
-        padding: 1rem 0.75rem;
-        gap: 1rem;
-    }
-
-    .welcome-grid {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-    }
-
-    .welcome-panel {
-        justify-content: flex-start;
-        padding: 1.5rem 0.25rem;
-    }
-
-    .welcome-icon {
-        width: 4.5rem;
-        height: 4.5rem;
-    }
-
-    .welcome-icon ::deep .mud-icon-root {
-        font-size: 3rem;
-    }
-}
+.message-list { flex: 1; min-height: 0; min-width: 0; overflow-y: auto; overscroll-behavior: contain; padding: 32px var(--mo-chat-reading-gutter, 32px); }
+.transcript { width: 100%; max-width: var(--mo-chat-reading-width, 960px); margin-inline: auto; display: flex; flex-direction: column; gap: 40px; }
+.conversation-turn { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.welcome-panel { min-height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; width: 100%; max-width: var(--mo-chat-reading-width, 960px); margin-inline: auto; gap: 14px; padding-bottom: 32px; }
+.welcome-mark { display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 4px; border-radius: 12px; color: var(--mud-palette-primary); background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface)); border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-lines-default)); }
+.welcome-title { margin: 0; font-family: var(--mud-typography-h2-family); font-size: 2.125rem; font-weight: 500; line-height: 1.25; letter-spacing: -.025em; }
+.welcome-eyebrow { color: var(--mud-palette-primary); font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.welcome-subtitle { color: var(--mud-palette-text-secondary); max-width: 60ch; line-height: 1.65; }
+.welcome-features { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 16px; color: var(--mud-palette-text-secondary); font-size: .8rem; }
+.welcome-features span { display: flex; gap: 8px; align-items: center; }
+@container chat-main (max-width: 1000px) { .welcome-title { font-size: 1.75rem; } }
+@container chat-main (max-width: 600px) { .message-list { padding-block: 24px; } .welcome-title { font-size: 1.625rem; } .welcome-features { flex-direction: column; gap: 12px; margin-top: 8px; } .welcome-panel { padding-bottom: 12px; } }
+.message-list[data-short="true"] .welcome-panel { justify-content: flex-start; padding-bottom: 0; }
+.message-list[data-short="true"] .welcome-title { font-size: 1.625rem; }
+.message-list[data-short="true"] .welcome-features { margin-top: 4px; }

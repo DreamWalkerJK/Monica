@@ -1,0 +1,53 @@
+.mo-workbench-navigation {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.mo-workbench-navigation ::deep a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    min-width: 0;
+    padding: 10px 14px;
+    border-radius: var(--mud-default-borderradius);
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+    font-family: var(--mud-typography-default-family);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 20px;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.mo-workbench-navigation ::deep a:hover {
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-action-default-hover);
+}
+
+.mo-workbench-navigation ::deep a[aria-current="page"] {
+    color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mud-palette-primary) 9%, var(--mud-palette-surface));
+}
+
+.mo-workbench-navigation ::deep a:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.mo-workbench-navigation ::deep .mud-icon-root {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    color: inherit;
+}
+
+@media (max-width: 700px) {
+    .mo-workbench-navigation { gap: 3px; }
+    .mo-workbench-navigation ::deep a { padding: 9px 10px; }
+}

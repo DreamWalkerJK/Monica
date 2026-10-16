@@ -1,3 +1,6 @@
+@using Monica.AI.UI.Shared.Support
+@implements IAsyncDisposable
+@using Monica.UI.Shared.Components.Dialogs
 @using Microsoft.Extensions.Localization
 @using Monica.AI.RAG.Facades
 @using Monica.AI.RAG.Models
@@ -6,11 +9,12 @@
 @inject RAGVectorStoreFacade VectorStoreFacade
 @inject IStringLocalizer<AIResource> L
 
-<MudDialog>
+<div class="knowledge-dialog-owner">
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" ContentClass="pa-0 knowledge-dialog-content" ActionsClass="pa-0" Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px;overflow:hidden">
+    <TitleContent><MoDialogHeading Text="@L["RAG:VectorDiagnostics:Title"]" /></TitleContent>
     <DialogContent>
         <div class="vector-diagnostics-root">
             <div class="dialog-header">
-                <MudText Typo="Typo.h6">@L["RAG:VectorDiagnostics:Title"]</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     @L["RAG:VectorDiagnostics:Subtitle"]
                 </MudText>
@@ -103,7 +107,7 @@
                                    Color="Color.Primary"
                                    StartIcon="@Icons.Material.Filled.PlayArrow"
                                    OnClick="@TestConnectionAsync"
-                                   Disabled="@_isTesting">
+                                   aria-disabled="@(_isTesting ? "true" : "false")">
                             @(_isTesting ? L["RAG:VectorDiagnostics:Testing"] : L["RAG:VectorDiagnostics:Test"])
                         </MudButton>
                     </div>
@@ -116,7 +120,7 @@
                     }
                     else
                     {
-                        <div class="test-result @(_testResult.Succeeded ? "success" : "failed")">
+                        <div class="test-result @(_testResult.Succeeded ? "success" : "failed")" role="status">
                             <MudIcon Icon="@(_testResult.Succeeded ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.ErrorOutline)"
                                      Size="Size.Small" />
                             <div class="test-result-copy">
@@ -135,11 +139,14 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" OnClick="Close">
-            @L["Common:Actions:Close"]
-        </MudButton>
+        <div class="dialog-actions">
+            <MudButton Variant="Variant.Text" OnClick="Close">
+                @L["Common:Actions:Close"]
+            </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
+</div>
 
 @code {
     [CascadingParameter]
@@ -150,6 +157,7 @@
     private string? _loadErrorMessage;
     private bool _isLoading = true;
     private bool _isTesting;
+    private readonly AIAdministrationOperationLifetime _lifetime = new();
 
     protected override void OnInitialized()
     {
@@ -170,7 +178,7 @@
 
     private async Task TestConnectionAsync()
     {
-        if (_isTesting)
+        if (_lifetime.IsRetired || _isTesting)
         {
             return;
         }
@@ -180,23 +188,25 @@
 
         try
         {
-            var result = await VectorStoreFacade.TestConnectionAsync();
-            if (result.IsFailed(out var error, out var testResult))
+            await _lifetime.RunAsync(async token =>
             {
-                testResult = new VectorStoreConnectionTestResult
+                var result = await VectorStoreFacade.TestConnectionAsync(token);
+                if (result.IsFailed(out var error, out var testResult))
                 {
-                    Succeeded = false,
-                    ProbeCollectionName = string.Empty,
-                    Message = error.Message ?? L["Common:Error"].Value
-                };
-            }
-
-            _testResult = testResult;
+                    testResult = new VectorStoreConnectionTestResult
+                    {
+                        Succeeded = false,
+                        ProbeCollectionName = string.Empty,
+                        Message = error.Message ?? L["Common:Error"].Value
+                    };
+                }
+                _lifetime.TryApply(() => _testResult = testResult);
+            });
         }
+        catch (OperationCanceledException) when (_lifetime.IsRetired) { }
         finally
         {
-            _isTesting = false;
-            StateHasChanged();
+            if (_lifetime.TryApply(() => _isTesting = false)) StateHasChanged();
         }
     }
 
@@ -220,4 +230,7 @@
         => string.IsNullOrWhiteSpace(value) ? "-" : value;
 
     private void Close() => MudDialog.Close();
+
+    /// <summary>Cancels and drains this dialog's connection probe without disposing its borrowed facade.</summary>
+    public ValueTask DisposeAsync() => _lifetime.RetireAsync();
 }

@@ -9,13 +9,15 @@
                          Value="@Value"
                          ValueChanged="SetValueAsync"
                          Min="@Minimum"
+                         Error="@(Value is { } number && number < Minimum)"
+                         ErrorText="@L["Policy:Validation:NumericMinimum", Label, Minimum]"
                          Variant="Variant.Outlined"
                          Margin="Margin.Dense"
                          Disabled="@Disabled"
                          Placeholder="@L["Policy:InheritDefault"]"
                          HelperText="@ZeroHint"
                          aria-label="@Label" />
-        <MudIconButton Icon="@Icons.Material.Filled.Restore"
+        <MudIconButton Icon="@Icons.Material.Outlined.Restore"
                        Size="Size.Small"
                        Disabled="@(Disabled || Value is null)"
                        OnClick="ResetAsync"
@@ -25,27 +27,35 @@
 </div>
 
 @code {
+    /// <summary>Gets or sets the localized field label used by the native input and compact provenance captions.</summary>
     [Parameter, EditorRequired]
     public string Label { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the declaration or scheduler default shown before an override.</summary>
     [Parameter]
     public int Declared { get; set; }
 
+    /// <summary>Gets or sets the nullable override; null inherits the default and an explicit zero remains a value.</summary>
     [Parameter]
     public int? Value { get; set; }
 
+    /// <summary>Raised with the complete nullable override; resetting reports null.</summary>
     [Parameter]
     public EventCallback<int?> ValueChanged { get; set; }
 
+    /// <summary>Gets or sets the effective value after applying the override.</summary>
     [Parameter]
     public int Effective { get; set; }
 
+    /// <summary>Gets or sets the inclusive minimum allowed for an explicit override; the default is zero.</summary>
     [Parameter]
     public int Minimum { get; set; }
 
+    /// <summary>Gets or sets whether native controls are disabled during an admitted save.</summary>
     [Parameter]
     public bool Disabled { get; set; }
 
+    /// <summary>Gets or sets optional localized help explaining an explicit zero for this policy field.</summary>
     [Parameter]
     public string? ZeroHint { get; set; }
 

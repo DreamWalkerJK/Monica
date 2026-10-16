@@ -5,7 +5,9 @@ description: Design or prototype a Monica UI before or alongside Blazor implemen
 
 # Monica UI Design
 
-Understand the UI's task, audience, information density, and key interactions. Inspect existing Monica shell and related pages when the design must fit an existing product. Choose a visual direction that makes the subject clear through hierarchy, type, spacing, and restrained use of color or effects. Read [design guidance](references/aesthetics-guidelines.md) when visual direction is uncertain, and `$monica-ui-development`'s Precision reference when handing a prototype into the default Monica theme.
+Understand the UI's task, audience, information density, and key interactions. Inspect real data, actions, and runtime states before choosing the composition. For operational pages, apply the shared [visual language](../monica-ui-development/references/monica-visual-language.md) and [working-interface language](../monica-ui-development/references/monica-workbench-design-language.md); use [design guidance](references/aesthetics-guidelines.md) for prototype decisions and `$monica-ui-development`'s Precision Default or optional Grove contract for theme handoff. A page redesign does not replace the preserved Default palette.
+
+Every page gets a signature region built from real evidence, a multi-role color map, and clear scale contrast. Restraint is not the default; a neutral page with one accent is a defect, not a style.
 
 Produce the artifact the user needs: a design note, wireframe, interactive prototype, or implementation-ready page specification. Use `.ui-design/{feature}/` for standalone prototype artifacts when the task has no other location. A small prototype may be one `index.html`; split CSS, JavaScript, and mock data only when it helps review. Make meaningful controls interactive and test responsive behavior in a browser. Keep assets local when the prototype is intended for offline or intranet use, and map color roles to MudBlazor palette or approved Monica tokens for an implementation handoff.
 

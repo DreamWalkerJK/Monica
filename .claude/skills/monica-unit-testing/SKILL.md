@@ -40,7 +40,7 @@ Keep production context/provider registration. UseTestDatabase overrides options
 
 Default seams retain real audit policy; replace TimeProvider/current-user/ID inputs. SeedAsync suppresses entity projections. Test `[Outbox]` publishing through the real scoped EventBus gateway, inspect committed row snapshots separately from delivery, and explicitly call DrainOutboxAsync<TContext>. Replace `IEventTransport`, not `IDistributedEventBus`, for provider recording. Include rollback after an early flush, failed results, generated-key capture, immutable payloads, retry identity, Inbox consumer uniqueness, and fresh-scope retries.
 
-When a handler host has multiple write contexts, annotate the ordinary handler with `[UnitOfWorkContext(typeof(PrimaryDbContext), typeof(ParticipantDbContext))]` and test the real receive pipeline. The selected primary context owns Inbox and Outbox rows; verify its final flush after later participants stage projections. Explicit `UnitOfWorkScopeOptions` execution features take precedence over the attribute.
+When a handler host has multiple write contexts, put `[ExecutionTransaction(ExecutionTransactionMode.Automatic, DbContextTypes = new[] { typeof(PrimaryDbContext), typeof(ParticipantDbContext) })]` on its concrete execution method and test the real receive pipeline. The selected primary context owns Inbox and Outbox rows; verify its final flush after later participants stage projections. Follow the persistence [transaction contract](../monica-infra-persistence/references/transactions.md) for selection and explicit execution features.
 
 ## Raw ProjectUnit Fast Path
 

@@ -1,163 +1,194 @@
+@using Microsoft.JSInterop
 @using Monica.Utilities.Localization
 @using Monica.Utilities.Text.Models
+@implements IDisposable
 @inject TextTransformState State
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<UtilitiesResource> L
 
-<div class="text-transform-panel">
-    <MudPaper Class="text-transform-panel__card mo-self-painted pa-4" Elevation="0">
-        <MudStack Spacing="3">
-            <div>
-                <MudText Typo="Typo.h6">@L["TextJson:Title"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["TextJson:Subtitle"]</MudText>
+<div class="text-transform-panel" @ref="_workspace">
+    <div class="transform-toolbar">
+        <div class="transform-operations">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => Execute(TextTransformOperation.DecodeEscapedText))">@L["TextJson:DecodeEscapedText"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => Execute(TextTransformOperation.FormatJson))">@L["TextJson:FormatJson"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => Execute(TextTransformOperation.MinifyJson))">@L["TextJson:MinifyJson"]</MudButton>
+        </div>
+        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="Clear">@L["TextJson:Clear"]</MudButton>
+    </div>
+    <p class="transform-helper">@L["TextJson:Hint"]</p>
+
+    @if (!string.IsNullOrWhiteSpace(State.ErrorMessage))
+    {
+        <section class="transform-error" role="alert" aria-labelledby="text-transform-error-heading">
+            <h2 id="text-transform-error-heading" tabindex="-1" @ref="_errorHeading">@L["TextJson:AttemptFailed", GetOperationText(State.LastAttemptedRequest!.Operation)]</h2>
+            <p>@State.ErrorMessage</p>
+            @if (AttemptInputChanged)
+            {
+                <p class="attempt-context">@L["TextJson:AttemptDraftChanged"]</p>
+            }
+        </section>
+    }
+
+    <div class="editor-grid">
+        <section class="editor-sheet input-sheet" aria-labelledby="text-transform-input-heading">
+            <header class="editor-heading">
+                <h2 id="text-transform-input-heading">@L["TextJson:Input"]</h2>
+            </header>
+            <div class="editor-body">
+                <MudTextField T="string" @ref="_inputEditor" @bind-Value="State.InputText"
+                              Label="@L["TextJson:Input"]" Placeholder="@L["TextJson:InputPlaceholder"]"
+                              Variant="Variant.Outlined" Lines="12" Immediate="true" Class="transform-editor" spellcheck="false" />
             </div>
-
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-                @L["TextJson:Hint"]
-            </MudAlert>
-
-            @if (!string.IsNullOrWhiteSpace(State.ErrorMessage))
-            {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true">
-                    @State.ErrorMessage
-                </MudAlert>
-            }
-            else if (State.LastResult is not null)
-            {
-                <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Dense="true">
-                    @GetResultSummary(State.LastResult)
-                </MudAlert>
-            }
-
-            <MudStack Row="true" Spacing="2" Class="text-transform-panel__actions">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Execute(TextTransformOperation.DecodeEscapedText))">
-                    @L["TextJson:DecodeEscapedText"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => Execute(TextTransformOperation.FormatJson))">
-                    @L["TextJson:FormatJson"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(() => Execute(TextTransformOperation.MinifyJson))">
-                    @L["TextJson:MinifyJson"]
-                </MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Secondary" Disabled="@string.IsNullOrEmpty(State.OutputText)" OnClick="ReuseOutput">
-                    @L["TextJson:UseOutputAsInput"]
-                </MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="@(() => State.Clear())">
-                    @L["TextJson:Clear"]
-                </MudButton>
-            </MudStack>
-
-            <MudGrid Spacing="3">
-                <MudItem xs="12" lg="6">
-                    <MudTextField T="string"
-                                  @bind-Value="State.InputText"
-                                  Label="@L["TextJson:Input"]"
-                                  Placeholder="@L["TextJson:InputPlaceholder"]"
-                                  Variant="Variant.Outlined"
-                                  Lines="18"
-                                  Immediate="true"
-                                  Class="text-transform-panel__editor" />
-                </MudItem>
-                <MudItem xs="12" lg="6">
-                    <MudTextField T="string"
-                                  Value="State.OutputText"
-                                  Label="@L["TextJson:Output"]"
-                                  Placeholder="@L["TextJson:OutputPlaceholder"]"
-                                  Variant="Variant.Outlined"
-                                  Lines="18"
-                                  ReadOnly="true"
-                                  Class="text-transform-panel__editor" />
-                </MudItem>
-            </MudGrid>
-
-            @if (State.LastResult is null)
-            {
-                <div class="text-transform-panel__empty">
-                    <MudStack AlignItems="AlignItems.Center" Spacing="2">
-                        <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Large" Color="Color.Default" />
-                        <MudText Typo="Typo.h6">@L["TextJson:NoOutputTitle"]</MudText>
-                        <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
-                            @L["TextJson:NoOutputSubtitle"]
-                        </MudText>
-                    </MudStack>
+        </section>
+        <section class="@OutputSheetClass" aria-labelledby="text-transform-output-heading">
+            <header class="editor-heading output-heading">
+                <div class="output-identity">
+                    <h2 id="text-transform-output-heading" tabindex="-1" @ref="_outputHeading">@L["TextJson:Output"]</h2>
+                    <p class="output-provenance">
+                        @if (State.LastResult is { } accepted)
+                        {
+                            @L[IsCurrentOutput ? "TextJson:OutputCurrent" : "TextJson:OutputPrevious", GetOperationText(accepted.Operation)]
+                        }
+                        else
+                        {
+                            @L["TextJson:NoAcceptedOutput"]
+                        }
+                    </p>
                 </div>
-            }
-            else
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="@string.IsNullOrEmpty(State.OutputText)" OnClick="ReuseOutput">@L["TextJson:UseOutputAsInput"]</MudButton>
+            </header>
+            <div class="editor-body">
+                <MudTextField T="string" Value="State.OutputText" Label="@L["TextJson:Output"]"
+                              Placeholder="@L["TextJson:OutputPlaceholder"]" Variant="Variant.Outlined"
+                              Lines="12" ReadOnly="true" Class="transform-editor" spellcheck="false" />
+            </div>
+            @if (State.LastResult is { } result)
             {
-                <div class="text-transform-panel__detail">
-                    <MudText Typo="Typo.subtitle1">@L["TextJson:ResultTitle"]</MudText>
-                    <div class="text-transform-panel__stats">
-                        <article class="text-transform-panel__stat">
-                            <span class="text-transform-panel__stat-label">@L["TextJson:Operation"]</span>
-                            <strong>@GetOperationText(State.LastResult.Operation)</strong>
-                        </article>
-                        <article class="text-transform-panel__stat">
-                            <span class="text-transform-panel__stat-label">@L["TextJson:InputLength"]</span>
-                            <strong>@State.LastResult.InputLength</strong>
-                        </article>
-                        <article class="text-transform-panel__stat">
-                            <span class="text-transform-panel__stat-label">@L["TextJson:OutputLength"]</span>
-                            <strong>@State.LastResult.OutputLength</strong>
-                        </article>
-                        <article class="text-transform-panel__stat">
-                            <span class="text-transform-panel__stat-label">@L["TextJson:DecodePasses"]</span>
-                            <strong>@State.LastResult.DecodePasses</strong>
-                        </article>
-                        <article class="text-transform-panel__stat">
-                            <span class="text-transform-panel__stat-label">@L["TextJson:JsonLayers"]</span>
-                            <strong>@State.LastResult.JsonStringLayersRemoved</strong>
-                        </article>
+                <div class="editor-footer">
+                    <div class="accepted-result" aria-label="@L["TextJson:ResultTitle"]">
+                        @if (State.HasInputChanges)
+                        {
+                            <p class="output-context">@L["TextJson:DraftChanged"]</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(State.ErrorMessage))
+                        {
+                            <p class="output-context">@L["TextJson:FailedOutputRetained"]</p>
+                        }
+                        <p class="result-summary">@GetResultSummary(result)</p>
+                        <dl class="result-facts">
+                            <div><dt>@L["TextJson:InputLength"]</dt><dd>@result.InputLength</dd></div>
+                            <div><dt>@L["TextJson:OutputLength"]</dt><dd>@result.OutputLength</dd></div>
+                            <div><dt>@L["TextJson:DecodePasses"]</dt><dd>@result.DecodePasses</dd></div>
+                            <div><dt>@L["TextJson:JsonLayers"]</dt><dd>@result.JsonStringLayersRemoved</dd></div>
+                        </dl>
+                        <p class="result-units">@L["TextJson:LengthUnits"]</p>
                     </div>
                 </div>
             }
-        </MudStack>
-    </MudPaper>
+        </section>
+    </div>
+    <span class="transform-announcement" role="status" aria-live="polite">@_announcement</span>
 </div>
 
 @code {
+    private ElementReference _workspace;
+    private ElementReference _outputHeading;
+    private ElementReference _errorHeading;
+    private MudTextField<string>? _inputEditor;
+    private FocusTarget? _pendingFocus;
+    private string? _announcement;
+    private bool _disposed;
+    private long _focusVersion;
+
+    private bool IsCurrentOutput => State.LatestAttemptSucceeded == true && !State.HasInputChanges;
+    private bool IsChangedOutput => State.AcceptedRequest is { } accepted
+        && !string.Equals(accepted.Input, State.OutputText, StringComparison.Ordinal);
+    private bool AttemptInputChanged => State.LastAttemptedRequest is { } attempted
+        && !string.Equals(attempted.Input, State.InputText, StringComparison.Ordinal);
+    private string OutputSheetClass => $"editor-sheet output-sheet {(State.LastResult is null ? "output-empty" : IsCurrentOutput && IsChangedOutput ? "output-success" : "output-retained")}";
+
     private void Execute(TextTransformOperation operation)
     {
+        if (_disposed) return;
+        _focusVersion++;
         var result = State.Execute(operation);
-        if (result.IsFailed(out var error, out _))
+        if (result.IsFailed(out _, out _))
         {
-            Snackbar.Add(error.Message ?? L["TextJson:ResultTitle"].Value, Severity.Error);
-            return;
+            _announcement = null;
+            _pendingFocus = FocusTarget.Error;
         }
-
-        Snackbar.Add(L["Messages:TransformCompleted"].Value, Severity.Success);
+        else
+        {
+            _announcement = GetResultSummary(State.LastResult!);
+            _pendingFocus = FocusTarget.Output;
+        }
     }
 
     private void ReuseOutput()
     {
+        if (_disposed || string.IsNullOrEmpty(State.OutputText)) return;
+        _focusVersion++;
         State.UseOutputAsInput();
-        Snackbar.Add(L["Messages:OutputReused"].Value, Severity.Info);
+        _announcement = L["Messages:OutputReused"];
+        _pendingFocus = FocusTarget.Input;
     }
 
-    private string GetOperationText(TextTransformOperation operation)
+    private void Clear()
     {
-        return operation switch
-        {
-            TextTransformOperation.DecodeEscapedText => L["TextJson:Operations:DecodeEscapedText"],
-            TextTransformOperation.FormatJson => L["TextJson:Operations:FormatJson"],
-            TextTransformOperation.MinifyJson => L["TextJson:Operations:MinifyJson"],
-            _ => operation.ToString()
-        };
+        if (_disposed) return;
+        _focusVersion++;
+        State.Clear();
+        _announcement = null;
+        _pendingFocus = FocusTarget.Input;
     }
 
-    private string GetResultSummary(TextTransformResult result)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        return result.Operation switch
+        if (_disposed || _pendingFocus is not { } target) return;
+        var focusVersion = _focusVersion;
+        _pendingFocus = null;
+        try
         {
-            TextTransformOperation.DecodeEscapedText when result.DecodePasses > 0 =>
-                L["TextJson:Summary:Decoded", result.DecodePasses].Value,
-            TextTransformOperation.DecodeEscapedText => L["TextJson:Summary:DecodeUnchanged"].Value,
-            TextTransformOperation.FormatJson when result.JsonStringLayersRemoved > 0 =>
-                L["TextJson:Summary:FormattedWithLayers", result.JsonStringLayersRemoved].Value,
-            TextTransformOperation.FormatJson => L["TextJson:Summary:Formatted"].Value,
-            TextTransformOperation.MinifyJson when result.JsonStringLayersRemoved > 0 =>
-                L["TextJson:Summary:MinifiedWithLayers", result.JsonStringLayersRemoved].Value,
-            TextTransformOperation.MinifyJson => L["TextJson:Summary:Minified"].Value,
-            _ => L["Messages:TransformCompleted"].Value
-        };
+            if (target == FocusTarget.Input)
+            {
+                if (!_disposed && _inputEditor is not null) await _inputEditor.FocusAsync();
+                return;
+            }
+
+            // The CSS grid uses this same unpadded owner, including the shell's Sidebar width.
+            var bounds = await _workspace.MudGetBoundingClientRectAsync();
+            if (_disposed || focusVersion != _focusVersion || bounds.Width >= 900) return;
+            if (target == FocusTarget.Error) await _errorHeading.FocusAsync();
+            else await _outputHeading.FocusAsync();
+        }
+        catch (JSDisconnectedException) { }
+        catch (OperationCanceledException) when (_disposed) { }
     }
+
+    private string GetOperationText(TextTransformOperation operation) => operation switch
+    {
+        TextTransformOperation.DecodeEscapedText => L["TextJson:Operations:DecodeEscapedText"],
+        TextTransformOperation.FormatJson => L["TextJson:Operations:FormatJson"],
+        TextTransformOperation.MinifyJson => L["TextJson:Operations:MinifyJson"],
+        _ => operation.ToString()
+    };
+
+    private string GetResultSummary(TextTransformResult result) => result.Operation switch
+    {
+        TextTransformOperation.DecodeEscapedText when result.DecodePasses > 0 => L["TextJson:Summary:Decoded", result.DecodePasses],
+        TextTransformOperation.DecodeEscapedText => L["TextJson:Summary:DecodeUnchanged"],
+        TextTransformOperation.FormatJson when result.JsonStringLayersRemoved > 0 => L["TextJson:Summary:FormattedWithLayers", result.JsonStringLayersRemoved],
+        TextTransformOperation.FormatJson => L["TextJson:Summary:Formatted"],
+        TextTransformOperation.MinifyJson when result.JsonStringLayersRemoved > 0 => L["TextJson:Summary:MinifiedWithLayers", result.JsonStringLayersRemoved],
+        TextTransformOperation.MinifyJson => L["TextJson:Summary:Minified"],
+        _ => L["Messages:TransformCompleted"]
+    };
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _focusVersion++;
+        _pendingFocus = null;
+    }
+
+    private enum FocusTarget { Input, Output, Error }
 }

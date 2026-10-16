@@ -64,7 +64,7 @@ public sealed class ShadowCopyAnalyzerAssemblyLoader : IAnalyzerAssemblyLoader
     /// through shadow copies instead of Roslyn's original-file-mapping default.
     /// </summary>
     public static MSBuildWorkspace CreateWorkspace()
-        => MSBuildWorkspace.Create(HOST_SERVICES);
+        => MSBuildWorkspace.Create(ProjectUnitBuildInputs.CreateGlobalProperties(), HOST_SERVICES);
 
     private string ShadowCopy(string sourcePath)
     {

@@ -4,13 +4,13 @@
 
 - Work should run on a schedule.
 - Work should be triggered asynchronously with typed parameters.
-- The business logic is long-running or retriable enough that it should not stay inside an event handler or request handler.
+- Work needs its own execution policy, operator control, or execution history.
 
 ## Rules
 
 - Use `RecurringJob` for scheduled work and name it `Worker*`.
 - Use `TriggeredJob<TArgs>` for on-demand asynchronous work and name it `Job*`.
-- Keep the job focused on scheduling, retry, and orchestration. Put reusable business behavior in a `DomainService`.
+- Keep the job focused on its execution lifecycle and orchestration. Entities own invariants; use a DomainService only for a meaningful rule without a natural entity owner. Retry or durability configuration needs an actual feature requirement.
 - Add `[JobConfig]` only when defaults are not enough. Use `$monica-infra-jobs` for scheduler registration, durable store, owner/scope identity, and execution semantics.
 - Inject `ILogger<TConcreteJob>` and pass it to the job base constructor.
 - Use `$ApplicationNamespace$` for the application-layer namespace chosen by the architecture skill.
@@ -29,7 +29,6 @@ namespace $ApplicationNamespace$.BackgroundWorkers;
 [JobConfig(CronSchedule = "0 */5 * * * *", RetryCount = 3)]
 [ProjectUnitMetadata(
     "Refresh Order Snapshot Worker",
-    Owner = "$Owner$",
     Description = "Refreshes order snapshots on a fixed schedule.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]
@@ -61,7 +60,6 @@ public sealed class RefreshOrderSnapshotArgs
 
 [ProjectUnitMetadata(
     "Refresh Order Snapshot Job",
-    Owner = "$Owner$",
     Description = "Refreshes one order snapshot asynchronously.",
     Tags = ["$SubdomainTag$", "$FeatureTag$"])]
 [ProjectUnitRequirement("$RequirementId$")]

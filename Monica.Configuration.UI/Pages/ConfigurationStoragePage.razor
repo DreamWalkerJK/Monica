@@ -1,528 +1,206 @@
 @attribute [Route(PAGE_URL)]
+@implements IAsyncDisposable
 @inject ConfigurationFacade Facade
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <PageTitle>@L["Pages:ConfigurationStorage:Title"]</PageTitle>
-
-<div class="configuration-storage-page">
-<MudContainer MaxWidth="MaxWidth.False">
-    <MudStack Spacing="3">
-        <ConfigurationPageHeader Title="@L["Pages:ConfigurationStorage:Title"]"
-                                 Subtitle="@L["Storage:Subtitle"]"
-                                 Icon="@Icons.Material.Filled.Storage">
-            <Actions>
-                <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                   Variant="Variant.Outlined"
-                                   OnClick="LoadAsync"
-                                   aria-label="@L["Common:Actions:Refresh"]" />
-                </MudTooltip>
-            </Actions>
-        </ConfigurationPageHeader>
-
-        @if (_loading)
-        {
-            <MudProgressLinear Indeterminate="true" />
-        }
-        else if (_overview is null)
-        {
-            <MudAlert Severity="Severity.Info">@L["Storage:Empty"]</MudAlert>
-        }
-        else
-        {
-            <MudPaper Outlined="true" Class="pa-3">
-                <MudStack Spacing="2">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.subtitle2">@L["Sources:Runtime:Title"]</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Sources:Runtime:Subtitle"]</MudText>
-                        </MudStack>
-                        <MudChip T="int" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">@_sourceInventories.Count</MudChip>
-                    </MudStack>
+<div class="configuration-storage-page" aria-busy="@(_loading ? "true" : "false")">
+    <ConfigurationPageHeader Title="@L["Pages:ConfigurationStorage:Title"]" Subtitle="@L["Storage:Subtitle"]">
+        <Actions><MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@_loading" OnClick="LoadAsync">@L["Common:Actions:Refresh"]</MudButton></Actions>
+    </ConfigurationPageHeader>
+    <ConfigurationWorkbenchNavigation ActiveRoute="@PAGE_URL" />
+    @if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
+    <div class="configuration-storage-tabs">
+        <MudTabs MinimumTabWidth="140px" Elevation="0" Rounded="false" KeepPanelsAlive="true">
+            <MudTabPanel Text="@L["Storage:Workbench:SourcesTab"]" Icon="@Icons.Material.Outlined.AccountTree">
+                <section class="configuration-source-workspace">
+                    <header class="configuration-source-feature">
+                        <div><span class="configuration-storage-feature-label">@L["Storage:Workbench:SourcesTab"]</span><h2>@L["Sources:Runtime:Title"]</h2><p>@L["Sources:Runtime:Subtitle"]</p></div>
+                        <div class="configuration-source-observation">
+                            @if (_hasLoadedSourceInventories) { <strong>@L["Storage:Workbench:SourceCount", _sourceInventories.Count]</strong> }
+                            @if (_sourceInventoriesObservedAtUtc is { } observed) { <span>@L["Storage:Workbench:AcceptedAt"]</span><time datetime="@observed.ToString("O")">@observed.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time> }
+                        </div>
+                    </header>
+                    <div class="configuration-source-evidence">
+                    <div class="configuration-source-filter"><MudTextField T="string" @bind-Value="_sourceSearchText" Label="@L["Storage:Workbench:SearchSources"]" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />@if (_hasLoadedSourceInventories) { <p>@L["Storage:Workbench:SourcesShowing", FilteredSourceInventories.Count(), _sourceInventories.Count]</p> }</div>
                     @if (!string.IsNullOrWhiteSpace(_sourceInventoryLoadError))
                     {
-                        <MudAlert Severity="Severity.Error">@($"{L["Common:Errors:LoadFailed"]}: {_sourceInventoryLoadError}")</MudAlert>
+                        <div class="configuration-storage-feedback"><MudAlert Severity="Severity.Error">@_sourceInventoryLoadError</MudAlert></div>
                     }
-                    else if (_sourceInventories.Count == 0)
+                    @if (_hasLoadedSourceInventories && _sourceInventories.Count == 0)
                     {
-                        <MudAlert Severity="Severity.Info">@L["Sources:Empty"]</MudAlert>
+                        <div class="configuration-storage-empty"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" /><p>@L["Sources:Empty"]</p></div>
                     }
-                    else
+                    else if (_hasLoadedSourceInventories && !FilteredSourceInventories.Any())
                     {
-                        <MudExpansionPanels MultiExpansion="true" Elevation="0" Dense="true" Class="configuration-source-panels">
-                            @foreach (var inventory in _sourceInventories)
-                            {
-                                <MudExpansionPanel Class="configuration-source-panel">
-                                    <TitleContent>
-                                        <div class="configuration-source-title">
-                                            <MudChip T="int"
-                                                     Size="Size.Small"
-                                                     Color="Color.Default"
-                                                     Variant="Variant.Outlined">
-                                                @inventory.Source.PriorityIndex
-                                            </MudChip>
-                                            <div class="configuration-source-title-main">
-                                                <MudText Typo="Typo.body2">@inventory.Source.DisplayName</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@SourcePath(inventory.Source)</MudText>
+                        <div class="configuration-storage-empty"><MudIcon Icon="@Icons.Material.Outlined.SearchOff" /><p>@L["Storage:Workbench:NoSourcesMatch"]</p></div>
+                    }
+                    else if (FilteredSourceInventories.Any())
+                    {
+                        <div class="configuration-source-panels">
+                            <MudExpansionPanels MultiExpansion="true" Elevation="0" Square="true" Outlined="false" Gutters="false">
+                                @foreach (var inventory in FilteredSourceInventories)
+                                {
+                                    <MudExpansionPanel @key="inventory.Source.SourceKey">
+                                        <TitleContent>
+                                            <div class="configuration-source-title">
+                                                <span class="configuration-source-priority">@L["Sources:Columns:Priority"] <strong>@inventory.Source.PriorityIndex</strong></span>
+                                                <div class="configuration-source-title-main"><h3>@inventory.Source.DisplayName</h3><code>@inventory.Source.SourceKey</code></div>
+                                                <div class="configuration-source-counts"><span data-tone="info">@L["Sources:Inventory:SuppliedCount", inventory.SuppliedValueCount]</span><span data-tone="success">@L["Sources:Inventory:EffectiveCount", inventory.EffectiveValueCount]</span><span>@L["Sources:Inventory:ManagedCount", inventory.ManagedValueCount]</span><span data-tone="warning">@L["Sources:Inventory:UnmanagedCount", inventory.UnmanagedValueCount]</span></div>
                                             </div>
-                                            <div class="configuration-source-title-actions">
-                                                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1">
-                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@inventory.Source.Kind</MudChip>
-                                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                                                        @L["Sources:Inventory:SuppliedCount", inventory.SuppliedValueCount]
-                                                    </MudChip>
-                                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
-                                                        @L["Sources:Inventory:EffectiveCount", inventory.EffectiveValueCount]
-                                                    </MudChip>
-                                                    @if (inventory.ManagedValueCount > 0)
-                                                    {
-                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                                                            @L["Sources:Inventory:ManagedCount", inventory.ManagedValueCount]
-                                                        </MudChip>
-                                                    }
-                                                    @if (inventory.UnmanagedValueCount > 0)
-                                                    {
-                                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                                                            @L["Sources:Inventory:UnmanagedCount", inventory.UnmanagedValueCount]
-                                                        </MudChip>
-                                                    }
-                                                    <MudChip T="string" Size="Size.Small" Color="@(inventory.Source.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined">
-                                                        @(inventory.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
-                                                    </MudChip>
-                                                    @if (inventory.Source.IsManagedByMonica)
-                                                    {
-                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">@L["Sources:Managed"]</MudChip>
-                                                    }
-                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@ReloadText(inventory.Source)</MudChip>
-                                                    @if (inventory.Source.Kind == ConfigurationSourceKind.JsonFile)
-                                                    {
-                                                        <MudTooltip Text="@L["Sources:Actions:ViewFile"]">
-                                                            <MudIconButton Icon="@Icons.Material.Filled.Article"
-                                                                           Size="Size.Small"
-                                                                           OnClick="() => ViewFileAsync(inventory.Source)" />
-                                                        </MudTooltip>
-                                                    }
-                                                </MudStack>
-                                            </div>
-                                        </div>
-                                    </TitleContent>
-                                    <ChildContent>
-                                        @if (inventory.Items.Count == 0)
-                                        {
-                                            <MudAlert Severity="Severity.Info">@L["Sources:Inventory:NoItems"]</MudAlert>
-                                        }
-                                        else
-                                        {
-                                            <div class="configuration-source-groups">
-                                                @foreach (var group in SourceInventoryGroups(inventory))
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <div class="configuration-source-content">
+                                                <div class="configuration-source-toolbar">
+                                                    <div class="configuration-storage-badges"><span>@inventory.Source.Kind</span><span data-tone="@(inventory.Source.IsWritable ? "info" : "secondary")">@(inventory.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])</span><span data-tone="@(inventory.Source.IsManagedByMonica ? "primary" : "warning")">@(inventory.Source.IsManagedByMonica ? L["Sources:Managed"] : L["Sources:Unmanaged"])</span></div>
+                                                    @if (inventory.Source.Kind == ConfigurationSourceKind.JsonFile) { <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.Article" OnClick="() => ViewFileAsync(inventory.Source)">@L["Sources:Actions:ViewFile"]</MudButton> }
+                                                </div>
+                                                <dl class="configuration-storage-facts">
+                                                    <div><dt>@L["Sources:File:SourceKey"]</dt><dd><code>@inventory.Source.SourceKey</code></dd></div>
+                                                    <div><dt>@L["Sources:File:ProviderType"]</dt><dd><code>@inventory.Source.ProviderType</code></dd></div>
+                                                    @if (inventory.Source.PhysicalPath is not null) { <div class="configuration-storage-fact-wide"><dt>@L["Sources:File:PhysicalPath"]</dt><dd><code>@inventory.Source.PhysicalPath</code></dd></div> }
+                                                    @if (inventory.Source.SourcePath is not null) { <div><dt>@L["Sources:File:DeclaredPath"]</dt><dd><code>@inventory.Source.SourcePath</code></dd></div> }
+                                                    <div><dt>@L["Storage:Workbench:Reload"]</dt><dd>@ReloadText(inventory.Source)</dd></div>
+                                                    @if (inventory.Source.Optional is { } optional) { <div><dt>@L["Storage:Workbench:SourceOptional"]</dt><dd>@(optional ? L["Storage:Workbench:Optional"] : L["Storage:Workbench:Required"])</dd></div> }
+                                                    @if (!string.IsNullOrWhiteSpace(inventory.Source.ReadOnlyReason)) { <div class="configuration-storage-fact-wide"><dt>@L["Storage:Workbench:ReadOnlyReason"]</dt><dd>@inventory.Source.ReadOnlyReason</dd></div> }
+                                                    @if (!string.IsNullOrWhiteSpace(inventory.Source.Description)) { <div class="configuration-storage-fact-wide"><dt>@L["Storage:Workbench:Description"]</dt><dd>@inventory.Source.Description</dd></div> }
+                                                </dl>
+                                                @if (inventory.Items.Count == 0) { <div class="configuration-storage-empty"><p>@L["Sources:Inventory:NoItems"]</p></div> }
+                                                else
                                                 {
-                                                    <div class="@SourceGroupClass(group)">
-                                                        <MudPaper Outlined="true" Class="pa-3 configuration-source-group-card">
-                                                            <MudStack Spacing="2">
-                                                                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                                                                    <MudStack Spacing="0">
-                                                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                                            <MudText Typo="Typo.subtitle2">@group.Title</MudText>
-                                                                            @if (group.UnmanagedCount > 0)
-                                                                            {
-                                                                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                                                                                    @L["Sources:Unmanaged"]
-                                                                                </MudChip>
-                                                                            }
-                                                                            @if (group.EffectiveCount == group.Items.Count)
-                                                                            {
-                                                                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
-                                                                                    @L["Sources:Effective"]
-                                                                                </MudChip>
-                                                                            }
-                                                                        </MudStack>
-                                                                        @if (!string.IsNullOrWhiteSpace(group.Subtitle))
-                                                                        {
-                                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@group.Subtitle</MudText>
-                                                                        }
-                                                                    </MudStack>
-                                                                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1">
-                                                                        <MudChip T="int" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                                                                            @L["Sources:Inventory:ItemCount", group.Items.Count]
-                                                                        </MudChip>
-                                                                        @if (group.EffectiveCount > 0 && group.EffectiveCount != group.Items.Count)
-                                                                        {
-                                                                            <MudChip T="int" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
-                                                                                @L["Sources:Inventory:EffectiveCount", group.EffectiveCount]
-                                                                            </MudChip>
-                                                                        }
-                                                                    </MudStack>
-                                                                </MudStack>
-
-                                                                <div class="configuration-source-value-grid" role="table">
-                                                                    <div class="configuration-source-value-header" role="row">
-                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Sources:Inventory:FieldColumn"]</MudText>
-                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Sources:Inventory:ValueColumn"]</MudText>
-                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Sources:Inventory:StateColumn"]</MudText>
-                                                                    </div>
-                                                                    @foreach (var item in group.Items)
-                                                                    {
-                                                                        var overridingSource = OverridingSourceFor(item, inventory.Source);
-                                                                        <div class="@SourceItemRowClass(item)" role="row">
-                                                                            <div class="configuration-source-value-field" role="cell">
-                                                                                <MudText Typo="Typo.body2">@FieldLabel(item)</MudText>
-                                                                                <MudTooltip Text="@item.ConfigurationPath">
-                                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="configuration-source-value-path">
-                                                                                        @item.RelativeConfigurationPath
-                                                                                    </MudText>
-                                                                                </MudTooltip>
-                                                                            </div>
-                                                                            <MudText Typo="Typo.body2" Class="configuration-source-value-content" role="cell">@DisplayValue(item)</MudText>
-                                                                            <div class="configuration-source-value-state" role="cell">
-                                                                                @if (item.IsEffective)
-                                                                                {
-                                                                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
-                                                                                        @L["Sources:Effective"]
-                                                                                    </MudChip>
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                    <MudTooltip Placement="Placement.Left" Arrow="true">
-                                                                                        <ChildContent>
-                                                                                            <span class="configuration-source-overridden-state">
-                                                                                                @L["Sources:Inventory:Overridden"]
+                                                    <div class="configuration-source-groups">
+                                                        @foreach (var group in SourceInventoryGroups(inventory))
+                                                        {
+                                                            <section class="configuration-source-group" data-effective="@(group.EffectiveCount == group.Items.Count ? "true" : "false")">
+                                                                <header><div><h4>@group.Title</h4>@if (!string.IsNullOrWhiteSpace(group.Subtitle)) { <code>@group.Subtitle</code> }</div><div class="configuration-source-counts"><span>@L["Sources:Inventory:ItemCount", group.Items.Count]</span><span data-tone="success">@L["Sources:Inventory:EffectiveCount", group.EffectiveCount]</span>@if (group.UnmanagedCount > 0) { <span data-tone="warning">@L["Sources:Unmanaged"]</span> }</div></header>
+                                                                <div class="configuration-source-table-owner">
+                                                                    <MudTable T="ConfigurationSourceInventoryItem" Items="@group.Items" Dense="true" Hover="true" Elevation="0" Square="true" Breakpoint="Breakpoint.Sm" RowsPerPage="10" Class="configuration-source-table">
+                                                                        <ColGroup><col style="width: 38%" /><col style="width: 40%" /><col style="width: 22%" /></ColGroup>
+                                                                        <HeaderContent><MudTh>@L["Sources:Inventory:FieldColumn"]</MudTh><MudTh>@L["Sources:Inventory:ValueColumn"]</MudTh><MudTh>@L["Sources:Inventory:StateColumn"]</MudTh></HeaderContent>
+                                                                        <RowTemplate>
+                                                                            <MudTd DataLabel="@L["Sources:Inventory:FieldColumn"]"><div class="configuration-source-field"><strong>@FieldLabel(context)</strong><code>@context.ConfigurationPath</code></div></MudTd>
+                                                                            <MudTd DataLabel="@L["Sources:Inventory:ValueColumn"]"><code class="configuration-source-value" data-sensitive="@(context.IsSensitive ? "true" : "false")">@DisplayValue(context)</code></MudTd>
+                                                                            <MudTd DataLabel="@L["Sources:Inventory:StateColumn"]">
+                                                                                <div class="configuration-source-state" data-tone="@(context.IsEffective ? "success" : "secondary")">
+                                                                                    @if (context.IsEffective)
+                                                                                    {
+                                                                                        <span>@L["Sources:Effective"]</span>
+                                                                                    }
+                                                                                    else
+                                                                                    {
+                                                                                        var overriddenExplanation = OverriddenTooltip(OverridingSourceFor(context, inventory.Source));
+                                                                                        <MudTooltip Text="@overriddenExplanation" ShowOnFocus="true" ShowOnHover="true" Placement="Placement.Top">
+                                                                                            <span class="configuration-source-state-detail" tabindex="0" role="note" aria-label="@($"{L["Sources:Inventory:Overridden"]}. {overriddenExplanation}")">
+                                                                                                @L["Sources:Inventory:Overridden"]<MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" aria-hidden="true" />
                                                                                             </span>
-                                                                                        </ChildContent>
-                                                                                        <TooltipContent>
-                                                                                            <div class="configuration-source-overridden-tooltip">
-                                                                                                @OverriddenTooltip(overridingSource)
-                                                                                            </div>
-                                                                                        </TooltipContent>
-                                                                                    </MudTooltip>
-                                                                                }
-                                                                            </div>
-                                                                        </div>
-                                                                    }
+                                                                                        </MudTooltip>
+                                                                                    }
+                                                                                </div>
+                                                                            </MudTd>
+                                                                        </RowTemplate>
+                                                                        <PagerContent><MudTablePager PageSizeOptions="@(new[] { 10, 25, 50 })" RowsPerPageString="@L["Storage:Workbench:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
+                                                                    </MudTable>
                                                                 </div>
-                                                            </MudStack>
-                                                        </MudPaper>
+                                                            </section>
+                                                        }
                                                     </div>
                                                 }
                                             </div>
-                                        }
-                                    </ChildContent>
-                                </MudExpansionPanel>
-                            }
-                        </MudExpansionPanels>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                }
+                            </MudExpansionPanels>
+                        </div>
                     }
-                </MudStack>
-            </MudPaper>
-
-            <MudGrid Spacing="2">
-                <MudItem xs="12" md="4">
-                    @StoreCard(L["Storage:Roles:EffectiveValues"], _overview.EffectiveValueStore)
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    @StoreCard(L["Storage:Roles:History"], _overview.HistoryStore)
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    @StoreCard(L["Storage:Roles:Metadata"], _overview.MetadataStore)
-                </MudItem>
-            </MudGrid>
-
-            <MudPaper Outlined="true" Class="pa-3">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                    <MudStack Spacing="0">
-                        <MudText Typo="Typo.subtitle2">@L["Storage:Notifications:Title"]</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Storage:Notifications:Subtitle"]</MudText>
-                    </MudStack>
-                    <MudChip T="string"
-                             Color="@(_overview.HasChangeNotifier ? Color.Success : Color.Default)"
-                             Variant="@(_overview.HasChangeNotifier ? Variant.Filled : Variant.Outlined)">
-                        @(_overview.HasChangeNotifier ? L["Storage:Notifications:Registered"] : L["Storage:Notifications:NotRegistered"])
-                    </MudChip>
-                </MudStack>
-            </MudPaper>
-        }
-    </MudStack>
-</MudContainer>
+                    else if (_loading) { <div class="configuration-storage-empty"><p>@L["Common:States:Loading"]</p></div> }
+                    </div>
+                </section>
+            </MudTabPanel>
+            <MudTabPanel Text="@L["Storage:Workbench:StoresTab"]" Icon="@Icons.Material.Outlined.Storage">
+                <section class="configuration-store-workspace">
+                    <header><div><h2>@L["Storage:Workbench:StoresTab"]</h2><p>@L["Storage:Workbench:OverviewHelp"]</p></div>@if (_overviewObservedAtUtc is { } observed) { <div class="configuration-storage-observation"><span>@L["Storage:Workbench:AcceptedAt"]</span><time datetime="@observed.ToString("O")">@observed.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time></div> }</header>
+                    @if (!string.IsNullOrWhiteSpace(_overviewLoadError)) { <div class="configuration-storage-feedback"><MudAlert Severity="Severity.Error">@_overviewLoadError</MudAlert></div> }
+                    @if (!string.IsNullOrWhiteSpace(_storeStateLoadError)) { <div class="configuration-storage-feedback"><MudAlert Severity="Severity.Error">@_storeStateLoadError</MudAlert></div> }
+                    @if (_overview is not null)
+                    {
+                        <div class="configuration-store-dossiers">
+                            @foreach (var role in new[] { (Label: L["Storage:Roles:EffectiveValues"].Value, Store: _overview.EffectiveValueStore), (Label: L["Storage:Roles:History"].Value, Store: _overview.HistoryStore), (Label: L["Storage:Roles:Metadata"].Value, Store: _overview.MetadataStore) })
+                            {
+                                var state = _states.FirstOrDefault(candidate => string.Equals(candidate.StoreKey, role.Store.StoreKey, StringComparison.OrdinalIgnoreCase));
+                                <article class="configuration-store-dossier">
+                                    <header><span>@role.Label</span><h3>@role.Store.DisplayName</h3></header>
+                                    <dl class="configuration-storage-facts"><div><dt>@L["Storage:Workbench:StoreKey"]</dt><dd><code>@role.Store.StoreKey</code></dd></div><div><dt>@L["Storage:Workbench:Kind"]</dt><dd>@role.Store.Kind</dd></div><div><dt>@L["Storage:Workbench:WriteAccess"]</dt><dd>@(role.Store.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])</dd></div></dl>
+                                    <dl class="configuration-store-capabilities">
+                                        @foreach (var capability in new[] { (Label: L["Storage:Capabilities:EffectiveValues"].Value, Supported: role.Store.SupportsEffectiveValues), (Label: L["Storage:Capabilities:History"].Value, Supported: role.Store.SupportsHistory), (Label: L["Storage:Capabilities:Metadata"].Value, Supported: role.Store.SupportsMetadata), (Label: L["Storage:Notifications:Title"].Value, Supported: role.Store.SupportsNotifications) })
+                                        { <div data-supported="@(capability.Supported ? "true" : "false")"><dt>@capability.Label</dt><dd><MudIcon Icon="@(capability.Supported ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.RemoveCircleOutline)" Size="Size.Small" />@(capability.Supported ? L["Storage:Workbench:Supported"] : L["Storage:Workbench:NotSupported"])</dd></div> }
+                                    </dl>
+                                    <section class="configuration-store-operation" data-outcome="@(!_hasLoadedStoreStates || !HasRecordedOperation(state) ? "unknown" : state!.LastOperationSucceeded ? "success" : "error")">
+                                        <h4>@L["Storage:Workbench:LatestOperation"]</h4>
+                                        @if (!_hasLoadedStoreStates) { <p>@L["Storage:Workbench:NotAvailable"]</p> }
+                                        else if (state is null || !HasRecordedOperation(state)) { <p>@L["Storage:State:Unknown"]</p> }
+                                        else
+                                        {
+                                            <strong>@(state!.LastOperationSucceeded ? L["Storage:State:Succeeded"] : L["Storage:State:Failed"])</strong>
+                                            <dl><div><dt>@L["Storage:Workbench:OperationTime"]</dt><dd>@if (state!.LastOperationTime is { } recorded) { <time datetime="@recorded.ToString("O")">@recorded.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time> } else { @L["Storage:Workbench:NotAvailable"] }</dd></div></dl>
+                                            @if (state.LastError is not null) { <dl><div><dt>@L["Storage:Workbench:OperationError"]</dt><dd>@state.LastError</dd></div></dl> }
+                                        }
+                                    </section>
+                                </article>
+                            }
+                        </div>
+                        <section class="configuration-store-notifier"><div><h3>@L["Storage:Notifications:Title"]</h3><p>@L["Storage:Notifications:Subtitle"]</p></div><span data-tone="@(_overview.HasChangeNotifier ? "primary" : "secondary")">@(_overview.HasChangeNotifier ? L["Storage:Notifications:Registered"] : L["Storage:Notifications:NotRegistered"])</span></section>
+                    }
+                    else if (_hasLoadedOverview) { <div class="configuration-storage-empty"><p>@L["Storage:Empty"]</p></div> }
+                    else if (_loading) { <div class="configuration-storage-empty"><p>@L["Common:States:Loading"]</p></div> }
+                    @if (_overview is null && _hasLoadedStoreStates)
+                    {
+                        <section class="configuration-store-operation-ledger">
+                            <header><h3>@L["Storage:Workbench:LatestOperation"]</h3><p>@L["Storage:Workbench:OperationEvidenceHelp"]</p></header>
+                            @if (_states.Count == 0)
+                            {
+                                <div class="configuration-storage-empty"><p>@L["Storage:State:Unknown"]</p></div>
+                            }
+                            else
+                            {
+                                <div class="configuration-store-dossiers">
+                                    @foreach (var state in _states)
+                                    {
+                                        <article @key="state.StoreKey" class="configuration-store-dossier">
+                                            <header><span>@L["Storage:Workbench:StoreKey"]</span><h3><code>@state.StoreKey</code></h3></header>
+                                            <section class="configuration-store-operation" data-outcome="@(!HasRecordedOperation(state) ? "unknown" : state.LastOperationSucceeded ? "success" : "error")">
+                                                @if (!HasRecordedOperation(state)) { <p>@L["Storage:State:Unknown"]</p> }
+                                                else
+                                                {
+                                                    <strong>@(state.LastOperationSucceeded ? L["Storage:State:Succeeded"] : L["Storage:State:Failed"])</strong>
+                                                    <dl><div><dt>@L["Storage:Workbench:OperationTime"]</dt><dd>@if (state.LastOperationTime is { } recorded) { <time datetime="@recorded.ToString("O")">@recorded.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time> } else { @L["Storage:Workbench:NotAvailable"] }</dd></div></dl>
+                                                    @if (state.LastError is not null) { <dl><div><dt>@L["Storage:Workbench:OperationError"]</dt><dd>@state.LastError</dd></div></dl> }
+                                                }
+                                            </section>
+                                        </article>
+                                    }
+                                </div>
+                            }
+                        </section>
+                    }
+                    @if (_storeStatesObservedAtUtc is { } operationsObserved) { <footer class="configuration-storage-observation"><span>@L["Storage:Workbench:LatestOperation"] · @L["Storage:Workbench:AcceptedAt"]</span><time datetime="@operationsObserved.ToString("O")">@operationsObserved.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time></footer> }
+                </section>
+            </MudTabPanel>
+        </MudTabs>
+    </div>
 </div>
 
 @code {
-    public const string PAGE_URL = ConfigurationUiRoutes.STORAGE_ROUTE;
+    private static bool HasRecordedOperation(ConfigurationStoreState? state) =>
+        state is not null && (state.LastOperationTime.HasValue ||
+                              !state.LastOperationSucceeded ||
+                              !string.IsNullOrWhiteSpace(state.LastError));
+    private string _sourceSearchText = string.Empty;
+    private IEnumerable<ConfigurationSourceInventory> FilteredSourceInventories => string.IsNullOrWhiteSpace(_sourceSearchText)
+        ? _sourceInventories : _sourceInventories.Where(inventory => SourceMatches(inventory.Source));
 
-    private readonly List<ConfigurationStoreState> _states = [];
-    private readonly List<ConfigurationSourceInventory> _sourceInventories = [];
-    private ConfigurationStorageOverview? _overview;
-    private string? _sourceInventoryLoadError;
-    private bool _loading = true;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        _loading = true;
-        var overviewResult = await Facade.GetStorageOverviewAsync();
-        if (overviewResult.IsFailed(out var overviewError, out var overview))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {overviewError.Message}", Severity.Error);
-            _overview = null;
-        }
-        else
-        {
-            _overview = overview;
-        }
-
-        var stateResult = await Facade.GetStoreStatesAsync();
-        if (!stateResult.IsFailed(out _, out var states))
-        {
-            _states.Clear();
-            _states.AddRange(states);
-        }
-
-        var sourceResult = await Facade.GetConfigurationSourceInventoriesAsync();
-        _sourceInventories.Clear();
-        if (sourceResult.IsFailed(out var sourceError, out var sourceInventories))
-        {
-            _sourceInventoryLoadError = sourceError.Message;
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {sourceError.Message}", Severity.Error);
-        }
-        else
-        {
-            _sourceInventoryLoadError = null;
-            _sourceInventories.AddRange(sourceInventories);
-        }
-
-        _loading = false;
-    }
-
-    private async Task ViewFileAsync(ConfigurationSourceDescriptor source)
-    {
-        var parameters = new DialogParameters<ConfigurationSourceFileDialog>();
-        parameters.Add(dialog => dialog.SourceKey, source.SourceKey);
-        await DialogService.ShowAsync<ConfigurationSourceFileDialog>(L["Sources:File:Title", source.DisplayName], parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true
-        });
-    }
-
-    private string SourcePath(ConfigurationSourceDescriptor source)
-    {
-        return source.PhysicalPath ?? source.SourcePath ?? source.ProviderType;
-    }
-
-    private string ReloadText(ConfigurationSourceDescriptor source)
-    {
-        return source.ReloadOnChange is null
-            ? L["Sources:Reload:Unknown"]
-            : source.ReloadOnChange.Value ? L["Sources:Reload:Enabled"] : L["Sources:Reload:Disabled"];
-    }
-
-    private IReadOnlyList<SourceInventoryGroup> SourceInventoryGroups(ConfigurationSourceInventory inventory)
-    {
-        return inventory.Items
-            .GroupBy(SourceInventoryGroupKey)
-            .Select(group =>
-            {
-                var items = group
-                    .OrderBy(static item => item.RelativeConfigurationPath, StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
-                return new SourceInventoryGroup(
-                    GroupTitle(items[0]),
-                    GroupSubtitle(items[0]),
-                    items,
-                    items.Count(static item => item.IsEffective),
-                    items.Count(static item => !item.IsManagedByMonica));
-            })
-            .OrderBy(group => group.UnmanagedCount > 0 ? 1 : 0)
-            .ThenBy(group => group.Title, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private string SourceInventoryGroupKey(ConfigurationSourceInventoryItem item)
-    {
-        return item.IsManagedByMonica
-            ? item.DefinitionKey ?? item.DefinitionDisplayName ?? item.ConfigurationPath
-            : L["Sources:Inventory:UnmanagedDefinition"].Value;
-    }
-
-    private string GroupTitle(ConfigurationSourceInventoryItem item)
-    {
-        return item.IsManagedByMonica
-            ? item.DefinitionDisplayName ?? L["Sources:Inventory:UnknownDefinition"]
-            : L["Sources:Inventory:UnmanagedDefinition"];
-    }
-
-    private string GroupSubtitle(ConfigurationSourceInventoryItem item)
-    {
-        if (!item.IsManagedByMonica)
-        {
-            return L["Sources:Inventory:RuntimeKey"];
-        }
-
-        return item.DefinitionKey ?? string.Empty;
-    }
-
-    private string FieldLabel(ConfigurationSourceInventoryItem item)
-    {
-        return string.IsNullOrWhiteSpace(item.NodeLabel)
-            ? item.RelativeConfigurationPath
-            : item.NodeLabel!;
-    }
-
-    private string DisplayValue(ConfigurationSourceInventoryItem item)
-    {
-        return item.IsSensitive ? L["State:Value:Sensitive"] : item.DisplayValue ?? L["Value:States:Empty"];
-    }
-
-    private ConfigurationSourceDescriptor? OverridingSourceFor(
-        ConfigurationSourceInventoryItem item,
-        ConfigurationSourceDescriptor currentSource)
-    {
-        if (item.IsEffective)
-        {
-            return null;
-        }
-
-        return _sourceInventories
-            .OrderByDescending(static inventory => inventory.Source.PriorityIndex)
-            .FirstOrDefault(inventory =>
-                !string.Equals(inventory.Source.SourceKey, currentSource.SourceKey, StringComparison.Ordinal)
-                && inventory.Items.Any(candidate => candidate.IsEffective && HasSameConfigurationPath(candidate, item)))
-            ?.Source;
-    }
-
-    private string OverriddenTooltip(ConfigurationSourceDescriptor? source)
-    {
-        return source is null
-            ? L["Sources:Inventory:OverriddenUnknownTooltip"]
-            : L["Sources:Inventory:OverriddenTooltip", source.DisplayName, source.PriorityIndex, SourcePath(source)];
-    }
-
-    private static bool HasSameConfigurationPath(
-        ConfigurationSourceInventoryItem left,
-        ConfigurationSourceInventoryItem right)
-    {
-        return string.Equals(left.ConfigurationPath, right.ConfigurationPath, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string SourceGroupClass(SourceInventoryGroup group)
-    {
-        return group.EffectiveCount == group.Items.Count
-            ? "configuration-source-group effective-source"
-            : "configuration-source-group";
-    }
-
-    private static string SourceItemRowClass(ConfigurationSourceInventoryItem item)
-    {
-        return item.IsEffective ? "configuration-source-value-row effective-source" : "configuration-source-value-row";
-    }
-
-    private sealed record SourceInventoryGroup(
-        string Title,
-        string Subtitle,
-        IReadOnlyList<ConfigurationSourceInventoryItem> Items,
-        int EffectiveCount,
-        int UnmanagedCount);
-
-    private RenderFragment StoreCard(string role, ConfigurationStoreDescriptor store) => builder =>
-    {
-        var state = _states.FirstOrDefault(candidate =>
-            string.Equals(candidate.StoreKey, store.StoreKey, StringComparison.OrdinalIgnoreCase));
-
-        builder.OpenComponent<MudPaper>(0);
-        builder.AddAttribute(1, "Outlined", true);
-        builder.AddAttribute(2, "Class", "pa-3 storage-card");
-        builder.AddAttribute(3, "ChildContent", (RenderFragment)(content =>
-        {
-            content.OpenComponent<MudStack>(4);
-            content.AddAttribute(5, "Spacing", 2);
-            content.AddAttribute(6, "ChildContent", (RenderFragment)(stack =>
-            {
-                stack.OpenComponent<MudText>(7);
-                stack.AddAttribute(8, "Typo", Typo.overline);
-                stack.AddAttribute(9, "Color", Color.Secondary);
-                stack.AddAttribute(10, "ChildContent", (RenderFragment)(child => child.AddContent(11, role)));
-                stack.CloseComponent();
-
-                stack.OpenComponent<MudText>(12);
-                stack.AddAttribute(13, "Typo", Typo.subtitle2);
-                stack.AddAttribute(14, "ChildContent", (RenderFragment)(child => child.AddContent(15, store.DisplayName)));
-                stack.CloseComponent();
-
-                stack.OpenComponent<MudText>(16);
-                stack.AddAttribute(17, "Typo", Typo.caption);
-                stack.AddAttribute(18, "Color", Color.Secondary);
-                stack.AddAttribute(19, "ChildContent", (RenderFragment)(child => child.AddContent(20, store.StoreKey)));
-                stack.CloseComponent();
-
-                stack.AddContent(21, CapabilityChips(store));
-                stack.AddContent(22, StoreState(state));
-            }));
-            content.CloseComponent();
-        }));
-        builder.CloseComponent();
-    };
-
-    private RenderFragment CapabilityChips(ConfigurationStoreDescriptor store) => builder =>
-    {
-        builder.OpenComponent<MudStack>(0);
-        builder.AddAttribute(1, "Row", true);
-        builder.AddAttribute(2, "Wrap", Wrap.Wrap);
-        builder.AddAttribute(3, "Spacing", 1);
-        builder.AddAttribute(4, "ChildContent", (RenderFragment)(content =>
-        {
-            content.AddContent(5, CapabilityChip(store.SupportsEffectiveValues, L["Storage:Capabilities:EffectiveValues"]));
-            content.AddContent(6, CapabilityChip(store.SupportsHistory, L["Storage:Capabilities:History"]));
-            content.AddContent(7, CapabilityChip(store.SupportsMetadata, L["Storage:Capabilities:Metadata"]));
-        }));
-        builder.CloseComponent();
-    };
-
-    private RenderFragment CapabilityChip(bool enabled, string label) => builder =>
-    {
-        builder.OpenComponent<MudChip<string>>(0);
-        builder.AddAttribute(1, "Size", Size.Small);
-        builder.AddAttribute(2, "Color", enabled ? Color.Success : Color.Default);
-        builder.AddAttribute(3, "Variant", enabled ? Variant.Filled : Variant.Outlined);
-        builder.AddAttribute(4, "ChildContent", (RenderFragment)(child => child.AddContent(5, label)));
-        builder.CloseComponent();
-    };
-
-    private RenderFragment StoreState(ConfigurationStoreState? state) => builder =>
-    {
-        if (state is null)
-        {
-            builder.OpenComponent<MudText>(0);
-            builder.AddAttribute(1, "Typo", Typo.caption);
-            builder.AddAttribute(2, "Color", Color.Secondary);
-            builder.AddAttribute(3, "ChildContent", (RenderFragment)(child => child.AddContent(4, L["Storage:State:Unknown"])));
-            builder.CloseComponent();
-            return;
-        }
-
-        builder.OpenComponent<MudStack>(5);
-        builder.AddAttribute(6, "Row", true);
-        builder.AddAttribute(7, "AlignItems", AlignItems.Center);
-        builder.AddAttribute(8, "Spacing", 1);
-        builder.AddAttribute(9, "ChildContent", (RenderFragment)(content =>
-        {
-            content.OpenComponent<MudChip<string>>(10);
-            content.AddAttribute(11, "Size", Size.Small);
-            content.AddAttribute(12, "Color", state.LastOperationSucceeded ? Color.Success : Color.Error);
-            content.AddAttribute(13, "Variant", Variant.Filled);
-            content.AddAttribute(14, "ChildContent", (RenderFragment)(child =>
-                child.AddContent(15, state.LastOperationSucceeded ? L["Storage:State:Succeeded"] : L["Storage:State:Failed"])));
-            content.CloseComponent();
-
-            content.OpenComponent<MudText>(16);
-            content.AddAttribute(17, "Typo", Typo.caption);
-            content.AddAttribute(18, "Color", Color.Secondary);
-            content.AddAttribute(19, "ChildContent", (RenderFragment)(child =>
-                child.AddContent(20, state.LastOperationTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"))));
-            content.CloseComponent();
-        }));
-        builder.CloseComponent();
-    };
+    private bool SourceMatches(ConfigurationSourceDescriptor source) =>
+        new[] { source.DisplayName, source.SourceKey, source.PhysicalPath, source.SourcePath, source.ProviderType, source.Kind.ToString() }
+            .Any(value => value?.Contains(_sourceSearchText, StringComparison.OrdinalIgnoreCase) == true);
 }

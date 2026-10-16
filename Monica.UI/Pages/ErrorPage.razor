@@ -2,55 +2,35 @@
 @layout MainLayout
 @using System.Diagnostics
 @using Microsoft.AspNetCore.Http
+@using Microsoft.Extensions.Hosting
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
 @inject IStringLocalizer<SharedResource> L
+@inject IHostEnvironment HostEnvironment
 
 <PageTitle>@L["Error:PageTitle"]</PageTitle>
 
-<main class="error-page">
-    <section class="error-page__surface" role="alert" aria-labelledby="error-page-title">
-        <span class="error-page__icon" aria-hidden="true">
-            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" />
-        </span>
-
-        <div class="error-page__copy">
-            <MudText Typo="Typo.overline" Class="error-page__eyebrow">@L["Error:Eyebrow"]</MudText>
-            <MudText Typo="Typo.h3" HtmlTag="h1" id="error-page-title">@L["Error:Title"]</MudText>
-            <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Error:Message"]</MudText>
-        </div>
-
-        @if (ShowRequestId)
-        {
-            <div class="error-page__request-id">
-                <span>@L["Error:RequestId"]</span>
-                <code>@RequestId</code>
+<ShellPageState HeadingId="error-page-title"
+                Title="@L["Error:Title"]"
+                Description="@L["Error:Message"]"
+                Icon="@Icons.Material.Filled.ErrorOutline"
+                Severity="Severity.Error"
+                HomeLabel="@L["Common:GoHome"]"
+                EvidenceLabel="@L["Error:RequestId"]"
+                EvidenceValue="@RequestId">
+    @if (HostEnvironment.IsDevelopment())
+    {
+        <aside class="error-page__guidance" aria-labelledby="error-guidance-title">
+            <span class="error-page__guidance-icon" aria-hidden="true">
+                <MudIcon Icon="@Icons.Material.Outlined.Terminal" />
+            </span>
+            <div>
+                <h2 id="error-guidance-title">@L["Error:DevelopmentHeading"]</h2>
+                <p>@L["Error:DevelopmentGuidance"]</p>
             </div>
-        }
-
-        <div class="error-page__action">
-            <MudButton Href="/"
-                       FullWidth="true"
-                       Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Home">
-                @L["Error:BackToOverview"]
-            </MudButton>
-        </div>
-    </section>
-
-    <aside class="error-page__guidance" aria-labelledby="error-guidance-title">
-        <span class="error-page__guidance-icon" aria-hidden="true">
-            <MudIcon Icon="@Icons.Material.Outlined.Terminal" />
-        </span>
-        <div>
-            <MudText Typo="Typo.h6" HtmlTag="h2" id="error-guidance-title">@L["Error:DevelopmentMode"]</MudText>
-            <MudText Typo="Typo.body2">@L["Error:DevelopmentModeWarning"]</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Error:DevelopmentModeNote"]</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Error:DevelopmentModeInstruction"]</MudText>
-        </div>
-    </aside>
-</main>
+        </aside>
+    }
+</ShellPageState>
 
 @code {
     public const string PAGE_URL = "/Error";
@@ -59,7 +39,6 @@
     private HttpContext? HttpContext { get; set; }
 
     private string? RequestId { get; set; }
-    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
 
     protected override void OnInitialized() =>
         RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;

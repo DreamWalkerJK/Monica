@@ -14,7 +14,7 @@ Use these rules to keep the microservice architecture from collapsing into a dis
 - `{Subdomain}Service.Domain` references only `Shared/Platform.Infrastructure/Platform.Infrastructure.csproj` from the shared platform chain.
 - `Shared/Platform.Infrastructure/Platform.Infrastructure.csproj` references only `Shared/Platform.Protocol/Platform.Protocol.csproj`.
 - `Shared/Platform.Protocol/Platform.Protocol.csproj` references only `Shared/Platform.BuildingBlocks/Platform.BuildingBlocks.csproj`.
-- `Shared/Platform.Protocol/PublishedLanguages` may be referenced broadly as business contracts.
+- Business code consumes `Platform.Protocol/PublishedLanguages` contracts through the adopted project chain; this does not authorize extra direct project references that bypass it.
 - A service's `Domain` stays private to that service.
 - Cross-service collaboration happens through published requests, models, events, or explicitly chosen service interfaces.
 
@@ -47,7 +47,7 @@ flowchart LR
 ## Adapter Rule
 
 - The service `API` project and host entry points are delivery mechanisms.
-- AppHost or gateway projects are composition-only entry points and should stay limited to the project file and `Program.cs`.
+- AppHost or gateway projects are composition-only. Modules and registration/host adapters may organize that composition; they do not own business behavior.
 - They do not replace `ApplicationService`, `DomainService`, `Entity`, `Repository`, or other ProjectUnits.
 
 ## Solution View

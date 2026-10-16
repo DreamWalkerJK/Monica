@@ -1,0 +1,81 @@
+@implements IAsyncDisposable
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Shared.Support
+@using Monica.AI.UI.Localization
+@using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase
+@inject IStringLocalizer<AIResource> L
+
+<aside class="knowledge-catalog" data-open="@_open.ToString().ToLowerInvariant()" aria-label="@L["KnowledgeWorkbench:Collections"]">
+    <button type="button" class="catalog-disclosure" aria-expanded="@_open.ToString().ToLowerInvariant()" aria-controls="@_bodyId" @onclick="() => _open = !_open">
+        <MudIcon Icon="@Icons.Material.Outlined.LibraryBooks" /><span><small>@L["KnowledgeWorkbench:Collections"] · @Items.Count</small><strong>@(Selected?.Name ?? L["RAG:KnowledgeBase:SelectPrompt"].Value)</strong></span><MudIcon Icon="@(_open ? Icons.Material.Outlined.ExpandLess : Icons.Material.Outlined.ExpandMore)" />
+    </button>
+    <div class="catalog-body" id="@_bodyId">
+        <div class="catalog-heading"><h2>@L["KnowledgeWorkbench:Collections"]</h2><span>@Items.Count</span></div>
+        <div class="catalog-search"><MudTextField T="string" @bind-Value="_search" Label="@L["KnowledgeWorkbench:SearchCollections"]" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" /></div>
+        @if (IsLoading) { <div class="catalog-message" role="status"><p>@LoadingText</p><MudProgressLinear Indeterminate="true" Color="Color.Primary" /></div> }
+        else if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <div class="catalog-message" role="alert"><p>@ErrorMessage</p>@if (Retry.HasDelegate) { <MudButton OnClick="() => Retry.InvokeAsync()">@L["KnowledgeWorkbench:Retry"]</MudButton> }</div>
+        }
+        else
+        {
+            <div class="catalog-entries">
+                @foreach (var item in VisibleItems)
+                {
+                    <button type="button" class="catalog-entry" aria-pressed="@string.Equals(Selected?.Id, item.Id, StringComparison.OrdinalIgnoreCase).ToString().ToLowerInvariant()" disabled="@IsDisabled" @onclick="() => SelectAsync(item)">
+                        <span class="catalog-entry-heading"><strong>@item.Name</strong>@if (Selected?.Id == item.Id) { <MudIcon Icon="@Icons.Material.Outlined.Check" /> }</span>
+                        @if (!string.IsNullOrWhiteSpace(item.Description)) { <span class="catalog-entry-description">@item.Description</span> }
+                        <span class="catalog-entry-meta">@L["KnowledgeWorkbench:DocumentCount", item.DocumentCount] <span>·</span> @(HasBinding(item) ? L["KnowledgeWorkbench:ModelBound"] : L["KnowledgeBase:RagStatus:LookupOnly"])</span>
+                    </button>
+                }
+                @if (!VisibleItems.Any()) { <p class="catalog-message">@(Items.Count == 0 ? L["RAG:KnowledgeBase:EmptyHint"] : L["KnowledgeWorkbench:NoCollectionsMatch"])</p> }
+            </div>
+        }
+    </div>
+</aside>
+@code {
+    /// <summary>Gets or sets the loaded collection snapshot; local filtering does not mutate it.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<KnowledgeBaseModel> Items { get; set; } = [];
+    /// <summary>Gets or sets the caller's selected collection.</summary>
+    [Parameter] public KnowledgeBaseModel? Selected { get; set; }
+    /// <summary>Gets or sets whether selection is unavailable while the caller changes an embedding binding.</summary>
+    [Parameter] public bool IsDisabled { get; set; }
+    /// <summary>Gets or sets whether initial loading is still running.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+    /// <summary>Gets or sets the localized actual loading stage.</summary>
+    [Parameter] public string? LoadingText { get; set; }
+    /// <summary>Gets or sets an actual catalog read error, separately from a successful empty snapshot.</summary>
+    [Parameter] public string? ErrorMessage { get; set; }
+    /// <summary>Gets or sets the caller's native collection selection command.</summary>
+    [Parameter, EditorRequired] public EventCallback<KnowledgeBaseModel> SelectionChanged { get; set; }
+    /// <summary>Gets or sets the optional retry command after a failed catalog read.</summary>
+    [Parameter] public EventCallback Retry { get; set; }
+    /// <summary>Gets or sets focus transfer after selection from the compact disclosure.</summary>
+    [Parameter] public EventCallback<KnowledgeBaseModel> FocusRequested { get; set; }
+    private readonly AIAdministrationOperationLifetime _lifetime = new();
+    private long _selectionSequence;
+    private string _search = string.Empty;
+    private bool _open;
+    private readonly string _bodyId = "knowledge-catalog-" + Guid.NewGuid().ToString("N");
+    private IEnumerable<KnowledgeBaseModel> VisibleItems => Items.Where(item => string.IsNullOrWhiteSpace(_search) || new[] { item.Name, item.Id, item.Description }.Any(value => value?.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase) == true));
+    private static bool HasBinding(KnowledgeBaseModel item) => !string.IsNullOrWhiteSpace(item.EmbeddingProviderId) && !string.IsNullOrWhiteSpace(item.EmbeddingModelName);
+    private async Task SelectAsync(KnowledgeBaseModel item)
+    {
+        if (_lifetime.IsRetired || IsDisabled) return;
+        var sequence = ++_selectionSequence;
+        var compactSelection = _open;
+        _open = false;
+        try
+        {
+            await _lifetime.RunAsync(async token =>
+            {
+                await SelectionChanged.InvokeAsync(item);
+                if (token.IsCancellationRequested || sequence != _selectionSequence || IsDisabled) return;
+                if (compactSelection && FocusRequested.HasDelegate) await FocusRequested.InvokeAsync(item);
+            });
+        }
+        catch (OperationCanceledException) when (_lifetime.IsRetired) { }
+    }
+    /// <summary>Stops selection continuations and drains the admitted native callback.</summary>
+    public ValueTask DisposeAsync() => _lifetime.RetireAsync();
+}

@@ -46,8 +46,8 @@ public class RegistrationStateManager(
             var regKey = GetRegistrationKey();
             var now = DateTime.UtcNow;
 
-            // Get the base instance status (contains all service information and metadata)
-            var instanceState = clientInfo.GetServiceStatus();
+            // Every heartbeat replaces the complete registration, including its metadata.
+            var instanceState = clientInfo.GetServiceStatus(isHeartbeatInfo: false);
 
             // Use cached registration time to avoid Get operations for every heartbeat
             DateTime registrationTime;
@@ -99,15 +99,18 @@ public class RegistrationStateManager(
 
     public async Task<LeaderState?> GetLeaderStateAsync(CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         try
         {
             var leaderKey = GetLeaderKey();
-            return await stateStore.GetStateAsync<LeaderState>(LEADER_PREFIX + leaderKey, ct);
+            var state = await stateStore.GetStateAsync<LeaderState>(LEADER_PREFIX + leaderKey, ct);
+            ct.ThrowIfCancellationRequested();
+            return state;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get the leader state.");
-            return null;
+            throw;
         }
     }
 
@@ -231,10 +234,12 @@ public class RegistrationStateManager(
 
     public async Task<List<InstanceState>> GetAllInstancesAsync(CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         try
         {
             // Step 1: Use glob pattern to scan all keys under the reg prefix
             var instanceKeys = await stateStore.ScanKeysAsync(REG_PREFIX + "*", ct);
+            ct.ThrowIfCancellationRequested();
 
             if (instanceKeys.Count == 0)
             {
@@ -247,6 +252,7 @@ public class RegistrationStateManager(
                 instanceKeys,
                 removeEmptyValue: true,
                 cancellationToken: ct);
+            ct.ThrowIfCancellationRequested();
             
             return instances.Values
                 .Where(x => x != null)
@@ -255,7 +261,7 @@ public class RegistrationStateManager(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to retrieve registered service instances.");
-            return [];
+            throw;
         }
     }
 

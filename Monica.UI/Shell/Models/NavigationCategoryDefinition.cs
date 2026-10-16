@@ -3,18 +3,24 @@ using Monica.Core.Localization.Abstractions;
 namespace Monica.UI.Shell.Models;
 
 /// <summary>
-/// Describes the localized presentation and deterministic order of a navigation category.
+/// Describes the localized presentation, hierarchy, and deterministic order of a navigation category.
 /// </summary>
 public sealed class NavigationCategoryDefinition
 {
     internal NavigationCategoryDefinition(
         NavigationCategoryId id,
         UIRegistryText displayName,
-        int order)
+        int order,
+        NavigationCategoryId? parentId = null,
+        string? icon = null,
+        UIRegistryText? description = null)
     {
         Id = id;
         DisplayName = displayName;
         Order = order;
+        ParentId = parentId;
+        Icon = icon;
+        Description = description;
     }
 
     /// <summary>
@@ -33,6 +39,21 @@ public sealed class NavigationCategoryDefinition
     public int Order { get; }
 
     /// <summary>
+    /// Gets the parent category identity, or <see langword="null"/> for a top-level category.
+    /// </summary>
+    public NavigationCategoryId? ParentId { get; }
+
+    /// <summary>
+    /// Gets the optional icon used to represent the category in shell navigation.
+    /// </summary>
+    public string? Icon { get; }
+
+    /// <summary>
+    /// Gets the optional literal or resource-backed explanation of this category's capabilities.
+    /// </summary>
+    public UIRegistryText? Description { get; }
+
+    /// <summary>
     /// Resolves the category label through the specified host localization catalog.
     /// </summary>
     /// <param name="localizationCatalog">The localization catalog owned by the current host.</param>
@@ -42,8 +63,20 @@ public sealed class NavigationCategoryDefinition
         return DisplayName.Resolve(localizationCatalog);
     }
 
+    /// <summary>
+    /// Resolves the optional category description through the specified host localization catalog.
+    /// </summary>
+    /// <param name="localizationCatalog">The localization catalog owned by the current host.</param>
+    /// <returns>The localized description or registered fallback, or null when none was registered.</returns>
+    public string? ResolveDescription(ILocalizationCatalog localizationCatalog)
+    {
+        ArgumentNullException.ThrowIfNull(localizationCatalog);
+        return Description?.Resolve(localizationCatalog);
+    }
+
     internal bool HasSameRegistrationAs(NavigationCategoryDefinition other)
     {
-        return Order == other.Order && DisplayName == other.DisplayName;
+        return Order == other.Order && DisplayName == other.DisplayName
+            && ParentId == other.ParentId && Icon == other.Icon && Description == other.Description;
     }
 }

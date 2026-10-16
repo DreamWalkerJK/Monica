@@ -1,5 +1,7 @@
-@inject IStringLocalizer<RepositoryUIResource> L
 @using System.Globalization
+@using Monica.Tool.Extensions
+@using Monica.Repository.Persistence.Services.Support
+@inject IStringLocalizer<RepositoryUIResource> L
 
 @if (Snapshot is null)
 {
@@ -11,208 +13,65 @@ else if (ShowOptionsOnly)
 }
 else
 {
-    <div class="overview-grid">
-        <div class="metric-card">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:Metrics:Connection"]</MudText>
-            <MudText Typo="Typo.h6">@(Snapshot.CanConnect ? L["Overview:Values:Connected"] : L["Overview:Values:Disconnected"])</MudText>
-        </div>
-        <div class="metric-card">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:Metrics:Pool"]</MudText>
-            <MudText Typo="Typo.h6">@PoolUsageText</MudText>
-        </div>
-        <div class="metric-card">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:Metrics:Pending"]</MudText>
-            <MudText Typo="Typo.h6">@(Snapshot.PendingMigrationCount?.ToString() ?? L["Overview:Values:Unknown"])</MudText>
-        </div>
-        <div class="metric-card">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:Metrics:ProviderType"]</MudText>
-            <MudText Typo="Typo.h6">@Snapshot.Registration.ProviderType</MudText>
-        </div>
-        <div class="metric-card">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:Metrics:MigrationAssembly"]</MudText>
-            <MudText Typo="Typo.h6">@DisplayValue(Snapshot.MigrationAssembly)</MudText>
-        </div>
-    </div>
-
-    <div class="overview-sections">
-        <div class="overview-section">
-            <div class="section-header">
-                <MudText Typo="Typo.subtitle1">@L["Overview:Connection:Title"]</MudText>
-                <MudButton Variant="Variant.Text"
-                           Size="Size.Small"
-                           StartIcon="@(RevealConnectionStrings ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
-                           OnClick="OnToggleReveal">
-                    @(RevealConnectionStrings ? L["Overview:Connection:Hide"] : L["Overview:Connection:Reveal"])
-                </MudButton>
-            </div>
-            <div class="property-grid">
-                <div>@L["Overview:Connection:DataSource"]</div>
-                <div>@DisplayValue(Snapshot.Connection?.DataSource)</div>
-                <div>@L["Overview:Connection:Database"]</div>
-                <div>@DisplayValue(Snapshot.Connection?.Database)</div>
-                <div>@L["Overview:Connection:ConnectionString"]</div>
-                <code>@ConnectionStringText</code>
-            </div>
-        </div>
-
-        <div class="overview-section">
-            <MudText Typo="Typo.subtitle1">@L["Overview:Pool:Title"]</MudText>
-            <div class="property-grid">
-                <div>@L["Overview:Pool:Pooling"]</div>
-                <div>@PoolingText</div>
-                <div>@L["Overview:Pool:MaxPoolSize"]</div>
-                <div>@MaxPoolSizeText</div>
-                <div>@L["Overview:Pool:MinPoolSize"]</div>
-                <div>@MinPoolSizeText</div>
-            </div>
-
-            @if (SessionSummary is not null)
+    <div class="repository-connection-workspace">
+        <section class="connection-decision" data-state="@(Snapshot.CanConnect ? "connected" : Snapshot.HasError ? "unknown" : "disconnected")">
+            <div class="connection-decision__title"><MudIcon Icon="@(Snapshot.CanConnect ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.ErrorOutline)" /><span>@L["Workbench:Overview:Probe"]</span></div>
+            <h3>@(Snapshot.CanConnect ? L["Overview:Values:Connected"] : Snapshot.HasError ? L["Workbench:Overview:Incomplete"] : L["Overview:Values:Disconnected"])</h3>
+            <p>@L["Workbench:Overview:ProbeNote"]</p>
+            <div class="connection-address"><span>@L["Overview:Connection:Database"]</span><strong>@Value(Snapshot.Connection?.Database)</strong><span>@L["Overview:Connection:DataSource"]</span><code>@Value(Snapshot.Connection?.DataSource)</code></div>
+            <div class="connection-string-heading"><h4>@L["Overview:Connection:ConnectionString"]</h4><MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="IsBusy" StartIcon="@(RevealConnectionStrings ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)" OnClick="OnToggleReveal">@(RevealConnectionStrings ? L["Overview:Connection:Hide"] : L["Overview:Connection:Reveal"])</MudButton></div>
+            <pre class="connection-string">@Value(RevealConnectionStrings ? Snapshot.Connection?.RevealedConnectionString ?? Snapshot.Connection?.MaskedConnectionString : Snapshot.Connection?.MaskedConnectionString)</pre>
+        </section>
+        <section class="connection-facts">
+            <header><span class="connection-eyebrow">@L["Workbench:Overview:Resolution"]</span><h3>@L["Overview:Provider:Title"]</h3></header>
+            <dl><dt>@L["Overview:Provider:ProviderName"]</dt><dd>@Value(Snapshot.ProviderName)</dd><dt>@L["Overview:Metrics:ProviderType"]</dt><dd>@Snapshot.Registration.ProviderType</dd><dt>@L["Overview:Provider:ContextType"]</dt><dd><code>@Snapshot.Registration.DbContextType.GetCleanFullName()</code></dd><dt>@L["Overview:Provider:Assembly"]</dt><dd>@Snapshot.Registration.AssemblyName</dd><dt>@L["Overview:Metrics:MigrationAssembly"]</dt><dd>@Value(Snapshot.MigrationAssembly)</dd></dl>
+        </section>
+        <section class="connection-facts">
+            <header><span class="connection-eyebrow">@L["Workbench:Overview:Configuration"]</span><h3>@L["Overview:Pool:Title"]</h3></header>
+            <p>@L["Workbench:Overview:PoolNote"]</p>
+            <dl><dt>@L["Overview:Pool:Pooling"]</dt><dd>@(Pool?.Pooling is { } enabled ? enabled ? L["Overview:Pool:Enabled"] : L["Overview:Pool:Disabled"] : L["Workbench:Overview:ProviderDefault"])</dd><dt>@L["Overview:Pool:MaxPoolSize"]</dt><dd>@PoolSize(Pool?.MaxPoolSize, RepositoryConnectionPoolInfo.DefaultMaxPoolSize)</dd><dt>@L["Overview:Pool:MinPoolSize"]</dt><dd>@PoolSize(Pool?.MinPoolSize, RepositoryConnectionPoolInfo.DefaultMinPoolSize)</dd></dl>
+        </section>
+        <section class="connection-facts connection-sessions">
+            <header><span class="connection-eyebrow">@L["Workbench:Overview:DatabaseScope"]</span><h3>@L[DatabaseScopeKnown ? "Overview:Pool:DatabaseSessions" : "Workbench:Activity:DatabaseScopeUnknown"]</h3></header>
+            @if (Activity?.Support == RepositoryActivitySupport.Supported && Activity.Summary is { } summary)
             {
-                <MudProgressLinear Value="@PoolUtilizationPercent"
-                                   Color="@PoolUtilizationColor"
-                                   Rounded="true" />
-                <div class="property-grid">
-                    <div>@L["Overview:Pool:DatabaseSessions"]</div>
-                    <div>@SessionSummary.DatabaseSessions</div>
-                    <div>@L["Overview:Pool:ActiveSessions"]</div>
-                    <div>@SessionSummary.ActiveSessions</div>
-                    <div>@L["Overview:Pool:IdleSessions"]</div>
-                    <div>@SessionSummary.IdleSessions</div>
-                    <div>@L["Overview:Pool:IdleInTransactionSessions"]</div>
-                    <div>@SessionSummary.IdleInTransactionSessions</div>
-                    <div>@L["Overview:Pool:WaitingSessions"]</div>
-                    <div>@SessionSummary.WaitingSessions</div>
-                </div>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Pool:SessionsNote"]</MudText>
+                <div class="connection-session-count"><strong>@summary.DatabaseSessions</strong><span>@Value(Snapshot.Connection?.Database)</span></div>
+                <dl><dt>@L["Overview:Pool:ActiveSessions"]</dt><dd>@summary.ActiveSessions</dd><dt>@L["Overview:Pool:IdleSessions"]</dt><dd>@summary.IdleSessions</dd><dt>@L["Overview:Pool:IdleInTransactionSessions"]</dt><dd>@summary.IdleInTransactionSessions</dd><dt>@L[IsPostgreSql ? "Workbench:Activity:LockWaitCount" : "Overview:Pool:WaitingSessions"]</dt><dd>@summary.WaitingSessions</dd></dl>
+                <p>@L[DatabaseScopeKnown ? "Overview:Pool:SessionsNote" : "Workbench:Activity:DatabaseScopeUnknownDescription"]</p>
+                @if (IsPostgreSql) { <p>@L["Workbench:Activity:PostgreSqlWaitNote"]</p> }
             }
             else
             {
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Pool:SessionsUnavailable"]</MudText>
+                <p>@L[Activity?.Support == RepositoryActivitySupport.Failed ? "Workbench:Overview:SessionsFailed" : "Overview:Pool:SessionsUnavailable"]</p>
             }
-        </div>
-
-        <div class="overview-section">
-            <MudText Typo="Typo.subtitle1">@L["Overview:Provider:Title"]</MudText>
-            <div class="property-grid">
-                <div>@L["Overview:Provider:ProviderName"]</div>
-                <div>@DisplayValue(Snapshot.ProviderName)</div>
-                <div>@L["Overview:Provider:ContextType"]</div>
-                <div>@Snapshot.Registration.FullName</div>
-                <div>@L["Overview:Provider:Assembly"]</div>
-                <div>@Snapshot.Registration.AssemblyName</div>
-            </div>
-        </div>
+            <a href="@ActivityUrl">@L["Workbench:Overview:InspectActivity"] <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></a>
+        </section>
+        <section class="connection-migrations">
+            <div><span class="connection-eyebrow">@L["Workbench:Overview:Schema"]</span><h3>@L["Migrations:Title"]</h3><p>@L["Migrations:ContextNote", Value(Snapshot.MigrationAssembly)]</p></div>
+            <div class="connection-migration-count"><span>@L["Overview:Metrics:Pending"]</span><strong>@(Snapshot.PendingMigrationCount?.ToString() ?? L["Overview:Values:Unknown"].Value)</strong></div>
+            <a href="@MigrationsUrl">@L["Workbench:Overview:InspectMigrations"] <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></a>
+        </section>
+        @if (Snapshot.HasError)
+        {
+            <div class="connection-error"><MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@Snapshot.ErrorMessage</MudAlert></div>
+        }
     </div>
-
-    @if (Snapshot.HasError)
-    {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@Snapshot.ErrorMessage</MudAlert>
-    }
 }
 
 @code {
     [Parameter] public RepositoryDbContextSnapshot? Snapshot { get; set; }
-
     [Parameter] public RepositoryMigrationStatus? MigrationStatus { get; set; }
-
     [Parameter] public RepositoryActivityResult? Activity { get; set; }
-
     [Parameter] public bool RevealConnectionStrings { get; set; }
-
     [Parameter] public bool ShowOptionsOnly { get; set; }
-
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public string MigrationsUrl { get; set; } = "/repository-dashboard/migrations";
+    [Parameter] public string ActivityUrl { get; set; } = "/repository-dashboard/activity";
     [Parameter] public EventCallback OnToggleReveal { get; set; }
-
+    private bool IsPostgreSql => (Activity?.ProviderGuide ?? RepositoryActivityProviderGuideCatalog.Resolve(Activity?.ProviderName ?? Snapshot?.ProviderName)).ProviderKind == RepositoryActivityProviderKind.PostgreSql;
+    private bool DatabaseScopeKnown => !string.IsNullOrWhiteSpace(Snapshot?.Connection?.Database);
     private RepositoryConnectionPoolInfo? Pool => Snapshot?.Connection?.Pool;
-
-    private RepositoryActivitySummary? SessionSummary => Activity?.Summary;
-
-    private string PoolUsageText
-    {
-        get
-        {
-            if (Pool is null)
-            {
-                return DisplayValue(null);
-            }
-
-            if (!Pool.PoolingEnabled)
-            {
-                return L["Overview:Pool:Disabled"];
-            }
-
-            return SessionSummary is null
-                ? DisplayValue(null)
-                : string.Create(CultureInfo.InvariantCulture, $"{SessionSummary.DatabaseSessions} / {Pool.EffectiveMaxPoolSize}");
-        }
-    }
-
-    private string PoolingText => Pool is null
-        ? DisplayValue(null)
-        : Pool.PoolingEnabled ? L["Overview:Pool:Enabled"] : L["Overview:Pool:Disabled"];
-
-    private string MaxPoolSizeText => Pool is not { PoolingEnabled: true }
-        ? DisplayValue(null)
-        : FormatPoolSize(Pool.MaxPoolSize, RepositoryConnectionPoolInfo.DefaultMaxPoolSize);
-
-    private string MinPoolSizeText => Pool is not { PoolingEnabled: true }
-        ? DisplayValue(null)
-        : FormatPoolSize(Pool.MinPoolSize, RepositoryConnectionPoolInfo.DefaultMinPoolSize);
-
-    private double PoolUtilizationPercent
-    {
-        get
-        {
-            var ratio = PoolUtilizationRatio;
-            return double.IsNaN(ratio) ? 0 : Math.Clamp(ratio * 100, 0, 100);
-        }
-    }
-
-    private Color PoolUtilizationColor
-    {
-        get
-        {
-            var ratio = PoolUtilizationRatio;
-            if (double.IsNaN(ratio))
-            {
-                return Color.Default;
-            }
-
-            return ratio >= 1 ? Color.Error : ratio >= 0.8 ? Color.Warning : Color.Default;
-        }
-    }
-
-    /// <summary>
-    /// Database sessions divided by the effective maximum pool size.
-    /// <see cref="double.NaN"/> when the ratio is not computable.
-    /// </summary>
-    private double PoolUtilizationRatio
-    {
-        get
-        {
-            if (SessionSummary is null || Pool is not { PoolingEnabled: true } || Pool.EffectiveMaxPoolSize <= 0)
-            {
-                return double.NaN;
-            }
-
-            return (double)SessionSummary.DatabaseSessions / Pool.EffectiveMaxPoolSize;
-        }
-    }
-
-    private string FormatPoolSize(int? explicitSize, int defaultSize)
-    {
-        return explicitSize is { } size
-            ? size.ToString(CultureInfo.InvariantCulture)
-            : $"{defaultSize.ToString(CultureInfo.InvariantCulture)} {L["Overview:Pool:DefaultSuffix"]}";
-    }
-
-    private string ConnectionStringText =>
-        RevealConnectionStrings
-            ? DisplayValue(Snapshot?.Connection?.RevealedConnectionString ?? Snapshot?.Connection?.MaskedConnectionString)
-            : DisplayValue(Snapshot?.Connection?.MaskedConnectionString);
-
-    private string DisplayValue(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? L["Common:Values:Unavailable"] : value;
-    }
+    private bool CommonPoolDefaults => Snapshot?.ProviderName is { } provider && (provider.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) || provider.Contains("SqlServer", StringComparison.OrdinalIgnoreCase) || provider.Contains("MySql", StringComparison.OrdinalIgnoreCase));
+    private string PoolSize(int? value, int fallback) => Pool is not { PoolingEnabled: true } ? Value(null) : value is { } explicitValue ? explicitValue.ToString(CultureInfo.InvariantCulture) : CommonPoolDefaults ? $"{fallback} {L["Overview:Pool:DefaultSuffix"]}" : L["Workbench:Overview:ProviderDefault"].Value;
+    private string Value(string? value) => string.IsNullOrWhiteSpace(value) ? L["Common:Values:Unavailable"].Value : value;
 }

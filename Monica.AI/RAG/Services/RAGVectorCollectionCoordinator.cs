@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
@@ -202,8 +201,7 @@ internal sealed class RAGVectorCollectionCoordinator(
 
         var collection = _collections.GetOrAdd(collectionName, _ =>
         {
-            var embeddingGenerator = embeddingBindingResolver.GetEmbeddingGenerator(binding);
-            var definition = CreateCollectionDefinition(binding.Dimensions, embeddingGenerator);
+            var definition = CreateCollectionDefinition(binding.Dimensions);
             return vectorStore.GetCollection<Guid, RAGVectorRecord>(collectionName, definition);
         });
 
@@ -300,13 +298,10 @@ internal sealed class RAGVectorCollectionCoordinator(
     private static string BuildBindingKey(string providerId, string modelName, int dimensions)
         => $"{providerId}::{modelName}::{dimensions}";
 
-    private static VectorStoreCollectionDefinition CreateCollectionDefinition(
-        int vectorDimensions,
-        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
+    private static VectorStoreCollectionDefinition CreateCollectionDefinition(int vectorDimensions)
     {
         return new VectorStoreCollectionDefinition
         {
-            EmbeddingGenerator = embeddingGenerator,
             Properties =
             [
                 new VectorStoreKeyProperty(nameof(RAGVectorRecord.StorageKey), typeof(Guid)),
@@ -321,9 +316,6 @@ internal sealed class RAGVectorCollectionCoordinator(
                 new VectorStoreDataProperty(nameof(RAGVectorRecord.ChunkEnd), typeof(int)),
                 new VectorStoreDataProperty(nameof(RAGVectorRecord.ChunkerId), typeof(string)),
                 new VectorStoreVectorProperty(nameof(RAGVectorRecord.ContentEmbedding), typeof(float[]), vectorDimensions)
-                {
-                    EmbeddingGenerator = embeddingGenerator
-                }
             ]
         };
     }

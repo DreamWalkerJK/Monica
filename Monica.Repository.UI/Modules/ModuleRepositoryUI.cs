@@ -44,13 +44,36 @@ public sealed class ModuleRepositoryUI : MonicaModule<ModuleRepositoryUIOption>,
             static option => option.AddResource<RepositoryUIResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
+            {
                 registry.RegisterLocalizedPage<UIRepositoryDashboardPage, RepositoryUIResource>(
                     UIRepositoryDashboardPage.PAGE_URL,
-                    "Pages:RepositoryDashboard:Title",
+                    "Workbench:Views:Overview:Label",
                     Icons.Material.Filled.Storage,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
-                    navOrder: 35)));
+                    navOrder: 35);
+                registry.RegisterLocalizedPage<UIRepositoryActivityPage, RepositoryUIResource>(
+                    UIRepositoryActivityPage.PAGE_URL,
+                    "Workbench:Views:Activity:Label",
+                    Icons.Material.Outlined.QueryStats,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 36);
+                registry.RegisterLocalizedPage<UIRepositoryMigrationsPage, RepositoryUIResource>(
+                    UIRepositoryMigrationsPage.PAGE_URL,
+                    "Workbench:Views:Migrations:Label",
+                    Icons.Material.Outlined.AccountTree,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 37);
+                registry.RegisterLocalizedPage<UIRepositoryOptionsPage, RepositoryUIResource>(
+                    UIRepositoryOptionsPage.PAGE_URL,
+                    "Workbench:Views:Options:Label",
+                    Icons.Material.Outlined.Tune,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 38);
+            }));
     }
 
     /// <inheritdoc />

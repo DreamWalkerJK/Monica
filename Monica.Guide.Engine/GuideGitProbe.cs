@@ -38,6 +38,12 @@ public interface IGuideGitProbe
 
     /// <summary>Resolves one exact tag name to its commit; null when the tag does not exist.</summary>
     string? ResolveTagCommit(string repositoryRoot, string tag);
+
+    /// <summary>
+    /// Counts commits reachable from <paramref name="toCommit"/> but not from
+    /// <paramref name="fromCommit"/>; null when the range cannot be resolved in the checkout.
+    /// </summary>
+    int? CountCommitsAhead(string repositoryRoot, string fromCommit, string toCommit);
 }
 
 public sealed partial class GuideGitProbe : IGuideGitProbe
@@ -84,6 +90,18 @@ public sealed partial class GuideGitProbe : IGuideGitProbe
         ArgumentException.ThrowIfNullOrWhiteSpace(tag);
         var commit = Run(repositoryRoot, $"rev-parse --verify refs/tags/{tag}^{{commit}}")?.Trim().ToLowerInvariant();
         return commit is not null && IsCommit(commit) ? commit : null;
+    }
+
+    public int? CountCommitsAhead(string repositoryRoot, string fromCommit, string toCommit)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryRoot);
+        if (!IsCommit(fromCommit) || !IsCommit(toCommit))
+        {
+            return null;
+        }
+
+        var count = Run(repositoryRoot, $"rev-list --count {fromCommit}..{toCommit}")?.Trim();
+        return int.TryParse(count, out var value) && value >= 0 ? value : null;
     }
 
     internal static bool IsCommit(string value)

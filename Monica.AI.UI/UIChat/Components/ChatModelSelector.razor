@@ -1,0 +1,90 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@implements IAsyncDisposable
+@inject IStringLocalizer<AIResource> L
+
+<div class="model-selector" title="@FullSelection" @onkeydown="HandleDismissalKeyAsync" @onkeydown:stopPropagation="true">
+    <MudMenu @ref="_menu" @bind-Open="_open" Dense="true" Disabled="@Disabled" Label="@TriggerLabel" AriaLabel="@($"{L["Model:Label"]}: {FullSelection}")" Size="Size.Small" EndIcon="@Icons.Material.Filled.ExpandMore" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight">
+        <ChildContent>
+                        <div class="model-picker" @onkeydown="HandleDismissalKeyAsync" @onkeydown:stopPropagation="true">
+                            <div class="current-selection"><strong>@ModelLabel</strong><span>@FullSelection</span></div>
+                            <div class="model-search" @onkeydown="HandleDismissalKeyAsync" @onkeydown:stopPropagation="true">
+                                <MudTextField T="string" @bind-Value="_search" Immediate="true" Placeholder="@L["Workbench:SearchModels"]" aria-label="@L["Workbench:SearchModels"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" />
+                            </div>
+                            <div class="model-groups">
+                                @foreach (var group in MatchingGroups)
+                                {
+                                    <div class="model-group">
+                                        <div class="provider-heading">@group.Provider.DisplayName</div>
+                                        @foreach (var model in group.Models)
+                                        {
+                                            <MudMenuItem Disabled="@(!group.Provider.IsValid || Disabled)" Icon="@(IsSelected(group.Provider, model) ? Icons.Material.Filled.Check : null)" OnClick="@(() => OnModelChanged.InvokeAsync((group.Provider.ProviderId, model.ModelName)))">
+                                                <span class="model-choice" title="@model.ModelName"><span class="choice-label">@(model.DisplayName ?? model.ModelName)</span>
+                                                    <span class="model-capacity">@(model.ContextWindow is { } capacity ? $"{capacity / 1024d:0.#}K" : L["Workbench:DefaultContextCapacity", ChatContextCapacity.DefaultTokens / 1024])</span>
+                                                </span>
+                                            </MudMenuItem>
+                                        }
+                                    </div>
+                                }
+                                @if (!MatchingGroups.Any()) { <MudMenuItem Disabled="true">@L["Model:NoModelsAvailable"]</MudMenuItem> }
+                            </div>
+                @if (ShowEffort)
+                {
+                    <details class="effort-picker">
+                        <summary>@L["Workbench:Effort"] · @EffortLabel</summary>
+                        <div class="effort-choices">
+                            <MudButton Disabled="@Disabled" Variant="Variant.Text" aria-pressed="@(ReasoningLevel is null ? "true" : "false")" OnClick="@(() => ReasoningLevelChanged.InvokeAsync((string?)null))">@L["Workbench:ReasoningDefault"]</MudButton>
+                            @foreach (var level in CurrentModel!.ReasoningLevels)
+                            {
+                                <MudButton Disabled="@Disabled" Variant="Variant.Text" aria-pressed="@(level.Id == ReasoningLevel ? "true" : "false")" OnClick="@(() => ReasoningLevelChanged.InvokeAsync(level.Id))">@(level.DisplayName ?? level.Id)</MudButton>
+                            }
+                        </div>
+                    </details>
+                }
+                        </div>
+        </ChildContent>
+    </MudMenu>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<AIProviderInfo> Providers { get; set; } = [];
+    [Parameter] public string? ProviderId { get; set; }
+    [Parameter] public string? ModelName { get; set; }
+    [Parameter] public LLMModelInfo? CurrentModel { get; set; }
+    [Parameter] public string? ReasoningLevel { get; set; }
+    [Parameter] public bool AllowProviderSelection { get; set; } = true;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<(string ProviderId, string ModelName)> OnModelChanged { get; set; }
+    [Parameter] public EventCallback<string?> ReasoningLevelChanged { get; set; }
+    private MudMenu? _menu;
+    private string _search = string.Empty;
+    private bool _open, _closing, _disposed;
+    private Task? _closeTask, _retirement;
+    private Task HandleDismissalKeyAsync(KeyboardEventArgs args)
+    {
+        if (args.Key != "Escape" || !_open || _closing || _disposed || _menu is not { } menu) return Task.CompletedTask;
+        _closing = true;
+        return _closeTask = CloseAsync(menu);
+    }
+    private async Task CloseAsync(MudMenu menu)
+    {
+        try { await menu.CloseAllMenusAsync(); }
+        catch (JSDisconnectedException) { }
+        finally { _closing = false; }
+    }
+    public ValueTask DisposeAsync() => new(_retirement ??= RetireAsync());
+    private async Task RetireAsync() { _disposed = true; if (_closeTask is not null) await _closeTask; }
+    private bool ShowEffort => CurrentModel is { SupportsReasoning: not false } && (CurrentModel.SupportsReasoning == true || CurrentModel.ReasoningLevels.Count > 0);
+    private string ModelLabel => CurrentModel?.DisplayName ?? ModelName ?? L["Model:Label"];
+    private string? EffectiveEffort => ReasoningLevel ?? CurrentModel?.DefaultReasoningLevel;
+    private string EffortLabel => EffectiveEffort is null ? L["Workbench:ReasoningDefault"] : CurrentModel?.ReasoningLevels.FirstOrDefault(level => level.Id == EffectiveEffort)?.DisplayName ?? EffectiveEffort;
+    private string TriggerLabel => ModelLabel + (ShowEffort ? $" · {EffortLabel}" : string.Empty);
+    private string FullSelection => $"{ProviderId} / {ModelName}" + (ShowEffort ? $" · {EffortLabel}" : string.Empty);
+    private IEnumerable<(AIProviderInfo Provider, LLMModelInfo[] Models)> MatchingGroups => Providers
+        .Where(provider => AllowProviderSelection || provider.ProviderId == ProviderId)
+        .Select(provider => (Provider: provider, Models: (provider.SupportedModels ?? []).OfType<LLMModelInfo>()
+            .Where(model => string.IsNullOrWhiteSpace(_search) || Matches(provider.DisplayName) || Matches(model.ModelName) || Matches(model.DisplayName)).ToArray()))
+        .Where(group => group.Models.Length > 0);
+    private bool Matches(string? value) => value?.Contains(_search, StringComparison.OrdinalIgnoreCase) == true;
+    private bool IsSelected(AIProviderInfo provider, LLMModelInfo model) => provider.ProviderId == ProviderId && model.ModelName == ModelName;
+}

@@ -8,66 +8,44 @@
     <MudExpansionPanels Elevation="0" Outlined="true" Dense="true">
         <MudExpansionPanel KeepContentAlive="false">
             <TitleContent>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.DataObject" Color="Color.Secondary" />
-                    <MudText Typo="Typo.subtitle2">@L["Page:Diagnostics:Title"]</MudText>
-                </MudStack>
+                <span class="execution-pipeline-technical-identity__title">
+                    <MudIcon Icon="@Icons.Material.Outlined.DataObject" Size="Size.Small" />
+                    <span>@L["Page:Diagnostics:Title"]</span>
+                </span>
             </TitleContent>
             <ChildContent>
                 <div class="execution-pipeline-technical-identity__content">
                     <div class="execution-pipeline-technical-identity__intro">
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Diagnostics:Description"]</MudText>
+                        <p>@L["Page:Diagnostics:Description"]</p>
                         <MudButton Variant="Variant.Outlined"
                                    Color="Color.Primary"
                                    Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.ContentCopy"
+                                   StartIcon="@Icons.Material.Outlined.ContentCopy"
                                    OnClick="CopyAsync">
                             @L["Page:Diagnostics:Copy"]
                         </MudButton>
                     </div>
 
                     <div class="execution-pipeline-technical-identity__grid">
-                        @Diagnostic(
-                            L["Page:Diagnostics:PlanId"],
-                            L["Page:Help:Plans:PlanId"],
-                            Plan.Id.Value)
-                        @Diagnostic(
-                            L["Page:Diagnostics:OperationId"],
-                            L["Page:Help:Plans:OperationId"],
-                            Plan.Descriptor.Id.Value)
-                        @Diagnostic(
-                            L["Page:Diagnostics:PlanKey"],
-                            L["Page:Help:Plans:PlanKey"],
-                            Plan.Diagnostics.CanonicalKey)
-                        @Diagnostic(
-                            L["Page:Diagnostics:OperationKey"],
-                            L["Page:Help:Plans:OperationKey"],
-                            Plan.Descriptor.Diagnostics.CanonicalKey)
-                        @Diagnostic(
-                            L["Page:Plans:Component"],
-                            L["Page:Diagnostics:ExactTypeHelp"],
+                        @Diagnostic(L["Page:Diagnostics:PlanId"], L["Page:Help:Plans:PlanId"], Plan.Id.Value)
+                        @Diagnostic(L["Page:Diagnostics:OperationId"], L["Page:Help:Plans:OperationId"], Plan.Descriptor.Id.Value)
+                        @Diagnostic(L["Page:Diagnostics:PlanKey"], L["Page:Help:Plans:PlanKey"], Plan.Diagnostics.CanonicalKey)
+                        @Diagnostic(L["Page:Diagnostics:OperationKey"], L["Page:Help:Plans:OperationKey"], Plan.Descriptor.Diagnostics.CanonicalKey)
+                        @Diagnostic(L["Page:Plans:Component"], L["Page:Diagnostics:ExactTypeHelp"],
                             Plan.Descriptor.ComponentType.Diagnostics.AssemblyQualifiedName)
                         @if (Plan.Descriptor.ContractType is { } contractType)
                         {
-                            @Diagnostic(
-                                L["Page:Plans:Contract"],
-                                L["Page:Diagnostics:ExactTypeHelp"],
+                            @Diagnostic(L["Page:Plans:Contract"], L["Page:Diagnostics:ExactTypeHelp"],
                                 contractType.Diagnostics.AssemblyQualifiedName)
                         }
                         @if (Plan.Descriptor.EntryMethod is { } entryMethod)
                         {
-                            @Diagnostic(
-                                L["Page:Plans:Method"],
-                                L["Page:Diagnostics:ExactMethodHelp"],
+                            @Diagnostic(L["Page:Plans:Method"], L["Page:Diagnostics:ExactMethodHelp"],
                                 entryMethod.Diagnostics.CanonicalSignature)
                         }
-                        @Diagnostic(
-                            L["Page:Plans:Input"],
-                            L["Page:Diagnostics:ExactTypeHelp"],
+                        @Diagnostic(L["Page:Plans:Input"], L["Page:Diagnostics:ExactTypeHelp"],
                             Plan.Descriptor.InputType.Diagnostics.AssemblyQualifiedName)
-                        @Diagnostic(
-                            L["Page:Plans:Result"],
-                            L["Page:Diagnostics:ExactTypeHelp"],
+                        @Diagnostic(L["Page:Plans:Result"], L["Page:Diagnostics:ExactTypeHelp"],
                             Plan.Descriptor.ResultType.Diagnostics.AssemblyQualifiedName)
                     </div>
                 </div>

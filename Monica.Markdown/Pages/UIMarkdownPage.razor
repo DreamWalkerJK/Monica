@@ -1,135 +1,92 @@
 @attribute [Route(PAGE_URL)]
-@using Microsoft.Extensions.Localization
-@using Monica.Markdown.Localization
 @using Monica.Markdown.UIMarkdown.Components
-@using Monica.Markdown.UIMarkdown.Models
-@using Monica.Markdown.UIMarkdown.State
-@implements IAsyncDisposable
-
-@inject MarkdownViewerPageStateFactory PageStateFactory
-@inject IStringLocalizer<MarkdownResource> L
 
 <PageTitle>@L["Pages:MarkdownDocuments:Title"]</PageTitle>
-
-<div @ref="_viewerRoot" class="doc-layout mo-page-shell mo-page-shell--compact">
-    @if (PageState.IsLoading)
+<div class="@LayoutClass">
+    @if (!PageState.IsLoading && PageState.Groups is { Count: > 0 })
     {
-        <div class="doc-center-state">
-            <MudStack AlignItems="AlignItems.Center" Spacing="4">
-                <MudProgressCircular Color="Color.Primary"
-                                     Size="Size.Large"
-                                     Indeterminate="true" />
-                <MudText Typo="Typo.h6" Color="Color.Primary">
-                    @L["MarkdownViewer:States:LoadingDocuments"]
-                </MudText>
-            </MudStack>
-        </div>
+        <DocumentViewerToolbar CurrentGroup="PageState.CurrentGroup" CurrentCulture="@PageState.SelectedCulture"
+            CurrentLanguage="PageState.CurrentLanguage" Languages="PageState.CurrentLanguages"
+            ShowLanguageSwitcher="PageState.ShowLanguageSwitcher" IsSidebarVisible="PageState.ShowSidebar"
+            IsOutlineVisible="PageState.ShowTableOfContents" HasOutline="@(PageState.DocumentHeadings.Count > 0)" OnToggleSidebar="PageState.ToggleSidebar"
+            OnOpenGroupSwitcher="PageState.OpenGroupSwitcherAsync" OnOpenDocumentSearch="PageState.OpenDocumentSearchAsync"
+            OnLanguageChanged="PageState.OnLanguageSelectedAsync" OnToggleOutline="PageState.ToggleTableOfContents" />
     }
-    else if (PageState.Groups is null || PageState.Groups.Count == 0)
-    {
-        <div class="doc-center-state">
-            <MudStack AlignItems="AlignItems.Center" Spacing="4">
-                <MudIcon Icon="@Icons.Material.Filled.FolderOff"
-                         Size="Size.Large"
-                         Color="Color.Default"
-                         Class="empty-state-icon" />
-                <MudText Typo="Typo.h6" Class="empty-state-copy">
-                    @L["MarkdownViewer:States:NoKnowledgeBasesRegistered"]
-                </MudText>
-            </MudStack>
-        </div>
-    }
-    else
-    {
-        <div class="@PageState.WorkspaceClass">
-            @if (PageState.ShowSidebar)
-            {
-                <aside class="doc-sidebar-rail">
-                    <DocumentSidebar CurrentGroup="PageState.CurrentGroup"
-                                     CurrentTree="PageState.CurrentTree"
-                                     CurrentCulture="PageState.SelectedCulture"
-                                     SelectedDocument="PageState.SelectedDocument"
-                                     SelectedDocumentChanged="PageState.OnDocumentSelectedAsync"
-                                     OnCollapseRequested="PageState.ToggleSidebar"
-                                     OnOpenGroupSwitcher="PageState.OpenGroupSwitcherAsync" />
-                </aside>
-            }
-
-            <div class="@PageState.MainStageClass">
-                <main class="doc-reader-card">
-                    <DocumentContentViewer CurrentGroup="PageState.CurrentGroup"
-                                           Document="PageState.SelectedDocument"
-                                           Content="@PageState.DocumentContent"
-                                           CurrentAnchorId="@PageState.CurrentAnchorId"
-                                           CurrentCulture="PageState.SelectedCulture"
-                                           CurrentLanguage="PageState.CurrentLanguage"
-                                           Languages="PageState.CurrentLanguages"
-                                           ShowLanguageSwitcher="PageState.ShowLanguageSwitcher"
-                                           MissingTranslation="PageState.MissingTranslation"
-                                           IsLoading="PageState.IsContentLoading"
-                                           ShowSidebarToggle="!PageState.ShowSidebar"
-                                           IsTableOfContentsVisible="PageState.ShowTableOfContents"
-                                           OnToggleSidebar="PageState.ToggleSidebar"
-                                           OnOpenDocumentSearch="PageState.OpenDocumentSearchAsync"
-                                           OnLanguageChanged="PageState.OnLanguageSelectedAsync"
-                                           OnToggleTableOfContents="PageState.ToggleTableOfContents"
-                                           HeadingsChanged="PageState.OnDocumentHeadingsChangedAsync" />
-                </main>
-
-                @if (PageState.ShowTableOfContents)
-                {
-                    <aside class="doc-toc-rail">
-                        <DocumentTableOfContentsPanel Document="PageState.SelectedDocument"
-                                                      Headings="PageState.DocumentHeadings"
-                                                      CurrentAnchorId="@PageState.CurrentAnchorId"
-                                                      OnHeadingSelected="PageState.OnHeadingSelectedAsync" />
-                    </aside>
-                }
+    <div @ref="_viewerRoot" class="@WorkspaceClass">
+        @if (PageState.IsLoading)
+        {
+            <div class="doc-center-state" role="status">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <h1>@L["MarkdownViewer:States:LoadingDocuments"]</h1>
             </div>
-
-            @if (PageState.ShowSidebar)
+        }
+        else if (PageState.CatalogError is not null)
+        {
+            <div class="doc-center-state">
+                <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Color="Color.Error" />
+                <h1>@L["MarkdownViewer:States:CatalogFailed"]</h1><p>@PageState.CatalogError</p>
+                <MudButton OnClick="PageState.ReloadAsync" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh">@L["MarkdownViewer:Actions:Refresh"]</MudButton>
+            </div>
+        }
+        else if (PageState.Groups is null || PageState.Groups.Count == 0)
+        {
+            <div class="doc-center-state">
+                <MudIcon Icon="@Icons.Material.Outlined.FolderOff" />
+                <h1>@L["MarkdownViewer:States:NoKnowledgeBasesRegistered"]</h1>
+                <p>@L["MarkdownViewer:States:NoLibrariesDescription"]</p>
+                <MudButton OnClick="PageState.ReloadAsync" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh">@L["MarkdownViewer:Actions:Refresh"]</MudButton>
+            </div>
+        }
+        else
+        {
+            @if (PageState.ShowSidebar && !PageState.IsSidebarTemporary)
             {
-                <button type="button"
-                        class="doc-sidebar-backdrop"
-                        @onclick="PageState.ToggleSidebar"
-                        aria-label="@L["MarkdownViewer:Navbar:HideSidebar"]"></button>
+                <aside class="doc-sidebar-rail" aria-label="@L["MarkdownViewer:Toolbar:DocumentTree"]">@LibraryContent</aside>
             }
-        </div>
-    }
+            <main class="doc-reader-card">
+                <DocumentContentViewer CurrentGroup="PageState.CurrentGroup" Document="PageState.SelectedDocument"
+                    Content="@PageState.DocumentContent" CurrentAnchorId="@PageState.CurrentAnchorId"
+                    CurrentCulture="@PageState.SelectedCulture" CurrentLanguage="PageState.CurrentLanguage"
+                    Languages="PageState.CurrentLanguages" MissingTranslation="PageState.MissingTranslation"
+                    IsLoading="PageState.IsContentLoading" ContentError="@PageState.ContentError"
+                    HeadingsChanged="PageState.OnDocumentHeadingsChangedAsync" />
+            </main>
+            @if (PageState.ShowTableOfContents && !PageState.IsOutlineTemporary)
+            {
+                <aside class="doc-toc-rail" aria-label="@L["MarkdownViewer:Navbar:Outline"]">@OutlineContent</aside>
+            }
+            @if (PageState.IsSidebarTemporary && PageState.ShowSidebar)
+            {
+                <MudDrawer Open="PageState.ShowSidebar" OpenChanged="PageState.SetSidebarOpen" Variant="DrawerVariant.Temporary"
+                    Width="min(360px, 92vw)" Elevation="1" Class="doc-temporary-pane" role="dialog" aria-modal="true"
+                    aria-label="@L["MarkdownViewer:Toolbar:DocumentTree"]">
+                    @if (PageState.ShowSidebar)
+                    {
+                        <div class="doc-pane-content" @onkeydown="HandlePaneKeyDown"><MudFocusTrap>@LibraryContent</MudFocusTrap></div>
+                    }
+                </MudDrawer>
+            }
+            @if (PageState.IsOutlineTemporary && PageState.ShowTableOfContents)
+            {
+                <MudDrawer Open="PageState.ShowTableOfContents" OpenChanged="PageState.SetOutlineOpen" Anchor="Anchor.Right"
+                    Variant="DrawerVariant.Temporary" Width="min(336px, 92vw)" Elevation="1" Class="doc-temporary-pane"
+                    role="dialog" aria-modal="true" aria-label="@L["MarkdownViewer:Navbar:Outline"]">
+                    @if (PageState.ShowTableOfContents)
+                    {
+                        <div class="doc-pane-content" @onkeydown="HandlePaneKeyDown"><MudFocusTrap>@OutlineContent</MudFocusTrap></div>
+                    }
+                </MudDrawer>
+            }
+        }
+    </div>
 </div>
 
 @code {
-    public const string PAGE_URL = MarkdownViewerLocation.PAGE_URL;
-
-    private ElementReference _viewerRoot;
-    private MarkdownViewerPageState PageState { get; set; } = null!;
-    private int _disposeRequested;
-
-    protected override void OnInitialized()
-    {
-        PageState = PageStateFactory.Create(RequestRenderAsync);
-    }
-
-    protected override Task OnInitializedAsync()
-    {
-        return PageState.InitializeAsync();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        await PageState.HandleAfterRenderAsync(_viewerRoot, firstRender);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        Interlocked.Exchange(ref _disposeRequested, 1);
-        await PageState.DisposeAsync();
-    }
-
-    private Task RequestRenderAsync()
-    {
-        return Volatile.Read(ref _disposeRequested) != 0
-            ? Task.CompletedTask
-            : InvokeAsync(StateHasChanged);
-    }
+    private RenderFragment LibraryContent => @<DocumentSidebar CurrentGroup="PageState.CurrentGroup"
+        CurrentTree="PageState.CurrentTree" CurrentCulture="@PageState.SelectedCulture" SelectedDocument="PageState.SelectedDocument"
+        TreeError="@PageState.TreeError" SelectedDocumentChanged="PageState.OnDocumentSelectedAsync"
+        OnCollapseRequested="PageState.ToggleSidebar" />;
+    private RenderFragment OutlineContent => @<DocumentTableOfContentsPanel Document="PageState.SelectedDocument"
+        Headings="PageState.DocumentHeadings" CurrentAnchorId="@PageState.CurrentAnchorId"
+        OnClose="PageState.ToggleTableOfContents" OnHeadingSelected="PageState.OnHeadingSelectedAsync" />;
 }

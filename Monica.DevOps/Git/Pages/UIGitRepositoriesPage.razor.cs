@@ -1,572 +1,282 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.JSInterop;
+using Monica.DevOps.Git.Components;
 using Monica.DevOps.Git.Facades;
 using Monica.DevOps.Git.Models;
+using Monica.DevOps.Git.State;
+using Monica.DevOps.Git.Support;
 using Monica.DevOps.Localization;
-using Monica.Core.Results;
+using Monica.Modules;
 using MudBlazor;
 
 namespace Monica.DevOps.Git.Pages;
 
+/// <summary>Inspects working copies and owns explicit native confirmation and selection sessions.</summary>
 public partial class UIGitRepositoriesPage : IAsyncDisposable
 {
+    /// <summary>The existing repository administration destination.</summary>
     public const string PAGE_URL = "/git-repositories";
+    [Inject] private GitFacade GitService { get; set; } = null!;
+    [Inject] private IOptions<ModuleGitOption> Options { get; set; } = null!;
+    [Inject] private ISnackbar Snackbar { get; set; } = null!;
+    [Inject] private IDialogService DialogService { get; set; } = null!;
+    [Inject] private IStringLocalizer<GitResource> L { get; set; } = null!;
+    [Inject] private IJSRuntime JS { get; set; } = null!;
+    [Inject] private ILogger<UIGitRepositoriesPage> Logger { get; set; } = null!;
 
-    private static readonly TimeSpan OperationPollInterval = TimeSpan.FromMilliseconds(400);
-    private const string LoadFailedMessageKey = "GitDashboard:Messages:LoadFailed";
-    private const string OperationFailedMessageKey = "GitDashboard:Messages:OperationFailed";
+    private GitWorkspaceController _workspace = null!;
+    private GitPresentationPrivacy _privacy = null!;
+    private readonly HashSet<Task> _users = [];
+    private readonly HashSet<GitRepositorySyncState> _states = [];
+    private string _query = "";
+    private bool _dirtyOnly, _catalogOpen, _retired;
+    private Task? _retirement;
+    private IDialogReference? _dialog;
+    private Task _closing = Task.CompletedTask;
+    private Task<IJSObjectReference>? _moduleImport;
+    private Task<IJSObjectReference>? _sizingStart;
+    private Task? _sizingStop;
+    private bool _sizingAdmitted;
+    private readonly string _visit = "git-" + Guid.NewGuid().ToString("N");
+    private long _focusVersion;
+    private FocusIntent? _focusIntent;
+    private ElementReference _root;
+    private MudTextField<string>? _search;
+    private bool Busy => _workspace?.IsBusy == true;
+    private string SelectedKey => Safe(_workspace?.SelectedId);
+    private bool HasFilters => _states.Count > 0 || _dirtyOnly || !string.IsNullOrWhiteSpace(_query);
+    private IEnumerable<GitRepositoryStatus> VisibleRepositories => _workspace.Repositories.Where(repository =>
+        (_states.Count == 0 || _states.Contains(repository.State)) && (!_dirtyOnly || repository.IsDirty) &&
+        (string.IsNullOrWhiteSpace(_query) || new[] { repository.Id, repository.Provider, repository.ConfiguredBranch,
+                repository.ResolvedBranch, repository.RemoteUrl, repository.LocalPath, repository.ResolvedLocalPath }
+            .Any(value => Safe(value).Contains(_query.Trim(), StringComparison.OrdinalIgnoreCase))));
+    private string ResultCount => L["Workspace:Repositories:Results", VisibleRepositories.Count(), _workspace.Repositories.Count];
+    private string CatalogEmptyText => L[_workspace.Repositories.Count > 0 ? "Workspace:Repositories:NoMatches"
+        : _workspace.RepositoriesObservedAt is not null ? "GitDashboard:Messages:NoRepositories"
+        : _workspace.IsLoading ? "Workspace:Repositories:Loading" : "Workspace:Repositories:NoAcceptedData"];
 
-    [Inject]
-    private GitFacade GitService { get; set; } = default!;
-
-    [Inject]
-    private ISnackbar Snackbar { get; set; } = default!;
-
-    [Inject]
-    private IDialogService DialogService { get; set; } = default!;
-
-    [Inject]
-    private IStringLocalizer<GitResource> L { get; set; } = default!;
-
-    private bool _isLoading;
-    private bool _isOperating;
-    private bool _isDisposed;
-    private readonly CancellationTokenSource _disposeCts = new();
-    private List<GitRepositoryStatus> _repositories = [];
-    private List<GitCredentialInfo> _credentials = [];
-    private List<GitCredentialResolverInfo> _resolvers = [];
-    private GitRepositoryStatus? _selectedRepository;
-
-    private bool IsBusy => _isLoading || _isOperating;
-
-    private GitRepositoryStatus? OwnershipFailureRepository => _repositories.FirstOrDefault(repository =>
-        repository.State == GitRepositorySyncState.Failed && IsOwnershipFailure(repository.LastError));
-
+    protected override async Task OnInitializedAsync()
+    {
+        _privacy = new(Options.Value.CredentialRegistrations);
+        _workspace = new(GitService, Options);
+        _workspace.Changed += CaptureChanged;
+        await Track(async () => { await _workspace.RefreshAsync(); if (!_retired) _catalogOpen = _workspace.SelectedRepository is null; });
+    }
+    private void CaptureChanged()
+    {
+        if (_retired) return;
+        _ = ObserveRenderAsync(Track(() => InvokeAsync(() => { if (!_retired) StateHasChanged(); })));
+    }
+    private async Task ObserveRenderAsync(Task task)
+    {
+        try { await task; }
+        catch (Exception exception) { Logger.LogError("Git workspace render dispatch failed: {Error}", Safe(exception.Message)); }
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
+        if (_retired) return;
+        var initializeSizing = !_sizingAdmitted;
+        var intent = _focusIntent;
+        if (!initializeSizing && intent is null) return;
+        _sizingAdmitted = true;
+        _focusIntent = null;
+        await Track(async () =>
         {
-            return;
-        }
-
-        await LoadAsync();
+            _moduleImport ??= JS.InvokeAsync<IJSObjectReference>("import", "./_content/Monica.DevOps/Git/git-catalog.js").AsTask();
+            try
+            {
+                var module = await _moduleImport;
+                if (_retired) return;
+                if (initializeSizing)
+                {
+                    // Publish the reservation before a producer can reenter retirement.
+                    var started = new TaskCompletionSource<IJSObjectReference>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _sizingStart = started.Task;
+                    try { started.TrySetResult(await module.InvokeAsync<IJSObjectReference>("createCatalogSizer", _root, _visit)); }
+                    catch (Exception exception) { started.TrySetException(exception); }
+                    await started.Task;
+                    if (_retired) { await StopSizingAsync(); return; }
+                }
+                if (!_retired && intent is not null && intent.Version == _focusVersion && intent.Key == SelectedKey)
+                    await module.InvokeVoidAsync("reveal", _root, _visit, intent.Version, intent.Kind, intent.Key);
+            }
+            catch (JSDisconnectedException) { }
+            catch (OperationCanceledException) when (_retired) { }
+        });
     }
-
-    public ValueTask DisposeAsync()
+    private Task StopSizingAsync()
     {
-        _isDisposed = true;
-        _disposeCts.Cancel();
-        _disposeCts.Dispose();
-        return ValueTask.CompletedTask;
+        if (_sizingStop is not null) return _sizingStop;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _sizingStop = completion.Task;
+        _ = StopAsync();
+        return completion.Task;
+        async Task StopAsync()
+        {
+            try
+            {
+                if (_sizingStart is not null)
+                {
+                    var observer = await _sizingStart;
+                    try { await observer.InvokeVoidAsync("dispose"); }
+                    finally { await observer.DisposeAsync(); }
+                }
+                completion.TrySetResult();
+            }
+            catch (JSDisconnectedException) { completion.TrySetResult(); }
+            catch (OperationCanceledException) when (_retired) { completion.TrySetResult(); }
+            catch (Exception exception) { completion.TrySetException(exception); }
+        }
     }
-
+    private void CancelFocus() { _focusVersion++; _focusIntent = null; }
+    private void SetQuery(string? value) { CancelFocus(); _query = value ?? ""; }
+    private void SetDirty(bool value) { CancelFocus(); _dirtyOnly = value; }
+    private void ToggleState(GitRepositorySyncState state) { CancelFocus(); if (!_states.Remove(state)) _states.Add(state); }
+    private async Task ClearFiltersAsync()
+    {
+        CancelFocus(); _query = ""; _dirtyOnly = false; _states.Clear();
+        if (_search is not null) await _search.ClearAsync();
+    }
+    private void ToggleCatalog()
+    {
+        if (_retired) return;
+        CancelFocus(); _catalogOpen = !_catalogOpen;
+        if (_catalogOpen) _focusIntent = new(_focusVersion, "catalog", SelectedKey);
+    }
+    private void SelectRepository(string id)
+    {
+        if (_retired) return;
+        _workspace.Select(id);
+        if (!SameId(_workspace.SelectedId, id)) return;
+        CancelFocus(); _catalogOpen = false;
+        _focusIntent = new(_focusVersion, "detail", SelectedKey);
+    }
     private Task RefreshAsync()
     {
-        return LoadAsync();
+        if (_retired || Busy) return Task.CompletedTask;
+        CancelFocus();
+        return Track(async () => { await _workspace.RefreshAsync(); if (!_retired && _workspace.SelectedRepository is null) _catalogOpen = true; });
     }
-
-    private async Task LoadAsync(bool showErrors = true)
+    private Task ConfirmAsync(GitCommandKind kind)
     {
-        if (_isDisposed || _isLoading)
+        // Freeze command admission before rendering or starting the native dialog producer.
+        if (_retired || !_workspace.TryBeginCommand(kind, out var scope) || scope is null) return Task.CompletedTask;
+        if (_retired) { _workspace.CancelCommand(scope); return Task.CompletedTask; }
+        CancelFocus();
+        var targets = scope.Targets.Select(target => new GitOperationConfirmTarget(Safe(target.Id), Safe(target.ResolvedLocalPath),
+            Safe(target.ConfiguredBranch), Safe(target.ResolvedBranch), target.IsDirty, target.IsAvailable,
+            Safe(_workspace.Repositories.FirstOrDefault(repository => SameId(repository.Id, target.Id))?.RemoteUrl))).ToArray();
+        return Track(async () =>
         {
-            return;
-        }
-
-        _isLoading = true;
-        await RefreshViewAsync();
-
-        try
-        {
-            if (!await LoadRepositoriesAsync(showErrors))
+            try
             {
-                return;
-            }
-
-            await LoadMetadataAsync(showErrors);
-        }
-        finally
-        {
-            _isLoading = false;
-            await RefreshViewAsync();
-        }
-    }
-
-    private async Task<bool> LoadRepositoriesAsync(bool showErrors)
-    {
-        var response = await GitService.GetRepositoriesAsync();
-        if (!TryGetResponseValue(response, showErrors, LoadFailedMessageKey, out var repositories))
-        {
-            return false;
-        }
-
-        ApplyRepositories(repositories);
-        return true;
-    }
-
-    private async Task<bool> LoadMetadataAsync(bool showErrors)
-    {
-        var credentialsResponse = await GitService.GetCredentialsAsync();
-        if (!TryGetResponseValue(credentialsResponse, showErrors, LoadFailedMessageKey, out var credentials))
-        {
-            return false;
-        }
-
-        var resolversResponse = await GitService.GetCredentialResolversAsync();
-        if (!TryGetResponseValue(resolversResponse, showErrors, LoadFailedMessageKey, out var resolvers))
-        {
-            return false;
-        }
-
-        _credentials = credentials.ToList();
-        _resolvers = resolvers.ToList();
-        return true;
-    }
-
-    private void ApplyRepositories(IReadOnlyList<GitRepositoryStatus> repositories)
-    {
-        _repositories = repositories.ToList();
-
-        if (_selectedRepository is null)
-        {
-            _selectedRepository = _repositories.FirstOrDefault();
-            return;
-        }
-
-        _selectedRepository = _repositories.FirstOrDefault(x => x.Id == _selectedRepository.Id)
-            ?? _repositories.FirstOrDefault();
-    }
-
-    private async Task<bool> RefreshRepositoryAsync(string repositoryId, bool showErrors = false)
-    {
-        var response = await GitService.GetRepositoryAsync(repositoryId);
-        if (!TryGetResponseValue(response, showErrors, LoadFailedMessageKey, out var repository))
-        {
-            return false;
-        }
-
-        UpdateRepositoryPreview(repositoryId, _ => repository);
-        await RefreshViewAsync();
-        return true;
-    }
-
-    private void SelectRepository(string repositoryId)
-    {
-        _selectedRepository = _repositories.FirstOrDefault(x => x.Id == repositoryId);
-    }
-
-    private async Task SyncRepositoryAsync(string repositoryId)
-    {
-        PreviewRepositorySync(repositoryId);
-        await RefreshViewAsync();
-
-        var syncTask = GitService.SyncRepositoryAsync(repositoryId);
-        var response = await RunOperationAsync(
-            syncTask,
-            (task, cancellationToken) => TrackOperationAsync(
-                task,
-                () => RefreshRepositoryAsync(repositoryId, showErrors: false),
-                cancellationToken));
-
-        if (response is null)
-        {
-            return;
-        }
-
-        if (response.IsFailed(out var error, out var result))
-        {
-            ShowError(OperationFailedMessageKey, error);
-        }
-        else
-        {
-            Snackbar.Add(
-                result.Success
-                    ? L["GitDashboard:Messages:SyncRepositorySuccess", repositoryId]
-                    : L[OperationFailedMessageKey, result.Message],
-                result.Success ? Severity.Success : Severity.Error);
-        }
-
-        await RefreshRepositoryAsync(repositoryId);
-    }
-
-    private async Task DeleteRepositoryAsync(string repositoryId)
-    {
-        if (!await ConfirmDeleteRepositoryAsync(repositoryId))
-        {
-            return;
-        }
-
-        PreviewRepositoryDeletion(repositoryId);
-        await RefreshViewAsync();
-
-        var deleteTask = GitService.DeleteRepositoryAsync(repositoryId);
-        var response = await RunOperationAsync(
-            deleteTask,
-            (task, cancellationToken) => TrackOperationAsync(
-                task,
-                () => RefreshRepositoryAsync(repositoryId, showErrors: false),
-                cancellationToken));
-
-        if (response is null)
-        {
-            return;
-        }
-
-        if (response.IsFailed(out var error, out var result))
-        {
-            ShowError(OperationFailedMessageKey, error);
-        }
-        else
-        {
-            Snackbar.Add(
-                result.Success
-                    ? L["GitDashboard:Messages:DeleteRepositorySuccess", repositoryId]
-                    : L[OperationFailedMessageKey, result.Message],
-                result.Success ? Severity.Success : Severity.Error);
-        }
-
-        await RefreshRepositoryAsync(repositoryId, showErrors: true);
-    }
-
-    private async Task SyncAllAsync()
-    {
-        PreviewAllRepositoriesSync();
-        await RefreshViewAsync();
-
-        var syncTask = GitService.SyncAllAsync();
-        var response = await RunOperationAsync(syncTask, (task, cancellationToken) =>
-            TrackOperationAsync(task, RefreshAllRepositoriesPreviewAsync, cancellationToken));
-
-        if (response is null)
-        {
-            return;
-        }
-
-        if (response.IsFailed(out var error, out var results))
-        {
-            ShowError(OperationFailedMessageKey, error);
-        }
-        else
-        {
-            var failures = results.Where(x => !x.Success).ToList();
-            Snackbar.Add(
-                failures.Count == 0
-                    ? L["GitDashboard:Messages:SyncAllSuccess"]
-                    : L[OperationFailedMessageKey, string.Join("; ", failures.Select(x => x.Message))],
-                failures.Count == 0 ? Severity.Success : Severity.Warning);
-        }
-
-        await LoadAsync(showErrors: false);
-    }
-
-    private async Task<Res<TResult>?> RunOperationAsync<TResult>(
-        Task<Res<TResult>> operationTask,
-        Func<Task<Res<TResult>>, CancellationToken, Task>? tracker = null)
-    {
-        _isOperating = true;
-        await RefreshViewAsync();
-
-        try
-        {
-            if (tracker is not null)
-            {
-                await tracker(operationTask, _disposeCts.Token);
-                if (_isDisposed)
+                var reference = await DialogService.ShowAsync<GitOperationConfirmDialog>(ConfirmationTitle(kind), new DialogParameters
                 {
-                    return null;
+                    [nameof(GitOperationConfirmDialog.Kind)] = kind,
+                    [nameof(GitOperationConfirmDialog.Targets)] = targets
+                }, new() { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = true });
+                _dialog = reference;
+                var resultTask = reference.Result;
+                if (_retired) await Task.WhenAll(CloseDialogAsync(reference), resultTask);
+                var result = await resultTask;
+                await _closing;
+                if (_retired || result is not { Canceled: false, Data: true }) return;
+                await _workspace.ExecuteAsync(scope);
+                if (!_retired && _workspace.Outcome is { } outcome)
+                {
+                    var failed = outcome.FacadeError is not null || outcome.SyncResults.Any(item => !item.Success) || outcome.DeleteResult?.Success == false;
+                    Snackbar.Add(failed ? L["Workspace:Repositories:OperationFailed", OutcomeMessage(outcome)] : L["Workspace:Repositories:OperationSucceeded"], failed ? Severity.Error : Severity.Success);
                 }
             }
-
-            return await operationTask;
-        }
-        catch (OperationCanceledException)
-        {
-            return null;
-        }
-        finally
-        {
-            _isOperating = false;
-            await RefreshViewAsync();
-        }
-    }
-
-    private async Task TrackOperationAsync(
-        Task operationTask,
-        Func<Task> refreshAsync,
-        CancellationToken cancellationToken)
-    {
-        while (!operationTask.IsCompleted)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            await Task.Delay(OperationPollInterval, cancellationToken);
-            if (operationTask.IsCompleted)
+            catch (Exception exception)
             {
-                break;
+                Logger.LogError("Git workspace command or confirmation failed: {Error}", Safe(exception.Message));
+                if (!_retired) Snackbar.Add(L["Workspace:Repositories:OperationFailed", Safe(exception.Message)], Severity.Error);
             }
-
-            await refreshAsync();
+            finally { _dialog = null; if (!scope.HasStarted) _workspace.CancelCommand(scope); }
+        });
+    }
+    private Task CloseDialogAsync(IDialogReference reference)
+    {
+        // Reserve completion before Close, whose Result continuation may resume inline.
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _closing = completion.Task;
+        _ = CloseAsync();
+        return completion.Task;
+        async Task CloseAsync()
+        {
+            try { await InvokeAsync(() => reference.Close(DialogResult.Cancel())); completion.TrySetResult(); }
+            catch (Exception exception)
+            {
+                try { reference.Dismiss(DialogResult.Cancel()); }
+                catch (Exception dismissFailure) { exception = new AggregateException(exception, dismissFailure); }
+                completion.TrySetException(exception);
+            }
         }
     }
-
-    private async Task RefreshAllRepositoriesPreviewAsync()
+    private Task Track(Func<Task> action)
     {
-        await LoadRepositoriesAsync(showErrors: false);
-        await RefreshViewAsync();
-    }
-
-    private void PreviewAllRepositoriesSync()
-    {
-        UpdateAllRepositoriesPreview(
-            GitRepositorySyncState.Syncing,
-            GitRepositoryProgressStages.Preparing,
-            null,
-            L["GitDashboard:Messages:SyncAllInProgress"]);
-    }
-
-    private void PreviewRepositorySync(string repositoryId)
-    {
-        UpdateRepositoryPreview(repositoryId, repository => CopyRepositoryStatus(
-            repository,
-            state: GitRepositorySyncState.Syncing,
-            progressStage: GitRepositoryProgressStages.Preparing,
-            progressPercent: null,
-            lastSyncMessage: L["GitDashboard:Messages:SyncInProgress", repositoryId],
-            lastError: null));
-    }
-
-    private void PreviewRepositoryDeletion(string repositoryId)
-    {
-        UpdateRepositoryPreview(repositoryId, repository => CopyRepositoryStatus(
-            repository,
-            state: GitRepositorySyncState.Syncing,
-            progressStage: GitRepositoryProgressStages.Deleting,
-            progressPercent: null,
-            lastSyncMessage: L["GitDashboard:ProgressStages:Deleting"],
-            lastError: null));
-    }
-
-    private async Task<bool> ConfirmDeleteRepositoryAsync(string repositoryId)
-    {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            L["GitDashboard:Dialogs:DeleteLocalRepository:Title"],
-            L["GitDashboard:Dialogs:DeleteLocalRepository:Message", repositoryId],
-            yesText: L["GitDashboard:Dialogs:DeleteLocalRepository:Confirm"],
-            cancelText: L["GitDashboard:Dialogs:DeleteLocalRepository:Cancel"]);
-
-        return confirmed == true;
-    }
-
-    private bool TryGetResponseValue<T>(
-        Res<T> response,
-        bool showErrors,
-        string errorMessageKey,
-        [MaybeNullWhen(false)] out T value)
-    {
-        if (!response.IsFailed(out var error, out value))
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _users.Add(completion.Task);
+        _ = CompleteAsync();
+        return completion.Task;
+        async Task CompleteAsync()
         {
-            return true;
-        }
-
-        if (showErrors)
-        {
-            ShowError(errorMessageKey, error);
-        }
-
-        return false;
-    }
-
-    private void ShowError(string messageKey, string error)
-    {
-        Snackbar.Add(L[messageKey, error], Severity.Error);
-    }
-
-    private Task RefreshViewAsync()
-    {
-        return _isDisposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
-    }
-
-    private void UpdateAllRepositoriesPreview(
-        GitRepositorySyncState state,
-        string? progressStage = null,
-        double? progressPercent = null,
-        string? message = null)
-    {
-        _repositories = _repositories
-            .Select(repository => CopyRepositoryStatus(
-                repository,
-                state: state,
-                progressStage: progressStage,
-                progressPercent: progressPercent,
-                lastSyncMessage: message,
-                lastError: null))
-            .ToList();
-
-        if (_selectedRepository is not null)
-        {
-            _selectedRepository = _repositories.FirstOrDefault(x => x.Id == _selectedRepository.Id)
-                ?? _selectedRepository;
+            try { await action(); completion.TrySetResult(); }
+            catch (Exception exception) { completion.TrySetException(exception); }
+            finally { _users.Remove(completion.Task); }
         }
     }
-
-    private void UpdateRepositoryPreview(string repositoryId, Func<GitRepositoryStatus, GitRepositoryStatus> updater)
+    /// <summary>Stops publication, settles owned confirmation, and joins work without disposing borrowed services.</summary>
+    public ValueTask DisposeAsync()
     {
-        var index = _repositories.FindIndex(x => string.Equals(x.Id, repositoryId, StringComparison.OrdinalIgnoreCase));
-        if (index < 0)
+        if (_retirement is not null) return new(_retirement);
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _retirement = completion.Task;
+        _retired = true; CancelFocus();
+        if (_workspace is not null) _workspace.Changed -= CaptureChanged;
+        _ = RetireAsync();
+        return new(_retirement);
+        async Task RetireAsync()
         {
-            return;
+            try
+            {
+                var close = _dialog is { } reference ? CloseDialogAsync(reference) : Task.CompletedTask;
+                var controller = _workspace?.DisposeAsync().AsTask() ?? Task.CompletedTask;
+                var sizing = StopSizingAsync();
+                try { await Task.WhenAll(close, controller, sizing, Task.WhenAll(_users.ToArray())); }
+                finally
+                {
+                    if (_moduleImport is not null)
+                    {
+                        try { await (await _moduleImport).DisposeAsync(); }
+                        catch (JSDisconnectedException) { }
+                        catch (OperationCanceledException) when (_retired) { }
+                    }
+                }
+                completion.TrySetResult();
+            }
+            catch (Exception exception) { completion.TrySetException(exception); }
         }
-
-        var updated = updater(_repositories[index]);
-        _repositories[index] = updated;
-
-        if (_selectedRepository is not null
-            && string.Equals(_selectedRepository.Id, repositoryId, StringComparison.OrdinalIgnoreCase))
-        {
-            _selectedRepository = updated;
-        }
     }
-
-    private static GitRepositoryStatus CopyRepositoryStatus(
-        GitRepositoryStatus repository,
-        GitRepositorySyncState? state = null,
-        bool? isAvailable = null,
-        bool? isDirty = null,
-        string? resolvedBranch = null,
-        string? currentCommit = null,
-        string? progressStage = null,
-        double? progressPercent = null,
-        long? workingDirectorySizeBytes = null,
-        string? lastSyncMessage = null,
-        string? lastError = null)
+    private string Safe(string? value) => _privacy?.Redact(value) ?? "";
+    private string Display(string? value) => GitWorkspacePresentation.Display(Safe(value), L);
+    private string StateText(GitRepositorySyncState state) => GitWorkspacePresentation.StateText(state, L);
+    private static Color StateColor(GitRepositorySyncState state) => GitWorkspacePresentation.StateColor(state);
+    private string BoolText(bool value) => GitWorkspacePresentation.BoolText(value, L);
+    private string DateText(DateTimeOffset? value) => value is null ? L["Workspace:Repositories:NeverSynced"] : GitWorkspacePresentation.FormatDate(value, L);
+    private string ConfirmationTitle(GitCommandKind kind) => L[kind switch
     {
-        return new GitRepositoryStatus
-        {
-            Id = repository.Id,
-            Provider = repository.Provider,
-            RemoteUrl = repository.RemoteUrl,
-            LocalPath = repository.LocalPath,
-            ResolvedLocalPath = repository.ResolvedLocalPath,
-            ConfiguredBranch = repository.ConfiguredBranch,
-            ResolvedBranch = resolvedBranch ?? repository.ResolvedBranch,
-            CredentialId = repository.CredentialId,
-            State = state ?? repository.State,
-            IsAvailable = isAvailable ?? repository.IsAvailable,
-            IsDirty = isDirty ?? repository.IsDirty,
-            CurrentCommit = currentCommit ?? repository.CurrentCommit,
-            ProgressStage = progressStage ?? repository.ProgressStage,
-            ProgressPercent = progressPercent ?? repository.ProgressPercent,
-            WorkingDirectorySizeBytes = workingDirectorySizeBytes ?? repository.WorkingDirectorySizeBytes,
-            LastSyncAtUtc = repository.LastSyncAtUtc,
-            LastSyncMessage = lastSyncMessage ?? repository.LastSyncMessage,
-            LastError = lastError ?? repository.LastError
-        };
-    }
-
-    private string GetStateText(GitRepositorySyncState state)
-    {
-        return state switch
-        {
-            GitRepositorySyncState.NotReady => L["GitDashboard:States:NotReady"],
-            GitRepositorySyncState.Syncing => L["GitDashboard:States:Syncing"],
-            GitRepositorySyncState.Ready => L["GitDashboard:States:Ready"],
-            GitRepositorySyncState.Failed => L["GitDashboard:States:Failed"],
-            _ => state.ToString()
-        };
-    }
-
-    private string GetProgressText(GitRepositoryStatus repository)
-    {
-        var stage = GetProgressStageText(repository.ProgressStage);
-        if (string.IsNullOrWhiteSpace(stage))
-        {
-            return L["GitDashboard:States:None"];
-        }
-
-        return repository.ProgressPercent is double progressPercent
-            ? $"{stage} ({progressPercent:0}%)"
-            : stage;
-    }
-
-    private string GetProgressStageText(string? progressStage)
-    {
-        return progressStage switch
-        {
-            GitRepositoryProgressStages.Preparing => L["GitDashboard:ProgressStages:Preparing"],
-            GitRepositoryProgressStages.Cloning => L["GitDashboard:ProgressStages:Cloning"],
-            GitRepositoryProgressStages.Fetching => L["GitDashboard:ProgressStages:Fetching"],
-            GitRepositoryProgressStages.Checkout => L["GitDashboard:ProgressStages:Checkout"],
-            GitRepositoryProgressStages.Deleting => L["GitDashboard:ProgressStages:Deleting"],
-            _ => string.Empty
-        };
-    }
-
-    private static bool IsProgressIndeterminate(GitRepositoryStatus repository)
-    {
-        return repository.State == GitRepositorySyncState.Syncing
-            && !repository.ProgressPercent.HasValue;
-    }
-
-    private static double GetProgressValue(GitRepositoryStatus repository)
-    {
-        return repository.ProgressPercent ?? 0d;
-    }
-
-    private static Color GetStateColor(GitRepositorySyncState state)
-    {
-        return state switch
-        {
-            GitRepositorySyncState.Ready => Color.Success,
-            GitRepositorySyncState.Syncing => Color.Info,
-            GitRepositorySyncState.Failed => Color.Error,
-            _ => Color.Default
-        };
-    }
-
-    private string BoolText(bool value)
-    {
-        return value ? L["GitDashboard:States:Yes"] : L["GitDashboard:States:No"];
-    }
-
-    private string GetDisplay(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? L["GitDashboard:States:None"] : value;
-    }
-
-    private static string ShortSha(string? sha)
-    {
-        return string.IsNullOrWhiteSpace(sha)
-            ? string.Empty
-            : sha.Length <= 8
-                ? sha
-                : sha[..8];
-    }
-
-    private static string FormatDate(DateTimeOffset? dateTimeOffset)
-    {
-        return dateTimeOffset?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
-    }
-
-    private static string FormatBytes(long bytes)
-    {
-        string[] units = ["B", "KB", "MB", "GB", "TB"];
-        double size = bytes;
-        var unitIndex = 0;
-
-        while (size >= 1024 && unitIndex < units.Length - 1)
-        {
-            size /= 1024;
-            unitIndex++;
-        }
-
-        return unitIndex == 0
-            ? $"{bytes} {units[unitIndex]}"
-            : $"{size:0.##} {units[unitIndex]}";
-    }
-
-    private static bool IsOwnershipFailure(string? error)
-    {
-        return error?.Contains("dubious ownership", StringComparison.OrdinalIgnoreCase) == true
-            || error?.Contains("safe.directory", StringComparison.OrdinalIgnoreCase) == true
-            || error?.Contains("repository ownership", StringComparison.OrdinalIgnoreCase) == true;
-    }
+        GitCommandKind.SyncAll => "Workspace:Confirm:SyncAllTitle",
+        GitCommandKind.DeleteLocal => "Workspace:Confirm:DeleteTitle",
+        _ => "Workspace:Confirm:SyncTitle"
+    }];
+    private string OutcomeMessage(GitCommandOutcome outcome) => Safe(outcome.FacadeError ?? string.Join("; ",
+        outcome.SyncResults.Where(item => !item.Success).Select(item => item.Message).Append(outcome.DeleteResult?.Success == false ? outcome.DeleteResult.Message : "").Where(message => !string.IsNullOrWhiteSpace(message))));
+    private static bool SameId(string? left, string? right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+    private string CredentialHref(string id) => "/git-credentials?credential=" + Uri.EscapeDataString(Safe(id));
+    private sealed record FocusIntent(long Version, string Kind, string Key);
 }

@@ -1,0 +1,59 @@
+@inject IStringLocalizer<OpenTelemetryUIResource> L
+
+<section class="telemetry-registry" aria-label="@L["Registry:Title"]">
+    <header class="registry-heading"><div><span class="registry-eyebrow">@L["Registry:Eyebrow"]</span><h2>@L["Registry:Title"]</h2></div><span class="registry-count">@Instruments.Count</span></header>
+    <div class="registry-filters">
+        <div><MudTextField T="string" Value="@NameFilter" ValueChanged="OnNameFilter" Immediate="true" Placeholder="@L["Registry:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" aria-label="@L["Filter:InstrumentName"]" /></div>
+        <div><MudSelect T="string" Value="@MeterFilter" ValueChanged="OnMeterFilter" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" aria-label="@L["Filter:MeterPrefix"]"><MudSelectItem T="string" Value="@string.Empty">@L["Filter:AllMeters"]</MudSelectItem>@foreach (var meter in MeterNames) { <MudSelectItem T="string" Value="@meter">@meter</MudSelectItem> }</MudSelect></div>
+    </div>
+    @if (Instruments.Count == 0)
+    {
+        <div class="registry-empty" role="status"><h3>@L[MeterNames.Count == 0 ? "Registry:EmptyTitle" : "Registry:NoMatchesTitle"]</h3><p>@L[MeterNames.Count == 0 ? "Registry:Empty" : "Registry:NoMatches"]</p></div>
+    }
+    else
+    {
+        <div class="registry-list">
+            @foreach (var instrument in Instruments.Skip((_page - 1) * PageSize).Take(PageSize))
+            {
+                var selected = ReferenceEquals(Selected, instrument);
+                <button type="button" class="registry-row @(selected ? "is-selected" : null)" data-instrument-id="@instrument.InstrumentId" data-instrument-name="@instrument.Name" aria-pressed="@(selected ? "true" : "false")" @onclick="@(() => OnSelect.InvokeAsync(instrument))">
+                    <span class="registry-row-meta"><span>@instrument.Kind</span><span>@instrument.TagSets.Count @L["Registry:Series"]</span></span>
+                    <strong>@instrument.Name</strong><span class="registry-meter">@instrument.MeterName @if (!string.IsNullOrEmpty(instrument.MeterVersion)) { <span>· @instrument.MeterVersion</span> }</span>
+                    @if (instrument.Overflow) { <span class="registry-overflow"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />@L["Registry:Dropped", instrument.DroppedSamples]</span> }
+                </button>
+            }
+        </div>
+        <footer class="registry-footer"><span>@L["Registry:Shown", (_page - 1) * PageSize + 1, Math.Min(_page * PageSize, Instruments.Count), Instruments.Count]</span>@if (PageCount > 1) { <MudPagination Count="@PageCount" Selected="_page" SelectedChanged="SetPage" ShowFirstButton="true" ShowLastButton="true" Color="Color.Default" Size="Size.Small" /> }</footer>
+    }
+</section>
+
+@code {
+    /// <summary>Gets or sets all actual matching instruments in one adopted view.</summary>
+    [Parameter] public IReadOnlyList<InstrumentSnapshot> Instruments { get; set; } = [];
+    /// <summary>Gets or sets whole-view meter names independent of name filtering.</summary>
+    [Parameter] public IReadOnlyList<string> MeterNames { get; set; } = [];
+    /// <summary>Gets or sets the exact selected object in the detached view.</summary>
+    [Parameter] public InstrumentSnapshot? Selected { get; set; }
+    /// <summary>Gets or sets the exact meter-equality filter.</summary>
+    [Parameter] public string MeterFilter { get; set; } = string.Empty;
+    /// <summary>Gets or sets the name substring filter.</summary>
+    [Parameter] public string NameFilter { get; set; } = string.Empty;
+    /// <summary>Requests a meter-filter change from the owning session.</summary>
+    [Parameter] public EventCallback<string> OnMeterFilter { get; set; }
+    /// <summary>Requests a name-filter change from the owning session.</summary>
+    [Parameter] public EventCallback<string> OnNameFilter { get; set; }
+    /// <summary>Requests selection of the exact rendered instrument.</summary>
+    [Parameter] public EventCallback<InstrumentSnapshot> OnSelect { get; set; }
+    private const int PageSize = 12;
+    private int _page = 1;
+    private string _previousMeter = string.Empty;
+    private string _previousName = string.Empty;
+    private int PageCount => Math.Max(1, (Instruments.Count + PageSize - 1) / PageSize);
+    protected override void OnParametersSet()
+    {
+        if (_previousMeter != MeterFilter || _previousName != NameFilter) _page = 1;
+        _previousMeter = MeterFilter; _previousName = NameFilter;
+        _page = Math.Clamp(_page, 1, PageCount);
+    }
+    private void SetPage(int page) => _page = Math.Clamp(page, 1, PageCount);
+}

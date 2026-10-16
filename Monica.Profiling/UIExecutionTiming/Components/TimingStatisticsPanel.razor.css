@@ -1,0 +1,61 @@
+.timing-statistics { container: timing-statistics / inline-size; margin-bottom: 24px; min-width: 0; padding: 26px; border: 1px solid var(--mud-palette-lines-default); border-radius: 12px; background: var(--mud-palette-surface); }
+.timing-panel-heading { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 22px; }
+.timing-panel-eyebrow { font-size: 10px; letter-spacing: .1em; font-weight: 500; color: var(--timing-accent-ink); }
+.timing-panel-heading h2 { margin: 7px 0 0; font-size: 20px; line-height: 1.4; font-weight: 500; }
+.timing-result-count { font-size: 11px; line-height: 1.65; color: var(--timing-muted-ink); }
+.timing-ledger-controls { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+.timing-ledger-controls > div { min-width: 0; }
+.timing-ledger-controls > div:first-child { flex: 1 1 260px; }
+.timing-ledger-controls > div:nth-child(2) { flex: 0 1 220px; }
+.timing-ledger-controls ::deep .mud-button-root { margin-top: 8px; color: var(--timing-accent-ink); }
+.timing-ledger-paint { min-width: 0; border: 1px solid var(--mud-palette-lines-default); border-radius: 7px; overflow: clip; }
+.timing-ledger-paint ::deep .mud-table { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.timing-ledger-paint ::deep .mud-table-container { overflow: clip; }
+.timing-ledger-paint ::deep table { width: 100%; table-layout: fixed; }
+.timing-ledger-paint ::deep th { padding: 14px 16px; font-size: 11px; font-weight: 500; white-space: normal; color: var(--timing-muted-ink); background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface)); }
+.timing-ledger-paint ::deep td { padding: 22px 16px; border-color: var(--mud-palette-lines-default); vertical-align: middle; font-size: 13px; overflow-wrap: anywhere; }
+.timing-ledger-paint ::deep tbody tr:last-child td { border-bottom: 0; }
+.timing-ledger-paint ::deep .timing-identity-column { width: 37%; }
+.timing-ledger-paint ::deep .timing-measure-column { width: 21%; }
+.timing-ledger-paint ::deep .timing-frequency-column { width: 18%; }
+.timing-ledger-paint ::deep .timing-allocation-column { width: 19%; }
+.timing-ledger-paint ::deep .timing-action-column { width: 5%; padding-inline: 8px; text-align: center; }
+.timing-operation-name { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; line-height: 1.65; }
+.timing-operation-key { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-family: var(--mo-font-family-mono); font-size: 12px; color: var(--timing-muted-ink); line-height: 1.8; white-space: normal; overflow-wrap: anywhere; }
+.timing-stacked-label { display: none; }
+.timing-number-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.timing-number-pair > div { display: grid; align-content: start; gap: 7px; min-width: 0; }
+.timing-number-pair span { font-size: 10px; line-height: 1.6; color: var(--timing-muted-ink); }
+.timing-number-pair strong { font-family: var(--mo-font-family-mono); font-size: 13px; line-height: 1.65; font-weight: 400; overflow-wrap: anywhere; }
+.timing-measure-column .timing-number-pair > div:first-child strong { font-size: 18px; }
+.timing-measure-column .timing-number-pair > div:last-child strong { font-size: 14px; }
+.timing-relative-track { height: 3px; margin-top: 14px; background: var(--mud-palette-divider); border-radius: 2px; overflow: clip; }
+.timing-relative-track span { display: block; height: 100%; background: var(--mud-palette-primary); }
+.timing-ledger-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding-top: 18px; font-size: 11px; line-height: 1.7; color: var(--timing-muted-ink); }
+.timing-ledger-footer p { margin: 0 0 3px; }
+.timing-empty { display: flex; align-items: flex-start; gap: 14px; padding: 24px; border: 1px solid var(--mud-palette-lines-default); border-radius: 7px; font-size: 13px; }
+.timing-empty strong { font-weight: 500; }
+.timing-empty p { margin: 8px 0 0; line-height: 1.75; color: var(--timing-muted-ink); }
+.timing-accessible-label { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+@container timing-statistics (max-width: 800px) {
+    .timing-ledger-paint ::deep table, .timing-ledger-paint ::deep tbody { display: block; }
+    .timing-ledger-paint ::deep thead { display: none; }
+    .timing-ledger-paint ::deep tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; padding: 20px 16px; border-bottom: 1px solid var(--mud-palette-lines-default); }
+    .timing-ledger-paint ::deep tbody tr:last-child { border-bottom: 0; }
+    .timing-ledger-paint ::deep tbody td { display: block; width: auto; min-width: 0; padding: 0; border: 0; }
+    .timing-ledger-paint ::deep tbody td:is(.timing-identity-column, .timing-measure-column, .timing-frequency-column, .timing-allocation-column, .timing-action-column) { width: auto; }
+    .timing-ledger-paint ::deep .timing-identity-column { grid-column: 1 / -1; }
+    .timing-ledger-paint ::deep .timing-action-column { justify-self: end; align-self: end; }
+    .timing-stacked-label { display: block; margin-bottom: 12px; font-size: 11px; font-weight: 500; }
+    .timing-ledger-controls > div:nth-child(2) { flex-grow: 1; }
+}
+@container timing-statistics (max-width: 400px) {
+    .timing-panel-heading { margin-bottom: 16px; }
+    .timing-ledger-controls { gap: 8px; margin-bottom: 16px; }
+    .timing-ledger-controls > div:first-child, .timing-ledger-controls > div:nth-child(2) { flex: 1 1 140px; }
+    .timing-ledger-controls ::deep .mud-input-slot { font-size: 14px; }
+    .timing-ledger-paint ::deep .timing-measure-column, .timing-ledger-paint ::deep .timing-frequency-column, .timing-ledger-paint ::deep .timing-allocation-column { grid-column: 1 / -1; }
+    .timing-panel-heading h2 { font-size: 19px; }
+    .timing-number-pair { gap: 8px; }
+}
+@media (max-width: 600px) { .timing-statistics { padding: 20px 18px; } }

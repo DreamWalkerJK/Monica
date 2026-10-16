@@ -2,6 +2,8 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
+using Monica.AI.Chat.Models;
+using Monica.AI.Chat.Services;
 
 namespace Monica.AI.Services.Support;
 
@@ -33,6 +35,15 @@ internal sealed class ToolInvocationTrackingAgentDecorator(
 
         var updateChannel = ResolveUpdateChannel(context.Options?.AdditionalProperties);
         var functionCall = CreateFunctionCallContent(context);
+        var run = updateChannel?.RunContext;
+        var step = run?.Session.StartStep(ChatExecutionStepKind.Tool, run.Turn?.Id, tool: new ChatToolExecution
+        {
+            CallId = functionCall.CallId,
+            Name = functionCall.Name,
+            Arguments = functionCall.Arguments is null ? null : ChatInspectionRedactor.Redact(
+                System.Text.Json.JsonSerializer.SerializeToElement(functionCall.Arguments), run.RedactDiagnostic).GetRawText()
+        });
+        if (run is not null && step is not null) await run.PublishAsync(new ChatStepChangedEvent(step));
 
         logger.LogInformation(
             "Observed tool invocation '{ToolName}' (CallId: {CallId}). Channel available: {HasChannel}.",
@@ -53,6 +64,23 @@ internal sealed class ToolInvocationTrackingAgentDecorator(
         try
         {
             var result = await next(context, cancellationToken).ConfigureAwait(false);
+            var toolError = ToolInvocationErrorResult.FromResult(result);
+            if (toolError is not null)
+            {
+                toolError = toolError with { Message = Redact(toolError.Message, run) };
+                result = toolError;
+            }
+
+            if (run is not null && step is not null)
+            {
+                await run.RecordAsync(step with
+                {
+                    Status = toolError is null ? ChatExecutionStatus.Completed : ChatExecutionStatus.Failed,
+                    CompletedAt = DateTimeOffset.UtcNow,
+                    Error = toolError?.Message,
+                    Tool = step.Tool! with { Result = run.Redact(ToolCallContentSerializer.SerializeResult(result)) }
+                });
+            }
 
             if (updateChannel is not null)
             {
@@ -65,26 +93,37 @@ internal sealed class ToolInvocationTrackingAgentDecorator(
         }
         catch (OperationCanceledException)
         {
+            if (run is not null && step is not null)
+                await run.RecordAsync(step with { Status = ChatExecutionStatus.Cancelled, CompletedAt = DateTimeOffset.UtcNow });
             throw;
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Tool invocation '{ToolName}' failed and will be returned to the model as a tool error result.",
-                functionCall.Name);
+                "Tool invocation '{ToolName}' failed with {ErrorType}: {Error}. It will be returned to the model as a tool error result.",
+                functionCall.Name, ex.GetType().Name, Redact(ex.Message, run));
 
-            var errorResult = ToolInvocationErrorResult.Create(functionCall, ex);
+            var errorResult = ToolInvocationErrorResult.Create(functionCall, ex) with { Message = Redact(ex.Message, run) };
+            if (run is not null && step is not null)
+                await run.RecordAsync(step with
+                {
+                    Status = ChatExecutionStatus.Failed, CompletedAt = DateTimeOffset.UtcNow,
+                    Error = run.Redact(ex.Message),
+                    Tool = step.Tool! with { Result = run.Redact(ToolCallContentSerializer.SerializeResult(errorResult)) }
+                });
             if (updateChannel is not null)
             {
                 await updateChannel.PublishAsync(
-                    CreateFunctionResultUpdate(functionCall.CallId, errorResult, ex),
+                    CreateFunctionResultUpdate(functionCall.CallId, errorResult, new InvalidOperationException(errorResult.Message)),
                     cancellationToken);
             }
 
             return errorResult;
         }
     }
+
+    private static string Redact(string value, ChatRunContext? run)
+        => (run?.Redact(value) ?? ChatInspectionRedactor.Redact(value))!;
 
     private static AgentResponseUpdate CreateFunctionResultUpdate(
         string callId,

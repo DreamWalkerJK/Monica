@@ -1,23 +1,27 @@
 <header class="policy-section-heading">
     <div class="policy-section-heading__icon">
-        <MudIcon Icon="@Icon" Color="Color.Primary" />
+        <MudIcon Icon="@Icon" />
     </div>
     <div>
         <MudText Typo="Typo.h6" HtmlTag="h3" id="@HeadingId">@Title</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">@Description</MudText>
+        <MudText Typo="Typo.body2">@Description</MudText>
     </div>
 </header>
 
 @code {
+    /// <summary>Gets or sets the unique native heading identifier used by the containing section.</summary>
     [Parameter, EditorRequired]
     public string HeadingId { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the outlined icon for this policy task.</summary>
     [Parameter, EditorRequired]
     public string Icon { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the localized section heading.</summary>
     [Parameter, EditorRequired]
     public string Title { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the localized policy semantics below the heading.</summary>
     [Parameter, EditorRequired]
     public string Description { get; set; } = string.Empty;
 }

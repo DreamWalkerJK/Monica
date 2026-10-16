@@ -1,0 +1,94 @@
+@using Microsoft.Extensions.Options
+@using Monica.Modules
+@using Monica.UI.Localization
+@using Monica.UI.Shell.Support
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+@inject IOptions<ModuleShellUIOption> Options
+@inject IStringLocalizer<NavigationSearchResource> L
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<MudIconButton Icon="@ShellIcons.Search" Color="Color.Default" Size="Size.Medium" Class="action-button"
+               OnClick="RequestSearchAsync" aria-label="@L["Search:Action"]" title="@L["Search:Action"]" />
+
+@code {
+    private readonly object _disposeSync = new();
+    private NavigationSearchInteropSession<NavigationSearch>? _interop;
+    private NavigationSearchSession? _session;
+    private Task? _disposeTask;
+    private bool _disposed;
+
+    protected override void OnInitialized()
+    {
+        _session = new NavigationSearchSession(
+            ShowDialogAsync,
+            action => InvokeAsync(action),
+            entry => Navigation.NavigateTo(entry.Item.Href));
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _disposed)
+        {
+            return Task.CompletedTask;
+        }
+
+        _interop = new NavigationSearchInteropSession<NavigationSearch>(JSRuntime, this);
+        return _interop.InitializeAsync("observeShortcut");
+    }
+
+    /// <summary>Acknowledges the native opening or the completed host callback while retaining owned dialog work separately.</summary>
+    [JSInvokable]
+    public Task RequestSearchAsync() => InvokeAsync(() =>
+        _disposed || _session is not { } session
+            ? Task.CompletedTask
+            : session.RequestAsync(Options.Value.NavBarSearchAction));
+
+    private async Task<NavigationSearchSession.DialogLease> ShowDialogAsync()
+    {
+        var reference = await DialogService.ShowAsync<NavigationSearchDialog>(L["Search:Title"], new DialogOptions
+        {
+            NoHeader = true,
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        });
+        return new NavigationSearchSession.DialogLease(reference, reference.Dialog as NavigationSearchDialog);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        TaskCompletionSource completion;
+        lock (_disposeSync)
+        {
+            if (_disposeTask is { } disposal) return new ValueTask(disposal);
+            _disposed = true;
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _disposeTask = completion.Task;
+        }
+
+        _ = DisposeCoreAsync(completion);
+        return new ValueTask(completion.Task);
+    }
+
+    private async Task DisposeCoreAsync(TaskCompletionSource completion)
+    {
+        try
+        {
+            // A shortcut callback can await opening or the host callback. Retire both owners before waiting on either.
+            var search = _session?.DisposeAsync().AsTask() ?? Task.CompletedTask;
+            var observer = _interop?.DisposeAsync().AsTask() ?? Task.CompletedTask;
+            await Task.WhenAll(search, observer);
+            completion.TrySetResult();
+        }
+        catch (OperationCanceledException exception)
+        {
+            completion.TrySetCanceled(exception.CancellationToken);
+        }
+        catch (Exception exception)
+        {
+            completion.TrySetException(exception);
+        }
+    }
+}

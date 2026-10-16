@@ -12,87 +12,139 @@
 @inject IStringLocalizer<ServiceDiscoveryResource> L
 @implements IAsyncDisposable
 
-<section class="domain-discovery-visual">
-    <header class="domain-discovery-visual__header">
-        <div class="domain-discovery-visual__identity">
-            <span class="domain-discovery-visual__icon" aria-hidden="true">
-                <MudIcon Icon="@Icons.Material.Filled.Hub" />
-            </span>
-            <div>
-                <MudText Typo="Typo.h6">@L["DomainGraph:Title"]</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["DomainGraph:Description"]</MudText>
-            </div>
-        </div>
-        <div class="domain-discovery-visual__actions">
-            <MudTooltip Text="@L["DomainGraph:Tooltips:RefreshData"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                               Color="Color.Primary"
-                               OnClick="LoadDomainDataAsync"
-                               Disabled="@_loading" />
-            </MudTooltip>
-            <MudTooltip Text="@L["DomainGraph:Tooltips:ResetView"]">
-                <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
-                               Color="Color.Secondary"
-                               OnClick="ResetView"
-                               Disabled="@_loading" />
-            </MudTooltip>
-            <MudTooltip Text="@L["DomainGraph:Tooltips:LayoutSettings"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Dashboard"
-                               Color="Color.Info"
-                               OnClick="ToggleLayoutPanel" />
-            </MudTooltip>
-            <MudTooltip Text="@L["DomainGraph:Tooltips:FilterSettings"]">
-                <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
-                               Color="Color.Tertiary"
-                               OnClick="ToggleFilterPanel" />
-            </MudTooltip>
+<section class="domain-discovery-visual discovery-atlas" aria-busy="@(_loading ? "true" : "false")">
+    <header class="atlas-heading">
+        <div class="atlas-heading__identity"><span class="atlas-kicker">@L["Atlas:Domains:Eyebrow"]</span><h2>@L["DomainGraph:Title"]</h2><p>@L["Atlas:Domains:Description"]</p></div>
+        <div class="atlas-actions">
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="LoadDomainDataAsync" Disabled="@_loading">@L["Shared:Actions:Refresh"]</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Tune" OnClick="ToggleLayoutPanel" aria-expanded="@(_showLayoutPanel ? "true" : "false")">@L["Atlas:Shared:Layout"]</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.FilterAlt" OnClick="ToggleFilterPanel" aria-expanded="@(_showFilterPanel ? "true" : "false")">@L["Atlas:Shared:Filters"]</MudButton>
         </div>
     </header>
-    <div class="domain-discovery-visual__body">
-        @if (_showLayoutPanel)
-        {
-            <DomainLayoutPanel CurrentLayout="_currentLayout"
-                               ForceDistance="_forceDistance"
-                               ForceStrength="_forceStrength"
-                               CurrentLayoutChanged="OnLayoutChanged"
-                               ForceDistanceChanged="OnForceDistanceChanged"
-                               ForceStrengthChanged="OnForceStrengthChanged" />
-        }
-        
-        @if (_showFilterPanel)
-        {
-            <DomainFilterPanel @bind-FilterText="_filterText"
-                               @bind-SelectedDomains="_selectedDomainsFilter"
-                               @bind-ShowOnlyWithServices="_showOnlyWithServices"
-                               @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies"
-                               OnFiltersChanged="ApplyFilters"
-                               AllDomains="_domains" />
-        }
-
-        <MudPaper Class="visualization-container" Elevation="0" Outlined="true">
-            @if (_loading)
+    @if (_captureError is not null)
+    {
+        <div class="atlas-notice atlas-notice--error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+            <div><strong>@L[_hasSnapshot ? "Atlas:Shared:RetainedSnapshot" : "Atlas:Shared:CaptureFailed"]</strong><p>@_captureError</p></div></div>
+    }
+    @if (_showLayoutPanel)
+    {
+        <div class="atlas-shelf"><DomainLayoutPanel CurrentLayout="_currentLayout" ForceDistance="_forceDistance" ForceStrength="_forceStrength"
+            CurrentLayoutChanged="OnLayoutChanged" ForceDistanceChanged="OnForceDistanceChanged" ForceStrengthChanged="OnForceStrengthChanged" /></div>
+    }
+    @if (_showFilterPanel)
+    {
+        <div class="atlas-shelf"><DomainFilterPanel @ref="_filterPanel" @bind-FilterText="_filterText" @bind-SelectedDomains="_selectedDomainsFilter"
+            @bind-ShowOnlyWithServices="_showOnlyWithServices" @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies"
+            DomainSelectionIntentChanged="OnDomainSelectionIntentChanged" OnFiltersChanged="ApplyFilters" AllDomains="_domains" /></div>
+    }
+    <div class="atlas-workspace">
+        <section class="atlas-map" aria-label="@L["Atlas:Domains:MapLabel"]">
+            <header class="atlas-map__bar"><div><span class="atlas-scope">@L["Atlas:Domains:MapLabel"]</span><strong>@(_hasSnapshot ? L["Atlas:Domains:MapSummary", _filteredDomains.Count, _domains.Count, _filteredDependencies.Count, _dependencies.Count] : L["Shared:Values:NotAvailable"])</strong></div>
+                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.CenterFocusStrong" OnClick="ResetView" Disabled="@(!_graphAvailable)">@L["Atlas:Shared:FitView"]</MudButton></header>
+            <div class="atlas-map__stage">
+                <div id="@_graphContainerId" class="domain-discovery-visual__canvas" aria-hidden="true" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
+                @if (_loading && !_hasSnapshot)
+                {
+                    <div class="atlas-map__state" role="status"><MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Medium" /><strong>@L["Atlas:Shared:Loading"]</strong></div>
+                }
+                else if (_graphError is not null)
+                {
+                    <div class="atlas-map__state" role="status"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" /><strong>@L["Atlas:Shared:GraphUnavailable"]</strong><p>@L["Atlas:Shared:NativeAlternative"]</p></div>
+                }
+                else if (!_hasSnapshot && _captureError is not null)
+                {
+                    <div class="atlas-map__state" role="status"><strong>@L["Atlas:Shared:CaptureFailed"]</strong><p>@L["Atlas:Shared:RetryHint"]</p></div>
+                }
+                else if (_hasSnapshot && _filteredDomains.Count == 0)
+                {
+                    <div class="atlas-map__state" role="status"><MudIcon Icon="@Icons.Material.Outlined.Hub" /><strong>@L[_domains.Count == 0 ? "Atlas:Domains:Empty" : "Atlas:Shared:FilterMiss"]</strong><p>@L[_domains.Count == 0 ? "Atlas:Domains:EmptyHint" : "Atlas:Shared:FilterMissHint"]</p>
+                        @if (_domains.Count > 0) { <MudButton OnClick="@(() => ClearAllFiltersAsync(null))" Color="Color.Primary">@L["Shared:Actions:Clear"]</MudButton> }
+                    </div>
+                }
+                @if (_loading && _hasSnapshot) { <div class="atlas-refreshing" role="status">@L["Atlas:Shared:Refreshing"]</div> }
+            </div>
+            <footer class="atlas-map__footer"><p>@L["Atlas:Domains:EdgeHint"]</p>
+                @if (_unassignedServices.Count > 0) { <p class="atlas-map__scope-note">@L["Atlas:Domains:UnassignedScope", _unassignedServices.Count]</p> }
+                <span>@L["Atlas:Shared:GestureHint"]</span></footer>
+        </section>
+        <section class="atlas-native" aria-label="@L["Atlas:Domains:Evidence"]">
+            <header class="atlas-native__heading"><div><span class="atlas-kicker">@L["Atlas:Shared:NativeEvidence"]</span><h3>@L["Atlas:Domains:Evidence"]</h3></div><span class="atlas-native__count">@(_hasSnapshot ? NativeEvidenceCount.ToString() : L["Shared:Values:NotAvailable"].Value)</span></header>
+            <div class="atlas-native__tabs" role="group" aria-label="@L["Atlas:Domains:Evidence"]">
+                <button type="button" aria-pressed="@(_nativeView == NativeEvidenceView.Declarations ? "true" : "false")" @onclick="@(() => _nativeView = NativeEvidenceView.Declarations)">@L["Atlas:Domains:Ledger"]</button>
+                <button type="button" aria-pressed="@(_nativeView == NativeEvidenceView.Domains ? "true" : "false")" @onclick="@(() => _nativeView = NativeEvidenceView.Domains)">@L["Atlas:Domains:Roster"]</button>
+                <button type="button" aria-pressed="@(_nativeView == NativeEvidenceView.Unassigned ? "true" : "false")" @onclick="@(() => _nativeView = NativeEvidenceView.Unassigned)">@L["Atlas:Domains:Unassigned"] <span>@_unassignedServices.Count</span></button>
+            </div>
+            <p class="atlas-native__intro">@L[NativeEvidenceHintKey]</p>
+            @if (_nativeView == NativeEvidenceView.Domains)
             {
-                <MudOverlay Visible="true" DarkBackground="false" Absolute="true">
-                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
-                </MudOverlay>
+                <ul class="atlas-roster">
+                    @foreach (var domain in _filteredDomains.OrderBy(d => d.DisplayName ?? d.Name, StringComparer.CurrentCultureIgnoreCase))
+                    {
+                        <li @key="domain.Name" class="atlas-roster__row">
+                            <button type="button" class="atlas-record" @onclick="@(() => ViewDomainDetailsAsync(domain.Name))">
+                                <span class="atlas-record__name">@(domain.DisplayName ?? domain.Name)</span><code>@domain.Name</code>
+                                <span class="atlas-record__meta">@L["Atlas:Domains:ServiceCount", _domainServicesMap.GetValueOrDefault(domain.Name)?.Count ?? 0]</span>
+                                @if (_unlistedDomains.Contains(domain.Name)) { <span class="atlas-unlisted">@L["Atlas:Domains:Unlisted"]</span> }
+                            </button>
+                            <div class="atlas-record__actions">
+                                <MudTooltip Text="@L["DomainGraph:ContextMenu:FocusDomain"]"><MudIconButton Icon="@Icons.Material.Outlined.CenterFocusWeak" Size="Size.Small" aria-label="@L["DomainGraph:ContextMenu:FocusDomain"]" Disabled="@(!_graphAvailable)" OnClick="@(() => FocusOnDomainAsync(domain.Name))" /></MudTooltip>
+                                <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Size="Size.Small" AriaLabel="@L["Atlas:Shared:RecordActions", domain.Name]">
+                                    <MudMenuItem OnClick="@(() => ViewDomainDetailsAsync(domain.Name))">@L["DomainGraph:ContextMenu:ViewDomainDetails"]</MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => FilterByDomainAsync(domain.Name))">@L["DomainGraph:ContextMenu:FilterDomainServices"]</MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => ShowDependenciesAsync(domain.Name))">@L["DomainGraph:ContextMenu:ShowDependencies"]</MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => ClearAllFiltersAsync(domain.Name))">@L["DomainGraph:ContextMenu:ClearFilters"]</MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => CopyDomainNameAsync(domain.Name))">@L["DomainGraph:ContextMenu:CopyDomainName"]</MudMenuItem>
+                                </MudMenu>
+                            </div>
+                        </li>
+                    }
+                </ul>
             }
-            <div id="@_graphContainerId" class="domain-discovery-visual__canvas" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
-        </MudPaper>
-
-        <MudPaper Class="domain-discovery-visual__legend" Elevation="0" Outlined="true">
-            <MudGrid>
-                <MudItem xs="12" sm="8">
-                    <MudText Typo="Typo.caption">
-                        @L["DomainGraph:Summary:ShowingDomainsAndDependencies", _filteredDomains.Count, _domains.Count, _filteredDependencies.Count, _dependencies.Count]
-                    </MudText>
-                </MudItem>
-                <MudItem xs="12" sm="4" Class="domain-discovery-visual__legend-items">
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Circle" Color="Color.Info">@L["DomainGraph:Summary:NodeLegend"]</MudChip>
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary">@L["DomainGraph:Summary:ArrowLegend"]</MudChip>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
+            else if (_nativeView == NativeEvidenceView.Declarations)
+            {
+                <ol class="atlas-ledger">
+                    @foreach (var dependency in _filteredDependencies.OrderBy(d => d.SourceDomain, StringComparer.OrdinalIgnoreCase).ThenBy(d => d.TargetDomain, StringComparer.OrdinalIgnoreCase))
+                    {
+                        <li class="atlas-ledger__row">
+                            <div class="atlas-ledger__direction"><button type="button" @onclick="@(() => ViewDomainDetailsAsync(dependency.SourceDomain))">@dependency.SourceDomain</button><span aria-hidden="true">→</span><button type="button" @onclick="@(() => ViewDomainDetailsAsync(dependency.TargetDomain))">@dependency.TargetDomain</button></div>
+                            <span class="atlas-record__meta">@L["Atlas:Domains:Declarations", dependency.ServiceCount]</span>
+                            @if (_unlistedDomains.Contains(dependency.SourceDomain) || _unlistedDomains.Contains(dependency.TargetDomain)) { <span class="atlas-unlisted">@L["Atlas:Domains:UnlistedEdge"]</span> }
+                            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => ShowDependenciesAsync(dependency.SourceDomain))">@L["Atlas:Domains:FocusRelationship"]</MudButton>
+                        </li>
+                    }
+                </ol>
+            }
+            else
+            {
+                <ul class="atlas-unassigned-services">
+                    @foreach (var service in _unassignedServices.OrderBy(s => s.AppName, StringComparer.CurrentCultureIgnoreCase))
+                    {
+                        var targets = GetDeclaredTargets(service);
+                        <li @key="service.AppId" class="atlas-unassigned-service">
+                            <strong>@service.AppName</strong><code>@service.AppId</code>
+                            <span class="atlas-record__meta">@L["Atlas:Domains:NoOwner"] · @L["Atlas:Services:InstanceCount", service.TotalInstanceCount]</span>
+                            @if (targets.Count == 0)
+                            {
+                                <p>@L["Atlas:Domains:NoUnassignedDeclarations"]</p>
+                            }
+                            else
+                            {
+                                <ul class="atlas-unassigned-declarations" aria-label="@L["Atlas:Domains:UnassignedDeclarations"]">
+                                    @foreach (var target in targets)
+                                    {
+                                        <li><code>@service.AppId</code><span aria-hidden="true">→</span><button type="button" @onclick="@(() => ViewDomainDetailsAsync(target))">@target</button></li>
+                                    }
+                                </ul>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+            @if (_hasSnapshot && NativeEvidenceCount == 0) { <p class="atlas-native__empty">@L[NativeEvidenceEmptyKey]</p> }
+            <footer class="atlas-native__footer"><span>@L["Atlas:Shared:Captured"]</span><time>@(_capturedAt?.ToLocalTime().ToString("HH:mm:ss") ?? L["Shared:Values:NotAvailable"].Value)</time></footer>
+        </section>
     </div>
+    <div class="atlas-legend"><span class="atlas-domain-key"><span class="atlas-domain-key__sample"></span>@L["Atlas:Domains:CatalogNode"]</span><span class="atlas-domain-key"><span class="atlas-domain-key__sample atlas-domain-key__sample--unlisted"></span>@L["Atlas:Domains:Unlisted"]</span><span class="atlas-legend__note">@L["Atlas:Domains:SnapshotHint"]</span></div>
 </section>
 
 @* Context menu *@
@@ -102,6 +154,7 @@
                InitialX="@_contextMenuX" 
                InitialY="@_contextMenuY"
                ContextItem="@_contextMenuDomainName"
+               OpeningRevision="@_contextMenuOpeningRevision"
                OnItemClick="@OnContextMenuItemClick"
                OnClose="@CloseContextMenu" />
 
@@ -109,19 +162,31 @@
     [Parameter] public EventCallback<string> OnDomainClick { get; set; }
 
     private const string JS_MODULE_PATH = "./_content/Monica.ServiceDiscovery/UIServiceDiscovery/domainDependencyGraph.js";
+    private long _contextMenuOpeningRevision;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SemaphoreSlim _captureGate = new(1, 1);
     private readonly SemaphoreSlim _interopGate = new(1, 1);
     private readonly object _disposeSync = new();
     private readonly string _graphContainerId = $"domain-dependency-graph-{Guid.NewGuid():N}";
     private IJSObjectReference? _graphController;
     private DotNetObjectReference<DomainDependencyVisualization>? _dotNetReference;
+    private DomainFilterPanel? _filterPanel;
     private Task? _disposeTask;
     private List<DomainInfo> _domains = [];
     private List<DomainInfo> _filteredDomains = [];
     private List<DomainDependency> _dependencies = [];
     private List<DomainDependency> _filteredDependencies = [];
-    private Dictionary<string, List<RegisteredServiceStatus>> _domainServicesMap = new();
-    private bool _loading = false;
+    private Dictionary<string, List<RegisteredServiceStatus>> _domainServicesMap = new(StringComparer.OrdinalIgnoreCase);
+    private bool _loading = true;
+    private bool _hasSnapshot;
+    private bool _graphAvailable;
+    private NativeEvidenceView _nativeView;
+    private List<RegisteredServiceStatus> _unassignedServices = [];
+    private bool _allDomainsSelected = true;
+    private string? _captureError;
+    private string? _graphError;
+    private DateTimeOffset? _capturedAt;
+    private readonly HashSet<string> _unlistedDomains = new(StringComparer.OrdinalIgnoreCase);
     
     // Filter-related fields
     private bool _showFilterPanel = false;
@@ -144,26 +209,30 @@
     private List<ContextMenuItem<string>> _contextMenuItems = new();
     private volatile bool _disposed;
 
+    protected override Task OnInitializedAsync() => LoadDomainDataAsync(initialLoad: true);
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
+        if (!firstRender) return;
         try
         {
             await InitializeGraphAsync();
             if (!_disposed)
             {
-                await LoadDomainDataAsync();
+                _graphAvailable = true;
+                await UpdateGraph();
+                StateHasChanged();
             }
         }
-        catch (OperationCanceledException) when (_disposed)
+        catch (OperationCanceledException) when (_disposed) { }
+        catch (JSDisconnectedException) when (_disposed) { }
+        catch (JSException)
         {
-        }
-        catch (JSDisconnectedException) when (_disposed)
-        {
+            if (!_disposed)
+            {
+                _graphError = L["Atlas:Shared:GraphUnavailable"].Value;
+                StateHasChanged();
+            }
         }
     }
 
@@ -218,57 +287,61 @@
         }
     }
 
-    private async Task LoadDomainDataAsync()
-    {
-        _loading = true;
-        if (!_disposed)
-        {
-            StateHasChanged();
-        }
+    private Task LoadDomainDataAsync() => LoadDomainDataAsync(initialLoad: false);
 
+    private async Task LoadDomainDataAsync(bool initialLoad)
+    {
+        if (_disposed || (_loading && !initialLoad)) return;
+        var ownsCapture = false;
         try
         {
-            // Load domains first so the shared resolver can assign a stable color map.
-            if (!(await ServiceDiscoveryFacade.GetDomainsAsync()).IsFailed(out var error, out var domains))
-            {
-                _domains = domains ?? [];
-                DomainColorResolver.AssignColors(_domains);
+            ownsCapture = await _captureGate.WaitAsync(0, _lifetimeCancellation.Token);
+            if (!ownsCapture || _disposed) return;
+            _loading = true;
+            _captureError = null;
+            if (!initialLoad) StateHasChanged();
 
-                // Get merged service statuses to build dependencies
-                if (!(await ServiceDiscoveryFacade.GetMergedServicesStatusAsync()).IsFailed(out var servicesError, out var services))
-                {
-                    BuildDomainDependencies(services ?? []);
-                    BuildDomainServicesMap(services ?? []);
-                }
-                else
-                {
-                    Snackbar.Add(L["DomainGraph:Messages:GetServicesFailed", servicesError.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Warning);
-                }
-
-                // Initialize filters
-                InitializeFilters();
-                
-                // Apply filters
-                await ApplyFilters();
-            }
-            else
+            var domainResult = await ServiceDiscoveryFacade.CaptureDomainsAsync(_lifetimeCancellation.Token);
+            if (_disposed) return;
+            if (domainResult.IsFailed(out var domainError, out var domains))
             {
-                Snackbar.Add(L["DomainGraph:Messages:GetDomainsFailed", error.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Error);
+                _captureError = domainError.Message ?? L["Atlas:Shared:CaptureFailed"].Value;
+                return;
             }
+            var serviceResult = await ServiceDiscoveryFacade.CaptureServicesAsync(_lifetimeCancellation.Token);
+            if (_disposed) return;
+            if (serviceResult.IsFailed(out var serviceError, out var services))
+            {
+                _captureError = serviceError.Message ?? L["Atlas:Shared:CaptureFailed"].Value;
+                return;
+            }
+
+            _domains = (domains ?? []).GroupBy(d => d.Name, StringComparer.OrdinalIgnoreCase).Select(g => g.First()).ToList();
+            _unassignedServices = (services ?? []).Where(service => string.IsNullOrWhiteSpace(service.DomainName)).ToList();
+            BuildDomainServicesMap(services ?? []);
+            BuildDomainDependencies(services ?? []);
+            AddUnlistedEndpoints();
+            DomainColorResolver.AssignColors(_domains);
+            if (_allDomainsSelected)
+            {
+                _selectedDomainsFilter = _domains.Select(d => d.Name).ToList();
+            }
+            _hasSnapshot = true;
+            _capturedAt = DateTimeOffset.UtcNow;
+            await ApplyFilters();
         }
-        catch (OperationCanceledException) when (_disposed)
-        {
-        }
+        catch (OperationCanceledException) when (_disposed) { }
         catch (Exception ex)
         {
-            Snackbar.Add(L["DomainGraph:Messages:LoadFailed", ex.Message].Value, Severity.Error);
+            if (!_disposed) _captureError = L["DomainGraph:Messages:LoadFailed", ex.Message].Value;
         }
         finally
         {
-            _loading = false;
-            if (!_disposed)
+            if (ownsCapture)
             {
-                StateHasChanged();
+                _loading = false;
+                _captureGate.Release();
+                if (!_disposed) StateHasChanged();
             }
         }
     }
@@ -276,30 +349,38 @@
     private void BuildDomainDependencies(List<RegisteredServiceStatus> services)
     {
         _dependencies.Clear();
-        var dependencySet = new HashSet<(string, string)>();
-
-        foreach (var service in services)
+        foreach (var source in services.Where(service => !string.IsNullOrWhiteSpace(service.DomainName))
+                     .GroupBy(service => service.DomainName!, StringComparer.OrdinalIgnoreCase))
         {
-            if (service.DependentSubDomains?.Any() == true)
+            var targets = source.SelectMany(service => (service.DependentSubDomains ?? [])
+                .Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase))
+                .GroupBy(name => name, StringComparer.OrdinalIgnoreCase);
+            foreach (var target in targets)
             {
-                var sourceDomain = GetServiceDomainName(service);
-                
-                foreach (var dependentDomain in service.DependentSubDomains)
-                {
-                    if (sourceDomain != dependentDomain && 
-                        dependencySet.Add((sourceDomain, dependentDomain)))
-                    {
-                        _dependencies.Add(new DomainDependency
-                        {
-                            SourceDomain = sourceDomain,
-                            TargetDomain = dependentDomain,
-                            ServiceCount = services.Count(s => 
-                                GetServiceDomainName(s) == sourceDomain && 
-                                s.DependentSubDomains?.Contains(dependentDomain) == true)
-                        });
-                    }
-                }
+                _dependencies.Add(new DomainDependency { SourceDomain = source.Key, TargetDomain = target.Key, ServiceCount = target.Count() });
             }
+        }
+    }
+
+    private void AddUnlistedEndpoints()
+    {
+        _unlistedDomains.Clear();
+        var known = _domains.Select(d => d.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var endpoints = _domainServicesMap.Keys.Concat(_dependencies.SelectMany(d => new[] { d.SourceDomain, d.TargetDomain }))
+            .Concat(_unassignedServices.SelectMany(GetDeclaredTargets));
+        foreach (var name in endpoints.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (known.Add(name))
+            {
+                _unlistedDomains.Add(name);
+                _domains.Add(new DomainInfo { Name = name, DisplayName = name, Description = L["Atlas:Domains:UnlistedDescription"].Value });
+            }
+        }
+        var canonical = _domains.ToDictionary(d => d.Name, d => d.Name, StringComparer.OrdinalIgnoreCase);
+        foreach (var dependency in _dependencies)
+        {
+            dependency.SourceDomain = canonical[dependency.SourceDomain];
+            dependency.TargetDomain = canonical[dependency.TargetDomain];
         }
     }
 
@@ -307,9 +388,9 @@
     {
         _domainServicesMap.Clear();
         
-        foreach (var service in services)
+        foreach (var service in services.Where(service => !string.IsNullOrWhiteSpace(service.DomainName)))
         {
-            var domainName = GetServiceDomainName(service);
+            var domainName = service.DomainName!;
             if (!_domainServicesMap.ContainsKey(domainName))
             {
                 _domainServicesMap[domainName] = new List<RegisteredServiceStatus>();
@@ -326,10 +407,7 @@
             return;
         }
 
-        if (OnDomainClick.HasDelegate)
-        {
-            await OnDomainClick.InvokeAsync(domainName);
-        }
+        await ViewDomainDetailsAsync(domainName);
     }
     
     [JSInvokable]
@@ -344,6 +422,7 @@
         _contextMenuX = x;
         _contextMenuY = y;
         _contextMenuItems = BuildContextMenuItems(domainName);
+        ++_contextMenuOpeningRevision;
         _contextMenuOpen = true;
         StateHasChanged();
     }
@@ -374,6 +453,7 @@
     
     private void CloseContextMenu()
     {
+        if (_disposed) return;
         _contextMenuOpen = false;
     }
     
@@ -398,25 +478,26 @@
     
     private Task OnContextMenuItemClick(ContextMenuItem<string> item)
     {
+        if (_disposed) return Task.CompletedTask;
         _contextMenuOpen = false;
         StateHasChanged();
         return Task.CompletedTask;
     }
     
-    private Task ViewDomainDetailsAsync(string? domainName)
+    private async Task ViewDomainDetailsAsync(string? domainName)
     {
-        var domain = _domains.FirstOrDefault(d => d.Name == domainName);
-        if (domain != null)
+        if (_disposed) return;
+        var domain = _domains.FirstOrDefault(d => string.Equals(d.Name, domainName, StringComparison.OrdinalIgnoreCase));
+        if (domain is null) return;
+        if (!_unlistedDomains.Contains(domain.Name) && OnDomainClick.HasDelegate)
         {
-            var serviceCount = _domainServicesMap.GetValueOrDefault(domainName ?? "", new List<RegisteredServiceStatus>()).Count;
-            var dependencyCount = _dependencies.Count(d => d.SourceDomain == domainName || d.TargetDomain == domainName);
-            
-            Snackbar.Add(L["DomainGraph:Messages:DomainSummary", domain.DisplayName ?? domain.Name, serviceCount, dependencyCount].Value, Severity.Info);
+            await OnDomainClick.InvokeAsync(domain.Name);
+            return;
         }
-
-        return Task.CompletedTask;
+        await FocusOnDomainAsync(domain.Name);
+        if (!_disposed) Snackbar.Add(L["Atlas:Domains:UnlistedSummary", domain.Name].Value, Severity.Info);
     }
-    
+
     private async Task FocusOnDomainAsync(string? domainName)
     {
         if (!string.IsNullOrEmpty(domainName))
@@ -427,18 +508,19 @@
     
     private async Task FilterByDomainAsync(string? domainName)
     {
-        if (!string.IsNullOrEmpty(domainName))
+        if (!_disposed && !string.IsNullOrEmpty(domainName))
         {
+            _allDomainsSelected = false;
             _selectedDomainsFilter = new HashSet<string> { domainName };
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add(L["DomainGraph:Messages:FilteredDomain", domainName].Value, Severity.Info);
+            if (!_disposed) Snackbar.Add(L["DomainGraph:Messages:FilteredDomain", domainName].Value, Severity.Info);
         }
     }
     
     private async Task ShowDependenciesAsync(string? domainName)
     {
-        if (!string.IsNullOrEmpty(domainName))
+        if (!_disposed && !string.IsNullOrEmpty(domainName))
         {
             var relatedDomains = new HashSet<string> { domainName };
             var domainDeps = _dependencies.Where(d => d.SourceDomain == domainName || d.TargetDomain == domainName);
@@ -450,63 +532,87 @@
             }
             
             _selectedDomainsFilter = relatedDomains;
+            _allDomainsSelected = false;
             _showOnlyWithDependencies = true;
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add(L["DomainGraph:Messages:ShowingDependencies", domainName].Value, Severity.Info);
+            if (!_disposed) Snackbar.Add(L["DomainGraph:Messages:ShowingDependencies", domainName].Value, Severity.Info);
         }
     }
     
     private async Task ClearAllFiltersAsync(string? domainName)
     {
+        if (_disposed) return;
         _filterText = string.Empty;
+        _allDomainsSelected = true;
         _selectedDomainsFilter = new HashSet<string>(_domains.Select(d => d.Name));
         _showOnlyWithServices = false;
         _showOnlyWithDependencies = false;
-        await ApplyFilters();
-        Snackbar.Add(L["DomainGraph:Messages:ClearedFilters"].Value, Severity.Info);
+        if (_showFilterPanel && _filterPanel is not null)
+            await _filterPanel.SetSearchAsync(_filterText);
+        else
+            await ApplyFilters();
+        if (!_disposed) Snackbar.Add(L["DomainGraph:Messages:ClearedFilters"].Value, Severity.Info);
     }
     
     private async Task CopyDomainNameAsync(string? domainName)
     {
         if (!string.IsNullOrEmpty(domainName))
         {
-            await CopyToClipboardAsync(domainName);
-            Snackbar.Add(L["DomainGraph:Messages:CopiedDomainName"].Value, Severity.Success);
+            if (await CopyToClipboardAsync(domainName))
+                Snackbar.Add(L["DomainGraph:Messages:CopiedDomainName"].Value, Severity.Success);
         }
     }
 
-    private void InitializeFilters()
-    {
-        // Initialize selected domains
-        if (!_selectedDomainsFilter.Any())
-        {
-            var allDomainNames = _domains.Select(d => d.Name).ToList();
-            _selectedDomainsFilter = new HashSet<string>(allDomainNames);
-        }
-    }
-    
     private void ToggleFilterPanel()
     {
         _showFilterPanel = !_showFilterPanel;
+        if (!_showFilterPanel) _filterPanel = null;
         if (_showFilterPanel) _showLayoutPanel = false;
     }
     
     private void ToggleLayoutPanel()
     {
         _showLayoutPanel = !_showLayoutPanel;
-        if (_showLayoutPanel) _showFilterPanel = false;
+        if (_showLayoutPanel)
+        {
+            _showFilterPanel = false;
+            _filterPanel = null;
+        }
     }
 
-    private string GetServiceDomainName(RegisteredServiceStatus service)
-        => service.DomainName ?? L["Shared:Values:Unknown"].Value;
+    private static List<string> GetDeclaredTargets(RegisteredServiceStatus service)
+        => (service.DependentSubDomains ?? []).Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
+
+    private int NativeEvidenceCount => _nativeView switch
+    {
+        NativeEvidenceView.Domains => _filteredDomains.Count,
+        NativeEvidenceView.Unassigned => _unassignedServices.Count,
+        _ => _filteredDependencies.Count
+    };
+
+    private string NativeEvidenceHintKey => _nativeView switch
+    {
+        NativeEvidenceView.Domains => "Atlas:Domains:RosterHint",
+        NativeEvidenceView.Unassigned => "Atlas:Domains:UnassignedHint",
+        _ => "Atlas:Domains:LedgerHint"
+    };
+
+    private string NativeEvidenceEmptyKey => _nativeView switch
+    {
+        NativeEvidenceView.Domains => "Atlas:Domains:EmptyRoster",
+        NativeEvidenceView.Unassigned => "Atlas:Domains:NoUnassignedServices",
+        _ => "Atlas:Domains:EmptyLedger"
+    };
 
     private async Task ApplyFilters()
     {
+        if (_disposed) return;
         _filteredDomains = _domains.Where(domain =>
         {
             // Domain-name filter
-            if (!_selectedDomainsFilter.Contains(domain.Name))
+            if (!_selectedDomainsFilter.Contains(domain.Name, StringComparer.OrdinalIgnoreCase))
                 return false;
                 
             // Text filter
@@ -564,21 +670,16 @@
 
     private async Task UpdateGraph()
     {
-        await InvokeGraphAsync("updateGraph", PrepareGraphData());
-
-        // Apply current layout settings
-        await SetLayout(_currentLayout);
-        if (_currentLayout == DomainLayoutType.Force)
-        {
-            await InvokeGraphAsync("setForceDistance", _forceDistance);
-            await InvokeGraphAsync("setForceStrength", _forceStrength);
-        }
+        await InvokeGraphAsync("updateGraph", PrepareGraphData(), GetLayoutName(_currentLayout), _forceDistance, _forceStrength);
     }
     
     private async Task SetLayout(DomainLayoutType layoutType)
     {
         _currentLayout = layoutType;
-        var layoutName = layoutType switch
+        await InvokeGraphAsync("setLayout", GetLayoutName(layoutType));
+    }
+
+    private static string GetLayoutName(DomainLayoutType layoutType) => layoutType switch
         {
             DomainLayoutType.Force => "force",
             DomainLayoutType.Hierarchy => "hierarchy",
@@ -586,8 +687,8 @@
             DomainLayoutType.RadialTree => "radial_tree",
             _ => "force"
         };
-        await InvokeGraphAsync("setLayout", layoutName);
-    }
+
+    private void OnDomainSelectionIntentChanged(bool selectAll) => _allDomainsSelected = selectAll;
     
     private Task OnLayoutChanged(DomainLayoutType layoutType) => SetLayout(layoutType);
     
@@ -610,6 +711,7 @@
             id = domain.Name,
             name = domain.DisplayName ?? domain.Name,
             description = domain.Description,
+            isCatalogDomain = !_unlistedDomains.Contains(domain.Name),
             colorRole = DomainColorResolver.GetDomainColorRole(domain.Name),
             services = _domainServicesMap.GetValueOrDefault(domain.Name, new List<RegisteredServiceStatus>())
                 .Select(s => new
@@ -649,6 +751,11 @@
     {
         _disposed = true;
         await _lifetimeCancellation.CancelAsync();
+
+        // Providers can finish work that does not accept cancellation. Wait for the actual read and its
+        // continuation to settle before releasing resources owned by this retired component.
+        await _captureGate.WaitAsync();
+        _captureGate.Release();
 
         await _interopGate.WaitAsync();
         try
@@ -697,13 +804,22 @@
         catch (JSDisconnectedException) when (_disposed)
         {
         }
+        catch (JSException)
+        {
+            if (!_disposed)
+            {
+                _graphAvailable = false;
+                _graphError = L["Atlas:Shared:GraphUnavailable"].Value;
+                StateHasChanged();
+            }
+        }
     }
 
-    private async Task CopyToClipboardAsync(string value)
+    private async Task<bool> CopyToClipboardAsync(string value)
     {
         if (_disposed)
         {
-            return;
+            return false;
         }
 
         try
@@ -712,6 +828,7 @@
                 "navigator.clipboard.writeText",
                 _lifetimeCancellation.Token,
                 value);
+            return !_disposed;
         }
         catch (OperationCanceledException) when (_disposed)
         {
@@ -719,6 +836,11 @@
         catch (JSDisconnectedException) when (_disposed)
         {
         }
+        catch (JSException)
+        {
+            if (!_disposed) Snackbar.Add(L["Atlas:Shared:ClipboardFailed"].Value, Severity.Error);
+        }
+        return false;
     }
 
     private static async ValueTask DisposeGraphControllerAsync(IJSObjectReference? graphController)
@@ -777,6 +899,8 @@
         public int ServiceCount { get; set; }
     }
 
+    private enum NativeEvidenceView { Declarations, Domains, Unassigned }
+
     private object GetGraphTexts() => new
     {
         labels = new
@@ -787,7 +911,8 @@
             andMore = L["DomainGraph:Graph:Labels:AndMore"].Value,
             noRelatedServices = L["DomainGraph:Graph:Labels:NoRelatedServices"].Value,
             clickToViewDetails = L["DomainGraph:Graph:Labels:ClickToViewDetails"].Value,
-            dependencyServiceCount = L["DomainGraph:Graph:Labels:DependencyServiceCount"].Value
+            dependencyServiceCount = L["DomainGraph:Graph:Labels:DependencyServiceCount"].Value,
+            unlisted = L["Atlas:Domains:Unlisted"].Value
         },
         statuses = new
         {
@@ -795,6 +920,7 @@
             updating = L["Shared:ServiceStatuses:Updating"].Value,
             offline = L["Shared:ServiceStatuses:Offline"].Value,
             error = L["Shared:ServiceStatuses:Error"].Value,
+            unhealthy = L["Shared:ServiceStatuses:Unhealthy"].Value,
             unknown = L["Shared:ServiceStatuses:Unknown"].Value
         }
     };

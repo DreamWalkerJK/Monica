@@ -61,7 +61,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// </summary>
     /// <param name="id">The ID of the entity to retrieve</param>
     /// <returns>The mapped entity DTO</returns>
-    [ReadOnlyOperation]
+    [ExecutionTransaction(ExecutionTransactionMode.None)]
     public virtual async Task<TGetOutputDto> GetAsync(TKey id)
     {
         var entity = await GetEntityByIdAsync(id);
@@ -176,7 +176,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// </summary>
     /// <param name="input">The input parameters for the list operation</param>
     /// <returns>A paged response containing the mapped entity DTOs</returns>
-    [ReadOnlyOperation]
+    [ExecutionTransaction(ExecutionTransactionMode.None)]
     public virtual async Task<ResPaged<dynamic>> GetListAsync(TGetListInput input)
     {
         var result = await InnerGetListAsync(input);
@@ -200,7 +200,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <param name="cancellationToken">Cancellation token for the async operation</param>
     /// <returns>An async enumerable of mapped entity DTOs</returns>
     [HttpPost]
-    [ReadOnlyOperation]
+    [ExecutionTransaction(ExecutionTransactionMode.None)]
     public virtual async IAsyncEnumerable<TGetListOutputDto> ListStreamAsync(
         TGetListInput input, 
         [EnumeratorCancellation] CancellationToken cancellationToken = default)

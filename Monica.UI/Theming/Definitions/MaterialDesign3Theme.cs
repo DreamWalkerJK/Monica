@@ -26,17 +26,14 @@ public sealed class MaterialDesign3Theme : ThemeDefinitionBase
             LayoutProperties = new LayoutProperties
             {
                 DefaultBorderRadius = "12px",
-                AppbarHeight = "64px",
+                AppbarHeight = "56px",
                 DrawerWidthLeft = "280px",
                 DrawerWidthRight = "280px",
-                DrawerMiniWidthLeft = "80px",
-                DrawerMiniWidthRight = "80px"
+                DrawerMiniWidthLeft = "64px",
+                DrawerMiniWidthRight = "64px"
             },
             Typography = CreateTypography(),
-            Shadows = new Shadow
-            {
-                Elevation = CreateElevation()
-            }
+            Shadows = MonicaShadowDefaults.Create()
         };
     }
 
@@ -229,8 +226,8 @@ public sealed class MaterialDesign3Theme : ThemeDefinitionBase
             H2 = new H2Typography { FontFamily = displayFamily, FontSize = "2.8125rem", FontWeight = "400", LineHeight = "3.25rem", LetterSpacing = "0" },
             H3 = new H3Typography { FontFamily = displayFamily, FontSize = "2.25rem", FontWeight = "400", LineHeight = "2.75rem", LetterSpacing = "0" },
             H4 = new H4Typography { FontFamily = displayFamily, FontSize = "2rem", FontWeight = "400", LineHeight = "2.5rem", LetterSpacing = "0" },
-            H5 = new H5Typography { FontFamily = displayFamily, FontSize = "1.75rem", FontWeight = "400", LineHeight = "2.25rem", LetterSpacing = "0" },
-            H6 = new H6Typography { FontFamily = displayFamily, FontSize = "1.5rem", FontWeight = "400", LineHeight = "2rem", LetterSpacing = "0" },
+            H5 = new H5Typography { FontFamily = displayFamily, FontSize = "1.125rem", FontWeight = "500", LineHeight = "1.5rem", LetterSpacing = "0" },
+            H6 = new H6Typography { FontFamily = displayFamily, FontSize = "1rem", FontWeight = "500", LineHeight = "1.5rem", LetterSpacing = "0" },
             Subtitle1 = new Subtitle1Typography { FontFamily = displayFamily, FontSize = "1.375rem", FontWeight = "400", LineHeight = "1.75rem", LetterSpacing = "0" },
             Subtitle2 = new Subtitle2Typography { FontFamily = textFamily, FontSize = "1rem", FontWeight = "500", LineHeight = "1.5rem", LetterSpacing = "0.009375rem" },
             Body1 = new Body1Typography { FontFamily = textFamily, FontSize = "1rem", FontWeight = "400", LineHeight = "1.5rem", LetterSpacing = "0.03125rem" },
@@ -241,43 +238,4 @@ public sealed class MaterialDesign3Theme : ThemeDefinitionBase
         };
     }
 
-    private static string[] CreateElevation()
-    {
-        const string level0 = "none";
-        const string level1 = "0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 3px 1px rgba(0, 0, 0, 0.15)";
-        const string level2 = "0 1px 2px rgba(0, 0, 0, 0.30), 0 2px 6px 2px rgba(0, 0, 0, 0.15)";
-        const string level3 = "0 4px 8px 3px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.30)";
-        const string level4 = "0 6px 10px 4px rgba(0, 0, 0, 0.15), 0 2px 3px rgba(0, 0, 0, 0.30)";
-        const string level5 = "0 8px 12px 6px rgba(0, 0, 0, 0.15), 0 4px 4px rgba(0, 0, 0, 0.30)";
-
-        return
-        [
-            level0,
-            level1,
-            level1,
-            level2,
-            level2,
-            level3,
-            level3,
-            level3,
-            level4,
-            level4,
-            level4,
-            level4,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5,
-            level5
-        ];
-    }
 }

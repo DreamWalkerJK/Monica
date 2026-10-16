@@ -1,3 +1,5 @@
+using Monica.UI.Shell.Models;
+
 namespace Monica.UI.Shell.Support;
 
 /// <summary>
@@ -5,6 +7,21 @@ namespace Monica.UI.Shell.Support;
 /// </summary>
 internal static class NavigationRouteMatcher
 {
+    /// <summary>
+    /// Gets the most specific registered destination that owns the current route.
+    /// </summary>
+    /// <param name="currentRoute">The current base-relative route, optionally including a query or fragment.</param>
+    /// <param name="items">All authorized destinations in the current navigation tree.</param>
+    /// <returns>The longest matching destination, or <see langword="null"/> when no destination owns the route.</returns>
+    internal static NavigationItem? FindActiveItem(string currentRoute, IEnumerable<NavigationItem> items)
+    {
+        return items
+            .Where(item => IsActive(currentRoute, item.Href))
+            .OrderByDescending(static item => Normalize(item.Href).Length)
+            .ThenBy(static item => item.Href, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+    }
+
     /// <summary>
     /// Gets the CSS class used to identify an active navigation destination.
     /// </summary>

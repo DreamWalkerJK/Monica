@@ -10,35 +10,53 @@
 @inject IStringLocalizer<SharedResource> L
 @implements IAsyncDisposable
 
-<MudMenu Icon="@Icons.Material.Filled.Language"
-         Color="Color.Primary"
-         Size="Size.Medium"
-         AnchorOrigin="Origin.BottomCenter"
-         TransformOrigin="Origin.TopCenter"
-         ListClass="mo-appbar-menu-list"
-         Class="action-button"
-         title="@L["Layout:LanguageTooltip"]">
-    @foreach (var culture in LocalizationProfile.SupportedCultures)
-    {
-        var displayName = LocalizationProfile.GetDisplayName(culture);
-        var isCurrentCulture = string.Equals(
-            CultureInfo.CurrentUICulture.Name,
-            culture,
-            StringComparison.OrdinalIgnoreCase);
+<div class="culture-selector" @onkeydown="HandleMenuKeyDownAsync">
+    <MudMenu @ref="_menu"
+             @bind-Open="_menuOpen"
+             Icon="@ShellIcons.Globe"
+             Color="Color.Primary"
+             Size="Size.Medium"
+             AnchorOrigin="Origin.BottomCenter"
+             TransformOrigin="Origin.TopCenter"
+             ListClass="mo-appbar-menu-list"
+             Class="action-button"
+             AriaLabel="@L["Layout:LanguageTooltip"]"
+             title="@L["Layout:LanguageTooltip"]">
+        @foreach (var culture in LocalizationProfile.SupportedCultures)
+        {
+            var displayName = LocalizationProfile.GetDisplayName(culture);
+            var isCurrentCulture = string.Equals(
+                CultureInfo.CurrentUICulture.Name,
+                culture,
+                StringComparison.OrdinalIgnoreCase);
 
-        <MudMenuItem OnClick="@(() => ChangeCultureAsync(culture))"
-                     Class="@(isCurrentCulture ? "active" : null)"
-                     Icon="@(isCurrentCulture ? Icons.Material.Filled.Check : null)">
-            @displayName
-        </MudMenuItem>
-    }
-</MudMenu>
+            <MudMenuItem OnClick="@(() => ChangeCultureAsync(culture))"
+                         Class="@(isCurrentCulture ? "active" : null)"
+                         Icon="@(isCurrentCulture ? ShellIcons.Check : null)">
+                @displayName
+            </MudMenuItem>
+        }
+    </MudMenu>
+</div>
 
 @code {
     private const string STORAGE_KEY = "culture:preference";
     private const string CULTURE_MODULE_PATH = "./_content/Monica.UI/js/culture-helper.js";
+    private MudMenu? _menu;
+    private bool _menuOpen;
     private JsModuleSession? _cultureInterop;
     private bool _disposed;
+
+    private Task HandleMenuKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (!_disposed && args.Key == "Escape" && _menuOpen && _menu is { } menu)
+        {
+            // Mouse-opened menus can keep focus on the activator outside the popover's key handler.
+            return menu.CloseAllMenusAsync();
+        }
+
+        return Task.CompletedTask;
+    }
 
     protected override void OnInitialized()
     {

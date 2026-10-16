@@ -34,7 +34,7 @@ public sealed record JobOwnerSummary
 
     /// <summary>
     /// Gets the most recent <see cref="Definitions.JobDefinition.LastObservedAtUtc"/> across the owner's
-    /// definitions; freshness of this value is the owner's liveness signal.
+    /// definitions. This is definition-publication evidence, not a process heartbeat or worker-readiness signal.
     /// </summary>
     public required DateTimeOffset LastObservedAtUtc { get; init; }
 }

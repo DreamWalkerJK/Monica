@@ -83,8 +83,35 @@ Do not maintain a parallel `ApplicationServiceFixture<THandler>` abstraction.
 - Delete tests with no assertions, manual output only, uncontrolled random loops, untracked files, or live external calls.
 - Convert retained tests to xUnit v3, NSubstitute, and AwesomeAssertions.
 
+## Trait Rules
+
+Two trait keys are reserved for linking test classes into the ProjectUnit chain: `[ProjectUnitRequirement]` ties units to requirement IDs, and test classes declare the same IDs plus the unit under test.
+
+- `REQ` — the governing requirement ID of the spec under test. Class-level declares the default for every test in the class; a method-level `[Trait("REQ", "...")]` adds a requirement only one test exercises.
+- `Unit` — the project-qualified catalog reference `<workspace-relative-project.csproj>::<runtime-key>`. Required when the class name does not follow `{TypeUnderTest}Tests`, or when the stem names more than one unit. Runtime keys alone do not disambiguate projects.
+
+```csharp
+[Trait("REQ", "FIPS-REQ-FLIGHT-20260920-531942")]
+[Trait("Unit", "src/Services/Flight/FlightService.API/FlightService.API.csproj::Fips.Flight.FlightPlan.FlightPlanAppService")]
+public sealed class FlightPlanAppServiceTests
+{
+    [Fact]
+    public void Dispatch_WhenRunwayChanges_ShouldReplan() { }
+
+    [Fact]
+    [Trait("REQ", "FIPS-REQ-FLIGHT-20260922-000042")]
+    public void Dispatch_WhenFuelIsMarginal_ShouldRequestTanker() { }
+}
+```
+
+A class without Unit traits is resolved through the `{TypeUnderTest}Tests` naming convention when the stem names exactly one unit; a class with Unit traits resolves only through them. Trait arguments must be constant, non-empty strings. Keep other trait keys for repository-local tooling.
+
+`dotnet test --filter "REQ=<requirement-id>"` runs exactly the covering slice, trait values flow into JUnit XML for CI cross-checks, and Test Explorer groups tests by requirement.
+
 ## Parallelism
 
 Run independent scenarios in parallel because each scenario host owns its composition state.
 
 Serialize only tests that share a named external resource that cannot be isolated. Prefer unique database names, ports, directories, topics, queue names, and containers before introducing a collection-level lock.
+
+Class and method declarations remain separate in source analysis. Class traits apply to each method; method-level requirement and unit traits stay paired with their declaring method. Different methods never form a cross-product of requirement and unit associations. A naming-based unit association supplies navigation only and does not add undeclared requirement coverage.

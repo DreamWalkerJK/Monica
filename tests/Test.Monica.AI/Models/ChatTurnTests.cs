@@ -9,8 +9,7 @@ public sealed class ChatTurnTests
     public void Messages_WhenGenerationFailsAfterPartialOutput_ShouldKeepOutputBeforeError()
     {
         var turn = new ChatTurn(
-            new AIChatMessage { Role = AIChatRole.User, Content = "question" },
-            historyCheckpoint: 0)
+            new AIChatMessage { Role = AIChatRole.User, Content = "question" })
         {
             AssistantMessage = new AIChatMessage
             {
@@ -19,9 +18,9 @@ public sealed class ChatTurnTests
             }
         };
 
-        turn.AddError("provider failed").Should().BeTrue();
-        turn.AddError("provider failed").Should().BeFalse();
-        turn.AddError("retry failed").Should().BeTrue();
+        turn.AddError("provider failed");
+        turn.AddError("provider failed");
+        turn.AddError("retry failed");
 
         turn.Messages.Select(static message => (message.Kind, message.Content))
             .Should().Equal(

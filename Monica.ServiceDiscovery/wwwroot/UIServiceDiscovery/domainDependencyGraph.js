@@ -1,755 +1,298 @@
 /**
- * Subdomain dependency graph visualization
- * Subdomain dependency chart implemented based on d3.js
- * 
- * @module domainDependencyGraph
+ * A directed atlas of declarations in the captured registry. Dashed endpoints
+ * identify domain names absent from the catalog; they are not registered domains.
  */
+import { GraphBase } from '../../Monica.UI/js/d3js/d3-graph-base.js';
 
-import { GraphBase, getModernLinkStyle, getModernNodeStyle, focusOnPosition } from '../../Monica.UI/js/d3js/d3-graph-base.js';
-import { ForceLayoutManager } from '../../Monica.UI/js/d3js/d3-force-layout.js';
-import { createLayoutAlgorithms } from '../../Monica.UI/js/d3js/d3-layout-algorithms.js';
-import { NodeInteractionHandler, createStaticDragBehavior } from '../../Monica.UI/js/d3js/d3-node-interaction.js';
-
-const DOMAIN_NODE_RADIUS = 30;
-
-const ROLE_COLOR_MAP = {
-    primary: 'var(--mud-palette-primary)',
-    secondary: 'var(--mud-palette-secondary)',
-    tertiary: 'var(--mud-palette-tertiary)',
-    info: 'var(--mud-palette-info)',
-    success: 'var(--mud-palette-success)',
-    warning: 'var(--mud-palette-warning)',
+const roleColors = {
+    primary: 'var(--mud-palette-primary)', secondary: 'var(--mud-palette-secondary)',
+    tertiary: 'var(--mud-palette-tertiary)', info: 'var(--mud-palette-info)',
+    success: 'var(--mud-palette-success)', warning: 'var(--mud-palette-warning)',
     default: 'var(--mud-palette-text-secondary)'
 };
 
-const STATUS_COLOR_MAP = {
-    Running: 'var(--mud-palette-success)',
-    Error: 'var(--mud-palette-error)',
-    Updating: 'var(--mud-palette-warning)',
-    Offline: 'var(--mud-palette-dark)',
-    Unknown: 'var(--mud-palette-text-secondary)'
-};
-
-function resolveRoleColor(role) {
-    return ROLE_COLOR_MAP[role] || ROLE_COLOR_MAP.default;
-}
-
-/**
- * Domain Dependency Graph Class
- */
 class DomainDependencyGraph extends GraphBase {
-    constructor(containerId, options = {}) {
-        super(containerId, {
-            ...options,
-            showArrows: true,
-            arrowSize: 10
-        });
-
-        this.nodes = [];
-        this.links = [];
-        this.nodeElements = null;
-        this.linkElements = null;
-        this.dotNetHelper = options.dotNetHelper || null;
+    constructor(containerId, options) {
+        super(containerId, { ...options, showArrows: true, arrowSize: 8, scaleExtent: [.1, 4] });
+        this.reference = options.dotNetHelper;
+        this.texts = options.texts;
+        this.nodes = []; this.links = [];
         this.pendingCallbacks = new Set();
-        this.tooltip = null;
+        this.disposed = false;
         this.currentLayout = 'force';
-        this.texts = {
-            labels: {
-                serviceCount: 'Service Count',
-                relatedServices: 'Related Services ({0})',
-                statusCount: '{0}: {1}',
-                andMore: 'and {0} more',
-                noRelatedServices: 'No related services',
-                clickToViewDetails: 'Click to view details',
-                dependencyServiceCount: 'Service Count'
-            },
-            statuses: {
-                running: 'Running',
-                updating: 'Updating',
-                offline: 'Offline',
-                error: 'Error',
-                unknown: 'Unknown'
-            }
-        };
-
-        if (options.texts) {
-            this.texts = {
-                labels: {
-                    ...this.texts.labels,
-                    ...(options.texts.labels || {})
-                },
-                statuses: {
-                    ...this.texts.statuses,
-                    ...(options.texts.statuses || {})
-                }
-            };
-        }
-        
-        // Create a force-directed layout manager
-        this.forceLayout = new ForceLayoutManager(this.width, this.height, {
-            linkDistance: 200,
-            chargeStrength: -800,
-            collisionRadius: 80  // 增加碰撞半径以为下方文本留出空间
+        this.topologyKey = null;
+        this.cameraAdjusted = false;
+        this.forceDistance = 200; this.forceStrength = -800;
+        this.linkLayer = this.mainGroup.append('g').attr('class', 'links-layer');
+        this.nodeLayer = this.mainGroup.append('g').attr('class', 'nodes-layer');
+        this.simulation = d3.forceSimulation().stop()
+            .force('link', d3.forceLink().id(node => node.id).distance(this.forceDistance))
+            .force('charge', d3.forceManyBody().strength(this.forceStrength))
+            .force('center', d3.forceCenter(this.width / 2, this.height / 2))
+            .force('x', d3.forceX(this.width / 2).strength(.045))
+            .force('y', d3.forceY(this.height / 2).strength(.045))
+            .force('collision', d3.forceCollide().radius(80));
+        this.simulation.on('tick', () => this.updatePositions());
+        this.resizeObserver = new ResizeObserver(() => this.resize());
+        this.resizeObserver.observe(this.container);
+        this.zoom.on('zoom.atlas', event => {
+            if (event.sourceEvent) this.cameraAdjusted = true;
         });
-
-        // Initialize layout algorithm manager
-        this.layoutAlgorithms = createLayoutAlgorithms(this.width, this.height);
-        
-        // Initialize interaction handler
-        this.interactionHandler = new NodeInteractionHandler({
-            onClick: (event, d) => this.handleNodeClick(d),
-            onRightClick: (event, d, position) => this.handleNodeRightClick(d, position.clientX, position.clientY),
-            onHover: (event, d) => this.showTooltip(event, this.buildDomainTooltipContent(d)),
-            onHoverOut: (event, d) => this.hideTooltip(),
-            highlightOptions: {
-                fadeOpacity: 0.2,
-                normalOpacity: 1
-            },
-            isDarkMode: this.isDarkMode,
-            markerIds: this.markerIds // 传递marker IDs
-        });
-        
-        // Static layout dragging behavior
-        this.staticDragBehavior = null;
-
-        // Create layer
-        this.createLayers();
-        
-        // Binding events
-        this.bindEvents();
-    }
-
-    createLayers() {
-        // Create connection line layer
-        this.linkLayer = this.mainGroup.append('g')
-            .attr('class', 'links-layer');
-            
-        // Create node layer
-        this.nodeLayer = this.mainGroup.append('g')
-            .attr('class', 'nodes-layer');
-    }
-
-    bindEvents() {
-        // Listen for window size changes
-        this.handleResize = this.handleResize.bind(this);
-        window.addEventListener('resize', this.handleResize);
-        
-        // Add background click event handling
-        this.svg.on('click', (event) => {
-            // Only processed when the click is on the background (svg itself)
-            if (event.target === this.svg.node()) {
-                this.handleBackgroundClick();
-            }
+        this.svg.on('click.atlas', event => {
+            if (event.target === this.svg.node()) this.invokeDotNet('OnSvgBackgroundClick');
         });
     }
-    
-    /**
-     * Handling background click events
-     */
-    handleBackgroundClick() {
-        // If there is a .NET callback object, notify that the background was clicked
-        this.invokeDotNet('OnSvgBackgroundClick');
-    }
 
-    updateGraph(data) {
-        this.nodes = data.nodes || [];
-        this.links = data.links || [];
-        
-        // Update force-directed layout data
-        this.forceLayout.setData(this.nodes, this.links);
-        
-        // Render chart
+    updateGraph(data, layout = this.currentLayout, distance = this.forceDistance, strength = this.forceStrength) {
+        if (this.disposed) return;
+        const nextTopology = JSON.stringify([(data.nodes || []).map(node => node.id).sort(),
+            (data.links || []).map(link => [link.source, link.target]).sort()]);
+        const topologyChanged = this.topologyKey !== nextTopology;
+        const hadGeometry = this.nodes.length > 0;
+        this.topologyKey = nextTopology;
+        const previous = new Map(this.nodes.map(node => [node.id, node]));
+        this.nodes = (data.nodes || []).map(node => ({ ...node,
+            x: previous.get(node.id)?.x, y: previous.get(node.id)?.y }));
+        const known = new Set(this.nodes.map(node => node.id));
+        this.links = (data.links || []).filter(link => known.has(link.source) && known.has(link.target)).map(link => ({ ...link }));
+        this.forceDistance = distance; this.forceStrength = strength;
+        this.simulation.stop().force('charge').strength(strength);
+        this.simulation.force('link').distance(distance);
         this.render();
-        
-        // Start layout animation
-        this.forceLayout.start(() => {
-            this.updatePositions();
-        });
+        if (topologyChanged || layout !== this.currentLayout) {
+            this.setLayout(layout, !hadGeometry || !this.cameraAdjusted);
+        } else {
+            this.simulation.nodes(this.nodes); this.simulation.force('link').links(this.links);
+            this.bindDrag(layout === 'force'); this.updatePositions();
+        }
     }
 
     render() {
-        this.renderLinks();
-        this.renderNodes();
-    }
-
-    renderLinks() {
-        // Bind data
-        this.linkElements = this.linkLayer
-            .selectAll('.domain-link')
-            .data(this.links, d => `${d.source.id || d.source}-${d.target.id || d.target}`);
-
-        // Remove old elements
-        this.linkElements.exit().remove();
-
-        // Create new elements - use path instead of line to support better arrow display
-        const linkEnter = this.linkElements.enter()
-            .append('path')
-            .attr('class', 'domain-link modern-link')
-            .style('opacity', 0);
-
-        // Merge selection
-        this.linkElements = linkEnter.merge(this.linkElements);
-
-        // Set modern styles - completely refer to ProjectUnit implementation, do not use field colors
-        const linkStyle = getModernLinkStyle(this.isDarkMode, false, this.markerIds);
-        this.linkElements
-            .transition()
-            .duration(300)
-            .style('opacity', 1)
-            .attr('stroke', linkStyle.stroke)
-            .attr('stroke-width', linkStyle.strokeWidth)
-            .attr('stroke-opacity', linkStyle.strokeOpacity)
-            .attr('stroke-linecap', linkStyle.strokeLinecap)
-            .attr('stroke-linejoin', linkStyle.strokeLinejoin)
-            .attr('fill', 'none')
-            .attr('marker-end', linkStyle.markerEnd)
-            .style('filter', linkStyle.filter)
-            .style('pointer-events', 'stroke'); // 允许path元素响应鼠标事件
-
-        // Add interaction - keep only tooltip displayed
-        this.linkElements
-            .style('cursor', 'pointer')
-            .on('mouseenter', (event, d) => {
-                this.showTooltip(event, `${d.source.name || d.source} → ${d.target.name || d.target}<br/>${this.texts.labels.dependencyServiceCount}: ${d.serviceCount || 1}`);
-            })
-            .on('mouseleave', (event, d) => {
-                this.hideTooltip();
-            });
-    }
-
-    renderNodes() {
-        // Bind data
-        this.nodeElements = this.nodeLayer
-            .selectAll('.domain-node')
-            .data(this.nodes, d => d.id);
-
-        // Remove old elements
-        this.nodeElements.exit().remove();
-
-        // Create a new element group
-        const nodeEnter = this.nodeElements.enter()
-            .append('g')
-            .attr('class', 'domain-node')
-            .style('opacity', 0);
-
-        // Add circle node
-        nodeEnter.append('circle')
-            .attr('class', 'node-circle')
-            .attr('r', 0);
-
-        // Add text label (move below node)
-        nodeEnter.append('text')
-            .attr('class', 'node-text')
-            .attr('dy', '50px')
-            .attr('text-anchor', 'middle')
-            .style('font-size', '0px');
-
-        // Merge selection
-        this.nodeElements = nodeEnter.merge(this.nodeElements);
-
-        // animation display
-        this.nodeElements
-            .transition()
-            .duration(500)
-            .style('opacity', 1);
-
-        // Update circle node
+        this.linkElements = this.linkLayer.selectAll('.domain-link').data(this.links, link => JSON.stringify([this.nodeId(link.source), this.nodeId(link.target)]))
+            .join('path').attr('class', 'domain-link').attr('fill', 'none')
+            .attr('stroke', 'color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-text-secondary))')
+            .attr('stroke-width', 1.5).attr('marker-end', `url(#${this.markerIds.markerId})`)
+            .on('mouseenter.atlas', (event, link) => this.showTooltip(event,
+                `${this.nodeId(link.source)} → ${this.nodeId(link.target)}`,
+                [[this.texts.labels.dependencyServiceCount, link.serviceCount]]))
+            .on('mouseleave.atlas', () => this.hideTooltip());
+        this.nodeElements = this.nodeLayer.selectAll('.domain-node').data(this.nodes, node => node.id).join(
+            enter => {
+                const group = enter.append('g').attr('class', 'domain-node');
+                group.append('circle').attr('class', 'node-circle').attr('r', 29);
+                group.append('text').attr('class', 'node-count').attr('y', 4).attr('text-anchor', 'middle');
+                group.append('text').attr('class', 'node-name').attr('y', 51).attr('text-anchor', 'middle');
+                return group;
+            }, update => update, exit => exit.interrupt().remove());
         this.nodeElements.select('.node-circle')
-            .transition()
-            .duration(500)
-            .attr('r', DOMAIN_NODE_RADIUS)
-            .attr('fill', d => resolveRoleColor(d.colorRole))
-            .attr('stroke', getModernNodeStyle(this.isDarkMode).strokeColor)
-            .attr('stroke-width', 2)
-            .style('filter', 'drop-shadow(0 2px 8px rgba(var(--mud-palette-dark-rgb),0.15))');
-
-        // Update text
-        this.nodeElements.select('.node-text')
-            .transition()
-            .duration(500)
-            .style('font-size', '14px')
-            .style('font-weight', '500')
-            .style('text-shadow', '0 1px 3px rgba(var(--mud-palette-dark-rgb),0.3)')
-            .attr('fill', getModernNodeStyle(this.isDarkMode).textColor)
-            .text(d => this.truncateText(d.name, 15));
-
-        // Add dragging behavior
-        this.nodeElements.call(this.forceLayout.getDragBehavior());
-
-        // Binding interaction events - using NodeInteractionHandler
-        this.interactionHandler.bindNodeEvents(this.nodeElements, {
-            nodes: this.nodes,
-            links: this.links,
-            linkSelection: this.linkElements
-        });
-
-        // Set mouse style
-        this.nodeElements.style('cursor', 'pointer');
-    }
-
-    buildLinkPath(source, target) {
-        if (!source || !target) {
-            return '';
-        }
-
-        const dx = target.x - source.x;
-        const dy = target.y - source.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance === 0) {
-            return '';
-        }
-
-        const normX = dx / distance;
-        const normY = dy / distance;
-        const arrowOffset = DOMAIN_NODE_RADIUS + this.arrowSize;
-        const endX = target.x - normX * arrowOffset;
-        const endY = target.y - normY * arrowOffset;
-
-        return `M${source.x},${source.y} L${endX},${endY}`;
-    }
-
-    findNodeByLinkRef(linkNode) {
-        const nodeId = linkNode?.id || linkNode;
-        return this.nodes.find(node => node.id === nodeId);
-    }
-
-    updatePositions() {
-        if (this.nodeElements) {
-            this.nodeElements
-                .attr('transform', d => `translate(${d.x},${d.y})`);
-        }
-
-        if (this.linkElements) {
-            this.linkElements
-                .attr('d', d => this.buildLinkPath(d.source, d.target));
-        }
-    }
-
-
-    showTooltip(event, content) {
-        if (!this.tooltip) {
-            this.tooltip = d3.select('body')
-                .append('div')
-                .attr('class', 'domain-tooltip')
-                .style('position', 'absolute')
-                .style('background', 'rgba(var(--mud-palette-surface-rgb),0.98)')
-                .style('color', 'var(--mud-palette-text-primary)')
-                .style('border', '1px solid var(--mud-palette-lines-default)')
-                .style('padding', '8px 12px')
-                .style('border-radius', '6px')
-                .style('font-size', '12px')
-                .style('pointer-events', 'none')
-                .style('z-index', '10000')
-                .style('opacity', 0);
-        }
-
-        this.tooltip
-            .html(content)
-            .style('left', (event.pageX + 10) + 'px')
-            .style('top', (event.pageY - 10) + 'px')
-            .transition()
-            .duration(200)
-            .style('opacity', 1);
-    }
-
-    hideTooltip() {
-        if (!this.tooltip) {
-            return;
-        }
-
-        this.tooltip
-            .interrupt()
-            .transition()
-            .duration(200)
-            .style('opacity', 0);
-    }
-
-    focusOnNode(nodeId) {
-        const node = this.nodes.find(n => n.id === nodeId);
-        if (node && node.x !== undefined && node.y !== undefined) {
-            this.focusOnPosition({ x: node.x, y: node.y }, 1.5);
-        }
-    }
-
-    truncateText(text, maxLength) {
-        if (!text) return '';
-        return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
-    }
-
-    /**
-     * Handle node click events
-     * @param {Object} node - the clicked node data
-     */
-    handleNodeClick(node) {
-        // Focus on the node first
-        this.focusOnNode(node.id);
-        
-        // If there is a .NET callback object, call the domain details display method
-        this.invokeDotNet('OnDomainClickFromJS', node.id || node.name);
-    }
-    
-    /**
-     * Handle node right-click events
-     * @param {Object} node - the node data that was right-clicked
-     * @param {number} x - Client X coordinate
-     * @param {number} y - Client Y coordinate
-     */
-    handleNodeRightClick(node, x, y) {
-        // Hide tooltip
-        this.hideTooltip();
-        
-        // If there is a .NET callback object, call the right-click menu display method
-        this.invokeDotNet('OnDomainRightClick', node.id || node.name, x, y);
-    }
-
-    /**
-     * Construct the tooltip content of the domain node
-     * @param {Object} domain - Domain node data
-     * @returns {string} tooltip content in HTML format
-     */
-    buildDomainTooltipContent(domain) {
-        let content = `<strong>${domain.name}</strong>`;
-        
-        if (domain.description) {
-            content += `<br/><span style="color: var(--mud-palette-text-secondary);">${domain.description}</span>`;
-        }
-
-        // Display related microservice information
-        if (domain.services && domain.services.length > 0) {
-            content += `<br/><br/><strong>${this.formatText(this.texts.labels.relatedServices, domain.services.length)}:</strong>`;
-            
-            // Show services grouped by status
-            const servicesByStatus = this.groupServicesByStatus(domain.services);
-            
-            Object.entries(servicesByStatus).forEach(([status, services]) => {
-                const statusText = this.getServiceStatusText(status);
-                const statusColor = this.getServiceStatusColor(status);
-                content += `<br/><span style="color: ${statusColor};">• ${this.formatText(this.texts.labels.statusCount, statusText, services.length)}</span>`;
-                
-                // Show first 3 service names
-                if (services.length > 0) {
-                    const serviceNames = services.slice(0, 3).map(s => s.name || s.appName).join(', ');
-                    content += `<br/><span style="font-size: 11px; color: var(--mud-palette-text-secondary); margin-left: 12px;">${serviceNames}`;
-                    if (services.length > 3) {
-                        content += ` ${this.formatText(this.texts.labels.andMore, services.length)}`;
-                    }
-                    content += `</span>`;
+            .attr('fill', node => `color-mix(in srgb, ${roleColors[node.colorRole] || roleColors.default} 10%, var(--mud-palette-surface))`)
+            .attr('stroke', node => roleColors[node.colorRole] || roleColors.default)
+            .attr('stroke-width', 1.5).attr('stroke-dasharray', node => node.isCatalogDomain ? null : '4 3');
+        this.nodeElements.select('.node-count').attr('fill', 'var(--mud-palette-text-primary)')
+            .style('font-family', 'var(--mo-font-family-mono)').style('font-size', '15px')
+            .text(node => node.isCatalogDomain ? (node.services?.length ?? 0) : '?');
+        this.nodeElements.select('.node-name').attr('fill', 'var(--mud-palette-text-primary)')
+            .style('font-family', 'var(--mud-typography-default-family)').style('font-size', '12px').style('font-weight', '500')
+            .text(node => this.truncate(node.name, 22));
+        this.nodeElements.style('cursor', 'pointer')
+            .on('mouseenter.atlas', (event, node) => {
+                this.highlight(node.id);
+                const rows = [[this.texts.labels.serviceCount, node.services?.length ?? 0]];
+                if (!node.isCatalogDomain) rows.push(['', this.texts.labels.unlisted]);
+                if (node.description) rows.push(['', node.description]);
+                for (const service of node.services || []) {
+                    rows.push(['', `${service.name ?? service.appName} · ${this.statusText(service.status ?? service.overallStatus)}`]);
                 }
-            });
-        } else {
-            content += `<br/><span style="color: var(--mud-palette-text-secondary);">${this.texts.labels.noRelatedServices}</span>`;
-        }
-
-        content += `<br/><br/><span style="font-size: 11px; color: var(--mud-palette-text-secondary);">${this.texts.labels.clickToViewDetails}</span>`;
-        return content;
-    }
-
-    /**
-     * Group services by status
-     * @param {Array} services - list of services
-     * @returns {Object} Services grouped by status
-     */
-    groupServicesByStatus(services) {
-        const groups = {};
-        services.forEach(service => {
-            const status = service.status || service.overallStatus || 'Unknown';
-            if (!groups[status]) {
-                groups[status] = [];
-            }
-            groups[status].push(service);
-        });
-        return groups;
-    }
-
-    /**
-     * Get service status display text
-     * @param {string} status - service status
-     * @returns {string} Status display text
-     */
-    getServiceStatusText(status) {
-        switch (status) {
-            case 'Running': return this.texts.statuses.running;
-            case 'Error': return this.texts.statuses.error;
-            case 'Updating': return this.texts.statuses.updating;
-            case 'Offline': return this.texts.statuses.offline;
-            default: return this.texts.statuses.unknown;
-        }
-    }
-
-    formatText(template, ...values) {
-        return values.reduce((current, value, index) => current.replace(`{${index}}`, value), template);
-    }
-
-    /**
-     * Get service status color
-     * @param {string} status - service status
-     * @returns {string} status color
-     */
-    getServiceStatusColor(status) {
-        return STATUS_COLOR_MAP[status] || STATUS_COLOR_MAP.Unknown;
-    }
-
-    handleResize() {
-        const newWidth = this.container.clientWidth;
-        const newHeight = this.container.clientHeight;
-        
-        if (newWidth !== this.width || newHeight !== this.height) {
-            this.width = newWidth;
-            this.height = newHeight;
-            
-            this.svg
-                .attr('width', this.width)
-                .attr('height', this.height)
-                .attr('viewBox', [0, 0, this.width, this.height]);
-            
-            // Update Force Directed Layout Center
-            if (this.forceLayout) {
-                this.forceLayout.simulation
-                    .force('center', d3.forceCenter(this.width / 2, this.height / 2));
-                this.forceLayout.simulation.alpha(0.3).restart();
-            }
-        }
-    }
-
-    /**
-     * Set layout
-     */
-    setLayout(layoutType) {
-        this.currentLayout = layoutType;
-        
-        // Remove previous dragging behavior
-        if (this.nodeElements) {
-            this.nodeElements.on('.drag', null);
-        }
-        
-        switch (layoutType) {
-            case 'force':
-                this.applyForceLayout();
-                break;
-            case 'hierarchy':
-                this.applyHierarchyLayout();
-                break;
-            case 'circular':
-                this.applyCircularLayout();
-                break;
-            case 'radial_tree':
-                this.applyRadialTreeLayout();
-                break;
-            default:
-                this.applyForceLayout();
-        }
-    }
-    
-    /**
-     * Apply force-directed layout
-     */
-    applyForceLayout() {
-        // Release all pinned nodes
-        this.forceLayout.releaseAllFixed(this.nodes);
-        
-        // Set data
-        this.forceLayout.setData(this.nodes, this.links);
-        
-        // Apply drag behavior
-        if (this.nodeElements) {
-            this.nodeElements.call(this.forceLayout.getDragBehavior());
-            
-            // Rebind interaction events - use NodeInteractionHandler
-            this.interactionHandler.bindNodeEvents(this.nodeElements, {
-                nodes: this.nodes,
-                links: this.links,
-                linkSelection: this.linkElements
-            });
-            
-            // Set mouse style
-            this.nodeElements.style('cursor', 'pointer');
-        }
-        
-        // Start simulation
-        this.forceLayout.start(() => {
-            this.updatePositions();
-        });
-    }
-    
-    /**
-     * Apply hierarchical layout
-     */
-    applyHierarchyLayout() {
-        this.forceLayout.stop();
-        
-        // Compute hierarchical layout
-        this.layoutAlgorithms.hierarchicalLayout(this.nodes, this.links);
-        
-        // Apply static drag
-        this.applyStaticDrag();
-        
-        // Update location
-        this.updateStaticPositions();
-    }
-    
-    /**
-     * Apply ring layout
-     */
-    applyCircularLayout() {
-        this.forceLayout.stop();
-        
-        // Calculate ring layout
-        this.layoutAlgorithms.circularLayout(this.nodes, {
-            avgNodeSize: 60,
-            complexNodeCount: 0
-        });
-        
-        // Apply static drag
-        this.applyStaticDrag();
-        
-        // Update location
-        this.updateStaticPositions();
-    }
-    
-    /**
-     * Apply radial tree layout
-     */
-    applyRadialTreeLayout() {
-        this.forceLayout.stop();
-        
-        // Compute radial tree layout
-        this.layoutAlgorithms.radialTreeLayout(this.nodes, this.links, {
-            radiusStep: 80
-        });
-        
-        // Apply static drag
-        this.applyStaticDrag();
-        
-        // Update location
-        this.updateStaticPositions();
-    }
-    
-    /**
-     * Apply static drag
-     */
-    applyStaticDrag() {
-        const self = this;
-        
-        this.staticDragBehavior = createStaticDragBehavior({
-            updateLinks: (draggedNode) => {
-                // Live update of connecting lines - use path's d attribute instead of x1,y1,x2,y2
-                if (self.linkElements) {
-                    self.linkElements
-                        .attr('d', d => {
-                            const sourceId = d.source.id || d.source;
-                            const targetId = d.target.id || d.target;
-                            const source = sourceId === draggedNode.id
-                                ? draggedNode
-                                : self.findNodeByLinkRef(sourceId);
-                            const target = targetId === draggedNode.id
-                                ? draggedNode
-                                : self.findNodeByLinkRef(targetId);
-
-                            return self.buildLinkPath(source, target);
-                        });
-                }
-            }
-        });
-        
-        if (this.nodeElements) {
-            this.nodeElements.call(this.staticDragBehavior);
-            
-            // Rebind interaction events - use NodeInteractionHandler
-            this.interactionHandler.bindNodeEvents(this.nodeElements, {
-                nodes: this.nodes,
-                links: this.links,
-                linkSelection: this.linkElements
-            });
-            
-            // Set mouse style
-            this.nodeElements.style('cursor', 'pointer');
-        }
-    }
-    
-    /**
-     * Update static location
-     */
-    updateStaticPositions() {
-        if (this.nodeElements) {
-            this.nodeElements
-                .transition()
-                .duration(750)
-                .attr('transform', d => `translate(${d.x},${d.y})`);
-        }
-        
-        if (this.linkElements) {
-            this.linkElements
-                .transition()
-                .duration(750)
-                .attr('d', d => {
-                    const source = this.findNodeByLinkRef(d.source);
-                    const target = this.findNodeByLinkRef(d.target);
-
-                    return this.buildLinkPath(source, target);
-                });
-        }
-    }
-    
-    /**
-     * Set force guide distance
-     */
-    setForceDistance(distance) {
-        this.forceLayout.updateLinkDistance(distance);
-    }
-    
-    /**
-     * Set force guide strength
-     */
-    setForceStrength(strength) {
-        this.forceLayout.updateChargeStrength(strength);
-    }
-
-    invokeDotNet(methodName, ...args) {
-        const reference = this.dotNetHelper;
-        if (!reference || typeof reference.invokeMethodAsync !== 'function') {
-            return Promise.resolve();
-        }
-
-        const callback = reference.invokeMethodAsync(methodName, ...args)
-            .catch(error => {
-                if (this.dotNetHelper) {
-                    console.error(`Domain graph callback '${methodName}' failed.`, error);
-                }
+                this.showTooltip(event, node.name, rows);
             })
-            .finally(() => this.pendingCallbacks.delete(callback));
-
-        this.pendingCallbacks.add(callback);
-        return callback;
+            .on('mouseleave.atlas', () => { this.highlight(null); this.hideTooltip(); })
+            .on('click.atlas', (event, node) => {
+                event.stopPropagation(); this.hideTooltip(); this.focusOnNode(node.id);
+                this.invokeDotNet('OnDomainClickFromJS', node.id);
+            })
+            .on('contextmenu.atlas', (event, node) => {
+                event.preventDefault(); event.stopPropagation(); this.hideTooltip();
+                this.invokeDotNet('OnDomainRightClick', node.id, event.pageX, event.pageY);
+            });
     }
 
-    async dispose() {
-        this.dotNetHelper = null;
-
-        // Remove only the tooltip owned by this graph mount.
-        this.tooltip?.remove();
-        this.tooltip = null;
-        
-        // Stop force oriented layout
-        if (this.forceLayout) {
-            this.forceLayout.dispose();
+    setLayout(layout, fit = true) {
+        if (this.disposed) return;
+        this.currentLayout = layout;
+        this.simulation.stop();
+        this.nodes.forEach(node => { node.fx = null; node.fy = null; });
+        if (layout === 'force') {
+            this.simulation.nodes(this.nodes); this.simulation.force('link').links(this.links); this.simulation.alpha(1);
+            for (let index = 0; index < 140; index++) this.simulation.tick();
+        } else if (layout === 'hierarchy') {
+            const degree = new Map(this.nodes.map(node => [node.id, 0]));
+            this.links.forEach(link => { degree.set(this.nodeId(link.source), degree.get(this.nodeId(link.source)) + 1); degree.set(this.nodeId(link.target), degree.get(this.nodeId(link.target)) + 1); });
+            const groups = [...d3.group(this.nodes, node => degree.get(node.id))].sort((left, right) => right[0] - left[0]);
+            groups.forEach(([, nodes], row) => nodes.forEach((node, index) => { node.x = 100 + index * 160; node.y = 85 + row * 150; }));
+        } else if (layout === 'radial_tree') {
+            this.layoutRadial();
+        } else {
+            const radius = Math.max(120, this.nodes.length * 160 / (2 * Math.PI));
+            this.nodes.forEach((node, index) => {
+                const angle = index * 2 * Math.PI / this.nodes.length - Math.PI / 2;
+                node.x = this.width / 2 + Math.cos(angle) * radius; node.y = this.height / 2 + Math.sin(angle) * radius;
+            });
         }
-        
-        // Remove window event listener
-        window.removeEventListener('resize', this.handleResize);
-        
-        // Call dispose of the base class
-        super.dispose();
+        this.bindDrag(layout === 'force'); this.updatePositions();
+        if (fit) this.resetView();
+    }
 
-        await Promise.allSettled([...this.pendingCallbacks]);
-        this.pendingCallbacks.clear();
+    layoutRadial() {
+        const children = new Map(this.nodes.map(node => [node.id, []]));
+        const incoming = new Set();
+        this.links.forEach(link => { children.get(this.nodeId(link.source))?.push(this.nodeId(link.target)); incoming.add(this.nodeId(link.target)); });
+        const depth = new Map();
+        const traverse = root => {
+            const queue = [[root.id, 0]];
+            while (queue.length) {
+                const [id, level] = queue.shift();
+                if (depth.has(id)) continue;
+                depth.set(id, level);
+                for (const child of children.get(id) || []) if (!depth.has(child)) queue.push([child, level + 1]);
+            }
+        };
+        this.nodes.filter(node => !incoming.has(node.id)).forEach(traverse);
+        // Every disconnected component and directed cycle gets a deterministic root.
+        this.nodes.filter(node => !depth.has(node.id)).forEach(traverse);
+        const rings = d3.group(this.nodes, node => depth.get(node.id));
+        for (const [level, nodes] of rings) {
+            const radius = Math.max(100 + level * 160, nodes.length * 160 / (2 * Math.PI));
+            nodes.forEach((node, index) => {
+                const angle = index * 2 * Math.PI / nodes.length - Math.PI / 2;
+                node.x = this.width / 2 + Math.cos(angle) * radius; node.y = this.height / 2 + Math.sin(angle) * radius;
+            });
+        }
+    }
+
+    bindDrag(force) {
+        this.nodeElements.call(d3.drag()
+            .on('start', (event, node) => {
+                if (this.disposed) return;
+                this.hideTooltip();
+                this.cameraAdjusted = true;
+                if (force) { this.simulation.alphaTarget(.15).restart(); node.fx = node.x; node.fy = node.y; }
+            })
+            .on('drag', (event, node) => {
+                if (this.disposed) return;
+                if (force) { node.fx = event.x; node.fy = event.y; }
+                else { node.x = event.x; node.y = event.y; this.updatePositions(); }
+            })
+            .on('end', (event, node) => {
+                if (this.disposed) return;
+                if (force) { this.simulation.alphaTarget(0); node.fx = null; node.fy = null; }
+            }));
+    }
+    nodeId(reference) { return typeof reference === 'object' ? reference.id : reference; }
+    findNode(reference) { const id = this.nodeId(reference); return this.nodes.find(node => node.id === id); }
+    linkPath(link) {
+        const source = this.findNode(link.source), target = this.findNode(link.target);
+        if (!source || !target) return '';
+        if (source.id === target.id) return `M${source.x - 20},${source.y - 22} C${source.x - 90},${source.y - 110} ${source.x + 90},${source.y - 110} ${source.x + 23},${source.y - 30}`;
+        const dx = target.x - source.x, dy = target.y - source.y, distance = Math.hypot(dx, dy);
+        if (!distance) return '';
+        const startX = source.x + dx / distance * 30, startY = source.y + dy / distance * 30;
+        const endX = target.x - dx / distance * 38, endY = target.y - dy / distance * 38;
+        // Curved directed edges keep reciprocal declarations visually distinct.
+        const middleX = (startX + endX) / 2 - dy / distance * 22, middleY = (startY + endY) / 2 + dx / distance * 22;
+        return `M${startX},${startY} Q${middleX},${middleY} ${endX},${endY}`;
+    }
+    updatePositions() {
+        if (this.disposed) return;
+        this.nodeElements?.attr('transform', node => `translate(${node.x},${node.y})`);
+        this.linkElements?.attr('d', link => this.linkPath(link));
+    }
+    highlight(id) {
+        this.linkElements?.attr('stroke-width', link => id && (this.nodeId(link.source) === id || this.nodeId(link.target) === id) ? 2.5 : 1.5);
+        this.nodeElements?.select('.node-circle').attr('stroke-width', node => node.id === id ? 2.5 : 1.5);
+    }
+    setForceDistance(distance) {
+        this.forceDistance = distance; this.simulation.force('link').distance(distance);
+        if (this.currentLayout === 'force') this.setLayout('force', false);
+    }
+    setForceStrength(strength) {
+        this.forceStrength = strength; this.simulation.force('charge').strength(strength);
+        if (this.currentLayout === 'force') this.setLayout('force', false);
+    }
+    resetView() {
+        if (this.disposed) return;
+        this.cameraAdjusted = false;
+        this.svg.interrupt();
+        if (!this.nodes.length) { this.svg.call(this.zoom.transform, d3.zoomIdentity); return; }
+        const minX = d3.min(this.nodes, node => node.x) - 98, maxX = d3.max(this.nodes, node => node.x) + 98;
+        const minY = d3.min(this.nodes, node => node.y) - 100, maxY = d3.max(this.nodes, node => node.y) + 78;
+        // Larger topologies remain pannable instead of shrinking working labels into illegible marks.
+        const scale = Math.min(1.5, Math.max(.85, Math.min(this.width / (maxX - minX), this.height / (maxY - minY)) * .88));
+        this.svg.call(this.zoom.transform, d3.zoomIdentity.translate(this.width / 2, this.height / 2)
+            .scale(scale).translate(-(minX + maxX) / 2, -(minY + maxY) / 2));
+    }
+    focusOnNode(id) {
+        const node = this.nodes.find(node => node.id === id);
+        if (!node || this.disposed) return;
+        this.cameraAdjusted = true;
+        this.svg.interrupt().call(this.zoom.transform, d3.zoomIdentity.translate(this.width / 2, this.height / 2)
+            .scale(1.5).translate(-node.x, -node.y));
+    }
+    resize() {
+        if (this.disposed) return;
+        const width = this.container.clientWidth, height = this.container.clientHeight;
+        if (!width || !height || (width === this.width && height === this.height)) return;
+        const previousWidth = this.width, previousHeight = this.height;
+        const camera = d3.zoomTransform(this.svg.node());
+        this.width = width; this.height = height;
+        this.svg.attr('width', width).attr('height', height).attr('viewBox', [0, 0, width, height]);
+        this.simulation.force('center', d3.forceCenter(width / 2, height / 2));
+        this.simulation.force('x').x(width / 2); this.simulation.force('y').y(height / 2);
+        if (this.cameraAdjusted) {
+            this.svg.call(this.zoom.transform, d3.zoomIdentity
+                .translate(camera.x + (width - previousWidth) / 2, camera.y + (height - previousHeight) / 2).scale(camera.k));
+        } else {
+            this.resetView();
+        }
+    }
+    statusText(status) { return this.texts.statuses?.[String(status).toLowerCase()] || this.texts.statuses?.unknown || status; }
+    truncate(value, length) { const text = String(value ?? ''); return text.length > length ? `${text.slice(0, length - 1)}…` : text; }
+    showTooltip(event, titleValue, values) {
+        this.hideTooltip();
+        const tooltip = document.createElement('div'); tooltip.className = 'domain-tooltip'; tooltip.setAttribute('role', 'tooltip');
+        Object.assign(tooltip.style, { position: 'fixed', background: 'var(--mud-palette-surface)', color: 'var(--mud-palette-text-primary)',
+            border: '1px solid var(--mud-palette-divider)', borderRadius: '8px', padding: '16px', fontSize: '12px', lineHeight: '1.6',
+            pointerEvents: 'none', zIndex: '10000', maxWidth: '300px', maxHeight: '60vh', overflow: 'hidden', overflowWrap: 'anywhere' });
+        const title = document.createElement('strong'); title.textContent = titleValue; tooltip.append(title);
+        values.forEach(([label, value]) => {
+            const row = document.createElement('div'); row.textContent = label ? `${label}: ${value}` : value; tooltip.append(row);
+        });
+        document.body.append(tooltip); this.tooltip = tooltip;
+        const bounds = tooltip.getBoundingClientRect();
+        tooltip.style.left = `${Math.max(12, Math.min(event.clientX + 14, innerWidth - bounds.width - 12))}px`;
+        tooltip.style.top = `${Math.max(12, Math.min(event.clientY + 14, innerHeight - bounds.height - 12))}px`;
+    }
+    hideTooltip() { this.tooltip?.remove(); this.tooltip = null; }
+    invokeDotNet(method, ...args) {
+        const reference = this.reference;
+        if (this.disposed || !reference) return Promise.resolve();
+        const task = reference.invokeMethodAsync(method, ...args).catch(error => {
+            if (!this.disposed) console.error(`Domain atlas callback '${method}' failed.`, error);
+        }).finally(() => this.pendingCallbacks.delete(task));
+        this.pendingCallbacks.add(task); return task;
+    }
+    async dispose() {
+        if (this.disposed) return;
+        this.disposed = true; this.reference = null;
+        this.resizeObserver.disconnect(); this.simulation.stop().on('tick', null);
+        this.svg.interrupt().on('.atlas', null).on('.zoom', null);
+        this.zoom.on('zoom', null).on('zoom.atlas', null);
+        this.nodeElements?.interrupt().on('.atlas', null).on('.drag', null);
+        this.linkElements?.interrupt().on('.atlas', null); this.hideTooltip();
+        await Promise.allSettled([...this.pendingCallbacks]); this.pendingCallbacks.clear();
     }
 }
 
-/**
- * Creates an independently owned graph controller for one component mount.
- * The caller must invoke dispose() on the returned controller.
- */
+/** The caller owns the controller and must dispose it before releasing its .NET callback target. */
 export function createGraph(containerId, isDarkMode = false, dotNetHelper = null, texts = {}) {
     return new DomainDependencyGraph(containerId, { isDarkMode, dotNetHelper, texts });
 }

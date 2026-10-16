@@ -160,7 +160,7 @@ public abstract class CrudApplicationService<TEntity, TGetOutputDto, TGetListOut
     /// <param name="id">The entity ID.</param>
     /// <returns>The standardized response that wraps the requested entity.</returns>
     [OverrideService(-999)]
-    [ReadOnlyOperation]
+    [ExecutionTransaction(ExecutionTransactionMode.None)]
     public new virtual async Task<Res<TGetOutputDto>> GetAsync(TKey id)
     {
         try
@@ -176,7 +176,7 @@ public abstract class CrudApplicationService<TEntity, TGetOutputDto, TGetListOut
     // TODO: Remove this feature or move it elsewhere.
     // TODO: When overriding a method with a different signature, add the POST attribute explicitly because it is not inherited.
     [HttpPost]
-    [ReadOnlyOperation]
+    [ExecutionTransaction(ExecutionTransactionMode.None)]
     public virtual async Task<ResPaged<dynamic>> ListAsync(TGetListInput input)
     {
         return await GetListAsync(input);

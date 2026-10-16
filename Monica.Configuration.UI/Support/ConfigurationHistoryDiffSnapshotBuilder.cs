@@ -63,7 +63,7 @@ internal static class ConfigurationHistoryDiffSnapshotBuilder
         Func<ConfigurationValueHistory, string> targetDisplay,
         string redactedLabel)
     {
-        var groups = CollapseByPath(rows).ToArray();
+        var groups = CollapseByPath(rows, isSensitive).ToArray();
         if (groups.Length == 0)
         {
             return "null";
@@ -71,7 +71,7 @@ internal static class ConfigurationHistoryDiffSnapshotBuilder
 
         if (groups.Length == 1 && groups[0].Earliest.LogicalPath.Depth == 0)
         {
-            return FormatJson(CreateNode(selectValue(groups[0]), isSensitive(groups[0].Earliest), redactedLabel));
+            return FormatJson(CreateNode(selectValue(groups[0]), groups[0].IsSensitive, redactedLabel));
         }
 
         var includeDefinitionRoot = groups
@@ -89,7 +89,7 @@ internal static class ConfigurationHistoryDiffSnapshotBuilder
         foreach (var group in groups)
         {
             var row = group.Earliest;
-            var node = CreateNode(selectValue(group), isSensitive(row), redactedLabel);
+            var node = CreateNode(selectValue(group), group.IsSensitive, redactedLabel);
             var destinationRoot = root;
             if (includeTargetRoot)
             {
@@ -123,7 +123,9 @@ internal static class ConfigurationHistoryDiffSnapshotBuilder
         return root.ToJsonString(ConfigurationJsonDisplayFormatter.ReadableJsonOptions);
     }
 
-    private static IReadOnlyList<HistoryPathGroup> CollapseByPath(IReadOnlyList<ConfigurationValueHistory> rows)
+    private static IReadOnlyList<HistoryPathGroup> CollapseByPath(
+        IReadOnlyList<ConfigurationValueHistory> rows,
+        Func<ConfigurationValueHistory, bool> isSensitive)
     {
         return rows
             .GroupBy(
@@ -139,7 +141,8 @@ internal static class ConfigurationHistoryDiffSnapshotBuilder
                     .ThenBy(row => row.Version)
                     .ThenBy(row => row.HistoryId, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
-                return new HistoryPathGroup(group.Key.Target, ordered[0], ordered[^1]);
+                // Every member must prove value privacy before any collapsed payload is exposed.
+                return new HistoryPathGroup(group.Key.Target, ordered[0], ordered[^1], ordered.Any(isSensitive));
             })
             .OrderBy(static group => group.TargetIdentity.TargetKind)
             .ThenBy(static group => group.TargetIdentity.PhysicalPath, StringComparer.OrdinalIgnoreCase)
@@ -255,7 +258,8 @@ internal static class ConfigurationHistoryDiffSnapshotBuilder
     private sealed record HistoryPathGroup(
         HistoryTargetKey TargetIdentity,
         ConfigurationValueHistory Earliest,
-        ConfigurationValueHistory Latest);
+        ConfigurationValueHistory Latest,
+        bool IsSensitive);
 
     private sealed class HistoryTargetKeyComparer : IEqualityComparer<HistoryTargetKey>
     {

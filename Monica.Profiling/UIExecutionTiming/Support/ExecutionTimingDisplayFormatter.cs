@@ -1,3 +1,4 @@
+using System.Globalization;
 using Monica.Profiling.ExecutionTiming.Models;
 using Monica.Tool.Text;
 
@@ -7,8 +8,11 @@ internal static class ExecutionTimingDisplayFormatter
 {
     public static string FormatDateTime(DateTimeOffset? timestamp)
     {
-        return timestamp?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "—";
+        return timestamp?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture) ?? "—";
     }
+
+    public static string FormatMachineDateTime(DateTimeOffset? timestamp) =>
+        timestamp?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty;
 
     public static string FormatDuration(double milliseconds)
     {
@@ -20,14 +24,14 @@ internal static class ExecutionTimingDisplayFormatter
         return bytes.HasValue ? bytes.Value.FormatByteSize() : "—";
     }
 
-    public static string FormatRatePerMinute(ExecutionTimingStatistics statistics)
+    public static string FormatRatePerMinute(ExecutionTimingStatistics statistics, DateTimeOffset asOf)
     {
-        var elapsedMinutes = Math.Max((DateTimeOffset.UtcNow - statistics.FirstRecordedAt).TotalMinutes, 1d);
+        var elapsedMinutes = Math.Max((asOf - statistics.FirstRecordedAt).TotalMinutes, 1d);
         return $"{statistics.ExecutionCount / elapsedMinutes:0.##}";
     }
 
-    public static string FormatRunningDuration(RunningExecutionTimingInfo operation)
+    public static string FormatRunningDuration(RunningExecutionTimingInfo operation, DateTimeOffset asOf)
     {
-        return $"{(DateTimeOffset.UtcNow - operation.StartedAt).TotalSeconds:0.##}s";
+        return $"{Math.Max((asOf - operation.StartedAt).TotalSeconds, 0d):0.##}s";
     }
 }

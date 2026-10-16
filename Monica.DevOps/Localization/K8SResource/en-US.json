@@ -5,23 +5,7 @@
     }
   },
   "Page": {
-    "DocumentTitle": "K8S Operations",
-    "Title": "K8S Operations",
-    "Eyebrow": "Monica / Cluster control",
-    "Subtitle": "SSH + remote kubectl provider with runtime-only configuration and guarded restart workflows.",
-    "Summary": {
-      "AriaLabel": "Kubernetes cluster runtime summary",
-      "ExecutionNode": "Execution node",
-      "Namespaces": "Namespaces",
-      "Resources": "Loaded resources",
-      "Restrictions": "Guard keywords",
-      "NotConfigured": "Not configured"
-    },
-    "SearchHelper": "Searches all currently loaded resource information.",
-    "LoadingResources": "Loading {0} from {1}...",
-    "SelectNamespace": "Select a namespace to browse resources.",
-    "NoResources": "No {0} are loaded for the current namespace.",
-    "ResourceListLoaded": "Loaded {0} {1} from \"{2}\" at {3}."
+    "SelectNamespace": "Select a namespace to browse resources."
   },
   "Forms": {
     "Namespace": "Namespace",
@@ -29,20 +13,8 @@
     "SearchCurrentList": "Search current list"
   },
   "Actions": {
-    "RuntimeConfiguration": "Runtime Configuration",
-    "Refresh": "Refresh",
-    "RefreshCurrentList": "Refresh Current List",
-    "RestartMenu": "Restart",
-    "RestartSelectedWorkloads": "Restart Selected Workloads",
-    "RestartNamespaceWorkloads": "Restart Namespace Workloads",
-    "ScaleMenu": "Scale",
-    "ScaleDownSelectedWorkloads": "Scale Down Selected Workloads",
-    "ScaleUpSelectedWorkloads": "Scale Up Selected Workloads",
-    "ScaleDownNamespaceWorkloads": "Scale Down Namespace Workloads",
-    "ScaleUpNamespaceWorkloads": "Scale Up Namespace Workloads",
     "Describe": "Describe",
     "Restart": "Restart",
-    "RestartWorkloads": "Restart Workloads",
     "RestartBackingWorkloads": "Restart Backing Workloads"
   },
   "Columns": {
@@ -51,10 +23,8 @@
     "ClusterIp": "Cluster IP",
     "Ports": "Ports",
     "Selector": "Selector",
-    "BackingWorkloadRestart": "Backing Workload Restart",
     "Images": "Images",
     "Replicas": "Ready / Desired",
-    "LastRestart": "Last Restart",
     "Actions": "Actions"
   },
   "ResourceTypes": {
@@ -67,38 +37,9 @@
     "StatefulSet": "StatefulSet",
     "DaemonSet": "DaemonSet"
   },
-  "DialogTitles": {
-    "NamespaceRestart": "Confirm namespace workload restart for {0}",
-    "SingleServiceRestart": "Confirm workload restart behind {0}/{1}",
-    "SingleResourceRestart": "Confirm restart for {0}/{1}",
-    "BatchServiceRestart": "Confirm workload restart for selected services",
-    "BatchResourceRestart": "Confirm batch restart for {0}",
-    "BatchServiceScaleDown": "Confirm scale down for workloads behind selected services",
-    "BatchServiceScaleUp": "Confirm scale up for workloads behind selected services",
-    "BatchResourceScaleDown": "Confirm batch scale down for {0}",
-    "BatchResourceScaleUp": "Confirm batch scale up for {0}",
-    "NamespaceScaleDown": "Confirm namespace workload scale down for {0}",
-    "NamespaceScaleUp": "Confirm namespace workload scale up for {0}"
-  },
   "Messages": {
     "RuntimeConfigSaved": "Runtime configuration saved.",
-    "RuntimeConfigSavedAllNamespaces": "Runtime configuration saved. Empty namespace scope allows all namespaces returned by kubectl.",
-    "RestartResult": "Restarted {0} workload(s) from {1} target(s).",
-    "RestartIgnored": "Ignored: {0}",
-    "ScaleDownResult": "Scaled down {0} workload(s) from {1} target(s).",
-    "ScaleUpResult": "Scaled up {0} workload(s) from {1} target(s).",
-    "ScaleIgnored": "Ignored: {0}",
-    "NamespaceScopeMismatch": "Configured namespace scope does not match any namespace returned by kubectl.",
-    "FailedDescribeResource": "Failed to describe {0}/{1}.",
-    "FailedBuildRestartPreview": "Failed to build restart preview for {0}.",
-    "FailedBuildScalePreview": "Failed to build scale preview for {0}.",
-    "FailedRestartResource": "Failed to restart {0}/{1}.",
-    "FailedRestartSelectedResources": "Failed to restart selected {0}.",
-    "FailedNamespaceRestartPreview": "Failed to build namespace restart preview for \"{0}\".",
-    "FailedNamespaceRestart": "Failed to restart namespace \"{0}\".",
-    "FailedScaleSelectedResources": "Failed to scale selected {0}.",
-    "FailedNamespaceScalePreview": "Failed to build namespace scale preview for \"{0}\".",
-    "FailedNamespaceScale": "Failed to scale namespace \"{0}\"."
+    "RuntimeConfigSavedAllNamespaces": "Runtime configuration saved. Empty namespace scope allows all namespaces returned by kubectl."
   },
   "Common:Cancel": "Cancel",
   "Common:Close": "Close",
@@ -123,7 +64,7 @@
     "Namespace": "Namespace",
     "ServiceType": "Service Type",
     "ClusterIp": "Cluster IP",
-    "BackingWorkloadRestart": "Backing Workload Restart",
+    "BackingWorkloadRestart": "Backing workload restart/start",
     "ServiceExplanation": "This Service is a network entry. Restart operations target the backing workloads, not the Service object itself.",
     "ReadyDesired": "Ready / Desired",
     "LastRestart": "Last Restart",
@@ -149,7 +90,8 @@
     "ReadyStateReady": "Ready",
     "ReadyStateNotReady": "Not Ready",
     "DescribePod": "Describe Pod",
-    "RelatedWorkloadChip": "{0} ({1}, restarted {2})"
+    "RelatedWorkloadChip": "{0} ({1}, restart/start {2})",
+    "Title": "Inspect {0} · {1}"
   },
   "PodDialog": {
     "Pod": "Pod",
@@ -161,34 +103,35 @@
     "Started": "Started",
     "Node": "Node",
     "PodIp": "Pod IP",
-    "Issue": "Issue"
+    "Issue": "Issue",
+    "Title": "Inspect Pod/{0} · {1}",
+    "ReportedOwner": "Reported owner",
+    "Attention": "This Pod has evidence requiring attention. Phase and readiness are separate observations."
   },
   "RestartDialog": {
-    "SummaryWithWorkloads": "{0} workload(s) will be restarted from {1} eligible target(s).",
+    "SummaryWithWorkloads": "Current preview: {0} workloads from {1} eligible targets.",
     "SummaryWithoutWorkloads": "No eligible restart targets were resolved for this request.",
-    "SensitiveRestrictionsActive": "Sensitive operation restrictions are active: {0}",
     "ServiceExplanation": "Service resources are used only to locate backing workloads. The restart operation affects those workloads, not the Service object itself.",
-    "EligibleTargets": "Eligible targets",
     "NoEligibleTargets": "No eligible targets.",
-    "IgnoredTargets": "Ignored targets",
     "NoIgnoredTargets": "No ignored targets.",
     "WorkloadsToRestart": "Workloads to restart",
     "NoWorkloads": "No workloads will be restarted.",
-    "WorkloadEntry": "{0} ({1}, restarted {2})"
+    "Title": "Review restart · {0} · {1}",
+    "ConfirmWorkloads": "Restart {0} workloads"
   },
   "ScaleDialog": {
-    "SummaryScaleDownWithWorkloads": "{0} workload(s) will be annotated and scaled down from {1} eligible target(s).",
-    "SummaryScaleUpWithWorkloads": "{0} workload(s) will be scaled up from {1} eligible target(s).",
+    "SummaryScaleDownWithWorkloads": "Record the prior replica counts and scale {0} workloads to zero from {1} eligible targets.",
+    "SummaryScaleUpWithWorkloads": "Restore {0} workloads from {1} eligible targets using a positive recorded count or one. Workloads already above that target are not reduced.",
     "SummaryWithoutWorkloads": "No eligible scale targets were resolved for this request.",
-    "SensitiveRestrictionsActive": "Sensitive operation restrictions are active: {0}",
     "ServiceExplanation": "Service resources are used only to locate backing workloads. Scale operations affect those workloads, not the Service object itself.",
-    "EligibleTargets": "Eligible targets",
     "NoEligibleTargets": "No eligible targets.",
-    "IgnoredTargets": "Ignored targets",
     "NoIgnoredTargets": "No ignored targets.",
     "WorkloadsToScale": "Workloads to scale",
     "NoWorkloads": "No workloads will be scaled.",
-    "WorkloadEntry": "{0}: {1}->{2} replicas, recorded previous {3}"
+    "TitleScaleDown": "Review scale to zero · {0} · {1}",
+    "TitleScaleUp": "Review replica restoration · {0} · {1}",
+    "ConfirmScaleDown": "Scale {0} workloads to zero",
+    "ConfirmScaleUp": "Restore replicas for {0} workloads"
   },
   "ServiceMessages": {
     "LoadRuntimeConfigFailed": "Failed to load K8S runtime configuration: {0}",
@@ -234,5 +177,130 @@
     "UnsupportedWorkloadKind": "Unsupported workload kind \"{0}\".",
     "UnsupportedResourceType": "Unsupported resource type \"{0}\"."
   },
-  "Common:Empty": "-"
+  "Common:Empty": "-",
+  "Workbench": {
+    "Navigation": {
+      "Label": "K8S workbenches",
+      "Inventory": "Inventory",
+      "RuntimeConfig": "Runtime configuration"
+    },
+    "Inventory": {
+      "Subtitle": "Inspect resources and review workload operations.",
+      "ExecutionNode": "Configured execution node",
+      "NotConfigured": "Not configured",
+      "Scope": "Namespace actions resolve Service-backed workloads; orphan workloads are excluded, regardless of this list's kind.",
+      "NamespaceOperations": "Namespace operations",
+      "NamespaceRestart": "Restart Service-backed workloads",
+      "NamespaceDown": "Scale Service-backed workloads to zero",
+      "NamespaceUp": "Restore Service-backed replicas",
+      "RefreshAll": "Refresh all",
+      "RefreshList": "Refresh list",
+      "Kind": "Resource kind",
+      "NoNamespaces": "No namespaces were returned by the last successful discovery.",
+      "MissingNamespace": "{0} is missing or outside scope in the last namespace discovery. Retained evidence below keeps its original context.",
+      "FirstReadFailed": "The initial read failed. No inventory has been captured.",
+      "Capture": "{0} · {1} · {2} loaded · captured {3}",
+      "Retained": "Retained capture; requested context is {0} / {1}.",
+      "ReadFailure": "Read failed for {0} / {1}: {2}",
+      "Empty": "The captured {0} list is empty.",
+      "NoMatches": "No resources match the current search and column filters.",
+      "TimeExplanation": "Restart/start time may come from a restart annotation or a related Pod's start time.",
+      "BackingTime": "Backing workload restart/start",
+      "WorkloadTime": "Restart/start time"
+    },
+    "Selection": {
+      "Count": "{0} selected",
+      "Clear": "Clear selection",
+      "Hidden": "{0} selected resources are outside the current filters.",
+      "Actions": "Selected actions",
+      "Restart": "Restart selected",
+      "Down": "Scale selected workloads to zero",
+      "Up": "Restore selected replicas",
+      "ReplicaActions": "Replica actions",
+      "RowActions": "Actions for {0}"
+    },
+    "Pager": {
+      "Rows": "Rows per page:",
+      "Info": "{first_item}–{last_item} of {all_items}",
+      "First": "First page",
+      "Previous": "Previous page",
+      "Next": "Next page",
+      "Last": "Last page"
+    },
+    "Operation": {
+      "Completed": "Commands completed",
+      "Failed": "Command failed",
+      "Partial": "Earlier commands may already have applied. Refresh or inspect before deciding the next action.",
+      "Readiness": "Command completion does not establish rollout or replica readiness.",
+      "Details": "Operation details",
+      "Targets": "Affected targets",
+      "Workloads": "Workloads",
+      "Ignored": "Ignored targets",
+      "Commands": "Executed commands",
+      "RestartTitle": "Review restart in {0}",
+      "DownTitle": "Review scale to zero in {0}",
+      "UpTitle": "Review replica restoration in {0}",
+      "ScaleToZero": "Scale to zero",
+      "RestoreReplicas": "Restore replicas",
+      "AttemptedNamespace": "Attempted: {0} · Service-backed workloads",
+      "AttemptedSingle": "Attempted: {0} · {1}/{2}",
+      "AttemptedSelected": "Attempted: {0} · {1} selected {2} · {3}"
+    },
+    "Config": {
+      "Title": "K8S runtime configuration",
+      "Subtitle": "Edit connection settings and operation allow conditions for this running application.",
+      "Lifetime": "Changes are shared by this application's sessions and are lost when the process restarts. Saving does not test the connection.",
+      "Execution": "Execution",
+      "Scope": "Operation scope",
+      "Provider": "Provider",
+      "ProviderName": "SSH remote kubectl",
+      "Addresses": "Configured addresses",
+      "MasterAddresses": "Configured master addresses",
+      "WorkerAddresses": "Configured worker addresses",
+      "Fallback": "An empty execution node uses the first configured master address, then the first worker address. These addresses are not discovered node roles.",
+      "AllowedNamespaces": "Allowed namespaces",
+      "AllowedKeywords": "Allowed operation name keywords",
+      "KeywordHelp": "A requested name must contain at least one keyword, ignoring case. Empty allows all names. Service requests check the Service name.",
+      "ShowPassword": "Show password",
+      "HidePassword": "Hide password",
+      "Dirty": "Unsaved changes",
+      "Clean": "No unsaved changes",
+      "Discard": "Discard changes",
+      "Save": "Save runtime configuration",
+      "Saved": "Saved to this running application.",
+      "ReloadFailed": "Reload failed; entered draft values are retained.",
+      "Loading": "Reading runtime configuration…",
+      "Saving": "Saving runtime configuration…"
+    },
+    "Activity": {
+      "Reading": "Reading context and resource evidence…",
+      "Previewing": "Preparing operation preview…",
+      "Reviewing": "Awaiting operation review…",
+      "Inspecting": "Inspecting resource evidence…",
+      "Executing": "Executing the reviewed request…"
+    }
+  },
+  "Inspector": {
+    "Summary": "Summary",
+    "PodsWithCount": "Pods ({0})",
+    "PodsWithAttention": "Pods ({0}) · {1} need attention",
+    "Describe": "Describe",
+    "State": "State",
+    "RestartsStarted": "Restarts / started",
+    "Placement": "Placement"
+  },
+  "OperationReview": {
+    "TargetCounts": "Requested: {0} · Eligible: {1} · Ignored: {2}",
+    "AllowedKeywords": "Allowed operation name keywords: {0}",
+    "RequestedTargets": "Requested targets ({0})",
+    "NoRequestedTargets": "No targets were requested.",
+    "EligibleTargets": "Eligible targets ({0})",
+    "IgnoredTargets": "Ignored targets ({0})",
+    "CommandArguments": "Command arguments",
+    "CommandArgumentsHelp": "Exact preview arguments, without the configured executable prefix.",
+    "GeneratedAt": "Preview generated: {0}",
+    "ExecutionRechecks": "Execution uses the then-current runtime configuration and checks eligibility again. This preview does not guarantee unchanged configuration or cluster state. Command completion does not establish Pod readiness or rollout convergence.",
+    "ReplicaChange": "Current → target replicas",
+    "RecordedReplicas": "Recorded previous replicas"
+  }
 }

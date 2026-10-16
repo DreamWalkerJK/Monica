@@ -29,6 +29,10 @@ public static class ModuleOpenTelemetryBuilderExtensions
         /// <summary>
         /// Registers Monica's out-of-the-box OpenTelemetry SDK wiring for metrics exporters and instrumentations.
         /// </summary>
+        /// <remarks>
+        /// Requires Monica's localization and result envelope modules automatically. The latter also requires
+        /// JSON serialization and supplies the host-owned result/JSON contract used by the optional snapshot endpoint.
+        /// </remarks>
         /// <param name="action">Optional module option configuration delegate.</param>
         /// <returns>The host-bound OpenTelemetry module registration.</returns>
         public ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> AddOpenTelemetry(Action<ModuleOpenTelemetryOption>? action = null)
@@ -50,6 +54,7 @@ public class ModuleOpenTelemetry : MonicaModule<ModuleOpenTelemetryOption>, IWeb
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleLocalization, ModuleLocalizationOption>();
+        module.Require<ModuleResultEnvelope, ModuleResultEnvelopeOption>();
     }
 
     /// <inheritdoc />
@@ -363,13 +368,14 @@ public class ModuleOpenTelemetryOption : MinimalApiModuleOptions<ModuleOpenTelem
 
     /// <summary>
     /// Gets or sets the maximum number of samples retained for each instrument tag set.
-    /// Higher values improve local charts but increase per-process memory usage.
+    /// Defaults to 600. Values below one retain one sample. Higher values increase per-process memory usage.
     /// </summary>
     public int SamplesPerSeries { get; set; } = 600;
 
     /// <summary>
     /// Gets or sets the maximum number of distinct tag sets retained per instrument.
-    /// When exceeded, the collector reports overflow and drops additional tag sets for that instrument.
+    /// Defaults to 200. Non-positive values admit no tag sets. When exceeded, the collector reports overflow
+    /// and drops observations for additional tag sets while continuing to record already retained series.
     /// </summary>
     public int MaxTagSetsPerInstrument { get; set; } = 200;
 

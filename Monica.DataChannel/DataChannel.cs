@@ -26,7 +26,12 @@ public class DataChannel(ChannelPipeline pipeline)
     /// <summary>
     /// Reinitializes the data channel.
     /// Call this when the channel needs to be reset or reconnected.
+    /// Concurrent attempts are rejected. Success clears initialization unavailability; failure or cancellation
+    /// retires the attempt with an uninitialized, unavailable pipeline. Endpoints remain host-owned.
     /// </summary>
+    /// <param name="cancellationToken">Cancels this admitted endpoint initialization attempt.</param>
+    /// <exception cref="InvalidOperationException">An initialization attempt is already active.</exception>
+    /// <exception cref="OperationCanceledException">The supplied token cancels initialization.</exception>
     public async Task ReInitialize(CancellationToken cancellationToken = default)
     {
         await Pipe.InitAsync(cancellationToken);
@@ -37,9 +42,10 @@ public class DataChannel(ChannelPipeline pipeline)
     /// The payload passes through transform middleware, if any, and is then received by the outer endpoint.
     /// </summary>
     /// <param name="data">The data to send.</param>
-    public async Task SendDataFromInnerAsync(object data)
+    /// <param name="cancellationToken">Cancels the delivery; cancellation does not prove that no bytes were written.</param>
+    public async Task SendDataFromInnerAsync(object data, CancellationToken cancellationToken = default)
     {
-        await Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Inner, data));
+        await Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Inner, data) { CancellationToken = cancellationToken });
     }
 
     /// <summary>
@@ -47,8 +53,9 @@ public class DataChannel(ChannelPipeline pipeline)
     /// The payload passes through transform middleware, if any, and is then received by the inner endpoint.
     /// </summary>
     /// <param name="data">The data to send.</param>
-    public async Task SendDataFromOuterAsync(object data)
+    /// <param name="cancellationToken">Cancels the delivery.</param>
+    public async Task SendDataFromOuterAsync(object data, CancellationToken cancellationToken = default)
     {
-        await Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Outer, data));
+        await Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Outer, data) { CancellationToken = cancellationToken });
     }
 }

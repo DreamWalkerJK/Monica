@@ -103,19 +103,15 @@
     },
     "Footer": {
       "PendingCount": "Staged changes",
-      "ValidationIssueCount": "Validation issues",
       "SaveBlockedMetadata": "Save is unavailable because at least one staged definition no longer has complete authoritative metadata. Repair and refresh it first."
     },
     "RuntimeValidation": {
-      "Title": "Runtime validation",
-      "Valid": "Runtime configuration is valid.",
       "ValidSummary": "No runtime validation issues were found.",
       "InvalidSummary": "{0} runtime validation issues across {1} definitions.",
       "WarningTitle": "Runtime configuration requires attention",
       "WarningMessage": "{0} validation issues affect {1} configuration definitions. The service is running, but affected features may fail until the configuration is corrected.",
       "ViewIssues": "View issues",
       "Unavailable": "Runtime validation diagnostics are unavailable.",
-      "IssueCount": "Runtime validation issues",
       "DefinitionIssueCount": "Runtime validation issues for this definition",
       "CurrentValue": "Current value",
       "Problem": "Problem",
@@ -175,7 +171,6 @@
       }
     },
     "Actions": {
-      "SaveGroup": "Save group",
       "UndoAll": "Undo all",
       "Undo": "Undo",
       "PreviewValue": "Preview value",
@@ -438,7 +433,6 @@
       "TimelineRowSubtitle": "{0} · {1}",
       "CollapsedTimelineSubtitle": "{0} field changes · {1}",
       "Version": "v{0}",
-      "TargetKind": "Target kind",
       "Target": "Target",
       "SourceProvider": "Source provider",
       "SourceConfigurationPath": "Source configuration path",
@@ -450,7 +444,38 @@
       "Operator": "Operator",
       "DiffDirection": "Old value -> new value",
       "RollbackDirection": "Current target value -> rollback target",
-      "NoPreview": "No history rows are available for diff preview."
+      "NoPreview": "No history rows are available for diff preview.",
+      "Definition": "Definition",
+      "LogicalPath": "Logical path",
+      "HistoryRecord": "History record",
+      "MutationGroup": "Mutation group"
+    },
+    "Workbench": {
+      "Evidence": "PERSISTED CHANGE EVIDENCE",
+      "Records": "Change ledger",
+      "EvidenceHelp": "Follow what changed, where it was written, and the audit context that connects each change to its saved group.",
+      "Scope": "Persisted records · current host",
+      "Filters": "History filters",
+      "FilterHelp": "Search applies these filters. Path and target affect mutations only; definition and dates also filter groups.",
+      "Changes": "Individual changes",
+      "Groups": "Saved change groups",
+      "LoadedChanges": "{0} records loaded · {1} display rows",
+      "LoadedGroups": "{0} groups loaded",
+      "EmptyHelp": "There are no persisted records in this query. Review the filters or return after saving a configuration change.",
+      "Configuration": "Changed configuration",
+      "Audit": "Time & audit context",
+      "MutationCount": "{0} successful mutations",
+      "Root": "Entire definition",
+      "UnknownOperator": "Operator not recorded",
+      "QueryPending": "Waiting for a successful query.",
+      "AllDefinitions": "All definitions",
+      "AllDates": "All dates",
+      "DateRange": "{0} — {1} (local time)",
+      "OpenStart": "Beginning",
+      "OpenEnd": "Present",
+      "Actions": "Actions",
+      "OpenFrom": "Open start date",
+      "OpenTo": "Open end date"
     }
   },
   "Group": {
@@ -485,35 +510,33 @@
     "AppliedWithIssues": "The rollback values were saved, but reload, notification, audit, or verification follow-up work reported a problem."
   },
   "Versions": {
-    "Subtitle": "Review the current unified configuration version, compare history against it, and restore when needed.",
+    "Subtitle": "Review automatic captures, compare retained snapshots, and preview a restore against current effective values.",
     "Empty": "No unified configuration versions were found.",
     "Current": {
-      "Title": "Current Version",
+      "Title": "Latest captured snapshot",
       "DefinitionCount": "{0} definitions"
     },
     "List": {
-      "Title": "History Versions",
-      "Empty": "No history versions are available for comparison with the current version.",
-      "ComparedToCurrent": "Compared to current {0}"
+      "Title": "Saved snapshots"
     },
     "Compare": {
-      "AgainstCurrent": "{0} -> current {1}",
+      "AgainstCurrent": "{0} → latest saved {1}",
       "AgainstPrevious": "{0} -> {1}",
-      "CurrentOnly": "Every comparison in the history list uses the current version as the target.",
-      "PreviousPair": "This comparison comes from the history item's previous-version action.",
-      "NoSelection": "Select a history version",
-      "Unavailable": "Unable to load the difference between this version and the current version."
+      "CurrentOnly": "The target is the latest saved snapshot, not the live effective configuration.",
+      "PreviousPair": "The origin is the preceding retained snapshot; deleted version numbers may leave gaps.",
+      "NoSelection": "Choose an origin and target snapshot",
+      "Unavailable": "Unable to load the selected saved-snapshot comparison."
     },
     "Definitions": {
       "Empty": "No definitions were captured."
     },
     "Actions": {
-      "ComparePrevious": "Compare with previous version",
-      "Delete": "Delete history version"
+      "ComparePrevious": "Compare with preceding retained snapshot",
+      "Delete": "Delete saved snapshot"
     },
     "Delete": {
       "ConfirmTitle": "Delete {0}?",
-      "ConfirmMessage": "Permanently delete the {0} history snapshot? This does not change the current version or any effective configuration values.",
+      "ConfirmMessage": "Permanently delete saved snapshot {0}? Effective values and the latest saved snapshot remain unchanged.",
       "Confirm": "Delete version",
       "Messages": {
         "Succeeded": "{0} was deleted.",
@@ -530,7 +553,9 @@
         "Added": "Added",
         "Removed": "Removed",
         "Modified": "Modified"
-      }
+      },
+      "Origin": "Origin snapshot",
+      "Target": "Target snapshot"
     },
     "Rollback": {
       "Title": "Roll Back {0}",
@@ -566,7 +591,15 @@
         "CompositeSourceConflict": "This container also receives values from {0}; replacing it would create unreviewed overrides",
         "LowerPriorityFallback": "Removal would reveal lower-priority source {0}",
         "NoWritableTarget": "No writable target",
-        "DiffDirection": "Current effective value -> rollback target"
+        "DiffDirection": "Current effective value -> rollback target",
+        "PreviewFingerprint": "Reviewed plan fingerprint",
+        "CapturedSchemaHash": "Captured schema hash",
+        "CurrentSchemaHash": "Current schema hash",
+        "CurrentSchemaVersion": "Current schema version",
+        "SourceKey": "Source key",
+        "ExpectedValueVersion": "Expected store version",
+        "ExpectedSourceRevision": "Expected source revision",
+        "ExpectedSourceChainRevision": "Expected source-chain revision"
       },
       "MutationKinds": {
         "Set": "Set",
@@ -593,6 +626,33 @@
         "LowerPriorityFallback": "Lower-priority fallback",
         "UnsupportedSource": "Unsupported source"
       }
+    },
+    "Workbench": {
+      "LatestHelp": "Automatically captured after an included configuration change. This saved evidence is separate from current effective values.",
+      "CapturedAt": "Captured at",
+      "CaptureGroup": "Capture group",
+      "CapturedDefinitions": "Captured scope",
+      "TriggeredBy": "Triggered by",
+      "RetainedEvidence": "RETAINED EVIDENCE",
+      "LedgerHelp": "Review the complete identity, included definitions, and audit trail of each loaded snapshot.",
+      "Loaded": "{0} snapshots loaded",
+      "Filter": "Filter loaded snapshots",
+      "Matched": "Showing {0} / {1} loaded",
+      "Snapshot": "Snapshot",
+      "Audit": "Capture audit",
+      "Actions": "Actions",
+      "LatestBadge": "Latest capture",
+      "CompareSnapshot": "Compare with latest saved snapshot",
+      "LatestProtected": "The latest saved snapshot cannot be deleted.",
+      "NoMatches": "No matching saved snapshots",
+      "NoMatchesHelp": "Change or clear the filter to review loaded snapshots.",
+      "LoadedLimit": "This view loads the newest 200 retained snapshots. The loaded count is not a total retained count.",
+      "EmptyHelp": "Snapshots are captured automatically after successful mutation groups affecting definitions included in the host's capture configuration. There is no manual capture action here.",
+      "Comparison": "Comparison",
+      "SavedEvidence": "SAVED SNAPSHOT COMPARISON",
+      "ComparisonHelp": "Choose two retained snapshots and compare their captured effective values. Origin and target order controls the direction.",
+      "Compare": "Compare snapshots",
+      "PairHelp": "This compares saved values only. Definitions and sensitivity are checked against the currently loaded schemas."
     }
   },
   "Debug": {
@@ -603,10 +663,20 @@
     "RevealSensitive": "Reveal sensitive value",
     "HideSensitive": "Hide sensitive value",
     "RevealSensitiveAria": "Reveal sensitive configuration value for {0}",
-    "HideSensitiveAria": "Hide sensitive configuration value for {0}"
+    "HideSensitiveAria": "Hide sensitive configuration value for {0}",
+    "Workbench": {
+      "Scope": "Raw host configuration with provider provenance. Credential-like masking does not cover every sensitive value.",
+      "LoadedLines": "Loaded lines",
+      "SensitiveLines": "Credential-like lines",
+      "MatchingLines": "Matching lines",
+      "AcceptedAt": "Accepted at",
+      "SearchLabel": "Search safe debug text",
+      "SearchHelp": "Hidden credential values are excluded from search. Revealing a line does not change that search boundary.",
+      "NoMatches": "No debug lines match this search."
+    }
   },
   "Storage": {
-    "Subtitle": "Inspect the active configuration store bundle and its runtime state.",
+    "Subtitle": "Review runtime source contributions, registered store capabilities, and recorded operations.",
     "Empty": "No configuration storage is registered.",
     "Roles": {
       "EffectiveValues": "Effective values",
@@ -619,15 +689,42 @@
       "Metadata": "Metadata"
     },
     "State": {
-      "Succeeded": "Healthy",
-      "Failed": "Failed",
+      "Succeeded": "Latest operation succeeded",
+      "Failed": "Latest operation failed",
       "Unknown": "No store operation recorded."
     },
     "Notifications": {
       "Title": "Change notifications",
-      "Subtitle": "Cross-service hot reload requires a registered notifier implementation.",
+      "Subtitle": "Notifier registration describes composition; it does not prove delivery or consumer adoption.",
       "Registered": "Registered",
       "NotRegistered": "Not registered"
+    },
+    "Workbench": {
+      "SourcesTab": "Runtime sources",
+      "StoresTab": "Store implementations",
+      "AcceptedAt": "Accepted at",
+      "SourceCount": "{0} runtime sources",
+      "OverviewHelp": "Registration describes capabilities. Recorded operations describe their last reported outcome.",
+      "Supported": "Supported",
+      "NotSupported": "Not supported",
+      "StoreKey": "Store key",
+      "Kind": "Technology kind",
+      "WriteAccess": "Write access",
+      "LatestOperation": "Latest recorded operation",
+      "OperationTime": "Recorded at",
+      "OperationError": "Recorded failure detail",
+      "NotAvailable": "Not available",
+      "SourceOptional": "File requirement",
+      "Reload": "Reload behavior",
+      "ReadOnlyReason": "Read-only reason",
+      "Description": "Registration description",
+      "RowsPerPage": "Values per page",
+      "Optional": "Optional",
+      "Required": "Required",
+      "SearchSources": "Search sources",
+      "SourcesShowing": "Showing {0} / {1} loaded sources",
+      "NoSourcesMatch": "No sources match this search.",
+      "OperationEvidenceHelp": "Recorded outcomes are shown independently of store registration details."
     }
   },
   "Sources": {
@@ -639,7 +736,7 @@
     "Effective": "Effective",
     "Runtime": {
       "Title": "Runtime configuration sources",
-      "Subtitle": "Providers are shown from highest priority to lowest priority. The last provider that supplies a key wins."
+      "Subtitle": "Providers are ordered by priority. Supplied values remain inspectable even when a higher source or container barrier prevents them from being effective."
     },
     "Inventory": {
       "SuppliedCount": "Supplies {0}",
@@ -654,13 +751,16 @@
       "FieldColumn": "Field",
       "ValueColumn": "Value",
       "StateColumn": "State",
-      "Overridden": "Overridden",
+      "Overridden": "Not effective",
       "OverriddenTooltip": "Overridden by {0} (priority {1}). Source: {2}",
-      "OverriddenUnknownTooltip": "Overridden by a higher-priority provider."
+      "OverriddenUnknownTooltip": "This source is not proven effective. A higher value, container barrier, or uninspected alias may determine the runtime value."
     },
     "Definition": {
       "Title": "Configuration sources",
-      "Subtitle": "Source contribution summary for {0}."
+      "Subtitle": "Source contribution summary for {0}.",
+      "PriorityHelp": "Higher priority numbers take precedence.",
+      "CountsHelp": "Supplied counts this definition's registered scalar values provided by each source. Effective counts those still selected at runtime.",
+      "Empty": "No source contributions were found for this definition."
     },
     "Chain": {
       "Title": "Source chain",
@@ -673,7 +773,6 @@
     "Columns": {
       "Priority": "Priority",
       "Source": "Source",
-      "State": "State",
       "Supplied": "Supplied",
       "Effective": "Effective"
     },
@@ -684,11 +783,18 @@
     },
     "Actions": {
       "ViewFile": "View file",
-      "EditSource": "Edit source"
+      "EditSource": "Edit source",
+      "ViewFileFor": "View file for {0}"
     },
     "File": {
       "Title": "Configuration file - {0}",
-      "Redacted": "Sensitive values redacted"
+      "Redacted": "Sensitive values redacted",
+      "SourceKey": "Source key",
+      "PhysicalPath": "Physical path",
+      "DeclaredPath": "Declared source path",
+      "ProviderType": "Provider type",
+      "Content": "Normalized JSON",
+      "RedactionHelp": "Known sensitive paths in registered definitions are hidden; other file content remains visible."
     },
     "Edit": {
       "Title": "Edit Source Value",
@@ -846,7 +952,6 @@
     },
     "Import": {
       "Title": "Import Configuration",
-      "Subtitle": "Upload a Monica configuration package, review the report, then stage the detected changes.",
       "Upload": "Click to upload a configuration package",
       "InvalidPackage": "The selected file is not a valid Monica configuration package.",
       "PackageMeta": "Exported at {0}; by {1}; system version {2}.",
@@ -863,6 +968,8 @@
     "JsonEditor": {
       "Title": "Edit JSON",
       "Json": "JSON",
+      "BaselineUnavailable": "The current object or collection structure cannot be established safely. JSON editing is unavailable; edit known scalar values individually instead.",
+      "PendingStateUnavailable": "Staged sensitive or structural edits cannot be preserved safely here. Save or undo those edits before editing JSON.",
       "NoState": "The JSON does not produce any staged changes or validation issues."
     },
     "Report": {
@@ -921,6 +1028,10 @@
     "Errors": {
       "LoadFailed": "Failed to load data",
       "InvalidPath": "Invalid logical path"
+    },
+    "Pagination": {
+      "RowsPerPage": "Snapshots per page",
+      "InfoFormat": "{first_item}-{last_item} of {all_items}"
     }
   },
   "ValidationRules": {
@@ -933,5 +1044,76 @@
     "NoMinimum": "no minimum",
     "NoMaximum": "no maximum",
     "Unknown": "Unknown validation rule."
+  },
+  "Validation": {
+    "FragmentNotice": "This edit checks only the displayed fragment and portable schema rules. Complete object rules are checked against the final effective aggregate before saving the group.",
+    "Coverage": "Validation coverage",
+    "Complete": "Complete validation",
+    "SchemaOnly": "Schema checks only",
+    "Failed": "Validation could not complete",
+    "Valid": "The complete aggregate satisfies the current rules.",
+    "Invalid": "The complete aggregate has validation issues.",
+    "SchemaValid": "Portable schema checks passed; complete object validity has not been established.",
+    "SchemaInvalid": "Portable schema checks found issues; complete object validity has not been established.",
+    "FailedNotice": "Binding, rule execution, or the validation contract failed. Correct the reported problem before retrying.",
+    "Revision": "Owner validation revision: {0}",
+    "RevisionUnavailable": "Owner validation revision is unavailable.",
+    "Fragment": "Fragment",
+    "CompleteAggregate": "Complete effective aggregate",
+    "ActualOptions": "Actual default options",
+    "Scope": "Validated input: {0}",
+    "RuleSchema": "Portable schema rule",
+    "RuleCode": "Object code rule",
+    "RuleContract": "Validation contract failure",
+    "RuleExecution": "Validation execution failure",
+    "PreviewRequired": "Validate the final group before saving. Changing the draft invalidates the preview.",
+    "PreviewPending": "Validating the final effective aggregate…",
+    "PreviewBlocked": "This operation cannot be applied. Review all definition reports and plan problems below.",
+    "PreviewRefresh": "Refresh validation",
+    "SourceTitle": "Current effective sources",
+    "OptionsTitle": "Latest observed default options",
+    "OptionsNotice": "These diagnostics describe the latest observed creation after Configure and PostConfigure. They do not describe every consumer or cached instance, and refreshing this view does not create options.",
+    "NoObserved": "No actual default-options instance has been observed.",
+    "ObservedAt": "Observed at {0}",
+    "Attempt": "Creation attempt: {0}",
+    "DefaultName": "Default options name",
+    "Unavailable": "Validation diagnostics are unavailable.",
+    "Pending": "Validation is pending.",
+    "SchemaOnlySummary": "Complete validation is unavailable.",
+    "FailedSummary": "Validation execution failed.",
+    "Capability": "Owner validation capability: {0}",
+    "CapabilityUnknown": "Unknown",
+    "CapabilityPortableOnly": "Portable schema only",
+    "CapabilityObjectCode": "Object code rules",
+    "NotApplied": "The submitted changes were not applied. Review the current configuration and retry with a fresh preview.",
+    "StoredDocument": "Stored document at the physical target",
+    "EffectiveAggregate": "Final effective aggregate",
+    "MaskedChange": "This write is masked by another source or produces no effective change. The stored document must still satisfy its own complete contract."
+  },
+  "Workbench": {
+    "Eyebrow": "MONICA / CONFIGURATION",
+    "Navigation": "Configuration workspace",
+    "State": "Values",
+    "History": "Change history",
+    "Versions": "Versions",
+    "Storage": "Storage",
+    "Debug": "Diagnostics",
+    "Catalog": "Definitions",
+    "DefinitionCount": "{0} registered",
+    "ScalarFields": "{0} scalar fields",
+    "CatalogHelp": "Search names, definitions, and individual options.",
+    "Editor": "Configuration editor",
+    "Pending": "Pending change review",
+    "PendingCount": "{0} staged changes",
+    "PendingHelp": "Drafts stay here until you review and save them.",
+    "DraftIssues": "{0} draft issues",
+    "Review": "Review & save",
+    "SaveHelp": "Review the final configuration, provide an audit label, and validate before saving.",
+    "LabelRequired": "Enter an audit label.",
+    "ImportStage": "Stage selected changes",
+    "ImportHelp": "Analyze a JSON package, inspect its changes and issues, then add the selected items to your drafts.",
+    "AuditDetails": "Audit details",
+    "ChangeReview": "Change review",
+    "Validation": "Final configuration validation"
   }
 }

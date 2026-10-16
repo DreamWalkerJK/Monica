@@ -1,22 +1,23 @@
 namespace Monica.Framework.UI.UISwagger.Models;
 
 /// <summary>
-/// Represents a custom navigation button in Swagger UI topbar
+/// Represents a custom destination in the standalone Swagger UI toolbar.
 /// </summary>
 public record SwaggerNavigationButton
 {
     /// <summary>
-    /// Display text of the button
+    /// Caller-owned display text, rendered as literal text without localization or HTML interpretation.
     /// </summary>
     public required string Name { get; init; }
 
     /// <summary>
-    /// Navigation path (for example, "system-info" navigates to "~/system-info").
+    /// Application-root path, including <c>~/</c> paths, or an absolute HTTP/HTTPS URL.
+    /// Application paths retain the current request's PathBase when the host is mounted below the site root.
     /// </summary>
     public required string Path { get; init; }
 
     /// <summary>
-    /// Tooltip description shown on hover
+    /// Optional caller-owned tooltip description.
     /// </summary>
     public string? Description { get; init; }
 

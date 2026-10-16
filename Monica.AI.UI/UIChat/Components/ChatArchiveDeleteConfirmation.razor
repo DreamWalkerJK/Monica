@@ -1,0 +1,28 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+<div class="delete-confirmation" role="alert">
+    <MudIcon Icon="@Icons.Material.Outlined.DeleteForever" Color="Color.Error" Size="Size.Large" />
+    <h3>@L["Session:Archive:DeleteTitle", Count]</h3>
+    <p>@L["Session:Archive:DeleteWarning"]</p>
+    <div class="confirmation-actions">
+        <MudButton @ref="_cancelButton" Variant="Variant.Text" Disabled="@Working" OnClick="@OnCancel">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" Disabled="@Disabled" OnClick="@OnConfirm">@L["Session:Archive:DeleteConfirm"]</MudButton>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Count { get; set; }
+    [Parameter] public bool Working { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    private MudButton? _cancelButton;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // This owner renders inside the dialog portal, after the safe action is present in the DOM.
+        if (firstRender && _cancelButton is { } button) await button.FocusAsync();
+    }
+}

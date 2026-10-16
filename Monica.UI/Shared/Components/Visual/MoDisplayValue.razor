@@ -1,0 +1,22 @@
+@* The single display-scale value of a view; the page can supply a contrasting foreground for an inverse feature field. *@
+<p class="mo-vl-display @Class" aria-label="@AccessibleLabel">
+    <span class="mo-vl-display__value" aria-hidden="@(AccessibleLabel is null ? null : "true")">@Value</span>
+    @if (!string.IsNullOrWhiteSpace(Unit))
+    {
+        <span class="mo-vl-display__unit" aria-hidden="@(AccessibleLabel is null ? null : "true")">@Unit</span>
+    }
+</p>
+
+@code {
+    /// <summary>Gets or sets the display value text; numerals render in the interface family.</summary>
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the smaller unit rendered beside the value.</summary>
+    [Parameter] public string? Unit { get; set; }
+
+    /// <summary>Gets or sets the accessible reading of the value; when supplied the visual parts are hidden from assistive technology.</summary>
+    [Parameter] public string? AccessibleLabel { get; set; }
+
+    /// <summary>Gets or sets an optional identification class.</summary>
+    [Parameter] public string? Class { get; set; }
+}

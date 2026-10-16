@@ -9,19 +9,19 @@
     --mo-transition-fast: 200ms;
     --mo-transition-normal: 400ms;
     
-    --mo-button-border-radius: 12px;
-    --mo-button-padding-x: 18px;
-    --mo-button-padding-y: 10px;
+    --mo-button-border-radius: 8px;
+    --mo-button-padding-x: 14px;
+    --mo-button-padding-y: 8px;
     --mo-button-font-weight: 500;
     
-    --mo-card-border-radius: 16px;
-    --mo-card-padding: 24px;
+    --mo-card-border-radius: 12px;
+    --mo-card-padding: 20px;
     
-    --mo-input-border-radius: 12px;
+    --mo-input-border-radius: 8px;
     --mo-input-padding: 12px 16px;
     --mo-input-border-width: 1px;
     
-    --mo-dialog-border-radius: 20px;
+    --mo-dialog-border-radius: 12px;
     --mo-dialog-padding: 32px;
     
     --mo-chip-border-radius: 9999px;
@@ -30,7 +30,7 @@
     --mo-tooltip-bg: rgba(75, 85, 99, 0.95);
     --mo-tooltip-text: #F9F8F6;
     --mo-tooltip-border: rgba(107, 114, 128, 0.2);
-    --mo-tooltip-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    --mo-tooltip-shadow: var(--mud-elevation-4);
 
     --mo-appbar-background: rgba(255, 255, 255, 0.85);
     --mo-appbar-dark-background: var(--mo-appbar-background);
@@ -47,7 +47,7 @@
     --mo-appbar-menu-item-transition: background-color 200ms ease-out, color 200ms ease-out;
     
     /* Fresh hover effects */
-    --mo-clean-hover-shadow: 0 12px 30px -6px rgba(102, 203, 163, 0.15);
+    --mo-clean-hover-shadow: var(--mud-elevation-2);
 }
 
 /* Dark Mode */
@@ -56,19 +56,19 @@
     --mo-transition-fast: 200ms;
     --mo-transition-normal: 400ms;
     
-    --mo-button-border-radius: 12px;
-    --mo-button-padding-x: 18px;
-    --mo-button-padding-y: 10px;
+    --mo-button-border-radius: 8px;
+    --mo-button-padding-x: 14px;
+    --mo-button-padding-y: 8px;
     --mo-button-font-weight: 500;
     
-    --mo-card-border-radius: 16px;
-    --mo-card-padding: 24px;
+    --mo-card-border-radius: 12px;
+    --mo-card-padding: 20px;
     
-    --mo-input-border-radius: 12px;
+    --mo-input-border-radius: 8px;
     --mo-input-padding: 12px 16px;
     --mo-input-border-width: 1px;
     
-    --mo-dialog-border-radius: 20px;
+    --mo-dialog-border-radius: 12px;
     --mo-dialog-padding: 32px;
     
     --mo-chip-border-radius: 9999px;
@@ -77,7 +77,7 @@
     --mo-tooltip-bg: rgba(26, 29, 28, 0.98);
     --mo-tooltip-text: #F3F4F6;
     --mo-tooltip-border: rgba(55, 65, 81, 0.5);
-    --mo-tooltip-shadow: 0 12px 30px -6px rgba(0, 0, 0, 0.4);
+    --mo-tooltip-shadow: var(--mud-elevation-4);
 
     --mo-appbar-background: rgba(33, 37, 36, 0.85);
     --mo-appbar-dark-background: var(--mo-appbar-background);
@@ -94,7 +94,7 @@
     --mo-appbar-menu-item-transition: background-color 200ms ease-out, color 200ms ease-out;
     
     /* Dark mode hover effects */
-    --mo-clean-hover-shadow: 0 12px 30px -6px rgba(0, 0, 0, 0.3);
+    --mo-clean-hover-shadow: var(--mud-elevation-2);
 }
 
 /* Base resets */
@@ -107,21 +107,21 @@
 /* Buttons */
 .mo-theme-fresh-light .mud-button,
 .mo-theme-fresh-dark .mud-button {
-    border-radius: var(--mo-button-border-radius) !important;
-    padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
-    font-weight: var(--mo-button-font-weight) !important;
-    text-transform: none !important;
-    letter-spacing: 0.3px !important;
+    border-radius: var(--mo-button-border-radius);
+    padding: var(--mo-button-padding-y) var(--mo-button-padding-x);
+    font-weight: var(--mo-button-font-weight);
+    text-transform: none;
+    letter-spacing: 0.3px;
     transition: all var(--mo-transition-fast) cubic-bezier(0.4, 0, 0.2, 1) !important;
     box-shadow: none !important;
 }
 
 .mo-theme-fresh-light .mud-button-filled-primary {
-    box-shadow: 0 4px 12px -2px rgba(102, 203, 163, 0.25) !important;
+    box-shadow: var(--mud-elevation-2) !important;
 }
 
 .mo-theme-fresh-dark .mud-button-filled-primary {
-    box-shadow: 0 4px 12px -2px rgba(124, 227, 185, 0.15) !important;
+    box-shadow: var(--mud-elevation-2) !important;
 }
 
 .mo-theme-fresh-light .mud-button:not(.mud-button-disabled):hover,
@@ -130,7 +130,7 @@
 }
 
 .mo-theme-fresh-light .mud-button-filled:not(.mud-button-disabled):hover {
-    box-shadow: 0 6px 16px -3px rgba(102, 203, 163, 0.35) !important;
+    box-shadow: var(--mud-elevation-2) !important;
 }
 
 /* Cards - Quiet and airy */
@@ -140,7 +140,7 @@
     transition: all var(--mo-transition-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
     overflow: hidden;
     border: 1px solid transparent !important;
-    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.03) !important;
+    box-shadow: var(--mud-elevation-2) !important;
 }
 
 .mo-theme-fresh-light .mud-card:not(.mo-self-painted) {
@@ -150,7 +150,7 @@
 
 .mo-theme-fresh-dark .mud-card:not(.mo-self-painted) {
     border-color: rgba(255, 255, 255, 0.04) !important;
-    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: var(--mud-elevation-2) !important;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -214,11 +214,11 @@
 }
 
 .mo-theme-fresh-light .mud-dialog {
-    box-shadow: 0 30px 60px -15px rgba(102, 203, 163, 0.15), 0 20px 40px -10px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: var(--mud-elevation-24) !important;
 }
 
 .mo-theme-fresh-dark .mud-dialog {
-    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6) !important;
+    box-shadow: var(--mud-elevation-24) !important;
 }
 
 /* Tooltips */

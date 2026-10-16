@@ -23,9 +23,9 @@ public class EmbeddingModelFacade(
     {
         try
         {
-            var options = providerFactory.GetAllProviders()
-                .Where(provider => provider.Info.IsValid)
-                .SelectMany(provider => provider.Info.SupportedModels?
+            var options = providerFactory.GetAllProviderInfos()
+                .Where(provider => provider.IsValid)
+                .SelectMany(provider => provider.SupportedModels?
                     .OfType<EmbeddingModelInfo>()
                     .Select(model => new EmbeddingModelOption
                     {
@@ -61,19 +61,19 @@ public class EmbeddingModelFacade(
     {
         try
         {
-            var diagnostics = providerFactory.GetAllProviders()
-                .SelectMany(provider => provider.Info.SupportedModels?
+            var diagnostics = providerFactory.GetAllProviderInfos()
+                .SelectMany(provider => provider.SupportedModels?
                     .OfType<EmbeddingModelInfo>()
                     .Select(model => new EmbeddingModelDiagnosticInfo
                     {
                         ProviderId = provider.ProviderId,
                         ProviderDisplayName = provider.DisplayName,
-                        ProviderStatus = provider.Info.Status.ToString(),
-                        IsProviderValid = provider.Info.IsValid,
+                        ProviderStatus = provider.Status.ToString(),
+                        IsProviderValid = provider.IsValid,
                         ModelName = model.ModelName,
                         Dimensions = model.Dimensions,
                         Description = model.Description,
-                        ConfigurationErrors = provider.Info.ConfigurationErrors ?? []
+                        ConfigurationErrors = provider.ConfigurationErrors ?? []
                     }) ?? [])
                 .GroupBy(
                     option => EmbeddingModelOption.ToModelKey(option.ProviderId, option.ModelName),
@@ -117,7 +117,8 @@ public class EmbeddingModelFacade(
                 return Res.Fail("Embedding model name cannot be empty.");
             }
 
-            var provider = providerFactory.GetProvider(providerId);
+            using var lease = providerFactory.AcquireProvider(providerId);
+            var provider = lease?.Provider;
             if (provider is null)
             {
                 return Res.Fail($"Embedding provider '{providerId}' was not found.");
@@ -200,7 +201,7 @@ public class EmbeddingModelFacade(
                 return Res.Ok<EmbeddingModelOption?>(model);
             }
 
-            var provider = providerFactory.GetProvider(kb.EmbeddingProviderId);
+            var provider = providerFactory.GetProviderInfo(kb.EmbeddingProviderId);
             var fallbackProviderId = kb.EmbeddingProviderId.Trim();
 
             return Res.Ok<EmbeddingModelOption?>(new EmbeddingModelOption

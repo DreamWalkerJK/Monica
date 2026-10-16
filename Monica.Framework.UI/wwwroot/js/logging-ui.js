@@ -1,23 +1,26 @@
 const scrollListenerMap = new WeakMap();
+const downloadOwners = new Map();
+const retiredDownloadOwners = new Set();
 
-export function scrollToBottom(element) {
+export async function scrollToBottom(element) {
     if (!element) {
         return;
     }
 
     try {
-        requestAnimationFrame(() => {
+        await new Promise(resolve => requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-                element.scrollTop = element.scrollHeight;
+                if (element.isConnected) element.scrollTop = element.scrollHeight;
+                resolve();
             });
-        });
+        }));
     } catch (error) {
         console.error("Failed to scroll log viewer", error);
     }
 }
 
 export async function copyToClipboard(text) {
-    if (!text) {
+    if (text === null || text === undefined) {
         return false;
     }
 
@@ -98,7 +101,7 @@ export function scrollToLineIndex(container, lineIndex) {
 
         container.scrollTo({
             top: scrollTo,
-            behavior: "smooth"
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
         });
     } catch (error) {
         console.error("Failed to scroll to line index", error);
@@ -169,32 +172,70 @@ export async function removeScrollListener(container) {
     session.pendingCallbacks.clear();
 }
 
-export function preserveScrollPosition(container, absoluteLineNumber) {
+export function getScrollAnchor(container) {
+    if (!container) return null;
+    const owner = container.getBoundingClientRect();
+    for (const line of container.querySelectorAll("[data-line-index]")) {
+        const rect = line.getBoundingClientRect();
+        if (rect.bottom > owner.top && rect.top < owner.bottom) {
+            return { lineIndex: Number(line.dataset.lineIndex), absoluteLineNumber: Number(line.dataset.absoluteLineNumber), offset: rect.top - owner.top };
+        }
+    }
+    return null;
+}
+
+// Native Blazor scroll events own capture admission; this function adds no listeners or timers.
+export function getViewerPosition(container) {
+    if (!container?.isConnected) return null;
+    const owner = container.getBoundingClientRect();
+    const ledger = container.closest(".log-viewer-wrapper");
+    for (const line of container.querySelectorAll("[data-line-index]")) {
+        const rect = line.getBoundingClientRect();
+        if (rect.bottom > owner.top && rect.top < owner.bottom) {
+            return {
+                lineIndex: Number(line.dataset.lineIndex),
+                absoluteLineNumber: line.dataset.absoluteLineNumber ?? null,
+                offset: rect.top - owner.top,
+                atBottom: container.scrollHeight - container.clientHeight - container.scrollTop <= 2,
+                generation: ledger?.dataset.sourceGeneration ?? null,
+                revision: ledger?.dataset.positionRevision ?? null
+            };
+        }
+    }
+    return null;
+}
+
+export async function preserveScrollPosition(container, absoluteLineNumber, offset = 0) {
     if (!container || absoluteLineNumber === null || absoluteLineNumber === undefined) {
         return false;
     }
 
-    requestAnimationFrame(() => {
+    await new Promise(resolve => requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             try {
+                if (!container.isConnected) return;
                 const anchorElement = container.querySelector(
                     `[data-absolute-line-number="${absoluteLineNumber}"]`);
 
                 if (anchorElement) {
-                    anchorElement.scrollIntoView({ block: "start" });
+                    const containerBox = container.getBoundingClientRect();
+                    const anchorBox = anchorElement.getBoundingClientRect();
+                    container.scrollTop += anchorBox.top - containerBox.top - offset;
                 }
             } catch (error) {
                 console.error("Failed to preserve scroll position", error);
+            } finally {
+                resolve();
             }
         });
-    });
+    }));
 
     return true;
 }
 
 // Fetch the attachment before downloading a local Blob so HTTP deployments do not
 // hand an insecure network URL to the browser's download manager.
-export async function downloadFile(url) {
+export async function downloadFile(url, owner) {
     if (!url) {
         return false;
     }
@@ -204,18 +245,47 @@ export async function downloadFile(url) {
         return false;
     }
 
-    const response = await fetch(url, {
-        credentials: "same-origin",
-        mode: "same-origin",
-        redirect: "error"
-    });
-    if (!response.ok) {
-        throw new Error(`Log download failed: HTTP ${response.status} ${response.statusText}`.trim());
+    if (owner && retiredDownloadOwners.has(owner)) return false;
+    const controller = new AbortController();
+    const transfers = downloadOwners.get(owner) ?? new Set();
+    transfers.add(controller);
+    if (owner) downloadOwners.set(owner, transfers);
+    try {
+        const response = await fetch(url, {
+            credentials: "same-origin", mode: "same-origin", redirect: "error", signal: controller.signal
+        });
+        if (!response.ok) throw new Error(`Log download failed: HTTP ${response.status} ${response.statusText}`.trim());
+        const blob = await response.blob();
+        if (controller.signal.aborted || (owner && retiredDownloadOwners.has(owner))) return false;
+        return downloadBlob(blob, getDownloadFileName(response.headers.get("Content-Disposition")), host);
+    } catch (error) {
+        if (controller.signal.aborted) return false;
+        throw error;
+    } finally {
+        transfers.delete(controller);
+        if (owner && transfers.size === 0) downloadOwners.delete(owner);
     }
+}
 
-    const blob = await response.blob();
+export function cancelDownloads(owner) {
+    retiredDownloadOwners.add(owner);
+    for (const controller of downloadOwners.get(owner) ?? []) controller.abort();
+}
+
+export function releaseDownloadOwner(owner) {
+    downloadOwners.delete(owner);
+    retiredDownloadOwners.delete(owner);
+}
+
+export function downloadContent(name, contentType, bytes) {
+    const host = document.body ?? document.documentElement;
+    if (!host) return false;
+    return downloadBlob(new Blob([bytes], { type: contentType }), name, host);
+}
+
+function downloadBlob(blob, name, host) {
     const anchor = document.createElement("a");
-    anchor.download = getDownloadFileName(response.headers.get("Content-Disposition"));
+    anchor.download = name;
     anchor.rel = "noopener";
     anchor.style.display = "none";
     const objectUrl = URL.createObjectURL(blob);

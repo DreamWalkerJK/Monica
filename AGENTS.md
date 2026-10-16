@@ -35,7 +35,7 @@ powershell -File scripts/run-tests.ps1 -NoBuild
 ```
 
 - Use `pwsh` in place of `powershell` where appropriate. Do not run `dotnet test Monica.slnx`; use the runner or the affected test project.
-- Builds must have zero warnings. Resolve warnings rather than suppressing them with `NoWarn` or other suppressions unless explicitly required by the user.
+- Monica builds must have zero warnings. This requirement applies only to this Monica repository; sibling and consumer repositories own their verification rules. Resolve warnings rather than suppressing them with `NoWarn` or other suppressions unless explicitly required by the user. The advisory-specific `NuGetAuditSuppress` entries in [Monica.Office.csproj](Monica.Office/Monica.Office.csproj) are approved exceptions.
 - Avoid concurrent build/test processes that share dependencies or output paths. Use MSBuild parallelism inside one build with `-m`.
 - Run or add UI rendering tests only on explicit user request. Use browser smoke checks for UI changes. Requested UI tests protect behavior contracts, not layout, CSS classes, localized-key presence, or visual composition; details are in `monica-unit-testing`.
 - For skill or documentation changes, run their validators described in `CONTRIBUTING.md`; do not run unrelated UI tests.
@@ -44,7 +44,7 @@ powershell -File scripts/run-tests.ps1 -NoBuild
 
 - Edit Monica skills only in `skills/<name>/`. `.agents/skills/` and `.claude/skills/` are generated projections. Regenerate with `python scripts/sync_agent_skills.py --write` and include canonical and generated changes together.
 - Before completing a skill change, run `python scripts/validate_agent_skills.py`, `python scripts/sync_agent_skills.py --check`, and `python scripts/test_agent_skills.py`.
-- When implementation changes public behavior or yields verified reusable guidance, update the owning skill reference and relevant example or behavioral check in the same change. Replace obsolete guidance rather than appending session notes.
+- When implementation changes public behavior or yields verified reusable guidance, update the owning task reference, its routing when needed, and the relevant example or behavioral check in the same change. Follow `monica-docs-authoring` for topic boundaries; replace obsolete guidance rather than appending session notes.
 - Run `python scripts/check_knowledge_impact.py --base <base-ref>` for infrastructure changes. If guidance is unaffected, pass `--no-impact "<concrete reason>"` and record that rationale in the PR's Knowledge impact section.
 - The catalog at `.monica/agent-skill-catalog.json` owns skill routing, source ownership, and release projections. Monica.Docs owns stable editorial guides and renders published skills; do not create parallel module manuals here.
 

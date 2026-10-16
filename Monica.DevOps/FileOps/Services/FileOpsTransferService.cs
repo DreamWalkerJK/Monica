@@ -12,7 +12,7 @@ namespace Monica.DevOps.FileOps.Services;
 public class FileOpsTransferService(
     IFileOpsRuntimeConfigStore runtimeConfigStore,
     FileOpsPathPolicy pathPolicy,
-    ILogger<FileOpsTransferService> logger)
+    ILogger<FileOpsTransferService> logger) : IFileOpsTransferService
 {
     private const string ARCHIVE_CONTENT_TYPE = "application/zip";
     private const string ARCHIVE_EXTENSION = ".zip";
@@ -20,6 +20,10 @@ public class FileOpsTransferService(
 
     private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
 
+    /// <summary>Uploads a file after checking the parent and target against the current runtime write policy.</summary>
+    /// <remarks>The caller owns <paramref name="content"/>. Overwrite replaces an existing writable file;
+    /// cancellation or copy failure can leave partial output. Returned metadata is sampled after the
+    /// destination stream closes. The size limit applies to the supplied <paramref name="contentLength"/>.</remarks>
     public async Task<FileOpsEntrySummary> SaveUploadAsync(
         string directoryPath,
         string fileName,
@@ -40,9 +44,12 @@ public class FileOpsTransferService(
             throw FileOpsOperationException.EntryAlreadyExists(targetPath);
         }
 
+        pathPolicy.EnsureEntryWritable(runtimeConfig, targetPath);
         var fileMode = overwrite ? FileMode.Create : FileMode.CreateNew;
-        await using var targetStream = new FileStream(targetPath, fileMode, FileAccess.Write, FileShare.None);
-        await content.CopyToAsync(targetStream, cancellationToken);
+        await using (var targetStream = new FileStream(targetPath, fileMode, FileAccess.Write, FileShare.None))
+        {
+            await content.CopyToAsync(targetStream, cancellationToken);
+        }
 
         var fileInfo = new FileInfo(targetPath);
         logger.LogInformation("Uploaded FileOps file to {Path}", targetPath);

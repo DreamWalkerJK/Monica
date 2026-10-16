@@ -25,7 +25,7 @@ public class SubscriptionFilter
     public EventSubscriptionScope? Scope { get; set; }
 
     /// <summary>
-    /// Filter by service key
+    /// Filters by an exact ordinal service key. Null leaves this filter unset; empty and whitespace keys remain exact values.
     /// </summary>
     public string? ServiceKey { get; set; }
 
@@ -35,7 +35,7 @@ public class SubscriptionFilter
     public bool? IsAutoDiscovered { get; set; }
 
     /// <summary>
-    /// Search text (search within event type or topic name)
+    /// Case-insensitive search over event/handler names, topic, key, handler factory, action metadata, and subscription ID.
     /// </summary>
     public string? SearchText { get; set; }
 
@@ -45,19 +45,19 @@ public class SubscriptionFilter
     public EventBusProviderInfo? SelectedProvider { get; set; }
 
     /// <summary>
-    /// Are there any filters?
+    /// Gets whether any filter is set, including an exact empty or whitespace service key.
     /// </summary>
     public bool HasAnyFilter =>
         State.HasValue ||
         TopicRuntimeState.HasValue ||
         Scope.HasValue ||
-        !string.IsNullOrWhiteSpace(ServiceKey) ||
+        ServiceKey != null ||
         IsAutoDiscovered.HasValue ||
         !string.IsNullOrWhiteSpace(SearchText) ||
         SelectedProvider != null;
 
     /// <summary>
-    /// Clear all filters
+    /// Clears all filters, restoring the standalone service key to null (unset).
     /// </summary>
     public void Clear()
     {
@@ -71,8 +71,9 @@ public class SubscriptionFilter
     }
 
     /// <summary>
-    /// Create a copy
+    /// Copies filter values without normalizing or localizing the exact service key.
     /// </summary>
+    /// <returns>An independent filter whose selected-provider snapshot is shared and treated as read-only.</returns>
     public SubscriptionFilter Clone()
     {
         return new SubscriptionFilter

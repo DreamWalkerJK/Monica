@@ -31,12 +31,12 @@ public sealed class OpenTelemetrySnapshot
     public IReadOnlyList<string> MeterPatterns { get; init; } = [];
 
     /// <summary>
-    /// Gets the maximum retained samples per tag set.
+    /// Gets the effective maximum retained samples per tag set, with a minimum of one.
     /// </summary>
     public int SamplesPerSeries { get; init; }
 
     /// <summary>
-    /// Gets the maximum retained tag sets per instrument.
+    /// Gets the effective maximum retained tag sets per instrument, with a minimum of zero.
     /// </summary>
     public int MaxTagSetsPerInstrument { get; init; }
 

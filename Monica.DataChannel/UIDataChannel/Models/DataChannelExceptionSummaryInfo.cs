@@ -5,18 +5,20 @@ namespace Monica.DataChannel.UIDataChannel.Models;
 /// </summary>
 public class DataChannelExceptionSummaryInfo
 {
+    /// <summary>Gets or sets the UTC start time of the aggregate read.</summary>
+    public DateTime CapturedAt { get; set; }
     /// <summary>
     /// Total number of registered channels.
     /// </summary>
     public int TotalChannels { get; set; }
     
     /// <summary>
-    /// Channels currently reporting exceptions.
+    /// Channels whose captured history retains exception records.
     /// </summary>
     public int ChannelsWithExceptions { get; set; }
     
     /// <summary>
-    /// Sum of active exception counts across all channels.
+    /// Sum of retained exception counts across the captured channels.
     /// </summary>
     public int TotalCurrentExceptions { get; set; }
 
@@ -36,6 +38,11 @@ public class DataChannelExceptionSummaryInfo
 /// </summary>
 public class DataChannelExceptionSummaryItem
 {
+    /// <summary>Gets or sets the UTC time of this channel's tracker capture.</summary>
+    public DateTime CapturedAt { get; set; }
+
+    /// <summary>Gets or sets the exact pipeline group ID; null or empty indicates ungrouped.</summary>
+    public string? GroupId { get; set; }
     /// <summary>
     /// Identifier of the DataChannel.
     /// </summary>
@@ -47,7 +54,7 @@ public class DataChannelExceptionSummaryItem
     public string PipelineId { get; set; } = string.Empty;
     
     /// <summary>
-    /// Active exception count for the channel.
+    /// Retained exception count for the channel.
     /// </summary>
     public long CurrentExceptionCount { get; set; }
 
@@ -57,7 +64,7 @@ public class DataChannelExceptionSummaryItem
     public long TotalExceptionCount { get; set; }
     
     /// <summary>
-    /// Maximum size of the exception history pool.
+    /// Shared observable history capacity, including ordinary records and exceptions.
     /// </summary>
     public int MaxPoolSize { get; set; }
     
@@ -67,7 +74,7 @@ public class DataChannelExceptionSummaryItem
     public bool HasExceptions { get; set; }
     
     /// <summary>
-    /// Timestamp of the latest recorded exception, if any.
+    /// Timestamp of the latest retained exception, or null after all exception evidence is cleared or trimmed.
     /// </summary>
     public DateTime? LatestException { get; set; }
 }

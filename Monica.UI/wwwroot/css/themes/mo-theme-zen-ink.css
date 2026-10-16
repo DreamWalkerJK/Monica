@@ -53,7 +53,7 @@
     --mo-appbar-menu-item-active-text: var(--mud-palette-primary);
     --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
     
-    --mo-zen-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.15);
+    --mo-zen-shadow: var(--mud-elevation-2);
     
     /* Ink fade gradient for dividers */
     --mo-zen-ink-fade: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.4) 20%, rgba(0, 0, 0, 0.4) 80%, transparent);
@@ -85,7 +85,7 @@
     --mo-appbar-menu-item-active-text: var(--mud-palette-primary);
     --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
     
-    --mo-zen-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.8);
+    --mo-zen-shadow: var(--mud-elevation-2);
     
     /* Ink fade gradient for dividers */
     --mo-zen-ink-fade: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3) 20%, rgba(255, 255, 255, 0.3) 80%, transparent);
@@ -101,18 +101,8 @@
 
 /* Typography Overrides */
 .mo-theme-zen-ink-light :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select),
-.mo-theme-zen-ink-dark :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select),
-.mo-theme-zen-ink-light :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title),
-.mo-theme-zen-ink-dark :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title) {
+.mo-theme-zen-ink-dark :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select){
     font-family: var(--mo-zen-font);
-}
-
-/* High White Space Layout */
-.mo-theme-zen-ink-light .mo-layout,
-.mo-theme-zen-ink-dark .mo-layout,
-.mo-theme-zen-ink-light .mo-main-content,
-.mo-theme-zen-ink-dark .mo-main-content {
-    background: var(--mo-zen-bg);
 }
 
 /* Navigation & Appbar */
@@ -121,52 +111,6 @@
     border-bottom: 1px solid transparent;
     border-image: var(--mo-zen-ink-fade) 1;
     box-shadow: none;
-}
-
-.mo-theme-zen-ink-light .navbar-link,
-.mo-theme-zen-ink-dark .navbar-link,
-.mo-theme-zen-ink-light .navbar-measure-link,
-.mo-theme-zen-ink-dark .navbar-measure-link {
-    color: var(--mo-zen-muted);
-    font-size: 0.95rem;
-    font-weight: 500;
-    padding: 0.5rem 1.2rem;
-    --mo-navbar-link-padding-block: 0.5rem;
-    --mo-navbar-link-padding-inline: 1.2rem;
-    border-radius: var(--mo-zen-radius-irregular);
-    transition: all var(--mo-zen-transition);
-}
-
-.mo-theme-zen-ink-light .navbar-link:hover,
-.mo-theme-zen-ink-dark .navbar-link:hover {
-    color: var(--mo-zen-text);
-    background: transparent;
-    text-shadow: 0 0 1px rgba(0,0,0,0.2);
-}
-
-.mo-theme-zen-ink-light .navbar-link.active,
-.mo-theme-zen-ink-dark .navbar-link.active {
-    color: var(--mud-palette-primary);
-    background: transparent;
-    font-weight: 600;
-}
-
-/* Active Nav indicator as an ink blot underline */
-.mo-theme-zen-ink-light .navbar-link::before,
-.mo-theme-zen-ink-dark .navbar-link::before {
-    height: 3px;
-    background: var(--mud-palette-primary);
-    opacity: 0;
-    border-radius: 50%;
-    transform: scaleX(0.2);
-    transition: transform var(--mo-zen-transition), opacity var(--mo-zen-transition);
-    bottom: 2px;
-}
-
-.mo-theme-zen-ink-light .navbar-link.active::before,
-.mo-theme-zen-ink-dark .navbar-link.active::before {
-    opacity: 0.8;
-    transform: scaleX(1);
 }
 
 /* Brush stroke buttons */
@@ -197,21 +141,21 @@
 }
 
 /* Cards & Surfaces with large white space */
-.mo-theme-zen-ink-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
-.mo-theme-zen-ink-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+.mo-theme-zen-ink-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .mud-tabs),
+.mo-theme-zen-ink-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .mud-tabs) {
     background: var(--mo-zen-surface);
     border: 1px solid var(--mo-zen-border);
     border-radius: var(--mo-zen-radius-sm);
     box-shadow: none;
 }
 
-.mo-theme-zen-ink-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card),
-.mo-theme-zen-ink-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card) {
+.mo-theme-zen-ink-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar)),
+.mo-theme-zen-ink-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar)) {
     transition: border-color var(--mo-zen-transition), box-shadow var(--mo-zen-transition);
 }
 
-.mo-theme-zen-ink-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover),
-.mo-theme-zen-ink-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
+.mo-theme-zen-ink-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover),
+.mo-theme-zen-ink-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover) {
     border-color: var(--mo-zen-border-strong);
     box-shadow: var(--mo-zen-shadow);
 }
@@ -220,9 +164,7 @@
 :root[data-theme="zen-ink-light"] .mud-popover:not(.mud-tooltip),
 :root[data-theme="zen-ink-dark"] .mud-popover:not(.mud-tooltip),
 .mo-theme-zen-ink-light .mud-popover:not(.mud-tooltip),
-.mo-theme-zen-ink-dark .mud-popover:not(.mud-tooltip),
-.mo-theme-zen-ink-light :is(.more-menu, .flyout-menu, .dropdown-menu),
-.mo-theme-zen-ink-dark :is(.more-menu, .flyout-menu, .dropdown-menu) {
+.mo-theme-zen-ink-dark .mud-popover:not(.mud-tooltip){
     background: var(--mo-zen-surface-strong);
     border: 1px solid var(--mo-zen-border);
     border-radius: var(--mo-zen-radius-sm);
@@ -306,18 +248,6 @@
 .mo-theme-zen-ink-dark .mud-drawer {
     border-inline-end: 1px solid transparent;
     border-image: linear-gradient(to bottom, transparent, var(--mo-zen-border-strong) 20%, var(--mo-zen-border-strong) 80%, transparent) 1;
-}
-
-/* Theme Selection Card */
-.mo-theme-zen-ink-light .theme-card,
-.mo-theme-zen-ink-dark .theme-card {
-    border-radius: var(--mo-zen-radius-irregular);
-}
-.mo-theme-zen-ink-light .theme-card.selected,
-.mo-theme-zen-ink-dark .theme-card.selected {
-    border-color: var(--mud-palette-primary);
-    background: var(--mo-zen-selected);
-    box-shadow: 0 0 0 1px var(--mud-palette-primary);
 }
 
 @media (prefers-reduced-motion: reduce) {

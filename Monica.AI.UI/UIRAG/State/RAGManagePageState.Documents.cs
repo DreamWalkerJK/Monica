@@ -11,14 +11,20 @@ public sealed partial class RAGManagePageState
     /// <summary>
     /// Open the chunk viewer dialog for one queue row.
     /// </summary>
-    public async Task ShowChunkViewerAsync(DocumentQueueItem document)
+    public Task ShowChunkViewerAsync(DocumentQueueItem document) => _session.RunAsync(() => ShowChunkViewerAsyncCore(document), selectionBound: true);
+
+    private async Task ShowChunkViewerAsyncCore(DocumentQueueItem document)
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null || !string.Equals(originKnowledgeBase.Id, document.KnowledgeBaseId, StringComparison.OrdinalIgnoreCase)) return;
+        if (originKnowledgeBase is null)
         {
             return;
         }
 
-        var result = await _indexingFacade.GetDocumentChunksAsync(SelectedKnowledgeBase.Id, document.Id);
+        var result = await _indexingFacade.GetDocumentChunksAsync(originKnowledgeBase.Id, document.Id);
+        _session.CheckCurrent();
         if (result.IsFailed(out var error, out var view))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -44,25 +50,32 @@ public sealed partial class RAGManagePageState
             { nameof(ChunkViewerDialog.SourceGroupKey), view.SourceGroupKey }
         };
 
-        await _dialogService.ShowAsync<ChunkViewerDialog>(
+        await _session.ShowAsync<ChunkViewerDialog>(
             _localizer["RAG:ChunkViewer:Title"],
             parameters,
             new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Queue one document for reindexing.
     /// </summary>
-    public async Task ReindexDocumentAsync(DocumentQueueItem document)
+    public Task ReindexDocumentAsync(DocumentQueueItem document) => _session.RunAsync(() => ReindexDocumentAsyncCore(document), selectionBound: true);
+
+    private async Task ReindexDocumentAsyncCore(DocumentQueueItem document)
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null || !string.Equals(originKnowledgeBase.Id, document.KnowledgeBaseId, StringComparison.OrdinalIgnoreCase)) return;
+        if (originKnowledgeBase is null)
         {
             return;
         }
 
         var result = await _indexingFacade.QueueDocumentForReindexAsync(
-            SelectedKnowledgeBase.Id,
+            originKnowledgeBase.Id,
             document.Id);
+        _session.CheckCurrent();
         if (result.IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -71,21 +84,27 @@ public sealed partial class RAGManagePageState
 
         _snackbar.Add(_localizer["Common:Success"], Severity.Success);
         await RefreshSelectedKnowledgeBaseAsync();
+        _session.CheckCurrent();
         await LoadDocumentQueueAsync();
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Show the full indexing error for one queue row.
     /// </summary>
-    public async Task ShowIndexingErrorAsync(DocumentQueueItem document)
+    public Task ShowIndexingErrorAsync(DocumentQueueItem document) => _session.RunAsync(() => ShowIndexingErrorAsyncCore(document), selectionBound: true);
+
+    private async Task ShowIndexingErrorAsyncCore(DocumentQueueItem document)
     {
+        _session.CheckCurrent();
         var message = string.IsNullOrWhiteSpace(document.ErrorMessage)
             ? _localizer["Common:Error"].Value
             : document.ErrorMessage;
 
-        await _dialogService.ShowMessageBoxAsync(
+        await _session.ShowMessageBoxAsync(
             _localizer["Common:Error"],
             $"{document.Name}\n\n{message}",
             yesText: _localizer["Common:Close"]);
+        _session.CheckCurrent();
     }
 }

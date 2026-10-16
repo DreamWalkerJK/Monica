@@ -1,15 +1,108 @@
 {
-  "Pages": { "ExecutionTiming": { "Title": "Execution Timing" } },
-  "Page": {
-    "Eyebrow": "RUNTIME INSTRUMENTATION",
-    "Subtitle": "Inspect active operations and compare their observed latency, frequency, and allocation evidence.",
-    "Status": { "Live": "Live sampling", "Paused": "Sampling paused" },
-    "Actions": { "AutoRefresh": "Auto refresh", "Refresh": "Refresh evidence" },
-    "Messages": { "RefreshFailed": "Failed to refresh execution timing evidence." }
+  "Pages": {
+    "ExecutionTiming": {
+      "Title": "Execution Timing"
+    }
   },
-  "Summary": { "AriaLabel": "Execution timing summary", "Running": "Running now", "Operations": "Operation types", "Samples": "Recorded samples", "Average": "Mean latency" },
-  "Running": { "Eyebrow": "ACTIVE SPANS", "Title": "Operations in flight", "Empty": "No operations are currently running." },
-  "Statistics": { "Eyebrow": "AGGREGATED EVIDENCE", "Title": "Completed operation statistics", "Empty": "No completed timing samples have been recorded." },
-  "Columns": { "Name": "Operation", "Description": "Description", "StartedAt": "Started", "CurrentDuration": "Current latency", "RunningFor": "Running for", "Executions": "Executions", "AverageDuration": "Mean latency", "LastDuration": "Latest latency", "Rate": "Per minute", "AverageMemory": "Mean allocation", "LastMemory": "Latest allocation", "LastRecordedAt": "Last observed" },
-  "Common": { "Count": "{0} records", "Unavailable": "—" }
+  "Page": {
+    "Eyebrow": "RUNTIME / TIMING EVIDENCE",
+    "Subtitle": "Find costly operation identities and inspect captured work in this host.",
+    "Status": {
+      "Live": "Auto refresh · {0}s",
+      "Paused": "View paused",
+      "Manual": "Manual refresh only"
+    },
+    "Actions": {
+      "AutoRefresh": "Auto refresh",
+      "Refresh": "Refresh evidence"
+    },
+    "Captured": "Captured",
+    "Loading": "Reading local timing evidence…",
+    "Messages": {
+      "RefreshFailed": "Timing evidence could not be refreshed.",
+      "Retained": "The last successful snapshot is retained. Refresh to try again.",
+      "NoSnapshot": "No successful snapshot is available yet."
+    }
+  },
+  "Summary": {
+    "AriaLabel": "Whole snapshot timing scope",
+    "Running": "Captured in flight",
+    "Operations": "Completed keys",
+    "Samples": "Completed samples",
+    "Average": "Mean of key means",
+    "AverageBasis": "Each operation key has equal weight.",
+    "Scope": "Cumulative evidence in this host. Pausing the view does not pause recording."
+  },
+  "Statistics": {
+    "Eyebrow": "COMPLETED / RANKED EVIDENCE",
+    "Title": "Operation ledger",
+    "Empty": "No completed samples yet.",
+    "EmptyHelp": "Business operations measured by the Monica pipeline appear here after completion.",
+    "Search": "Find an operation",
+    "SearchPlaceholder": "Name or full operation key",
+    "Ordering": {
+      "Mean": "Highest mean",
+      "Latest": "Highest latest",
+      "Samples": "Most samples",
+      "Identity": "Identity · A–Z"
+    },
+    "DurationPair": "Duration",
+    "FrequencyPair": "Completions",
+    "AllocationPair": "Allocation",
+    "RelativeMean": "Mean duration is {0}% of the largest key mean in this snapshot.",
+    "ComparisonHelp": "Bars compare key means against the largest mean in the whole snapshot.",
+    "RateHelp": "Rate is cumulative completions per minute since the first completion, with a one-minute minimum denominator.",
+    "Pagination": "Completed operation pages"
+  },
+  "Running": {
+    "Eyebrow": "IN FLIGHT / CAPTURED INVOCATIONS",
+    "Title": "Work in progress",
+    "Empty": "No invocations were in flight at capture.",
+    "Search": "Find a captured invocation",
+    "AgeBasis": "Age at capture",
+    "CapturedHelp": "Membership and elapsed age belong to this capture. Recording continues while the view is paused.",
+    "Pagination": "Captured invocation pages"
+  },
+  "Columns": {
+    "Name": "Operation identity",
+    "Description": "Description",
+    "StartedAt": "Started at",
+    "RunningFor": "Captured age",
+    "Executions": "Samples",
+    "AverageDuration": "Mean",
+    "LastDuration": "Latest",
+    "Rate": "Cumulative / min",
+    "AverageMemory": "Mean",
+    "LastMemory": "Latest",
+    "LastRecordedAt": "Last completed at"
+  },
+  "Details": {
+    "CompletedTitle": "Completed operation evidence",
+    "RunningTitle": "Captured invocation evidence",
+    "CaptureHelp": "Values from the successful page capture:",
+    "DisplayName": "Display name",
+    "OperationKey": "Full operation key",
+    "InvocationId": "Invocation ID",
+    "FirstRecordedAt": "First completed at",
+    "AllocationHelp": "Allocation is optional recorded evidence. An unavailable value is distinct from zero; the collector does not expose a tracked-sample denominator.",
+    "MeanDuration": "Mean duration",
+    "LatestDuration": "Latest duration",
+    "MeanAllocation": "Mean allocation",
+    "LatestAllocation": "Latest allocation",
+    "RecordedMilliseconds": "Recorded: {0} ms",
+    "RecordedBytes": "Recorded: {0} bytes",
+    "OpenFailed": "The evidence inspector could not be opened."
+  },
+  "Common": {
+    "Unavailable": "—",
+    "VisibleCount": "{0} / {1} records",
+    "Order": "Order by",
+    "Clear": "Clear search",
+    "Details": "Details",
+    "Inspect": "Inspect {0}",
+    "Close": "Close",
+    "NoMatches": "No matching evidence.",
+    "NoMatchesHelp": "Change or clear the query to see the captured records.",
+    "PageRange": "{0}–{1} of {2}"
+  }
 }

@@ -6,18 +6,20 @@
 @using Monica.Core.Results
 @using Monica.UI.Shell.Support
 @using Monica.UI.UIModuleSystem.Components
+@using Monica.UI.Shared.Components.Dialogs
 @implements IDisposable
 @inject IServiceProvider Services
 @inject OperationalPageAccessEvaluator OperationalPageAccess
 @inject IStringLocalizer<StateStoreResource> L
 
-<MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChanged" Options="DialogOptions">
+<MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChanged" Options="DialogOptions"
+           DefaultFocus="DefaultFocus.FirstChild" Gutters="false" TitleClass="pa-0" ContentClass="pa-0" ActionsClass="pa-0">
     <TitleContent>
         @if (Provider is not null)
         {
             <div class="provider-dialog__title">
-                <MudText Typo="Typo.h6">@L.GetProviderDisplayName(Provider)</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@GetProviderSummary(Provider)</MudText>
+                <MoDialogHeading Text="@L.GetProviderDisplayName(Provider)" />
+                <p>@GetProviderSummary(Provider)</p>
             </div>
         }
     </TitleContent>
@@ -25,34 +27,34 @@
         @if (Provider != null)
         {
             <div class="provider-dialog">
-                <MudTabs Elevation="2"
-                         Rounded="true"
-                         ApplyEffectsToContainer="true"
+                <MudTabs Class="state-provider-tabs" Elevation="0"
+                         ApplyEffectsToContainer="false"
+                         MinimumTabWidth="0px"
                          ActivePanelIndex="@_activeTabIndex"
                          ActivePanelIndexChanged="OnActiveTabChanged">
-                    <MudTabPanel Text="@L["ProviderDetail:Tabs:Overview"]" Icon="@Icons.Material.Filled.Info">
+                    <MudTabPanel Text="@L["ProviderDetail:Tabs:Overview"]" Icon="@Icons.Material.Outlined.Info">
                         <div class="provider-dialog__tab-content">
-                            <div class="provider-dialog__overview">
+                            <dl class="provider-dialog__overview">
                                 <div class="provider-dialog__stat">
-                                    <span>@L["ProviderDetail:Labels:ProviderType"]</span>
-                                    <strong>@L.GetProviderTypeText(Provider.ProviderType)</strong>
+                                    <dt>@L["ProviderDetail:Labels:ProviderType"]</dt>
+                                    <dd>@L.GetProviderTypeText(Provider.ProviderType)</dd>
                                 </div>
 
                                 <div class="provider-dialog__stat">
-                                    <span>@L["ProviderDetail:Labels:ServiceKey"]</span>
-                                    <strong>@GetServiceKeyText(Provider)</strong>
+                                    <dt>@L["ProviderDetail:Labels:ServiceKey"]</dt>
+                                    <dd class="provider-dialog__identifier">@GetServiceKeyText(Provider)</dd>
                                 </div>
 
                                 <div class="provider-dialog__stat">
-                                    <span>@L["ProviderDetail:Labels:StorageMode"]</span>
-                                    <strong>@GetStorageModeText(Provider)</strong>
+                                    <dt>@L["ProviderDetail:Labels:StorageMode"]</dt>
+                                    <dd>@GetStorageModeText(Provider)</dd>
                                 </div>
 
                                 <div class="provider-dialog__stat">
-                                    <span>@L["ProviderDetail:Labels:ImplementationType"]</span>
-                                    <strong>@Provider.ImplementationType</strong>
+                                    <dt>@L["ProviderDetail:Labels:ImplementationType"]</dt>
+                                    <dd class="provider-dialog__identifier">@Provider.ImplementationType</dd>
                                 </div>
-                            </div>
+                            </dl>
 
                             <div class="provider-dialog__section">
                                 <div class="provider-dialog__section-header">
@@ -69,7 +71,7 @@
                         </div>
                     </MudTabPanel>
 
-                    <MudTabPanel Text="@L["ProviderDetail:Tabs:ConfigOptions"]" Icon="@Icons.Material.Filled.Settings">
+                    <MudTabPanel Text="@L["ProviderDetail:Tabs:Options"]" Icon="@Icons.Material.Outlined.Settings">
                         <div class="provider-dialog__tab-content">
                             <div class="provider-dialog__section">
                                 <div class="provider-dialog__section-header">
@@ -83,7 +85,7 @@
 
                                 @if (Provider.OptionDiagnosticsTarget is null)
                                 {
-                                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                                    <MudAlert Class="state-dialog-info" Severity="Severity.Info" Variant="Variant.Outlined">
                                         @L["ProviderDetail:Messages:ConfigurationShared"]
                                     </MudAlert>
                                 }
@@ -106,7 +108,7 @@
                                 {
                                     @if (_optionDiagnostics.ProfileResolution == ModuleOptionProfileResolution.DefaultFallback)
                                     {
-                                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                                        <MudAlert Class="state-dialog-info" Severity="Severity.Info" Variant="Variant.Outlined">
                                             @L[
                                                 "ProviderDetail:Messages:ConfigurationDefaultProfileFallback",
                                                 _optionDiagnostics.RequestedProfileName ?? Provider.ServiceKey ?? string.Empty]
@@ -128,9 +130,9 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Color="Color.Primary" OnClick="OnClose" StartIcon="@Icons.Material.Filled.Close">
-            @L["ProviderDetail:Actions:Close"]
-        </MudButton>
+        <div class="provider-dialog__actions">
+            <MudButton Class="state-dialog-primary-text" Color="Color.Primary" OnClick="OnClose">@L["ProviderDetail:Actions:Close"]</MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 

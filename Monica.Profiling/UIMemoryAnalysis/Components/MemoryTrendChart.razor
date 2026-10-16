@@ -1,131 +1,105 @@
 @using Monica.Profiling.RuntimeMetrics.Models
+@using Monica.Profiling.UIRuntimeMetrics.Components
+@using Monica.Profiling.UIRuntimeMetrics.Support
+@using Monica.Profiling.UIMemoryAnalysis.Support
 @inject IStringLocalizer<MemoryAnalysisResource> L
 
-<section class="memory-trend-layout">
-    <div class="memory-trend-summary" aria-label="@L["Trend:SummaryAriaLabel"]">
-        <div><strong class="mud-primary-text">@(TrendData?.AverageHeapSizeMB.ToString("F1") ?? "—") MB</strong><span>@L["Trend:Summary:AverageHeap"]</span></div>
-        <div><strong class="mud-warning-text">@(TrendData?.MaxHeapSizeMB.ToString("F1") ?? "—") MB</strong><span>@L["Trend:Summary:MaximumHeap"]</span></div>
-        <div><strong class="mud-info-text">@(TrendData is null ? "—" : ProfilingDisplayFormatter.FormatBytesPerSecond(TrendData.AverageAllocationRate))</strong><span>@L["Trend:Summary:AverageAllocation"]</span></div>
-        <div><strong class="mud-success-text">@(TrendData?.DataPoints.Count ?? 0)</strong><span>@L["Trend:Summary:Samples"]</span></div>
-    </div>
-
-    @if (TrendData?.DataPoints.Count == 0 && !IsLoading)
-    {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Trend:Waiting"]</MudAlert>
-    }
-
-    <div class="memory-trend-charts">
-        <article class="memory-trend-panel">
-            <header><MudText Typo="Typo.overline" Class="memory-trend-eyebrow">@L["Trend:Heap:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Trend:Heap:Title"]</MudText></header>
-            @if (TrendData?.DataPoints.Count > 1)
-            {
-                <div class="memory-chart-scroll"><MudChart ChartType="ChartType.Line" ChartSeries="@_heapSizeSeries" ChartLabels="@_timeLabels" Width="100%" Height="300px" ChartOptions="@_heapChartOptions" /></div>
-            }
-            else
-            {
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="260px" />
-            }
-        </article>
-
-        <article class="memory-trend-panel">
-            <header><MudText Typo="Typo.overline" Class="memory-trend-eyebrow">@L["Trend:Allocation:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Trend:Allocation:Title"]</MudText></header>
-            @if (TrendData?.DataPoints.Count > 1)
-            {
-                <div class="memory-chart-scroll"><MudChart ChartType="ChartType.Line" ChartSeries="@_allocationSeries" ChartLabels="@_timeLabels" Width="100%" Height="300px" ChartOptions="@_allocationChartOptions" /></div>
-            }
-            else
-            {
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="260px" />
-            }
-        </article>
-    </div>
-
-    <article class="memory-trend-panel">
-        <header><MudText Typo="Typo.overline" Class="memory-trend-eyebrow">@L["Trend:Generations:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Trend:Generations:Title"]</MudText></header>
-        @if (TrendData?.DataPoints.Count > 0)
-        {
-            var latest = TrendData.DataPoints[^1];
-            var generationData = new[]
-            {
-                latest.Gen0SizeBytes / 1024d / 1024d,
-                latest.Gen1SizeBytes / 1024d / 1024d,
-                latest.Gen2SizeBytes / 1024d / 1024d,
-                latest.LohSizeBytes / 1024d / 1024d
-            };
-            <div class="memory-chart-scroll">
-                <MudChart ChartType="ChartType.Bar"
-                          ChartSeries="@(new List<ChartSeries<double>> { new() { Name = L["Trend:Series:Size"], Data = generationData } })"
-                          ChartLabels="@(new[] { "Gen 0", "Gen 1", "Gen 2", "LOH" })"
-                          Width="100%"
-                          Height="240px"
-                          ChartOptions="@_generationChartOptions" />
-            </div>
-        }
-        else
-        {
-            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="220px" />
-        }
+<section class="memory-history">
+    <article class="memory-history-window">
+        <header class="memory-history-heading"><div><span class="memory-history-eyebrow">@L["Trend:WindowEyebrow"]</span><h2>@L["Trend:WindowTitle"]</h2><p>@L["Trend:WindowHelp"]</p></div></header>
+        <dl class="memory-history-summary">
+            <div><dt>@L["Trend:Summary:Samples"]</dt><dd data-window-count="@Points.Count">@(TrendData is null ? L["Common:Unavailable"] : L["Trend:Capacity", Points.Count, TrendData.MaxHistoryPoints])</dd></div>
+            <div><dt>@L["Trend:Window"]</dt><dd>@WindowDuration</dd><small><time datetime="@MachineTime(TrendData?.StartTime)">@RuntimeMetricsDisplayFormatter.LocalTime(TrendData?.StartTime)</time><span aria-hidden="true"> → </span><time datetime="@MachineTime(TrendData?.EndTime)">@RuntimeMetricsDisplayFormatter.LocalTime(TrendData?.EndTime)</time></small></div>
+            <div><dt>@L["Trend:CollectorInterval"]</dt><dd data-sample-interval="@TrendData?.SampleIntervalMs">@(TrendData is null ? L["Common:Unavailable"] : L["Trend:Seconds", TrendData.SampleIntervalMs / 1000d])</dd></div>
+        </dl>
+        <dl class="memory-history-means">
+            <div><dt>@L["Trend:Summary:AverageHeap"]</dt><dd>@RuntimeMetricsDisplayFormatter.Megabytes(Points.Count > 0 ? TrendData!.AverageHeapSizeMB : null)</dd></div>
+            <div><dt>@L["Trend:Summary:MaximumHeap"]</dt><dd>@RuntimeMetricsDisplayFormatter.Megabytes(Points.Count > 0 ? TrendData!.MaxHeapSizeMB : null)</dd></div>
+            <div><dt>@L["Trend:Summary:AverageAllocation"]</dt><dd>@RuntimeMetricsDisplayFormatter.ReportedAllocationRate(Points.Count > 0 ? TrendData!.AverageAllocationRate : null)</dd></div>
+        </dl>
     </article>
-
-    <article class="memory-trend-panel">
-        <header class="memory-trend-panel__split-header">
-            <div><MudText Typo="Typo.overline" Class="memory-trend-eyebrow">@L["Trend:Recent:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Trend:Recent:Title"]</MudText></div>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L["Trend:Recent:Count", Math.Min(TrendData?.DataPoints.Count ?? 0, 20)]</MudChip>
-        </header>
-        @if (TrendData?.DataPoints.Count > 0)
+    @if (Points.Count >= 2)
+    {
+        <div class="memory-history-plots">
+            <article class="memory-history-plot" data-metric="heap" data-unit="MB"><header><span class="memory-history-eyebrow">@L["Trend:Heap:Eyebrow"]</span><h2>@L["Trend:Heap:Title"]</h2><p>@L["Trend:HeapUnit"]</p></header>
+                <div class="memory-history-canvas"><MemoryHistoryPlot Points="@Points" Metric="MemoryHistoryMetric.HeapMegabytes" SeriesLabel="@L["Trend:Series:Heap"]" Description="@L["Trend:MeasurementHelp"]" UnavailableText="@L["Common:Unavailable"]" /></div></article>
+            <article class="memory-history-plot" data-metric="allocation" data-unit="MiB/s"><header><span class="memory-history-eyebrow">@L["Trend:Allocation:Eyebrow"]</span><h2>@L["Trend:Allocation:Title"]</h2><p>@L["Trend:AllocationUnit"]</p></header>
+                <div class="memory-history-canvas"><MemoryHistoryPlot Points="@Points" Metric="MemoryHistoryMetric.AllocationMebibytesPerSecond" SeriesLabel="@L["Trend:Series:Allocation"]" StrokeColor="var(--mud-palette-info)" Description="@L["Trend:MeasurementHelp"]" UnavailableText="@L["Common:Unavailable"]" /></div></article>
+        </div>
+    }
+    else
+    {
+        <div class="memory-history-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.ShowChart" /><h2>@EmptyTitle</h2><p>@EmptyHelp</p></div>
+    }
+    <p class="memory-history-note">@L["Trend:MeasurementHelp"]</p>
+    <article class="memory-generation-lens">
+        <header class="memory-history-heading"><div><span class="memory-history-eyebrow">@L["Trend:Generations:Eyebrow"]</span><h2>@L["Trend:Generations:Title"]</h2><p>@L["Trend:Generations:Help"]</p></div>
+            @if (Points.Count > 0) { <time datetime="@MemoryAnalysisDisplayFormatter.MachineTime(Points[^1].Timestamp)">@MemoryAnalysisDisplayFormatter.LocalSnapshotTime(Points[^1].Timestamp)</time> }</header>
+        @if (Points.Count > 0)
         {
-            <div class="memory-table-scroll">
-                <MudSimpleTable Dense="true" Hover="true" FixedHeader="true">
-                    <thead><tr><th>@L["Trend:Recent:Columns:Time"]</th><th>@L["Trend:Recent:Columns:Heap"]</th><th>@L["Trend:Recent:Columns:Allocation"]</th><th>@L["Trend:Recent:Columns:GcTime"]</th><th>@L["Trend:Recent:Columns:Fragmentation"]</th></tr></thead>
-                    <tbody>
-                        @foreach (var point in TrendData.DataPoints.TakeLast(20).Reverse())
-                        {
-                            <tr>
-                                <td class="diagnostic-value">@ProfilingDisplayFormatter.FormatLocalTime(point.Timestamp)</td>
-                                <td>@point.GcHeapSizeMB.ToString("F1") MB</td>
-                                <td>@ProfilingDisplayFormatter.FormatBytesPerSecond(point.AllocationRateBps)</td>
-                                <td><span class="@ProfilingSeverityColorResolver.GetGcTimeClass(point.TimeInGcPercent)">@point.TimeInGcPercent.ToString("F1")%</span></td>
-                                <td>@point.GcFragmentation.ToString("F1")%</td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
-            </div>
+            var latest = Points[^1];
+            <dl class="memory-generation-values">
+                <div><dt>@L["Common:Generation", 0]</dt><dd>@MemoryAnalysisDisplayFormatter.ReportedBytes(latest.Gen0SizeBytes)</dd></div>
+                <div><dt>@L["Common:Generation", 1]</dt><dd>@MemoryAnalysisDisplayFormatter.ReportedBytes(latest.Gen1SizeBytes)</dd></div>
+                <div><dt>@L["Common:Generation", 2]</dt><dd>@MemoryAnalysisDisplayFormatter.ReportedBytes(latest.Gen2SizeBytes)</dd></div>
+                <div><dt>@L["Gc:Generations:Names:Loh"]</dt><dd>@MemoryAnalysisDisplayFormatter.ReportedBytes(latest.LohSizeBytes)</dd></div>
+                <div><dt>@L["Gc:Generations:Names:Poh"]</dt><dd>@MemoryAnalysisDisplayFormatter.ReportedBytes(latest.PohSizeBytes)</dd></div>
+            </dl>
         }
-        else
+        else { <p class="memory-generation-empty">@L["Trend:Recent:Empty"]</p> }
+    </article>
+    <article class="memory-sample-ledger">
+        <header class="memory-history-heading"><div><span class="memory-history-eyebrow">@L["Trend:Recent:Eyebrow"]</span><h2>@L["Trend:Recent:Title"]</h2></div><p>@L["Trend:Recent:Help"]</p></header>
+        @if (Points.Count > 0)
         {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Trend:Recent:Empty"]</MudAlert>
+            <div class="memory-sample-frame"><MudSimpleTable Hover="true" Elevation="0">
+                <thead><tr><th scope="col">@L["Trend:Recent:Columns:Time"]</th><th scope="col">@L["Trend:Recent:Columns:Heap"]</th><th scope="col">@L["Trend:Recent:Columns:Allocation"]</th><th scope="col">@L["Trend:Recent:Columns:GcTime"]</th><th scope="col">@L["Trend:Recent:Columns:Fragmentation"]</th><th scope="col"><span class="memory-visually-hidden">@L["Trend:Recent:Columns:Inspect"]</span></th></tr></thead>
+                <tbody>@foreach (var point in VisiblePoints)
+                {
+                    <tr @key="point.Timestamp" data-sample-timestamp="@MemoryAnalysisDisplayFormatter.MachineTime(point.Timestamp)">
+                        <td data-label="@L["Trend:Recent:Columns:Time"]"><time datetime="@MemoryAnalysisDisplayFormatter.MachineTime(point.Timestamp)" title="@MemoryAnalysisDisplayFormatter.LocalSnapshotTime(point.Timestamp)">@RuntimeMetricsDisplayFormatter.LocalTime(point.Timestamp)</time></td>
+                        <td data-label="@L["Trend:Recent:Columns:Heap"]">@RuntimeMetricsDisplayFormatter.Megabytes(point.GcHeapSizeMB)</td>
+                        <td data-label="@L["Trend:Recent:Columns:Allocation"]">@RuntimeMetricsDisplayFormatter.ReportedAllocationRate(point.AllocationRateBps)</td>
+                        <td data-label="@L["Trend:Recent:Columns:GcTime"]">@MemoryAnalysisDisplayFormatter.Percent(point.TimeInGcPercent)</td>
+                        <td data-label="@L["Trend:Recent:Columns:Fragmentation"]">@MemoryAnalysisDisplayFormatter.Percent(point.GcFragmentation)</td>
+                        <td class="memory-sample-action"><MudIconButton Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" Color="Color.Primary" aria-label="@L["Trend:Recent:Inspect", MemoryAnalysisDisplayFormatter.MachineTime(point.Timestamp)]" OnClick="@(() => InspectAsync(point))" Disabled="@(CapturedAt is null)" /></td>
+                    </tr>
+                }</tbody>
+            </MudSimpleTable></div>
+            <footer class="memory-ledger-footer"><span>@L["Trend:Recent:Range", (_page - 1) * PageSize + 1, Math.Min(_page * PageSize, Points.Count), Points.Count]</span>
+                @if (PageCount > 1) { <MudPagination Count="PageCount" Selected="_page" SelectedChanged="ChangePage" ShowFirstButton="true" ShowLastButton="true" Size="Size.Small" Color="Color.Default" aria-label="@L["Trend:Recent:Pagination"]" /> }</footer>
         }
+        else { <div class="memory-ledger-empty">@L["Trend:Recent:Empty"]</div> }
     </article>
 </section>
 
 @code {
     [Parameter] public RuntimeMetricsTrend? TrendData { get; set; }
     [Parameter] public bool IsLoading { get; set; }
-
-    private List<ChartSeries<double>> _heapSizeSeries = [];
-    private List<ChartSeries<double>> _allocationSeries = [];
-    private string[] _timeLabels = [];
-    private readonly ChartOptions _heapChartOptions = new();
-    private readonly ChartOptions _allocationChartOptions = new();
-    private readonly ChartOptions _generationChartOptions = new();
-
-    protected override void OnParametersSet() => UpdateChartData();
-
-    private void UpdateChartData()
+    /// <summary>Gets or sets the successful view-read time associated with retained samples.</summary>
+    [Parameter] public DateTimeOffset? CapturedAt { get; set; }
+    /// <summary>Requests frozen sample inspection and completes when the native dialog closes.</summary>
+    [Parameter] public EventCallback<RuntimeSampleEvidence> OnInspect { get; set; }
+    /// <summary>Restores focus to a stable page action when the selected row is no longer mounted.</summary>
+    [Parameter] public EventCallback OnInspectTriggerRemoved { get; set; }
+    private const int PageSize = 12;
+    private int _page = 1;
+    private IReadOnlyList<RuntimeMetricsPoint> Points => TrendData?.DataPoints ?? [];
+    private int PageCount => Math.Max(1, (Points.Count + PageSize - 1) / PageSize);
+    private IEnumerable<RuntimeMetricsPoint> VisiblePoints => Points.Reverse().Skip((_page - 1) * PageSize).Take(PageSize);
+    private string WindowDuration => TrendData?.StartTime is { } start && TrendData.EndTime is { } end ? L["Trend:Seconds", (end-start).TotalSeconds] : L["Common:Unavailable"];
+    private string EmptyTitle => TrendData is null && IsLoading ? L["Common:LoadingValue"] : TrendData?.MaxHistoryPoints == 0 ? L["Trend:NoRetentionTitle"] : Points.Count == 1 ? L["Trend:SingleTitle"] : L["Trend:WaitingTitle"];
+    private string EmptyHelp => TrendData?.MaxHistoryPoints == 0 ? L["Trend:NoRetention"] : TrendData?.MaxHistoryPoints == 1 ? L["Trend:SingleRetention"] : Points.Count == 1 ? L["Trend:SingleWaiting"] : L["Trend:Waiting"];
+    protected override void OnParametersSet()
     {
-        if (TrendData?.DataPoints is not { Count: >= 2 } dataPoints)
-        {
-            _heapSizeSeries = [];
-            _allocationSeries = [];
-            _timeLabels = [];
-            return;
-        }
-
-        var step = Math.Max(1, dataPoints.Count / 50);
-        var sampledData = dataPoints.Where((_, index) => index % step == 0 || index == dataPoints.Count - 1).ToList();
-        _timeLabels = sampledData.Select(point => ProfilingDisplayFormatter.FormatLocalTime(point.Timestamp)).ToArray();
-        _heapSizeSeries = [new ChartSeries<double> { Name = L["Trend:Series:Heap"], Data = sampledData.Select(point => point.GcHeapSizeMB).ToArray() }];
-        _allocationSeries = [new ChartSeries<double> { Name = L["Trend:Series:Allocation"], Data = sampledData.Select(point => point.AllocationRateBps / 1024d / 1024d).ToArray() }];
+        _page = Math.Min(_page, PageCount);
+    }
+    private void ChangePage(int value) => _page=Math.Clamp(value,1,PageCount);
+    private static string? MachineTime(DateTime? timestamp) => timestamp is { } value ? MemoryAnalysisDisplayFormatter.MachineTime(value) : null;
+    private async Task InspectAsync(RuntimeMetricsPoint point)
+    {
+        if (CapturedAt is not { } capturedAt) return;
+        await OnInspect.InvokeAsync(new RuntimeSampleEvidence(point,capturedAt));
+        if (!VisiblePoints.Any(item=>item.Timestamp==point.Timestamp)) await OnInspectTriggerRemoved.InvokeAsync();
     }
 }

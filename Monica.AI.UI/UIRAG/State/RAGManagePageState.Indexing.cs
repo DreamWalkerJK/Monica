@@ -13,9 +13,14 @@ public sealed partial class RAGManagePageState
     /// <summary>
     /// Changes the current embedding selection and immediately updates RAG support when already enabled.
     /// </summary>
-    public async Task ChangeEmbeddingModelAsync(string modelKey)
+    public Task ChangeEmbeddingModelAsync(string modelKey)
+        => _session.RunAsync(() => ChangeEmbeddingModelAsyncCore(modelKey), selectionBound: true);
+
+    private async Task ChangeEmbeddingModelAsyncCore(string modelKey)
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null)
         {
             return;
         }
@@ -23,24 +28,30 @@ public sealed partial class RAGManagePageState
         CurrentEmbeddingModelKey = modelKey;
         NotifyStateChanged();
 
-        if (HasEmbeddingBinding(SelectedKnowledgeBase))
+        if (HasEmbeddingBinding(originKnowledgeBase))
         {
             await EnableOrUpdateRagSupportAsync();
+            _session.CheckCurrent();
         }
     }
 
     /// <summary>
     /// Enables RAG support for the selected knowledge base or switches its embedding model.
     /// </summary>
-    public async Task EnableOrUpdateRagSupportAsync()
+    public Task EnableOrUpdateRagSupportAsync()
+        => _session.RunAsync(() => EnableOrUpdateRagSupportAsyncCore(), selectionBound: true);
+
+    private async Task EnableOrUpdateRagSupportAsyncCore()
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null)
         {
             return;
         }
 
-        var selectedKnowledgeBaseId = SelectedKnowledgeBase.Id;
-        var isNewRagBinding = !HasEmbeddingBinding(SelectedKnowledgeBase);
+        var selectedKnowledgeBaseId = originKnowledgeBase.Id;
+        var isNewRagBinding = !HasEmbeddingBinding(originKnowledgeBase);
 
         if (!EmbeddingModelOption.TryParseModelKey(CurrentEmbeddingModelKey, out var providerId, out var modelName))
         {
@@ -48,22 +59,23 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        var previousModelKey = GetKnowledgeBaseModelKey(SelectedKnowledgeBase);
-        if (HasEmbeddingBinding(SelectedKnowledgeBase)
+        var previousModelKey = GetKnowledgeBaseModelKey(originKnowledgeBase);
+        if (HasEmbeddingBinding(originKnowledgeBase)
             && string.Equals(previousModelKey, CurrentEmbeddingModelKey, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        var requiresReindexWarning = HasIndexedContent(SelectedKnowledgeBase)
+        var requiresReindexWarning = HasIndexedContent(originKnowledgeBase)
             && !string.IsNullOrWhiteSpace(previousModelKey);
         if (requiresReindexWarning)
         {
-            var confirmed = await _dialogService.ShowMessageBoxAsync(
+            var confirmed = await _session.ShowMessageBoxAsync(
                 _localizer["RAG:EmbeddingModel:ReindexConfirm:Title"],
-                _localizer["RAG:EmbeddingModel:ReindexConfirm:Message", SelectedKnowledgeBase.Name],
+                _localizer["RAG:EmbeddingModel:ReindexConfirm:Message", originKnowledgeBase.Name],
                 yesText: _localizer["RAG:EmbeddingModel:ReindexConfirm:Continue"],
                 cancelText: _localizer["Common:Cancel"]);
+            _session.CheckCurrent();
 
             if (confirmed != true)
             {
@@ -85,11 +97,14 @@ public sealed partial class RAGManagePageState
                 return;
             }
 
-            if ((await _embeddingFacade.SetKnowledgeBaseEmbeddingModelAsync(
+            var bindingResult = await _embeddingFacade.SetKnowledgeBaseEmbeddingModelAsync(
                     selectedKnowledgeBaseId,
                     providerId,
                     modelName,
-                    clearIndex: true)).IsFailed(out var error))
+                    clearIndex: true);
+            _session.CheckCurrent();
+
+            if (bindingResult.IsFailed(out var error))
             {
                 CurrentEmbeddingModelKey = previousModelKey;
                 _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -98,7 +113,9 @@ public sealed partial class RAGManagePageState
             }
 
             await RefreshSelectedKnowledgeBaseAsync();
+            _session.CheckCurrent();
             await LoadDocumentQueueAsync();
+            _session.CheckCurrent();
 
             _snackbar.Add(
                 requiresReindexWarning
@@ -108,26 +125,35 @@ public sealed partial class RAGManagePageState
         }
         finally
         {
-            EndRagSupportAction(selectedKnowledgeBaseId);
+            if (_session.CanPublish)
+            {
+                EndRagSupportAction(selectedKnowledgeBaseId);
+            }
         }
     }
 
     /// <summary>
     /// Removes RAG support and clears existing RAG vector/index data for the selected knowledge base.
     /// </summary>
-    public async Task RemoveRagSupportAsync()
+    public Task RemoveRagSupportAsync()
+        => _session.RunAsync(() => RemoveRagSupportAsyncCore(), selectionBound: true);
+
+    private async Task RemoveRagSupportAsyncCore()
     {
-        if (SelectedKnowledgeBase is null || !HasEmbeddingBinding(SelectedKnowledgeBase))
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null || !HasEmbeddingBinding(originKnowledgeBase))
         {
             return;
         }
 
-        var selectedKnowledgeBaseId = SelectedKnowledgeBase.Id;
-        var confirmed = await _dialogService.ShowMessageBoxAsync(
+        var selectedKnowledgeBaseId = originKnowledgeBase.Id;
+        var confirmed = await _session.ShowMessageBoxAsync(
             _localizer["RAG:RagSupport:RemoveConfirm:Title"],
-            _localizer["RAG:RagSupport:RemoveConfirm:Message", SelectedKnowledgeBase.Name],
+            _localizer["RAG:RagSupport:RemoveConfirm:Message", originKnowledgeBase.Name],
             yesText: _localizer["RAG:RagSupport:RemoveConfirm:Confirm"],
             cancelText: _localizer["Common:Cancel"]);
+        _session.CheckCurrent();
 
         if (confirmed != true)
         {
@@ -142,12 +168,14 @@ public sealed partial class RAGManagePageState
         try
         {
             var result = await _vectorStoreFacade.RemoveSupportAsync(selectedKnowledgeBaseId);
+            _session.CheckCurrent();
             if (result.IsFailed(out var error, out var removal))
             {
                 if (CanForceRemoveRagSupport(error)
                     && await ConfirmForceRemoveRagSupportAsync())
                 {
                     await ForceRemoveRagSupportAsync(selectedKnowledgeBaseId);
+                    _session.CheckCurrent();
                     return;
                 }
 
@@ -156,39 +184,62 @@ public sealed partial class RAGManagePageState
             }
 
             await CompleteRagSupportRemovalAsync(removal);
+            _session.CheckCurrent();
         }
         finally
         {
-            EndRagSupportAction(selectedKnowledgeBaseId);
+            if (_session.CanPublish)
+            {
+                EndRagSupportAction(selectedKnowledgeBaseId);
+            }
         }
     }
 
     /// <summary>
     /// Opens the embedding model diagnostics dialog.
     /// </summary>
-    public async Task ShowEmbeddingDiagnosticsDialogAsync()
+    public Task ShowEmbeddingDiagnosticsDialogAsync()
+        => _session.RunAsync(() => ShowEmbeddingDiagnosticsDialogAsyncCore(), selectionBound: false);
+
+    private async Task ShowEmbeddingDiagnosticsDialogAsyncCore()
     {
-        await _dialogService.ShowAsync<EmbeddingDiagnosticsDialog>(
+        _session.CheckCurrent();
+        await _session.ShowAsync<EmbeddingDiagnosticsDialog>(
             _localizer["RAG:EmbeddingDiagnostics:Title"],
+            new DialogParameters(),
             new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Opens the vector-store diagnostics dialog.
     /// </summary>
-    public async Task ShowVectorStoreDiagnosticsDialogAsync()
+    public Task ShowVectorStoreDiagnosticsDialogAsync()
+        => _session.RunAsync(() => ShowVectorStoreDiagnosticsDialogAsyncCore(), selectionBound: false);
+
+    private async Task ShowVectorStoreDiagnosticsDialogAsyncCore()
     {
-        await _dialogService.ShowAsync<VectorStoreDiagnosticsDialog>(
+        _session.CheckCurrent();
+        await _session.ShowAsync<VectorStoreDiagnosticsDialog>(
             _localizer["RAG:VectorDiagnostics:Title"],
+            new DialogParameters(),
             new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Start batch indexing for selected pending or failed queue rows.
     /// </summary>
-    public async Task StartBatchIndexingAsync()
+    /// <remarks>The process-owned batch continues after this visit retires. Retirement drains its receipt;
+    /// only the explicit cancel action requests cancellation of the active batch.</remarks>
+    public Task StartBatchIndexingAsync()
+        => _session.RunAsync(() => StartBatchIndexingAsyncCore(), selectionBound: true);
+
+    private async Task StartBatchIndexingAsyncCore()
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null)
         {
             return;
         }
@@ -198,14 +249,17 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        var selectedKnowledgeBaseId = SelectedKnowledgeBase.Id;
+        var selectedKnowledgeBaseId = originKnowledgeBase.Id;
+        var originQueue = DocumentQueue.ToArray();
+        var originSelectedIds = SelectedDocumentIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var originParallelCount = ParallelCount;
         if (!await EnsureVectorCollectionReusableAsync(selectedKnowledgeBaseId))
         {
             return;
         }
 
-        var selectedDocuments = DocumentQueue
-            .Where(document => SelectedDocumentIds.Contains(document.Id)
+        var selectedDocuments = originQueue
+            .Where(document => originSelectedIds.Contains(document.Id)
                                && document.Status is DocumentStatus.Pending or DocumentStatus.Error)
             .ToList();
         if (selectedDocuments.Count == 0)
@@ -218,14 +272,19 @@ public sealed partial class RAGManagePageState
         EnsureQueuePolling();
         NotifyStateChanged();
 
-        var progress = new Progress<IndexingProgress>(OnBatchIndexingProgress);
+        var generation = _session.Generation;
+        var progress = new Progress<IndexingProgress>(_ => OnBatchIndexingProgress(selectedKnowledgeBaseId, generation));
         try
         {
+            _session.CheckCurrent();
+            // Admission/preflight belongs to the visit; the durable run belongs to the process.
             var result = await _indexingFacade.StartBatchAsync(
                 selectedKnowledgeBaseId,
                 selectedDocuments.Select(static document => document.Id),
-                ParallelCount,
-                progress);
+                originParallelCount,
+                progress,
+                ct: CancellationToken.None);
+            _session.CheckCurrent();
 
             if (result.IsFailed(out var error))
             {
@@ -236,10 +295,11 @@ public sealed partial class RAGManagePageState
                 else
                 {
                     _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
-                    await _dialogService.ShowMessageBoxAsync(
+                    await _session.ShowMessageBoxAsync(
                         _localizer["Common:Error"],
                         error.Message ?? _localizer["Common:Error"].Value,
                         yesText: _localizer["Common:Close"]);
+                    _session.CheckCurrent();
                 }
             }
             else
@@ -249,37 +309,46 @@ public sealed partial class RAGManagePageState
         }
         finally
         {
-            if (string.Equals(
-                    _batchStartInFlightKnowledgeBaseId,
-                    selectedKnowledgeBaseId,
-                    StringComparison.OrdinalIgnoreCase))
+            if (_session.CanPublish)
             {
-                _batchStartInFlightKnowledgeBaseId = null;
-            }
+                if (string.Equals(
+                        _batchStartInFlightKnowledgeBaseId,
+                        selectedKnowledgeBaseId,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    _batchStartInFlightKnowledgeBaseId = null;
+                }
 
-            await RefreshSelectedKnowledgeBaseAsync();
-            await LoadDocumentQueueAsync(ensurePolling: false);
-            EnsureQueuePolling();
-            NotifyStateChanged();
+                await RefreshSelectedKnowledgeBaseAsync();
+                _session.CheckCurrent();
+                await LoadDocumentQueueAsync(ensurePolling: false);
+                _session.CheckCurrent();
+                EnsureQueuePolling();
+                NotifyStateChanged();
+            }
         }
     }
 
     /// <summary>
     /// Start indexing for one queue row.
     /// </summary>
-    public async Task StartDocumentIndexingAsync(DocumentQueueItem document)
+    /// <remarks>After admission, indexing continues independently of route retirement. The visit still
+    /// drains the actual operation and suppresses late progress, refreshes, and notifications.</remarks>
+    public Task StartDocumentIndexingAsync(DocumentQueueItem document)
+        => _session.RunAsync(() => StartDocumentIndexingAsyncCore(document), selectionBound: true);
+
+    private async Task StartDocumentIndexingAsyncCore(DocumentQueueItem document)
     {
-        if (SelectedKnowledgeBase is null)
-        {
-            return;
-        }
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null || !string.Equals(originKnowledgeBase.Id, document.KnowledgeBaseId, StringComparison.OrdinalIgnoreCase)) return;
 
         if (!EnsureEmbeddingModelConfiguredForIndexing())
         {
             return;
         }
 
-        var selectedKnowledgeBaseId = SelectedKnowledgeBase.Id;
+        var selectedKnowledgeBaseId = originKnowledgeBase.Id;
         if (!await EnsureVectorCollectionReusableAsync(selectedKnowledgeBaseId))
         {
             return;
@@ -292,11 +361,15 @@ public sealed partial class RAGManagePageState
 
         try
         {
-            var progress = new Progress<IndexingProgress>(OnBatchIndexingProgress);
+            var generation = _session.Generation;
+            var progress = new Progress<IndexingProgress>(_ => OnBatchIndexingProgress(selectedKnowledgeBaseId, generation));
+            _session.CheckCurrent();
             var result = await _indexingFacade.IndexDocumentAsync(
                 selectedKnowledgeBaseId,
                 document.Id,
-                progress);
+                progress,
+                ct: CancellationToken.None);
+            _session.CheckCurrent();
             if (result.IsFailed(out var error))
             {
                 _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -307,25 +380,36 @@ public sealed partial class RAGManagePageState
         }
         finally
         {
-            ClearSingleIndexInFlight();
-            await RefreshSelectedKnowledgeBaseAsync();
-            await LoadDocumentQueueAsync(ensurePolling: false);
-            EnsureQueuePolling();
-            NotifyStateChanged();
+            if (_session.CanPublish)
+            {
+                ClearSingleIndexInFlight();
+                await RefreshSelectedKnowledgeBaseAsync();
+                _session.CheckCurrent();
+                await LoadDocumentQueueAsync(ensurePolling: false);
+                _session.CheckCurrent();
+                EnsureQueuePolling();
+                NotifyStateChanged();
+            }
         }
     }
 
     /// <summary>
     /// Cancel batch indexing for the current knowledge base.
     /// </summary>
-    public async Task CancelBatchIndexingAsync()
+    public Task CancelBatchIndexingAsync()
+        => _session.RunAsync(() => CancelBatchIndexingAsyncCore(), selectionBound: true);
+
+    private async Task CancelBatchIndexingAsyncCore()
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null)
         {
             return;
         }
 
-        var cancelResult = await _indexingFacade.CancelBatchAsync(SelectedKnowledgeBase.Id);
+        var cancelResult = await _indexingFacade.CancelBatchAsync(originKnowledgeBase.Id);
+        _session.CheckCurrent();
         if (cancelResult.IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -336,32 +420,41 @@ public sealed partial class RAGManagePageState
         EnsureQueuePolling();
         _snackbar.Add(cancelResult.Message ?? _localizer["Error:RequestCancelled"].Value, Severity.Warning);
         await LoadDocumentQueueAsync();
+        _session.CheckCurrent();
         await RefreshSelectedKnowledgeBaseAsync();
+        _session.CheckCurrent();
         NotifyStateChanged();
     }
 
     /// <summary>
     /// Clear pending and failed queue rows for the current selection.
     /// </summary>
-    public async Task ClearDocumentQueueAsync()
+    public Task ClearDocumentQueueAsync()
+        => _session.RunAsync(() => ClearDocumentQueueAsyncCore(), selectionBound: true);
+
+    private async Task ClearDocumentQueueAsyncCore()
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null)
         {
             return;
         }
 
-        var confirmed = await _dialogService.ShowMessageBoxAsync(
+        var confirmed = await _session.ShowMessageBoxAsync(
             _localizer["Common:Confirm"],
-            _localizer["RAG:DocumentQueue:ClearQueueConfirm", SelectedKnowledgeBase.Name],
+            _localizer["RAG:DocumentQueue:ClearQueueConfirm", originKnowledgeBase.Name],
             yesText: _localizer["RAG:DocumentQueue:Actions:ClearQueue"],
             cancelText: _localizer["Common:Cancel"]);
+        _session.CheckCurrent();
 
         if (confirmed != true)
         {
             return;
         }
 
-        var result = await _indexingFacade.ClearPendingQueueAsync(SelectedKnowledgeBase.Id);
+        var result = await _indexingFacade.ClearPendingQueueAsync(originKnowledgeBase.Id);
+        _session.CheckCurrent();
         if (result.IsFailed(out var error, out var removedCount))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -370,20 +463,28 @@ public sealed partial class RAGManagePageState
 
         _snackbar.Add(_localizer["RAG:DocumentQueue:Messages:QueueCleared", removedCount], Severity.Success);
         await RefreshSelectedKnowledgeBaseAsync();
+        _session.CheckCurrent();
         await LoadDocumentQueueAsync();
+        _session.CheckCurrent();
     }
 
     /// <summary>
     /// Queue all indexed documents in the selected knowledge base for reindexing.
     /// </summary>
-    public async Task ReindexSelectedKnowledgeBaseAsync()
+    public Task ReindexSelectedKnowledgeBaseAsync()
+        => _session.RunAsync(() => ReindexSelectedKnowledgeBaseAsyncCore(), selectionBound: true);
+
+    private async Task ReindexSelectedKnowledgeBaseAsyncCore()
     {
-        if (SelectedKnowledgeBase is null)
+        _session.CheckCurrent();
+        var originKnowledgeBase = SelectedKnowledgeBase;
+        if (originKnowledgeBase is null)
         {
             return;
         }
 
-        var result = await _indexingFacade.QueueKnowledgeBaseForReindexAsync(SelectedKnowledgeBase.Id);
+        var result = await _indexingFacade.QueueKnowledgeBaseForReindexAsync(originKnowledgeBase.Id);
+        _session.CheckCurrent();
         if (result.IsFailed(out var error, out var queuedCount))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -392,7 +493,9 @@ public sealed partial class RAGManagePageState
 
         _snackbar.Add(_localizer["RAG:VectorValidation:Messages:ReindexQueued", queuedCount], Severity.Success);
         await RefreshSelectedKnowledgeBaseAsync();
+        _session.CheckCurrent();
         await LoadDocumentQueueAsync();
+        _session.CheckCurrent();
     }
 
     private bool HasIndexedContent(KnowledgeBaseModel knowledgeBase)
@@ -407,6 +510,7 @@ public sealed partial class RAGManagePageState
 
     private async Task<bool> EnsureVectorCollectionReusableAsync(string knowledgeBaseId)
     {
+        _session.CheckCurrent();
         var knowledgeBase = SelectedKnowledgeBase;
         if (knowledgeBase is null)
         {
@@ -419,6 +523,7 @@ public sealed partial class RAGManagePageState
         }
 
         var statusResult = await _vectorStoreFacade.GetCollectionStatusAsync(knowledgeBaseId);
+        _session.CheckCurrent();
         if (statusResult.IsFailed(out var statusError, out var status))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {statusError.Message}", Severity.Error);
@@ -436,11 +541,12 @@ public sealed partial class RAGManagePageState
             return true;
         }
 
-        var confirmed = await _dialogService.ShowMessageBoxAsync(
+        var confirmed = await _session.ShowMessageBoxAsync(
             _localizer["RAG:VectorCollection:OverwriteConfirm:Title"],
             _localizer["RAG:VectorCollection:OverwriteConfirm:Message", status.CollectionName],
             yesText: _localizer["RAG:VectorCollection:OverwriteConfirm:Confirm"],
             cancelText: _localizer["Common:Cancel"]);
+        _session.CheckCurrent();
 
         if (confirmed != true)
         {
@@ -448,6 +554,7 @@ public sealed partial class RAGManagePageState
         }
 
         var overwriteResult = await _vectorStoreFacade.OverwriteCollectionAsync(knowledgeBaseId);
+        _session.CheckCurrent();
         if (overwriteResult.IsFailed(out var overwriteError, out var overwrite))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {overwriteError.Message}", Severity.Error);
@@ -463,26 +570,32 @@ public sealed partial class RAGManagePageState
                 overwrite.ClearedChunkCount],
             Severity.Warning);
         await RefreshSelectedKnowledgeBaseAsync();
+        _session.CheckCurrent();
         await LoadDocumentQueueAsync();
+        _session.CheckCurrent();
         return true;
     }
 
     private async Task<bool> ConfirmForceRemoveRagSupportAsync()
     {
-        var confirmed = await _dialogService.ShowMessageBoxAsync(
+        _session.CheckCurrent();
+        var confirmed = await _session.ShowMessageBoxAsync(
             _localizer["RAG:RagSupport:ForceRemoveConfirm:Title"],
             _localizer["RAG:RagSupport:ForceRemoveConfirm:Message"],
             yesText: _localizer["RAG:RagSupport:ForceRemoveConfirm:Confirm"],
             cancelText: _localizer["Common:Cancel"]);
+        _session.CheckCurrent();
 
         return confirmed == true;
     }
 
     private async Task ForceRemoveRagSupportAsync(string knowledgeBaseId)
     {
+        _session.CheckCurrent();
         var forcedResult = await _vectorStoreFacade.RemoveSupportAsync(
             knowledgeBaseId,
             forceLocalMetadataRemoval: true);
+        _session.CheckCurrent();
         if (forcedResult.IsFailed(out var forceError, out var forcedRemoval))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {forceError.Message}", Severity.Error);
@@ -490,10 +603,12 @@ public sealed partial class RAGManagePageState
         }
 
         await CompleteRagSupportRemovalAsync(forcedRemoval);
+        _session.CheckCurrent();
     }
 
     private async Task CompleteRagSupportRemovalAsync(KnowledgeBaseRagSupportRemovalResult removal)
     {
+        _session.CheckCurrent();
         CurrentEmbeddingModelKey = string.Empty;
         SelectedKnowledgeBaseVectorValidation = null;
         _snackbar.Add(
@@ -506,7 +621,9 @@ public sealed partial class RAGManagePageState
             removal.WasForced ? Severity.Warning : Severity.Success);
 
         await RefreshSelectedKnowledgeBaseAsync();
+        _session.CheckCurrent();
         await LoadDocumentQueueAsync();
+        _session.CheckCurrent();
     }
 
     private static bool CanForceRemoveRagSupport(Res error)

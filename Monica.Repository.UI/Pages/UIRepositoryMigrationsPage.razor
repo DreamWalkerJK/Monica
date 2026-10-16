@@ -1,0 +1,13 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.Repository.UI.UIRepository.Components
+@inject IStringLocalizer<RepositoryUIResource> L
+
+<PageTitle>@L["Workbench:Views:Migrations:Title"]</PageTitle>
+<RepositoryWorkbench View="Migrations" ContextId="@ContextId" />
+
+@code {
+    public const string PAGE_URL = "/repository-dashboard/migrations";
+
+    [SupplyParameterFromQuery(Name = "context")]
+    public string? ContextId { get; set; }
+}

@@ -5,6 +5,25 @@ description: Register and use Monica Blazor UI modules, the shell, Markdown view
 
 # Monica UI hosting
 
-Read [references/usage.md](references/usage.md) for the shell, feature UI registrations, document groups, and access behavior. Add UI modules inside `AddMonica(...)`; complete the Web app with `UseMonica()` and `MapMonica()` so static assets, antiforgery, Razor components, and module endpoints are mapped.
+The shell hosts pages; feature UI modules add operational views, while Markdown provides searchable document groups.
 
-For creating or editing Razor components and styles, use `$monica-ui-development`; for localized strings and resource validation, use `$monica-ui-localization`; for page structure, use `$monica-architecture`. `$monica-infra-ai` covers AI service configuration behind AI pages.
+| Task | Read |
+| --- | --- |
+| Compose the shell, add feature pages, configure navigation, or authorize operational pages | [Shell and access](references/shell-and-access.md) |
+| Inspect host identity, process evidence, startup timing, or configured operational links | [System information](references/system-information.md) |
+| Inspect registered DbContexts, provider sessions, or migration outcomes | [Repository diagnostics](../monica-infra-persistence/references/repository-diagnostics.md) |
+| Publish searchable documents, use the viewer, or serve local images | [Markdown](references/markdown.md) |
+| Probe connectivity from a host or transform escaped text and JSON | [Utilities workspaces](references/utilities.md) |
+| Inspect registered object-mapping pairs and generated expressions | [Mapper workspace](references/mapper.md) |
+| Inspect or maintain configured Git working copies and credential resolver metadata | [Git workspace](references/git-workspace.md) |
+| Browse bounded host files, edit text, transfer files, or configure FileOps runtime policy | [FileOps workspace](references/fileops-workspace.md) |
+| Execute host-local commands and inspect session, output, history and cancellation evidence | [Terminal workspace](references/terminal-workspace.md) |
+| Inspect Kubernetes resources, execute Service-backed operations, or publish the host's NodePort addresses | [K8S operations](references/k8s-workspace.md) |
+| Compare text or embed a Diff viewer with source-faithful line evidence | [Text comparison](references/diff.md) |
+| Read and copy captured exception or diagnostic text inside an existing UI | [Embedded diagnostic text](references/stack-trace.md) |
+| Theme the standalone Swagger reference or add application destinations to its toolbar | [Swagger workbench](references/swagger-ui.md) |
+| Set theme/language defaults or integrate custom page localization | [Theme and localization](references/theme-and-localization.md) |
+
+For building components, use `$monica-ui-development`; for authoring translation resources, use `$monica-ui-localization`; configure each feature's underlying service through its owning infrastructure skill.
+
+If a routed authoring skill is unavailable, use `$monica-guide` to resolve the verified Monica checkout (`source resolve --repository monica --json`) and read its canonical `skills/<name>/SKILL.md`.

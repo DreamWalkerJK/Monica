@@ -48,10 +48,11 @@ public class ModuleRuntimeMetricsUI : MonicaModule<ModuleRuntimeMetricsUIOption>
                 registry.RegisterLocalizedPage<UIRuntimeMetricsPage, RuntimeMetricsResource>(
                     UIRuntimeMetricsPage.PAGE_URL,
                     "Pages:RuntimeMetrics:Title",
-                    Icons.Material.Filled.Speed,
+                    Icons.Material.Outlined.Speed,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
-                    navOrder: 10)));
+                    navOrder: 10,
+                    descriptionKey: "Pages:RuntimeMetrics:Description")));
     }
 
     /// <inheritdoc />
@@ -68,7 +69,8 @@ public class ModuleRuntimeMetricsUIOption : ModuleOptions<ModuleRuntimeMetricsUI
 {
     /// <summary>
     /// Controls the automatic refresh interval of the runtime metrics page in milliseconds.
-    /// Set this to 0 to disable timer-based refresh and require manual refresh only.
+    /// Defaults to 2,000 milliseconds. Non-positive values disable view polling and require manual refresh.
+    /// This option does not stop or change the host-owned runtime collector's sampling interval.
     /// </summary>
     public int AutoRefreshIntervalMs { get; set; } = 2000;
 }

@@ -1,820 +1,673 @@
+@using System.Globalization
 @using System.Net
 @using System.Text
+@using Microsoft.Extensions.Logging
 @using Monica.Framework.UI.UILogging.Models
+@using Monica.Framework.UI.UILogging.Support
 @using Monica.UI.Shared.Components.ContextMenu
-
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<LoggingResource> L
-
+@inject IJSRuntime JsRuntime
+@inject ILogger<LogViewer> Logger
 @implements IAsyncDisposable
 
-<div class="log-viewer-wrapper">
-    <div class="log-viewer-header">
-        <MudText Typo="Typo.subtitle1">@L["Page:Components:Viewer:Title"]</MudText>
-        <MudChipSet T="string">
-            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">@L["Page:Components:Viewer:LineCount", _linesCount]</MudChip>
-            @if (Filter?.IsActive == true)
-            {
-                <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small">@L["Page:Components:Viewer:ActiveFilter", Filter.Keyword ?? string.Empty]</MudChip>
-            }
-        </MudChipSet>
-    </div>
-
-    @* Load More Indicator *@
+<section class="log-viewer-wrapper" aria-label="@L["Workbench:Viewer:Heading"]" data-source-generation="@Source?.Generation" data-position-revision="@_positionRevision.ToString(CultureInfo.InvariantCulture)">
+    <header class="log-viewer-header">
+        <div class="log-viewer-heading"><h2>@L["Workbench:Viewer:Heading"]</h2><span>@L["Workbench:Viewer:Scope", PageStartDisplay, PageEnd, CurrentLines.Count]</span></div>
+        <div class="log-viewer-commands">
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.KeyboardArrowUp" OnClick="LoadEarlierAsync" Disabled="@(!CanLoadEarlier || _isLoadingMore)">@L["Workbench:Viewer:Earlier"]</MudButton>
+            <MudButton @ref="_newestButton" Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.KeyboardArrowDown" OnClick="GoToNewestAsync">@L["Workbench:Viewer:Newest"]</MudButton>
+        </div>
+    </header>
     @if (_isLoadingMore)
     {
-        <div class="load-more-indicator">
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center" Class="mt-1">
-                @L["Page:Components:Viewer:LoadingMore"]
-            </MudText>
-        </div>
+        <div class="load-more-indicator" role="status"><MudProgressLinear Color="Color.Primary" Indeterminate="true" /><span>@L["Page:Components:Viewer:LoadingMore"]</span></div>
     }
-
-    @* Match Navigation Bar - Only shown when filter is active and OnlyCapture is false *@
-    @if (Filter?.IsActive == true && !Filter.OnlyCapture && _totalMatches > 0)
+    @if (HasKeyword && _matchedLineIndices.Count > 0)
     {
-        <div class="match-navigation-bar">
-            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="mr-1" />
-                        @L["Page:Components:Viewer:MatchPosition", _currentMatchIndex + 1, _totalMatches]
-                    </MudText>
-                </MudStack>
-                <MudStack Row="true" Spacing="1">
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward"
-                                   Size="Size.Small"
-                                   Color="Color.Primary"
-                                   Variant="Variant.Filled"
-                                   OnClick="GoToPreviousMatch"
-                                   Disabled="@(_totalMatches == 0)"
-                                   title="@L["Page:Components:Viewer:PreviousMatch"]"
-                                   aria-label="@L["Page:Components:Viewer:PreviousMatch"]" />
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward"
-                                   Size="Size.Small"
-                                   Color="Color.Primary"
-                                   Variant="Variant.Filled"
-                                   OnClick="GoToNextMatch"
-                                   Disabled="@(_totalMatches == 0)"
-                                   title="@L["Page:Components:Viewer:NextMatch"]"
-                                   aria-label="@L["Page:Components:Viewer:NextMatch"]" />
-                </MudStack>
-            </MudStack>
+        <div class="match-navigation-bar"><span>@L["Workbench:Viewer:Match", _currentMatchIndex + 1, _matchedLineIndices.Count]</span>
+            <div class="match-navigation-actions">
+                <MudIconButton Icon="@Icons.Material.Outlined.KeyboardArrowUp" Size="Size.Small" OnClick="GoToPreviousMatchAsync" title="@L["Workbench:Viewer:PreviousMatch"]" aria-label="@L["Workbench:Viewer:PreviousMatch"]" />
+                <MudIconButton Icon="@Icons.Material.Outlined.KeyboardArrowDown" Size="Size.Small" OnClick="GoToNextMatchAsync" title="@L["Workbench:Viewer:NextMatch"]" aria-label="@L["Workbench:Viewer:NextMatch"]" />
+            </div>
         </div>
     }
-
-    <div class="log-viewer-scroll" @ref="_scrollContainer">
+    <div class="log-ledger-head" aria-hidden="true"><span>@L["Workbench:Viewer:Line"]</span><span>@L["Workbench:Viewer:Message"]</span><span></span></div>
+    <div class="log-viewer-scroll" @ref="_scrollContainer" @onscroll="OnNativeScrollAsync">
         @if (CurrentLines.Count == 0)
         {
-            <MudAlert Severity="Severity.Info" Dense="true">@L["Page:Components:Viewer:Empty"]</MudAlert>
+            <div class="log-viewer-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.Subject" /><p>@L[Filter?.IsActive == true ? "Workbench:Viewer:FilterEmpty" : "Workbench:Viewer:Empty"]</p></div>
         }
         else
         {
-            @for (var i = 0; i < CurrentLines.Count; i++)
+            @for (var i = PageStart; i < PageEnd; i++)
             {
                 var line = CurrentLines[i];
-                var lineIndex = i;
-                var isCurrentMatch = line.IsMatch && _matchedLineIndices.Count > 0 &&
-                                     _currentMatchIndex >= 0 && _currentMatchIndex < _matchedLineIndices.Count &&
-                                     _matchedLineIndices[_currentMatchIndex] == lineIndex;
-
-                <div @key="line.AbsoluteLineNumber ?? lineIndex"
-                     class="log-entry @GetSeverityClass(line.Severity) @(line.IsContextTarget ? "context-target" : "") @(isCurrentMatch ? "current-match" : "") @(_selectedLineIndex == lineIndex ? "selected" : "")"
-                     data-line-index="@lineIndex"
-                     data-absolute-line-number="@line.AbsoluteLineNumber"
-                     tabindex="0"
-                     @onclick="() => HandleEntryClick(line, lineIndex)"
-                     @oncontextmenu="e => OnContextMenu(e, line)"
-                     @oncontextmenu:preventDefault="true">
-                    <span class="log-entry__header">@line.Header</span>
-                    <span class="log-entry__message">
-                        @((MarkupString)BuildMessageMarkup(line))
-                    </span>
-                    @if (_selectedLineIndex == lineIndex && line.AbsoluteLineNumber.HasValue)
-                    {
-                        <span class="log-entry__line-badge">#@line.AbsoluteLineNumber.Value</span>
-                    }
-                </div>
+                var reference = new ViewerLineReference(line, i, Source, SnapshotReadAt);
+                var isCurrentMatch = _matchedLineIndices.Count > 0 && _currentMatchIndex < _matchedLineIndices.Count && _matchedLineIndices[_currentMatchIndex] == i;
+                <article @key="(Source, line.AbsoluteLineNumber ?? i)" class="log-entry @GetSeverityClass(line.Severity) @(line.IsContextTarget ? "context-target" : "") @(isCurrentMatch ? "current-match" : "") @(_selectedLineIndex == i ? "selected" : "")" data-line-index="@i" data-absolute-line-number="@line.AbsoluteLineNumber" @oncontextmenu="e => OpenContextMenuAsync(e, reference)" @oncontextmenu:preventDefault="true">
+                    <span class="log-entry__number">@(line.AbsoluteLineNumber?.ToString(CultureInfo.InvariantCulture) ?? "—")</span>
+                    <div class="log-entry__evidence">
+                        <div class="log-entry__metadata"><span class="log-entry__level">@(string.IsNullOrEmpty(line.LevelText) ? L["Workbench:Viewer:Unknown"].Value : line.LevelText)</span>@if (!string.IsNullOrEmpty(line.Header)) { <span class="log-entry__header">@((MarkupString)BuildHeaderMarkup(line.Header))</span> }</div>
+                        <div class="log-entry__message">@((MarkupString)BuildMessageMarkup(line))</div>
+                    </div>
+                    <div class="log-entry__actions">
+                        <MudIconButton Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" OnClick="@(() => InspectAsync(reference))" title="@InspectLabel(line)" aria-label="@InspectLabel(line)" />
+                        <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Size="Size.Small" AriaLabel="@L["Workbench:Viewer:Actions"]" Dense="true" DropShadow="false">
+                            <MudMenuItem Icon="@Icons.Material.Outlined.Article" OnClick="@(() => ShowContextAsync(reference))" Disabled="@(!OnShowContext.HasDelegate || !line.AbsoluteLineNumber.HasValue)">@L["Page:Components:Viewer:ContextMenu:ShowContext"]</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.FilterAlt" OnClick="@(() => FilterSeverityAsync(reference))" Disabled="@(!OnFilterSeverity.HasDelegate)">@L["Page:Components:Viewer:ContextMenu:FilterSeverity"]</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.Search" OnClick="@(() => FindSelectionAsync(reference))" Disabled="@(!OnApplyFilter.HasDelegate)">@L["Page:Components:Viewer:ContextMenu:FindSelection"]</MudMenuItem>
+                            <MudMenu Label="@L["Page:Components:Viewer:ContextMenu:Copy"]" AriaLabel="@L["Page:Components:Viewer:ContextMenu:Copy"]" StartIcon="@Icons.Material.Outlined.ContentCopy" Dense="true" DropShadow="false">
+                                <MudMenuItem OnClick="@(() => CopyLineAsync(reference, LogCopyFormat.Raw))">@L["Page:Components:Viewer:ContextMenu:CopyRaw"]</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => CopyLineAsync(reference, LogCopyFormat.MessageOnly))">@L["Page:Components:Viewer:ContextMenu:CopyMessage"]</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => CopyLineAsync(reference, LogCopyFormat.WithTimestamp))">@L["Page:Components:Viewer:ContextMenu:CopyTimestamp"]</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => CopyLineAsync(reference, LogCopyFormat.WithLineNumber))">@L["Page:Components:Viewer:ContextMenu:CopyLineNumber"]</MudMenuItem>
+                            </MudMenu>
+                        </MudMenu>
+                    </div>
+                </article>
             }
         }
     </div>
-</div>
-
-@* Context Menu *@
-<MoContextMenu TItem="LogLineViewModel"
-               Items="@_contextMenuItems"
-               Visible="@_contextMenuVisible"
-               InitialX="@_contextMenuX"
-               InitialY="@_contextMenuY"
-               ContextItem="@_selectedLine"
-               OnItemClick="@OnContextMenuItemClickWrapper"
-               OnClose="@CloseContextMenu" />
+    <footer class="log-viewer-footer"><span>@L["Workbench:Viewer:Page", _page + 1, PageCount]@if (_browsingEarlier) { <span class="log-viewer-browse-hint"> · @L["Workbench:Viewer:BrowseHint"]</span> }</span>
+        <div class="log-viewer-pager">
+            <MudIconButton Icon="@Icons.Material.Outlined.ChevronLeft" Size="Size.Small" OnClick="PreviousPageAsync" Disabled="@(_page == 0)" title="@L["Workbench:Viewer:PreviousPage"]" aria-label="@L["Workbench:Viewer:PreviousPage"]" />
+            <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" OnClick="NextPageAsync" Disabled="@(_page >= PageCount - 1)" title="@L["Workbench:Viewer:NextPage"]" aria-label="@L["Workbench:Viewer:NextPage"]" />
+        </div>
+    </footer>
+</section>
+<MoContextMenu TItem="ViewerLineReference" Items="@_contextMenuItems" Visible="@_contextMenuVisible" InitialX="@_contextMenuX" InitialY="@_contextMenuY" ContextItem="@_contextReference" OpeningRevision="@_contextMenuOpeningRevision" OnClose="CloseContextMenu" />
 
 @code {
-    [Inject]
-    private IJSRuntime JsRuntime { get; set; } = default!;
+    /// <summary>Gets or sets all visible physical lines. Pagination retains access to every supplied line.</summary>
+    [Parameter] public IReadOnlyList<LogLineViewModel>? Lines { get; set; }
+    /// <summary>Gets or sets the source view revision used to reconcile row navigation.</summary>
+    [Parameter] public long Version { get; set; }
+    /// <summary>Gets or sets whether new rows follow the newest page unless the reader deliberately browses earlier pages.</summary>
+    [Parameter] public bool AutoScroll { get; set; }
+    [Parameter] public LogFilterState? Filter { get; set; }
+    [Parameter] public EventCallback<LogLineViewModel> OnLineClicked { get; set; }
+    [Parameter] public EventCallback<(LogLineViewModel line, int lineIndex)> OnShowContext { get; set; }
+    [Parameter] public EventCallback<(LogLineViewModel line, string keyword)> OnApplyFilter { get; set; }
+    [Parameter] public Func<int, Task<int>>? LoadMoreRequested { get; set; }
+    /// <summary>Gets or sets the observed source generation belonging to the supplied lines.</summary>
+    [Parameter] public LogSourceIdentity? Source { get; set; }
+    /// <summary>Gets or sets the successful read time of the supplied evidence; this is not a source timestamp.</summary>
+    [Parameter] public DateTimeOffset? SnapshotReadAt { get; set; }
+    /// <summary>Requests an exact severity filter independently of keyword matching.</summary>
+    [Parameter] public EventCallback<LogSeverity> OnFilterSeverity { get; set; }
+    /// <summary>Gets or sets the first retained physical line, allowing history reads even when a filter displays no rows.</summary>
+    [Parameter] public long? FirstRetainedLineNumber { get; set; }
+    /// <summary>Reports source-qualified positions after native scrolling, navigation, and selection; no callbacks are admitted after retirement.</summary>
+    [Parameter] public EventCallback<LogViewerPosition> PositionChanged { get; set; }
 
-    [Parameter]
-    public IReadOnlyList<LogLineViewModel>? Lines { get; set; }
-
-    [Parameter]
-    public long Version { get; set; }
-
-    [Parameter]
-    public bool AutoScroll { get; set; }
-
-    [Parameter]
-    public LogFilterState? Filter { get; set; }
-
-    [Parameter]
-    public EventCallback<LogLineViewModel> OnLineClicked { get; set; }
-
-    [Parameter]
-    public EventCallback<(LogLineViewModel line, int lineIndex)> OnShowContext { get; set; }
-
-    [Parameter]
-    public EventCallback<(LogLineViewModel line, string keyword)> OnApplyFilter { get; set; }
-
-    [Parameter]
-    public Func<int, Task<int>>? LoadMoreRequested { get; set; }
-
-    private const string JS_MODULE_PATH = "./_content/Monica.Framework.UI/js/logging-ui.js";
+    private const int RowsPerPage = 100;
+    private const string JsModulePath = "./_content/Monica.Framework.UI/js/logging-ui.js";
+    private readonly object _ownershipLock = new();
     private readonly SemaphoreSlim _interopGate = new(1, 1);
-    private readonly object _disposeSync = new();
+    private readonly HashSet<Task> _operations = [];
+    private readonly List<int> _matchedLineIndices = [];
     private ElementReference _scrollContainer;
-    private bool _isRendered;
-    private long _lastVersion;
-    private int _linesCount;
+    private MudButton? _newestButton;
     private IJSObjectReference? _jsModule;
+    private IDialogReference? _dialog;
+    private ViewerLineReference? _inspectedReference;
     private Task? _disposeTask;
     private volatile bool _disposed;
-    private bool _pendingScrollToBottom;
-    private long? _pendingScrollAnchorLineNumber;
-    private long _pendingPreserveAfterVersion;
-    private long? _lastFirstAbsoluteLineNumber;
-    private long? _lastLastAbsoluteLineNumber;
-
-    // Context menu state
+    private bool _openingDialog;
+    private bool _restoreHeaderFocus;
+    private bool _focusHeaderAfterDialog;
+    private bool _isLoadingMore;
+    private bool _browsingEarlier;
+    private bool _lastAutoScroll;
+    private bool _hasView;
+    private bool _capturePositionAfterRender;
+    private bool _positionCaptureRequested;
+    private long _positionRevision;
+    private Task? _positionCaptureTask;
+    private LogViewerPosition? _lastReportedPosition;
+    private LogViewerPosition? _pendingPositionRestore;
+    private IReadOnlyList<LogLineViewModel>? _lastLines;
+    private int _page;
+    private int? _selectedLineIndex;
+    private ViewerLineReference? _selectedReference;
+    private int _currentMatchIndex;
+    private long _lastVersion;
+    private LogSourceIdentity? _lastSource;
+    private string? _lastKeyword;
+    private bool _lastOnlyCapture;
+    private LogSeverity? _lastSeverity;
+    private long? _lastFirstLine;
+    private long? _lastLastLine;
+    private long? _matchLineNumber;
+    private string? _matchRaw;
+    private long? _lastContextLine;
+    private string? _lastContextRaw;
+    private int? _pendingScrollIndex;
+    private bool _pendingScrollBottom;
+    private bool _pendingScrollTop;
+    private ViewerLineReference? _pendingHistoryAnchor;
+    private long _historyVersion;
+    private double _historyOffset;
+    private long? _pendingRestorationLine;
+    private double _pendingRestorationOffset;
     private bool _contextMenuVisible;
+    private long _contextMenuOpeningRevision;
     private double _contextMenuX;
     private double _contextMenuY;
-    private LogLineViewModel? _selectedLine;
-    private List<ContextMenuItem<LogLineViewModel>> _contextMenuItems = new();
-
-    // Match navigation state
-    private int _currentMatchIndex = 0;
-    private int _totalMatches = 0;
-    private List<int> _matchedLineIndices = new();
-    private LogFilterState? _lastFilter;
-
-    // Load more state
-    private bool _isLoadingMore = false;
-    private DotNetObjectReference<LogViewer>? _dotNetRef;
-
-    // Selected line state
-    private int? _selectedLineIndex = null;
+    private ViewerLineReference? _contextReference;
+    private string? _menuCulture;
+    private List<ContextMenuItem<ViewerLineReference>> _contextMenuItems = [];
 
     private IReadOnlyList<LogLineViewModel> CurrentLines => Lines ?? Array.Empty<LogLineViewModel>();
+    private bool HasKeyword => !string.IsNullOrWhiteSpace(Filter?.Keyword);
+    private int PageCount => Math.Max(1, (CurrentLines.Count + RowsPerPage - 1) / RowsPerPage);
+    private int PageStart => _page * RowsPerPage;
+    private int PageStartDisplay => CurrentLines.Count == 0 ? 0 : PageStart + 1;
+    private int PageEnd => Math.Min(CurrentLines.Count, PageStart + RowsPerPage);
+    private bool CanLoadEarlier => LoadMoreRequested is not null && (FirstRetainedLineNumber ?? CurrentLines.FirstOrDefault()?.AbsoluteLineNumber) is > 1;
+    protected override void OnInitialized() => BuildContextMenu();
 
     protected override void OnParametersSet()
     {
-        var lines = CurrentLines;
-        _linesCount = lines.Count;
-
-        var filterChanged = !Equals(_lastFilter, Filter);
-        if (filterChanged || Version != _lastVersion)
+        if (_disposed) return;
+        if (!StringComparer.Ordinal.Equals(_menuCulture, CultureInfo.CurrentUICulture.Name)) BuildContextMenu();
+        var sourceChanged = !Equals(Source, _lastSource);
+        var filterChanged = !StringComparer.Ordinal.Equals(Filter?.Keyword, _lastKeyword) || (Filter?.OnlyCapture ?? false) != _lastOnlyCapture || Filter?.Severity != _lastSeverity;
+        var revisionChanged = Version != _lastVersion;
+        if (sourceChanged || filterChanged || revisionChanged || !ReferenceEquals(Lines, _lastLines)) _positionRevision++;
+        var first = CurrentLines.FirstOrDefault()?.AbsoluteLineNumber;
+        var last = CurrentLines.LastOrDefault()?.AbsoluteLineNumber;
+        var prepended = !sourceChanged && first < _lastFirstLine && last == _lastLastLine;
+        var autoScrollEnabled = AutoScroll && !_lastAutoScroll;
+        if (sourceChanged || filterChanged) { _browsingEarlier = false; _matchLineNumber = null; _matchRaw = null; _pendingScrollIndex = null; _pendingRestorationLine = null; _pendingScrollTop = false; }
+        if (sourceChanged) { _selectedReference = null; _pendingPositionRestore = null; _lastReportedPosition = null; }
+        var selectedIndex = _selectedReference is { } selected ? FindCurrentIndex(selected) : -1;
+        _selectedLineIndex = selectedIndex < 0 ? null : selectedIndex;
+        if (autoScrollEnabled) _browsingEarlier = false;
+        UpdateMatches();
+        if (sourceChanged || !_hasView) _page = AutoScroll ? PageCount - 1 : 0;
+        if (filterChanged) { _page = HasKeyword && _matchedLineIndices.Count > 0 ? _matchedLineIndices[0] / RowsPerPage : 0; _pendingScrollBottom = false; }
+        else if (AutoScroll && !_browsingEarlier && !prepended && (revisionChanged || autoScrollEnabled)) { _page = PageCount - 1; _pendingScrollBottom = true; }
+        _page = Math.Clamp(_page, 0, PageCount - 1);
+        if (_pendingHistoryAnchor is { } anchor && Version != _historyVersion)
         {
-            _lastFilter = Filter;
-            UpdateMatchTracking();
+            var index = FindCurrentIndex(anchor); _pendingHistoryAnchor = null;
+            if (index >= 0) QueueHistoryAnchor(anchor, index);
         }
-
-        var firstLine = _linesCount > 0 ? lines[0] : null;
-        var lastLine = _linesCount > 0 ? lines[^1] : null;
-        var currentFirstAbsoluteLineNumber = firstLine?.AbsoluteLineNumber;
-        var currentLastAbsoluteLineNumber = lastLine?.AbsoluteLineNumber;
-
-        if (Version != _lastVersion)
+        var contextIndex = -1;
+        for (var i = 0; i < CurrentLines.Count; i++) if (CurrentLines[i].IsContextTarget) { contextIndex = i; break; }
+        var contextLine = contextIndex >= 0 ? CurrentLines[contextIndex] : null;
+        if (contextLine is not null && (sourceChanged || contextLine.AbsoluteLineNumber != _lastContextLine || !StringComparer.Ordinal.Equals(contextLine.Raw, _lastContextRaw)))
         {
-            if (ShouldScrollToBottom(currentFirstAbsoluteLineNumber, currentLastAbsoluteLineNumber))
-            {
-                _pendingScrollToBottom = true;
-            }
-
-            _lastVersion = Version;
+            _page = contextIndex / RowsPerPage; _pendingScrollIndex = contextIndex; _pendingScrollBottom = false; _pendingScrollTop = false;
         }
-
-        _lastFirstAbsoluteLineNumber = currentFirstAbsoluteLineNumber;
-        _lastLastAbsoluteLineNumber = currentLastAbsoluteLineNumber;
+        _lastContextLine = contextLine?.AbsoluteLineNumber; _lastContextRaw = contextLine?.Raw;
+        if (_openingDialog && _inspectedReference is { } inspected)
+        {
+            var index = FindCurrentIndex(inspected);
+            if (index < PageStart || index >= PageEnd) _restoreHeaderFocus = true;
+        }
+        if (sourceChanged) { _contextMenuVisible = false; _contextReference = null; _pendingHistoryAnchor = null; }
+        if (_pendingPositionRestore is { } position) QueuePositionRestore(position);
+        _lastSource = Source; _lastVersion = Version; _lastKeyword = Filter?.Keyword; _lastOnlyCapture = Filter?.OnlyCapture ?? false; _lastSeverity = Filter?.Severity;
+        _lastAutoScroll = AutoScroll; _lastFirstLine = first; _lastLastLine = last; _lastLines = Lines; _hasView = true;
     }
 
-    private void UpdateMatchTracking()
+    private void UpdateMatches()
     {
         _matchedLineIndices.Clear();
+        if (HasKeyword) for (var i = 0; i < CurrentLines.Count; i++) if (CurrentLines[i].IsMatch) _matchedLineIndices.Add(i);
+        _currentMatchIndex = 0;
+        if (_matchLineNumber.HasValue || _matchRaw is not null)
+        {
+            var match = _matchedLineIndices.FindIndex(index => CurrentLines[index].AbsoluteLineNumber == _matchLineNumber && StringComparer.Ordinal.Equals(CurrentLines[index].Raw, _matchRaw));
+            if (match >= 0) _currentMatchIndex = match;
+        }
+        CaptureCurrentMatch();
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender) => RunOwned(async () =>
+    {
+        if (_disposed) return;
+        if (_focusHeaderAfterDialog && _newestButton is not null) { _focusHeaderAfterDialog = false; await _newestButton.FocusAsync(); }
+        if (_disposed) return;
+        var moved = false;
+        if (_pendingPositionRestore is { } position)
+        {
+            var index = FindPositionIndex(position.Source, position.AnchorLineNumber, position.AnchorRaw);
+            if (index < PageStart || index >= PageEnd)
+            {
+                QueuePositionRestore(position);
+                StateHasChanged();
+                return;
+            }
+            _pendingPositionRestore = null;
+            await InvokeJsVoidAsync("preserveScrollPosition", _scrollContainer, position.AnchorLineNumber.ToString(CultureInfo.InvariantCulture), double.IsFinite(position.AnchorOffset) ? position.AnchorOffset : 0);
+            moved = true;
+        }
+        else if (_pendingRestorationLine is { } number) { _pendingRestorationLine = null; await InvokeJsVoidAsync("preserveScrollPosition", _scrollContainer, number.ToString(CultureInfo.InvariantCulture), _pendingRestorationOffset); moved = true; }
+        else if (_pendingScrollIndex is { } index) { _pendingScrollIndex = null; await InvokeJsVoidAsync("scrollToLineIndex", _scrollContainer, index); moved = true; }
+        else if (_pendingScrollBottom) { _pendingScrollBottom = false; await InvokeJsVoidAsync("scrollToBottom", _scrollContainer); moved = true; }
+        else if (_pendingScrollTop) { _pendingScrollTop = false; await InvokeJsVoidAsync("scrollToTop", _scrollContainer); moved = true; }
+        if (firstRender || moved || _capturePositionAfterRender)
+        {
+            _capturePositionAfterRender = false;
+            await RequestPositionCaptureAsync();
+        }
+    });
+
+    private Task LoadEarlierAsync() => RunOwned(async () => { await LoadEarlierCoreAsync(); });
+    /// <summary>Loads earlier source lines through the page-owned callback; retained for existing JavaScript callers.</summary>
+    [JSInvokable] public async Task<bool> HandleScrollToTop()
+    {
+        var loaded = false; await RunOwned(async () => { loaded = await LoadEarlierCoreAsync(); }); return loaded;
+    }
+    private async Task<bool> LoadEarlierCoreAsync()
+    {
+        if (_disposed || _isLoadingMore || !CanLoadEarlier || LoadMoreRequested is null) return false;
+        _isLoadingMore = true; _browsingEarlier = true;
+        var source = Source;
+        StateHasChanged();
+        try
+        {
+            var scrollAnchor = await InvokeJsAsync<ScrollAnchor>("getScrollAnchor", _scrollContainer);
+            if (_disposed || !Equals(source, Source)) return false;
+            _historyOffset = scrollAnchor?.Offset ?? 0;
+            var anchorIndex = Math.Min(PageStart, CurrentLines.Count - 1);
+            if (scrollAnchor is not null)
+            {
+                var observedIndex = -1;
+                for (var i = 0; i < CurrentLines.Count; i++) if (CurrentLines[i].AbsoluteLineNumber == scrollAnchor.AbsoluteLineNumber) { observedIndex = i; break; }
+                if (observedIndex >= 0) anchorIndex = observedIndex;
+                else if (scrollAnchor.LineIndex >= PageStart && scrollAnchor.LineIndex < PageEnd) anchorIndex = scrollAnchor.LineIndex;
+            }
+            _pendingHistoryAnchor = anchorIndex >= 0 ? new ViewerLineReference(CurrentLines[anchorIndex], anchorIndex, Source, SnapshotReadAt) : null;
+            _historyVersion = Version;
+            var count = await LoadMoreRequested.Invoke(50);
+            if (_disposed) return false;
+            if (count <= 0) _pendingHistoryAnchor = null;
+            else if (_pendingHistoryAnchor is { } anchor && Version != _historyVersion)
+            {
+                var index = FindCurrentIndex(anchor); _pendingHistoryAnchor = null;
+                if (index >= 0) QueueHistoryAnchor(anchor, index);
+            }
+            return count > 0;
+        }
+        catch (Exception exception) when (!_disposed)
+        {
+            Logger.LogError(exception, "Earlier log lines could not be loaded.");
+            Snackbar.Add(L["Page:Components:Viewer:Messages:LoadMoreFailed", exception.Message], Severity.Error); _pendingHistoryAnchor = null; return false;
+        }
+        finally { _isLoadingMore = false; if (!_disposed) StateHasChanged(); }
+    }
+    private void QueueHistoryAnchor(ViewerLineReference anchor, int index)
+    {
+        _page = index / RowsPerPage; _positionRevision++; _pendingScrollBottom = false; _pendingScrollTop = false; _pendingScrollIndex = null; _capturePositionAfterRender = true;
+        if (anchor.Line.AbsoluteLineNumber is { } number) { _pendingRestorationLine = number; _pendingRestorationOffset = _historyOffset; }
+        else _pendingScrollIndex = index;
+    }
+
+    private Task PreviousPageAsync() => ChangePageAsync(_page - 1);
+    private Task NextPageAsync() => ChangePageAsync(_page + 1);
+    private Task ChangePageAsync(int page) => RunOwned(() =>
+    {
+        _page = Math.Clamp(page, 0, PageCount - 1); _positionRevision++; _browsingEarlier = _page < PageCount - 1; _pendingScrollTop = true; _pendingScrollBottom = false; _pendingScrollIndex = null; _pendingRestorationLine = null; _pendingPositionRestore = null; _capturePositionAfterRender = true;
+        if (_openingDialog) _restoreHeaderFocus = true;
+        StateHasChanged(); return Task.CompletedTask;
+    });
+    private Task GoToNewestAsync() => RunOwned(() =>
+    {
+        _page = PageCount - 1; _positionRevision++; _browsingEarlier = false; _pendingScrollBottom = true; _pendingScrollTop = false; _pendingScrollIndex = null; _pendingRestorationLine = null; _pendingPositionRestore = null; _capturePositionAfterRender = true;
+        if (_openingDialog) _restoreHeaderFocus = true;
+        StateHasChanged(); return Task.CompletedTask;
+    });
+    private Task GoToNextMatchAsync() => MoveMatchAsync(1);
+    private Task GoToPreviousMatchAsync() => MoveMatchAsync(-1);
+    private Task MoveMatchAsync(int delta) => RunOwned(() =>
+    {
+        if (_matchedLineIndices.Count == 0) return Task.CompletedTask;
+        _currentMatchIndex = (_currentMatchIndex + delta + _matchedLineIndices.Count) % _matchedLineIndices.Count;
+        CaptureCurrentMatch(); SetPendingLine(_matchedLineIndices[_currentMatchIndex]); return Task.CompletedTask;
+    });
+    private void CaptureCurrentMatch()
+    {
+        if (_matchedLineIndices.Count == 0) { _matchLineNumber = null; _matchRaw = null; return; }
+        var line = CurrentLines[_matchedLineIndices[_currentMatchIndex]]; _matchLineNumber = line.AbsoluteLineNumber; _matchRaw = line.Raw;
+    }
+    /// <summary>Reveals a supplied visible-list index, including a row on another ledger page.</summary>
+    public Task ScrollToLineAsync(int lineIndex) => RunOwned(() => { if (lineIndex >= 0 && lineIndex < CurrentLines.Count) SetPendingLine(lineIndex); return Task.CompletedTask; });
+    private void SetPendingLine(int index)
+    {
+        _page = index / RowsPerPage; _positionRevision++; _pendingScrollIndex = index; _pendingScrollBottom = false; _pendingScrollTop = false; _pendingRestorationLine = null; _pendingPositionRestore = null; _browsingEarlier = true; _capturePositionAfterRender = true;
+        if (_openingDialog) _restoreHeaderFocus = true;
+        StateHasChanged();
+    }
+
+    /// <summary>Captures and reports the current DOM position while this viewer is active; returns null when no source-qualified physical anchor is available.</summary>
+    /// <remarks>Await this method before navigation when the parent needs a final handoff. It never reads DOM during disposal.</remarks>
+    public async Task<LogViewerPosition?> CapturePositionAsync()
+    {
+        LogViewerPosition? position = null;
+        await RunOwned(async () => { position = await CapturePositionCoreAsync(); });
+        return position;
+    }
+
+    /// <summary>Queues restoration of an exact source-qualified anchor, selection, and browsing intent after the next render.</summary>
+    /// <param name="position">The detached position belonging to the target source generation.</param>
+    /// <param name="restoreFocus">Whether to focus the stable Newest button after rendering, even when the anchor cannot be restored; false preserves focus during ordinary route restoration.</param>
+    /// <returns>True when the exact anchor matches and restoration is queued; false for a retired viewer, different generation, or evicted anchor.</returns>
+    /// <remarks>
+    /// Supply the target source and lines before calling. A different generation is ignored. When this source's anchor
+    /// was evicted, the viewer safely shows its oldest available page for earlier browsing, or its newest page otherwise.
+    /// PositionChanged reports the resulting DOM position after rendering; this method does not assert browser completion.
+    /// </remarks>
+    public async Task<bool> RestorePositionAsync(LogViewerPosition position, bool restoreFocus = false)
+    {
+        ArgumentNullException.ThrowIfNull(position);
+        var matched = false;
+        await RunOwned(() =>
+        {
+            if (restoreFocus) _focusHeaderAfterDialog = true;
+            if (!Equals(position.Source, Source))
+            {
+                if (restoreFocus) StateHasChanged();
+                return Task.CompletedTask;
+            }
+            matched = QueuePositionRestore(position);
+            _capturePositionAfterRender = true;
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
+        return matched;
+    }
+
+    /// <summary>Queues focus on the stable Newest button after rendering; retired viewers ignore the request.</summary>
+    /// <remarks>Use when a dismissed context view has no restorable position. The owned after-render operation performs focus; this method only queues it.</remarks>
+    public Task FocusHeaderAsync() => RunOwned(() =>
+    {
+        _focusHeaderAfterDialog = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    private bool QueuePositionRestore(LogViewerPosition position)
+    {
+        if (!Equals(position.Source, Source)) { _pendingPositionRestore = null; return false; }
+        var index = FindPositionIndex(position.Source, position.AnchorLineNumber, position.AnchorRaw);
+        var selectedIndex = position.SelectedLineNumber is { } selected && position.SelectedRaw is { } raw
+            ? FindPositionIndex(position.Source, selected, raw) : -1;
+        _selectedReference = selectedIndex < 0 ? null : new ViewerLineReference(CurrentLines[selectedIndex], selectedIndex, Source, SnapshotReadAt);
+        _selectedLineIndex = selectedIndex < 0 ? null : selectedIndex;
+        _browsingEarlier = position.BrowsingEarlier;
+        var page = index >= 0 ? index / RowsPerPage : position.BrowsingEarlier ? 0 : PageCount - 1;
+        if (_page != page) _positionRevision++;
+        _page = page;
+        _pendingScrollIndex = null;
+        _pendingRestorationLine = null;
+        _pendingHistoryAnchor = null;
+        _pendingPositionRestore = index >= 0 ? position : null;
+        _pendingScrollTop = index < 0 && position.BrowsingEarlier;
+        _pendingScrollBottom = index < 0 && !position.BrowsingEarlier;
+        return index >= 0;
+    }
+
+    private int FindPositionIndex(LogSourceIdentity source, long number, string raw)
+    {
+        if (!Equals(source, Source)) return -1;
+        for (var i = 0; i < CurrentLines.Count; i++)
+            if (CurrentLines[i].AbsoluteLineNumber == number && StringComparer.Ordinal.Equals(CurrentLines[i].Raw, raw)) return i;
+        return -1;
+    }
+
+    private Task OnNativeScrollAsync() => RequestPositionCaptureAsync();
+
+    private Task RequestPositionCaptureAsync()
+    {
+        if (_disposed || !PositionChanged.HasDelegate) return Task.CompletedTask;
+        _positionCaptureRequested = true;
+        if (_positionCaptureTask is { IsCompleted: false }) return _positionCaptureTask;
+        return _positionCaptureTask = RunOwned(async () =>
+        {
+            while (_positionCaptureRequested && !_disposed)
+            {
+                _positionCaptureRequested = false;
+                await CapturePositionCoreAsync();
+            }
+        });
+    }
+
+    private async Task<LogViewerPosition?> CapturePositionCoreAsync()
+    {
+        var source = Source;
+        if (_disposed || source is null || CurrentLines.Count == 0) return null;
+        var revision = _positionRevision;
         var lines = CurrentLines;
-
-        if (Filter?.IsActive == true && !Filter.OnlyCapture)
+        var dom = await InvokeJsAsync<ViewerDomPosition>("getViewerPosition", _scrollContainer);
+        if (_disposed || revision != _positionRevision || !Equals(source, Source) || !ReferenceEquals(lines, CurrentLines)
+            || dom is null || !StringComparer.Ordinal.Equals(dom.Generation, source.Generation)
+            || !StringComparer.Ordinal.Equals(dom.Revision, revision.ToString(CultureInfo.InvariantCulture))
+            || dom.LineIndex < PageStart || dom.LineIndex >= PageEnd
+            || !long.TryParse(dom.AbsoluteLineNumber, NumberStyles.None, CultureInfo.InvariantCulture, out var number)
+            || number < 1
+            || lines[dom.LineIndex].AbsoluteLineNumber != number) return null;
+        var selectedIndex = _selectedReference is { } selected ? FindCurrentIndex(selected) : -1;
+        var selectedLine = selectedIndex >= 0 && CurrentLines[selectedIndex].AbsoluteLineNumber is > 0 ? CurrentLines[selectedIndex] : null;
+        var position = new LogViewerPosition
         {
-            for (int i = 0; i < lines.Count; i++)
-            {
-                if (lines[i].IsMatch)
-                {
-                    _matchedLineIndices.Add(i);
-                }
-            }
-
-            _totalMatches = _matchedLineIndices.Count;
-
-            // Reset to first match if we have matches
-            if (_totalMatches > 0)
-            {
-                _currentMatchIndex = 0;
-            }
-            else
-            {
-                _currentMatchIndex = 0;
-            }
-        }
-        else
+            Source = source with { }, AnchorLineNumber = number, AnchorRaw = lines[dom.LineIndex].Raw,
+            AnchorOffset = double.IsFinite(dom.Offset) ? dom.Offset : 0,
+            SelectedLineNumber = selectedLine?.AbsoluteLineNumber, SelectedRaw = selectedLine?.Raw,
+            BrowsingEarlier = _browsingEarlier
+        };
+        if (PositionChanged.HasDelegate && !Equals(position, _lastReportedPosition))
         {
-            _totalMatches = 0;
-            _currentMatchIndex = 0;
+            _lastReportedPosition = position;
+            if (!_disposed) await PositionChanged.InvokeAsync(position);
         }
+        return position;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private string InspectLabel(LogLineViewModel line) => L["Workbench:Viewer:Inspect", line.AbsoluteLineNumber?.ToString(CultureInfo.InvariantCulture) ?? "—"].Value;
+    private Task InspectAsync(ViewerLineReference? reference) => RunOwned(async () =>
     {
-        if (_disposed)
-        {
-            return;
-        }
-
-        if (firstRender)
-        {
-            _isRendered = true;
-            BuildContextMenu();
-            await SetupScrollListenerAsync();
-            if (_disposed)
-            {
-                return;
-            }
-
-            if (AutoScroll && CurrentLines.Count > 0)
-            {
-                _pendingScrollToBottom = true;
-            }
-        }
-
-        if (_pendingScrollAnchorLineNumber.HasValue && Version > _pendingPreserveAfterVersion)
-        {
-            var anchorLineNumber = _pendingScrollAnchorLineNumber.Value;
-            _pendingScrollAnchorLineNumber = null;
-            await PreserveScrollPositionAsync(anchorLineNumber);
-            if (_disposed)
-            {
-                return;
-            }
-        }
-
-        if (_pendingScrollToBottom)
-        {
-            _pendingScrollToBottom = false;
-            await ScrollToBottomAsync();
-        }
-    }
-
-    private async Task SetupScrollListenerAsync()
-    {
-        await _interopGate.WaitAsync();
-        DotNetObjectReference<LogViewer>? callbackReference = null;
+        if (reference is null || _openingDialog) return;
+        var evidence = LogLineEvidence.Capture(reference.Line, reference.Source, reference.ReadAt, reference.Index);
+        _openingDialog = true; _restoreHeaderFocus = false; _inspectedReference = reference; _selectedReference = reference; _selectedLineIndex = FindCurrentIndex(reference);
+        CloseContextMenu();
         try
         {
-            if (_disposed)
+            await CapturePositionCoreAsync();
+            if (_disposed) return;
+            await OnLineClicked.InvokeAsync(evidence.Line);
+            if (_disposed) return;
+            var dialog = await DialogService.ShowAsync<LogLineInfoDialog>(L["Workbench:Inspector:Title"], new DialogParameters<LogLineInfoDialog>
             {
-                return;
-            }
-
-            callbackReference = DotNetObjectReference.Create(this);
-            var jsModule = await GetOrImportJsModuleAsync();
-            if (jsModule is null)
-            {
-                return;
-            }
-
-            await jsModule.InvokeVoidAsync("addScrollTopListener",
-                _scrollContainer,
-                callbackReference,
-                nameof(HandleScrollToTop),
-                50);
-
-            if (_disposed)
-            {
-                await TryStopScrollListenerAsync(jsModule);
-                return;
-            }
-
-            var previousReference = _dotNetRef;
-            _dotNetRef = callbackReference;
-            callbackReference = null;
-            previousReference?.Dispose();
+                { item => item.Evidence, evidence },
+                { item => item.CopyRawRequested, EventCallback.Factory.Create<string>(this, CopyRawTextAsync) }
+            }, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true, BackdropClick = true });
+            lock (_ownershipLock) { if (_disposed) Retire(dialog); else _dialog = dialog; }
+            await dialog.Result;
+            lock (_ownershipLock) { if (ReferenceEquals(_dialog, dialog)) _dialog = null; }
         }
-        catch (JSDisconnectedException)
+        catch (Exception exception) when (!_disposed)
         {
-            // The browser circuit disconnected while registering the listener.
-        }
-        catch (JSException)
-        {
-            // The browser context no longer accepts listener registration.
+            Logger.LogError(exception, "The physical log line inspector could not be opened."); Snackbar.Add(L["Workbench:Viewer:OpenFailed"], Severity.Error);
         }
         finally
         {
-            callbackReference?.Dispose();
-            _interopGate.Release();
+            _openingDialog = false; _inspectedReference = null;
+            if (!_disposed && _restoreHeaderFocus) { _focusHeaderAfterDialog = true; StateHasChanged(); }
         }
-    }
-
-    [JSInvokable]
-    public async Task<bool> HandleScrollToTop()
-    {
-        if (_disposed || _isLoadingMore || LoadMoreRequested is null)
-        {
-            return false;
-        }
-
-        try
-        {
-            _isLoadingMore = true;
-            await InvokeAsync(StateHasChanged);
-
-            var lines = CurrentLines;
-            var anchorLineNumber = lines.Count > 0
-                ? lines[0].AbsoluteLineNumber
-                : null;
-            var loadedCount = await LoadMoreRequested.Invoke(50);
-            if (_disposed)
-            {
-                return false;
-            }
-
-            if (loadedCount > 0 && anchorLineNumber.HasValue)
-            {
-                _pendingScrollAnchorLineNumber = anchorLineNumber.Value;
-                _pendingPreserveAfterVersion = Version;
-            }
-
-            return loadedCount > 0;
-        }
-        catch (Exception ex) when (!_disposed)
-        {
-            Snackbar.Add(L["Page:Components:Viewer:Messages:LoadMoreFailed", ex.Message], Severity.Error);
-            return false;
-        }
-        finally
-        {
-            if (!_disposed)
-            {
-                _isLoadingMore = false;
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-    }
-
-    private bool ShouldScrollToBottom(long? currentFirstAbsoluteLineNumber, long? currentLastAbsoluteLineNumber)
-    {
-        if (!_isRendered || !AutoScroll || !currentLastAbsoluteLineNumber.HasValue)
-        {
-            return false;
-        }
-
-        if (!_lastLastAbsoluteLineNumber.HasValue)
-        {
-            return true;
-        }
-
-        var isHistoryPrepend = currentFirstAbsoluteLineNumber.HasValue
-            && _lastFirstAbsoluteLineNumber.HasValue
-            && currentFirstAbsoluteLineNumber.Value < _lastFirstAbsoluteLineNumber.Value
-            && currentLastAbsoluteLineNumber.Value == _lastLastAbsoluteLineNumber.Value;
-
-        return !isHistoryPrepend;
-    }
+    });
 
     private void BuildContextMenu()
     {
-        _contextMenuItems = ContextMenuBuilder<LogLineViewModel>.Create()
-            .AddItem(L["Page:Components:Viewer:ContextMenu:LineInfo"], Icons.Material.Filled.Info, OnShowLineInfoAsync)
-            .AddItem(L["Page:Components:Viewer:ContextMenu:FilterSeverity"], Icons.Material.Filled.Label, OnFilterBySeverityAsync)
-            .AddItem(L["Page:Components:Viewer:ContextMenu:FindSelection"], Icons.Material.Filled.Search, OnFindSelectedTextAsync)
-            .AddItem(L["Page:Components:Viewer:ContextMenu:ShowContext"], Icons.Material.Filled.Article, line => OnShowContextClickedAsync(line, _selectedLineIndex))
+        _menuCulture = CultureInfo.CurrentUICulture.Name;
+        _contextMenuItems = ContextMenuBuilder<ViewerLineReference>.Create()
+            .AddItem(L["Page:Components:Viewer:ContextMenu:LineInfo"], Icons.Material.Outlined.Info, InspectAsync)
+            .AddItem(L["Page:Components:Viewer:ContextMenu:FilterSeverity"], Icons.Material.Outlined.FilterAlt, FilterSeverityAsync)
+            .AddItem(L["Page:Components:Viewer:ContextMenu:FindSelection"], Icons.Material.Outlined.Search, FindSelectionAsync)
+            .AddItem(L["Page:Components:Viewer:ContextMenu:ShowContext"], Icons.Material.Outlined.Article, ShowContextAsync)
             .AddDivider()
-            .AddSubMenu(L["Page:Components:Viewer:ContextMenu:Copy"], Icons.Material.Filled.ContentCopy, builder => builder
-                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyRaw"], Icons.Material.Filled.ContentCopy, item => CopyToClipboardAsync(item, LogCopyFormat.Raw))
-                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyMessage"], Icons.Material.Filled.Subject, item => CopyToClipboardAsync(item, LogCopyFormat.MessageOnly))
-                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyTimestamp"], Icons.Material.Filled.AccessTime, item => CopyToClipboardAsync(item, LogCopyFormat.WithTimestamp))
-                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyLineNumber"], Icons.Material.Filled.Numbers, item => CopyToClipboardAsync(item, LogCopyFormat.WithLineNumber)))
-            .AddSubMenu(L["Page:Components:Viewer:ContextMenu:Navigate"], Icons.Material.Filled.Navigation, builder => builder
-                .AddItem(L["Page:Components:Viewer:ContextMenu:Top"], Icons.Material.Filled.ArrowUpward, _ => ScrollToTopAsync())
-                .AddItem(L["Page:Components:Viewer:ContextMenu:Bottom"], Icons.Material.Filled.ArrowDownward, _ => ScrollToBottomAsync()))
+            .AddSubMenu(L["Page:Components:Viewer:ContextMenu:Copy"], Icons.Material.Outlined.ContentCopy, builder => builder
+                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyRaw"], onClick: item => CopyLineAsync(item, LogCopyFormat.Raw))
+                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyMessage"], onClick: item => CopyLineAsync(item, LogCopyFormat.MessageOnly))
+                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyTimestamp"], onClick: item => CopyLineAsync(item, LogCopyFormat.WithTimestamp))
+                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyLineNumber"], onClick: item => CopyLineAsync(item, LogCopyFormat.WithLineNumber)))
+            .AddSubMenu(L["Page:Components:Viewer:ContextMenu:Navigate"], Icons.Material.Outlined.Navigation, builder => builder
+                .AddItem(L["Page:Components:Viewer:ContextMenu:Top"], onClick: _ => ChangePageAsync(0))
+                .AddItem(L["Page:Components:Viewer:ContextMenu:Bottom"], onClick: _ => GoToNewestAsync()))
             .Build();
     }
-
-    private async Task HandleEntryClick(LogLineViewModel line, int lineIndex)
+    private Task OpenContextMenuAsync(MouseEventArgs args, ViewerLineReference reference) => RunOwned(async () =>
     {
-        _selectedLineIndex = lineIndex;
-        await OnLineClicked.InvokeAsync(line);
-        if (!_disposed)
-        {
-            StateHasChanged();
-        }
-    }
-
-    private void OnContextMenu(MouseEventArgs e, LogLineViewModel line)
-    {
-        _selectedLine = line;
-        _contextMenuX = e.ClientX;
-        _contextMenuY = e.ClientY;
-        _contextMenuVisible = true;
+        if (_disposed) return;
+        _contextReference = reference; _selectedReference = reference; _selectedLineIndex = reference.Index; _contextMenuX = args.PageX; _contextMenuY = args.PageY; ++_contextMenuOpeningRevision; _contextMenuVisible = true;
         StateHasChanged();
-    }
-
-    private void CloseContextMenu()
+        await CapturePositionCoreAsync();
+    });
+    private void CloseContextMenu() { _contextMenuVisible = false; if (!_disposed) StateHasChanged(); }
+    private Task ShowContextAsync(ViewerLineReference? reference) => RunOwned(async () =>
     {
-        _contextMenuVisible = false;
-        StateHasChanged();
-    }
-
-    private Task OnContextMenuItemClickWrapper(ContextMenuItem<LogLineViewModel> menuItem)
+        if (reference is null || !OnShowContext.HasDelegate || !reference.Line.AbsoluteLineNumber.HasValue) return;
+        var index = FindCurrentIndex(reference);
+        if (index < 0) { Snackbar.Add(L["Workbench:Viewer:ContextStale"], Severity.Info); return; }
+        _selectedReference = reference; _selectedLineIndex = index;
+        await CapturePositionCoreAsync();
+        if (_disposed) return;
+        index = FindCurrentIndex(reference);
+        if (index < 0) return;
+        CloseContextMenu(); await OnShowContext.InvokeAsync((LogLineEvidence.Capture(reference.Line, reference.Source, reference.ReadAt, reference.Index).Line, index));
+    });
+    private Task FilterSeverityAsync(ViewerLineReference? reference) => RunOwned(async () =>
     {
-        return Task.CompletedTask;
-    }
-
-    private async Task OnShowLineInfoAsync(LogLineViewModel? line)
+        if (reference is null || !OnFilterSeverity.HasDelegate) return;
+        if (FindCurrentIndex(reference) < 0) { Snackbar.Add(L["Workbench:Viewer:ContextStale"], Severity.Info); return; }
+        CloseContextMenu(); await OnFilterSeverity.InvokeAsync(reference.Line.Severity);
+    });
+    private Task FindSelectionAsync(ViewerLineReference? reference) => RunOwned(async () =>
     {
-        if (line is null)
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters<LogLineInfoDialog>
-        {
-            { x => x.Line, line }
-        };
-
-        var options = new DialogOptions
-        {
-            CloseButton = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-
-        await DialogService.ShowAsync<LogLineInfoDialog>(L["Page:Components:LineInfo:DialogTitle"], parameters, options);
-    }
-
-    private async Task OnShowContextClickedAsync(LogLineViewModel? line, int? lineIndex)
+        if (reference is null || !OnApplyFilter.HasDelegate) return;
+        var text = await InvokeJsAsync<string>("getSelectedText");
+        if (_disposed) return;
+        if (string.IsNullOrWhiteSpace(text)) { Snackbar.Add(L["Page:Components:Viewer:Messages:SelectText"], Severity.Info); return; }
+        if (FindCurrentIndex(reference) < 0) { Snackbar.Add(L["Workbench:Viewer:ContextStale"], Severity.Info); return; }
+        CloseContextMenu(); await OnApplyFilter.InvokeAsync((reference.Line, text));
+    });
+    private Task CopyLineAsync(ViewerLineReference? reference, LogCopyFormat format) => reference is null ? Task.CompletedTask : CopyRawTextAsync(reference.Line.GetCopyText(format));
+    private Task CopyRawTextAsync(string text) => RunOwned(async () =>
     {
-        if (line is not null && OnShowContext.HasDelegate && lineIndex.HasValue)
-        {
-            await OnShowContext.InvokeAsync((line, lineIndex.Value));
-        }
-    }
-
-    private async Task CopyToClipboardAsync(LogLineViewModel? line, LogCopyFormat format)
+        var copied = await InvokeJsAsync<bool>("copyToClipboard", text);
+        if (!_disposed) Snackbar.Add(copied ? L["Page:Components:Viewer:Messages:Copied", text[..Math.Min(50, text.Length)]] : L["Workbench:Viewer:CopyFailed"], copied ? Severity.Success : Severity.Error);
+    });
+    private int FindCurrentIndex(ViewerLineReference reference)
     {
-        if (line is null)
-        {
-            return;
-        }
-
-        var text = line.GetCopyText(format);
-        var success = await InvokeJsAsync<bool>("copyToClipboard", text);
-
-        if (success == true && !_disposed)
-        {
-            Snackbar.Add(L["Page:Components:Viewer:Messages:Copied", text[..Math.Min(50, text.Length)]]);
-        }
+        if (!Equals(reference.Source, Source)) return -1;
+        if (!reference.Line.AbsoluteLineNumber.HasValue) return reference.Index < CurrentLines.Count && StringComparer.Ordinal.Equals(CurrentLines[reference.Index].Raw, reference.Line.Raw) ? reference.Index : -1;
+        for (var i = 0; i < CurrentLines.Count; i++) if (CurrentLines[i].AbsoluteLineNumber == reference.Line.AbsoluteLineNumber && StringComparer.Ordinal.Equals(CurrentLines[i].Raw, reference.Line.Raw)) return i;
+        return -1;
     }
 
-    private async Task OnFilterBySeverityAsync(LogLineViewModel? line)
+    private Task RunOwned(Func<Task> operation)
     {
-        if (line is not null && OnApplyFilter.HasDelegate)
+        lock (_ownershipLock)
         {
-            var keyword = line.LevelText;
-            await OnApplyFilter.InvokeAsync((line, keyword));
+            if (_disposed) return Task.CompletedTask;
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _operations.Add(completion.Task); _ = ExecuteOwnedAsync(operation, completion); return completion.Task;
         }
     }
-
-    private async Task OnFindSelectedTextAsync(LogLineViewModel? line)
+    private async Task ExecuteOwnedAsync(Func<Task> operation, TaskCompletionSource completion)
     {
-        if (line is null || !OnApplyFilter.HasDelegate)
-        {
-            return;
-        }
-
-        try
-        {
-            var selectedText = await InvokeJsAsync<string>("getSelectedText");
-            if (_disposed)
-            {
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(selectedText))
-            {
-                Snackbar.Add(L["Page:Components:Viewer:Messages:SelectText"], Severity.Warning);
-                return;
-            }
-
-            await OnApplyFilter.InvokeAsync((line, selectedText));
-            if (!_disposed)
-            {
-                Snackbar.Add(L["Page:Components:Viewer:Messages:FilterApplied", selectedText], Severity.Info);
-            }
-        }
-        catch (Exception ex) when (!_disposed)
-        {
-            Snackbar.Add(L["Page:Components:Viewer:Messages:SelectionFailed", ex.Message], Severity.Error);
-        }
+        try { await operation(); completion.TrySetResult(); }
+        catch (OperationCanceledException) when (_disposed) { completion.TrySetResult(); }
+        catch (JSDisconnectedException) { completion.TrySetResult(); }
+        catch (Exception exception) { Logger.LogError(exception, "A log reader operation failed."); completion.TrySetException(exception); }
+        finally { lock (_ownershipLock) _operations.Remove(completion.Task); }
     }
-
-    private async Task ScrollToTopAsync()
-    {
-        try
-        {
-            await InvokeJsVoidAsync("scrollToTop", _scrollContainer);
-        }
-        catch (JSException)
-        {
-        }
-    }
-
-    private async Task ScrollToBottomAsync()
-    {
-        try
-        {
-            await InvokeJsVoidAsync("scrollToBottom", _scrollContainer);
-        }
-        catch (JSException)
-        {
-        }
-    }
-
-    private async Task GoToNextMatch()
-    {
-        if (_totalMatches == 0 || _matchedLineIndices.Count == 0)
-        {
-            return;
-        }
-
-        _currentMatchIndex = (_currentMatchIndex + 1) % _totalMatches;
-
-        await ScrollToCurrentMatch();
-        if (!_disposed)
-        {
-            StateHasChanged();
-        }
-    }
-
-    private async Task GoToPreviousMatch()
-    {
-        if (_totalMatches == 0 || _matchedLineIndices.Count == 0)
-        {
-            return;
-        }
-
-        _currentMatchIndex = (_currentMatchIndex - 1 + _totalMatches) % _totalMatches;
-
-        await ScrollToCurrentMatch();
-        if (!_disposed)
-        {
-            StateHasChanged();
-        }
-    }
-
-    private async Task ScrollToCurrentMatch()
-    {
-        if (_currentMatchIndex < 0 || _currentMatchIndex >= _matchedLineIndices.Count)
-        {
-            return;
-        }
-
-        var lineIndex = _matchedLineIndices[_currentMatchIndex];
-
-        try
-        {
-            await InvokeJsVoidAsync("scrollToLineIndex", _scrollContainer, lineIndex);
-        }
-        catch (JSException)
-        {
-        }
-    }
-
-    public async Task ScrollToLineAsync(int lineIndex)
-    {
-        try
-        {
-            await InvokeJsVoidAsync("scrollToLineIndex", _scrollContainer, lineIndex);
-        }
-        catch (JSException)
-        {
-        }
-    }
-
-    private async Task PreserveScrollPositionAsync(long absoluteLineNumber)
-    {
-        try
-        {
-            await InvokeJsVoidAsync("preserveScrollPosition", _scrollContainer, absoluteLineNumber);
-        }
-        catch (JSException)
-        {
-        }
-    }
-
     private async ValueTask<T?> InvokeJsAsync<T>(string identifier, params object?[] args)
     {
         await _interopGate.WaitAsync();
-        try
-        {
-            if (_disposed)
-            {
-                return default;
-            }
-
-            var module = await GetOrImportJsModuleAsync();
-            return module is null ? default : await module.InvokeAsync<T>(identifier, args);
-        }
-        finally
-        {
-            _interopGate.Release();
-        }
+        try { if (_disposed) return default; var module = await GetOrImportJsModuleAsync(); return module is null || _disposed ? default : await module.InvokeAsync<T>(identifier, args); }
+        finally { _interopGate.Release(); }
     }
-
     private async ValueTask InvokeJsVoidAsync(string identifier, params object?[] args)
     {
         await _interopGate.WaitAsync();
-        try
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            var module = await GetOrImportJsModuleAsync();
-            if (module is not null)
-            {
-                await module.InvokeVoidAsync(identifier, args);
-            }
-        }
-        finally
-        {
-            _interopGate.Release();
-        }
+        try { if (_disposed) return; var module = await GetOrImportJsModuleAsync(); if (module is not null && !_disposed) await module.InvokeVoidAsync(identifier, args); }
+        finally { _interopGate.Release(); }
     }
-
     private async ValueTask<IJSObjectReference?> GetOrImportJsModuleAsync()
     {
-        if (_jsModule is not null)
-        {
-            return _jsModule;
-        }
-
-        IJSObjectReference? importedModule = null;
-        try
-        {
-            importedModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", JS_MODULE_PATH);
-            if (_disposed)
-            {
-                return null;
-            }
-
-            _jsModule = importedModule;
-            importedModule = null;
-            return _jsModule;
-        }
-        finally
-        {
-            await DisposeJsModuleAsync(importedModule);
-        }
+        if (_jsModule is not null) return _jsModule;
+        IJSObjectReference? imported = null;
+        try { imported = await JsRuntime.InvokeAsync<IJSObjectReference>("import", JsModulePath); if (_disposed) return null; _jsModule = imported; imported = null; return _jsModule; }
+        finally { await DisposeJsModuleAsync(imported); }
     }
-
     private static string GetSeverityClass(LogSeverity severity) => severity switch
     {
-        LogSeverity.Trace => "severity-trace",
-        LogSeverity.Debug => "severity-debug",
-        LogSeverity.Information => "severity-info",
-        LogSeverity.Warning => "severity-warning",
-        LogSeverity.Error => "severity-error",
-        LogSeverity.Critical => "severity-critical",
-        _ => "severity-unknown"
+        LogSeverity.Trace => "severity-trace", LogSeverity.Debug => "severity-debug", LogSeverity.Information => "severity-info",
+        LogSeverity.Warning => "severity-warning", LogSeverity.Error or LogSeverity.Critical => "severity-error", _ => "severity-unknown"
     };
-
-    private static string BuildMessageMarkup(LogLineViewModel line)
+    private string BuildHeaderMarkup(string header)
     {
-        var message = line.Message ?? string.Empty;
-        if (line.MatchSegments is null || line.MatchSegments.Count == 0)
+        if (!HasKeyword) return WebUtility.HtmlEncode(header);
+        var segments = new List<LogMatchSegment>();
+        var keyword = Filter!.Keyword!;
+        for (var offset = 0; offset < header.Length;)
         {
-            return WebUtility.HtmlEncode(message);
+            var match = header.IndexOf(keyword, offset, StringComparison.OrdinalIgnoreCase);
+            if (match < 0) break;
+            segments.Add(new LogMatchSegment(match, keyword.Length));
+            offset = match + keyword.Length;
         }
-
-        var builder = new StringBuilder(message.Length + 32);
-        var cursor = 0;
-        foreach (var segment in line.MatchSegments)
-        {
-            var safeStart = Math.Clamp(segment.Start, 0, message.Length);
-            if (safeStart > cursor)
-            {
-                builder.Append(WebUtility.HtmlEncode(message[cursor..safeStart]));
-            }
-
-            var length = Math.Min(segment.Length, message.Length - safeStart);
-            if (length <= 0)
-            {
-                continue;
-            }
-
-            builder.Append("<span class=\"match-chip\">");
-            builder.Append(WebUtility.HtmlEncode(message.Substring(safeStart, length)));
-            builder.Append("</span>");
-            cursor = safeStart + length;
-        }
-
-        if (cursor < message.Length)
-        {
-            builder.Append(WebUtility.HtmlEncode(message[cursor..]));
-        }
-
-        return builder.ToString();
+        return BuildMarkedText(header, segments);
     }
-
+    private static string BuildMessageMarkup(LogLineViewModel line) => BuildMarkedText(line.Message, line.MatchSegments);
+    private static string BuildMarkedText(string message, IReadOnlyList<LogMatchSegment>? segments)
+    {
+        if (segments is null || segments.Count == 0) return WebUtility.HtmlEncode(message);
+        var builder = new StringBuilder(message.Length + 32); var cursor = 0;
+        foreach (var segment in segments)
+        {
+            var start = Math.Max(cursor, Math.Clamp(segment.Start, 0, message.Length));
+            if (start > cursor) builder.Append(WebUtility.HtmlEncode(message[cursor..start]));
+            var length = Math.Clamp(segment.Length, 0, message.Length - start);
+            if (length == 0) { cursor = start; continue; }
+            builder.Append("<mark class=\"match-chip\">").Append(WebUtility.HtmlEncode(message.Substring(start, length))).Append("</mark>"); cursor = start + length;
+        }
+        if (cursor < message.Length) builder.Append(WebUtility.HtmlEncode(message[cursor..])); return builder.ToString();
+    }
+    /// <summary>Closes and drains local dialogs, admitted callbacks and interop. The parent owns the file reading session.</summary>
     public ValueTask DisposeAsync()
     {
-        lock (_disposeSync)
-        {
-            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
-        }
+        lock (_ownershipLock) { _disposed = true; return new ValueTask(_disposeTask ??= DisposeCoreAsync()); }
     }
-
     private async Task DisposeCoreAsync()
     {
-        _disposed = true;
-        await _interopGate.WaitAsync();
-        IJSObjectReference? module;
-        DotNetObjectReference<LogViewer>? callbackReference;
-        try
-        {
-            module = _jsModule;
-            callbackReference = _dotNetRef;
-            _jsModule = null;
-            _dotNetRef = null;
-            if (module is not null)
-            {
-                await TryStopScrollListenerAsync(module);
-            }
-        }
+        Retire(_dialog);
+        Task[] operations; lock (_ownershipLock) operations = _operations.ToArray();
+        try { await Task.WhenAll(operations); }
         finally
         {
-            _interopGate.Release();
-        }
-
-        callbackReference?.Dispose();
-        await DisposeJsModuleAsync(module);
-    }
-
-    private async ValueTask TryStopScrollListenerAsync(IJSObjectReference module)
-    {
-        try
-        {
-            await module.InvokeVoidAsync("removeScrollListener", _scrollContainer);
-        }
-        catch (JSDisconnectedException)
-        {
-            // The disconnected browser circuit already stopped producing callbacks.
-        }
-        catch (JSException)
-        {
-            // The destroyed browser context can no longer produce callbacks.
+            await _interopGate.WaitAsync();
+            IJSObjectReference? module;
+            try { module = _jsModule; _jsModule = null; }
+            finally { _interopGate.Release(); }
+            await DisposeJsModuleAsync(module);
         }
     }
-
+    private static void Retire(IDialogReference? dialog) { if (dialog is null) return; dialog.Close(DialogResult.Cancel()); dialog.Dismiss(DialogResult.Cancel()); }
     private static async ValueTask DisposeJsModuleAsync(IJSObjectReference? module)
     {
-        if (module is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await module.DisposeAsync();
-        }
-        catch (JSDisconnectedException)
-        {
-            // The disconnected circuit already released the module reference.
-        }
-        catch (JSException)
-        {
-            // The destroyed browser context cannot retain a usable module reference.
-        }
+        if (module is null) return;
+        try { await module.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
     }
+    private sealed record ViewerLineReference(LogLineViewModel Line, int Index, LogSourceIdentity? Source, DateTimeOffset? ReadAt);
+    private sealed record ScrollAnchor(int LineIndex, long? AbsoluteLineNumber, double Offset);
+    private sealed record ViewerDomPosition(int LineIndex, string? AbsoluteLineNumber, double Offset, string? Generation, string? Revision);
 }

@@ -3,10 +3,10 @@
     "Title": "数据播种"
   },
   "Page": {
-    "Title": "Seeder 运行监控",
+    "Title": "初始化执行",
     "Eyebrow": "应用初始化",
-    "Heading": "Seeder 运行监控",
-    "Subtitle": "查看当前主机的初始化依赖图、有效策略、执行尝试与失败证据。",
+    "Heading": "初始化执行",
+    "Subtitle": "查看当前主机的初始化进度、有效策略与执行证据。",
     "CurrentHost": "主机 · {0}"
   },
   "Access": {
@@ -19,7 +19,8 @@
     "Retry": "重试",
     "Close": "关闭",
     "Details": "查看详情",
-    "DetailsFor": "查看 {0}"
+    "DetailsFor": "查看 {0}",
+    "ClearFilters": "清除筛选"
   },
   "State": {
     "Loading": "正在加载 Seeder 诊断信息",
@@ -36,19 +37,29 @@
     "Duration": "耗时 · {0}",
     "CapturedAt": "采集于 · {0}",
     "FailFastTrigger": "触发快速失败的 Seeder：{0}",
-    "Readiness": "就绪状态 · {0}"
+    "Readiness": "初始化就绪 · {0}",
+    "TerminalCompletion": "已达终态",
+    "ActiveRefresh": "实时 · 每秒更新",
+    "CompletedRefresh": "运行结束 · 手动刷新",
+    "EmptyRun": "当前快照中没有初始化任务"
   },
   "Configuration": {
     "Eyebrow": "有效默认值",
-    "Title": "运行时配置",
-    "Subtitle": "Seeder 上的注解可以覆盖继承值。",
+    "Title": "执行默认策略",
+    "Subtitle": "Seeder 注解可覆盖部分继承策略，具体来源可在详情中查看。",
     "MaxConcurrency": "最大并发数",
     "ExecutionMode": "执行模式",
     "Criticality": "关键性",
     "MaxAttempts": "最大尝试次数",
     "RetryBaseDelay": "初始重试延迟",
     "RetryMaxDelay": "最大重试延迟",
-    "FailureBehavior": "失败策略"
+    "FailureBehavior": "失败策略",
+    "Groups": {
+      "Scheduling": "调度方式",
+      "Retries": "重试策略",
+      "Failure": "失败处理",
+      "Readiness": "就绪要求"
+    }
   },
   "Filters": {
     "AriaLabel": "Seeder 筛选条件",
@@ -78,7 +89,8 @@
       "Attempts": "尝试次数",
       "Duration": "耗时",
       "Dependencies": "依赖项",
-      "Actions": "详情"
+      "Actions": "详情",
+      "Policy": "有效策略"
     },
     "AttemptsValue": "{0} / {1}",
     "DependencyCount": {

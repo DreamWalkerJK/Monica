@@ -2,12 +2,15 @@
 
 Use this structure when a Monica business solution is intentionally split into independently owned subdomain services.
 
+The dependency chain and ownership rules are mandatory within this profile. The tree illustrates their physical layout; create only the folders used by actual units. The project's application specification records concrete topology, names, and approved deviations.
+
 ```text
 src/
 ├── AppHost/                                  # Optional orchestration/composition entry points
 │   └── Gateway/
 │       ├── Gateway.csproj
-│       └── Program.cs                        # Composition root only
+│       ├── Program.cs                        # Composition root only
+│       └── Modules/                          # Optional composition modules; no business units
 ├── Shared/
 │   ├── Platform.BuildingBlocks/
 │   │   └── Platform.BuildingBlocks.csproj    # Project-agnostic infrastructure building blocks and third-party extensions
@@ -57,6 +60,7 @@ Recommended `.slnx` folders should mirror the physical layout:
 
 ## Mapping Rules
 
+- For shared specialization naming, mechanism choice, and capability placement, follow the [project-level extension rules](../../monica-application-project-unit-development/references/01-project-unit-naming-and-boundaries.md#project-level-extensions) within this topology.
 - Keep the same shared platform split across solution styles to reduce learning overhead.
 - Use the strict solution-project reference chain `{Subdomain}Service.API -> {Subdomain}Service.Domain -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`.
 - Put project-agnostic infrastructure extensions into `Shared/Platform.BuildingBlocks/Platform.BuildingBlocks.csproj`.
@@ -71,5 +75,5 @@ Recommended `.slnx` folders should mirror the physical layout:
 - Keep `Utilities/` in the `Domain` project for pure helpers and name them `Utils*`.
 - Do not create `Persistence/` or `Providers/` as default folders. Keep repository implementations, `DbContext`, and EF mapping in `Domain/Repository/`.
 - Put migrations beside the service boundary they belong to, not in a global dump folder.
-- Keep AppHost or gateway entry projects down to the project file and `Program.cs`. Do not place business ProjectUnits there.
+- Keep AppHost or gateway projects composition-only. `Program.cs`, composition modules, registration extensions, and thin host adapters are allowed; business ProjectUnits and domain behavior remain in their owning service.
 - Keep `.slnx` folders aligned with the real `src/` tree so the solution view reflects AppHost, shared platform, services, and migrations ownership correctly.

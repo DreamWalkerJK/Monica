@@ -1,207 +1,427 @@
 @attribute [Route(PAGE_URL)]
-@using Monica.Core.ObjectMapping.Models
+@implements IAsyncDisposable
+@using System.Globalization
 @using Monica.Core.ObjectMapping.Facades
 @using Monica.Core.Results
+@using Monica.Framework.UI.UIMapper.Models
 @using Monica.UI.Shared.Components.Markdown
 @inject ObjectMappingFacade StatusService
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<MapperResource> L
+@inject IJSRuntime JS
 
 <PageTitle>@L["Page:PageTitle"]</PageTitle>
 
-<div class="mapper-page">
-    <MudContainer MaxWidth="MaxWidth.False" Class="mapper-page__outer-container">
-        <div class="mapper-page__container">
-            <header class="mapper-page__header">
-                <div class="mapper-page__eyebrow">
-                    <span class="mapper-page__eyebrow-line" aria-hidden="true"></span>
-                    <span>@L["Page:Header:Eyebrow"]</span>
-                </div>
-                <div class="mapper-page__heading-row">
-                    <div>
-                        <MudText Typo="Typo.h3" HtmlTag="h1">@L["Page:Header:Title"]</MudText>
-                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mapper-page__description">
-                            @L["Page:Header:Description"]
-                        </MudText>
-                    </div>
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Refresh"
-                               OnClick="LoadDataAsync"
-                               Disabled="@_loading">
-                        @(_loading ? L["Page:Actions:Loading"] : L["Page:Actions:Refresh"])
-                    </MudButton>
-                </div>
-            </header>
-
-            <section class="mapper-page__pulse" aria-label="@L["Page:Summary:AriaLabel"]">
-                <div class="mapper-page__pulse-icon" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Filled.CompareArrows" />
-                </div>
-                <div>
-                    <span>@L["Page:Summary:RegisteredMappings"]</span>
-                    <strong>@(_mapperData?.Count ?? 0)</strong>
-                </div>
-                <MudChip T="string" Size="Size.Small" Color="@(_loading ? Color.Info : Color.Success)" Variant="Variant.Outlined">
-                    @(_loading ? L["Page:Summary:Scanning"] : L["Page:Summary:Ready"])
-                </MudChip>
-            </section>
-
-            @if (_loading && _mapperData is null)
+<div class="mapper-page" @ref="_root" data-read-state="@ReadState" data-read-id="@_read?.Identity"
+     data-selected-ordinal="@_selected?.Ordinal" data-selection-version="@_selectionVersion" aria-busy="@(_loading ? "true" : "false")">
+    <header class="mapper-page__header">
+        <div class="mapper-page__heading-row">
+            <div class="mapper-page__identity">
+                <div class="mapper-page__eyebrow"><MudIcon Icon="@Icons.Material.Outlined.CompareArrows" /><span>@L["Page:Header:Eyebrow"]</span></div>
+                <h1>@L["Page:Header:Title"]</h1>
+            </div>
+            <MudButton Class="mapper-refresh" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh"
+                       OnClick="RefreshAsync" Disabled="@_loading" aria-label="@L["Page:Actions:Refresh"]">
+                <span class="mapper-refresh__full">@L["Page:Actions:Refresh"]</span><span class="mapper-refresh__short">@L["Page:Actions:RefreshShort"]</span>
+            </MudButton>
+        </div>
+        <p class="mapper-page__description">@L["Page:Header:Description"]</p>
+        <div class="mapper-page__read-context" role="status" aria-live="polite">
+            @if (_loading)
             {
-                <div class="mapper-page__state" role="status">
-                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-                    <MudText Typo="Typo.h6">@L["Page:States:Loading"]</MudText>
-                </div>
+                <span>@(_read is null ? L["Page:States:Reading"] : L["Page:States:Refreshing"])</span>
             }
-            else if (_mapperData?.Mappings is { Count: > 0 } mappings)
+            @if (_read is not null)
             {
-                <section class="mapper-registry">
-                    <header class="mapper-registry__header">
-                        <div class="mapper-registry__identity">
-                            <span class="mapper-registry__icon" aria-hidden="true">
-                                <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
-                            </span>
-                            <div>
-                                <MudText Typo="Typo.h6">@L["Page:Registry:Title"]</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Page:Registry:Description"]</MudText>
-                            </div>
-                        </div>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                            @L["Page:Registry:Count", mappings.Count]
-                        </MudChip>
-                    </header>
+                <span class="mapper-read-receipt" title="@FullReceipt">@L["Page:Read:LastSuccess", ShortReceipt]</span>
+            }
+            <span class="mud-sr-only">@_announcement</span>
+        </div>
+    </header>
 
-                    <div class="mapper-table-wrapper">
-                        <MudTable T="ObjectMapperInfo" Items="@mappings" Hover="true" Dense="true" Elevation="0">
-                            <HeaderContent>
-                                <MudTh>@L["Page:Registry:Columns:SourceType"]</MudTh>
-                                <MudTh>@L["Page:Registry:Columns:DestinationType"]</MudTh>
-                                <MudTh Class="mapper-table__action-column">@L["Page:Registry:Columns:Actions"]</MudTh>
-                            </HeaderContent>
-                            <RowTemplate>
-                                <MudTd DataLabel="@L["Page:Registry:Columns:SourceType"]">
-                                    <code class="mapper-type">@context.SourceType</code>
-                                </MudTd>
-                                <MudTd DataLabel="@L["Page:Registry:Columns:DestinationType"]">
-                                    <code class="mapper-type mapper-type--destination">@context.DestinationType</code>
-                                </MudTd>
-                                <MudTd DataLabel="@L["Page:Registry:Columns:Actions"]">
-                                    <MudButton Variant="Variant.Text"
-                                               Color="Color.Primary"
-                                               Size="Size.Small"
-                                               StartIcon="@Icons.Material.Filled.Code"
-                                               OnClick="@(() => ShowMapperCode(context))">
-                                        @L["Page:Actions:InspectExpression"]
-                                    </MudButton>
-                                </MudTd>
-                            </RowTemplate>
-                        </MudTable>
-                    </div>
+    @if (_error is not null && _read is not null)
+    {
+        <section class="mapper-read-error" role="alert">
+            <div class="mapper-read-error__summary"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" /><h2>@L["Page:States:LatestFailed"]</h2></div>
+            <p>@L["Page:Read:Retained", FullReceipt]</p>
+            <details><summary>@L["Page:Read:Diagnostic"]</summary><p class="mapper-read-error__diagnostic">@_error</p></details>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="RefreshAsync" Disabled="@_loading">@L["Page:Actions:Retry"]</MudButton>
+        </section>
+    }
+
+    <div class="mapper-workspace" data-mode="@(_compact ? "compact" : "wide")" data-picker-open="@(_pickerOpen ? "true" : "false")"
+         data-owner-width="@_ownerWidth.ToString(CultureInfo.InvariantCulture)" data-opening-height="@_openingHeight.ToString(CultureInfo.InvariantCulture)">
+        @if (_read is null)
+        {
+            @if (_error is not null)
+            {
+                <section class="mapper-page__state mapper-page__state--failed" role="alert">
+                    <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" />
+                    <h2>@L["Page:States:FirstFailed"]</h2>
+                    <p>@L["Page:States:FirstFailedDescription"]</p>
+                    <details><summary>@L["Page:Read:Diagnostic"]</summary><p class="mapper-read-error__diagnostic">@_error</p></details>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="RefreshAsync" Disabled="@_loading">@L["Page:Actions:Retry"]</MudButton>
                 </section>
             }
-            else if (!_loading && _mapperData is not null)
+            else
             {
-                <div class="mapper-page__state">
-                    <MudIcon Icon="@Icons.Material.Filled.DataObject" Color="Color.Secondary" Size="Size.Large" />
-                    <MudText Typo="Typo.h6">@L["Page:States:EmptyTitle"]</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:States:EmptyDescription"]</MudText>
-                </div>
+                <section class="mapper-page__state" role="status"><MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" /><h2>@L["Page:States:Reading"]</h2></section>
             }
-        </div>
-    </MudContainer>
-</div>
-
-<MudDialog @bind-Visible="_showCodeDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true })">
-    <TitleContent>
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Primary" />
-            <MudText Typo="Typo.h6">@L["Page:Dialog:Title"]</MudText>
-        </MudStack>
-    </TitleContent>
-    <DialogContent>
-        <MarkdownThemeSync />
-        @if (_selectedMapper is not null)
+        }
+        else if (_read.Rows.IsEmpty)
         {
-            <div class="mapper-expression">
-                <div class="mapper-expression__route">
-                    <div class="mapper-expression__type mapper-expression__type--source">
-                        <span>@L["Page:Dialog:SourceType"]</span>
-                        <code>@_selectedMapper.SourceType</code>
+            <section class="mapper-page__state mapper-page__state--empty">
+                <MudIcon Icon="@Icons.Material.Outlined.DataObject" />
+                <h2>@L["Page:States:EmptyTitle"]</h2>
+                <span class="mapper-catalog__count">@L["Page:Registry:Count", _read.ReportedCount]</span>
+                <p>@L["Page:States:EmptyDescription"]</p>
+            </section>
+        }
+        else
+        {
+            <section class="mapper-catalog" aria-labelledby="mapper-catalog-heading" @onkeydown="OnCatalogKeyDown">
+                <header class="mapper-catalog__header">
+                    <div><h2 id="mapper-catalog-heading">@L["Page:Registry:Title"]</h2><span class="mapper-catalog__count">@RegistryCount</span></div>
+                    @if (_compact)
+                    {
+                        <MudButton Class="mapper-picker-toggle" Variant="Variant.Text" Color="Color.Primary" OnClick="TogglePicker"
+                                   aria-expanded="@(_pickerOpen ? "true" : "false")" aria-controls="mapper-picker-content"
+                                   EndIcon="@(_pickerOpen ? Icons.Material.Outlined.ExpandLess : Icons.Material.Outlined.ExpandMore)">
+                            @(_selected is null ? L["Page:Actions:Choose"] : L["Page:Actions:ChooseAnother"])
+                        </MudButton>
+                    }
+                </header>
+                <div id="mapper-picker-content" class="mapper-catalog__content" hidden="@(_compact && !_pickerOpen)">
+                    <div class="mapper-catalog__controls">
+                        <MudTextField T="string" @ref="_search" Value="@_query" ValueChanged="QueryChanged" Immediate="true"
+                                      Label="@L["Page:Registry:Search"]" Placeholder="@L["Page:Registry:Search"]" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+                        <div class="mapper-catalog__control-actions">
+                            @if (_query.Length > 0)
+                            {
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearSearchAsync" StartIcon="@Icons.Material.Outlined.Clear">@L["Page:Actions:ClearSearch"]</MudButton>
+                            }
+                            @if (_compact)
+                            {
+                                <MudButton Variant="Variant.Text" OnClick="ClosePicker">@L["Page:Actions:ClosePicker"]</MudButton>
+                            }
+                        </div>
                     </div>
-                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="mapper-expression__arrow" />
-                    <div class="mapper-expression__type mapper-expression__type--destination">
-                        <span>@L["Page:Dialog:DestinationType"]</span>
-                        <code>@_selectedMapper.DestinationType</code>
+                    <div class="mapper-catalog__entries">
+                        @if (_visibleRows.Count == 0)
+                        {
+                            <div class="mapper-catalog__no-matches" role="status"><h3>@L["Page:States:NoMatches"]</h3><p>@L["Page:States:NoMatchesDescription"]</p></div>
+                        }
+                        else
+                        {
+                            <ul>
+                                @foreach (var row in _visibleRows)
+                                {
+                                    <li @key="(_read.Identity, row.Ordinal)">
+                                        <button type="button" class="mapper-pair" data-ordinal="@row.Ordinal" aria-pressed="@(_selected?.Ordinal == row.Ordinal ? "true" : "false")"
+                                                aria-controls="mapper-expression-reader" @onclick="@(() => Select(row))">
+                                            <span class="mapper-pair__role">@L["Page:Reader:Source"]</span><code class="mapper-pair__source">@row.SourceType</code>
+                                            <span class="mapper-pair__role mapper-pair__direction"><MudIcon Icon="@Icons.Material.Outlined.ArrowForward" /><span>@L["Page:Reader:Destination"]</span></span><code class="mapper-pair__destination">@row.DestinationType</code>
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        }
                     </div>
                 </div>
+            </section>
 
-                <div class="mapper-markdown-wrapper">
-                    @if (!string.IsNullOrEmpty(_selectedMapper.MapExpression))
+            <section id="mapper-expression-reader" class="mapper-reader" aria-labelledby="mapper-expression-heading">
+                <header class="mapper-reader__heading"><MudIcon Icon="@Icons.Material.Outlined.Code" /><h2 id="mapper-expression-heading" tabindex="-1">@L["Page:Reader:Title"]</h2><span aria-hidden="true">C#</span></header>
+                @if (_selected is null)
+                {
+                    <div class="mapper-reader__empty"><h3>@L["Page:States:SelectTitle"]</h3><p>@(_refreshed ? L["Page:States:SelectAfterRefresh"] : L["Page:States:SelectDescription"])</p></div>
+                }
+                else
+                {
+                    <div class="mapper-reader__context">
+                        <span class="mapper-reader__receipt" title="@FullReceipt">@L["Page:Read:ExpressionReceipt", ShortReceipt]</span>
+                        <MudCheckBox T="bool" Value="@_wrap" ValueChanged="WrapChanged" Label="@L["Page:Reader:Wrap"]" Color="Color.Primary" Dense="true" />
+                    </div>
+                    @if (!_visibleRows.Any(row => row.Ordinal == _selected.Ordinal))
                     {
-                        <MudMarkdown Value="@($"```csharp\n{_selectedMapper.MapExpression}\n```")" />
+                        <div class="mapper-reader__outside-filter" role="status"><span>@L["Page:States:OutsideFilter"]</span><MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearSearchAsync">@L["Page:Actions:ClearSearch"]</MudButton></div>
+                    }
+                    <div class="mapper-reader__pair">
+                        <div class="mapper-reader__source"><span>@L["Page:Reader:Source"]</span><code>@_selected.SourceType</code></div>
+                        <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Class="mapper-reader__arrow" />
+                        <div class="mapper-reader__destination"><span>@L["Page:Reader:Destination"]</span><code>@_selected.DestinationType</code></div>
+                    </div>
+                    @if (string.IsNullOrEmpty(_selected.Expression))
+                    {
+                        <div class="mapper-reader__missing" role="status"><MudIcon Icon="@Icons.Material.Outlined.Info" /><p>@L["Page:States:MissingExpression"]</p></div>
                     }
                     else
                     {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                            @L["Page:Dialog:NoExpression"]
-                        </MudAlert>
+                        <div class="mapper-code" data-wrap="@(_wrap ? "true" : "false")">
+                            <MarkdownThemeSync />
+                            <MudMarkdown @key="(_read.Identity, _selected.Ordinal)" Value="@_markdown" Styling="@_codeStyling" />
+                        </div>
                     }
-                </div>
-            </div>
+                }
+            </section>
         }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@(() => _showCodeDialog = false)">@L["Page:Actions:Close"]</MudButton>
-    </DialogActions>
-</MudDialog>
+    </div>
+</div>
 
 @code {
     public const string PAGE_URL = "/mapper-debug";
 
+    private readonly MudMarkdownStyling _codeStyling = new() { CodeBlock = { CopyButton = CodeBlockCopyButton.None } };
+    private readonly List<Task> _uiOperations = [];
+    private MapperRegistryRead? _read;
+    private MapperRegistryRow? _selected;
+    private IReadOnlyList<MapperRegistryRow> _visibleRows = [];
+    private string _query = string.Empty;
+    private string _markdown = string.Empty;
+    private string? _error;
+    private string _announcement = string.Empty;
     private bool _loading;
-    private ObjectMapperStatusResponse? _mapperData;
-    private bool _showCodeDialog;
-    private ObjectMapperInfo? _selectedMapper;
+    private bool _refreshed;
+    private bool _wrap = true;
+    private bool _compact = true;
+    private bool _pickerOpen = true;
+    private bool _retired;
+    private bool _resetEntries;
+    private bool _focusPicker;
+    private double _ownerWidth;
+    private double _openingHeight;
+    private long _readSequence;
+    private long _selectionVersion;
+    private (long Read, int Ordinal, long Version)? _pendingReveal;
+    private ElementReference _root;
+    private MudTextField<string>? _search;
+    private Task? _readOperation;
+    private Task? _initialization;
+    private TaskCompletionSource? _retirement;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _session;
+    private DotNetObjectReference<UIMapperDebugPage>? _callback;
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
-        => firstRender ? LoadDataAsync(showSuccessMessage: false) : Task.CompletedTask;
+    private string ReadState => _read is null ? (_error is null ? "reading" : "failed") : _read.Rows.IsEmpty ? "empty" : "populated";
+    private string ShortReceipt => _read?.ReceivedAt.ToString("T", CultureInfo.CurrentCulture) ?? string.Empty;
+    private string FullReceipt => _read is null ? string.Empty : _read.ReceivedAt.ToString("F", CultureInfo.CurrentCulture) + _read.ReceivedAt.ToString(" zzz", CultureInfo.InvariantCulture);
+    private string RegistryCount => string.IsNullOrWhiteSpace(_query)
+        ? L["Page:Registry:Count", _read!.ReportedCount]
+        : L["Page:Registry:FilteredCount", _visibleRows.Count, _read!.ReportedCount];
 
-    private Task LoadDataAsync() => LoadDataAsync(showSuccessMessage: true);
-
-    private async Task LoadDataAsync(bool showSuccessMessage)
+    protected override Task OnInitializedAsync() => ReadAsync(false);
+    private Task RefreshAsync() => ReadAsync(true);
+    private Task ReadAsync(bool manual)
     {
+        if (_retired || _loading) return Task.CompletedTask;
         _loading = true;
-        StateHasChanged();
+        return _readOperation = ReadCoreAsync(manual);
+    }
 
+    private async Task ReadCoreAsync(bool manual)
+    {
         try
         {
-            if ((await StatusService.GetStatusAsync()).IsFailed(out var error, out var data))
+            var result = await StatusService.GetStatusAsync();
+            if (_retired) return;
+            if (result.IsFailed(out var error, out var response))
             {
-                Snackbar.Add(L["Page:Messages:LoadFailed", error], Severity.Error);
+                RecordFailure(error.Message ?? string.Empty);
                 return;
             }
-
-            _mapperData = data;
-            if (showSuccessMessage)
-            {
-                Snackbar.Add(L["Page:Messages:LoadSucceeded", data.Count], Severity.Success);
-            }
+            _read = MapperRegistryRead.Capture(++_readSequence, response);
+            _selected = null;
+            _selectionVersion++;
+            _pendingReveal = null;
+            _focusPicker = false;
+            _markdown = string.Empty;
+            _error = null;
+            _refreshed = manual;
+            _pickerOpen = true;
+            _resetEntries = true;
+            FilterRows();
+            _announcement = L["Page:Messages:LoadSucceeded", _read.ReportedCount];
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            Snackbar.Add(L["Page:Messages:LoadException", ex.Message], Severity.Error);
+            if (!_retired) RecordFailure(exception.Message);
         }
         finally
         {
-            _loading = false;
-            StateHasChanged();
+            if (!_retired) _loading = false;
         }
     }
 
-    private void ShowMapperCode(ObjectMapperInfo mapper)
+    private void RecordFailure(string diagnostic)
     {
-        _selectedMapper = mapper;
-        _showCodeDialog = true;
+        _error = diagnostic;
+        _announcement = L["Page:Messages:LoadFailed", diagnostic];
+    }
+    private void QueryChanged(string? value)
+    {
+        if (_retired) return;
+        _query = value ?? string.Empty;
+        FilterRows();
+    }
+    private void FilterRows()
+    {
+        var query = _query.Trim();
+        _visibleRows = _read is null ? [] : _read.Rows
+            .Where(row => row.SourceType.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || row.DestinationType.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(row => row.SourceType, StringComparer.Ordinal)
+            .ThenBy(row => row.DestinationType, StringComparer.Ordinal).ThenBy(row => row.Ordinal).ToArray();
+    }
+    private Task ClearSearchAsync()
+    {
+        if (_retired) return Task.CompletedTask;
+        QueryChanged(string.Empty);
+        return TrackUiAsync(async () => { if (_search is not null) await _search.ClearAsync(); });
+    }
+    private void Select(MapperRegistryRow row)
+    {
+        if (_retired || _read is null || !_read.Rows.Contains(row)) return;
+        _selected = row;
+        _selectionVersion++;
+        _focusPicker = false;
+        _markdown = Fence(row.Expression);
+        if (_compact)
+        {
+            _pickerOpen = false;
+            _pendingReveal = (_read.Identity, row.Ordinal, _selectionVersion);
+        }
+    }
+    private static string Fence(string expression)
+    {
+        var longest = 0;
+        var run = 0;
+        foreach (var character in expression)
+        {
+            run = character == '`' ? run + 1 : 0;
+            longest = Math.Max(longest, run);
+        }
+        var fence = new string('`', Math.Max(3, longest + 1));
+        return $"{fence}csharp\n{expression}\n{fence}";
+    }
+    private void WrapChanged(bool value) { if (!_retired) _wrap = value; }
+    private void TogglePicker()
+    {
+        if (_retired) return;
+        _pickerOpen = !_pickerOpen;
+        _focusPicker = false;
+        if (_pickerOpen) _pendingReveal = null;
+    }
+    private void ClosePicker()
+    {
+        if (_retired) return;
+        _pickerOpen = false;
+        _focusPicker = true;
+    }
+    private void OnCatalogKeyDown(KeyboardEventArgs args)
+    {
+        if (_compact && _pickerOpen && args.Key == "Escape") ClosePicker();
+    }
+
+    /// <summary>Receives measurements of this visit's actual workspace and shell scrollport.</summary>
+    [JSInvokable]
+    public Task OnWorkbenchMeasured(double width, double openingHeight)
+    {
+        if (_retired) return Task.CompletedTask;
+        return InvokeAsync(() =>
+        {
+            if (_retired) return;
+            var compact = width < 1000 || openingHeight < 520;
+            if (compact && !_compact) _pickerOpen = _selected is null;
+            _compact = compact;
+            _ownerWidth = width;
+            _openingHeight = openingHeight;
+            StateHasChanged();
+        });
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try { await CoordinateRenderAsync(); }
+        catch (JSDisconnectedException) when (_retired) { }
+        catch (OperationCanceledException) when (_retired) { }
+    }
+    private async Task CoordinateRenderAsync()
+    {
+        if (_retired) return;
+        _initialization ??= InitializeInteropAsync();
+        await _initialization;
+        var session = _session;
+        if (_retired || session is null) return;
+        if (_resetEntries && _read is not null)
+        {
+            _resetEntries = false;
+            var identity = _read.Identity;
+            await TrackUiAsync(() => session.InvokeVoidAsync("resetEntries", identity).AsTask());
+        }
+        if (_pendingReveal is { } reveal)
+        {
+            _pendingReveal = null;
+            if (_compact && _read?.Identity == reveal.Read && _selected?.Ordinal == reveal.Ordinal && _selectionVersion == reveal.Version)
+                await TrackUiAsync(() => session.InvokeVoidAsync("reveal", reveal.Read, reveal.Ordinal, reveal.Version).AsTask());
+        }
+        if (_focusPicker)
+        {
+            _focusPicker = false;
+            var identity = _read?.Identity;
+            var version = _selectionVersion;
+            await TrackUiAsync(() => session.InvokeVoidAsync("focusPicker", identity, version).AsTask());
+        }
+    }
+    private async Task InitializeInteropAsync()
+    {
+        _module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Monica.Framework.UI/UIMapper/mapper-workbench.js");
+        if (_retired) return;
+        _callback = DotNetObjectReference.Create(this);
+        _session = await _module.InvokeAsync<IJSObjectReference>("observe", _root, _callback);
+    }
+    private async Task TrackUiAsync(Func<Task> operation)
+    {
+        if (_retired) return;
+        _uiOperations.RemoveAll(task => task.IsCompletedSuccessfully);
+        var task = operation();
+        _uiOperations.Add(task);
+        try { await task; }
+        catch (JSDisconnectedException) when (_retired) { }
+        catch (OperationCanceledException) when (_retired) { }
+    }
+
+    /// <inheritdoc />
+    public ValueTask DisposeAsync()
+    {
+        if (_retirement is not null) return new(_retirement.Task);
+        _retirement = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        _retired = true;
+        _pendingReveal = null;
+        _focusPicker = false;
+        _ = RetireAsync(_retirement);
+        return new(_retirement.Task);
+    }
+    private async Task RetireAsync(TaskCompletionSource completion)
+    {
+        var failures = new List<Exception>();
+        await ObserveAsync(() => _initialization ?? Task.CompletedTask);
+        var session = _session;
+        var module = _module;
+        // Stop callback producers before draining their consumers or releasing the .NET target.
+        if (session is not null) await ObserveAsync(() => session.InvokeVoidAsync("dispose").AsTask());
+        await ObserveAsync(() => _readOperation ?? Task.CompletedTask);
+        foreach (var operation in _uiOperations) await ObserveAsync(() => operation);
+        if (session is not null) await ObserveAsync(() => session.DisposeAsync().AsTask());
+        if (module is not null) await ObserveAsync(() => module.DisposeAsync().AsTask());
+        _callback?.Dispose();
+        if (failures.Count == 0) completion.TrySetResult();
+        else completion.TrySetException(new AggregateException("Mapper page retirement failed.", failures));
+
+        async Task ObserveAsync(Func<Task> operation)
+        {
+            try { await operation(); }
+            catch (JSDisconnectedException) { }
+            catch (OperationCanceledException) when (_retired) { }
+            catch (Exception exception) { failures.Add(exception); }
+        }
     }
 }

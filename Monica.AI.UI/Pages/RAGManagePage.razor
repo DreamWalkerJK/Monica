@@ -1,238 +1,83 @@
 @attribute [Route(PAGE_URL)]
-@implements IDisposable
+@implements IAsyncDisposable
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
-@using Monica.AI.UI.UIRAG.Components
+@using Monica.AI.UI.Shared.Components
 @using Monica.AI.UI.UIRAG.State
-@using Monica.UI.Localization
 @inject IStringLocalizer<AIResource> L
-@inject IStringLocalizer<SharedResource> Shared
 
 <PageTitle>@L["RAG:Navigation:Manage"]</PageTitle>
-
 <div class="rag-manage-page">
-    <RAGManageKnowledgeBasePanel PageState="PageState" />
-
-    <div class="kb-detail-panel">
-        @if (PageState.IsInitialLoading)
+    <KnowledgeRagHeader Title="@L["KnowledgeWorkbench:Indexing"]" Description="@L["KnowledgeWorkbench:IndexingDescription"]" CurrentRoute="@PAGE_URL" />
+    <div class="knowledge-workspace">
+        @if (!PageState.IsInitialLoading && string.IsNullOrWhiteSpace(PageState.CatalogErrorMessage) && PageState.KnowledgeBases.Count == 0)
         {
-            <div class="detail-loading-state">
-                <MudChip T="string"
-                         Size="Size.Small"
-                         Variant="Variant.Outlined"
-                         Color="Color.Primary"
-                         Class="loading-phase-chip">
-                    @Shared["Common:Initializing"]
-                </MudChip>
-                <MudText Typo="Typo.h6" Class="loading-title">@L["RAG:Navigation:Manage"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
-                    @PageState.LoadingPhaseText
-                </MudText>
-                <MudProgressLinear Value="@PageState.LoadingProgressValue"
-                                   Color="Color.Primary"
-                                   Rounded="true"
-                                   Class="loading-progress" />
-            </div>
-        }
-        else if (PageState.SelectedKnowledgeBase is { } selectedKnowledgeBase)
-        {
-            @if (PageState.IsSelectionLoading)
-            {
-                <div class="detail-loading-state">
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Variant="Variant.Outlined"
-                             Color="Color.Primary"
-                             Class="loading-phase-chip">
-                        @Shared["Common:Initializing"]
-                    </MudChip>
-                    <MudText Typo="Typo.h6" Class="loading-title">@selectedKnowledgeBase.Name</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
-                        @PageState.LoadingPhaseText
-                    </MudText>
-                    <MudProgressLinear Value="@PageState.LoadingProgressValue"
-                                       Color="Color.Primary"
-                                       Rounded="true"
-                                       Class="loading-progress" />
-                </div>
-            }
-            else
-            {
-                <div class="detail-content">
-                    <div class="rag-support-section">
-                        <div class="rag-support-header">
-                            <div class="rag-support-title-group">
-                                <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Class="rag-support-icon" />
-                                <div class="rag-support-title-copy">
-                                    <MudText Typo="Typo.subtitle1" Class="rag-support-title">
-                                        @L["RAG:RagSupport:Title"]
-                                    </MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        @(RAGManagePageState.HasEmbeddingBinding(selectedKnowledgeBase)
-                                            ? L["RAG:RagSupport:EnabledStatus"]
-                                            : L["RAG:RagSupport:DisabledStatus"])
-                                    </MudText>
-                                </div>
-                            </div>
-                            <div class="rag-support-actions">
-                                <MudButton Variant="Variant.Text"
-                                           Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.FactCheck"
-                                           OnClick="@PageState.ShowEmbeddingDiagnosticsDialogAsync"
-                                           Disabled="@PageState.HasRagSupportActionInFlight">
-                                    @L["RAG:EmbeddingDiagnostics:Open"]
-                                </MudButton>
-                                <MudButton Variant="Variant.Text"
-                                           Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.Storage"
-                                           OnClick="@PageState.ShowVectorStoreDiagnosticsDialogAsync"
-                                           Disabled="@PageState.HasRagSupportActionInFlight">
-                                    @L["RAG:VectorDiagnostics:Open"]
-                                </MudButton>
-                                @if (PageState.IsRagSupportEnableActionInFlight)
-                                {
-                                    <MudButton Variant="Variant.Filled"
-                                               Color="Color.Primary"
-                                               Size="Size.Small"
-                                               StartIcon="@Icons.Material.Filled.Link"
-                                               OnClick="@PageState.EnableOrUpdateRagSupportAsync"
-                                               Disabled="true">
-                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                        @L["RAG:RagSupport:Enabling"]
-                                    </MudButton>
-                                }
-                                else if (RAGManagePageState.HasEmbeddingBinding(selectedKnowledgeBase)
-                                         || PageState.IsRagSupportRemoveActionInFlight)
-                                {
-                                    <MudButton Variant="Variant.Outlined"
-                                               Color="Color.Error"
-                                               Size="Size.Small"
-                                               StartIcon="@Icons.Material.Filled.LinkOff"
-                                               OnClick="@PageState.RemoveRagSupportAsync"
-                                               Disabled="@(!PageState.CanRemoveRagSupport)">
-                                        @if (PageState.IsRagSupportRemoveActionInFlight)
-                                        {
-                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                            @L["RAG:RagSupport:Removing"]
-                                        }
-                                        else
-                                        {
-                                            @L["RAG:RagSupport:Remove"]
-                                        }
-                                    </MudButton>
-                                }
-                                else
-                                {
-                                    <MudButton Variant="Variant.Filled"
-                                               Color="Color.Primary"
-                                               Size="Size.Small"
-                                               StartIcon="@Icons.Material.Filled.Link"
-                                               OnClick="@PageState.EnableOrUpdateRagSupportAsync"
-                                               Disabled="@(!PageState.CanEnableRagSupport)">
-                                        @L["RAG:RagSupport:Enable"]
-                                    </MudButton>
-                                }
-                            </div>
-                        </div>
-
-                        <EmbeddingModelSelector AvailableModels="@PageState.AvailableModels"
-                                                SelectedModelKey="@PageState.CurrentEmbeddingModelKey"
-                                                SelectedModelKeyChanged="@PageState.ChangeEmbeddingModelAsync"
-                                                IsDisabled="@(PageState.HasActiveQueueWork || PageState.HasRagSupportActionInFlight)" />
-
-                        @if (PageState.AvailableModels.Count == 0)
-                        {
-                            <MudAlert Severity="Severity.Warning" Dense="true" Class="embedding-empty-warning">
-                                @L["RAG:EmbeddingModel:NotConfigured"]
-                            </MudAlert>
-                        }
-                    </div>
-
-                    <div class="kb-header">
-                        <div class="kb-header-info">
-                            <MudText Typo="Typo.h5">@selectedKnowledgeBase.Name</MudText>
-                            @if (!string.IsNullOrEmpty(selectedKnowledgeBase.Description))
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@selectedKnowledgeBase.Description</MudText>
-                            }
-                        </div>
-                        <div class="kb-badges">
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Variant="Variant.Outlined"
-                                     Color="Color.Default"
-                                     Icon="@Icons.Material.Filled.Description">
-                                @selectedKnowledgeBase.DocumentCount @L["RAG:KnowledgeBase:DocumentCount"]
-                            </MudChip>
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Variant="Variant.Outlined"
-                                     Color="Color.Default"
-                                     Icon="@Icons.Material.Filled.GridView">
-                                @selectedKnowledgeBase.ChunkCount @L["RAG:KnowledgeBase:ChunkCount"]
-                            </MudChip>
-                            @if (RAGManagePageState.HasEmbeddingBinding(selectedKnowledgeBase))
-                            {
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="Color.Info"
-                                         Variant="Variant.Outlined"
-                                         Icon="@Icons.Material.Filled.Memory"
-                                         Class="kb-header-model-chip">
-                                    @selectedKnowledgeBase.EmbeddingModelName
-                                </MudChip>
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="Color.Secondary"
-                                         Variant="Variant.Outlined"
-                                         Icon="@Icons.Material.Filled.Hub"
-                                         Class="kb-header-provider-chip">
-                                    @PageState.GetProviderDisplayLabel(
-                                        selectedKnowledgeBase.EmbeddingProviderId,
-                                        selectedKnowledgeBase.EmbeddingModelName)
-                                </MudChip>
-                            }
-                        </div>
-                    </div>
-
-                    @if (PageState.ShouldShowMissingVectorWarning)
-                    {
-                        <MudAlert Severity="Severity.Warning"
-                                  Variant="Variant.Outlined"
-                                  Class="vector-warning-alert">
-                            <div class="vector-warning-content">
-                                <div class="vector-warning-copy">
-                                    <MudText Typo="Typo.subtitle2" Class="vector-warning-title">
-                                        @L["RAG:VectorValidation:MissingVectors:Title"]
-                                    </MudText>
-                                    <MudText Typo="Typo.body2" Class="vector-warning-message">
-                                        @PageState.GetMissingVectorWarningMessage()
-                                    </MudText>
-                                </div>
-                                <MudButton Variant="Variant.Filled"
-                                           Color="Color.Warning"
-                                           Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.Refresh"
-                                           Class="vector-warning-action"
-                                           OnClick="@PageState.ReindexSelectedKnowledgeBaseAsync"
-                                           Disabled="@(!PageState.CanReindexSelectedKnowledgeBase)">
-                                    @L["RAG:VectorValidation:MissingVectors:Action"]
-                                </MudButton>
-                            </div>
-                        </MudAlert>
-                    }
-
-                    <RAGManageDocumentQueueSection PageState="PageState" />
-                </div>
-            }
+            <section class="knowledge-empty"><MudIcon Icon="@Icons.Material.Outlined.PlaylistPlay" /><h2>@L["KnowledgeWorkbench:FirstIndexSources"]</h2><p>@L["KnowledgeWorkbench:FirstIndexSourcesHint"]</p><MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="@KnowledgeBaseManagePage.PAGE_URL">@L["KnowledgeWorkbench:ManageSources"]</MudButton></section>
         }
         else
         {
-            <div class="empty-state">
-                <MudText Typo="Typo.h6" Color="Color.Secondary">
-                    @L["RAG:KnowledgeBase:SelectPrompt"]
-                </MudText>
-            </div>
+        <div class="knowledge-workspace-grid">
+            <KnowledgeBaseCatalog Items="PageState.KnowledgeBases" Selected="PageState.SelectedKnowledgeBase" IsLoading="PageState.IsInitialLoading" LoadingText="@PageState.LoadingPhaseText" ErrorMessage="@PageState.CatalogErrorMessage" IsDisabled="@(!PageState.CanChangeKnowledgeBaseSelection)" SelectionChanged="PageState.SelectKnowledgeBaseAsync" Retry="PageState.InitializeAsync" FocusRequested="FocusDossierAsync" />
+            <section class="indexing-dossier" aria-busy="@((PageState.IsInitialLoading || PageState.IsSelectionLoading).ToString().ToLowerInvariant())">
+                @if (PageState.IsInitialLoading || PageState.IsSelectionLoading)
+                {
+                    <div class="knowledge-loading" role="status"><p>@PageState.LoadingPhaseText</p><MudProgressLinear Value="PageState.LoadingProgressValue" Color="Color.Primary" /></div>
+                }
+                else if (PageState.SelectedKnowledgeBase is { } kb)
+                {
+                    <header class="indexing-identity"><span class="identity-label">@L["KnowledgeWorkbench:Collection"]</span><h2 @ref="_dossierHeading" tabindex="-1">@kb.Name</h2><code>@kb.Id</code>@if (!string.IsNullOrWhiteSpace(kb.Description)) { <p>@kb.Description</p> }<div class="identity-facts"><span>@L["KnowledgeWorkbench:DocumentCount", kb.DocumentCount]</span><span>@L["KnowledgeWorkbench:RecordedChunks", kb.ChunkCount]</span><a href="@KnowledgeBaseManagePage.PAGE_URL">@L["KnowledgeWorkbench:ManageSources"] <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" /></a></div></header>
+                    <section class="indexing-setup">
+                        <div class="embedding-setup">
+                            <div class="setup-heading">
+                                <div class="setup-heading-copy"><h3>@L["KnowledgeWorkbench:EmbeddingBinding"]</h3><span>@(RAGManagePageState.HasEmbeddingBinding(kb) ? L["KnowledgeWorkbench:ModelBound"] : L["RAG:RagSupport:DisabledStatus"])</span></div>
+                                <div class="setup-actions"><MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.FactCheck" OnClick="PageState.ShowEmbeddingDiagnosticsDialogAsync" Disabled="PageState.HasRagSupportActionInFlight">@L["RAG:EmbeddingDiagnostics:Open"]</MudButton>
+                                    @if (!RAGManagePageState.HasEmbeddingBinding(kb)) { <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Link" OnClick="PageState.EnableOrUpdateRagSupportAsync" Disabled="@(!PageState.CanEnableRagSupport)">@(PageState.IsRagSupportEnableActionInFlight ? L["RAG:RagSupport:Enabling"] : L["RAG:RagSupport:Enable"])</MudButton> }
+                                    else { <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" Size="Size.Small" AriaLabel="@L["KnowledgeWorkbench:BindingActions"]"><MudMenuItem Icon="@Icons.Material.Outlined.LinkOff" IconColor="Color.Error" Disabled="@(!PageState.CanRemoveRagSupport)" OnClick="PageState.RemoveRagSupportAsync">@(PageState.IsRagSupportRemoveActionInFlight ? L["RAG:RagSupport:Removing"] : L["RAG:RagSupport:Remove"])</MudMenuItem></MudMenu> }
+                                </div>
+                            </div>
+                            <EmbeddingModelSelector AvailableModels="PageState.AvailableModels" SelectedModelKey="@PageState.CurrentEmbeddingModelKey" SelectedModelKeyChanged="PageState.ChangeEmbeddingModelAsync" IsDisabled="@(PageState.HasActiveQueueWork || PageState.HasRagSupportActionInFlight)" />
+                            @if (RAGManagePageState.HasEmbeddingBinding(kb)) { <p class="binding-hint">@L["KnowledgeWorkbench:ChangingModelHint"]</p> }
+                        </div>
+                        <div class="vector-evidence" role="status">
+                            <h3>@L["KnowledgeWorkbench:VectorEvidence"]</h3>
+                            @if (PageState.IsVectorValidationLoading) { <p>@L["KnowledgeWorkbench:Vectors:Checking"]</p><MudProgressLinear Color="Color.Primary" Indeterminate="true" /> }
+                            else if (!string.IsNullOrWhiteSpace(PageState.VectorValidationErrorMessage)) { <p class="vector-error">@PageState.VectorValidationErrorMessage</p> }
+                            else if (PageState.SelectedKnowledgeBaseVectorValidation is { } validation)
+                            {
+                                <p class="vector-finding @(validation.HasPersistedIndexMetadata && validation.WasValidated ? (validation.HasValidVectors ? "is-present" : "is-missing") : string.Empty)"><i></i>@(!validation.HasPersistedIndexMetadata ? L["KnowledgeWorkbench:Vectors:NoIndex"] : !validation.WasValidated ? L["KnowledgeWorkbench:Vectors:Unavailable"] : validation.HasValidVectors ? L["KnowledgeWorkbench:Vectors:Present"] : L["KnowledgeWorkbench:Vectors:Missing"])</p>
+                                @if (validation.HasPersistedIndexMetadata) { <small>@L["KnowledgeWorkbench:Vectors:Scope", validation.IndexedDocumentCount, validation.IndexedChunkCount]</small> }
+                                @if (PageState.ShouldShowMissingVectorWarning) { <MudButton Variant="Variant.Text" Color="Color.Warning" Size="Size.Small" OnClick="PageState.ReindexSelectedKnowledgeBaseAsync" Disabled="@(!PageState.CanReindexSelectedKnowledgeBase)">@L["KnowledgeWorkbench:QueueAllReindex"]</MudButton> }
+                            }
+                            else { <p>@L["KnowledgeWorkbench:Vectors:Unavailable"]</p> }
+                            <p class="vector-scope-note">@L["KnowledgeWorkbench:Vectors:SampleNote"]</p>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Storage" OnClick="PageState.ShowVectorStoreDiagnosticsDialogAsync" Disabled="PageState.HasRagSupportActionInFlight">@L["RAG:VectorDiagnostics:Open"]</MudButton>
+                        </div>
+                    </section>
+                    <RAGManageDocumentQueueSection PageState="PageState" />
+                }
+                else { <div class="knowledge-empty"><MudIcon Icon="@Icons.Material.Outlined.PlaylistPlay" /><h2>@L["KnowledgeWorkbench:ChooseIndexCollection"]</h2><p>@L["KnowledgeWorkbench:ChooseIndexCollectionHint"]</p></div> }
+            </section>
+        </div>
         }
     </div>
 </div>
+@code {
+    private ElementReference _dossierHeading;
+    private readonly Monica.AI.UI.Shared.Support.KnowledgeDossierFocus _dossierFocus = new();
+    private async Task FocusDossierAsync(Monica.AI.KnowledgeBase.Models.KnowledgeBase selected)
+    {
+        if (_retired || PageState.IsRetired || PageState.SelectedKnowledgeBase?.Id != selected.Id) return;
+        var generation = PageState.SelectionGeneration;
+        await InvokeAsync(() =>
+        {
+            if (_retired || PageState.IsRetired || PageState.SelectionGeneration != generation
+                || PageState.SelectedKnowledgeBase?.Id != selected.Id) return;
+            _dossierFocus.Request(selected.Id, generation);
+            StateHasChanged();
+        });
+    }
+    protected override Task OnAfterRenderAsync(bool firstRender) => _dossierFocus.AfterRenderAsync(
+        (id, generation) => !_retired && !PageState.IsRetired && !PageState.IsSelectionLoading
+            && PageState.SelectionGeneration == generation && PageState.SelectedKnowledgeBase?.Id == id,
+        () => _dossierHeading.FocusAsync().AsTask());
+}

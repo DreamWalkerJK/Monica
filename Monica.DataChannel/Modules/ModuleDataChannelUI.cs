@@ -1,8 +1,10 @@
+using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.DataChannel.Localization;
 using Monica.DataChannel.Pages;
+using Monica.DataChannel.UIDataChannel.State;
 using Monica.UI.Shell.Models;
 using MudBlazor;
 
@@ -24,13 +26,30 @@ public class ModuleDataChannelUI : MonicaModule<ModuleDataChannelUIOption>, IUIM
             static option => option.AddResource<DataChannelResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
+            {
                 registry.RegisterLocalizedPage<UIDataChannelPage, DataChannelResource>(
                     UIDataChannelPage.PAGE_URL,
                     "Pages:DataChannelManage:Title",
-                    Icons.Material.Filled.DataObject,
+                    Icons.Material.Outlined.AltRoute,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
-                    navOrder: 30)));
+                    navOrder: 30,
+                    descriptionKey: "Workbench:DirectoryDescription");
+                registry.RegisterLocalizedPage<UIDataChannelExceptionsPage, DataChannelResource>(
+                    UIDataChannelExceptionsPage.PAGE_URL,
+                    "Pages:DataChannelExceptions:Title",
+                    Icons.Material.Outlined.ReportProblem,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 31,
+                    descriptionKey: "Workbench:ExceptionsDescription");
+            }));
+    }
+
+    /// <inheritdoc />
+    public override void ConfigureServices(ModuleContext<ModuleDataChannelUIOption> context)
+    {
+        context.Services.AddScoped<DataChannelWorkbenchState>();
     }
 }
 

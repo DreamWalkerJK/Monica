@@ -1,17 +1,21 @@
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Monica.DevOps.FileOps.Abstractions;
 using Monica.DevOps.FileOps.Exceptions;
 using Monica.DevOps.Localization;
 using Monica.DevOps.FileOps.Models;
-using Monica.DevOps.FileOps.Services;
 using Monica.DevOps.FileOps.Services.Support;
 using Monica.Core.Results;
 
 namespace Monica.DevOps.FileOps.Facades;
 
+/// <summary>Projects the scoped FileOps filesystem and transfer boundaries into result envelopes.</summary>
+/// <remarks>Injected services are borrowed. Callers own upload input streams and successful download streams.
+/// Service exceptions, including cancellation, are returned as failed envelopes; a failed mutation can already
+/// have applied filesystem changes. Native UI retirement must therefore observe actual producer completion.</remarks>
 public class FileOpsFacade(
-    FileOpsWorkspaceService workspaceService,
-    FileOpsTransferService transferService,
+    IFileOpsWorkspaceService workspaceService,
+    IFileOpsTransferService transferService,
     FileOpsMessageLocalizer messageLocalizer,
     IStringLocalizer<FileOpsResource> localizer,
     ILogger<FileOpsFacade> logger)

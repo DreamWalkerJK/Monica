@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
@@ -14,9 +13,6 @@ internal sealed class RAGEmbeddingBindingResolver(
     IAIProviderFactory providerFactory,
     ILogger<RAGEmbeddingBindingResolver> logger)
 {
-    private readonly ConcurrentDictionary<string, int> _resolvedEmbeddingDimensions =
-        new(StringComparer.OrdinalIgnoreCase);
-
     public async Task<RAGEmbeddingBinding> ResolveAsync(KnowledgeBaseModel kb, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(kb.EmbeddingProviderId) || string.IsNullOrWhiteSpace(kb.EmbeddingModelName))
@@ -43,9 +39,10 @@ internal sealed class RAGEmbeddingBindingResolver(
             throw new InvalidOperationException("Embedding model name cannot be empty.");
         }
 
-        var provider = providerFactory.GetProvider(providerId)
+        using var lease = providerFactory.AcquireProvider(providerId)
                        ?? throw new InvalidOperationException(
                            $"Embedding provider '{providerId}' was not found.");
+        var provider = lease.Provider;
 
         var embeddingModel = FindEmbeddingModel(provider, modelName)
                              ?? throw new InvalidOperationException(
@@ -57,11 +54,18 @@ internal sealed class RAGEmbeddingBindingResolver(
 
     public IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(RAGEmbeddingBinding binding)
     {
-        var provider = providerFactory.GetProvider(binding.ProviderId)
+        var lease = providerFactory.AcquireProvider(binding.ProviderId)
                        ?? throw new InvalidOperationException(
                            $"Embedding provider '{binding.ProviderId}' not found.");
-
-        return provider.GetEmbeddingGenerator(binding.ModelName);
+        try
+        {
+            return new LeasedEmbeddingGenerator(lease.Provider.GetEmbeddingGenerator(binding.ModelName), lease);
+        }
+        catch
+        {
+            lease.Dispose();
+            throw;
+        }
     }
 
     private async Task<int> ResolveEmbeddingDimensionsAsync(
@@ -72,13 +76,6 @@ internal sealed class RAGEmbeddingBindingResolver(
         if (embeddingModel.Dimensions is > 0)
         {
             return embeddingModel.Dimensions.Value;
-        }
-
-        var dimensionCacheKey = $"{provider.ProviderId}::{embeddingModel.ModelName}";
-        if (_resolvedEmbeddingDimensions.TryGetValue(dimensionCacheKey, out var cachedDimensions) && cachedDimensions > 0)
-        {
-            embeddingModel.Dimensions = cachedDimensions;
-            return cachedDimensions;
         }
 
         logger.LogInformation(
@@ -103,7 +100,6 @@ internal sealed class RAGEmbeddingBindingResolver(
         }
 
         embeddingModel.Dimensions = dimensions;
-        _resolvedEmbeddingDimensions[dimensionCacheKey] = dimensions;
 
         logger.LogInformation(
             "Resolved embedding dimensions for provider '{ProviderId}', model '{ModelName}': {Dimensions}",

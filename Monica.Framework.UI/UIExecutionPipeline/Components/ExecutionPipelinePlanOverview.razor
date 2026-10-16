@@ -3,54 +3,44 @@
 
 <section class="execution-pipeline-overview" data-testid="execution-pipeline-plan-overview">
     <header>
-        <ExecutionPipelineHelpLabel Text="@L["Page:Plans:OverviewTitle"]"
-                                    HelpText="@L["Page:Help:Plans:OperationName"]" />
-        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Plans:OverviewDescription"]</MudText>
+        <h3><ExecutionPipelineHelpLabel Text="@L["Page:Plans:OverviewTitle"]"
+                                        HelpText="@L["Page:Help:Plans:OperationName"]" /></h3>
+        <p>@L["Page:Plans:OverviewDescription"]</p>
     </header>
 
-    <div class="execution-pipeline-overview__grid">
-        @Metadata(
-            L["Page:Plans:Component"],
-            L["Page:Help:Plans:Component"],
-            Plan.Descriptor.ComponentType.FullName,
-            wide: true)
-        @Metadata(
-            L["Page:Filters:ExecutionPoint"],
-            L["Page:Help:Concepts:ExecutionPoint"],
-            Plan.Descriptor.Point.Value)
-        @Metadata(
-            L["Page:Plans:Contract"],
-            L["Page:Help:Plans:Contract"],
-            Plan.Descriptor.ContractType?.FullName ?? L["Page:States:NotAvailable"])
-        @Metadata(
-            L["Page:Plans:Method"],
-            L["Page:Help:Plans:Method"],
-            Plan.Descriptor.EntryMethod?.DisplaySignature ?? L["Page:States:NotAvailable"],
-            wide: true)
-        @Metadata(
-            L["Page:Plans:Input"],
-            L["Page:Help:Plans:Input"],
-            Plan.Descriptor.InputType.FullName)
-        @Metadata(
-            L["Page:Plans:Result"],
-            L["Page:Help:Plans:Result"],
-            Plan.Descriptor.ResultType.FullName)
-        @Metadata(
-            L["Page:Plans:Business"],
-            L["Page:Help:Concepts:BusinessOperation"],
-            Plan.Descriptor.IsBusinessOperation ? L["Page:Common:Yes"] : L["Page:Common:No"])
-        @Metadata(
-            L["Page:Plans:Transaction"],
-            L["Page:Help:Concepts:TransactionMode"],
-            L[$"Page:TransactionModes:{Plan.Descriptor.TransactionMode}"])
-        @Metadata(
-            L["Page:Plans:StartedAt"],
-            L["Page:Help:Plans:StartedAt"],
-            FormatTime(Plan.StartedAt))
-        @Metadata(
-            L["Page:Plans:CompletedAt"],
-            L["Page:Help:Plans:CompletedAt"],
-            Plan.CompletedAt is { } completedAt ? FormatTime(completedAt) : L["Page:States:NotAvailable"])
+    <div class="execution-pipeline-overview__groups">
+        <section class="execution-pipeline-overview__group execution-pipeline-overview__group--policy">
+            <h4>@L["Page:Plans:EvidenceBoundary"]</h4>
+            <dl>
+                @Metadata(L["Page:Filters:ExecutionPoint"], L["Page:Help:Concepts:ExecutionPoint"], Plan.Descriptor.Point.Value)
+                @Metadata(L["Page:Plans:Business"], L["Page:Help:Concepts:BusinessOperation"],
+                    Plan.Descriptor.IsBusinessOperation ? L["Page:Common:Yes"] : L["Page:Common:No"], technical: false)
+                @Metadata(L["Page:Plans:Transaction"], L["Page:Help:Concepts:TransactionMode"],
+                    L[$"Page:TransactionModes:{Plan.Descriptor.TransactionMode}"], technical: false)
+            </dl>
+        </section>
+        <section class="execution-pipeline-overview__group">
+            <h4>@L["Page:Plans:EvidenceCallable"]</h4>
+            <dl>
+                @Metadata(L["Page:Plans:Component"], L["Page:Help:Plans:Component"], Plan.Descriptor.ComponentType.FullName)
+                @Metadata(L["Page:Plans:Contract"], L["Page:Help:Plans:Contract"],
+                    Plan.Descriptor.ContractType?.FullName ?? L["Page:States:NotAvailable"])
+                @Metadata(L["Page:Plans:Method"], L["Page:Help:Plans:Method"],
+                    Plan.Descriptor.EntryMethod?.DisplaySignature ?? L["Page:States:NotAvailable"])
+                @Metadata(L["Page:Plans:Input"], L["Page:Help:Plans:Input"], Plan.Descriptor.InputType.FullName)
+                @Metadata(L["Page:Plans:Result"], L["Page:Help:Plans:Result"], Plan.Descriptor.ResultType.FullName)
+            </dl>
+        </section>
+        <section class="execution-pipeline-overview__group execution-pipeline-overview__group--timing">
+            <div class="execution-pipeline-overview__group-heading">
+                <h4>@L["Page:Plans:EvidenceMaterialization"]</h4>
+                <span>@L["Page:Header:LocalTime"]</span>
+            </div>
+            <dl>
+                @Timestamp(L["Page:Plans:StartedAt"], L["Page:Help:Plans:StartedAt"], Plan.StartedAt)
+                @Timestamp(L["Page:Plans:CompletedAt"], L["Page:Help:Plans:CompletedAt"], Plan.CompletedAt)
+            </dl>
+        </section>
     </div>
 </section>
 
@@ -58,12 +48,27 @@
     [Parameter, EditorRequired]
     public ExecutionPipelinePlanSnapshot Plan { get; set; } = null!;
 
-    private RenderFragment Metadata(string label, string helpText, string value, bool wide = false) =>
-        @<div class="@(wide ? "execution-pipeline-overview__item execution-pipeline-overview__item--wide" : "execution-pipeline-overview__item")">
-            <ExecutionPipelineHelpLabel Text="@label" HelpText="@helpText" />
-            <span title="@value">@value</span>
+    private RenderFragment Metadata(string label, string helpText, string value, bool technical = true) =>
+        @<div class="execution-pipeline-overview__item">
+            <dt><ExecutionPipelineHelpLabel Text="@label" HelpText="@helpText" /></dt>
+            <dd class="@(technical ? "execution-pipeline-overview__technical" : null)" title="@value">@value</dd>
+        </div>;
+
+    private RenderFragment Timestamp(string label, string helpText, DateTimeOffset? value) =>
+        @<div class="execution-pipeline-overview__item">
+            <dt><ExecutionPipelineHelpLabel Text="@label" HelpText="@helpText" /></dt>
+            <dd class="execution-pipeline-overview__technical">
+                @if (value is { } timestamp)
+                {
+                    <time datetime="@timestamp.ToString("O")">@FormatTime(timestamp)</time>
+                }
+                else
+                {
+                    @L["Page:States:NotAvailable"]
+                }
+            </dd>
         </div>;
 
     private static string FormatTime(DateTimeOffset value) =>
-        value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
+        value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff zzz");
 }

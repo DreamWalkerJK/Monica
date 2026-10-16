@@ -1,0 +1,133 @@
+.mo-navigation-popover {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.mo-navigation-popover.navbar-link ::deep .mud-menu-button-activator {
+    min-width: 0;
+    height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 6px;
+    color: var(--mud-palette-text-secondary);
+    background: transparent;
+    box-shadow: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: nowrap;
+}
+
+.mo-navigation-popover.navbar-link ::deep .mud-button-label { gap: 8px; }
+.mo-navigation-popover.navbar-link ::deep :is(.mud-button-icon-start, .mud-button-icon-end) { margin: 0; }
+.mo-navigation-popover.navbar-link ::deep .mud-button-icon-start .mud-icon-root { width: 18px; height: 18px; font-size: 18px; }
+.mo-navigation-popover.navbar-link ::deep .mud-button-icon-end .mud-icon-root { width: 14px; height: 14px; font-size: 14px; }
+
+.mo-navigation-popover.navbar-link ::deep .mud-menu-button-activator:hover,
+.mo-navigation-popover.navbar-link ::deep .mud-menu-button-activator[aria-expanded="true"] {
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-action-default-hover);
+}
+
+.mo-navigation-popover.navbar-link.is-active ::deep .mud-menu-button-activator {
+    color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary-hover);
+}
+
+.mo-navigation-popover ::deep :is(.mud-menu-button-activator, .mud-menu-icon-button-activator):focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.mo-navigation-popover__surface {
+    width: min(260px, calc(100vw - 24px));
+    max-height: min(480px, calc(100dvh - 82px));
+    padding: 8px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-surface);
+    border-radius: 8px;
+}
+
+.mo-navigation-popover__header {
+    margin: 0 4px 4px;
+    padding: 8px 4px 12px;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    color: var(--mud-palette-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.mo-navigation-popover__surface--overview {
+    width: min(380px, calc(100vw - 24px));
+    max-height: min(600px, calc(100dvh - 88px));
+    padding: 0;
+    border-radius: 12px;
+}
+
+.mo-navigation-popover__overview {
+    padding: 24px 26px 22px;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
+}
+
+.mo-navigation-popover__eyebrow {
+    color: var(--mud-palette-text-secondary);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+
+.mo-navigation-popover__overview h2 {
+    margin: 12px 0 8px;
+    font-family: var(--mud-typography-default-family);
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: -.02em;
+}
+
+.mo-navigation-popover__overview p {
+    margin: 0;
+    color: var(--mud-palette-text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.mo-navigation-popover__surface--overview ::deep .mo-navigation-popover__pages { padding: 14px 18px 16px; }
+
+.mo-navigation-popover__surface ::deep .mud-nav-link {
+    min-height: 38px;
+    padding: 9px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.mo-navigation-popover__surface--overview ::deep .mud-nav-link {
+    min-height: 42px;
+    padding: 11px 12px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.mo-navigation-popover__surface--overview ::deep .mud-nav-link.active { color: var(--mud-palette-primary); }
+.mo-navigation-popover__surface ::deep .mud-nav-link:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: -2px; }
+
+@media (max-width: 1100px) {
+    .mo-navigation-popover.navbar-link ::deep .mud-menu-button-activator { padding-inline: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mo-navigation-popover ::deep .mud-button-root,
+    .mo-navigation-popover__surface ::deep .mud-collapse-container { transition: none; }
+}

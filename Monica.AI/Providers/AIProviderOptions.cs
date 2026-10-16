@@ -1,3 +1,5 @@
+using Monica.AI.Models;
+
 namespace Monica.AI.Providers;
 
 /// <summary>
@@ -59,6 +61,9 @@ public enum OpenAIPromptCacheRetention
 /// </summary>
 public abstract class AIProviderOptions
 {
+    /// <summary>Whether this provider may accept new requests; defaults to enabled.</summary>
+    public bool Enabled { get; set; } = true;
+
     /// <summary>
     /// Unique provider identifier, or provider name if not set.
     /// </summary>
@@ -80,9 +85,20 @@ public abstract class AIProviderOptions
     public string? SystemPrompt { get; set; }
 
     /// <summary>
-    /// List of supported models. If empty, the provider is considered invalid.
+    /// Model identifiers selected by code configuration. Explicit AddModel templates apply to these names on any
+    /// endpoint; built-in templates apply only to official endpoints or the local fake provider. Unmatched names
+    /// retain unknown capabilities. If empty and Models is not supplied, the provider is considered invalid.
     /// </summary>
     public IList<string>? SupportedModels { get; set; }
+
+    /// <summary>
+    /// Provider-scoped model definitions. When supplied, these replace catalog lookup through
+    /// <see cref="SupportedModels"/> and permit two providers to configure the same model ID differently.
+    /// </summary>
+    public IList<AIModelInfo>? Models { get; set; }
+
+    /// <summary>Default chat model ID. Null selects the first configured chat model.</summary>
+    public string? DefaultModel { get; set; }
 
     /// <summary>
     /// Base API URL for custom endpoints, if applicable.
@@ -106,6 +122,12 @@ public abstract class AIProviderOptions
 public class OpenAIProviderOptions : AIProviderOptions
 {
     /// <summary>
+    /// OpenAI-compatible protocol variation. Auto recognizes the official DeepSeek endpoint;
+    /// select DeepSeek explicitly for a custom proxy that requires its thinking and reasoning fields.
+    /// </summary>
+    public OpenAIProtocolProfile ProtocolProfile { get; set; } = OpenAIProtocolProfile.Auto;
+
+    /// <summary>
     /// API surface used for chat requests. Defaults to <see cref="OpenAIProviderApiMode.Responses"/>.
     /// The Responses API is preferred because OpenAI prompt caching is automatic for eligible long
     /// prompts and Responses can improve cache utilization for supported workloads.
@@ -118,7 +140,9 @@ public class OpenAIProviderOptions : AIProviderOptions
     /// do not need to implement durable response storage. Set
     /// <see cref="OpenAIResponsesHistoryMode.PreviousResponseId"/> only for providers that fully
     /// support response-ID chaining. This setting has no effect in
-    /// <see cref="OpenAIProviderApiMode.Chat"/> mode.
+    /// <see cref="OpenAIProviderApiMode.Chat"/> mode. Monica's chat workbench always replays its
+    /// own retained context and does not chain remote response identifiers, independently of
+    /// this provider-client setting.
     /// </summary>
     public OpenAIResponsesHistoryMode ResponsesHistoryMode { get; set; } = OpenAIResponsesHistoryMode.LocalHistory;
 

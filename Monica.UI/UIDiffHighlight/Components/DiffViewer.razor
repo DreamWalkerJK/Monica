@@ -1,241 +1,115 @@
 @using Monica.UI.UIDiffHighlight.Facades
 @using Monica.UI.UIDiffHighlight.Models
-@using Monica.Core.Results;
-@using MudBlazor
-@using Microsoft.Extensions.Localization
-@using Monica.UI.Localization
-@implements IDisposable
+@using Monica.UI.UIDiffHighlight.State
+@implements IAsyncDisposable
 @inject DiffHighlightFacade DiffHighlightFacade
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> L
 
-<MudPaper Class="diff-viewer" Elevation="2">
-    @if (!string.IsNullOrEmpty(ErrorMessage))
+@{ var state = _comparison.State; }
+<div class="diff-viewer" aria-busy="@(state.IsBusy ? "true" : "false")" data-draft-revision="@state.DraftRevision">
+    @if (state.IsBusy)
     {
-        <MudAlert Severity="Severity.Error" Class="diff-error">
-            @ErrorMessage
-        </MudAlert>
+        <p class="diff-viewer__busy" role="status">@L["DiffViewer:Comparing"]</p>
     }
-
-    @if (DiffResult != null)
+    @if (state.Failure is { } failure)
     {
-        <div class="diff-header">
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                @($"{L["DiffViewer:Changes"]}: {DiffResult.Statistics.TotalChanges}")
-            </MudChip>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Success">
-                @($"+ {DiffResult.Statistics.AddedLines}")
-            </MudChip>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
-                @($"- {DiffResult.Statistics.DeletedLines}")
-            </MudChip>
-            @if (DiffResult.Statistics.ModifiedLines > 0)
-            {
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Warning">
-                    @($"~ {DiffResult.Statistics.ModifiedLines}")
-                </MudChip>
-            }
-            <MudSpacer />
-
-            @if (ViewMode == EDiffViewMode.Unified)
-            {
-                <MudButton Variant="Variant.Outlined" 
-                          Size="Size.Small" 
-                          StartIcon="@GetDisplayModeIcon()" 
-                          OnClick="ToggleDisplayMode"
-                          Class="display-mode-toggle">
-                    @GetDisplayModeText()
-                </MudButton>
-            }
-            <MudButton Variant="Variant.Outlined"
-                       Size="Size.Small"
-                       StartIcon="@GetViewModeIcon()"
-                       OnClick="ToggleViewMode"
-                       Class="view-mode-toggle">
-                @GetViewModeText()
-            </MudButton>
-            <MudText Typo="Typo.caption">
-                @L["DiffViewer:ProcessingTime"]: @($"{DiffResult.ProcessingTimeMs}ms")
-            </MudText>
-        </div>
-
-        <div class="diff-content">
-            <DiffContent DiffResult="DiffResult" 
-                        Options="Options" 
-                        ViewMode="ViewMode" 
-                        DisplayMode="DisplayMode" />
-        </div>
+        <section class="diff-viewer__error" role="alert">
+            <strong>@(state.IsFailureCurrent ? L["DiffViewer:ComparisonFailed"] : L["DiffViewer:FailureStale"])</strong>
+            <p>@failure.Message</p>
+        </section>
     }
-</MudPaper>
+    @if (_projection is { } result && _projectionEvidence is { } evidence)
+    {
+        <DiffResultPresentation Result="@result" IsCurrent="@(evidence.Input == state.Draft)"
+                                InputsEmpty="@evidence.Input.IsEmpty" ComparedAt="@evidence.ReceivedAt" ViewMode="@ViewMode" />
+    }
+    else if (!state.IsBusy && state.Failure is null)
+    {
+        <p class="diff-viewer__uncomputed">@L["DiffViewer:Uncomputed"]</p>
+    }
+</div>
 
 @code {
+    /// <summary>Original draft text. Defaults to empty; captured by value before each comparison.</summary>
     [Parameter] public string OriginText { get; set; } = string.Empty;
+    /// <summary>Updated draft text. Defaults to empty; captured by value before each comparison.</summary>
     [Parameter] public string NewText { get; set; } = string.Empty;
-    [Parameter] public DiffHighlightOptions? Options { get; set; } = new() {Mode = EDiffHighlightMode.Line};
+    /// <summary>
+    /// Draft comparison settings. Defaults to Line mode. Each request captures a detached copy,
+    /// including styles; null delegates defaults to the facade rather than mutating this parameter.
+    /// </summary>
+    [Parameter] public DiffHighlightOptions? Options { get; set; } = new() { Mode = EDiffHighlightMode.Line };
+    /// <summary>
+    /// True by default: changed inputs/settings and re-enabling this option request comparison.
+    /// False retains prior accepted evidence until RefreshDiffAsync; draft changes still invalidate currentness.
+    /// Both-empty admission clears evidence without invoking the facade.
+    /// </summary>
     [Parameter] public bool AutoRefresh { get; set; } = true;
+    /// <summary>
+    /// Initial or genuinely changed parent layout, Unified by default. Local reader choices survive
+    /// unrelated parent rerenders; a different parent value resets the local effective layout.
+    /// </summary>
     [Parameter] public EDiffViewMode ViewMode { get; set; } = EDiffViewMode.Unified;
 
-    private DiffHighlightResult? DiffResult { get; set; }
-    private string ErrorMessage { get; set; } = string.Empty;
-    private EDiffDisplayMode DisplayMode { get; set; } = EDiffDisplayMode.Compare;
+    private DiffComparisonController _comparison = null!;
+    private DiffComparisonEvidence? _projectionEvidence;
+    private DiffHighlightResult? _projection;
+    private bool _autoWasEnabled;
+    private bool _retired;
 
-    private bool _isRefreshing = false;
-    private bool _disposed;
-    private string? _lastAutoRefreshKey;
+    protected override void OnInitialized() => _comparison = DiffComparisonController.ForFacade(DiffHighlightFacade);
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!AutoRefresh || _disposed)
+        if (_retired) return;
+        var input = CaptureDraft();
+        var changed = _comparison.SetDraft(input);
+        var enabled = AutoRefresh && !_autoWasEnabled;
+        _autoWasEnabled = AutoRefresh;
+        if (AutoRefresh && (changed || enabled))
         {
-            return;
+            if (input.IsEmpty) _comparison.ClearEvidence();
+            else await _comparison.RequestAsync();
         }
-
-        var refreshKey = CreateAutoRefreshKey();
-        if (string.Equals(refreshKey, _lastAutoRefreshKey, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        _lastAutoRefreshKey = refreshKey;
-        await RefreshDiffInternalAsync();
+        if (!_retired) SynchronizeProjection();
     }
 
-    private void ToggleViewMode()
-    {
-        ViewMode = ViewMode == EDiffViewMode.Unified ? EDiffViewMode.Split : EDiffViewMode.Unified;
-    }
-
-    private void ToggleDisplayMode()
-    {
-        DisplayMode = DisplayMode switch
-        {
-            EDiffDisplayMode.Compare => EDiffDisplayMode.NewOnly,
-            EDiffDisplayMode.NewOnly => EDiffDisplayMode.OldOnly,
-            EDiffDisplayMode.OldOnly => EDiffDisplayMode.Compare,
-            _ => EDiffDisplayMode.Compare
-        };
-    }
-
-    private string GetViewModeText()
-    {
-        return ViewMode switch
-        {
-            EDiffViewMode.Split => L["DiffViewer:ViewModes:Split"],
-            EDiffViewMode.Unified => L["DiffViewer:ViewModes:Unified"],
-            _ => L["DiffViewer:ViewModes:Unified"]
-        };
-    }
-
-    private string GetViewModeIcon()
-    {
-        return ViewMode switch
-        {
-            EDiffViewMode.Split => Icons.Material.Outlined.ViewColumn,
-            EDiffViewMode.Unified => Icons.Material.Outlined.ViewAgenda,
-            _ => Icons.Material.Outlined.ViewAgenda
-        };
-    }
-
-    private string GetDisplayModeText()
-    {
-        return DisplayMode switch
-        {
-            EDiffDisplayMode.Compare => L["DiffViewer:DisplayModes:Compare"],
-            EDiffDisplayMode.NewOnly => L["DiffViewer:DisplayModes:NewValue"],
-            EDiffDisplayMode.OldOnly => L["DiffViewer:DisplayModes:OldValue"],
-            _ => L["DiffViewer:DisplayModes:Compare"]
-        };
-    }
-
-    private string GetDisplayModeIcon()
-    {
-        return DisplayMode switch
-        {
-            EDiffDisplayMode.Compare => Icons.Material.Outlined.Compare,
-            EDiffDisplayMode.NewOnly => Icons.Material.Outlined.Add,
-            EDiffDisplayMode.OldOnly => Icons.Material.Outlined.Remove,
-            _ => Icons.Material.Outlined.Compare
-        };
-    }
-
+    /// <summary>
+    /// Explicitly compares the current detached draft and awaits actual admitted serial work,
+    /// including the latest coalesced request. Both-empty inputs clear evidence without computation.
+    /// A failed current attempt retains the previous whole accepted comparison. Retirement stops
+    /// admission and suppresses rendering while draining any already admitted noncancelable work.
+    /// </summary>
     public async Task RefreshDiffAsync()
     {
-        _lastAutoRefreshKey = CreateAutoRefreshKey();
-        await RefreshDiffInternalAsync();
-    }
-
-    private string CreateAutoRefreshKey()
-    {
-        var style = Options?.Style;
-
-        return string.Join('\u001F',
-            OriginText,
-            NewText,
-            Options?.Mode,
-            Options?.OutputFormat,
-            Options?.IgnoreWhitespace,
-            Options?.IgnoreCase,
-            Options?.ContextLines,
-            Options?.MaxCharacterDiffLength,
-            style?.AddedLineStyle,
-            style?.DeletedLineStyle,
-            style?.ModifiedLineStyle,
-            style?.UnchangedLineStyle,
-            style?.AddedCharacterStyle,
-            style?.DeletedCharacterStyle,
-            style?.LineNumberStyle,
-            style?.ContainerStyle,
-            style?.IncludeDefaultCss);
-    }
-
-    private async Task RefreshDiffInternalAsync()
-    {
-        if (_isRefreshing || _disposed) return;
-        _isRefreshing = true;
-
-        try
+        if (_retired) return;
+        var input = CaptureDraft();
+        _comparison.SetDraft(input);
+        if (input.IsEmpty) _comparison.ClearEvidence();
+        else
         {
-            if (string.IsNullOrEmpty(OriginText) && string.IsNullOrEmpty(NewText))
-            {
-                DiffResult = null;
-                return;
-            }
-
-            ErrorMessage = string.Empty;
-
-            var result = await DiffHighlightFacade.HighlightAsync(OriginText, NewText, Options);
-            if (_disposed)
-            {
-                return;
-            }
-            
-            if (result.IsFailed(out var error, out var data))
-            {
-                ErrorMessage = error;
-                Snackbar.Add($"{L["DiffViewer:ComparisonFailed"]}: {error}", Severity.Error);
-            }
-            else
-            {
-                DiffResult = data;
-            }
+            var work = _comparison.RequestAsync();
+            StateHasChanged();
+            await work;
         }
-        catch (Exception ex) when (!_disposed)
-        {
-            ErrorMessage = ex.Message;
-            Snackbar.Add($"{L["DiffViewer:ComparisonError"]}: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            if (!_disposed)
-            {
-                _isRefreshing = false;
-            }
-        }
+        if (_retired) return;
+        SynchronizeProjection();
+        StateHasChanged();
     }
 
-    public void Dispose()
+    private DiffComparisonInput CaptureDraft() => DiffComparisonInput.Capture(OriginText, NewText, Options);
+    private void SynchronizeProjection()
     {
-        _disposed = true;
+        var accepted = _comparison.State.Accepted;
+        if (ReferenceEquals(accepted, _projectionEvidence)) return;
+        _projectionEvidence = accepted;
+        _projection = accepted?.CreateResult();
     }
 
+    /// <summary>Retires this wrapper and drains its actual comparison work; the injected facade remains borrowed.</summary>
+    public ValueTask DisposeAsync()
+    {
+        _retired = true;
+        return _comparison.DisposeAsync();
+    }
 }

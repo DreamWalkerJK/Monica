@@ -1,9 +1,12 @@
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<EventBusKafkaResource> L
 
-<MudDialog>
+<MudDialog Gutters="false">
+    <TitleContent><MoDialogHeading Text="@(Cluster is null ? L["Clusters:Dialog:CreateTitle"] : L["Clusters:Dialog:EditTitle"])" /></TitleContent>
     <DialogContent>
         <div class="cluster-editor">
             <MudStack Spacing="3">
+                @if (Cluster is not null) { <KafkaDialogContext ClusterId="@Cluster.ClusterId" /> }
                 @if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
                     <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
@@ -32,7 +35,7 @@
                                     <MudTextField T="string"
                                                   @bind-Value="_model.DisplayName"
                                                   Label="@L["Clusters:Fields:DisplayName"]"
-                                                  Required="true" />
+                                                  Required="true" RequiredError="@L["Clusters:Validation:DisplayNameRequired"]" />
                                 </MudItem>
                                 <MudItem xs="12" md="6">
                                     <MudTextField T="string"
@@ -74,7 +77,7 @@
                                 <MudItem xs="12" md="6">
                                     <MudTextField T="string"
                                                   @bind-Value="_model.JmxEndpoint"
-                                                  Label="@L["Clusters:Fields:JmxEndpoint"]" />
+                                                  Label="@L["Clusters:Fields:JmxEndpoint"]" HelperText="@L["Clusters:Fields:JmxHint"]" />
                                 </MudItem>
                                 <MudItem xs="12" md="6">
                                     <div class="cluster-toggle-field">
@@ -179,7 +182,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Text" OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">@L["Common:Actions:Save"]</MudButton>
+        <KafkaPrimaryButton OnClick="Save">@L["Common:Actions:Save"]</KafkaPrimaryButton>
     </DialogActions>
 </MudDialog>
 

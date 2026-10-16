@@ -7,14 +7,16 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
 @inject IStringLocalizer<AIResource> L
-@inject IDialogService DialogService
 
-<div class="input-area">
-    <MudPaper Elevation="2" Class="input-container">
+<div class="input-area" data-short="@(Layout is { IsObserved: true, Height: <= 600 } ? "true" : "false")">
+    <MudPaper Elevation="0" Class="input-container mo-self-painted">
+        <ChatAttachments Attachments="@Attachments" SessionId="@SessionId" Removable="true" Disabled="@(IsSending || IsUploading || Disabled)" OnRemove="@OnRemoveAttachment" />
         <div class="input-top" @ref="_inputTopRef">
             <div class="composer-editor"
                  contenteditable="@EditorContentEditable"
                  data-composer-editor
+                 data-session-id="@(SessionId ?? string.Empty)"
+                 data-session-generation="@_draftGeneration"
                  data-placeholder="@_placeholderText"
                  role="textbox"
                  aria-multiline="true"
@@ -59,89 +61,70 @@
         </div>
         <div class="input-bottom">
             <div class="input-actions-left">
-                <MudTooltip Text="@L["Chat:Input:AttachFile"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.AttachFile"
-                                   Class="input-action-button"
-                                   OnClick="@HandleAttach" />
-                </MudTooltip>
-                @if (SupportsReasoning)
-                {
-                    <MudTooltip Text="@(ReasoningEnabled ? L["Chat:Actions:DisableDeepThinking"] : L["Chat:Actions:EnableDeepThinking"])">
-                        <MudIconButton Icon="@Icons.Material.Filled.Psychology"
-                                       Class="@($"input-action-button {(ReasoningEnabled ? "active" : "")}")"
-                                       OnClick="@HandleDeepThinking" />
-                    </MudTooltip>
-                }
+                <InputFile id="@_uploadId" class="file-input" OnChange="@OnUpload" multiple accept="image/png,image/jpeg,image/webp,image/gif,.pdf,.docx,.txt,.md,.csv,.json,.xml,.html" disabled="@(IsSending || IsUploading || Disabled)" />
+                <MudButton HtmlTag="label" for="@_uploadId" StartIcon="@Icons.Material.Outlined.AttachFile" Size="Size.Small" Disabled="@(IsSending || IsUploading || Disabled)" aria-label="@L["Workbench:Attach"]"><span class="attachment-label">@L["Workbench:Attach"]</span></MudButton>
                 @if (KnowledgeBases is { Count: > 0 })
                 {
-                    <KnowledgeBaseSelector
-                        KnowledgeBases="@KnowledgeBases"
-                        SelectedIds="@SelectedKnowledgeBaseIds"
-                        SelectedIdsChanged="@SelectedKnowledgeBaseIdsChanged" />
+                    <KnowledgeBaseSelector KnowledgeBases="@KnowledgeBases" SelectedIds="@SelectedKnowledgeBaseIds" SelectedIdsChanged="@SelectedKnowledgeBaseIdsChanged" Disabled="@(IsSending || IsUploading || Disabled)" />
                 }
             </div>
-            <div class="input-actions-right">
-                <MudTooltip Text="@BuildContextTooltip()">
-                    <button type="button"
-                            class="input-context-button"
-                            @onclick="@ShowTokenUsageDialogAsync"
-                            aria-label="@BuildContextTooltip()">
-                        <MudProgressCircular Value="@RemainingPercent"
-                                             Size="Size.Small"
-                                             Color="@RemainingColor"
-                                             StrokeWidth="9"
-                                             Class="input-context-ring" />
-                    </button>
-                </MudTooltip>
-                <ModelSelector
-                    AvailableModels="@AvailableModels"
-                    SelectedModelName="@ModelName"
-                    OnModelChanged="@HandleModelChanged" />
+            <div class="input-model">
+                <ChatModelSelector Providers="@Providers" ProviderId="@ProviderId" ModelName="@ModelName" CurrentModel="@CurrentModel" ReasoningLevel="@ReasoningLevel" AllowProviderSelection="@ShowProviderInfo" Disabled="@(IsSending || IsUploading || Disabled)" OnModelChanged="@OnModelChanged" ReasoningLevelChanged="@ReasoningLevelChanged" />
+            </div>
+            <div class="input-context">
+                <ChatContextIndicator Usage="@ContextUsage" AutomaticCompaction="@AutomaticCompaction" AutomaticCompactionChanged="@AutomaticCompactionChanged" Disabled="@(IsSending || IsUploading || Disabled)" OnCompact="@OnCompact" CompactionThreshold="@CompactionThreshold" RetainedTurns="@RetainedTurns" OutputBudget="@OutputBudget" CompactionPreferencesChanged="@CompactionPreferencesChanged" />
+            </div>
+            <div class="input-send">
                 @if (IsSending)
                 {
-                    <MudTooltip Text="@L["Chat:Input:Stop"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Stop"
-                                       Color="Color.Error"
-                                       OnClick="@HandleCancel"
-                                       Class="cancel-button" />
-                    </MudTooltip>
+                    <MudIconButton Class="composer-stop" Icon="@Icons.Material.Filled.Stop" Color="Color.Error" OnClick="HandleCancel" aria-label="@L["Chat:Input:Stop"]" />
                 }
                 else
                 {
-                    <MudTooltip Text="@L["Chat:Input:Send"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Send"
-                                       Color="Color.Primary"
-                                       Disabled="@string.IsNullOrWhiteSpace(InputText)"
-                                       OnClick="@HandleSend"
-                                       Class="send-button" />
-                    </MudTooltip>
+                    <MudIconButton Class="composer-send" Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Primary" Disabled="@((string.IsNullOrWhiteSpace(InputText) && Attachments.Count == 0) || EditorDisabled || IsUploading || AttachmentIncompatible || ModelName is null)" OnClick="HandleSend" aria-label="@L["Chat:Input:Send"]" />
                 }
             </div>
         </div>
+        @if (IsUploading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
+        @if (ImageIncompatible) { <MudAlert Dense="true" Severity="Severity.Warning">@L["Workbench:ImageUnsupported"]</MudAlert> }
+        @if (DocumentIncompatible) { <MudAlert Dense="true" Severity="Severity.Warning">@L["Workbench:DocumentUnsupported"]</MudAlert> }
     </MudPaper>
-    @if (ShowProviderInfo && !string.IsNullOrEmpty(ProviderName))
-    {
-        <MudText Typo="Typo.caption" Class="provider-info">
-            @L["Chat:Status:Current"]: @ProviderName
-        </MudText>
-    }
+    <div class="composer-options"><span class="composer-hint">@L["Workbench:ComposerHint"]</span></div>
 </div>
 
 @code {
+    [CascadingParameter] private ChatWorkbenchLayout? Layout { get; set; }
     [Parameter] public string? Placeholder { get; set; }
     [Parameter] public bool IsSending { get; set; }
-    [Parameter] public string? ProviderName { get; set; }
+    [Parameter] public bool Disabled { get; set; }
     [Parameter] public string? ModelName { get; set; }
     [Parameter] public bool ShowProviderInfo { get; set; } = true;
-    [Parameter] public bool SupportsReasoning { get; set; }
-    [Parameter] public bool ReasoningEnabled { get; set; }
-    [Parameter] public IReadOnlyList<AIModelInfo>? AvailableModels { get; set; }
-    [Parameter] public IReadOnlyList<AIChatRequestUsage> LatestRequestUsages { get; set; } = [];
+    [Parameter] public LLMModelInfo? CurrentModel { get; set; }
+    [Parameter] public string? ReasoningLevel { get; set; }
+    [Parameter] public EventCallback<string?> ReasoningLevelChanged { get; set; }
+    [Parameter] public IReadOnlyList<AIProviderInfo> Providers { get; set; } = [];
+    [Parameter] public string? ProviderId { get; set; }
+    [Parameter] public ChatContextUsage? ContextUsage { get; set; }
+    [Parameter] public bool AutomaticCompaction { get; set; }
+    [Parameter] public EventCallback<bool> AutomaticCompactionChanged { get; set; }
+    [Parameter] public EventCallback OnCompact { get; set; }
+    [Parameter] public double CompactionThreshold { get; set; } = .8;
+    [Parameter] public int RetainedTurns { get; set; } = 4;
+    [Parameter] public int? OutputBudget { get; set; }
+    [Parameter] public EventCallback<(double Threshold, int RetainedTurns, int? OutputBudget)> CompactionPreferencesChanged { get; set; }
+    [Parameter] public bool IsUploading { get; set; }
+    [Parameter] public string? SessionId { get; set; }
+    [Parameter] public IReadOnlyList<ChatAttachmentReference> Attachments { get; set; } = [];
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnUpload { get; set; }
+    [Parameter] public EventCallback<ChatAttachmentReference> OnRemoveAttachment { get; set; }
+    private readonly string _uploadId = $"attachment-{Guid.NewGuid():N}";
+    private bool AttachmentIncompatible => ImageIncompatible || DocumentIncompatible;
+    private bool DocumentIncompatible => Attachments.Any(item => item.Kind == ChatAttachmentKind.Document && !item.HasExtractedText) && CurrentModel?.SupportsDocuments != true;
+    private bool ImageIncompatible => Attachments.Any(item => item.Kind == ChatAttachmentKind.Image) && CurrentModel?.SupportsImage != true;
     [Parameter] public IReadOnlyList<AgentCapabilityReferenceCandidate> CapabilityCandidates { get; set; } = [];
-    [Parameter] public EventCallback<bool> ReasoningEnabledChanged { get; set; }
     [Parameter] public EventCallback<ChatSendRequest> OnSend { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
-    [Parameter] public EventCallback<string> OnModelChanged { get; set; }
+    [Parameter] public EventCallback<(string ProviderId, string ModelName)> OnModelChanged { get; set; }
     [Parameter] public IReadOnlyList<KnowledgeBase>? KnowledgeBases { get; set; }
     [Parameter] public List<string> SelectedKnowledgeBaseIds { get; set; } = [];
     [Parameter] public EventCallback<List<string>> SelectedKnowledgeBaseIdsChanged { get; set; }
@@ -150,7 +133,15 @@
     private ElementReference _inputTopRef;
     private ChatComposerInteropSession? _interopSession;
     private bool _disposed;
-    private bool _wasSending;
+    private readonly Dictionary<string, (string Text, int Caret, long Generation)> _sessionDrafts = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, long> _clearedDraftGenerations = new(StringComparer.Ordinal);
+    private string? _draftSessionId;
+    private bool _draftInitialized;
+    private bool _forceDraftSynchronization = true;
+    private bool _draftSynchronizationPending = true;
+    private bool _focusDraftSynchronization;
+    private long _draftGeneration = 1;
+    private long _draftSynchronizationVersion;
     private string _placeholderText = string.Empty;
     private bool _referencePickerOpen;
     private string _referenceQuery = string.Empty;
@@ -158,38 +149,14 @@
     private int _referenceEndIndex = -1;
     private int _caretIndex;
     private int _highlightedCandidateIndex;
-    private bool ShowReferencePicker => _referencePickerOpen && !IsSending;
-    private string EditorContentEditable => IsSending ? "false" : "true";
+    private bool ShowReferencePicker => _referencePickerOpen && !EditorDisabled;
+    private bool EditorDisabled => IsSending || Disabled || _draftSynchronizationPending;
+    private string EditorContentEditable => EditorDisabled ? "false" : "true";
     private static readonly IReadOnlyDictionary<string, string> REFERENCE_ICONS = new Dictionary<string, string>
     {
         ["skills"] = Icons.Material.Filled.AutoAwesome,
         ["mcp"] = Icons.Material.Filled.AccountTree
     };
-    private int ContextWindow => ChatProviderResolver.GetContextWindow(AvailableModels, ModelName);
-    private TokenUsage? LatestUsage => LatestRequestUsages.LastOrDefault()?.Usage;
-    private int LatestInputTokens => LatestUsage?.InputTokens ?? 0;
-    private double RemainingContextRatio => ContextWindow > 0
-        ? Math.Clamp((double)Math.Max(ContextWindow - LatestInputTokens, 0) / ContextWindow, 0, 1)
-        : 1;
-    private double RemainingPercent => RemainingContextRatio * 100;
-    private Color RemainingColor
-    {
-        get
-        {
-            if (RemainingContextRatio < 0.1)
-            {
-                return Color.Error;
-            }
-
-            if (RemainingContextRatio < 0.25)
-            {
-                return Color.Warning;
-            }
-
-            return Color.Primary;
-        }
-    }
-
     private IReadOnlyList<AgentCapabilityReferenceCandidate> FilteredCapabilityCandidates =>
         CapabilityCandidates
             .Where(IsCandidateAvailable)
@@ -204,14 +171,24 @@
 
     protected override void OnParametersSet()
     {
-        if (_wasSending && !IsSending)
+        if (!_draftInitialized)
         {
-            InputText = string.Empty;
-            _caretIndex = 0;
-            CloseReferencePicker();
+            _draftInitialized = true;
+            _draftSessionId = SessionId;
+            return;
         }
-
-        _wasSending = IsSending;
+        if (string.Equals(_draftSessionId, SessionId, StringComparison.Ordinal)) return;
+        _sessionDrafts.TryAdd(_draftSessionId ?? string.Empty, (InputText, _caretIndex, _draftGeneration));
+        _draftSessionId = SessionId;
+        var draft = _sessionDrafts.GetValueOrDefault(SessionId ?? string.Empty);
+        InputText = draft.Text ?? string.Empty;
+        _caretIndex = Math.Clamp(draft.Caret, 0, InputText.Length);
+        CloseReferencePicker();
+        _draftGeneration++;
+        _draftSynchronizationVersion++;
+        _draftSynchronizationPending = true;
+        _focusDraftSynchronization = false;
+        _forceDraftSynchronization = true;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -228,36 +205,46 @@
                 _inputTopRef,
                 InputText,
                 _placeholderText,
-                REFERENCE_ICONS);
+                REFERENCE_ICONS,
+                SessionId,
+                _draftGeneration);
         }
 
         if (!_disposed && _interopSession is not null)
         {
-            await _interopSession.SynchronizeAsync(
-                ShowReferencePicker,
-                IsSending,
-                InputText,
-                _caretIndex,
-                focus: false,
-                force: false);
+            await SynchronizeEditorAsync(focus: false);
         }
     }
 
     private async Task HandleSend()
     {
-        if (string.IsNullOrWhiteSpace(InputText) || IsSending) return;
+        if (_disposed || (string.IsNullOrWhiteSpace(InputText) && Attachments.Count == 0) || EditorDisabled || IsUploading || AttachmentIncompatible || ModelName is null) return;
+        var request = new ChatSendRequest(InputText.Trim());
+        var draftSession = SessionId;
+        var draftGeneration = _draftGeneration;
+        var send = OnSend.InvokeAsync(request);
+        var cleared = request.Accepted;
+        if (cleared) await ClearDraftAsync(draftSession, draftGeneration);
+        await send;
+        if (!cleared && request.Accepted) await ClearDraftAsync(draftSession, draftGeneration);
+    }
 
-        var message = InputText.Trim();
-
+    private async Task ClearDraftAsync(string? draftSession, long draftGeneration)
+    {
+        var key = draftSession ?? string.Empty;
+        _clearedDraftGenerations[key] = Math.Max(_clearedDraftGenerations.GetValueOrDefault(key), draftGeneration);
+        if (!_sessionDrafts.TryGetValue(key, out var saved) || saved.Generation <= draftGeneration)
+        {
+            _sessionDrafts.Remove(key);
+        }
+        if (_disposed || !string.Equals(draftSession, SessionId, StringComparison.Ordinal) || draftGeneration != _draftGeneration) return;
         InputText = string.Empty;
         _caretIndex = 0;
-        await SyncEditorAsync(focus: false);
         CloseReferencePicker();
-
-        // Ensure component renders with empty value before parent re-renders
-        StateHasChanged();
-
-        await OnSend.InvokeAsync(new ChatSendRequest(message));
+        _draftGeneration++;
+        _draftSynchronizationPending = true;
+        await SyncEditorAsync(focus: false);
+        if (!_disposed) StateHasChanged();
     }
 
     private async Task HandleCancel()
@@ -265,43 +252,9 @@
         await OnCancel.InvokeAsync();
     }
 
-    private async Task ShowTokenUsageDialogAsync()
-    {
-        var parameters = new DialogParameters
-        {
-            [nameof(ChatTokenUsageDialog.ModelName)] = ModelName,
-            [nameof(ChatTokenUsageDialog.ContextWindow)] = ContextWindow,
-            [nameof(ChatTokenUsageDialog.RequestUsages)] = LatestRequestUsages
-        };
-
-        await DialogService.ShowAsync<ChatTokenUsageDialog>(
-            L["Chat:Usage:DialogTitle"],
-            parameters,
-            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
-    }
-
-    private string BuildContextTooltip()
-    {
-        return LatestInputTokens > 0
-            ? L["Chat:Usage:ContextTooltipWithUsage", FormatTokenCount(ContextWindow), FormatPercent(RemainingContextRatio)]
-            : L["Chat:Usage:ContextTooltip", FormatTokenCount(ContextWindow)];
-    }
-
-    private static string FormatTokenCount(int tokens)
-    {
-        return tokens >= 1_000_000
-            ? $"{tokens / 1_000_000d:0.#}M"
-            : $"{tokens / 1_000d:0.#}K";
-    }
-
-    private static string FormatPercent(double ratio)
-    {
-        return $"{ratio:P0}";
-    }
-
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.IsComposing)
+        if (_disposed || EditorDisabled || e.IsComposing)
         {
             return;
         }
@@ -350,15 +303,30 @@
     }
 
     [JSInvokable]
-    public Task HandleComposerInput(string? value, int caretIndex)
+    public Task HandleComposerInput(string? value, int caretIndex, string? sessionId = null, long sessionGeneration = 0)
     {
         if (_disposed)
         {
             return Task.CompletedTask;
         }
 
-        InputText = value ?? string.Empty;
-        _caretIndex = Math.Clamp(caretIndex, 0, InputText.Length);
+        var key = sessionId ?? string.Empty;
+        if ((_clearedDraftGenerations.TryGetValue(key, out var clearedGeneration) && sessionGeneration <= clearedGeneration)
+            || (_sessionDrafts.TryGetValue(key, out var saved) && sessionGeneration < saved.Generation))
+        {
+            return Task.CompletedTask;
+        }
+
+        var text = value ?? string.Empty;
+        var caret = Math.Clamp(caretIndex, 0, text.Length);
+        // A queued callback retains its originating draft without replacing a later selection's editor.
+        _sessionDrafts[key] = (text, caret, sessionGeneration);
+        if (!string.Equals(sessionId, SessionId, StringComparison.Ordinal) || sessionGeneration != _draftGeneration)
+        {
+            return Task.CompletedTask;
+        }
+        InputText = text;
+        _caretIndex = caret;
         UpdateReferencePicker();
         return InvokeAsync(StateHasChanged);
     }
@@ -444,7 +412,9 @@
 
     private async Task CompleteCandidate(AgentCapabilityReferenceCandidate candidate)
     {
+        if (_disposed || EditorDisabled) return;
         InsertReferenceToken(candidate);
+        _sessionDrafts[SessionId ?? string.Empty] = (InputText, _caretIndex, _draftGeneration);
         CloseReferencePicker();
         StateHasChanged();
         await FocusAsync();
@@ -516,22 +486,6 @@
             : Icons.Material.Filled.AccountTree;
     }
 
-    private Task HandleAttach()
-    {
-        // TODO: Implement attachment upload.
-        return Task.CompletedTask;
-    }
-
-    private async Task HandleDeepThinking()
-    {
-        await ReasoningEnabledChanged.InvokeAsync(!ReasoningEnabled);
-    }
-
-    private async Task HandleModelChanged(string modelName)
-    {
-        await OnModelChanged.InvokeAsync(modelName);
-    }
-
     public async Task FocusAsync()
     {
         await SyncEditorAsync(focus: true);
@@ -539,15 +493,39 @@
 
     private async Task SyncEditorAsync(bool focus)
     {
+        _draftSynchronizationVersion++;
+        _forceDraftSynchronization = true;
+        _focusDraftSynchronization |= focus;
+        await SynchronizeEditorAsync(focus);
+    }
+
+    private async Task SynchronizeEditorAsync(bool focus)
+    {
         if (!_disposed && _interopSession is not null)
         {
-            await _interopSession.SynchronizeAsync(
+            var sessionId = SessionId;
+            var generation = _draftGeneration;
+            var version = _draftSynchronizationVersion;
+            var accepted = await _interopSession.SynchronizeAsync(
                 ShowReferencePicker,
-                IsSending,
+                IsSending || Disabled,
                 InputText,
                 _caretIndex,
-                focus,
-                force: true);
+                focus || _focusDraftSynchronization,
+                force: _forceDraftSynchronization,
+                sessionId: sessionId,
+                sessionGeneration: generation,
+                synchronizationVersion: version);
+            if (_disposed || !accepted || generation != _draftGeneration || version != _draftSynchronizationVersion
+                || !string.Equals(sessionId, SessionId, StringComparison.Ordinal)) return;
+
+            _forceDraftSynchronization = false;
+            _focusDraftSynchronization = false;
+            if (_draftSynchronizationPending)
+            {
+                _draftSynchronizationPending = false;
+                StateHasChanged();
+            }
         }
     }
 

@@ -46,11 +46,6 @@ public class AIProviderInfo
     public bool IsValid { get; init; } = true;
 
     /// <summary>
-    /// Names of missing models.
-    /// </summary>
-    public IReadOnlyList<string>? InvalidModels { get; init; }
-
-    /// <summary>
     /// Friendly configuration errors that explain why the provider is disabled.
     /// </summary>
     public IReadOnlyList<string>? ConfigurationErrors { get; init; }

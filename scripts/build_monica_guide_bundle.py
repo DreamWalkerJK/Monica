@@ -169,7 +169,7 @@ def collect_skill_files(skill_root: Path) -> list[tuple[str, bytes]]:
 
 
 def profile_membership(catalog: dict) -> dict[str, list[str]]:
-    """Map each managed skill to the ordinal-sorted profiles that select it."""
+    """Project default profile membership; capability roots stay in profileSelections."""
 
     membership: dict[str, list[str]] = {name: [] for name in catalog["skills"]}
     for profile_name, profile in sorted(catalog.get("profiles", {}).items()):
@@ -194,7 +194,6 @@ def project_catalog(catalog: dict, staged_skills: Path) -> tuple[dict, bytes]:
         tree_digest = engine_tree_digest(files)
         dependencies = sorted(
             set(entry.get("dependencies", {}).get("required", []))
-            | set(entry.get("dependencies", {}).get("recommended", []))
         )
         skill_entry = {
             "name": skill_name,
@@ -235,6 +234,12 @@ def workspace_projection(catalog: dict) -> dict:
     """
 
     projection: dict = {}
+    profiles = catalog.get("profiles") or {}
+    if profiles:
+        projection["profileSelections"] = {
+            name: profile["skills"]
+            for name, profile in sorted(profiles.items())
+        }
     instructions = catalog.get("managedInstructions") or {}
     if instructions:
         projection["managedInstructions"] = {

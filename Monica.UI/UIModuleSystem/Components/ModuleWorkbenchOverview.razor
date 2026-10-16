@@ -1,6 +1,7 @@
 @using Microsoft.Extensions.Localization
 @using System.Globalization
 @using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.Core.Modularity.Models
 @using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.State
 @using Monica.UI.UIModuleSystem.Support
@@ -8,252 +9,383 @@
 
 @if (Session.Snapshot is { } snapshot)
 {
-    var findingsPresentation = GetFindingsPresentation(snapshot.Findings);
-    var applicationStartupDurationMs = snapshot.Summary.ApplicationStartupDurationMs;
-    <div class="overview-layout">
-        <section class="@KpiStripClass(applicationStartupDurationMs.HasValue)" aria-label="@L["Aria:SummaryMetrics"]">
-            @if (applicationStartupDurationMs is { } startupDurationMs)
-            {
-                var compositionShare = CompositionShare(snapshot.Summary.TotalCompositionDurationMs, startupDurationMs);
-                <article class="startup-kpi-card mo-card-surface" data-mo-card-tone="primary">
-                    <header class="startup-kpi-card__header">
-                        <span class="kpi-icon" aria-hidden="true">
-                            <MudIcon Icon="@Icons.Material.Filled.RocketLaunch" />
-                        </span>
-                        <span class="startup-kpi-card__title">
-                            <small>@L["Overview:Kpis:StartupTiming"]</small>
-                            <strong>@L["Overview:Kpis:ApplicationStartup"]</strong>
-                        </span>
-                        <span class="kpi-badge kpi-badge--tracked">
-                            <MudIcon Icon="@Icons.Material.Filled.RadioButtonChecked" Size="Size.Small" />
-                            @L["Overview:Kpis:Tracked"]
-                        </span>
-                    </header>
-                    <div class="startup-kpi-card__metrics">
-                        <span class="startup-kpi-card__primary">
-                            <strong>@ModuleDiagnosticsDisplay.ExactMilliseconds(startupDurationMs)</strong>
-                            <small>@L["Overview:Kpis:StartupBoundary"]</small>
-                        </span>
-                        <span class="startup-kpi-card__secondary">
-                            <small>@L["Overview:Kpis:Composition"]</small>
-                            <strong>@ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TotalCompositionDurationMs)</strong>
-                        </span>
-                    </div>
-                    <div class="startup-share">
-                        <span class="startup-share__heading">
-                            <small>@L["Overview:Kpis:CompositionShare"]</small>
-                            <strong class="kpi-badge startup-share__badge">@FormatPercentage(compositionShare)</strong>
-                        </span>
-                        <svg class="startup-share__bar" viewBox="0 0 100 6" preserveAspectRatio="none" role="img"
-                             aria-label="@L["Overview:Kpis:CompositionShareAria", FormatPercentage(compositionShare)]">
-                            <rect class="startup-share__remaining" x="0" y="0" width="100" height="6" rx="3" />
-                            <rect class="startup-share__composition" x="0" y="0" width="@FormatSvgNumber(compositionShare)" height="6" rx="3" />
-                        </svg>
-                        <span class="startup-share__legend" aria-hidden="true">
-                            <span><i></i>@L["Overview:Kpis:Composition"]</span>
-                            <span><i></i>@L["Overview:Kpis:RemainingStartup"]</span>
-                        </span>
-                    </div>
-                    @if (Session.Comparison?.ApplicationStartupDurationDeltaMs is { } startupDelta)
+    var startupDuration = snapshot.Summary.ApplicationStartupDurationMs;
+    var recordedDuration = startupDuration ?? snapshot.Summary.TotalCompositionDurationMs;
+    var startupWorkMs = snapshot.Modules.Sum(static module => module.StartupWorkDurationMs);
+    var longestWorkModule = snapshot.Modules
+        .Where(static module => module.StartupWorkDurationMs > 0)
+        .OrderByDescending(static module => module.StartupWorkDurationMs)
+        .FirstOrDefault();
+    <section class="overview-score" aria-label="@L["Aria:SummaryMetrics"]">
+        <div class="score-feature">
+            <div class="score-lede">
+                <span class="score-symbol" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Route" /></span>
+                <p class="mo-vl-eyebrow">@(startupDuration.HasValue ? L["Overview:Score:Eyebrow:Startup"] : L["Overview:Score:Eyebrow:Composition"])</p>
+                <MoDisplayValue Value="@DisplayValue(recordedDuration)"
+                                Unit="@DisplayUnit(recordedDuration)"
+                                AccessibleLabel="@L["Overview:Score:Display:Aria", ModuleDiagnosticsDisplay.Duration(recordedDuration)]" />
+                <p class="score-exact mo-vl-mono">@ModuleDiagnosticsDisplay.ExactMilliseconds(recordedDuration)</p>
+                @if (Session.Comparison?.ApplicationStartupDurationDeltaMs is { } startupDelta && startupDuration.HasValue)
+                {
+                    <p class="score-delta">@FormatExactDelta(startupDelta)</p>
+                }
+                <p class="mo-vl-lede score-finding">
+                    @L["Overview:Score:Lede:OfWhich"]
+                    <MoValueMark Role="MoVisualRole.Primary">@L["Overview:Score:Mark:Composition", ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TotalCompositionDurationMs)]</MoValueMark>
+                    <span>@L["Overview:Score:Lede:Joiner"]</span>
+                    <MoValueMark Role="MoVisualRole.Info">@L["Overview:Score:Mark:Work", ModuleDiagnosticsDisplay.Duration(startupWorkMs)]</MoValueMark>
+                    @if (longestWorkModule is { } longest)
                     {
-                        <span class="kpi-badge kpi-badge--comparison">@FormatExactDelta(startupDelta)</span>
+                        <span>@L["Overview:Score:Longest:Prefix"]</span>
+                        <span class="score-contributor"><button type="button" class="mo-vl-link" @onclick="() => ModuleSelected.InvokeAsync(longest)">@longest.TypeName</button><span>@L["Overview:Score:Longest:Suffix"]</span></span>
                     }
-                </article>
-            }
-            else
-            {
-                <article class="kpi-card kpi-card--composition mo-card-surface" data-mo-card-tone="primary">
-                    <header class="kpi-card__header">
-                        <span class="kpi-icon" aria-hidden="true">
-                            <MudIcon Icon="@Icons.Material.Filled.Speed" />
-                        </span>
-                        <span class="kpi-badge">@L["Overview:Kpis:Exact"]</span>
-                    </header>
-                    <span class="kpi-label">@L["Overview:Kpis:Composition"]</span>
-                    <strong class="kpi-value">@ModuleDiagnosticsDisplay.ExactMilliseconds(snapshot.Summary.TotalCompositionDurationMs)</strong>
-                    <small class="kpi-detail">@CompositionDetail()</small>
-                </article>
-            }
-            <article class="kpi-card kpi-card--modules mo-card-surface" data-mo-card-tone="success">
-                <header class="kpi-card__header">
-                    <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Widgets" /></span>
-                    <span class="kpi-badge">@L["Overview:Kpis:Declared", snapshot.Summary.ModuleCount]</span>
+                </p>
+                @if (!startupDuration.HasValue)
+                {
+                    <p class="score-note">@L["Atlas:Overview:StartupNotTracked"]</p>
+                }
+            </div>
+            <div class="score-trace">
+                <header class="score-trace-heading">
+                    <div>
+                        <p class="mo-vl-eyebrow">@L["Overview:Trace:Eyebrow"]</p>
+                        <h2>@L["Overview:Trace:Title"]</h2>
+                    </div>
+                    <span class="trace-count mo-vl-mono">@L["Overview:Trace:Count", snapshot.TraceSpans.Length]</span>
                 </header>
-                <span class="kpi-label">@L["Overview:Kpis:ActiveModules"]</span>
-                <strong class="kpi-value">@snapshot.Summary.ActiveModuleCount</strong>
-                <small class="kpi-detail">@L["Overview:Kpis:DirectEdges", snapshot.Topology.Edges.Length]</small>
-            </article>
-            <article class="kpi-card kpi-card--registration mo-card-surface" data-mo-card-tone="info">
-                <header class="kpi-card__header">
-                    <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.AppRegistration" /></span>
-                    <span class="kpi-badge">@L["Overview:Kpis:Exact"]</span>
-                </header>
-                <span class="kpi-label">@L["Overview:Kpis:ServiceRegistration"]</span>
-                <strong class="kpi-value">@ModuleDiagnosticsDisplay.ExactMilliseconds(snapshot.Summary.ServiceRegistrationDurationMs)</strong>
-                <small class="kpi-detail">@L["Overview:Kpis:CompositionShareValue", FormatPercentage(CompositionShare(snapshot.Summary.ServiceRegistrationDurationMs, snapshot.Summary.TotalCompositionDurationMs))]</small>
-            </article>
-            <article class="kpi-card kpi-card--discovery mo-card-surface" data-mo-card-tone="secondary">
-                <header class="kpi-card__header">
-                    <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.ManageSearch" /></span>
-                    <span class="kpi-badge">@L["Overview:Kpis:Queries", snapshot.TypeDiscovery.Statistics.DistinctQueryCount]</span>
-                </header>
-                <span class="kpi-label">@L["Overview:Kpis:TypeDiscovery"]</span>
-                <strong class="kpi-value">@ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TypeDiscoveryDurationMs)</strong>
-                <small class="kpi-detail">@L["Overview:Kpis:Matches", snapshot.TypeDiscovery.Statistics.MatchCount]</small>
-            </article>
-            <article class="kpi-card @findingsPresentation.KpiClass mo-card-surface"
-                     data-mo-card-tone="@findingsPresentation.Tone">
-                <header class="kpi-card__header">
-                    <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@findingsPresentation.Icon" /></span>
-                    <span class="kpi-badge">@L["Overview:Kpis:Errors", snapshot.Summary.ErrorCount]</span>
-                </header>
-                <span class="kpi-label">@L["Overview:Kpis:Findings"]</span>
-                <strong class="kpi-value">@snapshot.Findings.Length</strong>
-                <small class="kpi-detail">@L["Overview:Kpis:Warnings", snapshot.Findings.Count(static finding => finding.Severity == ModuleDiagnosticFindingSeverity.Warning)]</small>
-            </article>
+                <ModuleWorkbenchStartupTimeline Session="@Session" />
+            </div>
+        </div>
+        <div class="score-facts"><MoFactGrid Facts="@Facts(snapshot)" /></div>
+    </section>
+
+    <div class="overview-evidence">
+        <section class="mo-vl-panel ledger-panel" aria-labelledby="ledger-title">
+            <header class="mo-vl-panel-head ledger-heading">
+                <div>
+                    <h2 id="ledger-title" class="mo-vl-panel-title">@L["Overview:Ledger:Title"]</h2>
+                    <p class="mo-vl-panel-sub">@L["Overview:Ledger:Sub", snapshot.Summary.ModuleCount]</p>
+                </div>
+                <div class="mo-vl-legend">
+                    <span><i class="mo-vl-swatch mo-vl-role--primary"></i>@L["Overview:Ledger:Legend:Callback"]</span>
+                    <span><i class="mo-vl-swatch mo-vl-role--info"></i>@L["Overview:Ledger:Legend:Work"]</span>
+                </div>
+            </header>
+            <div class="ledger-tools">
+                <MudTextField T="string"
+                              Value="@_search"
+                              ValueChanged="@OnSearchChanged"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Outlined.Search"
+                              Label="@L["Overview:Ledger:SearchPlaceholder"]"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              Clearable="true"
+                              Class="ledger-search" />
+                <div class="mo-vl-chips" role="group" aria-label="@L["Overview:Ledger:FilterAria"]">
+                    <MoFilterChip Label="@L["Common:All"]" Selected="@(_filter == LedgerFilter.All)" SelectedChanged="@(() => SetFilter(LedgerFilter.All))" />
+                    <MoFilterChip Label="@L["Overview:Ledger:Filter:HasStartupWork"]" Selected="@(_filter == LedgerFilter.HasStartupWork)" SelectedChanged="@(() => SetFilter(LedgerFilter.HasStartupWork))" />
+                    <MoFilterChip Label="@L["Overview:Ledger:Filter:Web"]" Selected="@(_filter == LedgerFilter.Web)" SelectedChanged="@(() => SetFilter(LedgerFilter.Web))" />
+                    <MoFilterChip Label="@L["Overview:Ledger:Filter:Ui"]" Selected="@(_filter == LedgerFilter.Ui)" SelectedChanged="@(() => SetFilter(LedgerFilter.Ui))" />
+                    <MoFilterChip Label="@L["Overview:Ledger:Filter:Disabled"]" Selected="@(_filter == LedgerFilter.Disabled)" SelectedChanged="@(() => SetFilter(LedgerFilter.Disabled))" Role="MoVisualRole.Warning" />
+                </div>
+            </div>
+            <MoRankedLedger Rows="@LedgerRows"
+                            AriaLabel="@L["Overview:Ledger:Aria"]"
+                            HeaderLabels="@_ledgerHeader"
+                            TopN="10"
+                            EmptyText="@L["Overview:Ledger:Empty", _search]"
+                            FooterNote="@LedgerFooterNote(snapshot)"
+                            ShowMoreLabel="@L["Overview:Ledger:ShowMore"]"
+                            ShowLessLabel="@L["Overview:Ledger:ShowLess"]"
+                            OnRowSelected="@SelectLedgerRowAsync" />
         </section>
 
-        <ModuleWorkbenchCriticalPathRibbon Session="@Session" ModuleSelected="@ModuleSelected" />
-
-        <div class="overview-evidence-grid">
-            <section class="evidence-panel mo-card-surface" aria-labelledby="findings-title">
-                <div class="panel-heading">
+        <aside class="overview-side">
+            <section class="mo-vl-panel findings-panel" aria-labelledby="findings-title">
+                <header class="mo-vl-panel-head">
                     <div>
-                        <MudText Typo="Typo.overline">@L["Overview:Findings:Eyebrow"]</MudText>
-                        <MudText Typo="Typo.h6" HtmlTag="h2" id="findings-title">@L["Overview:Findings:Title"]</MudText>
+                        <h2 id="findings-title" class="mo-vl-panel-title">@L["Overview:Findings:Title"]</h2>
+                        <p class="mo-vl-panel-sub">@L["Overview:Findings:Sub", snapshot.Findings.Length, snapshot.Summary.ErrorCount]</p>
                     </div>
-                    <MudChip T="int" Size="Size.Small" Color="@findingsPresentation.Color">
-                        @snapshot.Findings.Length
-                    </MudChip>
-                </div>
-                @if (snapshot.Findings.IsEmpty)
-                {
-                    <div class="compact-empty-state">
-                        <span class="compact-empty-state__icon" aria-hidden="true">
-                            <MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Success" Size="Size.Large" />
-                        </span>
-                        <span>@L["Overview:Findings:Empty"]</span>
-                    </div>
-                }
-                else
-                {
-                    <MudList T="ModuleDiagnosticFinding" Dense="true">
-                        @foreach (var finding in snapshot.Findings.Take(6))
+                </header>
+                <div class="findings-list">
+                    @if (snapshot.Findings.IsEmpty)
+                    {
+                        <p class="compact-empty-state"><MudIcon Icon="@Icons.Material.Outlined.Checklist" Size="Size.Small" /><span>@L["Overview:Findings:Empty"]</span></p>
+                    }
+                    else
+                    {
+                        foreach (var finding in snapshot.Findings.Take(MaxVisibleFindings))
                         {
-                            <MudListItem Value="@finding" Icon="@FindingIcon(finding.Severity)"
-                                         IconColor="@FindingColor(finding.Severity)">
-                                <MudText Typo="Typo.body2">@ModuleDiagnosticsDisplay.Finding(finding, L)</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@finding.Code</MudText>
-                            </MudListItem>
+                            <MoSemanticCallout Severity="@FindingRole(finding.Severity)"
+                                                Title="@ModuleDiagnosticsDisplay.FindingTitle(finding, L)">
+                                <p class="finding-evidence">@ModuleDiagnosticsDisplay.FindingEvidence(finding, L)</p>
+                                @if (finding.RelatedModules.Length > 0)
+                                {
+                                    var relatedModule = finding.RelatedModules[0];
+                                    <button type="button" class="mo-vl-link finding-module" @onclick="() => SelectFindingModuleAsync(relatedModule)">@FindingModuleName(relatedModule)</button>
+                                }
+                                <details class="finding-diagnostics">
+                                    <summary>@L["Overview:Findings:DiagnosticCode"]</summary>
+                                    <code class="mo-vl-mono">@finding.Code</code>
+                                </details>
+                            </MoSemanticCallout>
                         }
-                    </MudList>
-                    @if (snapshot.Findings.Length > 6)
-                    {
-                        <MudExpansionPanels Class="finding-overflow">
-                            <MudExpansionPanel Text="@L["Overview:Findings:Remaining", snapshot.Findings.Length - 6]">
-                                <div class="finding-overflow-list">
-                                    <MudList T="ModuleDiagnosticFinding" Dense="true">
-                                        @foreach (var finding in snapshot.Findings.Skip(6))
+                        @if (snapshot.Findings.Length > MaxVisibleFindings)
+                        {
+                            <MudExpansionPanels Class="finding-overflow">
+                                <MudExpansionPanel Text="@L["Overview:Findings:Remaining", snapshot.Findings.Length - MaxVisibleFindings]">
+                                    <div class="finding-overflow-list">
+                                        @foreach (var finding in snapshot.Findings.Skip(MaxVisibleFindings))
                                         {
-                                            <MudListItem Value="@finding" Icon="@FindingIcon(finding.Severity)"
-                                                         IconColor="@FindingColor(finding.Severity)">
-                                                <MudText Typo="Typo.body2">@ModuleDiagnosticsDisplay.Finding(finding, L)</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@finding.Code</MudText>
-                                            </MudListItem>
+                                            <MoSemanticCallout Severity="@FindingRole(finding.Severity)"
+                                                                Title="@ModuleDiagnosticsDisplay.FindingTitle(finding, L)">
+                                                <p class="finding-evidence">@ModuleDiagnosticsDisplay.FindingEvidence(finding, L)</p>
+                                                @if (finding.RelatedModules.Length > 0)
+                                                {
+                                                    var relatedModule = finding.RelatedModules[0];
+                                                    <button type="button" class="mo-vl-link finding-module" @onclick="() => SelectFindingModuleAsync(relatedModule)">@FindingModuleName(relatedModule)</button>
+                                                }
+                                                <details class="finding-diagnostics">
+                                                    <summary>@L["Overview:Findings:DiagnosticCode"]</summary>
+                                                    <code class="mo-vl-mono">@finding.Code</code>
+                                                </details>
+                                            </MoSemanticCallout>
                                         }
-                                    </MudList>
-                                </div>
-                            </MudExpansionPanel>
-                        </MudExpansionPanels>
+                                    </div>
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
+                        }
                     }
-                }
+                </div>
             </section>
 
-            <section class="evidence-panel mo-card-surface" aria-labelledby="hotspots-title">
-                <div class="panel-heading">
+            <ModuleWorkbenchCriticalPathRibbon Session="@Session" ModuleSelected="@ModuleSelected" />
+
+            <section class="mo-vl-panel depth-panel" aria-labelledby="depth-title">
+                <header class="mo-vl-panel-head">
                     <div>
-                        <MudText Typo="Typo.overline">@L["Overview:Hotspots:Eyebrow"]</MudText>
-                        <MudText Typo="Typo.h6" HtmlTag="h2" id="hotspots-title">@L["Overview:Hotspots:Title"]</MudText>
+                        <h2 id="depth-title" class="mo-vl-panel-title">@L["Overview:Depth:Title"]</h2>
+                        <p class="mo-vl-panel-sub">@L["Overview:Depth:Sub", snapshot.Summary.ActiveModuleCount]</p>
                     </div>
-                </div>
-                <div class="hotspot-list">
-                    @foreach (var module in snapshot.Modules.OrderByDescending(ModuleCost).Take(5))
+                </header>
+                <div class="depth-body">
+                    @if (DepthRows.Count == 0)
                     {
-                        <button type="button" @onclick="@(() => ModuleSelected.InvokeAsync(module))">
-                            <span>
-                                <strong>@module.TypeName</strong>
-                                <small title="@module.FullTypeName">@module.AssemblyName</small>
-                            </span>
-                            <code>@ModuleDiagnosticsDisplay.Duration(ModuleCost(module))</code>
-                        </button>
+                        <p class="compact-empty-state"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" /><span>@L["Overview:Depth:Empty"]</span></p>
+                    }
+                    else
+                    {
+                        <MoDotDistribution Rows="@DepthRows" />
                     }
                 </div>
             </section>
-        </div>
+        </aside>
     </div>
 }
 
 @code {
+    private const int MaxVisibleFindings = 4;
+
     [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
     [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    private enum LedgerFilter
+    {
+        All,
+        HasStartupWork,
+        Web,
+        Ui,
+        Disabled,
+    }
+
+    private string _search = string.Empty;
+    private LedgerFilter _filter = LedgerFilter.All;
+    private MoLedgerHeaderLabels? _ledgerHeader;
 
     private static double ModuleCost(ModuleDiagnosticsModule module) =>
         module.SerialCallbackDurationMs + module.StartupWorkDurationMs;
 
-    private static string KpiStripClass(bool isStartupTracked) =>
-        isStartupTracked ? "kpi-strip kpi-strip--tracked" : "kpi-strip kpi-strip--untracked";
+    private IReadOnlyList<MoFact> Facts(ModuleDiagnosticsSnapshot snapshot) =>
+    [
+        new(L["Overview:Kpis:ActiveModules"], snapshot.Summary.ActiveModuleCount.ToString(CultureInfo.InvariantCulture), L["Overview:Kpis:Declared", snapshot.Summary.ModuleCount]),
+        new(L["Atlas:Overview:DirectDependencies"], snapshot.Topology.Edges.Length.ToString(CultureInfo.InvariantCulture)),
+        new(L["Overview:Kpis:ServiceRegistration"], ModuleDiagnosticsDisplay.Duration(snapshot.Summary.ServiceRegistrationDurationMs)),
+        new(L["Overview:Kpis:TypeDiscovery"], ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TypeDiscoveryDurationMs)),
+    ];
 
-    private static double CompositionShare(double numeratorMs, double denominatorMs) =>
-        denominatorMs <= 0 ? 0 : Math.Clamp(numeratorMs / denominatorMs * 100, 0, 100);
+    private IReadOnlyList<MoDotRow> DepthRows
+    {
+        get
+        {
+            if (Session.Snapshot is not { } snapshot)
+            {
+                return [];
+            }
 
-    private static string FormatPercentage(double value) =>
-        string.Create(CultureInfo.InvariantCulture, $"{value:F1}%");
+            var active = snapshot.Modules.Where(static module => module.IsActive).ToArray();
+            if (active.Length == 0)
+            {
+                return [];
+            }
 
-    private static string FormatSvgNumber(double value) =>
-        value.ToString("0.####", CultureInfo.InvariantCulture);
+            var maxDepth = active.Max(static module => module.DependencyDepth);
+            return active
+                .GroupBy(static module => module.DependencyDepth)
+                .OrderBy(static group => group.Key)
+                .Select(group => new MoDotRow(
+                    $"L{group.Key.ToString(CultureInfo.InvariantCulture)}",
+                    group.Count(),
+                    maxDepth == 0 ? 1.0 : 0.28 + group.Key / (double)maxDepth * 0.72))
+                .ToArray();
+        }
+    }
 
-    private string CompositionDetail() => Session.Comparison is { } comparison
-        ? FormatDelta(comparison.TotalDurationDeltaMs)
-        : L["Overview:Kpis:FinalCompositionInterval"];
+    private IReadOnlyList<MoLedgerRow> LedgerRows
+    {
+        get
+        {
+            if (Session.Snapshot is not { } snapshot)
+            {
+                return [];
+            }
+
+            _ledgerHeader ??= new MoLedgerHeaderLabels(
+                L["Overview:Ledger:Column:Rank"],
+                L["Overview:Ledger:Column:Name"],
+                L["Overview:Ledger:Column:Recorded"],
+                L["Overview:Ledger:Column:Total"]);
+
+            var query = snapshot.Modules.Where(MatchesFilter);
+            if (!string.IsNullOrWhiteSpace(_search))
+            {
+                var needle = _search.Trim();
+                query = query.Where(module => module.TypeName.Contains(needle, StringComparison.OrdinalIgnoreCase)
+                    || module.AssemblyName.Contains(needle, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var ranked = query.OrderByDescending(ModuleCost).ToArray();
+            var scale = ranked.Length > 0 ? ModuleCost(ranked[0]) : 0;
+            var rows = new List<MoLedgerRow>(ranked.Length);
+            foreach (var module in ranked)
+            {
+                var callback = module.SerialCallbackDurationMs;
+                var work = module.StartupWorkDurationMs;
+                string? workCaption = null;
+                if (work > 0)
+                {
+                    workCaption = L["Overview:Ledger:Cap:Work", ModuleDiagnosticsDisplay.Duration(work)];
+                }
+
+                var row = new MoLedgerRow(
+                    module.TypeName,
+                    module.AssemblyName,
+                    ModuleBadges(module),
+                    callback,
+                    work,
+                    scale,
+                    L["Overview:Ledger:Cap:Callback", callback > 0 ? ModuleDiagnosticsDisplay.Duration(callback) : "—"],
+                    workCaption,
+                    callback + work > 0 ? ModuleDiagnosticsDisplay.Duration(callback + work) : "—",
+                    TotalWarn: module.ErrorCount > 0,
+                    Disabled: !module.IsActive,
+                    Key: module.ModuleKey.Id);
+                rows.Add(row);
+            }
+
+            return rows;
+        }
+    }
+
+    private string? LedgerFooterNote(ModuleDiagnosticsSnapshot snapshot)
+    {
+        var filteredCount = LedgerRows.Count;
+        return filteredCount < snapshot.Summary.ModuleCount
+            ? L["Overview:Ledger:Filtered", filteredCount, snapshot.Summary.ModuleCount]
+            : L["Overview:Ledger:FullRegistry"];
+    }
+
+    private IReadOnlyList<MoLedgerBadge> ModuleBadges(ModuleDiagnosticsModule module)
+    {
+        var badges = new List<MoLedgerBadge>(4);
+        if (!module.IsActive)
+        {
+            badges.Add(new MoLedgerBadge(L["Overview:Ledger:Badge:Disabled"], MoVisualRole.Warning));
+        }
+
+        if (module.IsWebModule || module.RequiresWebHost)
+        {
+            badges.Add(new MoLedgerBadge("Web"));
+        }
+
+        if (module.IsUiModule)
+        {
+            badges.Add(new MoLedgerBadge("UI"));
+        }
+
+        if (module.ErrorCount > 0)
+        {
+            badges.Add(new MoLedgerBadge(module.ErrorCount.ToString(CultureInfo.InvariantCulture), MoVisualRole.Error));
+        }
+
+        return badges;
+    }
+
+    private bool MatchesFilter(ModuleDiagnosticsModule module) => _filter switch
+    {
+        LedgerFilter.HasStartupWork => module.StartupWorkDurationMs > 0,
+        LedgerFilter.Web => module.IsWebModule || module.RequiresWebHost,
+        LedgerFilter.Ui => module.IsUiModule,
+        LedgerFilter.Disabled => !module.IsActive,
+        _ => true,
+    };
+
+    private Task OnSearchChanged(string value)
+    {
+        _search = value;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task SetFilter(LedgerFilter filter)
+    {
+        _filter = filter;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task SelectLedgerRowAsync(MoLedgerRow row) => Session.Snapshot?.Modules
+        .FirstOrDefault(module => string.Equals(module.ModuleKey.Id, row.Key, StringComparison.Ordinal)) is { } module
+            ? ModuleSelected.InvokeAsync(module)
+            : Task.CompletedTask;
+
+    private Task SelectFindingModuleAsync(ModuleKey moduleKey) => Session.Snapshot?.Modules
+        .FirstOrDefault(module => module.ModuleKey == moduleKey) is { } module
+            ? ModuleSelected.InvokeAsync(module)
+            : Task.CompletedTask;
+
+    private string FindingModuleName(ModuleKey moduleKey) => Session.Snapshot?.Modules
+        .FirstOrDefault(module => module.ModuleKey == moduleKey)?.TypeName ?? moduleKey.Value;
+
+    private static MoVisualRole FindingRole(ModuleDiagnosticFindingSeverity severity) => severity switch
+    {
+        ModuleDiagnosticFindingSeverity.Error => MoVisualRole.Error,
+        ModuleDiagnosticFindingSeverity.Warning => MoVisualRole.Warning,
+        _ => MoVisualRole.Info,
+    };
+
+    private static string DisplayValue(double milliseconds) => milliseconds switch
+    {
+        >= 1_000 => (milliseconds / 1_000).ToString("F2", CultureInfo.InvariantCulture),
+        _ => milliseconds.ToString("F1", CultureInfo.InvariantCulture),
+    };
+
+    private static string DisplayUnit(double milliseconds) => milliseconds >= 1_000 ? "s" : "ms";
 
     private string FormatExactDelta(double delta) => delta switch
     {
         > 0 => L["Comparison:Slower", ModuleDiagnosticsDisplay.ExactMilliseconds(delta)],
         < 0 => L["Comparison:Faster", ModuleDiagnosticsDisplay.ExactMilliseconds(Math.Abs(delta))],
-        _ => L["Comparison:Unchanged"]
-    };
-
-    private static (Color Color, string Tone, string KpiClass, string Icon) GetFindingsPresentation(
-        IReadOnlyList<ModuleDiagnosticFinding> findings)
-    {
-        if (findings.Any(static finding => finding.Severity == ModuleDiagnosticFindingSeverity.Error))
-        {
-            return (Color.Error, "error", "kpi-card--findings-error", Icons.Material.Filled.Error);
-        }
-
-        return findings.Any(static finding => finding.Severity == ModuleDiagnosticFindingSeverity.Warning)
-            ? (Color.Warning, "warning", "kpi-card--findings-warning", Icons.Material.Filled.Warning)
-            : (Color.Success, "success", "kpi-card--findings-healthy", Icons.Material.Filled.Verified);
-    }
-
-    private static Color FindingColor(ModuleDiagnosticFindingSeverity severity) => severity switch
-    {
-        ModuleDiagnosticFindingSeverity.Error => Color.Error,
-        ModuleDiagnosticFindingSeverity.Warning => Color.Warning,
-        _ => Color.Info
-    };
-
-    private static string FindingIcon(ModuleDiagnosticFindingSeverity severity) => severity switch
-    {
-        ModuleDiagnosticFindingSeverity.Error => Icons.Material.Filled.Error,
-        ModuleDiagnosticFindingSeverity.Warning => Icons.Material.Filled.Warning,
-        _ => Icons.Material.Filled.Info
-    };
-
-    private string FormatDelta(double delta) => delta switch
-    {
-        > 0 => L["Comparison:Slower", ModuleDiagnosticsDisplay.Duration(delta)],
-        < 0 => L["Comparison:Faster", ModuleDiagnosticsDisplay.Duration(Math.Abs(delta))],
         _ => L["Comparison:Unchanged"]
     };
 }

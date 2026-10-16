@@ -1,3 +1,5 @@
+@implements IAsyncDisposable
+@using Monica.UI.Shared.Components.Dialogs
 @using System.Text.Json
 @using System.Text.Json.Serialization
 @using Microsoft.AspNetCore.Components.Forms
@@ -6,28 +8,22 @@
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <MudDialog>
+    <TitleContent><MoDialogHeading Text="@L["ImportExport:Import:Title"]" /></TitleContent>
     <DialogContent>
+        <p class="configuration-import-intro">@L["Workbench:ImportHelp"]</p>
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">@L["Validation:FragmentNotice"]</MudAlert>
         <div class="configuration-import-dialog-content">
             <MudStack Spacing="3">
-            <MudPaper Outlined="true" Class="pa-3">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.subtitle2">@L["ImportExport:Import:Title"]</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ImportExport:Import:Subtitle"]</MudText>
-                </MudStack>
-            </MudPaper>
+
 
             <MudFileUpload T="IBrowserFile"
                            Accept=".json,application/json"
                            FilesChanged="OnFileSelected"
                            MaximumFileCount="1">
                 <CustomContent Context="upload">
-                    <MudPaper Outlined="true" Class="pa-6 configuration-import-upload" @onclick="upload.OpenFilePickerAsync">
-                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
-                            <MudIcon Icon="@Icons.Material.Filled.UploadFile" Size="Size.Large" Color="Color.Primary" />
-                            <MudText Typo="Typo.body2">@L["ImportExport:Import:Upload"]</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">.json</MudText>
-                        </MudStack>
-                    </MudPaper>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="configuration-import-upload" Disabled="_loading" OnClick="upload.OpenFilePickerAsync" StartIcon="@Icons.Material.Outlined.UploadFile">
+                        <span>@L["ImportExport:Import:Upload"]<small>.json · 10 MB</small></span>
+                    </MudButton>
                 </CustomContent>
             </MudFileUpload>
 
@@ -92,9 +88,9 @@
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    StartIcon="@Icons.Material.Filled.PlaylistAddCheck"
-                   Disabled="@(_review?.HasItems is not true)"
+                   Disabled="@(_disposed || _loading || _review?.HasItems is not true)"
                    OnClick="Apply">
-            @L["Common:Actions:Apply"]
+            @L["Workbench:ImportStage"]
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -119,11 +115,21 @@
         Stage = ConfigurationPackageProgressStage.ReadingPackage
     };
     private bool _loading;
+    private bool _disposed;
+    private readonly ConfigurationOperationLifetime _operations = new();
+    private Task _pendingProgressRender = Task.CompletedTask;
     private string? _error;
 
     private async Task OnFileSelected(IBrowserFile? file)
     {
-        if (file is null)
+        if (_disposed || _loading || file is null) return;
+        try { await _operations.RunAsync(token => AnalyzeFileAsync(file, token)); }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+    }
+
+    private async Task AnalyzeFileAsync(IBrowserFile file, CancellationToken cancellationToken)
+    {
+        if (_disposed)
         {
             return;
         }
@@ -139,37 +145,60 @@
         });
         try
         {
-            await using var stream = file.OpenReadStream(MAX_IMPORT_BYTES);
-            var document = await JsonSerializer.DeserializeAsync<ConfigurationExportDocument>(stream, PackageJsonOptions);
+            await using var stream = file.OpenReadStream(MAX_IMPORT_BYTES, cancellationToken);
+            var document = await JsonSerializer.DeserializeAsync<ConfigurationExportDocument>(stream, PackageJsonOptions, cancellationToken);
+            if (_disposed) return;
             if (document is null)
             {
                 _error = L["ImportExport:Import:InvalidPackage"];
                 return;
             }
 
-            var progress = new Progress<ConfigurationPackageProgress>(ReportProgress);
-            _report = await PackageService.AnalyzeImportAsync(document, file.Name, progress);
+            var progress = new ImportProgress(ReportProgress);
+            var report = await PackageService.AnalyzeImportAsync(document, file.Name, progress);
+            if (_disposed) return;
+            _report = report;
             _review = new ConfigurationPendingReviewState(_report.Changes, _report.ValidationIssues);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception ex) when (!_disposed)
         {
             _error = ex.Message;
         }
         finally
         {
-            _loading = false;
+            if (!_disposed) _loading = false;
         }
     }
 
     private void ReportProgress(ConfigurationPackageProgress progress)
     {
+        if (_disposed) return;
         _progress = progress;
-        _ = InvokeAsync(StateHasChanged);
+        _pendingProgressRender = RenderProgressAsync(_pendingProgressRender);
+    }
+
+    private async Task RenderProgressAsync(Task previous)
+    {
+        await previous;
+        await InvokeAsync(() => { if (!_disposed) StateHasChanged(); });
+    }
+
+    private sealed class ImportProgress(Action<ConfigurationPackageProgress> report) : IProgress<ConfigurationPackageProgress>
+    {
+        public void Report(ConfigurationPackageProgress value) => report(value);
+    }
+
+    /// <summary>Drains the actual import producer and its admitted progress render before releasing this dialog.</summary>
+    public ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        return _operations.RetireAsync(async () => await _pendingProgressRender);
     }
 
     private void Apply()
     {
-        if (_report is null || _review?.HasItems is not true)
+        if (_disposed || _loading || _report is null || _review?.HasItems is not true)
         {
             return;
         }

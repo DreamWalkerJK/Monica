@@ -71,7 +71,10 @@ public sealed record ChatHistoryWriteResult
     /// </summary>
     public ChatHistoryWriteFailureReason FailureReason { get; init; }
 
-    /// <summary>Optional provider warning suitable for diagnostic presentation.</summary>
+    /// <summary>
+    /// Optional provider warning suitable for diagnostic presentation, including residual files awaiting automatic
+    /// cleanup after a successful catalog deletion. A warning does not reverse the committed catalog revision.
+    /// </summary>
     public string? Warning { get; init; }
 
     /// <summary>Whether the requested mutation was durably applied.</summary>

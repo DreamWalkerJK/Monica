@@ -26,14 +26,15 @@ public sealed class ModuleAIUITests
     }
 
     [Fact]
-    public void UseBrowserChatHistory_WhenRetentionIsInvalid_ShouldRejectConfiguration()
+    public void Composition_ShouldRegisterNonDisposablePageStateFactory()
     {
         var builder = WebApplication.CreateBuilder();
-
-        var configure = () => builder.AddMonica(monica =>
-            monica.AddModule<ModuleAIUI, ModuleAIUIOption>()
-                .UseBrowserChatHistory(options => options.MaxSessions = 0));
-
-        configure.Should().Throw<ArgumentOutOfRangeException>();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(options => options.ExcludeDefault());
+            monica.AddModule<ModuleAIUI, ModuleAIUIOption>();
+        });
+        builder.Services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(ChatPageStateFactory));
+        builder.Services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(ChatPageState));
     }
 }

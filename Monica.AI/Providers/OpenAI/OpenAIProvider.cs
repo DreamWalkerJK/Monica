@@ -14,16 +14,14 @@ namespace Monica.AI.Providers.OpenAI;
 /// </summary>
 internal sealed class OpenAIProvider : IAIProvider
 {
-    private const EAIProviderType ProviderKind = EAIProviderType.OpenAI;
+    private const EAIProviderType PROVIDER_KIND = EAIProviderType.OpenAI;
     private readonly OpenAIProviderOptions _options;
     private readonly OpenAIClient _client;
     private readonly IReadOnlyList<AIModelInfo> _models;
     private readonly string? _defaultModel;
     private readonly bool _isValid;
-    private readonly IReadOnlyList<string> _invalidModels;
-    private string? _systemPrompt;
-    private readonly ConcurrentDictionary<string, IChatClient> _chatClients = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, IEmbeddingGenerator<string, Embedding<float>>>
+    private readonly ConcurrentDictionary<string, Lazy<IChatClient>> _chatClients = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, Lazy<IEmbeddingGenerator<string, Embedding<float>>>>
         _embeddingGenerators = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
 
@@ -31,7 +29,12 @@ internal sealed class OpenAIProvider : IAIProvider
     {
         _options = options;
 
-        var clientOptions = new OpenAIClientOptions();
+        var clientOptions = new OpenAIClientOptions
+        {
+            NetworkTimeout = TimeSpan.FromSeconds(options.TimeoutSeconds),
+            OrganizationId = options.Organization,
+            ProjectId = options.Project
+        };
         if (!string.IsNullOrEmpty(options.BaseUrl))
         {
             clientOptions.Endpoint = new Uri(options.BaseUrl);
@@ -43,15 +46,13 @@ internal sealed class OpenAIProvider : IAIProvider
         _models = resolution.Models;
         _defaultModel = resolution.DefaultModel;
         _isValid = resolution.IsValid;
-        _invalidModels = resolution.MissingModels;
-        _systemPrompt = options.SystemPrompt;
     }
 
     /// <inheritdoc />
-    public string ProviderId => _options.ProviderId ?? ProviderKind.ToString();
+    public string ProviderId => _options.ProviderId ?? PROVIDER_KIND.ToString();
 
     /// <inheritdoc />
-    public string ProviderType => ProviderKind.ToString();
+    public string ProviderType => PROVIDER_KIND.ToString();
 
     /// <inheritdoc />
     public string DisplayName => _options.DisplayName ?? AIProviderNaming.BuildDisplayName(ProviderType, ProviderId);
@@ -64,10 +65,9 @@ internal sealed class OpenAIProvider : IAIProvider
         Description = $"{ProviderType} GPT models",
         ProviderType = ProviderType,
         DefaultModel = _defaultModel,
-        SystemPrompt = _systemPrompt,
+        SystemPrompt = _options.SystemPrompt,
         SupportedModels = _models,
         IsValid = _isValid,
-        InvalidModels = _invalidModels,
         Metadata = BuildMetadata(_options),
         IsDefault = _options.IsDefault,
         Icon = "openai"
@@ -76,25 +76,26 @@ internal sealed class OpenAIProvider : IAIProvider
     /// <inheritdoc />
     public IChatClient GetChatClient(string? modelName = null)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var resolvedModel = !string.IsNullOrWhiteSpace(modelName) ? modelName : _defaultModel;
         if (string.IsNullOrWhiteSpace(resolvedModel))
         {
             throw new InvalidOperationException("OpenAI model is not configured.");
         }
 
-        var cacheKey = BuildChatClientCacheKey(
-            _options.ApiMode,
-            _options.ResponsesHistoryMode,
-            resolvedModel,
-            _options.PromptCacheKey,
-            _options.PromptCacheRetention);
-        return _chatClients.GetOrAdd(cacheKey, _ => CreateChatClient(resolvedModel));
+        if (!_models.OfType<LLMModelInfo>().Any(model => string.Equals(model.ModelName, resolvedModel, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException($"Chat model '{resolvedModel}' is not configured on provider '{ProviderId}'.");
+        }
+
+        return _chatClients.GetOrAdd(resolvedModel, name => new Lazy<IChatClient>(() => CreateChatClient(name))).Value;
     }
 
     /// <inheritdoc />
     public IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(
         string? modelName = null)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var resolvedModel = !string.IsNullOrWhiteSpace(modelName)
             ? modelName
             : _models.OfType<EmbeddingModelInfo>().FirstOrDefault()?.ModelName
@@ -102,8 +103,13 @@ internal sealed class OpenAIProvider : IAIProvider
                   "No embedding model configured for this OpenAI provider. " +
                   "Add an embedding model to SupportedModels (e.g., 'text-embedding-3-small').");
 
+        if (!_models.OfType<EmbeddingModelInfo>().Any(model => string.Equals(model.ModelName, resolvedModel, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException($"Embedding model '{resolvedModel}' is not configured on provider '{ProviderId}'.");
+        }
+
         return _embeddingGenerators.GetOrAdd(resolvedModel, name =>
-            _client.GetEmbeddingClient(name).AsIEmbeddingGenerator());
+            new Lazy<IEmbeddingGenerator<string, Embedding<float>>>(() => _client.GetEmbeddingClient(name).AsIEmbeddingGenerator())).Value;
     }
 
     /// <inheritdoc />
@@ -137,14 +143,17 @@ internal sealed class OpenAIProvider : IAIProvider
     /// <inheritdoc />
     public async Task<IReadOnlyList<AIRemoteModelInfo>> FetchRemoteModelsAsync(CancellationToken ct = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         try
         {
             var modelClient = _client.GetOpenAIModelClient();
             var result = await modelClient.GetModelsAsync(ct);
+            var metadata = OpenAIModelMetadata.Read(result.GetRawResponse().Content);
             IReadOnlyList<AIRemoteModelInfo> remoteModels = result.Value
                 .Select(m => new AIRemoteModelInfo
                 {
                     ModelId = m.Id,
+                    Configuration = metadata.GetValueOrDefault(m.Id),
                     Metadata = new Dictionary<string, string>
                     {
                         ["OwnedBy"] = m.OwnedBy ?? "",
@@ -165,13 +174,6 @@ internal sealed class OpenAIProvider : IAIProvider
         }
     }
 
-    /// <inheritdoc />
-    public void UpdateSystemPrompt(string? systemPrompt)
-    {
-        _systemPrompt = systemPrompt;
-        _options.SystemPrompt = systemPrompt;
-    }
-
     /// <summary>
     /// Builds OpenAI-specific provider metadata.
     /// </summary>
@@ -182,6 +184,7 @@ internal sealed class OpenAIProvider : IAIProvider
         return new Dictionary<string, string>
         {
             [OpenAIProviderMetadataKeys.ApiMode] = options.ApiMode.ToString(),
+            [OpenAIProviderMetadataKeys.ProtocolProfile] = ResolveProtocolProfile(options).ToString(),
             [OpenAIProviderMetadataKeys.ResponsesHistoryMode] = options.ResponsesHistoryMode.ToString()
         };
     }
@@ -197,32 +200,28 @@ internal sealed class OpenAIProvider : IAIProvider
             _ => throw new InvalidOperationException($"Unsupported OpenAI API mode '{_options.ApiMode}'.")
         };
 
-        return RequiresRequestOptionsDecorator()
-            ? new OpenAIRequestOptionsChatClient(
-                chatClient,
-                _options.ApiMode,
-                _options.ResponsesHistoryMode,
-                _options.PromptCacheKey,
-                _options.PromptCacheRetention)
-            : chatClient;
+        IChatClient configuredClient = new OpenAIRequestOptionsChatClient(
+            chatClient,
+            _options.ApiMode,
+            _options.ResponsesHistoryMode,
+            _options.PromptCacheKey,
+            _options.PromptCacheRetention,
+            ResolveProtocolProfile(_options));
+        // Compatible endpoints may put a leading <think> block in ordinary content. Interpret it
+        // only for explicitly reasoning-capable Chat models; Responses and unknown models stay literal.
+        return _options.ApiMode == OpenAIProviderApiMode.Chat
+               && _models.OfType<LLMModelInfo>().Any(model => model.ModelName.Equals(resolvedModel, StringComparison.OrdinalIgnoreCase)
+                   && model.SupportsReasoning == true)
+            ? new TaggedReasoningChatClient(configuredClient)
+            : configuredClient;
     }
 
-    private bool RequiresRequestOptionsDecorator()
-    {
-        return !string.IsNullOrWhiteSpace(_options.PromptCacheKey)
-               || (_options.ApiMode == OpenAIProviderApiMode.Responses
-                   && _options.ResponsesHistoryMode == OpenAIResponsesHistoryMode.LocalHistory);
-    }
-
-    private static string BuildChatClientCacheKey(
-        OpenAIProviderApiMode apiMode,
-        OpenAIResponsesHistoryMode responsesHistoryMode,
-        string model,
-        string? promptCacheKey,
-        OpenAIPromptCacheRetention? promptCacheRetention)
-    {
-        return $"{apiMode}:{responsesHistoryMode}:{model}:{promptCacheKey}:{promptCacheRetention}";
-    }
+    internal static OpenAIProtocolProfile ResolveProtocolProfile(OpenAIProviderOptions options) =>
+        options.ProtocolProfile != OpenAIProtocolProfile.Auto ? options.ProtocolProfile
+        : Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var endpoint)
+          && string.Equals(endpoint.Host, "api.deepseek.com", StringComparison.OrdinalIgnoreCase)
+            ? OpenAIProtocolProfile.DeepSeek
+            : OpenAIProtocolProfile.Standard;
 
     public void Dispose()
     {
@@ -233,13 +232,13 @@ internal sealed class OpenAIProvider : IAIProvider
 
         foreach (var chatClient in _chatClients.Values)
         {
-            chatClient.Dispose();
+            if (chatClient.IsValueCreated) chatClient.Value.Dispose();
         }
 
         _chatClients.Clear();
         foreach (var generator in _embeddingGenerators.Values)
         {
-            (generator as IDisposable)?.Dispose();
+            if (generator.IsValueCreated) generator.Value.Dispose();
         }
 
         _embeddingGenerators.Clear();

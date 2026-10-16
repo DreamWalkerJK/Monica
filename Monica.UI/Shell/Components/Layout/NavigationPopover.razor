@@ -1,0 +1,299 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using MudBlazor.Interfaces
+@using Monica.UI.Shell.Models
+@using Monica.UI.Shell.Support
+@inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> L
+@inject IJSRuntime JSRuntime
+@implements INavigationEventReceiver
+@implements IAsyncDisposable
+
+<div class="mo-navigation-popover @Class" @ref="_activatorRef" @onkeydown="HandleActivatorKeyDown">
+    @if (string.IsNullOrEmpty(Icon))
+    {
+        <MudButton Variant="Variant.Text" Color="Color.Inherit" Class="mud-menu-button-activator"
+                   StartIcon="@StartIcon" EndIcon="@ShellIcons.ChevronDown" OnClick="Toggle"
+                   aria-label="@Label" aria-expanded="@(_open ? "true" : "false")" aria-controls="@_popupId">
+            @Label
+        </MudButton>
+    }
+    else
+    {
+        <MudIconButton Icon="@Icon" Color="Color.Inherit" Class="mud-menu-icon-button-activator"
+                       OnClick="Toggle" title="@Label"
+                       aria-label="@Label" aria-expanded="@(_open ? "true" : "false")" aria-controls="@_popupId" />
+    }
+
+    <MudPopover Open="@_open" Class="@PopoverClass" AnchorOrigin="@AnchorOrigin" TransformOrigin="@TransformOrigin"
+                OverflowBehavior="OverflowBehavior.FlipAlways" Elevation="8" Duration="0">
+        @if (_open)
+        {
+            <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild" Disabled="@OpenOnHover">
+                <div id="@_popupId" class="@SurfaceClass" @onkeydown="HandlePopoverKeyDown">
+                    @if (!string.IsNullOrWhiteSpace(Header))
+                    {
+                        @if (ShowOverview)
+                        {
+                            <div class="mo-navigation-popover__overview">
+                                <span class="mo-navigation-popover__eyebrow">@L["NavBar:Explore"]</span>
+                                <h2>@Header</h2>
+                                @if (!string.IsNullOrWhiteSpace(HeaderDescription))
+                                {
+                                    <p>@HeaderDescription</p>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mo-navigation-popover__header">@Header</div>
+                        }
+                    }
+                    <CascadingValue Value="@((INavigationEventReceiver)this)" IsFixed="true">
+                        <MudNavMenu Class="mo-navigation-popover__pages" aria-label="@Label">
+                            @if (Group is { } group)
+                            {
+                                <NavigationTree Group="@group" ActiveItem="@ActiveItem" ShowPageIcons="@(!ShowOverview)" />
+                            }
+                            else
+                            {
+                                @foreach (var root in Groups)
+                                {
+                                    <MudNavGroup @key="root.Id" Title="@root.DisplayName" Icon="@root.Icon" ExpandIcon="@ShellIcons.ChevronDown" Expanded="@ContainsActive(root)">
+                                        <NavigationTree Group="@root" ActiveItem="@ActiveItem" ShowPageIcons="@(!ShowOverview)" />
+                                    </MudNavGroup>
+                                }
+                            }
+                        </MudNavMenu>
+                    </CascadingValue>
+                </div>
+            </MudFocusTrap>
+        }
+    </MudPopover>
+    <MudOverlay Visible="@(_open && !OpenOnHover)" AutoClose="true" OnClosed="Close" Class="mud-overlay-popover" LockScroll="false" />
+</div>
+
+@code {
+    private readonly string _popupId = $"mo-navigation-{Guid.NewGuid():N}";
+    private readonly ComponentRenderTracker _renderTracker = new();
+    private readonly object _retirementGate = new();
+    private TaskCompletionSource? _retirement;
+    private ElementReference _activatorRef;
+    private NavigationPopoverInteropSession? _hoverInterop;
+    private bool _open;
+    private bool _openedByHover;
+    private bool _focusFirst;
+    private bool _restoreFocus;
+    private long _pointerVersion;
+    private bool _disposed;
+    private string PopoverClass => ShowOverview ? "mo-navbar-menu-popover mo-navbar-menu-popover--overview" : "mo-navbar-menu-popover";
+    private string SurfaceClass => ShowOverview ? "mo-navigation-popover__surface mo-navigation-popover__surface--overview" : "mo-navigation-popover__surface";
+
+    /// <summary>Gets or sets one authorized category to render directly. When set, it takes precedence over <see cref="Groups"/>.</summary>
+    [Parameter] public NavigationGroup? Group { get; set; }
+
+    /// <summary>Gets or sets authorized root categories shown as expandable branches when <see cref="Group"/> is absent.</summary>
+    [Parameter] public IReadOnlyList<NavigationGroup> Groups { get; set; } = [];
+
+    /// <summary>Gets or sets the single active destination used to expand its ancestors.</summary>
+    [Parameter] public NavigationItem? ActiveItem { get; set; }
+
+    /// <summary>Gets or sets the localized activator and navigation label. Required for an accessible icon activator.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Gets or sets an optional icon activator. When absent, the activator displays <see cref="Label"/>.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Gets or sets an optional leading icon on a text activator. Ignored when <see cref="Icon"/> supplies an icon-only activator.</summary>
+    [Parameter] public string? StartIcon { get; set; }
+
+    /// <summary>Gets or sets an optional localized heading inside the popover.</summary>
+    [Parameter] public string? Header { get; set; }
+
+    /// <summary>Gets or sets a localized description beneath the heading when <see cref="ShowOverview"/> is enabled.</summary>
+    [Parameter] public string? HeaderDescription { get; set; }
+
+    /// <summary>Gets or sets whether to show a spacious category overview and simple destination rows. Defaults to false for compact menus.</summary>
+    [Parameter] public bool ShowOverview { get; set; }
+
+    /// <summary>Gets or sets whether a fine, hover-capable pointer opens this menu without moving keyboard focus. Defaults to false.</summary>
+    /// <remarks>Click, touch, and ArrowDown still open the menu with focus. Hover menus allow native Tab navigation and close when focus leaves.</remarks>
+    [Parameter] public bool OpenOnHover { get; set; }
+
+    /// <summary>Gets or sets additional presentation classes on the activator wrapper.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Gets or sets the activator's anchor point. Defaults to its bottom-left corner.</summary>
+    [Parameter] public Origin AnchorOrigin { get; set; } = Origin.BottomLeft;
+
+    /// <summary>Gets or sets the popover's transform origin. Defaults to its top-left corner.</summary>
+    [Parameter] public Origin TransformOrigin { get; set; } = Origin.TopLeft;
+
+    protected override void OnInitialized()
+    {
+        _hoverInterop = new NavigationPopoverInteropSession(JSRuntime, this);
+        Navigation.LocationChanged += HandleLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed || _hoverInterop is not { } hoverInterop)
+        {
+            return;
+        }
+
+        var focusFirst = _focusFirst;
+        var restoreFocus = _restoreFocus;
+        _focusFirst = false;
+        _restoreFocus = false;
+        await hoverInterop.SynchronizeAsync(
+            _activatorRef, _popupId, OpenOnHover, _open, _openedByHover,
+            focusFirst, restoreFocus, _pointerVersion);
+    }
+
+    private bool ContainsActive(NavigationGroup group) =>
+        ActiveItem is not null && NavigationTreeBuilder.Flatten([group]).Contains(ActiveItem);
+
+    private void Toggle()
+    {
+        if (!_disposed)
+        {
+            if (_open && !_openedByHover)
+            {
+                Close(restoreFocus: true);
+            }
+            else
+            {
+                OpenWithFocus();
+            }
+        }
+    }
+
+    private void OpenWithFocus()
+    {
+        _open = true;
+        _openedByHover = false;
+        _focusFirst = OpenOnHover;
+        _restoreFocus = false;
+    }
+
+    private void Close() => Close(restoreFocus: false);
+
+    private void Close(bool restoreFocus)
+    {
+        _restoreFocus = OpenOnHover && _open && restoreFocus;
+        _open = false;
+        _openedByHover = false;
+        _focusFirst = false;
+    }
+
+    private void HandleActivatorKeyDown(KeyboardEventArgs args)
+    {
+        if (!_disposed && args.Key == "ArrowDown")
+        {
+            OpenWithFocus();
+        }
+        else if (!_disposed && args.Key == "Escape")
+        {
+            Close(restoreFocus: true);
+        }
+    }
+
+    private void HandlePopoverKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            Close(restoreFocus: true);
+        }
+    }
+
+    /// <summary>Receives ordered pointer and outside-dismissal notifications from this menu's browser observer.</summary>
+    /// <param name="open">Whether the pointer requested opening this menu or leaving its trigger and popup.</param>
+    /// <param name="interactionVersion">The observer's increasing interaction version, used to reject stale pointer notifications.</param>
+    /// <remarks>The observer never moves focus for hover opening or outside dismissal and stops before its callback reference is released.</remarks>
+    [JSInvokable]
+    public Task UpdatePointerNavigationAsync(bool open, long interactionVersion) => InvokeAsync(() =>
+    {
+        if (_disposed || !OpenOnHover || interactionVersion <= _pointerVersion)
+        {
+            return;
+        }
+
+        _pointerVersion = interactionVersion;
+        if (open)
+        {
+            if (!_open)
+            {
+                _open = true;
+                _openedByHover = true;
+                _restoreFocus = false;
+            }
+        }
+        else
+        {
+            Close();
+        }
+
+        StateHasChanged();
+    });
+
+    /// <summary>Closes the popover after any native navigation link click, including the current destination.</summary>
+    public Task OnNavigation() => InvokeAsync(() =>
+    {
+        if (!_disposed && _open)
+        {
+            Close();
+            StateHasChanged();
+        }
+    });
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        if (_disposed || !_open)
+        {
+            return;
+        }
+
+        _renderTracker.Queue(() => InvokeAsync(() =>
+        {
+            if (!_disposed && _open)
+            {
+                Close();
+                StateHasChanged();
+            }
+        }));
+    }
+
+    /// <summary>Stops route and pointer callbacks and drains renderer work, including when interop cleanup fails.</summary>
+    /// <remarks>Repeated callers share actual retirement completion and its unexpected cleanup failures.</remarks>
+    public ValueTask DisposeAsync()
+    {
+        TaskCompletionSource completion;
+        lock (_retirementGate)
+        {
+            if (_retirement is not null) return new(_retirement.Task);
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _retirement = completion;
+            _disposed = true;
+        }
+        Navigation.LocationChanged -= HandleLocationChanged;
+        var hoverInterop = _hoverInterop;
+        _hoverInterop = null;
+        _ = CompleteRetirementAsync(hoverInterop, completion);
+        return new(completion.Task);
+    }
+
+    private async Task CompleteRetirementAsync(NavigationPopoverInteropSession? hoverInterop, TaskCompletionSource completion)
+    {
+        var failures = new List<Exception>();
+        if (hoverInterop is not null)
+        {
+            try { await hoverInterop.DisposeAsync(); }
+            catch (Exception exception) { failures.Add(exception); }
+        }
+        try { await _renderTracker.CompleteAsync(); }
+        catch (Exception exception) { failures.Add(exception); }
+        if (failures.Count == 0) completion.TrySetResult();
+        else if (failures.Count == 1) completion.TrySetException(failures[0]);
+        else completion.TrySetException(new AggregateException("Navigation popover retirement failed.", failures));
+    }
+}

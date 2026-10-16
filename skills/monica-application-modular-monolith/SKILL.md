@@ -1,9 +1,11 @@
 ---
 name: monica-application-modular-monolith
-description: Design a Monica DDD modular monolith with bounded contexts under Domains, AppHost composition, Platform dependency direction, published language, and persistence ownership.
+description: Apply the Monica modular-monolith specification when designing, implementing, refactoring, or reviewing domain ownership, host composition, project dependencies, contracts, or persistence. Load monica-application and the repository's project specification first.
 ---
 
 # Monica Application Modular Monolith
+
+Before using this profile, load `$monica-application` and the repository-designated project specification. The [shared specification](../monica-application/references/00-application-specification.md) defines mandatory rules, allowed options, and examples; the project specification records the adopted profile and actual topology. Use [specification evolution](../monica-application/references/01-specification-evolution.md) for a new pattern or deviation.
 
 Keep one deployment with business boundaries under `Domains/`, rather than global Application/Domain/Infrastructure buckets. Each bounded context uses one `Domains.{Subdomain}.csproj` containing its application units, domain model, and domain-owned infrastructure. The intended chain is `AppHost → Domains.{Subdomain} → Platform.Infrastructure → Platform.Protocol → Platform.BuildingBlocks`. Put project-common libraries in BuildingBlocks, solution wiring in Infrastructure, and subdomain-only dependencies in the owning project. AppHost remains composition-only. See [solution layout](references/00-solution-layout.md) and [new bounded context](references/01-create-subdomain-and-domain.md).
 

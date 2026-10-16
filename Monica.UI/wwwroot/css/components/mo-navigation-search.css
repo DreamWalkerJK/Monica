@@ -1,0 +1,23 @@
+/* Dialog chrome is portaled outside the search component's isolated CSS scope. */
+:root[data-theme] .mud-dialog.navigation-search-dialog {
+    width: min(960px, calc(100vw - 48px));
+    max-width: 960px;
+    margin: 24px;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 12px;
+}
+
+:root[data-theme] .mud-dialog-content.navigation-search-dialog-content {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+@media (max-width: 600px) {
+    :root[data-theme] .mud-dialog.navigation-search-dialog {
+        width: calc(100vw - 24px);
+        margin: 12px;
+        border-radius: 10px;
+    }
+}

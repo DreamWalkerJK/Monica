@@ -27,5 +27,16 @@ namespace Monica.DataChannel.Providers.TCP
             Type = CommunicationType.TCP;
             Direction = direction;
         }
+
+        /// <inheritdoc />
+        public override void EnrichOrValidate()
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(ClientAddress.Key);
+            if (ClientAddress.Value?.Address is not { } address || string.IsNullOrWhiteSpace(address.Item1))
+                throw new ArgumentException("TCP client host is required.", nameof(ClientAddress));
+            if (address.Item2 is < 1 or > 65535) throw new ArgumentOutOfRangeException(nameof(ClientAddress));
+            if (Direction is not (ConnectionDirection.Input or ConnectionDirection.Output or ConnectionDirection.InputAndOutput))
+                throw new ArgumentOutOfRangeException(nameof(Direction));
+        }
     }
 }

@@ -9,11 +9,6 @@ namespace Monica.AI.UI.UIChat.Support;
 public static class ChatProviderResolver
 {
     /// <summary>
-    /// Default context window used when provider metadata does not specify a model limit.
-    /// </summary>
-    public const int DEFAULT_CONTEXT_WINDOW = 200_000;
-
-    /// <summary>
     /// Gets providers that have at least one chat-capable (LLM) model.
     /// </summary>
     public static IReadOnlyList<AIProviderInfo> GetChatProviders(IReadOnlyList<AIProviderInfo> providers)
@@ -32,17 +27,6 @@ public static class ChatProviderResolver
             .OfType<LLMModelInfo>()
             .Cast<AIModelInfo>()
             .ToList() ?? [];
-    }
-
-    /// <summary>
-    /// Resolves the context window for a selected model, falling back to the Monica default when unknown.
-    /// </summary>
-    public static int GetContextWindow(
-        IReadOnlyList<AIModelInfo>? availableModels,
-        string? modelName)
-    {
-        return ResolveLLMModel(availableModels, modelName)?.ContextWindow
-               ?? DEFAULT_CONTEXT_WINDOW;
     }
 
     /// <summary>

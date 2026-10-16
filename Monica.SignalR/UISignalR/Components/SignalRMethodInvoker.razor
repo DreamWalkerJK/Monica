@@ -1,348 +1,178 @@
+@using System.Text.Json
 @using Monica.SignalR.UISignalR.Models
+@using Monica.SignalR.UISignalR.Support
+@inject SignalRInvocationArgumentParser ArgumentParser
 @inject IStringLocalizer<SignalRResource> L
 
-<MudPaper Class="signalr-method-invoker" Elevation="0">
-    <div class="signalr-component-heading"><MudIcon Icon="@Icons.Material.Outlined.Terminal" Color="Color.Primary" /><MudText Typo="Typo.h6">@L["UISignalR:MethodInvoker:Title"]</MudText></div>
-    <MudGrid>
-        <MudItem xs="12" sm="6">
-            <MudSelect Value="@SelectedMethodName"
-                     ValueChanged="@((string value) => OnSelectedMethodNameChangedInternal(value))"
-                     Label="@L["UISignalR:MethodInvoker:MethodLabel"]" 
-                     Variant="Variant.Outlined"
-                     T="string">
+<section class="signalr-method-invoker" aria-label="@L["UISignalR:MethodInvoker:Title"]" aria-busy="@(_isInvoking ? "true" : "false")">
+    <header class="signalr-invoker-heading">
+        <span>@L["UISignalR:MethodInvoker:Scope"]</span>
+        <h2>@L["UISignalR:MethodInvoker:Title"]</h2>
+        <p>@L["UISignalR:MethodInvoker:Help"]</p>
+    </header>
+
+    @if (HubMethods.Count == 0)
+    {
+        <div class="signalr-invoker-empty">@L["UISignalR:MethodInvoker:Empty"]</div>
+    }
+    else
+    {
+        <div class="signalr-invoker-method">
+            <MudSelect T="string" Value="@SelectedMethodName" ValueChanged="ChangeSelectedMethodAsync"
+                       Label="@L["UISignalR:MethodInvoker:MethodLabel"]" Variant="Variant.Outlined"
+                       Margin="Margin.Dense" Disabled="_isInvoking">
                 @foreach (var method in HubMethods)
                 {
                     <MudSelectItem Value="@method.Name">@method.DisplayName</MudSelectItem>
                 }
             </MudSelect>
-        </MudItem>
-        <MudItem xs="12">
-            @if (SelectedMethod != null && SelectedMethod.Args.Any())
+        </div>
+
+        @if (SelectedMethod is { } selectedMethod)
+        {
+            <code class="signalr-invoker-signature">@FormatSignature(selectedMethod)</code>
+            @if (selectedMethod.Args.Count > 0)
             {
-                <MudText Typo="Typo.h6" Class="mb-2">@L["UISignalR:MethodInvoker:ParametersTitle"]</MudText>
-                @foreach (var arg in SelectedMethod.Args)
-                {
-                    var value = GetParameterValue(arg.Name);
-                    var isValid = ValidateParameterValue(value, arg.TypeName);
-                    
-                    <MudTextField Value="@value" 
-                                Label="@L["UISignalR:MethodInvoker:ParameterLabel", arg.Name, GetDisplayType(arg.TypeName)]" 
-                                Variant="Variant.Outlined"
-                                Class="mb-2"
-                                HelperText="@GetParameterHelperText(arg.TypeName)"
-                                Error="@(!isValid && !string.IsNullOrEmpty(value))"
-                                ErrorText="@(isValid ? "" : GetParameterErrorText(value, arg.TypeName))"
-                                ValueChanged="@((string newValue) => SetParameterValue(arg.Name, newValue))" />
-                }
+                <div class="signalr-invoker-parameters">
+                    <h3>@L["UISignalR:MethodInvoker:ParametersTitle"]</h3>
+                    <p>@L["UISignalR:MethodInvoker:DefaultsHelp"]</p>
+                    @foreach (var argument in selectedMethod.Args)
+                    {
+                        var value = GetParameterValue(argument.Name);
+                        var valid = IsParameterValid(value, argument.TypeName);
+                        <div class="signalr-invoker-field" @key="(selectedMethod.Name, argument.Name)">
+                            <MudTextField T="string" Value="@value"
+                                          ValueChanged="@((string newValue) => SetParameterValueAsync(argument.Name, newValue))"
+                                          Label="@L["UISignalR:MethodInvoker:ParameterLabel", argument.Name, argument.TypeName]"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                                          Disabled="_isInvoking" HelperText="@GetParameterHelperText(argument.TypeName)"
+                                          Error="@(!valid)" ErrorText="@(valid ? string.Empty : GetParameterErrorText(argument.TypeName))" />
+                        </div>
+                    }
+                </div>
             }
-            else if (SelectedMethod != null)
+            else
             {
-                <MudAlert Severity="Severity.Info">@L["UISignalR:MethodInvoker:NoParameters"]</MudAlert>
+                <p class="signalr-invoker-no-parameters">@L["UISignalR:MethodInvoker:NoParameters"]</p>
             }
-        </MudItem>
-        <MudItem xs="12">
-            <MudStack Row Spacing="2">
-                <MudButton Variant="Variant.Filled" 
-                         Color="Color.Primary" 
-                         OnClick="InvokeMethodAsync"
-                         Disabled="!IsConnected || string.IsNullOrWhiteSpace(SelectedMethodName) || !AreParametersValid()">
-                    <MudIcon Icon="@Icons.Material.Filled.PlayArrow" />
-                    <MudText Class="ms-2">@L["UISignalR:MethodInvoker:Invoke"]</MudText>
+        }
+
+        @if (!IsConnected)
+        {
+            <p class="signalr-invoker-connect-help">@L["UISignalR:MethodInvoker:ConnectHelp"]</p>
+        }
+        <div class="signalr-invoker-actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.PlayArrow"
+                       OnClick="InvokeMethodAsync" Disabled="@(_isInvoking || !IsConnected || SelectedMethod is null || !AreParametersValid())">
+                @L[_isInvoking ? "UISignalR:MethodInvoker:Invoking" : "UISignalR:MethodInvoker:Invoke"]
+            </MudButton>
+            @if (SelectedMethod?.Args.Count > 0)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="ClearParametersAsync" Disabled="_isInvoking">
+                    @L["UISignalR:MethodInvoker:ClearParameters"]
                 </MudButton>
-                @if (SelectedMethod != null && SelectedMethod.Args.Any())
-                {
-                    <MudButton Variant="Variant.Outlined" 
-                             Color="Color.Secondary" 
-                             OnClick="ClearParametersAsync">
-                        <MudIcon Icon="@Icons.Material.Filled.Clear" />
-                        <MudText Class="ms-2">@L["UISignalR:MethodInvoker:ClearParameters"]</MudText>
-                    </MudButton>
-                }
-            </MudStack>
-        </MudItem>
-    </MudGrid>
-</MudPaper>
+            }
+        </div>
+    }
+</section>
 
 @code {
-    /// <summary>
-    /// Hub method list
-    /// </summary>
+    /// <summary>Gets or sets the callable method catalog supplied by the session owner.</summary>
     [Parameter] public List<HubMethodInfo> HubMethods { get; set; } = [];
-
-    /// <summary>
-    /// Is it connected?
-    /// </summary>
+    /// <summary>Gets or sets whether the browser session can execute a hub invocation.</summary>
     [Parameter] public bool IsConnected { get; set; }
-
-    /// <summary>
-    /// Selected method name
-    /// </summary>
-    [Parameter] public string SelectedMethodName { get; set; } = "";
-
-    /// <summary>
-    /// Selected method name change callback
-    /// </summary>
+    /// <summary>Gets or sets the selected method name.</summary>
+    [Parameter] public string SelectedMethodName { get; set; } = string.Empty;
+    /// <summary>Reports a newly selected method to the owning state.</summary>
     [Parameter] public EventCallback<string> SelectedMethodNameChanged { get; set; }
-
-    /// <summary>
-    /// method parameters
-    /// </summary>
-    [Parameter] public Dictionary<string, string> MethodParameters { get; set; } = new();
-
-    /// <summary>
-    /// Call method callback
-    /// </summary>
+    /// <summary>Gets or sets the shared raw argument draft; clearing or editing retains state-owner ownership.</summary>
+    [Parameter] public Dictionary<string, string> MethodParameters { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>Requests execution with a snapshot of the method name and raw arguments; conversion uses the registered invocation parser.</summary>
     [Parameter] public EventCallback<(string methodName, List<MethodCallParameter> parameters)> OnInvokeMethod { get; set; }
 
-    /// <summary>
-    /// Currently selected method
-    /// </summary>
-    private HubMethodInfo? SelectedMethod => HubMethods.FirstOrDefault(m => m.Name == SelectedMethodName);
+    private bool _isInvoking;
+    private HubMethodInfo? SelectedMethod => HubMethods.FirstOrDefault(method => method.Name == SelectedMethodName);
+    private string GetParameterValue(string name) => MethodParameters.GetValueOrDefault(name, string.Empty);
+    private static string FormatSignature(HubMethodInfo method) => $"{method.Name}({string.Join(", ", method.Args.Select(argument => $"{argument.TypeName} {argument.Name}"))})";
 
-    /// <summary>
-    /// Safely obtain parameter values
-    /// </summary>
-    /// <param name="parameterName">Parameter name</param>
-    /// <returns>Parameter values</returns>
-    private string GetParameterValue(string parameterName)
+    private async Task ChangeSelectedMethodAsync(string value)
     {
-        return MethodParameters?.GetValueOrDefault(parameterName, "") ?? "";
+        if (_isInvoking) return;
+        SelectedMethodName = value ?? string.Empty;
+        await SelectedMethodNameChanged.InvokeAsync(SelectedMethodName);
     }
 
-    /// <summary>
-    /// Security setting parameter value
-    /// </summary>
-    /// <param name="parameterName">Parameter name</param>
-    /// <param name="value">Parameter value</param>
-    private void SetParameterValue(string parameterName, string value)
+    private Task SetParameterValueAsync(string name, string value)
     {
-        if (MethodParameters != null)
+        if (!_isInvoking) MethodParameters[name] = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task ClearParametersAsync()
+    {
+        if (!_isInvoking && SelectedMethod is { } method)
         {
-            MethodParameters[parameterName] = value ?? "";
+            foreach (var argument in method.Args) MethodParameters[argument.Name] = string.Empty;
         }
+        return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Parameter setting change processing
-    /// </summary>
-    protected override async Task OnParametersSetAsync()
+    private bool IsParameterValid(string value, string type)
     {
-        // Make sure the MethodParameters dictionary is not null
-        MethodParameters ??= new Dictionary<string, string>();
-        
-        if (SelectedMethod != null)
-        {
-            // Make sure the parameter dictionary contains all required parameters
-            foreach (var arg in SelectedMethod.Args)
-            {
-                if (!MethodParameters.ContainsKey(arg.Name))
-                {
-                    MethodParameters[arg.Name] = "";
-                }
-            }
-        }
-        await base.OnParametersSetAsync();
-    }
-
-    /// <summary>
-    /// Get display type name
-    /// </summary>
-    /// <param name="type">Parameter type</param>
-    /// <returns>Display type name</returns>
-    private string GetDisplayType(string type)
-    {
-        var normalizedType = type.ToLower().Replace("system.", "");
-        
-        return normalizedType switch
-        {
-            "string" => "string",
-            "int" or "int32" => "int",
-            "long" or "int64" => "long",
-            "double" => "double",
-            "float" or "single" => "float",
-            "bool" or "boolean" => "bool",
-            "datetime" => "DateTime",
-            "guid" => "Guid",
-            _ => type
-        };
-    }
-
-    /// <summary>
-    /// Get parameter help text
-    /// </summary>
-    /// <param name="type">Parameter type</param>
-    /// <returns>Help text</returns>
-    private string GetParameterHelperText(string type)
-    {
-        var normalizedType = type.ToLower().Replace("system.", "");
-        
-        return normalizedType switch
-        {
-            "string" => L["UISignalR:MethodInvoker:HelperText:String"].Value,
-            "int" or "int32" => L["UISignalR:MethodInvoker:HelperText:Int"].Value,
-            "long" or "int64" => L["UISignalR:MethodInvoker:HelperText:Long"].Value,
-            "double" => L["UISignalR:MethodInvoker:HelperText:Double"].Value,
-            "float" or "single" => L["UISignalR:MethodInvoker:HelperText:Float"].Value,
-            "bool" or "boolean" => L["UISignalR:MethodInvoker:HelperText:Bool"].Value,
-            "datetime" => L["UISignalR:MethodInvoker:HelperText:DateTime"].Value,
-            "guid" => L["UISignalR:MethodInvoker:HelperText:Guid"].Value,
-            _ when normalizedType.Contains("[]") => L["UISignalR:MethodInvoker:HelperText:Array"].Value,
-            _ when normalizedType.Contains("list") => L["UISignalR:MethodInvoker:HelperText:List"].Value,
-            _ => L["UISignalR:MethodInvoker:HelperText:Complex", type].Value
-        };
-    }
-
-    /// <summary>
-    /// Get parameter error text
-    /// </summary>
-    /// <param name="value">Parameter value</param>
-    /// <param name="type">Parameter type</param>
-    /// <returns>Error text</returns>
-    private string GetParameterErrorText(string value, string type)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return "";
-        }
-
-        var normalizedType = type.ToLower().Replace("system.", "");
-        
-        return normalizedType switch
-        {
-            "int" or "int32" => L["UISignalR:MethodInvoker:ErrorText:Int"].Value,
-            "long" or "int64" => L["UISignalR:MethodInvoker:ErrorText:Long"].Value,
-            "double" => L["UISignalR:MethodInvoker:ErrorText:Double"].Value,
-            "float" or "single" => L["UISignalR:MethodInvoker:ErrorText:Float"].Value,
-            "bool" or "boolean" => L["UISignalR:MethodInvoker:ErrorText:Bool"].Value,
-            "datetime" => L["UISignalR:MethodInvoker:ErrorText:DateTime"].Value,
-            "guid" => L["UISignalR:MethodInvoker:ErrorText:Guid"].Value,
-            _ => L["UISignalR:MethodInvoker:ErrorText:Invalid"].Value
-        };
-    }
-
-    /// <summary>
-    /// Validate parameter values
-    /// </summary>
-    /// <param name="value">Parameter value</param>
-    /// <param name="type">Parameter type</param>
-    /// <returns>Is it valid?</returns>
-    private bool ValidateParameterValue(string value, string type)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return true; // Allow empty values so the server can apply default handling.
-        }
-
-        var normalizedType = type.ToLower().Replace("system.", "");
-        
         try
         {
-            switch (normalizedType)
-            {
-                case "string":
-                    return true; // String input is always valid.
-                case "int" or "int32":
-                    return int.TryParse(value, out _);
-                case "long" or "int64":
-                    return long.TryParse(value, out _);
-                case "double":
-                    return double.TryParse(value, out _);
-                case "float" or "single":
-                    return float.TryParse(value, out _);
-                case "bool" or "boolean":
-                    var trimmed = value.ToLower().Trim();
-                    return trimmed == "true" || trimmed == "false" || 
-                           trimmed == "1" || trimmed == "0" || 
-                           trimmed == "yes" || trimmed == "no" || 
-                           trimmed == "y" || trimmed == "n";
-                case "datetime":
-                    return DateTime.TryParse(value, out _);
-                case "guid":
-                    return Guid.TryParse(value, out _);
-                default:
-                    // For complex types, treat JSON-shaped input as structured data.
-                    if (value.Trim().StartsWith("{") || value.Trim().StartsWith("["))
-                    {
-                        try
-                        {
-                            System.Text.Json.JsonDocument.Parse(value);
-                            return true;
-                        }
-                        catch
-                        {
-                            return false;
-                        }
-                    }
-                    return true; // Otherwise keep the raw text and let the server validate it.
-            }
+            _ = ArgumentParser.ConvertValue(value, type);
+            return true;
         }
-        catch
+        catch (Exception exception) when (exception is FormatException or OverflowException or JsonException or ArgumentException)
         {
             return false;
         }
     }
 
-    /// <summary>
-    /// ArgumentGuard if all parameters are valid
-    /// </summary>
-    /// <returns>Are all parameters valid</returns>
-    private bool AreParametersValid()
-    {
-        if (SelectedMethod == null) return true;
+    private bool AreParametersValid() => SelectedMethod is { } method
+        && method.Args.All(argument => IsParameterValid(GetParameterValue(argument.Name), argument.TypeName));
 
-        return SelectedMethod.Args.All(arg => 
-        {
-            var value = GetParameterValue(arg.Name);
-            return ValidateParameterValue(value, arg.TypeName);
-        });
-    }
-
-    /// <summary>
-    /// Clear all parameters
-    /// </summary>
-    private Task ClearParametersAsync()
-    {
-        if (SelectedMethod != null)
-        {
-            foreach (var arg in SelectedMethod.Args)
-            {
-                MethodParameters[arg.Name] = "";
-            }
-            StateHasChanged();
-        }
-
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// call method
-    /// </summary>
     private async Task InvokeMethodAsync()
     {
-        if (SelectedMethod == null || !AreParametersValid()) return;
-
-        var parameters = new List<MethodCallParameter>();
-        
-        foreach (var arg in SelectedMethod.Args)
+        if (_isInvoking || !IsConnected || SelectedMethod is not { } method || !AreParametersValid()) return;
+        var parameters = method.Args.Select(argument => new MethodCallParameter
         {
-            var value = GetParameterValue(arg.Name);
-            parameters.Add(new MethodCallParameter
-            {
-                Name = arg.Name,
-                Value = value,
-                Type = arg.TypeName
-            });
-        }
-
-        await OnInvokeMethod.InvokeAsync((SelectedMethodName, parameters));
+            Name = argument.Name,
+            Type = argument.TypeName,
+            Value = GetParameterValue(argument.Name)
+        }).ToList();
+        _isInvoking = true;
+        try { await OnInvokeMethod.InvokeAsync((method.Name, parameters)); }
+        finally { _isInvoking = false; }
     }
 
-    /// <summary>
-    /// Handling method name changes
-    /// </summary>
-    private async Task OnSelectedMethodNameChangedInternal(string value)
+    private static string NormalizeTypeName(string type) => type.Trim().Replace("System.", string.Empty, StringComparison.Ordinal).ToLowerInvariant();
+
+    private string GetParameterHelperText(string type) => NormalizeTypeName(type) switch
     {
-        SelectedMethodName = value;
-        await SelectedMethodNameChanged.InvokeAsync(value);
-    }
-} 
+        "string" => L["UISignalR:MethodInvoker:HelperText:String"].Value,
+        "int" or "int32" => L["UISignalR:MethodInvoker:HelperText:Int"].Value,
+        "long" or "int64" => L["UISignalR:MethodInvoker:HelperText:Long"].Value,
+        "double" => L["UISignalR:MethodInvoker:HelperText:Double"].Value,
+        "float" or "single" => L["UISignalR:MethodInvoker:HelperText:Float"].Value,
+        "bool" or "boolean" => L["UISignalR:MethodInvoker:HelperText:Bool"].Value,
+        "datetime" => L["UISignalR:MethodInvoker:HelperText:DateTime"].Value,
+        "guid" => L["UISignalR:MethodInvoker:HelperText:Guid"].Value,
+        var normalized when normalized.Contains("[]", StringComparison.Ordinal) || normalized.Contains("array", StringComparison.Ordinal) => L["UISignalR:MethodInvoker:HelperText:Array"].Value,
+        var normalized when normalized.Contains("list", StringComparison.Ordinal) => L["UISignalR:MethodInvoker:HelperText:List"].Value,
+        _ => L["UISignalR:MethodInvoker:HelperText:Complex", type].Value
+    };
+
+    private string GetParameterErrorText(string type) => NormalizeTypeName(type) switch
+    {
+        "int" or "int32" => L["UISignalR:MethodInvoker:ErrorText:Int"].Value,
+        "long" or "int64" => L["UISignalR:MethodInvoker:ErrorText:Long"].Value,
+        "double" => L["UISignalR:MethodInvoker:ErrorText:Double"].Value,
+        "float" or "single" => L["UISignalR:MethodInvoker:ErrorText:Float"].Value,
+        "bool" or "boolean" => L["UISignalR:MethodInvoker:ErrorText:Bool"].Value,
+        "datetime" => L["UISignalR:MethodInvoker:ErrorText:DateTime"].Value,
+        "guid" => L["UISignalR:MethodInvoker:ErrorText:Guid"].Value,
+        _ => L["UISignalR:MethodInvoker:ErrorText:Invalid"].Value
+    };
+}

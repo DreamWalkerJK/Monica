@@ -1,69 +1,126 @@
-.provider-dialog {
+.provider-dialog,
+.provider-dialog__title,
+.provider-dialog__actions {
+    box-sizing: border-box;
     min-width: 0;
-    padding-top: 4px;
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-surface);
 }
 
-.provider-dialog ::deep .mud-tabs {
-    width: 100%;
+.provider-dialog {
+    container: provider-dialog / inline-size;
+    padding: 0 24px;
+}
+
+.provider-dialog__title {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px 56px 20px 24px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.provider-dialog__title ::deep .mo-dialog-heading {
+    font-family: var(--mud-typography-default-family);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.provider-dialog__title p {
+    margin: 0;
+    color: var(--mud-palette-text-secondary);
+    font-size: .875rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.provider-dialog ::deep .mud-tabs,
+.provider-dialog ::deep .mud-tabs-panels {
     min-width: 0;
+    background: var(--mud-palette-surface);
+}
+
+.provider-dialog ::deep .mud-tabs-tabbar {
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.provider-dialog ::deep .mud-tab {
+    min-width: 0;
+    padding: 14px 16px;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mud-typography-default-family);
+    font-size: .875rem;
+    white-space: normal;
+    line-height: 1.5;
+}
+
+.provider-dialog ::deep .mud-tab.mud-tab-active {
+    color: var(--mud-palette-primary);
 }
 
 .provider-dialog__tab-content {
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 16px;
-    padding: 16px;
-}
-
-::deep .mud-secondary-text {
-    color: var(--mud-palette-text-secondary) !important;
-}
-
-.provider-dialog__title {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    gap: 24px;
+    padding: 24px 20px;
+    background: var(--mud-palette-surface);
 }
 
 .provider-dialog__overview {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-}
-
-.provider-dialog__stat,
-.provider-dialog__section {
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 8px;
-    background: var(--mud-palette-surface);
+    gap: 24px;
+    margin: 0;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
 }
 
 .provider-dialog__stat {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 6px;
-    padding: 14px 16px;
 }
 
-.provider-dialog__stat span {
+.provider-dialog__stat dt {
     color: var(--mud-palette-text-secondary);
-    font-size: 0.82rem;
+    font-size: .8125rem;
+    line-height: 1.5;
 }
+
+.provider-dialog__stat dd {
+    margin: 0;
+    font-size: .875rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.provider-dialog__identifier { font-family: var(--mo-font-family-mono); }
 
 .provider-dialog__section {
     display: flex;
+    min-width: 0;
     flex-direction: column;
-    gap: 12px;
-    padding: 16px;
+    gap: 16px;
 }
 
 .provider-dialog__section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
     min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.provider-dialog__section-header ::deep .mud-typography-subtitle1 {
+    font-family: var(--mud-typography-default-family);
+    font-weight: 600;
+}
+
+.provider-dialog__section-header ::deep .mud-secondary-text {
+    color: var(--mud-palette-text-secondary) !important;
 }
 
 .provider-dialog__chips {
@@ -72,14 +129,49 @@
     gap: 8px;
 }
 
-.provider-dialog__configuration-loading {
-    display: grid;
-    min-height: 8rem;
-    place-items: center;
+.provider-dialog__chips ::deep .mud-chip {
+    max-width: 100%;
+    height: auto;
+    min-height: 28px;
+    white-space: normal;
 }
 
-@media (max-width: 720px) {
-    .provider-dialog__overview {
-        grid-template-columns: minmax(0, 1fr);
-    }
+.provider-dialog__configuration-loading {
+    padding: 24px;
+    text-align: center;
+}
+
+.provider-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    padding: 16px 24px 20px;
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+@container provider-dialog (max-width: 520px) {
+    .provider-dialog__overview { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+}
+
+@media (max-width: 600px) {
+    .provider-dialog { padding: 0 18px; }
+    .provider-dialog__title { padding: 16px 48px 18px 18px; }
+    .provider-dialog__tab-content { padding: 20px 16px; gap: 20px; }
+    .provider-dialog__actions { padding: 16px 18px; }
+    .provider-dialog ::deep .mud-tab { padding: 12px 10px; }
+}
+
+.provider-dialog,
+.provider-dialog__actions {
+    --state-dialog-primary-ink: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    --state-dialog-info-ink: color-mix(in srgb, var(--mud-palette-info) 65%, var(--mud-palette-text-primary));
+}
+
+.provider-dialog ::deep .state-provider-tabs [role="tab"][aria-selected="true"]:not(.mud-disabled):not([aria-disabled="true"]),
+.provider-dialog__actions ::deep .state-dialog-primary-text.mud-button-text-primary:not(:disabled):not(.mud-disabled) {
+    color: var(--state-dialog-primary-ink) !important;
+}
+
+.provider-dialog ::deep .state-dialog-info .mud-alert-message {
+    color: var(--state-dialog-info-ink) !important;
 }

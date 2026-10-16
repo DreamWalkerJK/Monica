@@ -161,7 +161,8 @@ module.Require<ModuleShellUI, ModuleShellUIOption>(
         var categoryId = registry.RegisterLocalizedCategory<ExampleResource>(
             "Contoso.Monica.Example",
             "Navigation:Category",
-            order: 450);
+            order: 450,
+            descriptionKey: "Navigation:CategoryDescription");
 
         registry.RegisterLocalizedPage<UIExamplePage, ExampleResource>(
             UIExamplePage.PAGE_URL,
@@ -169,7 +170,8 @@ module.Require<ModuleShellUI, ModuleShellUIOption>(
             Icons.Material.Filled.Extension,
             categoryId,
             addToNav: true,
-            navOrder: 10);
+            navOrder: 10,
+            descriptionKey: "Navigation:PageDescription");
     }));
 ```
 
@@ -331,10 +333,24 @@ python scripts/validate_localization.py --json
 
 ### Validation Checks
 
+Discovery excludes exact generated or archive directory names below the requested root, including `.evidence`.
+An exact `evidence` directory beneath `.ui-design` is also an archive; its preserved projects, source files,
+and resources cannot define live resource identities or satisfy current key usages. Live `.ui-design` bridge
+projects remain in scope. Names such as `.evidence-copy` and `evidence-copy`, and production `Evidence`
+directories outside `.ui-design`, are not excluded by this archive rule. Directory-name comparisons ignore case.
+
+Exclusions apply only below the requested root, not to its parent directories. To validate an archived project
+itself, explicitly pass that project as `--root`; the root must contain a `.csproj`, `.slnx`, or `.sln` file.
+The same rules apply to directories below that explicit root. For example, from the repository root:
+
+```bash
+python skills/monica-ui-localization/scripts/validate_localization.py --root .ui-design/review/evidence/bridge-preparation/ReviewHost --strict
+```
+
 1. **Missing keys** (ERROR): Keys used in Razor or C# but not defined in JSON
 2. **Unused keys** (WARNING): Keys defined in JSON but never used
 3. **Language sync** (ERROR): Keys in one language but not another
-4. **Navigation registration keys** (ERROR): Every page/category key must resolve from its explicitly declared module resource
+4. **Navigation registration keys** (ERROR): Page/category labels and optional `descriptionKey` values must resolve from their explicitly declared module resource; named and positional description arguments are checked
 5. **Navigation resource registration** (ERROR): Every page/category resource must be registered through `AddResource<TResource>()`
 6. **Legacy navigation API** (ERROR): `RegisterLocalizedComponent` and an implicit resource type are rejected
 

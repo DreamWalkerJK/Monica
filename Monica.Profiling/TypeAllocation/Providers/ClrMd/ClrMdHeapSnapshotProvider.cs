@@ -4,18 +4,49 @@ using Monica.Profiling.TypeAllocation.Models;
 
 namespace Monica.Profiling.TypeAllocation.Providers.ClrMd;
 
+/// <summary>
+/// Serializes Windows PSS clone scans of the current process and drains admitted scans on disposal.
+/// </summary>
+/// <remarks>
+/// Requires Windows 8.1/Server 2012 R2 or later and a matching readable DAC. It does not force GC,
+/// create a dump, or prove root reachability. The synchronous native capture/walk cannot be forcibly
+/// canceled; callers own result publication while the provider owns admitted scan completion.
+/// </remarks>
 internal sealed class ClrMdHeapSnapshotProvider(ILogger<ClrMdHeapSnapshotProvider> logger)
+    : IDisposable, IAsyncDisposable
 {
-    public async Task<TypeAllocationSnapshot> TakeHeapSnapshotAsync()
+    private readonly object _gate = new();
+    private Task _captureTail = Task.CompletedTask;
+    private bool _disposed;
+
+    public Task<TypeAllocationSnapshot> TakeHeapSnapshotAsync()
     {
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (!OperatingSystem.IsWindowsVersionAtLeast(6, 3))
+                throw new PlatformNotSupportedException("CLR heap snapshots require Windows 8.1/Server 2012 R2 or later and the Windows process snapshot provider.");
+            var capture = CaptureAfterAsync(_captureTail);
+            _captureTail = capture;
+            return capture;
+        }
+    }
+
+    private async Task<TypeAllocationSnapshot> CaptureAfterAsync(Task previous)
+    {
+        // An earlier caller owns its failure; a failed scan must not poison later admitted scans.
+        try { await previous.ConfigureAwait(false); }
+        catch (Exception ex) { logger.LogDebug(ex, "The preceding CLR heap scan failed."); }
         return await Task.Run(() =>
         {
             logger.LogInformation("Capturing CLR heap snapshot.");
             var startTime = DateTime.UtcNow;
 
-            using var dataTarget = DataTarget.AttachToProcess(Environment.ProcessId, false);
+            // This version uses PSS_CAPTURE_VA_CLONE on Windows. Its Linux branch writes a full dump,
+            // so platform admission above is part of the clone-only operation's contract.
+            using var dataTarget = DataTarget.CreateSnapshotAndAttach(Environment.ProcessId);
 
-            var runtime = dataTarget.ClrVersions.FirstOrDefault()?.CreateRuntime();
+            using var runtime = dataTarget.ClrVersions.FirstOrDefault()?.CreateRuntime();
             if (runtime == null)
             {
                 throw new InvalidOperationException("Unable to create the CLR runtime. The current process may not be managed.");
@@ -31,17 +62,17 @@ internal sealed class ClrMdHeapSnapshotProvider(ILogger<ClrMdHeapSnapshotProvide
 
             foreach (var obj in heap.EnumerateObjects())
             {
-                if (!obj.IsValid)
+                if (!obj.IsValid || obj.IsFree)
                 {
                     continue;
                 }
 
                 var typeName = obj.Type?.Name ?? "Unknown";
-                var size = (long)obj.Size;
+                var size = checked((long)obj.Size);
 
                 if (typeStats.TryGetValue(typeName, out var stats))
                 {
-                    typeStats[typeName] = (stats.Count + 1, stats.Size + size);
+                    typeStats[typeName] = (checked(stats.Count + 1), checked(stats.Size + size));
                 }
                 else
                 {
@@ -83,6 +114,21 @@ internal sealed class ClrMdHeapSnapshotProvider(ILogger<ClrMdHeapSnapshotProvide
                 SamplingMode = AllocationSamplingMode.Disabled,
                 DataSource = TypeAllocationDataSource.HeapSnapshot
             };
-        });
+        }).ConfigureAwait(false);
+    }
+
+    public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
+
+    public async ValueTask DisposeAsync()
+    {
+        Task captures;
+        lock (_gate)
+        {
+            _disposed = true;
+            captures = _captureTail;
+        }
+        try { await captures.ConfigureAwait(false); }
+        catch (Exception ex) { logger.LogDebug(ex, "Admitted CLR heap scan completed with failure during disposal."); }
+        GC.SuppressFinalize(this);
     }
 }

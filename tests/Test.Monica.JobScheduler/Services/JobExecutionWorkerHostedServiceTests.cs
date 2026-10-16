@@ -298,6 +298,12 @@ public sealed class JobExecutionWorkerHostedServiceTests
                 typeof(CancellationIgnoringRecurringJob).FullName!)
         };
         var store = Substitute.For<IJobSchedulerStore>();
+        // A renewal can run before the job-start continuation requests worker shutdown.
+        store.RenewLeaseAsync(
+                Arg.Any<JobLeaseKey>(),
+                Arg.Any<TimeSpan>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new JobLeaseRenewalResult { Status = JobLeaseRenewalStatus.Active });
         var (worker, options) = CreateWorker(
             store,
             [definition],

@@ -1,0 +1,13 @@
+.context-indicator { min-width: 0; }
+.context-activator, .context-visual { display: inline-flex; align-items: center; gap: 6px; }
+.context-indicator ::deep .mud-menu-activator { display: inline-flex; align-items: center; min-height: 40px; padding: 8px; border-radius: var(--mud-default-borderradius); }
+.context-indicator ::deep .mud-menu-activator:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }
+.context-indicator ::deep .context-ring { width: 20px; height: 20px; border-radius: 50%; outline: 2px solid var(--mud-palette-lines-default); outline-offset: -2px; }
+.context-details { width: min(340px, calc(100vw - 48px)); max-height: calc(100dvh - 72px); overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; background: var(--mud-palette-surface); color: var(--mud-palette-text-primary); }
+.context-details dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; font-size: .875rem; margin-block: 4px; }
+.context-details dt { color: color-mix(in srgb, var(--mud-palette-text-secondary) 70%, var(--mud-palette-text-primary)); overflow-wrap: anywhere; }
+.context-details dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.context-advanced { padding-block: 12px; border-top: 1px solid var(--mud-palette-lines-default); }
+.context-advanced summary { cursor: pointer; font-size: .875rem; font-weight: 600; margin-bottom: 12px; }
+.context-advanced ::deep .mud-input-control { margin-bottom: 12px; }
+@media(max-width: 600px) { .context-details { padding: 16px; } }

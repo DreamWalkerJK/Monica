@@ -1,59 +1,66 @@
-.topics-actions {
+.topic-workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+}
+
+.topic-tools {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-end;
+    gap: 16px;
+    padding: 20px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+    min-width: 0;
+}
+
+.topic-search {
+    flex: 1 1 280px;
+    min-width: 0;
+}
+
+.topic-search ::deep .mud-input-control {
+    margin: 0;
+}
+
+.topic-filters {
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     min-width: 0;
 }
 
-.topics-actions ::deep .mud-input-control,
-.topics-actions ::deep .mud-button-root {
-    height: 40px;
-    min-height: 40px;
-}
-
-.topics-actions ::deep .mud-input-control {
-    width: 260px;
-    min-width: 220px;
-    margin: 0;
-}
-
-.topic-identity {
+.topic-identity, .topic-topology {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     min-width: 0;
 }
 
 .topic-name {
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.topic-description {
+    font-size: .75rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.topic-metadata-warning {
     display: flex;
     align-items: flex-start;
     gap: 6px;
-    min-width: 0;
-    max-width: 100%;
-}
-
-.topic-name ::deep .mud-typography-root {
-    min-width: 0;
+    font-size: .8125rem;
+    color: color-mix(in srgb, var(--mud-palette-warning) 40%, var(--mud-palette-text-primary));
     overflow-wrap: anywhere;
-    word-break: break-word;
 }
 
-@media (max-width: 1100px) {
-    .topics-actions {
-        width: 100%;
-        justify-content: flex-start;
-    }
-}
-
-@media (max-width: 720px) {
-    .topics-actions ::deep .mud-input-control {
-        flex: 1 1 100%;
-        width: 100%;
-    }
-
-    .topics-actions ::deep .mud-button-root {
-        width: 100%;
+@media (max-width: 600px) {
+    .topic-tools {
+        padding: 16px;
     }
 }

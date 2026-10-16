@@ -60,7 +60,16 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
 
         var diagnostics = new List<ProjectUnitSourceDiagnostic>();
         var projects = NormalizeProjectPaths(root, request.ProjectPaths, diagnostics);
-        if (projects.Count == 0)
+        var testProjects = NormalizeProjectPaths(root, request.TestProjectPaths ?? [], diagnostics);
+        var testProjectPaths = new HashSet<string>(testProjects, StringComparer.OrdinalIgnoreCase);
+        // A path listed both ways is a caller error; the test classification wins so its types are
+        // never misread as production units.
+        projects = projects.Where(path => !testProjectPaths.Contains(path)).ToList();
+        var allProjects = projects
+            .Concat(testProjects)
+            .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (allProjects.Count == 0)
         {
             Report(progress, ProjectUnitSourceAnalysisStage.Completed, 0, 0, null, "No projects were selected.");
             return new ProjectUnitSourceCatalog(
@@ -70,9 +79,11 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 diagnostics.Any(static diagnostic => diagnostic.Severity == ProjectUnitSourceDiagnosticSeverity.Error),
                 DateTimeOffset.UtcNow,
                 [],
+                [],
                 diagnostics);
         }
 
+        var inputObservation = new SourceInputObservation(root, diagnostics);
         using var workspace = ShadowCopyAnalyzerAssemblyLoader.CreateWorkspace();
         var workspaceDiagnostics = new List<WorkspaceDiagnostic>();
         var workspaceDiagnosticsLock = new Lock();
@@ -86,10 +97,10 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
 
         var loadedProjects = new List<Project>();
         var transientFailures = new List<(string AbsolutePath, string RelativePath)>();
-        for (var index = 0; index < projects.Count; index++)
+        for (var index = 0; index < allProjects.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var projectPath = projects[index];
+            var projectPath = allProjects[index];
             var relativePath = ToRelativePath(root, projectPath);
             Report(
                 progress,
@@ -109,6 +120,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 continue;
             }
 
+            inputObservation.ObserveBuildInputs(projectPath);
             try
             {
                 var loaded = workspace.CurrentSolution.Projects.FirstOrDefault(project => string.Equals(
@@ -143,8 +155,10 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                 diagnostic.Message)));
         }
 
+        inputObservation.Observe(workspace.CurrentSolution, loadedProjects);
         var analyzedProjects = 0;
         var candidates = new List<AnalyzedProjectUnitCandidate>();
+        var testClasses = new List<ProjectUnitSourceTestClass>();
         for (var index = 0; index < loadedProjects.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -197,12 +211,20 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
             }
 
             analyzedProjects++;
-            await CollectProjectUnitsAsync(
-                root, project, compilation, relativeProjectPath, candidates, diagnostics, cancellationToken);
+            if (testProjectPaths.Contains(projectPath))
+            {
+                await CollectTestClassesAsync(
+                    root, project, relativeProjectPath, testClasses, diagnostics, cancellationToken);
+            }
+            else
+            {
+                await CollectProjectUnitsAsync(
+                    root, project, compilation, relativeProjectPath, candidates, diagnostics, cancellationToken);
+            }
         }
 
         analyzedProjects += await RetryTransientFailuresAsync(
-            root, transientFailures, candidates, diagnostics, progress, cancellationToken);
+            root, transientFailures, testProjectPaths, candidates, testClasses, diagnostics, progress, inputObservation, cancellationToken);
 
         Report(
             progress,
@@ -212,35 +234,168 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
             null,
             "Resolving ProjectUnit dependencies.");
         var units = ResolveUnits(candidates, diagnostics);
-        var isPartial = analyzedProjects != projects.Count
+        var isPartial = analyzedProjects != allProjects.Count
                         || diagnostics.Any(static diagnostic =>
                             diagnostic.Code is "ProjectUnit.Analysis.Project.Missing"
                                 or "ProjectUnit.Analysis.Project.LoadFailed"
                                 or "ProjectUnit.Analysis.Project.CompilationFailed"
                                 or "ProjectUnit.Analysis.Project.CompilationMissing"
-                                or "ProjectUnit.Analysis.Project.LanguageUnsupported");
+                                or "ProjectUnit.Analysis.Project.LanguageUnsupported"
+                                or "ProjectUnit.Analysis.Project.InputsIncomplete");
         Report(
             progress,
             ProjectUnitSourceAnalysisStage.Completed,
-            projects.Count,
-            projects.Count,
+            allProjects.Count,
+            allProjects.Count,
             null,
             isPartial ? "ProjectUnit analysis completed with partial results." : "ProjectUnit analysis completed.");
 
+        var finalInputs = inputObservation.Capture();
         return new ProjectUnitSourceCatalog(
             ProjectUnitSourceAnalysisContract.Version,
-            projects.Count,
+            allProjects.Count,
             analyzedProjects,
             isPartial,
             DateTimeOffset.UtcNow,
             units,
+            testClasses
+                .OrderBy(static testClass => testClass.ProjectPath, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static testClass => testClass.RuntimeKey, StringComparer.Ordinal)
+                .ToArray(),
             diagnostics
                 .OrderByDescending(static diagnostic => diagnostic.Severity)
                 .ThenBy(static diagnostic => diagnostic.ProjectPath, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(static diagnostic => diagnostic.SourcePath, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(static diagnostic => diagnostic.Line)
                 .ThenBy(static diagnostic => diagnostic.Code, StringComparer.Ordinal)
-                .ToArray());
+                .ToArray())
+        {
+            InputPaths = inputObservation.SnapshotPaths(),
+            EvaluationContexts = inputObservation.Contexts,
+            InputsChangedDuringAnalysis = inputObservation.HasChanged(finalInputs),
+            InputObservations = finalInputs
+        };
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> CaptureInputPaths(Solution solution, IReadOnlyList<Project> selected)
+    {
+        var result = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var selectedProject in selected)
+        {
+            var visited = new HashSet<ProjectId>();
+            var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var pending = new Queue<Project>();
+            pending.Enqueue(selectedProject);
+            while (pending.TryDequeue(out var project))
+            {
+                if (!visited.Add(project.Id)) continue;
+                foreach (var path in project.Documents.Select(document => document.FilePath)
+                             .Concat(project.AdditionalDocuments.Select(document => document.FilePath))
+                             .Concat(project.AnalyzerConfigDocuments.Select(document => document.FilePath))
+                             .Concat(project.MetadataReferences.OfType<PortableExecutableReference>().Select(reference => reference.FilePath))
+                             .Concat(project.AnalyzerReferences.Select(reference => reference.FullPath)).Append(project.FilePath))
+                    if (!string.IsNullOrWhiteSpace(path))
+                    {
+                        paths.Add(Path.GetFullPath(path));
+                        if (Path.GetExtension(path) is ".cs" or ".csproj") paths.Add(Path.GetDirectoryName(Path.GetFullPath(path))!);
+                    }
+                foreach (var reference in project.ProjectReferences)
+                    if (solution.GetProject(reference.ProjectId) is { } referenced) pending.Enqueue(referenced);
+            }
+            result[Path.GetFullPath(selectedProject.FilePath!)] = paths.Order(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+        return result;
+    }
+
+    private sealed class SourceInputObservation(string root, List<ProjectUnitSourceDiagnostic> diagnostics)
+    {
+        private readonly Dictionary<string, ProjectUnitSourceInput> _initialStamps = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, EvaluatedProjectInputs?> _evaluations = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, HashSet<string>> _projectPaths = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> Contexts { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public bool HasChanged(IReadOnlyList<ProjectUnitSourceInput> finalInputs)
+            => finalInputs.Any(input => _initialStamps[input.Path] != input);
+        public IReadOnlyList<ProjectUnitSourceInput> Capture()
+            => _initialStamps.Keys.Order(StringComparer.OrdinalIgnoreCase).Select(ProjectUnitSourceInput.Observe).ToArray();
+
+        /// <summary>Materializes the per-project input sets once, when the catalog is constructed.</summary>
+        public IReadOnlyDictionary<string, IReadOnlyList<string>> SnapshotPaths()
+            => _projectPaths.ToDictionary(
+                static pair => pair.Key,
+                static pair => (IReadOnlyList<string>)pair.Value.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+                StringComparer.OrdinalIgnoreCase);
+
+        public void Observe(Solution solution, IReadOnlyList<Project> projects)
+        {
+            foreach (var (project, paths) in CaptureInputPaths(solution, projects))
+            {
+                ObserveBuildInputs(project);
+                Record(project, paths);
+            }
+        }
+
+        public void ObserveBuildInputs(string selectedProject)
+        {
+            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var pending = new Queue<string>();
+            pending.Enqueue(Path.GetFullPath(selectedProject));
+            while (pending.TryDequeue(out var path))
+            {
+                if (!visited.Add(path)) continue;
+                if (!_evaluations.TryGetValue(path, out var inputs))
+                {
+                    try { inputs = ProjectUnitBuildInputs.Evaluate(path); }
+                    catch (Exception exception) when (exception is not OperationCanceledException)
+                    {
+                        inputs = null;
+                        diagnostics.Add(new ProjectUnitSourceDiagnostic("ProjectUnit.Analysis.Project.InputsIncomplete",
+                            ProjectUnitSourceDiagnosticSeverity.Error,
+                            $"MSBuild input evaluation is incomplete for '{ToRelativePath(root, path)}': {exception.Message}",
+                            ToRelativePath(root, selectedProject)));
+                    }
+                    _evaluations[path] = inputs;
+                }
+                if (inputs is null)
+                {
+                    if (!diagnostics.Any(diagnostic => diagnostic.Code == "ProjectUnit.Analysis.Project.InputsIncomplete"
+                        && diagnostic.ProjectPath == ToRelativePath(root, selectedProject)))
+                        diagnostics.Add(new ProjectUnitSourceDiagnostic("ProjectUnit.Analysis.Project.InputsIncomplete",
+                            ProjectUnitSourceDiagnosticSeverity.Error,
+                            $"Inputs from referenced project '{ToRelativePath(root, path)}' were not completely evaluated.",
+                            ToRelativePath(root, selectedProject)));
+                    continue;
+                }
+                Contexts[path] = inputs.Contexts;
+                Record(selectedProject, inputs.Paths.SelectMany(input =>
+                {
+                    var directory = Path.GetDirectoryName(input)!;
+                    // Design-time loading can create obj/<configuration> after evaluation. Imported
+                    // files still participate in drift checks; disposable directory entries do not.
+                    var isBuildOutput = directory.Split(['/', '\\']).Any(segment =>
+                        segment.Equals("obj", StringComparison.OrdinalIgnoreCase) || segment.Equals("bin", StringComparison.OrdinalIgnoreCase));
+                    return isBuildOutput ? new[] { input } : new[] { input, directory };
+                }));
+                foreach (var reference in inputs.ProjectReferences) pending.Enqueue(reference);
+            }
+        }
+
+        private void Record(string project, IEnumerable<string> paths)
+        {
+            // One filesystem observation per distinct input path: Record runs once per closure
+            // member per selected project, so re-observing the merged set would stat every input
+            // thousands of times over a full solution.
+            if (!_projectPaths.TryGetValue(project, out var set))
+            {
+                set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                _projectPaths[project] = set;
+            }
+            foreach (var path in paths)
+            {
+                if (!set.Add(path)) continue;
+                if (!_initialStamps.ContainsKey(path))
+                    _initialStamps[path] = ProjectUnitSourceInput.Observe(path);
+            }
+        }
     }
 
     private async Task CollectProjectUnitsAsync(
@@ -285,6 +440,47 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
         }
     }
 
+    private async Task CollectTestClassesAsync(
+        string root,
+        Project project,
+        string relativeProjectPath,
+        List<ProjectUnitSourceTestClass> testClasses,
+        List<ProjectUnitSourceDiagnostic> diagnostics,
+        CancellationToken cancellationToken)
+    {
+        var symbols = await GetDeclaredTypesAsync(project, cancellationToken);
+        foreach (var candidate in ProjectUnitTestClassScanner.Scan(symbols))
+        {
+            var location = CreateLocation(root, candidate.Symbol);
+            if (location is null)
+            {
+                continue;
+            }
+
+            diagnostics.AddRange(candidate.Diagnostics.Select(diagnostic => diagnostic with
+            {
+                ProjectPath = relativeProjectPath,
+                SourcePath = location.RelativePath,
+                Line = location.Line
+            }));
+            testClasses.Add(new ProjectUnitSourceTestClass(
+                candidate.Symbol.GetRuntimeName(),
+                relativeProjectPath,
+                project.Name,
+                candidate.Symbol.ContainingNamespace?.ToDisplayString() ?? string.Empty,
+                candidate.Symbol.Name,
+                location,
+                candidate.TestMethodCount,
+                candidate.Traits.Select(trait => MapTraitLocation(root, trait)).ToArray())
+            {
+                Methods = candidate.Methods.Select(method => new ProjectUnitSourceTestMethod(
+                    method.Symbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat),
+                    CreateLocation(root, method.Symbol) ?? location,
+                    method.Traits.Select(trait => MapTraitLocation(root, trait)).ToArray())).ToArray()
+            });
+        }
+    }
+
     /// <summary>
     /// Project-load and compilation failures observed in large batch runs can be transient
     /// MSBuild/Roslyn workspace states. Each failed project gets exactly one retry in a fresh
@@ -295,9 +491,12 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
     private async Task<int> RetryTransientFailuresAsync(
         string root,
         IReadOnlyList<(string AbsolutePath, string RelativePath)> failures,
+        IReadOnlySet<string> testProjectPaths,
         List<AnalyzedProjectUnitCandidate> candidates,
+        List<ProjectUnitSourceTestClass> testClasses,
         List<ProjectUnitSourceDiagnostic> diagnostics,
         IProgress<ProjectUnitSourceAnalysisProgress>? progress,
+        SourceInputObservation inputObservation,
         CancellationToken cancellationToken)
     {
         if (failures.Count == 0)
@@ -329,9 +528,11 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
+                inputObservation.ObserveBuildInputs(absolutePath);
                 var project = await retryWorkspace.OpenProjectAsync(
                     absolutePath,
                     cancellationToken: cancellationToken);
+                inputObservation.Observe(retryWorkspace.CurrentSolution, [project]);
                 if (project.Language != LanguageNames.CSharp)
                 {
                     continue;
@@ -355,14 +556,28 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                     ProjectUnitSourceDiagnosticSeverity.Information,
                     "The project succeeded on a fresh-workspace retry after a transient load or compilation failure.",
                     relativePath));
-                await CollectProjectUnitsAsync(
-                    root,
-                    project,
-                    compilation,
-                    relativePath,
-                    candidates,
-                    diagnostics,
-                    cancellationToken);
+                if (testProjectPaths.Contains(absolutePath))
+                {
+                    await CollectTestClassesAsync(
+                        root,
+                        project,
+                        relativePath,
+                        testClasses,
+                        diagnostics,
+                        cancellationToken);
+                }
+                else
+                {
+                    await CollectProjectUnitsAsync(
+                        root,
+                        project,
+                        compilation,
+                        relativePath,
+                        candidates,
+                        diagnostics,
+                        cancellationToken);
+                }
+
                 recovered++;
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
@@ -459,7 +674,10 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
         return results;
     }
 
-    private static ProjectUnitSourceLocation? CreateLocation(string root, INamedTypeSymbol symbol)
+    private static ProjectUnitSourceTestTrait MapTraitLocation(string root, ProjectUnitSourceTestTrait trait)
+        => trait with { Source = trait.Source is { } source ? source with { RelativePath = ToRelativePath(root, source.RelativePath) } : null };
+
+    private static ProjectUnitSourceLocation? CreateLocation(string root, ISymbol symbol)
     {
         var syntax = symbol.DeclaringSyntaxReferences
             .OrderBy(reference => reference.SyntaxTree.FilePath, StringComparer.OrdinalIgnoreCase)
@@ -513,18 +731,7 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                         dependencies.Add(dependencyKey);
                     }
                 }
-                else if (dependency.MissingDiagnosticCode is not null)
-                {
-                    var diagnostic = new ProjectUnitSourceDiagnostic(
-                        dependency.MissingDiagnosticCode,
-                        ProjectUnitSourceDiagnosticSeverity.Warning,
-                        $"Associated ProjectUnit '{dependency.Symbol.GetRuntimeName()}' was not discovered in the analyzed workspace.",
-                        candidate.ProjectPath,
-                        candidate.Location.RelativePath,
-                        candidate.Location.Line);
-                    unitDiagnostics.Add(diagnostic);
-                    allDiagnostics.Add(diagnostic);
-                }
+
             }
 
             dependenciesByKey[key] = dependencies.Order(StringComparer.Ordinal).ToArray();
@@ -569,7 +776,13 @@ public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                     candidate.Candidate.ExecutionPoints,
                     dependenciesByKey[key],
                     dependedBy[key].Order(StringComparer.Ordinal).ToArray(),
-                    diagnosticsByKey[key]);
+                    diagnosticsByKey[key])
+                {
+                    OutgoingReferences = candidate.Candidate.Dependencies.Select(dependency => new ProjectUnitSourceReference(
+                        dependency.Symbol.ContainingAssembly.Name,
+                        dependency.Symbol.GetRuntimeName(),
+                        dependency.MissingDiagnosticCode)).ToArray()
+                };
             })
             .OrderBy(static unit => unit.ProjectPath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(static unit => unit.UnitType)

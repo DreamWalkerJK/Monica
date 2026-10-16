@@ -1,126 +1,166 @@
+@using System.Globalization
 @using Monica.Profiling.MemoryDiagnostics.Models
+@using Monica.Profiling.UIMemoryAnalysis.Support
 @inject IStringLocalizer<MemoryAnalysisResource> L
 
-<section class="gc-statistics-layout">
-    <article class="gc-statistics-panel">
-        <header class="gc-statistics-panel__header">
-            <MudText Typo="Typo.overline" Class="gc-statistics-eyebrow">@L["Gc:LastCollection:Eyebrow"]</MudText>
-            <MudText Typo="Typo.h6">@L["Gc:LastCollection:Title"]</MudText>
-        </header>
-        @if (GCInfo is not null)
-        {
-            <dl class="gc-definition-list">
-                <div><dt>@L["Gc:Labels:Index"]</dt><dd class="diagnostic-value">@GCInfo.GCIndex</dd></div>
-                <div><dt>@L["Gc:Labels:Generation"]</dt><dd><MudChip T="string" Size="Size.Small" Color="@ProfilingSeverityColorResolver.GetGenerationColor(GCInfo.Generation)">Gen @GCInfo.Generation</MudChip></dd></div>
-                <div>
-                    <dt>@L["Gc:Labels:Type"]</dt>
-                    <dd class="gc-chip-row">
-                        @if (GCInfo.WasConcurrent)
-                        {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@L["Gc:Types:Concurrent"]</MudChip>
-                        }
-                        @if (GCInfo.WasCompacting)
-                        {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">@L["Gc:Types:Compacting"]</MudChip>
-                        }
-                        @if (!GCInfo.WasConcurrent && !GCInfo.WasCompacting)
-                        {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Default">@L["Gc:Types:Blocking"]</MudChip>
-                        }
-                    </dd>
-                </div>
-                <div><dt>@L["Gc:Labels:PauseDuration"]</dt><dd class="diagnostic-value">@L["Common:Milliseconds", GCInfo.PauseDuration.TotalMilliseconds.ToString("F2")]</dd></div>
-                <div class="gc-definition-list__wide">
-                    <dt>@L["Gc:Labels:TimeShare"]</dt>
-                    <dd class="gc-progress-value">
-                        <MudProgressLinear Color="@ProfilingSeverityColorResolver.GetGcTimeColor(GCInfo.PauseTimePercentage)" Value="@GCInfo.PauseTimePercentage" Max="100" />
-                        <span>@GCInfo.PauseTimePercentage.ToString("F2")%</span>
-                    </dd>
-                </div>
-            </dl>
-        }
-        else if (!IsLoading)
-        {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Gc:LastCollection:Empty"]</MudAlert>
-        }
-    </article>
-
-    <article class="gc-statistics-panel">
-        <header class="gc-statistics-panel__header">
-            <MudText Typo="Typo.overline" Class="gc-statistics-eyebrow">@L["Gc:Heap:Eyebrow"]</MudText>
-            <MudText Typo="Typo.h6">@L["Gc:Heap:Title"]</MudText>
-        </header>
-        @if (GCInfo is not null)
-        {
-            <dl class="gc-definition-list">
-                <div><dt>@L["Gc:Labels:HeapSize"]</dt><dd>@ProfilingDisplayFormatter.FormatBytes(GCInfo.HeapSizeBytes)</dd></div>
-                <div>
-                    <dt>@L["Gc:Labels:Fragmentation"]</dt>
-                    <dd class="gc-chip-row">@ProfilingDisplayFormatter.FormatBytes(GCInfo.FragmentedBytes)<MudChip T="string" Size="Size.Small" Color="@ProfilingSeverityColorResolver.GetFragmentationColor(GCInfo.FragmentationPercent)">@GCInfo.FragmentationPercent.ToString("F1")%</MudChip></dd>
-                </div>
-                <div><dt>@L["Gc:Labels:Committed"]</dt><dd>@ProfilingDisplayFormatter.FormatBytes(GCInfo.CommittedBytes)</dd></div>
-                <div><dt>@L["Gc:Labels:Promoted"]</dt><dd>@ProfilingDisplayFormatter.FormatBytes(GCInfo.PromotedBytes)</dd></div>
-                <div><dt>@L["Gc:Labels:PinnedObjects"]</dt><dd>@GCInfo.PinnedObjectsCount</dd></div>
-                <div><dt>@L["Gc:Labels:FinalizationPending"]</dt><dd class="@(GCInfo.FinalizationPendingCount > 100 ? "mud-error-text" : null)">@GCInfo.FinalizationPendingCount</dd></div>
-            </dl>
-        }
-    </article>
-
-    <article class="gc-statistics-panel">
-        <header class="gc-statistics-panel__header">
-            <MudText Typo="Typo.overline" Class="gc-statistics-eyebrow">@L["Gc:SystemMemory:Eyebrow"]</MudText>
-            <MudText Typo="Typo.h6">@L["Gc:SystemMemory:Title"]</MudText>
-        </header>
-        @if (GCInfo is not null && GCInfo.TotalAvailableMemoryBytes > 0)
-        {
-            var memoryUsagePercent = (double)GCInfo.MemoryLoadBytes / GCInfo.TotalAvailableMemoryBytes * 100;
-            <dl class="gc-definition-list">
-                <div><dt>@L["Gc:Labels:AvailableMemory"]</dt><dd>@ProfilingDisplayFormatter.FormatBytes(GCInfo.TotalAvailableMemoryBytes)</dd></div>
-                <div><dt>@L["Gc:Labels:MemoryLoad"]</dt><dd>@ProfilingDisplayFormatter.FormatBytes(GCInfo.MemoryLoadBytes)</dd></div>
-                <div class="gc-definition-list__wide"><dt>@L["Gc:Labels:MemoryLoadShare"]</dt><dd><MudProgressLinear Color="@ProfilingSeverityColorResolver.GetMemoryLoadColor(memoryUsagePercent)" Value="@memoryUsagePercent" Max="100" /></dd></div>
-                <div><dt>@L["Gc:Labels:HighMemoryThreshold"]</dt><dd>@ProfilingDisplayFormatter.FormatBytes(GCInfo.HighMemoryLoadThresholdBytes)</dd></div>
-            </dl>
-        }
-        else
-        {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Gc:SystemMemory:Unavailable"]</MudAlert>
-        }
-    </article>
-
-    <article class="gc-statistics-panel gc-statistics-panel--generations">
-        <header class="gc-statistics-panel__header">
-            <MudText Typo="Typo.overline" Class="gc-statistics-eyebrow">@L["Gc:Generations:Eyebrow"]</MudText>
-            <MudText Typo="Typo.h6">@L["Gc:Generations:Title"]</MudText>
-        </header>
-        @if (GCInfo?.GenerationDetails?.Length > 0)
-        {
-            <div class="gc-table-scroll">
-                <MudSimpleTable Dense="true" Hover="true">
-                    <thead>
-                        <tr><th>@L["Gc:Generations:Columns:Generation"]</th><th>@L["Gc:Generations:Columns:Before"]</th><th>@L["Gc:Generations:Columns:After"]</th><th>@L["Gc:Generations:Columns:Collected"]</th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var generation in GCInfo.GenerationDetails)
-                        {
-                            <tr>
-                                <td><MudChip T="string" Size="Size.Small" Color="@ProfilingSeverityColorResolver.GetGenerationColor(generation.Generation)">@generation.GenerationName</MudChip></td>
-                                <td>@ProfilingDisplayFormatter.FormatBytes(generation.SizeBeforeBytes)</td>
-                                <td>@ProfilingDisplayFormatter.FormatBytes(generation.SizeAfterBytes)</td>
-                                <td><span class="@(generation.CollectedBytes > 0 ? "mud-success-text" : null)">@(generation.CollectedBytes > 0 ? ProfilingDisplayFormatter.FormatBytes(generation.CollectedBytes) : "—")</span></td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
+<section class="gc-evidence" data-gc-index="@GCInfo?.GCIndex.ToString(CultureInfo.InvariantCulture)" aria-busy="@(IsLoading && GCInfo is null)">
+    @if (GCInfo is { GCIndex: > 0 } gc)
+    {
+        <div class="gc-collection">
+            <div class="gc-collection__feature">
+                <article class="gc-collection__identity">
+                    <span class="gc-eyebrow">@L["Gc:LastCollection:Eyebrow"]</span>
+                    <h2>@L["Gc:LastCollection:Title"]</h2>
+                    <div class="gc-collection__index"><span>@L["Gc:Labels:Index"]</span><strong data-gc-field="GCIndex"><span aria-hidden="true">#</span>@MemoryAnalysisDisplayFormatter.Count(gc.GCIndex)</strong></div>
+                    <div class="gc-collection__flags">
+                        <span data-gc-field="Generation">@GenerationName(gc.Generation)</span>
+                        <span data-gc-field="WasConcurrent">@(gc.WasConcurrent ? L["Gc:Types:Concurrent"] : L["Gc:Types:NonConcurrent"])</span>
+                        <span data-gc-field="WasCompacting">@(gc.WasCompacting ? L["Gc:Types:Compacting"] : L["Gc:Types:NonCompacting"])</span>
+                    </div>
+                    <p>@L["Gc:LastCollection:Scope"]</p>
+                </article>
+                <dl class="gc-collection__pauses">
+                    <div><dt>@L["Gc:Labels:PauseDuration"]</dt><dd data-gc-field="PauseDuration">@MemoryAnalysisDisplayFormatter.Milliseconds(gc.PauseDuration)</dd><p>@L["Gc:Pause:DurationHelp"]</p></div>
+                    <div><dt>@L["Gc:Labels:TimeShare"]</dt><dd data-gc-field="PauseTimePercentage">@MemoryAnalysisDisplayFormatter.Percent(gc.PauseTimePercentage)</dd><p>@L["Gc:Pause:ShareHelp"]</p></div>
+                </dl>
             </div>
-        }
-        else
-        {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Gc:Generations:Empty"]</MudAlert>
-        }
-    </article>
+            <footer class="gc-collection__context">
+                <div><span>@L["Gc:LastCollection:ViewRead"]</span>
+                    @if (CapturedAt is { } capturedAt)
+                    {
+                        <time data-view-capture datetime="@capturedAt.ToString("O")">@MemoryAnalysisDisplayFormatter.LocalDateTime(capturedAt)</time>
+                    }
+                    else
+                    {
+                        <span>@L["Common:Unavailable"]</span>
+                    }
+                </div>
+                <p>@L["Gc:LastCollection:NoTimestamp"]</p>
+            </footer>
+        </div>
+
+        <section class="gc-movement" aria-labelledby="gc-movement-title">
+            <header class="gc-section-heading"><span class="gc-eyebrow">@L["Gc:Generations:Eyebrow"]</span><h2 id="gc-movement-title">@L["Gc:Generations:Title"]</h2><p>@L["Gc:Generations:Scope"]</p></header>
+            @if (gc.GenerationDetails.Length > 0)
+            {
+                <div class="gc-movement-frame">
+                    <MudSimpleTable Elevation="0">
+                        <thead><tr><th scope="col">@L["Gc:Generations:Columns:Generation"]</th><th scope="col">@L["Gc:Generations:Columns:Before"]</th><th scope="col">@L["Gc:Generations:Columns:After"]</th><th scope="col">@L["Gc:Generations:Columns:Collected"]</th></tr></thead>
+                        <tbody>
+                            @foreach (var generation in gc.GenerationDetails)
+                            {
+                                <tr @key="generation.Generation" data-generation="@generation.Generation">
+                                    <th scope="row">@GenerationName(generation.Generation)</th>
+                                    <td data-label="@L["Gc:Generations:Columns:Before"]" data-movement="before"><strong>@MemoryAnalysisDisplayFormatter.Bytes(generation.SizeBeforeBytes)</strong></td>
+                                    <td data-label="@L["Gc:Generations:Columns:After"]" data-movement="after"><strong>@MemoryAnalysisDisplayFormatter.Bytes(generation.SizeAfterBytes)</strong></td>
+                                    <td data-label="@L["Gc:Generations:Columns:Collected"]" class="gc-movement__decrease" data-movement="decrease"><strong>@MemoryAnalysisDisplayFormatter.SignedBytes(generation.CollectedBytes)</strong></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </div>
+            }
+            else
+            {
+                <p class="gc-movement__empty">@L["Gc:Generations:Empty"]</p>
+            }
+        </section>
+
+        <section class="gc-heap-evidence" aria-labelledby="gc-heap-title">
+            <header class="gc-section-heading"><span class="gc-eyebrow">@L["Gc:Heap:Eyebrow"]</span><h2 id="gc-heap-title">@L["Gc:Heap:Title"]</h2><p>@L["Gc:Heap:Scope"]</p></header>
+            <dl class="gc-heap-values">
+                <div><dt>@L["Gc:Labels:HeapSize"]</dt><dd data-gc-field="HeapSizeBytes">@MemoryAnalysisDisplayFormatter.Bytes(gc.HeapSizeBytes)</dd></div>
+                <div><dt>@L["Gc:Labels:Committed"]</dt><dd data-gc-field="CommittedBytes">@MemoryAnalysisDisplayFormatter.Bytes(gc.CommittedBytes)</dd></div>
+                <div><dt>@L["Gc:Labels:Fragmentation"]</dt><dd data-gc-field="FragmentedBytes">@MemoryAnalysisDisplayFormatter.Bytes(gc.FragmentedBytes) <small>@MemoryAnalysisDisplayFormatter.RatioPercent(gc.FragmentedBytes, gc.HeapSizeBytes)</small></dd></div>
+                <div><dt>@L["Gc:Labels:Promoted"]</dt><dd data-gc-field="PromotedBytes">@MemoryAnalysisDisplayFormatter.Bytes(gc.PromotedBytes)</dd></div>
+                <div><dt>@L["Gc:Labels:PinnedObjects"]</dt><dd data-gc-field="PinnedObjectsCount">@MemoryAnalysisDisplayFormatter.Count(gc.PinnedObjectsCount)</dd></div>
+                <div><dt>@L["Gc:Labels:FinalizationPending"]</dt><dd data-gc-field="FinalizationPendingCount">@MemoryAnalysisDisplayFormatter.Count(gc.FinalizationPendingCount)</dd></div>
+            </dl>
+        </section>
+
+        <section class="gc-memory-context" aria-labelledby="gc-context-title">
+            <header class="gc-section-heading"><span class="gc-eyebrow">@L["Gc:SystemMemory:Eyebrow"]</span><h2 id="gc-context-title">@L["Gc:SystemMemory:Title"]</h2><p>@L["Gc:SystemMemory:Scope"]</p></header>
+            <dl class="gc-context-values">
+                <div><dt>@L["Gc:Labels:MemoryLoad"]</dt><dd data-gc-field="MemoryLoadBytes">@MemoryAnalysisDisplayFormatter.Bytes(gc.MemoryLoadBytes)</dd></div>
+                <div><dt>@L["Gc:Labels:AvailableMemory"]</dt><dd data-gc-field="TotalAvailableMemoryBytes">@MemoryAnalysisDisplayFormatter.Bytes(gc.TotalAvailableMemoryBytes)</dd></div>
+                <div><dt>@L["Gc:Labels:HighMemoryThreshold"]</dt><dd data-gc-field="HighMemoryLoadThresholdBytes">@MemoryAnalysisDisplayFormatter.Bytes(gc.HighMemoryLoadThresholdBytes)</dd></div>
+                <div><dt>@L["Gc:Labels:MemoryLoadShare"]</dt><dd data-gc-field="MemoryLoadRatio">@MemoryAnalysisDisplayFormatter.RatioPercent(gc.MemoryLoadBytes, gc.TotalAvailableMemoryBytes)</dd></div>
+            </dl>
+        </section>
+
+        <details class="gc-raw">
+            <summary>@L["Gc:Raw:Title"]</summary>
+            <p>@L["Gc:Raw:Scope"]</p>
+            @if (gc.GenerationDetails.Length > 0)
+            {
+                <div class="gc-raw-frame">
+                    <MudSimpleTable Elevation="0">
+                        <thead><tr><th scope="col">@L["Gc:Generations:Columns:Generation"]</th><th scope="col">@L["Gc:Raw:Columns:BeforeSize"]</th><th scope="col">@L["Gc:Raw:Columns:AfterSize"]</th><th scope="col">@L["Gc:Raw:Columns:Decrease"]</th><th scope="col">@L["Gc:Raw:Columns:BeforeFragmentation"]</th><th scope="col">@L["Gc:Raw:Columns:AfterFragmentation"]</th></tr></thead>
+                        <tbody>
+                            @foreach (var generation in gc.GenerationDetails)
+                            {
+                                <tr @key="generation.Generation" data-raw-generation="@generation.Generation">
+                                    <th scope="row">@GenerationName(generation.Generation)</th>
+                                    <td data-label="@L["Gc:Raw:Columns:BeforeSize"]" data-raw-field="SizeBeforeBytes">@MemoryAnalysisDisplayFormatter.Raw(generation.SizeBeforeBytes)</td>
+                                    <td data-label="@L["Gc:Raw:Columns:AfterSize"]" data-raw-field="SizeAfterBytes">@MemoryAnalysisDisplayFormatter.Raw(generation.SizeAfterBytes)</td>
+                                    <td data-label="@L["Gc:Raw:Columns:Decrease"]" data-raw-field="CollectedBytes">@MemoryAnalysisDisplayFormatter.Raw(generation.CollectedBytes)</td>
+                                    <td data-label="@L["Gc:Raw:Columns:BeforeFragmentation"]" data-raw-field="FragmentationBeforeBytes">@MemoryAnalysisDisplayFormatter.Raw(generation.FragmentationBeforeBytes)</td>
+                                    <td data-label="@L["Gc:Raw:Columns:AfterFragmentation"]" data-raw-field="FragmentationAfterBytes">@MemoryAnalysisDisplayFormatter.Raw(generation.FragmentationAfterBytes)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </div>
+            }
+            <dl class="gc-raw-values">
+                @foreach (var field in RawFields(gc))
+                {
+                    <div><dt>@field.Label @if (field.IsBytes) { <small>@L["Common:RawBytes"]</small> }</dt><dd data-raw-field="@field.Name">@MemoryAnalysisDisplayFormatter.Raw(field.Value)</dd></div>
+                }
+                <div><dt>@L["Gc:Raw:PauseMilliseconds"]</dt><dd data-raw-field="PauseDurationMilliseconds">@MemoryAnalysisDisplayFormatter.Raw(gc.PauseDuration.TotalMilliseconds)</dd></div>
+                <div><dt>@L["Gc:Raw:PausePercent"]</dt><dd data-raw-field="PauseTimePercentage">@MemoryAnalysisDisplayFormatter.Raw(gc.PauseTimePercentage)</dd></div>
+                <div><dt>@L["Gc:Raw:FragmentationPercent"]</dt><dd data-raw-field="FragmentationPercent">@(gc.HeapSizeBytes > 0 ? MemoryAnalysisDisplayFormatter.Raw(gc.FragmentationPercent) : L["Common:Unavailable"])</dd></div>
+            </dl>
+        </details>
+    }
+    else
+    {
+        <div class="gc-absence" role="status">
+            <MudIcon Icon="@Icons.Material.Outlined.Layers" Size="Size.Large" aria-hidden="true" />
+            <span class="gc-eyebrow">@L["Gc:LastCollection:Eyebrow"]</span>
+            <h2>@(GCInfo is not null ? L["Gc:LastCollection:NoCollectionTitle"] : IsLoading ? L["Common:LoadingValue"] : L["Gc:LastCollection:Empty"])</h2>
+            <p>@(GCInfo is not null ? L["Gc:LastCollection:NoCollectionHelp"] : L["Gc:LastCollection:EmptyHelp"])</p>
+        </div>
+    }
 </section>
 
 @code {
+    /// <summary>Gets or sets the latest GC report. Index zero does not represent a reported collection.</summary>
     [Parameter] public GcDetails? GCInfo { get; set; }
+
+    /// <summary>Gets or sets whether evidence is refreshing. Existing collection values remain visible.</summary>
     [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>Gets or sets the successful view read time, not an unavailable per-collection timestamp.</summary>
+    [Parameter] public DateTimeOffset? CapturedAt { get; set; }
+
+    private string GenerationName(int generation) => generation switch
+    {
+        3 => L["Gc:Generations:Names:Loh"],
+        4 => L["Gc:Generations:Names:Poh"],
+        _ => L["Common:Generation", generation]
+    };
+
+    private IEnumerable<(string Name, string Label, long Value, bool IsBytes)> RawFields(GcDetails gc) =>
+    [
+        (nameof(gc.HeapSizeBytes), L["Gc:Labels:HeapSize"], gc.HeapSizeBytes, true),
+        (nameof(gc.FragmentedBytes), L["Gc:Labels:Fragmentation"], gc.FragmentedBytes, true),
+        (nameof(gc.CommittedBytes), L["Gc:Labels:Committed"], gc.CommittedBytes, true),
+        (nameof(gc.PromotedBytes), L["Gc:Labels:Promoted"], gc.PromotedBytes, true),
+        (nameof(gc.PinnedObjectsCount), L["Gc:Labels:PinnedObjects"], gc.PinnedObjectsCount, false),
+        (nameof(gc.FinalizationPendingCount), L["Gc:Labels:FinalizationPending"], gc.FinalizationPendingCount, false),
+        (nameof(gc.MemoryLoadBytes), L["Gc:Labels:MemoryLoad"], gc.MemoryLoadBytes, true),
+        (nameof(gc.TotalAvailableMemoryBytes), L["Gc:Labels:AvailableMemory"], gc.TotalAvailableMemoryBytes, true),
+        (nameof(gc.HighMemoryLoadThresholdBytes), L["Gc:Labels:HighMemoryThreshold"], gc.HighMemoryLoadThresholdBytes, true)
+    ];
 }

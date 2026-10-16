@@ -1,62 +1,35 @@
-.embedding-diagnostics-root {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    min-width: min(900px, 80vw);
+.knowledge-dialog-owner { display:contents; }
+.knowledge-dialog-owner ::deep .knowledge-dialog-content { min-height:0; overflow:auto; }
+.embedding-diagnostics-root { display:flex; flex-direction:column; gap:20px; min-width:0; padding:24px; }
+.dialog-header { display:flex; flex-direction:column; gap:4px; }
+.diagnostics-loading { display:flex; align-items:center; gap:12px; padding-block:24px; }
+.diagnostics-table-wrapper { min-width:0; border:1px solid var(--mud-palette-lines-default); border-radius:var(--mud-default-borderradius); overflow:hidden; }
+.diagnostics-table-wrapper ::deep .diagnostics-table { background:var(--mud-palette-surface); border-radius:0; }
+.diagnostics-table-wrapper ::deep .mud-table-container { overflow-x:auto; }
+.diagnostics-table-wrapper ::deep table { table-layout:fixed; width:100%; }
+.diagnostics-table-wrapper ::deep .mud-table-cell { padding:12px; overflow-wrap:anywhere; font-size:13px; line-height:1.6; border-radius:0; }
+.diagnostics-table-wrapper ::deep .mud-table-head .mud-table-cell { background:var(--mud-palette-background-gray); font-weight:500; }
+.diagnostics-table-wrapper ::deep .mud-table-row:last-child .mud-table-cell { border-bottom:0; }
+.model-cell,.provider-cell { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.model-cell ::deep .mud-typography-caption,.provider-cell ::deep .mud-typography-caption,.diagnostics-table-wrapper ::deep .status-detail { font-size:12px; line-height:1.6; }
+.provider-cell ::deep .mud-typography-caption { font-family:var(--mo-font-family-mono); }
+.diagnostics-table-wrapper ::deep .status-detail { display:block; margin-top:6px; overflow-wrap:anywhere; }
+.diagnostics-table-wrapper ::deep .mud-chip { margin-left:0; margin-right:0; }
+@media (min-width:601px) {
+    .diagnostics-table-wrapper ::deep .mud-table-head th:nth-child(1) { width:27%; }
+    .diagnostics-table-wrapper ::deep .mud-table-head th:nth-child(2) { width:25%; }
+    .diagnostics-table-wrapper ::deep .mud-table-head th:nth-child(3) { width:9%; }
+    .diagnostics-table-wrapper ::deep .mud-table-head th:nth-child(4) { width:13%; }
+    .diagnostics-table-wrapper ::deep .mud-table-head th:nth-child(5) { width:14%; }
+    .diagnostics-table-wrapper ::deep .mud-table-head th:nth-child(6) { width:12%; }
 }
+.test-result { display:flex; align-items:flex-start; gap:6px; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
+.test-result ::deep .mud-icon-root { flex-shrink:0; margin-top:2px; }
+.test-result.success { color:var(--mud-palette-success); }
+.test-result.failed { color:var(--mud-palette-error); }
+.embedding-diagnostics-root ::deep .mud-button-root[aria-disabled="true"] { color:var(--mud-palette-action-disabled); border-color:var(--mud-palette-action-disabled-background); cursor:progress; }
+@media (max-width:600px) { .embedding-diagnostics-root { padding:20px; } .diagnostics-table-wrapper ::deep .mud-table-cell { padding:10px 12px; min-width:0; gap:12px; } .diagnostics-table-wrapper ::deep .mud-table-cell::before { flex:0 0 34%; white-space:normal; overflow-wrap:anywhere; font-size:12px; } .diagnostics-table-wrapper ::deep .mud-table-cell > * { min-width:0; } }
 
-.dialog-header {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.diagnostics-loading {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 120px;
-}
-
-.diagnostics-table-wrapper {
-    max-height: min(62vh, 620px);
-    overflow: auto;
-}
-
-.diagnostics-table-wrapper ::deep .diagnostics-table {
-    background-color: var(--mud-palette-surface);
-}
-
-.model-cell,
-.provider-cell {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-}
-
-.model-name {
-    font-family: "Consolas", "Monaco", "Courier New", monospace;
-}
-
-.status-detail {
-    display: block;
-    max-width: 280px;
-    margin-top: 4px;
-}
-
-.test-result {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    max-width: 320px;
-    font-size: 0.8125rem;
-}
-
-.test-result.success {
-    color: var(--mud-palette-success);
-}
-
-.test-result.failed {
-    color: var(--mud-palette-error);
-}
+.dialog-actions { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px; width:100%; padding:16px 24px 20px; }
+.dialog-actions ::deep .mud-button-root { min-height:36px; }
+@media (max-width:600px) { .dialog-actions { padding:16px 20px 20px; } }

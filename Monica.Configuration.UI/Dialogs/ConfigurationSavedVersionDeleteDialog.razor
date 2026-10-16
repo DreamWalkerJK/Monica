@@ -1,0 +1,20 @@
+@using Monica.UI.Shared.Components.Dialogs
+@inject IStringLocalizer<ConfigurationUIResource> L
+<MudDialog ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent><MoDialogHeading Text="@L["Versions:Delete:ConfirmTitle", ConfigurationUnifiedVersionDisplayFormatter.VersionLabel(Version)]" /></TitleContent>
+    <DialogContent><div class="configuration-saved-version-delete">
+        <p>@L["Versions:Delete:ConfirmMessage", ConfigurationUnifiedVersionDisplayFormatter.VersionLabel(Version)]</p>
+        <dl><div><dt>@L["Versions:Workbench:CapturedAt"]</dt><dd>@ConfigurationUnifiedVersionDisplayFormatter.CreatedTimeText(Version)</dd></div>
+            <div><dt>@L["Versions:Workbench:CaptureGroup"]</dt><dd><code>@ConfigurationUnifiedVersionDisplayFormatter.ValueOrEmpty(Version.MutationGroupId, L["Common:States:Empty"])</code></dd></div>
+            @if (!string.IsNullOrWhiteSpace(Version.Reason)) { <div><dt>@L["Group:Reason"]</dt><dd>@Version.Reason</dd></div> }
+        </dl>
+    </div></DialogContent>
+    <DialogActions><div class="configuration-saved-version-delete-actions"><MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Outlined.Delete" OnClick="Confirm">@L["Versions:Delete:Confirm"]</MudButton></div></DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    /// <summary>Gets or sets the exact saved snapshot reviewed before a separate facade deletion.</summary>
+    [Parameter, EditorRequired] public ConfigurationUnifiedVersionSummary Version { get; set; } = default!;
+    private void Cancel() => Dialog.Cancel();
+    private void Confirm() => Dialog.Close(DialogResult.Ok(Version.Version));
+}

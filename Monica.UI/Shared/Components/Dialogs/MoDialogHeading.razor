@@ -1,0 +1,74 @@
+@* Mount inside a native MudDialog; the enclosing dialog owns focus and dismissal. *@
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<h2 id="@_headingId" @ref="_heading" class="mo-dialog-heading @Class">@Text</h2>
+
+@code {
+    /// <summary>Gets or sets the encoded visible heading that names the enclosing native dialog.</summary>
+    [Parameter, EditorRequired] public string Text { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets optional additional classes on the visible heading.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private readonly string _headingId = $"mo-dialog-heading-{Guid.NewGuid():N}";
+    private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
+    private readonly object _disposeGate = new();
+    private ElementReference _heading;
+    private IJSObjectReference? _module;
+    private Task? _disposeTask;
+    private bool _disposed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _disposed) return;
+        await _lifecycleGate.WaitAsync();
+        IJSObjectReference? imported = null;
+        try
+        {
+            if (_disposed) return;
+            imported = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Monica.UI/js/moDialogHeading.js");
+            if (_disposed) return;
+            _module = imported;
+            imported = null;
+            await _module.InvokeVoidAsync("labelDialog", _heading, _headingId);
+        }
+        catch (JSDisconnectedException) { }
+        finally
+        {
+            try
+            {
+                if (imported is not null) await DisposeModuleAsync(imported);
+            }
+            finally { _lifecycleGate.Release(); }
+        }
+    }
+
+    /// <summary>Drains admitted heading interop and releases its local module exactly once.</summary>
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeGate)
+        {
+            _disposed = true;
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        await _lifecycleGate.WaitAsync();
+        try
+        {
+            var module = _module;
+            _module = null;
+            if (module is not null) await DisposeModuleAsync(module);
+        }
+        finally { _lifecycleGate.Release(); }
+    }
+
+    private static async ValueTask DisposeModuleAsync(IJSObjectReference module)
+    {
+        try { await module.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+    }
+}

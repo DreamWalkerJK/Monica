@@ -3,60 +3,76 @@
     overflow: hidden;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 12px;
-    background-color: var(--mud-palette-surface);
-    box-shadow: var(--mud-elevation-1);
+    background: var(--mud-palette-surface);
 }
 
 .attention-panel__heading {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 14px;
-    padding: 16px 18px;
+    min-width: 0;
+    padding: 20px;
     border-bottom: 1px solid var(--mud-palette-lines-default);
 }
 
 .attention-panel__heading > div {
+    flex: 1 1 12rem;
     min-width: 0;
 }
 
-.attention-panel__count {
-    display: grid;
-    min-width: 2rem;
-    height: 2rem;
-    place-items: center;
-    border: 1px solid var(--mud-palette-warning);
-    border-radius: 999px;
-    color: var(--mud-palette-warning);
-    background-color: var(--mud-palette-warning-hover);
-    font-family: var(--mo-font-family-mono);
-    font-size: 0.78rem;
-    font-weight: 750;
+.attention-panel__heading h2 {
+    margin: 0;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mud-typography-default-family);
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
-.attention-panel__count[data-clear="true"] {
-    border-color: var(--mud-palette-success);
-    color: var(--mud-palette-success);
-    background-color: var(--mud-palette-success-hover);
+.attention-panel__heading p {
+    margin: 6px 0 0;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.attention-panel__count {
+    max-width: 100%;
+    padding: 5px 9px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 6px;
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-background);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
 .attention-panel__items {
     display: grid;
-    gap: 5px;
-    padding: 8px;
+    gap: 10px;
+    min-width: 0;
+    padding: 20px;
 }
 
 .attention-panel__item {
     --attention-tone: var(--mud-palette-info);
+    --attention-ink: color-mix(in srgb, var(--attention-tone) 30%, var(--mud-palette-text-primary));
     display: grid;
-    grid-template-columns: 32px minmax(0, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: 9px;
+    gap: 12px;
     min-width: 0;
-    padding: 9px;
-    border: 1px solid transparent;
+    padding: 16px;
+    border: 1px solid color-mix(in srgb, var(--attention-tone) 35%, var(--mud-palette-lines-default));
     border-radius: 8px;
-    color: inherit;
+    color: var(--mud-palette-text-primary);
+    background: color-mix(in srgb, var(--attention-tone) 5%, var(--mud-palette-surface));
     text-decoration: none;
     transition: border-color 140ms ease, background-color 140ms ease;
 }
@@ -70,75 +86,102 @@
 }
 
 .attention-panel__item:hover {
-    border-color: var(--mud-palette-lines-inputs);
-    background-color: var(--mud-palette-action-default-hover);
+    border-color: var(--attention-ink);
+    background: color-mix(in srgb, var(--attention-tone) 9%, var(--mud-palette-surface));
 }
 
 .attention-panel__item:focus-visible {
-    outline: 2px solid var(--mud-palette-primary);
-    outline-offset: -2px;
+    outline: 2px solid var(--attention-ink);
+    outline-offset: 2px;
 }
 
-.attention-panel__item > span:first-child,
-.attention-panel__clear > span {
+.attention-panel__item-icon {
     display: grid;
     width: 30px;
     height: 30px;
     place-items: center;
-    border-radius: 8px;
-    color: var(--attention-tone);
-    background-color: color-mix(in srgb, var(--attention-tone) 11%, transparent);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--attention-tone) 9%, var(--mud-palette-surface));
 }
 
-.attention-panel__item > span:nth-child(2),
+.attention-panel__item-icon ::deep .mud-icon-root,
+.attention-panel__item ::deep .attention-panel__chevron {
+    color: var(--attention-ink);
+}
+
+.attention-panel__item-copy,
 .attention-panel__clear > div {
     display: grid;
+    gap: 5px;
     min-width: 0;
-}
-
-.attention-panel__item strong,
-.attention-panel__item small,
-.attention-panel__clear strong,
-.attention-panel__clear small {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .attention-panel__item strong,
 .attention-panel__clear strong {
     color: var(--mud-palette-text-primary);
-    font-size: 0.8rem;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
 .attention-panel__item small,
 .attention-panel__clear small {
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.68rem;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 75%, var(--mud-palette-text-primary));
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
 }
 
 .attention-panel__item b {
-    color: var(--attention-tone);
-    font-family: var(--mo-font-family-mono);
-    font-size: 0.85rem;
+    color: var(--attention-ink);
+    font-size: 18px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
 .attention-panel__clear {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 12px;
-    padding: 24px 18px;
+    align-items: start;
+    gap: 14px;
+    min-width: 0;
+    padding: 24px 20px;
 }
 
-.attention-panel__clear > span {
-    --attention-tone: var(--mud-palette-success);
+.attention-panel__clear-icon {
+    display: grid;
     width: 38px;
     height: 38px;
+    place-items: center;
+    border-radius: 8px;
+    background: var(--mud-palette-action-default-hover);
+}
+
+.attention-panel__clear-icon ::deep .mud-icon-root {
+    color: color-mix(in srgb, var(--mud-palette-info) 30%, var(--mud-palette-text-primary));
+}
+
+@media (max-width: 600px) {
+    .attention-panel__heading,
+    .attention-panel__items {
+        padding: 20px 16px;
+    }
+
+    .attention-panel__item {
+        gap: 9px;
+        padding: 14px;
+    }
+
+    .attention-panel__clear {
+        padding-inline: 16px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .attention-panel__item {
-        transition-duration: 0.01ms;
+        transition: none;
     }
 }

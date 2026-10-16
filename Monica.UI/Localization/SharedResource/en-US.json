@@ -5,21 +5,27 @@
     }
   },
   "Common": {
-    "Close": "Close",
-    "Loading": "Loading",
-    "Initializing": "Initializing"
+    "Initializing": "Initializing",
+    "GoHome": "Go to home"
   },
   "Theme": {
-    "Settings": "Theme Settings",
-    "SelectStyle": "Select Theme Style",
-    "DarkMode": "Dark Mode",
-    "CurrentTheme": "Current Theme",
+    "Settings": "Appearance",
+    "Introduction": "Choose your theme and navigation layout.",
+    "SelectStyle": "Theme",
+    "ColorMode": "Color mode",
+    "NavigationLayout": "Navigation layout",
+    "Sidebar": "Sidebar",
+    "SidebarDescription": "Collapsible, with nested navigation",
+    "Topbar": "Topbar",
+    "TopbarDescription": "One row, with grouped menus",
+    "Apply": "Apply changes",
+    "Cancel": "Cancel",
     "Dark": "Dark",
     "Light": "Light",
     "Options": {
       "MudBlazor": {
         "Name": "MudBlazor",
-        "Description": "MudBlazor styling with Monica's offline typography fallback"
+        "Description": "Familiar Material surfaces with a clean rhythm"
       },
       "Default": {
         "Name": "Default",
@@ -27,55 +33,62 @@
       },
       "HermesTeal": {
         "Name": "Hermes Teal",
-        "Description": "Editorial dark teal dashboard inspired by the Hermes Agent web UI"
+        "Description": "Deep teal, quiet contrast, and refined dashboard surfaces"
       },
       "VibeUsageMatrix": {
         "Name": "Hacker Matrix",
-        "Description": "Terminal-green hacker console inspired by the VibeUsage dashboard"
+        "Description": "Terminal green with a crisp technical character"
       },
       "MaterialDesign3": {
         "Name": "Material Design 3",
-        "Description": "Material Design 3 tokens with soft surfaces, rounded shapes, and expressive typography"
+        "Description": "Soft color layers and expressive rounded controls"
       },
       "FluentDesign": {
         "Name": "Fluent Design",
-        "Description": "Fluent Design styling with Mica-inspired layers, acrylic flyouts, Segoe typography, and soft rounded controls"
+        "Description": "Lightweight layers, clear accents, and quiet depth"
       },
       "Fresh": {
         "Name": "Fresh",
-        "Description": "Light mint colors and a calm feel"
+        "Description": "Airy mint tones and a calm, light workspace"
       },
       "MacaronSweetheart": {
         "Name": "Macaron Sweetheart",
-        "Description": "A playful pastel macaron theme with rounded candy surfaces and handwritten typography"
+        "Description": "Pastel colors, gentle shapes, and playful details"
       },
       "InkLandscape": {
         "Name": "Ink Landscape",
-        "Description": "Ink-wash style with quiet contrast"
+        "Description": "Quiet ink tones with an editorial sense of space"
       },
       "ZenInk": {
         "Name": "Zen Sumi-e",
-        "Description": "Minimalist Chinese ink wash painting style with ample white space"
+        "Description": "Minimal ink contrast and considered white space"
       },
       "ComicBurst": {
         "Name": "Comic Burst",
-        "Description": "Inked comic panels with paper texture, hard shadows, and saturated red-yellow accents"
+        "Description": "Bold ink outlines and vivid print-inspired accents"
+      },
+      "Grove": {
+        "Name": "Grove",
+        "Description": "Warm stone, forest green, and editorial typography"
       }
     }
   },
   "Layout": {
-    "SearchTooltip": "Search (Ctrl+K)",
     "NotificationsTooltip": "Notifications",
     "LanguageTooltip": "Language / 语言",
     "UserMenu": {
       "Profile": "Profile",
       "Settings": "Settings",
       "Logout": "Logout"
-    }
+    },
+    "Error": "This page encountered an error.",
+    "Reload": "Reload page",
+    "DismissError": "Dismiss error message",
+    "ErrorRecovery": "Reload the page to continue."
   },
   "NavBar": {
     "More": "More",
-    "MoreModules": "More Modules",
+    "MoreModules": "More destinations",
     "Categories": {
       "AI": "AI",
       "KnowledgeRetrieval": "Knowledge & Retrieval",
@@ -87,7 +100,26 @@
       "Monitor": "Monitor",
       "Debug": "Debug",
       "Uncategorized": "Uncategorized"
-    }
+    },
+    "CategoryDescriptions": {
+      "AI": "Converse with models, compare providers, and inspect AI integrations.",
+      "KnowledgeRetrieval": "Organize knowledge bases and trace document retrieval.",
+      "Documentation": "Read guides, reference material, and rendered Markdown.",
+      "Configuration": "Inspect managed settings and review configuration changes.",
+      "Infrastructure": "Inspect service composition, persistence, and messaging.",
+      "Module": "Explore module composition, startup timing, and dependencies.",
+      "TaskScheduling": "Manage scheduled work and inspect job execution history.",
+      "Monitor": "Follow service health, runtime metrics, and log evidence.",
+      "Debug": "Inspect execution behavior and use troubleshooting utilities.",
+      "Uncategorized": "Access host extensions beyond the shared navigation categories."
+    },
+    "Navigation": "Navigation",
+    "ExpandSidebar": "Expand sidebar",
+    "CollapseSidebar": "Collapse sidebar",
+    "OpenNavigation": "Open navigation",
+    "CloseNavigation": "Close navigation",
+    "Explore": "Explore",
+    "MorePages": "Browse additional pages and tools."
   },
   "DiffViewer": {
     "Changes": "Changes",
@@ -98,47 +130,72 @@
     },
     "DisplayModes": {
       "Compare": "Compare",
-      "NewValue": "New Value",
-      "OldValue": "Old Value"
+      "NewValue": "Updated only",
+      "OldValue": "Original only"
     },
     "OriginalContent": "Original content",
-    "NewContent": "New content",
-    "NoDifferences": "The texts are identical.",
+    "NewContent": "Updated content",
+    "NoDifferences": "No changes under these rules.",
     "ComparisonFailed": "Comparison failed",
-    "ComparisonError": "Comparison error"
+    "Title": "Accepted comparison",
+    "Scope": "Counts describe the complete comparison.",
+    "Added": "Added",
+    "Deleted": "Deleted",
+    "Modified": "Modified",
+    "Layout": "Layout",
+    "Display": "Show",
+    "Current": "Content compared",
+    "Stale": "Inputs changed — showing the last comparison",
+    "ComparedAt": "Compared here at {0}",
+    "BothEmpty": "Both inputs are empty.",
+    "Uncomputed": "Enter text to compare.",
+    "Absent": "No source line",
+    "SplitStacked": "Split pairs are stacked in this reader.",
+    "Comparing": "Comparing…",
+    "FailureStale": "An earlier comparison attempt failed.",
+    "ExactMatching": "Line matching includes case and leading/trailing whitespace.",
+    "AcceptedWhitespace": "Line matching ignores leading/trailing whitespace.",
+    "AcceptedCase": "Line matching ignores case.",
+    "CharacterLimit": "Character detail limit: {0}"
   },
   "DiffHighlightPage": {
-    "PageTitle": "Diff Highlight",
-    "Title": "Diff Highlight Tool",
-    "Description": "Compare two texts and highlight the differences with various comparison modes and output formats",
-    "ConfigOptions": "Configuration Options",
-    "CompareMode": "Compare Mode",
+    "BackToDrafts": "Back to drafts",
+    "PageTitle": "Text comparison",
+    "Title": "Text comparison",
+    "Description": "Edit two texts and inspect their differences.",
+    "Drafts": "Comparison drafts",
+    "ConfigOptions": "Comparison rules",
+    "CompareMode": "Compare by",
     "Modes": {
-      "Line": "Line Mode",
-      "Character": "Character Mode",
-      "Mixed": "Mixed Mode"
+      "Line": "Line",
+      "Character": "Character",
+      "Mixed": "Mixed"
     },
-    "OutputFormat": "Output Format",
+    "OutputFormat": "Output",
     "Formats": {
       "Html": "HTML",
-      "Markdown": "Markdown",
-      "PlainText": "Plain Text"
+      "Markdown": "Markdown source",
+      "PlainText": "Plain text"
     },
-    "ContextLines": "Context Lines",
-    "MaxCharacterDiffLength": "Max Character Diff Length",
-    "IgnoreWhitespace": "Ignore Whitespace",
-    "IgnoreCase": "Ignore Case",
-    "AutoRefresh": "Auto Refresh",
-    "LoadSample": "Load Sample",
-    "OriginalText": "Original Text",
-    "OriginalTextPlaceholder": "Enter original text here...",
-    "NewText": "New Text",
-    "NewTextPlaceholder": "Enter new text here...",
-    "DiffResult": "Diff Result",
-    "Comparing": "Comparing...",
-    "ManualRefresh": "Manual Refresh",
-    "EnterTextAndRefresh": "Enter text in both fields and click refresh to see the comparison",
-    "ComparisonFailed": "Comparison failed"
+    "MaxCharacterDiffLength": "Character detail limit",
+    "IgnoreWhitespace": "Ignore leading/trailing whitespace",
+    "IgnoreCase": "Ignore case",
+    "AutoRefresh": "Auto compare",
+    "LoadSample": "Load sample",
+    "SampleHint": "Replaces both drafts",
+    "OriginalText": "Original draft",
+    "OriginalTextPlaceholder": "Enter original text…",
+    "NewText": "Updated draft",
+    "NewTextPlaceholder": "Enter updated text…",
+    "Comparing": "Comparing…",
+    "ManualRefresh": "Compare",
+    "EnterTextAndRefresh": "Enter text and choose Compare to inspect a comparison.",
+    "ComparisonFailed": "Comparison failed",
+    "RulesHint": "Whitespace matching trims line edges only. Case matching ignores letter case. Character and Mixed currently use the same character detail; longer lines fall back to line comparison above this limit (maximum 1,000 characters). All lines remain visible.",
+    "FailedDraft": "Current comparison failed",
+    "EarlierDrafts": "Drafts changed — showing the last comparison",
+    "CurrentDrafts": "Current drafts compared",
+    "PendingDrafts": "Drafts changed — comparison pending"
   },
   "Markdown": {
     "CopyHint": "Click to copy",
@@ -147,32 +204,36 @@
     "CopyFailed": "Could not copy. Select the code and copy it manually."
   },
   "StackTrace": {
-    "CopyTooltip": "Copy stack trace",
-    "NoStackTrace": "No stack trace available",
-    "NotProvided": "Stack trace not provided"
+    "Caption": "Diagnostic text",
+    "WrapLines": "Wrap lines",
+    "Copy": "Copy",
+    "CopyLabel": "Copy diagnostic text",
+    "Copied": "Copied",
+    "CopyFailed": "Could not copy. Select the text and copy it manually.",
+    "NotProvided": "No diagnostic text was provided.",
+    "WhitespaceOnly": "Only whitespace was provided.",
+    "SourceLabel": "Complete diagnostic text"
   },
   "Error": {
     "PageTitle": "Request failed",
-    "Eyebrow": "MONICA / REQUEST STATE",
     "Title": "Request failed",
-    "Message": "The application could not complete this request. No further action was taken.",
+    "Message": "The application could not complete this request.",
     "RequestId": "Request ID",
-    "BackToOverview": "Back to overview",
-    "DevelopmentMode": "Local troubleshooting",
-    "DevelopmentModeWarning": "Development mode can provide more detailed error evidence during local debugging.",
-    "DevelopmentModeNote": "Do not enable Development mode on a deployed host because exception details can expose sensitive information.",
-    "DevelopmentModeInstruction": "For local debugging, set ASPNETCORE_ENVIRONMENT to Development and restart the application."
+    "DevelopmentHeading": "Local diagnostics",
+    "DevelopmentGuidance": "Review the host logs while reproducing the problem. This guidance is shown because the host is running in Development."
   },
   "PageNotFound": {
-    "PageTitle": "Not found",
+    "PageTitle": "Page not found",
     "Title": "Page not found",
-    "Message": "Sorry, the page you requested does not exist."
+    "Message": "No page is available at this address.",
+    "Recovery": "Check the address or choose another destination."
   },
   "RouteAccess": {
     "CheckingPageTitle": "Checking access",
-    "Checking": "Checking whether you can access this page...",
+    "Checking": "Checking whether this page is available to you.",
     "DeniedPageTitle": "Access denied",
     "DeniedTitle": "Access denied",
-    "DeniedDescription": "You do not have permission to view this page."
+    "DeniedDescription": "Access to this page was not granted.",
+    "DeniedRecovery": "Use the application navigation to choose another page."
   }
 }

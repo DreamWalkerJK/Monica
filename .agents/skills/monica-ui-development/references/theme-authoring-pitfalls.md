@@ -332,6 +332,8 @@ The common failure mode is:
 3. never add layout-changing properties such as `position`, `inset`, or width rules to overlays through a broad shared selector unless you have verified MudBlazor source and live DOM behavior
 4. verify overlay size and placement on a real hover or click path, not only by reading CSS
 
+An overlay-specific selector must also preserve MudBlazor's positioning ownership. Native `.mud-popover-fixed` uses viewport coordinates; a more specific theme rule that forces `position: absolute` can subtract genuine document scroll a second time, detach the menu, and make focus scroll the document unexpectedly. Remove the theme's `position` declaration rather than forcing every popover to be fixed: normal anchored popovers still use their native absolute mode. Check computed positioning, page coordinates, document scroll and viewport bounds on an actual opening after scrolling; a shell with only an internal scroll host does not exercise this contract.
+
 ## 11. Decorative textures can overwhelm data-heavy pages
 
 ### What happens
@@ -376,3 +378,11 @@ The common failure mode is:
 2. do not apply `overflow: hidden` to shared table or grid hosts in a theme
 3. verify `scrollWidth > clientWidth` cases on real pages such as `module-system-dashboard` and `程序集分析`
 4. keep decorative pseudo-elements off scroll hosts unless you have confirmed they do not interfere with scrolling or clipping
+
+## 13. A held ripple changes the rendered action background
+
+A filled button can pass a foreground/background calculation yet lose legibility while pressed. MudBlazor creates a descendant `.mud-ripple-effect` on pointer down; its expanding state keeps a foreground-colored layer at `--mud-ripple-opacity` until release. Compositing only the button and its ancestors misses that layer. The held fill can therefore differ from both the resting and hover background returned by computed style.
+
+Inspect the actual enabled button at rest, hover, keyboard focus and native pointer-down hold. Include descendants and pseudo-elements, their opacity, color, transform and painted overlap. Wait for the relevant transition to settle, retain the true native state, and compare the unchanged screenshot's solid interior with opaque label pixels. Antialiased edges are not the intended foreground. Report computed base colors separately from rendered composite evidence; one passing sample does not certify every animation frame or component.
+
+Correct the existing theme's state fill and ripple composition together. Inspect the winning custom-property declaration: the package's filled-button rule sets ripple opacity with `!important`, so a normal theme declaration can exist without changing the rendered value. Scope a verified cascade correction to the enabled action family, preserve its feedback and theme identity, and retain native disabled palette/interaction guards. For a mutating action, capture the held state without submitting: move outside before releasing and cancel the draft afterward. Recheck native focus restoration and the actual post-release state as separate contracts.

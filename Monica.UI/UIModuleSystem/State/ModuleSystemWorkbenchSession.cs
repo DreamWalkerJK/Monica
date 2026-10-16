@@ -562,7 +562,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         CompleteAssemblyInventoryRequest(requestVersion, _calls.GetAssemblyInventory());
     }
 
-    /// <summary>Returns the sanitized schema-v2 payload produced by Core after rechecking access.</summary>
+    /// <summary>Returns the sanitized current-schema payload produced by Core after rechecking access.</summary>
     public async Task<Res<ModuleDiagnosticsExport>> CreateExportAsync()
     {
         return await EnsureAuthorizedAsync()

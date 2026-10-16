@@ -7,7 +7,7 @@
 @inject IJSRuntime JSRuntime
 @inject IStringLocalizer<ModuleSystemResource> L
 
-<div class="dependency-graph-canvas" aria-busy="@(_renderState == GraphRenderState.Loading)">
+<div class="dependency-graph-canvas" aria-busy="@(_renderState == GraphRenderState.Loading ? "true" : "false")">
     <div class="graph-surface"
          @ref="_graphRoot"
          role="img"
@@ -23,11 +23,11 @@
     else if (_renderState == GraphRenderState.Failed)
     {
         <div class="graph-placeholder graph-failed" role="alert">
-            <MudIcon Icon="@Icons.Material.Filled.BrokenImage" Color="Color.Error" />
+            <MudIcon Icon="@Icons.Material.Outlined.BrokenImage" Color="Color.Error" />
             <span>@L["Dependencies:Graph:Failed"]</span>
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Refresh"
+                       StartIcon="@Icons.Material.Outlined.Refresh"
                        OnClick="@RetryAsync">
                 @L["Actions:Retry"]
             </MudButton>

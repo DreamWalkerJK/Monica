@@ -5,141 +5,170 @@
 
 <MudDialog>
     <TitleContent>
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudIcon Icon="@Icons.Material.Filled.Info" />
-            <MudText Typo="Typo.h6">@L["Page:Dialog:Title"]</MudText>
-        </MudStack>
+        <div class="di-inspector-title">
+            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" />
+            <h2>@L["Page:Dialog:Title"]</h2>
+        </div>
     </TitleContent>
     <DialogContent>
-        <MudStack Spacing="3">
-            <MudPaper Class="pa-4" Outlined="true">
-                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["Page:Dialog:Sections:Descriptor"]</MudText>
-                <MudSimpleTable Dense="true">
-                    <tbody>
-                    <tr>
-                        <td>@L["Page:Dialog:Fields:ServiceType"]</td>
-                        <td><code>@Descriptor.ServiceType</code></td>
-                    </tr>
-                    <tr>
-                        <td>@L["Page:Dialog:Fields:ServiceAssembly"]</td>
-                        <td>@GetTextOrFallback(Descriptor.ServiceAssemblyName)</td>
-                    </tr>
-                    <tr>
-                        <td>@L["Page:Dialog:Fields:Lifetime"]</td>
-                        <td>@L[$"Page:Shared:Lifetimes:{Descriptor.Lifetime}"]</td>
-                    </tr>
-                    <tr>
-                        <td>@L["Page:Dialog:Fields:ServiceKey"]</td>
-                        <td>@GetTextOrFallback(Descriptor.ServiceKey)</td>
-                    </tr>
-                    <tr>
-                        <td>@L["Page:Dialog:Fields:Index"]</td>
-                        <td>@Descriptor.Index</td>
-                    </tr>
-                    <tr>
-                        <td>@L["Page:Dialog:Fields:IsKeyed"]</td>
-                        <td>@GetYesNo(Descriptor.IsKeyedService)</td>
-                    </tr>
-                    <tr>
-                        <td>@L["Page:Dialog:Fields:IsOpenGeneric"]</td>
-                        <td>@GetYesNo(Descriptor.IsOpenGeneric)</td>
-                    </tr>
-                    </tbody>
-                </MudSimpleTable>
-            </MudPaper>
+        <div class="di-inspector">
+            <header class="di-inspector-identity">
+                <span class="di-inspector-eyebrow">@L["Page:Dialog:Fields:ServiceType"]</span>
+                <h3>@Descriptor.ServiceTypeDisplayName</h3>
+                <code>@Descriptor.ServiceType</code>
+                <div class="di-inspector-identity-meta">
+                    <span>@L[$"Page:Shared:Lifetimes:{Descriptor.Lifetime}"]</span>
+                    <span>@L[$"Page:Grid:Kinds:{Descriptor.ImplementationKind}"]</span>
+                    <span>@L["Page:Dialog:Fields:Index"] @Descriptor.Index</span>
+                    @if (Descriptor.IsAutoRegistered)
+                    {
+                        <span class="di-inspector-auto-label">@L["Page:Filters:SourceOptions:AutoRegistered"]</span>
+                    }
+                </div>
+            </header>
 
-            <MudPaper Class="pa-4" Outlined="true">
-                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["Page:Dialog:Sections:Implementation"]</MudText>
-                <MudSimpleTable Dense="true">
-                    <tbody>
-                    <tr>
-                        <td>@L["Page:Dialog:Fields:ImplementationKind"]</td>
-                        <td>@L[$"Page:Grid:Kinds:{Descriptor.ImplementationKind}"]</td>
-                    </tr>
-                    <tr>
-                        <td>@L["Page:Dialog:Fields:ImplementationType"]</td>
-                        <td><code>@GetTextOrFallback(Descriptor.ImplementationType)</code></td>
-                    </tr>
-                    <tr>
-                        <td>@L["Page:Dialog:Fields:ImplementationAssembly"]</td>
-                        <td>@GetTextOrFallback(Descriptor.ImplementationAssemblyName)</td>
-                    </tr>
-                    <tr>
-                        <td>@L["Page:Dialog:Fields:FactoryDisplay"]</td>
-                        <td><code>@GetTextOrFallback(Descriptor.FactoryDisplay)</code></td>
-                    </tr>
-                    </tbody>
-                </MudSimpleTable>
-            </MudPaper>
+            <div class="di-inspector-definitions">
+                <section class="di-inspector-section">
+                    <h4>@L["Page:Dialog:Sections:Descriptor"]</h4>
+                    <dl class="di-definition-list">
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:ServiceAssembly"]</dt>
+                            <dd>@GetTextOrFallback(Descriptor.ServiceAssemblyName)</dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:Lifetime"]</dt>
+                            <dd>@L[$"Page:Shared:Lifetimes:{Descriptor.Lifetime}"]</dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:ServiceKey"]</dt>
+                            <dd><code>@GetTextOrFallback(Descriptor.ServiceKey)</code></dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:Index"]</dt>
+                            <dd><code>@Descriptor.Index</code></dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:IsKeyed"]</dt>
+                            <dd>@GetYesNo(Descriptor.IsKeyedService)</dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:IsOpenGeneric"]</dt>
+                            <dd>@GetYesNo(Descriptor.IsOpenGeneric)</dd>
+                        </div>
+                    </dl>
+                </section>
+                <section class="di-inspector-section">
+                    <h4>@L["Page:Dialog:Sections:Implementation"]</h4>
+                    <dl class="di-definition-list">
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:ImplementationKind"]</dt>
+                            <dd>@L[$"Page:Grid:Kinds:{Descriptor.ImplementationKind}"]</dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:ImplementationType"]</dt>
+                            <dd><code>@GetTextOrFallback(Descriptor.ImplementationType)</code></dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:ImplementationAssembly"]</dt>
+                            <dd>@GetTextOrFallback(Descriptor.ImplementationAssemblyName)</dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:FactoryDisplay"]</dt>
+                            <dd><code>@GetTextOrFallback(Descriptor.FactoryDisplay)</code></dd>
+                        </div>
+                    </dl>
+                </section>
+            </div>
 
-            <MudPaper Class="pa-4" Outlined="true">
-                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["Page:Dialog:Sections:AutoRegistration"]</MudText>
+            <section class="di-provenance">
+                <header class="di-provenance-header">
+                    <h4>@L["Page:Dialog:Sections:AutoRegistration"]</h4>
+                    @if (Descriptor.AutoRegistration is { } registration)
+                    {
+                        <span>@L[$"Page:Shared:Outcomes:{registration.Outcome}"]</span>
+                    }
+                </header>
                 @if (Descriptor.AutoRegistration is { } autoRegistration)
                 {
-                    <MudSimpleTable Dense="true">
-                        <tbody>
-                        <tr>
-                            <td>@L["Page:Dialog:Fields:SourceImplementationType"]</td>
-                            <td><code>@autoRegistration.SourceImplementationType</code></td>
-                        </tr>
-                        <tr>
-                            <td>@L["Page:Dialog:Fields:SourceImplementationAssembly"]</td>
-                            <td>@GetTextOrFallback(autoRegistration.SourceImplementationAssemblyName)</td>
-                        </tr>
-                        <tr>
-                            <td>@L["Page:Dialog:Fields:LifetimeSource"]</td>
-                            <td>@L[$"Page:Shared:LifetimeSources:{autoRegistration.LifetimeSource}"]</td>
-                        </tr>
-                        <tr>
-                            <td>@L["Page:Dialog:Fields:RegistrationMode"]</td>
-                            <td>@L[$"Page:Shared:RegistrationModes:{autoRegistration.RegistrationMode}"]</td>
-                        </tr>
-                        <tr>
-                            <td>@L["Page:Dialog:Fields:Outcome"]</td>
-                            <td>@L[$"Page:Shared:Outcomes:{autoRegistration.Outcome}"]</td>
-                        </tr>
-                        </tbody>
-                    </MudSimpleTable>
+                    <dl class="di-provenance-source">
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:SourceImplementationType"]</dt>
+                            <dd><code>@autoRegistration.SourceImplementationType</code></dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:SourceImplementationAssembly"]</dt>
+                            <dd>@GetTextOrFallback(autoRegistration.SourceImplementationAssemblyName)</dd>
+                        </div>
+                    </dl>
+                    <dl class="di-provenance-policy">
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:Lifetime"]</dt>
+                            <dd>@L[$"Page:Shared:Lifetimes:{autoRegistration.Lifetime}"]</dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:LifetimeSource"]</dt>
+                            <dd>@L[$"Page:Shared:LifetimeSources:{autoRegistration.LifetimeSource}"]</dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:RegistrationMode"]</dt>
+                            <dd>@L[$"Page:Shared:RegistrationModes:{autoRegistration.RegistrationMode}"]</dd>
+                        </div>
+                        <div>
+                            <dt>@L["Page:Dialog:Fields:Outcome"]</dt>
+                            <dd>@L[$"Page:Shared:Outcomes:{autoRegistration.Outcome}"]</dd>
+                        </div>
+                    </dl>
 
-                    <MudDivider Class="my-3" />
-
-                    <MudText Typo="Typo.subtitle2" Class="mb-2">@L["Page:Dialog:Fields:ExposedServices"]</MudText>
-                    <MudStack Spacing="1">
-                        @foreach (var exposedService in autoRegistration.ExposedServices)
+                    <div class="di-inspector-exposures">
+                        <div class="di-inspector-subheading">
+                            <h4>@L["Page:Dialog:Fields:ExposedServices"]</h4>
+                            <span>@autoRegistration.ExposedServices.Count</span>
+                        </div>
+                        @if (autoRegistration.ExposedServices.Count == 0)
                         {
-                            <MudPaper Class="pa-2" Outlined="true">
-                                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" AlignItems="AlignItems.Center">
-                                    @if (exposedService.IsKeyedService)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
-                                            @GetTextOrFallback(exposedService.ServiceKey)
-                                        </MudChip>
-                                    }
-                                    <MudText Typo="Typo.body2">
-                                        <code>@exposedService.ServiceType</code>
-                                    </MudText>
-                                </MudStack>
-                            </MudPaper>
+                            <p class="di-inspector-empty">@L["Page:Issues:NoExposures"]</p>
                         }
-                    </MudStack>
+                        else
+                        {
+                            <ul class="di-exposed-service-list">
+                                @foreach (var exposedService in autoRegistration.ExposedServices)
+                                {
+                                    <li>
+                                        <code>@exposedService.ServiceType</code>
+                                        @if (exposedService.IsKeyedService)
+                                        {
+                                            <span class="di-exposed-service-key">
+                                                @L["Page:Dialog:Fields:ServiceKey"]: @GetTextOrFallback(exposedService.ServiceKey)
+                                            </span>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
 
                     @if (autoRegistration.Issues.Count > 0)
                     {
-                        <MudDivider Class="my-3" />
-
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">@L["Page:Dialog:Fields:Issues"]</MudText>
-                        <DependencyInjectionAutoRegistrationIssueList Items="autoRegistration.Issues" />
+                        <div class="di-inspector-issues">
+                            <div class="di-inspector-subheading">
+                                <h4>@L["Page:Dialog:Fields:Issues"]</h4>
+                                <span>@autoRegistration.Issues.Count</span>
+                            </div>
+                            <DependencyInjectionAutoRegistrationIssueList Items="autoRegistration.Issues" />
+                        </div>
                     }
                 }
                 else
                 {
-                    <MudAlert Severity="Severity.Info">@L["Page:Dialog:States:NoAutoRegistration"]</MudAlert>
+                    <p class="di-inspector-empty">@L["Page:Dialog:States:NoAutoRegistration"]</p>
                 }
-            </MudPaper>
-        </MudStack>
+            </section>
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close" Color="Color.Primary">@L["Page:Dialog:Close"]</MudButton>
+        <div class="di-inspector-actions">
+            <MudButton OnClick="Close" Variant="Variant.Outlined" Color="Color.Primary">@L["Page:Dialog:Close"]</MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 

@@ -1,0 +1,83 @@
+.file-inspector {
+    container: file-inspector / inline-size;
+    min-width: 0;
+    min-height: 0;
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+}
+
+.inspector-header {
+    min-width: 0;
+    padding: 24px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface));
+}
+.inspector-eyebrow { margin: 0 0 12px; font-size: 11px; line-height: 1.5; font-weight: 500; color: var(--mud-palette-text-secondary); }
+.inspector-body { min-width: 0; padding: 24px; }
+
+.inspector-heading { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.inspector-identity { flex: 1; min-width: 0; }
+h2 { margin: 0; font-family: var(--mo-font-family-body); font-size: 20px; line-height: 1.4; font-weight: 500; overflow-wrap: anywhere; }
+h2:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 4px; }
+.inspector-heading ::deep .inspector-close { flex: 0 0 44px; width: 44px; height: 44px; }
+.inspector-heading ::deep .inspector-menu { flex: 0 0 44px; }
+.inspector-heading ::deep .inspector-menu .mud-icon-button { width: 44px; height: 44px; }
+
+.draft-state, .read-only-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 72%, var(--mud-palette-text-primary));
+}
+.draft-state-dirty { color: color-mix(in srgb, var(--mud-palette-warning) 42%, var(--mud-palette-text-primary)); }
+.draft-state ::deep .mud-icon-root, .read-only-note ::deep .mud-icon-root { flex-shrink: 0; }
+.inspector-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-block: 16px; }
+.inspector-actions ::deep .mud-button-root { min-height: 44px; font-weight: 500; }
+
+.exact-path { min-width: 0; border-top: 1px solid var(--mud-palette-lines-default); font-size: 12px; line-height: 1.7; }
+.exact-path summary { display: flex; align-items: center; gap: 16px; min-width: 0; min-height: 44px; cursor: pointer; list-style: none; }
+.exact-path summary::-webkit-details-marker { display: none; }
+.exact-path summary:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }
+.exact-path summary code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exact-path summary span { flex-shrink: 0; text-decoration: underline; text-underline-offset: 3px; }
+.exact-path code { font-family: var(--mo-font-family-mono); font-size: 12px; }
+.exact-path-value { display: block; overflow-wrap: anywhere; padding-block: 2px 12px; }
+
+.evidence-note { margin: 0 0 12px; font-size: 12px; line-height: 1.6; }
+.disk-evidence { margin-block: 10px 16px; }
+dl { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 0; }
+dl > div { min-width: 0; }
+dt { margin-bottom: 4px; font-size: 12px; line-height: 1.5; color: color-mix(in srgb, var(--mud-palette-text-secondary) 72%, var(--mud-palette-text-primary)); }
+dd { margin: 0; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.text-editor { min-width: 0; margin-top: 16px; }
+.text-editor ::deep textarea {
+    box-sizing: border-box;
+    min-height: 320px;
+    max-height: 480px;
+    overflow: auto;
+    resize: vertical;
+    font-family: var(--mo-font-family-mono);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.65;
+    color: var(--mud-palette-text-primary);
+}
+.file-inspector ::deep .mud-alert { margin-block: 12px; }
+.file-inspector ::deep .mud-alert-message { min-width: 0; color: var(--mud-palette-text-primary); }
+.preview-unavailable { margin-top: 16px; padding-block: 20px; }
+.preview-unavailable h3 { margin: 10px 0; font-size: 17px; line-height: 1.5; font-weight: 500; }
+.preview-unavailable p { margin: 0; font-size: 13px; line-height: 1.65; }
+.attempted-file { margin-block: 12px; min-width: 0; }
+.attempted-file p { font-size: 13px; line-height: 1.65; }
+.attempted-file code { font-family: var(--mo-font-family-mono); font-size: 13px; overflow-wrap: anywhere; }
+
+@container file-inspector (max-width: 480px) {
+    h2 { font-size: 18px; }
+    .text-editor ::deep textarea { min-height: 260px; }
+    dl { gap: 10px 20px; }
+}
+@media (max-width: 600px) { .inspector-header, .inspector-body { padding: 16px; } }
+@media (max-height: 700px) { .text-editor ::deep textarea { min-height: 180px; max-height: 260px; } }

@@ -636,7 +636,8 @@ else
                 // would place; a missing bundle leaves it null and disables the button.
                 try
                 {
-                    Closure = await Facade.DescribeProfileClosureAsync(configuredProfile);
+                    Closure = await Facade.DescribeProfileClosureAsync(
+                        configuredProfile, detection.ConfiguredCapabilities);
                 }
                 catch (InvalidOperationException)
                 {

@@ -7,11 +7,11 @@
 <section class="job-activity" aria-labelledby="job-activity-heading">
     <header class="job-activity__heading">
         <div>
-            <MudText Typo="Typo.overline" Color="Color.Primary">@L["JobDetail:Activity:Eyebrow"]</MudText>
+            <MudText Typo="Typo.overline">@L["JobDetail:Activity:Eyebrow"]</MudText>
             <MudText Typo="Typo.h6" HtmlTag="h2" id="job-activity-heading">
                 @L["JobDetail:Activity:Title"]
             </MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
+            <MudText Typo="Typo.body2">
                 @L["JobDetail:Activity:Description"]
             </MudText>
         </div>
@@ -24,13 +24,13 @@
         <section class="job-activity__stream job-activity__stream--running" aria-labelledby="job-running-heading">
             <header>
                 <span class="job-activity__stream-icon" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Filled.PlayCircle" Size="Size.Small" />
+                    <MudIcon Icon="@Icons.Material.Outlined.PlayCircle" Size="Size.Small" />
                 </span>
                 <div>
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-running-heading">
                         @L["JobDetail:Activity:RunningTitle"]
                     </MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    <MudText Typo="Typo.caption">
                         @L["JobDetail:Activity:RunningDescription"]
                     </MudText>
                 </div>
@@ -47,7 +47,7 @@
             @if (Running.Error is null && Running.Items.Count == 0)
             {
                 <div class="job-activity__empty">
-                    <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Small" />
+                    <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" />
                     <span>@L["JobDetail:Activity:RunningEmpty"]</span>
                 </div>
             }
@@ -71,7 +71,7 @@
                             <span class="job-activity__duration">
                                 @TimePresentation.FormatExecutionDuration(execution, ObservedAtUtc)
                             </span>
-                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
+                            <MudIcon Icon="@Icons.Material.Outlined.ChevronRight"
                                      Size="Size.Small"
                                      Class="job-activity__chevron" />
                         </button>
@@ -83,13 +83,13 @@
         <section class="job-activity__stream job-activity__stream--failed" aria-labelledby="job-failed-heading">
             <header>
                 <span class="job-activity__stream-icon" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" />
+                    <MudIcon Icon="@Icons.Material.Outlined.Error" Size="Size.Small" />
                 </span>
                 <div>
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-failed-heading">
                         @L["JobDetail:Activity:FailuresTitle"]
                     </MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    <MudText Typo="Typo.caption">
                         @L["JobDetail:Activity:FailuresDescription"]
                     </MudText>
                 </div>
@@ -106,7 +106,7 @@
             @if (Failures.Error is null && Failures.Items.Count == 0)
             {
                 <div class="job-activity__empty">
-                    <MudIcon Icon="@Icons.Material.Filled.Verified" Size="Size.Small" />
+                    <MudIcon Icon="@Icons.Material.Outlined.FactCheck" Size="Size.Small" />
                     <span>@L["JobDetail:Activity:FailuresEmpty"]</span>
                 </div>
             }
@@ -130,7 +130,7 @@
                             <span class="job-activity__duration">
                                 @TimePresentation.FormatExecutionDuration(execution, ObservedAtUtc)
                             </span>
-                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
+                            <MudIcon Icon="@Icons.Material.Outlined.ChevronRight"
                                      Size="Size.Small"
                                      Class="job-activity__chevron" />
                         </button>

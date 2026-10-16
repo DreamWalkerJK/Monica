@@ -21,16 +21,29 @@ public interface INavigationRegistryBuilder
     /// <param name="categoryId">The durable category identifier.</param>
     /// <param name="displayName">The category label.</param>
     /// <param name="order">The category order. Lower values render first.</param>
+    /// <param name="parentId">The optional parent category. The default is a top-level category.</param>
+    /// <param name="icon">The optional category icon. The default is <see langword="null"/>.</param>
+    /// <param name="description">An optional nonblank explanation of the category's capabilities. The default is null.</param>
     /// <returns>The validated category identifier for use by page registrations.</returns>
+    /// <remarks>
+    /// A parent may be registered by a later module; every parent must exist and the hierarchy must be acyclic when
+    /// startup registration is sealed. Categories with no authorized descendant pages are omitted by the shell.
+    /// </remarks>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="categoryId"/> is not a valid category identifier or
-    /// <paramref name="displayName"/> is null, empty, or whitespace.
+    /// <paramref name="displayName"/> is null, empty, or whitespace, or a supplied <paramref name="description"/> is blank.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the registry has been sealed, or when the identifier was already registered with a different
-    /// label or order.
+    /// label, description, order, parent, or icon.
     /// </exception>
-    NavigationCategoryId RegisterCategory(string categoryId, string displayName, int order = 0);
+    NavigationCategoryId RegisterCategory(
+        string categoryId,
+        string displayName,
+        int order = 0,
+        NavigationCategoryId? parentId = null,
+        string? icon = null,
+        string? description = null);
 
     /// <summary>
     /// Registers a category localized through a module-owned resource marker type.
@@ -39,22 +52,30 @@ public interface INavigationRegistryBuilder
     /// <param name="categoryId">The durable category identifier.</param>
     /// <param name="displayNameKey">The localization key for the category label.</param>
     /// <param name="order">The category order. Lower values render first.</param>
+    /// <param name="parentId">The optional parent category. The default is a top-level category.</param>
+    /// <param name="icon">The optional category icon. The default is <see langword="null"/>.</param>
+    /// <param name="descriptionKey">An optional nonblank category description key in <typeparamref name="TResource"/>. The default is null.</param>
     /// <returns>The validated category identifier for use by page registrations.</returns>
     /// <remarks>
     /// The contributing module must add <typeparamref name="TResource"/> to the Localization module's resource catalog.
+    /// A parent may be registered by a later module; every parent must exist and the hierarchy must be acyclic when
+    /// startup registration is sealed. Categories with no authorized descendant pages are omitted by the shell.
     /// </remarks>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="categoryId"/> is not a valid category identifier or
-    /// <paramref name="displayNameKey"/> is null, empty, or whitespace.
+    /// <paramref name="displayNameKey"/> is null, empty, or whitespace, or a supplied <paramref name="descriptionKey"/> is blank.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the registry has been sealed, or when the identifier was already registered with a different
-    /// localization resource, key, or order.
+    /// localization resource, key, description, order, parent, or icon.
     /// </exception>
     NavigationCategoryId RegisterLocalizedCategory<TResource>(
         string categoryId,
         string displayNameKey,
-        int order = 0)
+        int order = 0,
+        NavigationCategoryId? parentId = null,
+        string? icon = null,
+        string? descriptionKey = null)
         where TResource : class, ILocalizationResource;
 
     /// <summary>
@@ -71,6 +92,7 @@ public interface INavigationRegistryBuilder
     /// An optional concrete <see cref="IPageAccessPolicy"/> implementation registered in the current host.
     /// The same policy controls navigation visibility and must be evaluated by the page before protected work begins.
     /// </param>
+    /// <param name="description">An optional nonblank explanation of the page's purpose. The default is null.</param>
     /// <remarks>
     /// Routes are trimmed and compared without regard to case. When <paramref name="addToNav"/> is
     /// <see langword="true"/>, <paramref name="categoryId"/> must identify a built-in or registered category before
@@ -79,6 +101,7 @@ public interface INavigationRegistryBuilder
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="route"/> or <paramref name="displayName"/> is null, empty, or whitespace, or when
     /// <paramref name="accessPolicyType"/> is not a concrete <see cref="IPageAccessPolicy"/> implementation.
+    /// A supplied <paramref name="description"/> must not be empty or whitespace.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the registry has been sealed or the normalized route is already registered.
@@ -90,7 +113,8 @@ public interface INavigationRegistryBuilder
         NavigationCategoryId? categoryId = null,
         bool addToNav = false,
         int navOrder = 0,
-        Type? accessPolicyType = null)
+        Type? accessPolicyType = null,
+        string? description = null)
         where TPage : ComponentBase;
 
     /// <summary>
@@ -108,6 +132,7 @@ public interface INavigationRegistryBuilder
     /// An optional concrete <see cref="IPageAccessPolicy"/> implementation registered in the current host.
     /// Missing policy registration denies access.
     /// </param>
+    /// <param name="descriptionKey">An optional nonblank page description key in <typeparamref name="TResource"/>. The default is null.</param>
     /// <remarks>
     /// The contributing module must add <typeparamref name="TResource"/> to the Localization module's resource catalog.
     /// Text is resolved from the current
@@ -119,6 +144,7 @@ public interface INavigationRegistryBuilder
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="route"/> or <paramref name="displayNameKey"/> is null, empty, or whitespace, or when
     /// <paramref name="accessPolicyType"/> is not a concrete <see cref="IPageAccessPolicy"/> implementation.
+    /// A supplied <paramref name="descriptionKey"/> must not be empty or whitespace.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the registry has been sealed or the normalized route is already registered.
@@ -130,7 +156,8 @@ public interface INavigationRegistryBuilder
         NavigationCategoryId? categoryId = null,
         bool addToNav = false,
         int navOrder = 0,
-        Type? accessPolicyType = null)
+        Type? accessPolicyType = null,
+        string? descriptionKey = null)
         where TPage : ComponentBase
         where TResource : class, ILocalizationResource;
 }

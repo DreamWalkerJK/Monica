@@ -3,58 +3,22 @@
 @inject IStringLocalizer<AIResource> L
 
 <div class="provider-selector">
-    <div class="provider-trigger">
-        <MudIcon Icon="@GetProviderIcon(_currentProvider)" Size="Size.Small" />
-        <span class="provider-name">
-            @if (!string.IsNullOrEmpty(SelectedModelName))
-            {
-                var shortModelName = SelectedModelName.Length > 20 ? SelectedModelName[..20] + "..." : SelectedModelName;
-                <text>@(_currentProvider?.ProviderType ?? L["Provider:Label"]) / @shortModelName</text>
-            }
-            else
-            {
-                <text>@(_currentProvider?.ProviderType ?? L["Provider:Label"])</text>
-            }
-        </span>
-        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
-    </div>
-    <div class="provider-menu">
+    <MudMenu Label="@(Providers.FirstOrDefault(p => p.ProviderId == SelectedProviderId)?.DisplayName ?? L["Provider:Label"])"
+             EndIcon="@Icons.Material.Filled.ExpandMore" AriaLabel="@L["Provider:Label"]" Dense="true" Disabled="@Disabled">
         @foreach (var provider in Providers)
         {
-            <button class="provider-option @(provider.ProviderId == SelectedProviderId ? "is-active" : string.Empty)"
-                    @onclick="() => HandleProviderChanged(provider.ProviderId)">
-                <MudIcon Icon="@GetProviderIcon(provider)" Size="Size.Small" />
-                <span>@provider.DisplayName</span>
-                @if (provider.IsDefault)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="default-chip">@L["Provider:Default"]</MudChip>
-                }
-            </button>
+            <MudMenuItem OnClick="@(() => SelectedProviderIdChanged.InvokeAsync(provider.ProviderId))"
+                         Icon="@(provider.ProviderId == SelectedProviderId ? Icons.Material.Filled.Check : null)">
+                @provider.DisplayName
+            </MudMenuItem>
         }
-    </div>
+    </MudMenu>
 </div>
 
 @code {
     [Parameter] public IReadOnlyList<AIProviderInfo> Providers { get; set; } = [];
     [Parameter] public string? SelectedProviderId { get; set; }
     [Parameter] public string? SelectedModelName { get; set; }
+    [Parameter] public bool Disabled { get; set; }
     [Parameter] public EventCallback<string> SelectedProviderIdChanged { get; set; }
-
-    private AIProviderInfo? _currentProvider =>
-        Providers.FirstOrDefault(p => p.ProviderId == SelectedProviderId) ?? Providers.FirstOrDefault();
-
-    private async Task HandleProviderChanged(string providerId)
-    {
-        await SelectedProviderIdChanged.InvokeAsync(providerId);
-    }
-
-    private string GetProviderIcon(AIProviderInfo? provider)
-    {
-        return provider?.ProviderType switch
-        {
-            "OpenAI" => Icons.Material.Filled.Psychology,
-            "Anthropic" => Icons.Material.Filled.AutoAwesome,
-            _ => Icons.Material.Filled.SmartToy
-        };
-    }
 }

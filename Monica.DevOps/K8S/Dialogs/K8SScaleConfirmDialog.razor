@@ -1,178 +1,98 @@
 @using Monica.DevOps.Localization
 @using Monica.DevOps.K8S.Models
+@using Monica.UI.Shared.Components.Dialogs
+@implements IAsyncDisposable
 @inject IStringLocalizer<K8SResource> L
 
-<MudDialog Class="k8s-scale-dialog">
+<MudDialog DefaultFocus="DefaultFocus.LastChild">
+    <TitleContent><MoDialogHeading @ref="_heading" Text="@L[Preview.Operation == K8SScaleOperation.ScaleDown ? "ScaleDialog:TitleScaleDown" : "ScaleDialog:TitleScaleUp", Preview.ScopeName, Preview.Namespace]" /></TitleContent>
     <DialogContent>
-        <MudStack Spacing="3">
-            <MudAlert Severity="@(Preview.Workloads.Count > 0 ? Severity.Warning : Severity.Info)" Variant="Variant.Outlined">
-                <MudText Typo="Typo.body1">
-                    @if (Preview.Workloads.Count > 0)
+        <div class="operation-review">
+            <MudStack Spacing="3">
+                <MudAlert Severity="@(Preview.HasScalableTargets ? (Preview.Operation == K8SScaleOperation.ScaleDown ? Severity.Warning : Severity.Info) : Severity.Info)" Variant="Variant.Outlined">
+                    @(Preview.HasScalableTargets ? L[Preview.Operation == K8SScaleOperation.ScaleDown ? "ScaleDialog:SummaryScaleDownWithWorkloads" : "ScaleDialog:SummaryScaleUpWithWorkloads", Preview.Workloads.Count, Preview.EligibleTargets.Count] : L["ScaleDialog:SummaryWithoutWorkloads"])
+                </MudAlert>
+                <MudText Typo="Typo.body2">@L["OperationReview:TargetCounts", Preview.RequestedTargets.Count, Preview.EligibleTargets.Count, Preview.IgnoredTargets.Count]</MudText>
+                @if (Preview.ResourceType is null || Preview.ResourceType == K8SResourceType.Service)
+                {
+                    <MudText Typo="Typo.body2">@L["ScaleDialog:ServiceExplanation"]</MudText>
+                }
+                @if (Preview.RestrictionKeywords.Count > 0)
+                {
+                    <MudText Typo="Typo.body2">@L["OperationReview:AllowedKeywords", string.Join(", ", Preview.RestrictionKeywords)]</MudText>
+                }
+                <section class="workloads">
+                    <MudText Typo="Typo.subtitle1">@L["ScaleDialog:WorkloadsToScale"]</MudText>
+                    @if (Preview.Workloads.Count == 0)
                     {
-                        <text>@L[GetSummaryKey(), Preview.Workloads.Count, Preview.EligibleTargets.Count]</text>
+                        <MudText Typo="Typo.body2">@L["ScaleDialog:NoWorkloads"]</MudText>
                     }
                     else
                     {
-                        <text>@L["ScaleDialog:SummaryWithoutWorkloads"]</text>
+                        <MudTable T="K8SScaleWorkloadPlan" Items="Preview.Workloads" Dense="true" Breakpoint="Breakpoint.Sm">
+                            <HeaderContent><MudTh>@L["DescribeDialog:Workload"]</MudTh><MudTh>@L["OperationReview:ReplicaChange"]</MudTh><MudTh>@L["OperationReview:RecordedReplicas"]</MudTh></HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="@L["DescribeDialog:Workload"]">@GetDisplayName(context.Kind, context.Name)</MudTd>
+                                <MudTd DataLabel="@L["OperationReview:ReplicaChange"]"><span class="replica-change">@context.CurrentReplicas → @context.TargetReplicas</span></MudTd>
+                                <MudTd DataLabel="@L["OperationReview:RecordedReplicas"]">@(context.PreviousReplicas?.ToString() ?? L["Common:Empty"].Value)</MudTd>
+                            </RowTemplate>
+                        </MudTable>
                     }
-                </MudText>
-            </MudAlert>
-
-            @if (Preview.RestrictionKeywords.Count > 0)
-            {
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                    @L["ScaleDialog:SensitiveRestrictionsActive", string.Join(", ", Preview.RestrictionKeywords)]
-                </MudAlert>
-            }
-
-            @if (Preview.ResourceType == K8SResourceType.Service)
-            {
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                    @L["ScaleDialog:ServiceExplanation"]
-                </MudAlert>
-            }
-
-            <MudGrid Spacing="2">
-                <MudItem xs="12" md="6">
-                    <MudPaper Class="pa-4 list-panel" Outlined="true">
-                        <MudText Typo="Typo.subtitle2">@L["ScaleDialog:EligibleTargets"]</MudText>
-                        @if (Preview.EligibleTargets.Count == 0)
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ScaleDialog:NoEligibleTargets"]</MudText>
-                        }
-                        else
-                        {
-                            <MudList T="string" Dense="true">
-                                @foreach (var target in Preview.EligibleTargets)
-                                {
-                                    <MudListItem T="string">
-                                        <MudText Typo="Typo.body2">@GetTargetDisplayName(target)</MudText>
-                                    </MudListItem>
-                                }
-                            </MudList>
-                        }
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudPaper Class="pa-4 list-panel" Outlined="true">
-                        <MudText Typo="Typo.subtitle2">@L["ScaleDialog:IgnoredTargets"]</MudText>
-                        @if (Preview.IgnoredTargets.Count == 0)
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ScaleDialog:NoIgnoredTargets"]</MudText>
-                        }
-                        else
-                        {
-                            <MudList T="string" Dense="true">
-                                @foreach (var target in Preview.IgnoredTargets)
-                                {
-                                    <MudListItem T="string">
-                                        <MudStack Spacing="0">
-                                            <MudText Typo="Typo.body2">@GetTargetDisplayName(target)</MudText>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@target.Reason</MudText>
-                                        </MudStack>
-                                    </MudListItem>
-                                }
-                            </MudList>
-                        }
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
-
-            <MudPaper Class="pa-4 list-panel" Outlined="true">
-                <MudText Typo="Typo.subtitle2">@L["ScaleDialog:WorkloadsToScale"]</MudText>
-                @if (Preview.Workloads.Count == 0)
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ScaleDialog:NoWorkloads"]</MudText>
-                }
-                else
-                {
-                    <MudList T="string" Dense="true">
-                        @foreach (var workload in Preview.Workloads)
-                        {
-                            <MudListItem T="string">
-                                <MudText Typo="Typo.body2">@L["ScaleDialog:WorkloadEntry", GetWorkloadDisplayName(workload), workload.CurrentReplicas, workload.TargetReplicas, GetPreviousReplicasDisplay(workload)]</MudText>
-                            </MudListItem>
-                        }
-                    </MudList>
-                }
-            </MudPaper>
-
-            <MudPaper Class="command-output" Outlined="true">
-                <pre>@string.Join(Environment.NewLine, Preview.CommandPreview)</pre>
-            </MudPaper>
-        </MudStack>
+                </section>
+                <MudExpansionPanels Elevation="0" MultiExpansion="true">
+                    <MudExpansionPanel Text="@L["OperationReview:RequestedTargets", Preview.RequestedTargets.Count]">
+                        <div class="disclosure-body">
+                            @if (Preview.RequestedTargets.Count == 0) { <MudText Typo="Typo.body2">@L["OperationReview:NoRequestedTargets"]</MudText> }
+                            else { <ul class="target-list">@foreach (var target in Preview.RequestedTargets) { <li>@GetDisplayName(target.Kind, target.Name)</li> }</ul> }
+                        </div>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="@L["OperationReview:EligibleTargets", Preview.EligibleTargets.Count]">
+                        <div class="disclosure-body">
+                            @if (Preview.EligibleTargets.Count == 0) { <MudText Typo="Typo.body2">@L["ScaleDialog:NoEligibleTargets"]</MudText> }
+                            else { <ul class="target-list">@foreach (var target in Preview.EligibleTargets) { <li>@GetDisplayName(target.Kind, target.Name)</li> }</ul> }
+                        </div>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="@L["OperationReview:IgnoredTargets", Preview.IgnoredTargets.Count]" Expanded="@(!Preview.HasScalableTargets && Preview.IgnoredTargets.Count > 0)">
+                        <div class="disclosure-body">
+                            @if (Preview.IgnoredTargets.Count == 0) { <MudText Typo="Typo.body2">@L["ScaleDialog:NoIgnoredTargets"]</MudText> }
+                            else { <ul class="target-list">@foreach (var target in Preview.IgnoredTargets) { <li><span>@GetDisplayName(target.Kind, target.Name)</span><p class="ignored-reason">@target.Reason</p></li> }</ul> }
+                        </div>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="@L["OperationReview:CommandArguments"]">
+                        <div class="disclosure-body"><MudText Typo="Typo.body2">@L["OperationReview:CommandArgumentsHelp"]</MudText><div class="command-output"><pre>@string.Join(Environment.NewLine, Preview.CommandPreview)</pre></div></div>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+                <MudText Typo="Typo.body2">@L["OperationReview:GeneratedAt", Preview.GeneratedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")]</MudText>
+                <MudText Typo="Typo.body2">@L["OperationReview:ExecutionRechecks"]</MudText>
+            </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">
-            @L["Common:Cancel"]
-        </MudButton>
-        @if (Preview.Workloads.Count > 0)
-        {
-            <MudButton OnClick="Confirm"
-                       Variant="Variant.Filled"
-                       Color="Color.Error"
-                       StartIcon="@GetConfirmIcon()">
-                @ConfirmButtonText
-            </MudButton>
-        }
+        <div class="k8s-confirm-actions">
+            @if (Preview.HasScalableTargets)
+            {
+                <MudButton Class="k8s-confirm-action" OnClick="Confirm" Variant="Variant.Filled" Color="@(Preview.Operation == K8SScaleOperation.ScaleDown ? Color.Error : Color.Primary)">@L[Preview.Operation == K8SScaleOperation.ScaleDown ? "ScaleDialog:ConfirmScaleDown" : "ScaleDialog:ConfirmScaleUp", Preview.Workloads.Count]</MudButton>
+            }
+            <MudButton OnClick="Cancel" Variant="Variant.Text">@L["Common:Cancel"]</MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
-
+    /// <summary>Gets or sets the preview for the exact captured request. Execution re-plans under current configuration.</summary>
     [Parameter] public K8SScalePreview Preview { get; set; } = new();
-
+    /// <summary>Retained for source compatibility. The native confirmation label uses the preview's concrete workload count and does not display this value.</summary>
     [Parameter] public string ConfirmButtonText { get; set; } = string.Empty;
-
-    private void Cancel()
+    private MoDialogHeading? _heading;
+    private void Cancel() => MudDialog?.Cancel();
+    private void Confirm() { if (Preview.HasScalableTargets) MudDialog?.Close(DialogResult.Ok(true)); }
+    /// <summary>Drains the owned accessible heading before returning the native result.</summary>
+    public ValueTask DisposeAsync() => _heading?.DisposeAsync() ?? ValueTask.CompletedTask;
+    private string GetDisplayName(string kind, string name) => $"{GetLocalizedKind(kind)}/{name}";
+    private string GetLocalizedKind(string kind) => kind switch
     {
-        MudDialog?.Cancel();
-    }
-
-    private void Confirm()
-    {
-        MudDialog?.Close(DialogResult.Ok(true));
-    }
-
-    private string GetSummaryKey()
-    {
-        return Preview.Operation == K8SScaleOperation.ScaleDown
-            ? "ScaleDialog:SummaryScaleDownWithWorkloads"
-            : "ScaleDialog:SummaryScaleUpWithWorkloads";
-    }
-
-    private string GetConfirmIcon()
-    {
-        return Preview.Operation == K8SScaleOperation.ScaleDown
-            ? Icons.Material.Filled.KeyboardArrowDown
-            : Icons.Material.Filled.KeyboardArrowUp;
-    }
-
-    private string GetTargetDisplayName(K8SScaleTarget target)
-    {
-        return $"{GetLocalizedKind(target.Kind)}/{target.Name}";
-    }
-
-    private string GetWorkloadDisplayName(K8SScaleWorkloadPlan workload)
-    {
-        return $"{GetLocalizedKind(workload.Kind)}/{workload.Name}";
-    }
-
-    private string GetPreviousReplicasDisplay(K8SScaleWorkloadPlan workload)
-    {
-        return workload.PreviousReplicas?.ToString() ?? L["Common:Empty"];
-    }
-
-    private string GetLocalizedKind(string kind)
-    {
-        return kind switch
-        {
-            "Service" => L["ResourceTypes:Service"].Value,
-            "Deployment" => L["ResourceTypes:Deployment"].Value,
-            "StatefulSet" => L["ResourceTypes:StatefulSet"].Value,
-            "DaemonSet" => L["ResourceTypes:DaemonSet"].Value,
-            _ => kind
-        };
-    }
+        "Service" => L["ResourceTypes:Service"].Value, "Deployment" => L["ResourceTypes:Deployment"].Value,
+        "StatefulSet" => L["ResourceTypes:StatefulSet"].Value, "DaemonSet" => L["ResourceTypes:DaemonSet"].Value, _ => kind
+    };
 }

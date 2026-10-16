@@ -40,7 +40,8 @@ public class UnitApplicationService : ProjectUnit
     public Type? RequestType { get; set; }
 
     /// <summary>
-    /// Gets or sets the response type returned by a generic application service.
+    /// Gets or sets the payload type for a typed result wrapper, the explicit result type for a custom application
+    /// service, or <see langword="null"/> for a response-less result wrapper.
     /// </summary>
     public Type? ResponseType { get; set; }
 
@@ -62,13 +63,17 @@ public class UnitApplicationService : ProjectUnit
         };
         unit.CheckNameConventionMode();
 
-        var exactGenericType = shape.BaseTypes.FirstOrDefault(type =>
-            type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ApplicationService<,>));
-        if (exactGenericType is not null)
+        var applicationServiceBase = shape.BaseTypes.FirstOrDefault(type =>
+            type.IsGenericType
+            && (type.GetGenericTypeDefinition() == typeof(ApplicationService<,>)
+                || type.GetGenericTypeDefinition() == typeof(ApplicationService<>)))
+            ?? shape.BaseTypes.FirstOrDefault(type =>
+                type.IsGenericType && type.GetGenericTypeDefinition() == typeof(CustomApplicationService<,>));
+        if (applicationServiceBase is not null)
         {
-            var args = exactGenericType.GetGenericArguments();
+            var args = applicationServiceBase.GetGenericArguments();
             unit.RequestType = args[0];
-            unit.ResponseType = args[1];
+            unit.ResponseType = args.Length == 2 ? args[1] : null;
         }
 
         unit.InitializeMethods<ApplicationService>();

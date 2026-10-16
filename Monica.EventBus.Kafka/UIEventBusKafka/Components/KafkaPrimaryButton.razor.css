@@ -1,0 +1,11 @@
+.kafka-primary-button {
+    display: inline-flex;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.kafka-primary-button ::deep .mud-button-filled-primary:not(:disabled):not(.mud-disabled) {
+    max-width: 100%;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 90%, var(--mud-palette-black)) !important;
+    color: var(--mud-palette-primary-text) !important;
+}

@@ -1,0 +1,31 @@
+@namespace Monica.DevOps.Git.Components
+@using Monica.DevOps.Git.Pages
+@using Monica.DevOps.Localization
+@using Monica.UI.Shared.Components.Navigation
+@inject IStringLocalizer<GitResource> L
+
+<header class="git-workspace-header">
+    <div class="git-workspace-eyebrow">@L["Workspace:Navigation:Label"]</div>
+    <div class="git-workspace-heading">
+        <div class="git-workspace-identity">
+            <h1>@Title</h1>
+            @if (!string.IsNullOrWhiteSpace(Description)) { <p>@Description</p> }
+        </div>
+        @if (Actions is not null) { <div class="git-workspace-actions">@Actions</div> }
+    </div>
+</header>
+<MoWorkbenchNavigation Label="@L["Workspace:Navigation:Label"]">
+    <a href="@UIGitRepositoriesPage.PAGE_URL" aria-current="@(!IsCredentialsPage ? "page" : null)">@L["Workspace:Navigation:Repositories"]</a>
+    <a href="@UIGitCredentialsPage.PAGE_URL" aria-current="@(IsCredentialsPage ? "page" : null)">@L["Workspace:Navigation:Credentials"]</a>
+</MoWorkbenchNavigation>
+
+@code {
+    /// <summary>Gets or sets the owning route's localized primary heading.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    /// <summary>Gets or sets the localized task sentence below the heading.</summary>
+    [Parameter] public string? Description { get; set; }
+    /// <summary>Gets or sets native route actions; the route owns their admission and lifecycle.</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+    /// <summary>Gets or sets exact peer selection for the credentials route, including its query references.</summary>
+    [Parameter] public bool IsCredentialsPage { get; set; }
+}

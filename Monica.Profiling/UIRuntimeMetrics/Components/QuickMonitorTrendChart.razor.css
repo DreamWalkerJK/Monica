@@ -1,76 +1,65 @@
-.runtime-trend-layout {
-    min-width: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1.55fr) minmax(360px, 0.85fr);
-    gap: 16px;
+.runtime-evidence { container-type: inline-size; min-width: 0; }
+.runtime-history, .runtime-sample-ledger { border: 1px solid var(--mud-palette-lines-default); border-radius: 12px; background: var(--mud-palette-surface); margin-top: 24px; min-width: 0; }
+.runtime-section-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; padding: 24px 26px 20px; }
+.runtime-section-eyebrow { font-size: 10px; letter-spacing: .1em; color: var(--runtime-accent-ink); font-weight: 500; }
+.runtime-section-header h2 { font-family: var(--mo-font-family-display); font-size: 21px; font-weight: 500; line-height: 1.4; margin-top: 7px; }
+.runtime-section-header p { font-size: 12px; line-height: 1.7; color: var(--runtime-muted-ink); margin-top: 7px; }
+.runtime-metric-controls ::deep .mud-chip { font-size: 12px; margin: 3px; }
+.runtime-metric-controls ::deep .mud-chip { color: var(--runtime-accent-ink); }
+.runtime-ledger-footer ::deep .mud-pagination-item-selected .mud-button-filled-primary { background: color-mix(in srgb, var(--mud-palette-primary) 12%, var(--mud-palette-surface)); color: var(--runtime-accent-ink); }
+.runtime-window { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 22px; margin: 0 26px 22px; padding: 17px 20px; border-radius: 8px; background: color-mix(in srgb, var(--mud-palette-background) 70%, var(--mud-palette-surface)); }
+.runtime-window > div { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.runtime-window span { font-size: 10px; color: var(--runtime-muted-ink); }
+.runtime-window strong { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.runtime-window small { font-family: var(--mo-font-family-mono); font-size: 10px; color: var(--runtime-muted-ink); overflow-wrap: anywhere; line-height: 1.7; }
+.runtime-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; padding: 0 26px; }
+.runtime-history-chart:only-child { grid-column: 1 / -1; }
+.runtime-history-chart { min-width: 0; }
+.runtime-history-chart header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 12px 14px; }
+.runtime-history-chart h3 { font-size: 13px; font-weight: 500; }
+.runtime-history-chart header span { color: var(--runtime-muted-ink); font-size: 10px; }
+.runtime-history-note { font-size: 11px; line-height: 1.8; color: var(--runtime-muted-ink); margin: 18px 26px 24px; }
+.runtime-history-empty { display: grid; justify-items: center; align-content: center; text-align: center; gap: 12px; min-height: 200px; padding: 24px; }
+.runtime-history-empty ::deep .mud-icon-root { color: var(--mud-palette-primary); }
+.runtime-history-empty h3 { font-size: 16px; font-weight: 500; }
+.runtime-history-empty p { font-size: 12px; line-height: 1.8; max-width: 500px; color: var(--runtime-muted-ink); }
+.runtime-table-frame { margin: 0 26px; border: 1px solid var(--mud-palette-lines-default); border-radius: 8px; overflow: hidden; }
+.runtime-table-frame ::deep .mud-table { border-radius: inherit; box-shadow: none; }
+.runtime-table-frame ::deep .mud-table-container table { width: 100%; table-layout: auto; }
+.runtime-table-frame ::deep .mud-table thead { background: color-mix(in srgb, var(--mud-palette-background) 75%, var(--mud-palette-surface)); }
+.runtime-table-frame ::deep .mud-table th { font-size: 11px; font-weight: 500; color: var(--runtime-muted-ink); padding: 15px 12px;
+    white-space: nowrap; }
+.runtime-table-frame ::deep .mud-table td { font-size: 12px; padding: 12px; font-variant-numeric: tabular-nums; }
+.runtime-table-frame ::deep .mud-table th:first-child, .runtime-table-frame ::deep .mud-table td:first-child { padding-left: 18px; }
+.runtime-table-frame ::deep .mud-table th:last-child, .runtime-table-frame ::deep .mud-table td:last-child { padding-right: 18px; }
+.runtime-table-frame ::deep .mud-table tr:last-child td { border-bottom: none; }
+.runtime-sample-time { font-family: var(--mo-font-family-mono); font-size: 11px; }
+.runtime-sample-action { width: 48px; text-align: right; }
+.runtime-ledger-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 26px; font-size: 11px; color: var(--runtime-muted-ink); }
+.runtime-ledger-footer ::deep .mud-pagination { flex-wrap: wrap; gap: 3px; }
+.runtime-ledger-empty { padding: 12px 26px 30px; font-size: 13px; color: var(--runtime-muted-ink); }
+.runtime-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
+    white-space: nowrap; }
+@container (max-width: 900px) {
+    .runtime-charts { grid-template-columns: minmax(0, 1fr); }
+    .runtime-table-frame ::deep .mud-table thead { display: none; }
+    .runtime-table-frame ::deep .mud-table tbody { display: block; }
+    .runtime-table-frame ::deep .mud-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 20px; border-bottom: 1px solid var(--mud-palette-lines-default); }
+    .runtime-table-frame ::deep .mud-table tr:last-child { border-bottom: none; }
+    .runtime-table-frame ::deep .mud-table td, .runtime-table-frame ::deep .mud-table td:first-child, .runtime-table-frame ::deep .mud-table td:last-child { padding: 0; border: 0; min-width: 0; overflow-wrap: anywhere; }
+    .runtime-table-frame ::deep .mud-table td[data-label]::before { content: attr(data-label); display: block; font-family: var(--mo-font-family-body); color: var(--runtime-muted-ink); font-size: 10px; margin-bottom: 6px; }
+    .runtime-table-frame ::deep .mud-table .runtime-sample-time { grid-column: 1 / 3; }
+    .runtime-table-frame ::deep .mud-table .runtime-sample-action { grid-column: 3; grid-row: 1; width: auto; justify-self: end; }
 }
-
-.runtime-trend-panel {
-    min-width: 0;
-    padding: 20px;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 12px;
-    background: var(--mud-palette-surface);
-    transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.runtime-trend-panel:hover {
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 22%, var(--mud-palette-lines-default));
-    box-shadow: var(--mud-elevation-2);
-}
-
-.runtime-trend-panel__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 16px;
-}
-
-.runtime-trend-eyebrow {
-    color: var(--mud-palette-text-secondary);
-    letter-spacing: 0.08em;
-}
-
-.runtime-trend-chart {
-    min-width: 0;
-    overflow-x: auto;
-}
-
-.runtime-table-scroll {
-    width: 100%;
-    min-width: 0;
-    max-height: 390px;
-    overflow: auto;
-}
-
-.runtime-table-scroll ::deep .mud-table-root {
-    min-width: 720px;
-}
-
-.runtime-table-scroll ::deep th {
-    white-space: nowrap;
-}
-
-.diagnostic-value {
-    font-family: var(--mo-font-family-mono, Consolas, "Liberation Mono", monospace);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-
-@media (max-width: 1080px) {
-    .runtime-trend-layout {
-        grid-template-columns: minmax(0, 1fr);
-    }
-}
-
-@media (max-width: 600px) {
-    .runtime-trend-panel {
-        padding: 16px;
-    }
-
-    .runtime-trend-panel__header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
+@container (max-width: 550px) {
+    .runtime-section-header { padding: 22px 18px 18px; gap: 12px; }
+    .runtime-window { grid-template-columns: 1fr 1fr; gap: 18px; margin: 0 18px 22px; padding: 16px; }
+    .runtime-window > div:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+    .runtime-charts { padding: 0 12px; }
+    .runtime-history-note { margin: 16px 18px 22px; }
+    .runtime-table-frame { margin: 0 14px; }
+    .runtime-table-frame ::deep .mud-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 18px; }
+    .runtime-table-frame ::deep .mud-table .runtime-sample-time { grid-column: 1; }
+    .runtime-table-frame ::deep .mud-table .runtime-sample-action { grid-column: 2; }
+    .runtime-ledger-footer { padding: 18px; }
 }

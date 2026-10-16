@@ -9,6 +9,7 @@
                    T="bool"
                    Value="@_boolValue"
                    ValueChanged="OnBoolChanged"
+                   aria-label="@EditorLabel"
                    Disabled="@Disabled"
                    Color="Color.Primary" />
     }
@@ -18,6 +19,7 @@
                          T="decimal?"
                          Value="@_decimalValue"
                          ValueChanged="OnDecimalChanged"
+                         aria-label="@EditorLabel"
                          Variant="Variant.Outlined"
                          Margin="Margin.Dense"
                          Immediate="true"
@@ -29,6 +31,7 @@
         <MudDatePicker @key="EditorInstanceKey"
                        Date="@_dateValue"
                        DateChanged="OnDateChanged"
+                       aria-label="@EditorLabel"
                        Variant="Variant.Outlined"
                        Margin="Margin.Dense"
                        Editable="true"
@@ -41,6 +44,7 @@
             <div class="configuration-time-span-input">
                 <MudTextField @key="EditorInstanceKey"
                               T="string"
+                              aria-label="@EditorLabel"
                               @bind-Value:get="@_textValue"
                               @bind-Value:set="OnTimeTextChanged"
                               OnBlur="OnTimeTextBlurred"
@@ -91,6 +95,7 @@
     {
         <MudSelect @key="EditorInstanceKey"
                    T="string"
+                   aria-label="@EditorLabel"
                    Value="@_textValue"
                    ValueChanged="OnTextChanged"
                    Variant="Variant.Outlined"
@@ -107,6 +112,7 @@
     {
         <MudTextField @key="EditorInstanceKey"
                       T="string"
+                      aria-label="@EditorLabel"
                       Value="@_textValue"
                       ValueChanged="OnTextChanged"
                       Variant="Variant.Outlined"
@@ -192,6 +198,8 @@
     private int _editorResetVersion;
 
     private bool IsNumeric => Node.ValueKind is ConfigurationValueKind.Integer or ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating;
+
+    private string EditorLabel => string.IsNullOrWhiteSpace(Node.DisplayName) ? Node.Name : Node.DisplayName;
 
     private IReadOnlyList<string> EnumValues =>
         ConfigurationScalarValueCodec.GetAllowedValues(Node);

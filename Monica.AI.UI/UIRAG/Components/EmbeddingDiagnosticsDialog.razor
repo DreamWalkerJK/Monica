@@ -1,3 +1,6 @@
+@using Monica.AI.UI.Shared.Support
+@implements IAsyncDisposable
+@using Monica.UI.Shared.Components.Dialogs
 @using Microsoft.Extensions.Localization
 @using Monica.AI.RAG.Facades
 @using Monica.AI.RAG.Models
@@ -6,11 +9,12 @@
 @inject EmbeddingModelFacade EmbeddingFacade
 @inject IStringLocalizer<AIResource> L
 
-<MudDialog>
+<div class="knowledge-dialog-owner">
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" ContentClass="pa-0 knowledge-dialog-content" ActionsClass="pa-0" Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px;overflow:hidden">
+    <TitleContent><MoDialogHeading Text="@L["RAG:EmbeddingDiagnostics:Title"]" /></TitleContent>
     <DialogContent>
         <div class="embedding-diagnostics-root">
             <div class="dialog-header">
-                <MudText Typo="Typo.h6">@L["RAG:EmbeddingDiagnostics:Title"]</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     @L["RAG:EmbeddingDiagnostics:Subtitle"]
                 </MudText>
@@ -46,6 +50,7 @@
                     <MudTable T="EmbeddingModelDiagnosticInfo"
                               Items="@_models"
                               Dense="true"
+                              Breakpoint="Breakpoint.Xs"
                               Hover="true"
                               Class="diagnostics-table">
                         <HeaderContent>
@@ -104,7 +109,7 @@
                             <MudTd DataLabel="@L["RAG:EmbeddingDiagnostics:Column:Connection"]">
                                 @if (_testResults.TryGetValue(context.ModelKey, out var testResult))
                                 {
-                                    <div class="test-result @(testResult.Succeeded ? "success" : "failed")">
+                                    <div class="test-result @(testResult.Succeeded ? "success" : "failed")" role="status">
                                         <MudIcon Icon="@(testResult.Succeeded ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.ErrorOutline)"
                                                  Size="Size.Small" />
                                         <span>@BuildTestResultText(testResult)</span>
@@ -123,7 +128,8 @@
                                            Color="Color.Primary"
                                            StartIcon="@Icons.Material.Filled.PlayArrow"
                                            OnClick="@(() => TestModelAsync(context))"
-                                           Disabled="@(!context.IsProviderValid || IsTesting(context))">
+                                           Disabled="@(!context.IsProviderValid)"
+                                           aria-disabled="@(IsTesting(context) ? "true" : "false")">
                                     @(IsTesting(context)
                                         ? L["RAG:EmbeddingDiagnostics:Testing"]
                                         : L["RAG:EmbeddingDiagnostics:Test"])
@@ -136,11 +142,14 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" OnClick="Close">
-            @L["Common:Actions:Close"]
-        </MudButton>
+        <div class="dialog-actions">
+            <MudButton Variant="Variant.Text" OnClick="Close">
+                @L["Common:Actions:Close"]
+            </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
+</div>
 
 @code {
     [CascadingParameter]
@@ -151,27 +160,38 @@
     private IReadOnlyList<EmbeddingModelDiagnosticInfo> _models = [];
     private string? _loadErrorMessage;
     private bool _isLoading = true;
+    private readonly AIAdministrationOperationLifetime _lifetime = new();
 
     protected override async Task OnInitializedAsync()
     {
-        var result = await EmbeddingFacade.GetEmbeddingModelDiagnosticsAsync();
-        if (result.IsFailed(out var error, out var models))
+        try
         {
-            _models = [];
-            _loadErrorMessage = error.Message ?? L["Common:Error"].Value;
+            await _lifetime.RunAsync(async _ =>
+            {
+                // Metadata lookup has no cancellation argument; retirement still drains its producer.
+                var result = await EmbeddingFacade.GetEmbeddingModelDiagnosticsAsync();
+                _lifetime.TryApply(() =>
+                {
+                    if (result.IsFailed(out var error, out var models))
+                    {
+                        _models = [];
+                        _loadErrorMessage = error.Message ?? L["Common:Error"].Value;
+                    }
+                    else
+                    {
+                        _models = models;
+                        _loadErrorMessage = null;
+                    }
+                    _isLoading = false;
+                });
+            });
         }
-        else
-        {
-            _models = models;
-            _loadErrorMessage = null;
-        }
-
-        _isLoading = false;
+        catch (OperationCanceledException) when (_lifetime.IsRetired) { }
     }
 
     private async Task TestModelAsync(EmbeddingModelDiagnosticInfo model)
     {
-        if (!_testingModelKeys.Add(model.ModelKey))
+        if (_lifetime.IsRetired || !model.IsProviderValid || !_testingModelKeys.Add(model.ModelKey))
         {
             return;
         }
@@ -180,24 +200,26 @@
 
         try
         {
-            var result = await EmbeddingFacade.TestEmbeddingModelConnectionAsync(model.ProviderId, model.ModelName);
-            if (result.IsFailed(out var error, out var testResult))
+            await _lifetime.RunAsync(async token =>
             {
-                testResult = new EmbeddingModelConnectionTestResult
+                var result = await EmbeddingFacade.TestEmbeddingModelConnectionAsync(model.ProviderId, model.ModelName, token);
+                if (result.IsFailed(out var error, out var testResult))
                 {
-                    ProviderId = model.ProviderId,
-                    ModelName = model.ModelName,
-                    Succeeded = false,
-                    Message = error.Message ?? L["Common:Error"].Value
-                };
-            }
-
-            _testResults[model.ModelKey] = testResult;
+                    testResult = new EmbeddingModelConnectionTestResult
+                    {
+                        ProviderId = model.ProviderId,
+                        ModelName = model.ModelName,
+                        Succeeded = false,
+                        Message = error.Message ?? L["Common:Error"].Value
+                    };
+                }
+                _lifetime.TryApply(() => _testResults[model.ModelKey] = testResult);
+            });
         }
+        catch (OperationCanceledException) when (_lifetime.IsRetired) { }
         finally
         {
-            _testingModelKeys.Remove(model.ModelKey);
-            StateHasChanged();
+            if (_lifetime.TryApply(() => _testingModelKeys.Remove(model.ModelKey))) StateHasChanged();
         }
     }
 
@@ -213,4 +235,7 @@
         => dimensions.HasValue ? dimensions.Value.ToString() : "?";
 
     private void Close() => MudDialog.Close();
+
+    /// <summary>Cancels and drains this dialog's requests without disposing borrowed facades.</summary>
+    public ValueTask DisposeAsync() => _lifetime.RetireAsync();
 }

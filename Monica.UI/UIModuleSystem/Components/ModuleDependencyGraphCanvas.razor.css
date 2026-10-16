@@ -1,97 +1,60 @@
 .dependency-graph-canvas {
+    --module-graph-surface: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
     position: relative;
     display: grid;
     width: 100%;
+    height: var(--module-graph-height, clamp(24rem, 52svh, 34rem));
     min-width: 0;
-    min-height: 42rem;
+    min-height: 0;
     overflow: hidden;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: var(--mud-default-borderradius);
-    background: var(--mud-palette-background);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 18%, var(--mud-palette-divider));
+    border-radius: 10px;
+    background-color: var(--module-graph-surface);
+    background-image: radial-gradient(var(--mud-palette-divider) .6px, transparent .6px);
+    background-size: 20px 20px;
 }
-
-.graph-surface {
-    grid-area: 1 / 1;
-    width: 100%;
-    min-width: 0;
-    min-height: 42rem;
-    cursor: grab;
-}
-
-.graph-surface:active {
-    cursor: grabbing;
-}
-
-.graph-surface ::deep svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-    min-height: 42rem;
-}
-
+.graph-surface { grid-area: 1 / 1; width: 100%; height: 100%; min-width: 0; min-height: 0; cursor: grab; }
+.graph-surface:active { cursor: grabbing; }
+.graph-surface ::deep svg { display: block; width: 100%; height: 100%; min-height: 0; }
 .graph-surface ::deep .graph-link,
 .graph-surface ::deep .graph-node,
 .graph-surface ::deep .graph-node-core,
-.graph-surface ::deep .graph-node-halo {
-    transition: opacity .16s ease, stroke .16s ease, stroke-width .16s ease, filter .16s ease;
-}
-
+.graph-surface ::deep .graph-node-halo { transition: opacity .16s ease, stroke .16s ease, stroke-width .16s ease, filter .16s ease; }
 .graph-surface ::deep .graph-node-label {
-    font-size: .7rem;
-    font-weight: 650;
+    font-family: var(--mud-typography-default-family);
+    font-size: 12px;
+    font-weight: 500;
     paint-order: stroke;
-    stroke: var(--mud-palette-background);
-    stroke-width: .2rem;
+    stroke: var(--module-graph-surface);
+    stroke-width: 4px;
     stroke-linejoin: round;
     pointer-events: none;
 }
-
-.graph-surface ::deep .graph-node-glyph {
-    font-size: .58rem;
-    font-weight: 800;
-    letter-spacing: -.02em;
-    pointer-events: none;
-}
-
-.graph-surface ::deep .graph-node-match .graph-node-core {
-    filter: drop-shadow(0 0 .55rem var(--mud-palette-warning));
-}
-
+.graph-surface ::deep .graph-node-glyph { font-family: var(--mud-typography-default-family); font-size: 10px; font-weight: 600; letter-spacing: -.02em; pointer-events: none; }
+.graph-surface ::deep .graph-node-match .graph-node-core { filter: drop-shadow(0 0 3px var(--mud-palette-warning)); }
 .graph-placeholder {
     z-index: 2;
     grid-area: 1 / 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: .65rem;
+    gap: 12px;
     min-width: 0;
-    padding: 1rem;
-    background: var(--mud-palette-background);
-    color: var(--mud-palette-text-secondary);
+    min-height: 0;
+    padding: 24px;
+    background: var(--module-graph-surface);
+    color: var(--module-workbench-muted-text, color-mix(in srgb, var(--mud-palette-text-secondary) 85%, var(--mud-palette-text-primary)));
+    font-family: var(--mud-typography-default-family);
+    font-size: 13px;
+    line-height: 1.65;
     text-align: center;
 }
-
-.graph-failed {
-    flex-direction: column;
-}
-
+.graph-failed { flex-direction: column; }
+.graph-failed > span { max-width: 30rem; }
+.graph-failed ::deep .mud-button-root { min-height: 36px; padding: 7px 14px; border-radius: 6px; box-shadow: none; font-size: 12px; font-weight: 500; text-transform: none; }
 @media (prefers-reduced-motion: reduce) {
     .graph-surface ::deep .graph-link,
     .graph-surface ::deep .graph-node,
     .graph-surface ::deep .graph-node-core,
-    .graph-surface ::deep .graph-node-halo {
-        transition: none;
-    }
-}
-
-@media (max-width: 700px) {
-    .dependency-graph-canvas,
-    .graph-surface,
-    .graph-surface ::deep svg {
-        min-height: 30rem;
-    }
-
-    .graph-surface ::deep .graph-node-label {
-        font-size: .64rem;
-    }
+    .graph-surface ::deep .graph-node-halo { transition: none; }
 }

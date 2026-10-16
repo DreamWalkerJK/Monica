@@ -1,0 +1,38 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.UIChat.Support
+@inject IStringLocalizer<AIResource> L
+
+<div class="execution-metrics" aria-label="@L["Workbench:Metrics"]">
+    <span title="@L["Workbench:Elapsed"]"><MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />@ChatExecutionPresentation.Duration(Elapsed)</span>
+    <span title="@L["Workbench:FirstToken"]">@L["Workbench:FirstTokenShort"] @ChatExecutionPresentation.Duration(FirstToken)</span>
+    <span title="@L["Workbench:InputTokens"]">↓ @ChatExecutionPresentation.Tokens(Input)</span>
+    <span title="@L["Workbench:OutputTokens"]">↑ @ChatExecutionPresentation.Tokens(Output)</span>
+    @if (Reasoning is { } reasoning)
+    {
+        <span title="@L["Workbench:ReasoningTokens"]"><MudIcon Icon="@Icons.Material.Outlined.Psychology" Size="Size.Small" />@ChatExecutionPresentation.Tokens(reasoning)</span>
+    }
+    <span title="@L["Workbench:SpeedHelp"]">@(Speed is { } speed ? $"{speed:0.0}" : "—") @L["Workbench:TokensPerSecond"]</span>
+    <span title="@L["Workbench:CacheHelp"]">@L["Workbench:Cache"] @(CacheRatio is { } ratio ? $"{ratio:P0}" : "—")</span>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<ChatExecutionStep> Steps { get; set; } = [];
+    private IReadOnlyList<ChatModelRequest> Requests { get; set; } = [];
+    private TokenUsage Usage { get; set; } = new();
+    protected override void OnParametersSet()
+    {
+        Requests = Steps.Where(step => step.Request is not null).Select(step => step.Request!).ToArray();
+        Usage = TokenUsage.Sum(Requests.Select(request => request.Usage ?? new TokenUsage()));
+    }
+    private TimeSpan? Elapsed => Steps.Count > 0 && Steps.All(step => step.CompletedAt.HasValue)
+        ? Steps.Max(step => step.CompletedAt!.Value) - Steps.Min(step => step.StartedAt) : null;
+    private TimeSpan? FirstToken => Requests.FirstOrDefault()?.TimeToFirstToken;
+    private int? Input => Usage.InputTokens;
+    private int? Output => Usage.OutputTokens;
+    private int? Reasoning => Usage.ReasoningTokens;
+    private double? CacheRatio => Usage.CachedInputRatio;
+    private double? Speed => Output is { } output && Requests.Count > 0
+        && Requests.All(request => request.GenerationDuration is { TotalSeconds: > 0 })
+        ? output / Requests.Sum(request => request.GenerationDuration!.Value.TotalSeconds) : null;
+}

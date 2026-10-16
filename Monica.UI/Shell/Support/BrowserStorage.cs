@@ -10,7 +10,6 @@ namespace Monica.UI.Shell.Support;
 /// </summary>
 public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger) : IBrowserStorage
 {
-    private const string KEY_PREFIX = "mo:";
     private const string MODULE_PATH = "./_content/Monica.UI/js/mo-browser-storage.js";
     private const string QUOTA_EXCEEDED_ERROR = "quota-exceeded";
     private const string STORAGE_UNAVAILABLE_ERROR = "storage-unavailable";
@@ -22,8 +21,6 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
 
     private readonly JsModuleSession _module = new(jsRuntime, MODULE_PATH);
 
-    private static string PrefixKey(string key) => $"{KEY_PREFIX}{key}";
-
     public async Task<T> GetAsync<T>(string key, T defaultValue, BrowserStorageType storageType = BrowserStorageType.Local)
     {
         try
@@ -31,7 +28,7 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
             var json = await _module.InvokeAsync<string?>(
                 "getItem",
                 GetStorageTypeName(storageType),
-                PrefixKey(key));
+                BrowserStorageKeys.GetPrefixedKey(key));
 
             if (string.IsNullOrEmpty(json))
                 return defaultValue;
@@ -76,7 +73,7 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
             var failureCode = await _module.InvokeAsync<string?>(
                 "trySetItem",
                 GetStorageTypeName(storageType),
-                PrefixKey(key),
+                BrowserStorageKeys.GetPrefixedKey(key),
                 json);
 
             var result = new BrowserStorageWriteResult(MapWriteFailure(failureCode));
@@ -108,7 +105,7 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
             await _module.InvokeVoidAsync(
                 "removeItem",
                 GetStorageTypeName(storageType),
-                PrefixKey(key));
+                BrowserStorageKeys.GetPrefixedKey(key));
         }
         catch (JSDisconnectedException)
         {
@@ -124,7 +121,7 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
     {
         try
         {
-            var prefix = $"{KEY_PREFIX}{category}:";
+            var prefix = BrowserStorageKeys.GetPrefixedKey($"{category}:");
             var keys = await _module.InvokeAsync<string[]>(
                 "getKeys",
                 GetStorageTypeName(storageType),
@@ -146,7 +143,7 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
     {
         try
         {
-            var prefix = $"{KEY_PREFIX}{category}:";
+            var prefix = BrowserStorageKeys.GetPrefixedKey($"{category}:");
             return await _module.InvokeAsync<int>(
                 "clearByPrefix",
                 GetStorageTypeName(storageType),

@@ -1,257 +1,157 @@
 @using System.Globalization
 @using Monica.ProjectUnits.Facades
-@using Monica.Core.Results;
+@using Monica.Core.Results
 @using Monica.ProjectUnits.Models
-
 @inject ProjectUnitsFacade ProjectUnitsFacade
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
 @inject IStringLocalizer<ProjectUnitsResource> L
-
 @implements IAsyncDisposable
 
-<div class="enum-info-viewer">
-    <div class="project-units-tab-section">
-        <MudStack Row="true"
-                  Justify="Justify.SpaceBetween"
-                  AlignItems="AlignItems.Center"
-                  Class="project-units-tab-section__header">
-            <div class="project-units-tab-section__identity">
-                <div class="project-units-tab-section__icon">
-                    <MudIcon Icon="@Icons.Material.Filled.DataObject" />
-                </div>
-                <div class="project-units-tab-section__copy">
-                    <MudText Typo="Typo.h6">@L["EnumInfoViewer:Header:Title"]</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="project-units-tab-section__description">
-                        @L["EnumInfoViewer:Header:Description"]
-                    </MudText>
-                </div>
-            </div>
-            <div class="project-units-tab-section__actions">
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           OnClick="LoadAllEnumsAsync"
-                           StartIcon="@Icons.Material.Filled.Refresh"
-                           Disabled="@_loading">
-                    @L["Shared:Actions:Refresh"]
-                </MudButton>
-            </div>
-        </MudStack>
-        <div class="project-units-tab-section__body">
-            <div class="enum-info-viewer__toolbar">
-                <div class="enum-info-viewer__search-input">
-                    <MudTextField T="string"
-                                  Value="@_searchText"
-                                  ValueChanged="OnSearchTextChanged"
-                                  Immediate="true"
-                                  Clearable="true"
-                                  Placeholder="@L["EnumInfoViewer:Search:Placeholder"]"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Search"
-                                  FullWidth="true"
-                                  Disabled="@(!_enumGroups.Any() && !_loading)" />
-                </div>
-                <div class="enum-info-viewer__toolbar-actions">
-                    @if (HasSearchQuery)
-                    {
-                        <MudChip T="string"
-                                 Variant="Variant.Outlined"
-                                 Color="@GetSearchSummaryColor()"
-                                 Icon="@Icons.Material.Filled.Search">
-                            @GetSearchSummary()
-                        </MudChip>
-                        <MudTooltip Text="@L["Shared:Actions:PreviousMatch"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward"
-                                           Color="Color.Primary"
-                                           Variant="Variant.Outlined"
-                                           OnClick="GoToPreviousMatchAsync"
-                                           Disabled="@(!HasSearchMatches)" />
-                        </MudTooltip>
-                        <MudTooltip Text="@L["Shared:Actions:NextMatch"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward"
-                                           Color="Color.Primary"
-                                           Variant="Variant.Outlined"
-                                           OnClick="GoToNextMatchAsync"
-                                           Disabled="@(!HasSearchMatches)" />
-                        </MudTooltip>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @L["EnumInfoViewer:Search:Hint"]
-                        </MudText>
-                    }
-                </div>
-            </div>
-
-            @if (_loading)
-            {
-                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
-            }
-
-            <MudGrid Class="enum-info-viewer__grid">
-                <MudItem xs="12" md="4">
-                    <MudPaper Class="enum-info-viewer__panel project-units-tool-card" Elevation="0" Outlined="true">
-                        <div class="enum-info-viewer__panel-header">
-                            <div class="enum-info-viewer__panel-title">@L["EnumInfoViewer:Panels:Assemblies"]</div>
-                            <div class="enum-info-viewer__panel-subtitle">@GetAssemblyPanelSummary()</div>
-                        </div>
-
-                        <div class="enum-info-viewer__panel-content" @ref="_assemblyContainer">
-                            @if (_enumGroups.Any())
-                            {
-                                @for (var assemblyIndex = 0; assemblyIndex < _enumGroups.Count; assemblyIndex++)
-                                {
-                                    var currentAssemblyIndex = assemblyIndex;
-                                    var group = _enumGroups[currentAssemblyIndex];
-
-                                    <div class="@GetAssemblyItemClass(currentAssemblyIndex)"
-                                         data-search-key="@GetAssemblySearchKey(currentAssemblyIndex)"
-                                         role="button"
-                                         tabindex="0"
-                                         @onclick="@(() => SelectAssembly(currentAssemblyIndex))"
-                                         @onkeydown="@((KeyboardEventArgs args) => HandleItemKeyDown(args, () => SelectAssembly(currentAssemblyIndex)))">
-                                        <div class="enum-info-viewer__item-top">
-                                            <div class="enum-info-viewer__item-title">
-                                                <MudHighlighter Text="@GetShortAssemblyName(group.From)"
-                                                                HighlightedTexts="@_searchTerms"
-                                                                Class="enum-info-viewer__highlight" />
-                                            </div>
-                                            <div class="enum-info-viewer__item-badge">@L.GetCountText(ProjectUnitsCountText.Enum, group.Enums.Count)</div>
-                                        </div>
-                                        @if (!string.IsNullOrWhiteSpace(group.From))
-                                        {
-                                            <div class="enum-info-viewer__assembly-full-name">
-                                                <MudHighlighter Text="@group.From"
-                                                                HighlightedTexts="@_searchTerms"
-                                                                Class="enum-info-viewer__highlight" />
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <MudAlert Severity="Severity.Info" Class="enum-info-viewer__empty">
-                                    @L["EnumInfoViewer:States:Empty"]
-                                </MudAlert>
-                            }
-                        </div>
-                    </MudPaper>
-                </MudItem>
-
-                <MudItem xs="12" md="4">
-                    <MudPaper Class="enum-info-viewer__panel project-units-tool-card" Elevation="0" Outlined="true">
-                        <div class="enum-info-viewer__panel-header">
-                            <div class="enum-info-viewer__panel-title">@L["EnumInfoViewer:Panels:Enums"]</div>
-                            <div class="enum-info-viewer__panel-subtitle">@GetEnumPanelSummary()</div>
-                        </div>
-
-                        <div class="enum-info-viewer__panel-content" @ref="_enumContainer">
-                            @if (SelectedAssembly is not null && _selectedAssemblyIndex is int selectedAssemblyIndex)
-                            {
-                                @for (var enumIndex = 0; enumIndex < SelectedAssembly.Enums.Count; enumIndex++)
-                                {
-                                    var currentEnumIndex = enumIndex;
-                                    var enumInfo = SelectedAssembly.Enums[currentEnumIndex];
-
-                                    <div class="@GetEnumItemClass(selectedAssemblyIndex, currentEnumIndex)"
-                                         data-search-key="@GetEnumSearchKey(selectedAssemblyIndex, currentEnumIndex)"
-                                         role="button"
-                                         tabindex="0"
-                                         @onclick="@(() => SelectEnum(selectedAssemblyIndex, currentEnumIndex))"
-                                         @onkeydown="@((KeyboardEventArgs args) => HandleItemKeyDown(args, () => SelectEnum(selectedAssemblyIndex, currentEnumIndex)))">
-                                        <div class="enum-info-viewer__item-top">
-                                            <div class="enum-info-viewer__item-title">
-                                                <MudHighlighter Text="@enumInfo.Name"
-                                                                HighlightedTexts="@_searchTerms"
-                                                                Class="enum-info-viewer__highlight" />
-                                            </div>
-                                            <div class="enum-info-viewer__item-badge">@L.GetCountText(ProjectUnitsCountText.EnumValue, enumInfo.Values.Count)</div>
-                                        </div>
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <MudAlert Severity="Severity.Info" Class="enum-info-viewer__empty">
-                                    @L["EnumInfoViewer:States:SelectAssembly"]
-                                </MudAlert>
-                            }
-                        </div>
-                    </MudPaper>
-                </MudItem>
-
-                <MudItem xs="12" md="4">
-                    <MudPaper Class="enum-info-viewer__panel project-units-tool-card" Elevation="0" Outlined="true">
-                        <div class="enum-info-viewer__panel-header">
-                            <div class="enum-info-viewer__panel-title">@L["EnumInfoViewer:Panels:Values"]</div>
-                            <div class="enum-info-viewer__panel-subtitle">@GetValuePanelSummary()</div>
-                        </div>
-
-                        <div class="enum-info-viewer__panel-content" @ref="_valueContainer">
-                            @if (SelectedEnum is not null
-                                && _selectedAssemblyIndex is int selectedAssemblyIndex
-                                && _selectedEnumIndex is int selectedEnumIndex)
-                            {
-                                <div class="enum-info-viewer__selected-enum">
-                                    <div class="enum-info-viewer__selected-enum-title">
-                                        <MudHighlighter Text="@SelectedEnum.Name"
-                                                        HighlightedTexts="@_searchTerms"
-                                                        Class="enum-info-viewer__highlight" />
-                                    </div>
-                                    <div class="enum-info-viewer__selected-enum-meta">
-                                        @L.GetCountText(ProjectUnitsCountText.EnumValue, SelectedEnum.Values.Count)
-                                    </div>
-                                </div>
-
-                                @for (var valueIndex = 0; valueIndex < SelectedEnum.Values.Count; valueIndex++)
-                                {
-                                    var currentValueIndex = valueIndex;
-                                    var value = SelectedEnum.Values[currentValueIndex];
-
-                                    <div class="@GetValueItemClass(selectedAssemblyIndex, selectedEnumIndex, currentValueIndex)"
-                                         data-search-key="@GetValueSearchKey(selectedAssemblyIndex, selectedEnumIndex, currentValueIndex)"
-                                         role="button"
-                                         tabindex="0"
-                                         @onclick="@(() => SelectValueMatch(selectedAssemblyIndex, selectedEnumIndex, currentValueIndex))"
-                                         @onkeydown="@((KeyboardEventArgs args) => HandleItemKeyDown(args, () => SelectValueMatch(selectedAssemblyIndex, selectedEnumIndex, currentValueIndex)))">
-                                        <div class="enum-info-viewer__item-top">
-                                            <div class="enum-info-viewer__item-title">
-                                                <MudHighlighter Text="@value.Name"
-                                                                HighlightedTexts="@_searchTerms"
-                                                                Class="enum-info-viewer__highlight" />
-                                            </div>
-                                            <div class="enum-info-viewer__value-index">
-                                                <MudHighlighter Text="@value.Index.ToString(CultureInfo.InvariantCulture)"
-                                                                HighlightedTexts="@_searchTerms"
-                                                                Class="enum-info-viewer__highlight" />
-                                            </div>
-                                        </div>
-                                        @if (!string.IsNullOrWhiteSpace(value.Description))
-                                        {
-                                            <div class="enum-info-viewer__item-description">
-                                                <MudHighlighter Text="@value.Description"
-                                                                HighlightedTexts="@_searchTerms"
-                                                                Class="enum-info-viewer__highlight" />
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <MudAlert Severity="Severity.Info" Class="enum-info-viewer__empty">
-                                    @L["EnumInfoViewer:States:SelectEnum"]
-                                </MudAlert>
-                            }
-                        </div>
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
+<section class="enum-info-viewer" @ref="_viewerContainer">
+    <header class="enum-info-viewer__heading">
+        <div>
+            <span class="enum-info-viewer__eyebrow">@L["EnumInfoViewer:Desk:Eyebrow"]</span>
+            <h1>@L["EnumInfoViewer:Header:Title"]</h1>
+            <p>@L["EnumInfoViewer:Header:Description"]</p>
         </div>
+        <div class="enum-info-viewer__refresh">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="LoadAllEnumsAsync"
+                       StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@_loading">@L["Shared:Actions:Refresh"]</MudButton>
+        </div>
+    </header>
+    <div class="enum-info-viewer__toolbar">
+        <div class="enum-info-viewer__search-input">
+            <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchTextChanged" Immediate="true" Clearable="true"
+                          Variant="Variant.Outlined" Label="@L["EnumInfoViewer:Desk:SearchLabel"]"
+                          Placeholder="@L["EnumInfoViewer:Search:Placeholder"]" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Outlined.Search" Disabled="@(_loading || _enumGroups.Count == 0)" />
+        </div>
+        <div class="enum-info-viewer__toolbar-actions">
+            <span class="enum-info-viewer__search-summary" role="status">@GetSearchSummary()</span>
+            <MudIconButton Icon="@Icons.Material.Outlined.ArrowUpward" aria-label="@L["Shared:Actions:PreviousMatch"]"
+                           OnClick="GoToPreviousMatchAsync" Disabled="@(_loading || !HasSearchMatches)" />
+            <MudIconButton Icon="@Icons.Material.Outlined.ArrowDownward" aria-label="@L["Shared:Actions:NextMatch"]"
+                           OnClick="GoToNextMatchAsync" Disabled="@(_loading || !HasSearchMatches)" />
+        </div>
+        <p>@L["EnumInfoViewer:Search:Hint"]</p>
     </div>
-</div>
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    @if (_loadError is not null)
+    {
+        <div class="enum-info-viewer__error" role="alert">@_loadError</div>
+    }
+    <nav class="enum-info-viewer__stages" aria-label="@L["EnumInfoViewer:Desk:StagesLabel"]">
+        <button type="button" disabled="@_interopFailed" @onclick="@(() => RevealPane(SearchSection.Assembly))">01 · @L["EnumInfoViewer:Panels:Assemblies"]</button>
+        <button type="button" disabled="@(_interopFailed || SelectedAssembly is null)" @onclick="@(() => RevealPane(SearchSection.Enum))">02 · @L["EnumInfoViewer:Panels:Enums"]</button>
+        <button type="button" disabled="@(_interopFailed || SelectedEnum is null)" @onclick="@(() => RevealPane(SearchSection.Value))">03 · @L["EnumInfoViewer:Panels:Values"]</button>
+    </nav>
+
+    <div class="enum-info-viewer__grid">
+        <section class="enum-info-viewer__panel enum-info-viewer__panel--assemblies">
+            <header class="enum-info-viewer__panel-header">
+                <span class="enum-info-viewer__stage-number">01</span>
+                <div><h3>@L["EnumInfoViewer:Panels:Assemblies"]</h3><p>@GetAssemblyPanelSummary()</p></div>
+            </header>
+            <div class="enum-info-viewer__panel-content" tabindex="0" aria-label="@L["EnumInfoViewer:Panels:Assemblies"]" @ref="_assemblyContainer">
+                @for (var assemblyIndex = 0; assemblyIndex < _enumGroups.Count; assemblyIndex++)
+                {
+                    var currentAssemblyIndex = assemblyIndex;
+                    var group = _enumGroups[currentAssemblyIndex];
+                    var itemClass = GetAssemblyItemClass(currentAssemblyIndex);
+                    <button type="button" class="@itemClass" data-search-key="@GetAssemblySearchKey(currentAssemblyIndex)"
+                            aria-pressed="@(_selectedAssemblyIndex == currentAssemblyIndex ? "true" : "false")"
+                            aria-current="@(itemClass.Contains("enum-info-viewer__item--current", StringComparison.Ordinal) ? "true" : null)"
+                            disabled="@_loading" @onclick="@(() => SelectAssembly(currentAssemblyIndex))">
+                        <span class="enum-info-viewer__item-top">
+                            <span class="enum-info-viewer__item-title"><MudHighlighter Text="@GetShortAssemblyName(group.From)" HighlightedTexts="@_searchTerms" Class="enum-info-viewer__highlight" /></span>
+                            <span class="enum-info-viewer__item-badge">@L.GetCountText(ProjectUnitsCountText.Enum, group.Enums.Count)</span>
+                        </span>
+                        @if (!string.IsNullOrWhiteSpace(group.From))
+                        {
+                            <span class="enum-info-viewer__assembly-full-name"><MudHighlighter Text="@group.From" HighlightedTexts="@_searchTerms" Class="enum-info-viewer__highlight" /></span>
+                        }
+                    </button>
+                }
+                @if (!_loading && _loadError is null && _enumGroups.Count == 0)
+                {
+                    <p class="enum-info-viewer__empty">@L["EnumInfoViewer:States:Empty"]</p>
+                }
+            </div>
+        </section>
+        <section class="enum-info-viewer__panel enum-info-viewer__panel--enums">
+            <header class="enum-info-viewer__panel-header">
+                <span class="enum-info-viewer__stage-number">02</span>
+                <div><h3>@L["EnumInfoViewer:Panels:Enums"]</h3><p>@GetEnumPanelSummary()</p></div>
+            </header>
+            <div class="enum-info-viewer__panel-content" tabindex="0" aria-label="@L["EnumInfoViewer:Panels:Enums"]" @ref="_enumContainer">
+                @if (SelectedAssembly is { } assembly && _selectedAssemblyIndex is int selectedAssemblyIndex)
+                {
+                    @for (var enumIndex = 0; enumIndex < assembly.Enums.Count; enumIndex++)
+                    {
+                        var currentEnumIndex = enumIndex;
+                        var enumInfo = assembly.Enums[currentEnumIndex];
+                        var itemClass = GetEnumItemClass(selectedAssemblyIndex, currentEnumIndex);
+                        <button type="button" class="@itemClass" data-search-key="@GetEnumSearchKey(selectedAssemblyIndex, currentEnumIndex)"
+                                aria-pressed="@(_selectedEnumIndex == currentEnumIndex ? "true" : "false")"
+                                aria-current="@(itemClass.Contains("enum-info-viewer__item--current", StringComparison.Ordinal) ? "true" : null)"
+                                disabled="@_loading" @onclick="@(() => SelectEnum(selectedAssemblyIndex, currentEnumIndex))">
+                            <span class="enum-info-viewer__item-top">
+                                <span class="enum-info-viewer__item-title"><MudHighlighter Text="@enumInfo.Name" HighlightedTexts="@_searchTerms" Class="enum-info-viewer__highlight" /></span>
+                                <span class="enum-info-viewer__item-badge">@L.GetCountText(ProjectUnitsCountText.EnumValue, enumInfo.Values.Count)</span>
+                            </span>
+                        </button>
+                    }
+                }
+                else
+                {
+                    <p class="enum-info-viewer__empty">@L["EnumInfoViewer:States:SelectAssembly"]</p>
+                }
+            </div>
+        </section>
+        <section class="enum-info-viewer__panel enum-info-viewer__panel--values">
+            <header class="enum-info-viewer__panel-header">
+                <span class="enum-info-viewer__stage-number">03</span>
+                <div><h3>@L["EnumInfoViewer:Panels:Values"]</h3><p>@GetValuePanelSummary()</p></div>
+            </header>
+            <div class="enum-info-viewer__panel-content" tabindex="0" aria-label="@L["EnumInfoViewer:Panels:Values"]" @ref="_valueContainer">
+                @if (SelectedEnum is { } selectedEnum && _selectedAssemblyIndex is int valueAssemblyIndex && _selectedEnumIndex is int valueEnumIndex)
+                {
+                    <div class="enum-info-viewer__selected-enum">
+                        <strong><MudHighlighter Text="@selectedEnum.Name" HighlightedTexts="@_searchTerms" Class="enum-info-viewer__highlight" /></strong>
+                        <span>@L.GetCountText(ProjectUnitsCountText.EnumValue, selectedEnum.Values.Count)</span>
+                        <p>@L["EnumInfoViewer:Desk:PositionHint"]</p>
+                    </div>
+                    @for (var valueIndex = 0; valueIndex < selectedEnum.Values.Count; valueIndex++)
+                    {
+                        var currentValueIndex = valueIndex;
+                        var value = selectedEnum.Values[currentValueIndex];
+                        var itemClass = GetValueItemClass(valueAssemblyIndex, valueEnumIndex, currentValueIndex);
+                        <button type="button" class="@itemClass" data-search-key="@GetValueSearchKey(valueAssemblyIndex, valueEnumIndex, currentValueIndex)"
+                                aria-current="@(itemClass.Contains("enum-info-viewer__item--current", StringComparison.Ordinal) ? "true" : null)"
+                                disabled="@_loading" @onclick="@(() => SelectValueMatch(valueAssemblyIndex, valueEnumIndex, currentValueIndex))">
+                            <span class="enum-info-viewer__item-top">
+                                <span class="enum-info-viewer__item-title"><MudHighlighter Text="@value.Name" HighlightedTexts="@_searchTerms" Class="enum-info-viewer__highlight" /></span>
+                                <span class="enum-info-viewer__value-index"><span>@L["EnumInfoViewer:Desk:Position"]</span><MudHighlighter Text="@value.Index.ToString(CultureInfo.InvariantCulture)" HighlightedTexts="@_searchTerms" Class="enum-info-viewer__highlight" /></span>
+                            </span>
+                            @if (!string.IsNullOrWhiteSpace(value.Description))
+                            {
+                                <span class="enum-info-viewer__item-description"><MudHighlighter Text="@value.Description" HighlightedTexts="@_searchTerms" Class="enum-info-viewer__highlight" /></span>
+                            }
+                        </button>
+                    }
+                }
+                else
+                {
+                    <p class="enum-info-viewer__empty">@L["EnumInfoViewer:States:SelectEnum"]</p>
+                }
+            </div>
+        </section>
+    </div>
+</section>
 
 @code {
     private readonly HashSet<int> _matchedAssemblyIndices = [];
@@ -259,8 +159,21 @@
     private readonly HashSet<(int AssemblyIndex, int EnumIndex, int ValueIndex)> _matchedValueIndices = [];
     private readonly List<SearchMatch> _searchMatches = [];
     private readonly List<SearchScrollRequest> _pendingScrollRequests = [];
+    private readonly SemaphoreSlim _jsGate = new(1, 1);
+    private readonly CancellationTokenSource _lifetime = new();
 
     private IJSObjectReference? _jsModule;
+    private IJSObjectReference? _scrollController;
+    private Task? _disposeTask;
+    private ElementReference _viewerContainer;
+    private CancellationToken _lifetimeToken;
+    private bool _disposed;
+    private bool _interopFailed;
+    private bool _loaded;
+    private bool _cancelPendingScroll;
+    private string? _loadError;
+    private SearchSection? _pendingFocusSection;
+    private long _scrollRevision;
     private ElementReference _assemblyContainer;
     private ElementReference _enumContainer;
     private ElementReference _valueContainer;
@@ -292,42 +205,103 @@
 
     private bool HasSearchMatches => _searchMatches.Count > 0;
 
+    protected override Task OnInitializedAsync()
+    {
+        _lifetimeToken = _lifetime.Token;
+        return LoadAllEnumsAsync();
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (_disposed || _interopFailed) return;
+        var acquired = false;
+        try
         {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./_content/Monica.Framework.UI/UIProjectUnits/enumInfoViewer.js");
-
-            await LoadAllEnumsAsync();
-            return;
-        }
-
-        if (_jsModule is null || _pendingScrollRequests.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var request in _pendingScrollRequests)
-        {
-            var container = request.Section switch
+            await _jsGate.WaitAsync(_lifetimeToken);
+            acquired = true;
+            if (_disposed) return;
+            if (_jsModule is null)
             {
-                SearchSection.Assembly => _assemblyContainer,
-                SearchSection.Enum => _enumContainer,
-                SearchSection.Value => _valueContainer,
-                _ => default
-            };
+                var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
+                    "./_content/Monica.Framework.UI/UIProjectUnits/enumInfoViewer.js");
+                if (_disposed)
+                {
+                    await module.DisposeAsync();
+                    return;
+                }
+                _jsModule = module;
+            }
+            if (_scrollController is null)
+            {
+                var controller = await _jsModule.InvokeAsync<IJSObjectReference>("createScrollController", _viewerContainer);
+                if (_disposed)
+                {
+                    await StopControllerAsync(controller);
+                    return;
+                }
+                _scrollController = controller;
+            }
 
-            await _jsModule.InvokeVoidAsync("scrollToMatch", container, request.SearchKey);
+            var requests = _pendingScrollRequests.ToArray();
+            _pendingScrollRequests.Clear();
+            var cancelPendingScroll = _cancelPendingScroll;
+            _cancelPendingScroll = false;
+            var focusSection = _pendingFocusSection;
+            _pendingFocusSection = null;
+            var revision = _scrollRevision;
+            if (cancelPendingScroll || requests.Length > 0)
+            {
+                await _scrollController.InvokeVoidAsync("cancelPending");
+            }
+            if (requests.Length > 0)
+            {
+                foreach (var request in requests)
+                {
+                    if (_disposed || revision != _scrollRevision) return;
+                    await _scrollController.InvokeVoidAsync("scrollToMatch", GetContainer(request.Section), request.SearchKey);
+                }
+            }
+            if (!_disposed && revision == _scrollRevision && focusSection is { } section)
+            {
+                await _scrollController.InvokeVoidAsync("revealPane", GetContainer(section));
+            }
         }
+        catch (OperationCanceledException) when (_lifetimeToken.IsCancellationRequested) { }
+        catch (JSDisconnectedException) { }
+        catch (JSException ex)
+        {
+            if (!_disposed)
+            {
+                _interopFailed = true;
+                Snackbar.Add(L["EnumInfoViewer:Desk:NavigationFailed", ex.Message], Severity.Error);
+                StateHasChanged();
+            }
+        }
+        finally
+        {
+            if (acquired) _jsGate.Release();
+        }
+    }
 
-        _pendingScrollRequests.Clear();
+    private ElementReference GetContainer(SearchSection section) => section switch
+    {
+        SearchSection.Assembly => _assemblyContainer,
+        SearchSection.Enum => _enumContainer,
+        SearchSection.Value => _valueContainer,
+        _ => default
+    };
+
+    private void RevealPane(SearchSection section)
+    {
+        if (_disposed) return;
+        _pendingFocusSection = section;
     }
 
     private async Task LoadAllEnumsAsync()
     {
+        if (_disposed || _loading) return;
         _loading = true;
+        _loadError = null;
         StateHasChanged();
 
         try
@@ -336,13 +310,16 @@
             var selectedEnumName = SelectedEnum?.Name;
 
             var result = await ProjectUnitsFacade.GetEnumInfoAsync();
+            if (_disposed) return;
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add(L["Shared:Messages:LoadFailed", error], Severity.Error);
+                _loadError = L["Shared:Messages:LoadFailed", error];
+                Snackbar.Add(_loadError, Severity.Error);
                 return;
             }
 
             _enumGroups = data ?? [];
+            _loaded = true;
 
             if (HasSearchQuery)
             {
@@ -355,17 +332,23 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add(L["Shared:Messages:LoadException", ex.Message], Severity.Error);
+            if (_disposed) return;
+            _loadError = L["Shared:Messages:LoadException", ex.Message];
+            Snackbar.Add(_loadError, Severity.Error);
         }
         finally
         {
-            _loading = false;
-            StateHasChanged();
+            if (!_disposed)
+            {
+                _loading = false;
+                StateHasChanged();
+            }
         }
     }
 
     private Task OnSearchTextChanged(string? value)
     {
+        if (_disposed || _loading) return Task.CompletedTask;
         _searchText = value ?? string.Empty;
         RebuildSearchMatches(selectFirstMatch: true);
         return Task.CompletedTask;
@@ -373,6 +356,8 @@
 
     private void SelectAssembly(int assemblyIndex)
     {
+        if (_disposed || _loading) return;
+        CancelPendingNavigation();
         _selectedAssemblyIndex = assemblyIndex;
         _selectedEnumIndex = null;
         SyncCurrentMatchFromSelection(SearchTargetType.Assembly, assemblyIndex, null, null);
@@ -380,6 +365,8 @@
 
     private void SelectEnum(int assemblyIndex, int enumIndex)
     {
+        if (_disposed || _loading) return;
+        CancelPendingNavigation();
         _selectedAssemblyIndex = assemblyIndex;
         _selectedEnumIndex = enumIndex;
         SyncCurrentMatchFromSelection(SearchTargetType.Enum, assemblyIndex, enumIndex, null);
@@ -387,6 +374,8 @@
 
     private void SelectValueMatch(int assemblyIndex, int enumIndex, int valueIndex)
     {
+        if (_disposed || _loading) return;
+        CancelPendingNavigation();
         _selectedAssemblyIndex = assemblyIndex;
         _selectedEnumIndex = enumIndex;
         SyncCurrentMatchFromSelection(SearchTargetType.Value, assemblyIndex, enumIndex, valueIndex);
@@ -394,7 +383,7 @@
 
     private Task GoToPreviousMatchAsync()
     {
-        if (!HasSearchMatches)
+        if (_disposed || _loading || !HasSearchMatches)
         {
             return Task.CompletedTask;
         }
@@ -406,7 +395,7 @@
 
     private Task GoToNextMatchAsync()
     {
-        if (!HasSearchMatches)
+        if (_disposed || _loading || !HasSearchMatches)
         {
             return Task.CompletedTask;
         }
@@ -416,23 +405,13 @@
         return Task.CompletedTask;
     }
 
-    private Task HandleItemKeyDown(KeyboardEventArgs args, Action action)
-    {
-        if (args.Key is "Enter" or " " or "Space" or "Spacebar")
-        {
-            action();
-        }
-
-        return Task.CompletedTask;
-    }
-
     private void RebuildSearchMatches(bool selectFirstMatch)
     {
         _matchedAssemblyIndices.Clear();
         _matchedEnumIndices.Clear();
         _matchedValueIndices.Clear();
         _searchMatches.Clear();
-        _pendingScrollRequests.Clear();
+        CancelPendingNavigation();
 
         _searchTerms = ParseSearchTerms(_searchText);
 
@@ -500,7 +479,7 @@
             return;
         }
 
-        _pendingScrollRequests.Clear();
+        CancelPendingNavigation();
         _pendingScrollRequests.Add(new SearchScrollRequest(SearchSection.Assembly, GetAssemblySearchKey(match.AssemblyIndex)));
 
         if (match.EnumIndex is int enumIndex)
@@ -537,6 +516,14 @@
         {
             _currentMatchIndex = matchedIndex;
         }
+    }
+
+    private void CancelPendingNavigation()
+    {
+        _pendingScrollRequests.Clear();
+        _pendingFocusSection = null;
+        _scrollRevision++;
+        _cancelPendingScroll = true;
     }
 
     private void RestoreSelection(string? selectedAssemblyFrom, string? selectedEnumName)
@@ -630,7 +617,7 @@
 
     private string GetAssemblyPanelSummary()
     {
-        if (!_enumGroups.Any())
+        if (!_loaded)
         {
             return L["EnumInfoViewer:Summaries:NotLoaded"];
         }
@@ -671,16 +658,6 @@
         }
 
         return L["EnumInfoViewer:Summaries:MatchProgress", _currentMatchIndex + 1, _searchMatches.Count];
-    }
-
-    private Color GetSearchSummaryColor()
-    {
-        if (!HasSearchQuery)
-        {
-            return Color.Default;
-        }
-
-        return HasSearchMatches ? Color.Success : Color.Warning;
     }
 
     private string GetAssemblyItemClass(int assemblyIndex)
@@ -765,11 +742,50 @@
         return parts.Length > 0 ? parts[0] : fullName;
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync() => new(_disposeTask ??= DisposeCoreAsync());
+
+    private async Task DisposeCoreAsync()
     {
-        if (_jsModule is not null)
+        if (_disposed) return;
+        _disposed = true;
+        _lifetime.Cancel();
+        _pendingScrollRequests.Clear();
+        _pendingFocusSection = null;
+        await _jsGate.WaitAsync();
+        try
         {
-            await _jsModule.DisposeAsync();
+            var controller = _scrollController;
+            var module = _jsModule;
+            _scrollController = null;
+            _jsModule = null;
+            try
+            {
+                if (controller is not null) await StopControllerAsync(controller);
+            }
+            finally
+            {
+                if (module is not null) await module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException) { }
+        finally
+        {
+            _jsGate.Release();
+            _jsGate.Dispose();
+            _lifetime.Dispose();
+        }
+    }
+
+    private static async ValueTask StopControllerAsync(IJSObjectReference controller)
+    {
+        try
+        {
+            await controller.InvokeVoidAsync("dispose");
+        }
+        catch (JSDisconnectedException) { }
+        finally
+        {
+            await controller.DisposeAsync();
         }
     }
 

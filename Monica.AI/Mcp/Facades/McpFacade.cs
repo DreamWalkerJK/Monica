@@ -100,6 +100,7 @@ public sealed class McpFacade
                 throw new KeyNotFoundException($"External MCP profile '{name}' was not found.");
             }
 
+            await catalog.InvalidateExternalEntriesAsync(ct);
             return await capabilityService.RemoveEntryOverrideAsync(AgentCapabilityKind.Mcp, name, ct);
         });
     }

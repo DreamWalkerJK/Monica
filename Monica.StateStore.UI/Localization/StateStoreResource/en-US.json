@@ -6,21 +6,18 @@
   },
   "Dashboard": {
     "PageTitle": "State Store Management",
-    "Eyebrow": "State Browser",
-    "Title": "State Store Management",
-    "Subtitle": "Inspect providers, browse keys, and verify state behavior without leaving the workspace.",
+    "Title": "State store",
     "Summary": {
-      "RegisteredProviders": "{0} providers online",
-      "DefaultProvider": "Default route: {0}",
-      "PatternProviders": "{0} browse-enabled",
-      "ExactOnlyProviders": "{0} exact-only"
+      "RegisteredProviders": "{0} registered providers",
+      "RegisteredProvider": "1 registered provider"
     },
     "Messages": {
       "NoProviders": "No StateStore Provider registered",
       "NoProvidersDescription": "Register at least one StateStore provider to unlock the browser workspace.",
-      "LoadProviderFailed": "Failed to load Provider: {0}",
-      "LoadingProviders": "Loading registered providers...",
-      "LoadingProvidersDescription": "Refreshing provider metadata and workspace capabilities."
+      "LoadProviderFailed": "Failed to load Provider: {0}"
+    },
+    "Actions": {
+      "Retry": "Retry"
     }
   },
   "ProviderList": {
@@ -48,6 +45,7 @@
   "ProviderDetail": {
     "Tabs": {
       "Overview": "Overview",
+      "Options": "Options",
       "ConfigOptions": "Configuration Options"
     },
     "ProviderTypes": {
@@ -85,53 +83,39 @@
     }
   },
   "KeyExplorer": {
-    "Rail": {
-      "Eyebrow": "Sources",
-      "Title": "Providers",
-      "Subtitle": "{0} providers available"
-    },
     "Workspace": {
-      "Eyebrow": "Browser",
       "ReadyTitle": "Ready to search",
       "ReadySubtitle": "Choose the query mode, enter a key or pattern, and search to inspect records in place.",
       "NoProviderTitle": "No provider selected",
-      "NoProviderSubtitle": "Refresh the provider list or register a StateStore provider to begin browsing.",
-      "ProviderSubtitle": "{0} using {1}"
+      "NoProviderSubtitle": "Refresh the provider list or register a StateStore provider to begin browsing."
     },
     "Detail": {
-      "Eyebrow": "Record Detail",
-      "EmptyTitle": "Select a provider",
-      "EmptySubtitle": "Choose a provider on the left to browse keys in the center and inspect a record here.",
-      "SelectKeyTitle": "Select a record",
-      "SelectKeySubtitle": "Choose a key in the browser pane to inspect its payload, TTL, status, and actions. Use the eye action on a provider card to view provider details.",
-      "SelectedKeySubtitle": "Inspect payload and operations for the active record.",
-      "PreviewTitle": "Value preview",
-      "PreviewReadyTitle": "Preview unavailable",
-      "PreviewReadySubtitle": "This provider can load values, but the active record has not been loaded yet.",
-      "EmptyValueSubtitle": "The record exists but currently stores an empty payload.",
-      "NoETag": "Unavailable",
+      "NoETag": "Not supplied",
       "TTLPermanent": "Permanent",
       "TTLUnavailable": "This provider cannot read TTL",
       "TTLUnknown": "Not loaded yet",
       "Labels": {
         "Provider": "Provider",
-        "Mode": "Mode",
-        "Key": "Key",
-        "Status": "Status",
         "ETag": "ETag",
         "TTL": "TTL"
-      }
+      },
+      "NotSupplied": "Not supplied",
+      "SelectedKeyLabel": "Selected key"
     },
     "Labels": {
       "KeyPattern": "Key Pattern (e.g., user:*, session:*)",
       "KeyName": "Key Name (Full Name)",
-      "ValuePreview": "Value Preview",
+      "ValuePreview": "Value",
       "SearchMode": "Search Mode",
       "ExactLookupMode": "Exact Lookup",
       "PatternSearchMode": "Pattern Scan",
       "DefaultProvider": "Default",
-      "ResultCount": "{0} records",
-      "SelectedCount": "{0} selected"
+      "SelectedCount": "{0} selected",
+      "ProviderScope": "Store",
+      "ShownMatched": "{0} shown / {1} matched",
+      "CompletedQuery": "Completed query",
+      "Keys": "Keys",
+      "SelectKey": "Select {0}"
     },
     "Placeholders": {
       "PatternSearch": "*",
@@ -140,35 +124,32 @@
     "Actions": {
       "Scan": "Scan",
       "Query": "Query",
-      "Create": "Create",
+      "Create": "Create key",
       "View": "View",
       "Edit": "Edit",
       "Delete": "Delete",
-      "DeleteSelected": "Delete Selected ({0})"
+      "DeleteSelected": "Delete Selected ({0})",
+      "ChooseKeys": "Choose a key",
+      "BackToKeys": "Back to keys",
+      "RefreshProviders": "Refresh providers"
     },
     "Messages": {
-      "FoundKeys": "Found {0} Keys",
-      "ShowingFirst": "(Showing first {0})",
-      "NoKeysFound": "No matching Keys found",
-      "NoKeysFoundHint": "Try a different pattern or switch the provider mode before searching again.",
+      "ShowingFirst": "Showing the first {0} matches. Refine the pattern to narrow the results.",
+      "NoKeysFound": "No matching keys found",
+      "NoKeysFoundHint": "Try a different pattern or switch the query mode before searching again.",
       "KeySaveSuccess": "Key saved successfully",
       "KeyCreateSuccess": "Key created successfully",
       "KeyDeleteSuccess": "Key deleted successfully",
       "KeyDeleteFailed": "Failed to delete Key: {0}",
-      "BatchDeleteFailed": "Failed to batch delete Keys: {0}",
-      "DeleteSuccess": "Deleted successfully",
-      "PatternSearchDescription": "Browse keys by pattern and keep the result list visible while you inspect records on the right.",
-      "ExactSearchDescription": "This provider supports direct exact-key lookup instead of pattern-based browsing.",
+      "PatternSearchDescription": "Scan matching keys. Refine the pattern to narrow the results.",
+      "ExactSearchDescription": "Look up a record using its complete key.",
       "ExactOnlyProvider": "Exact-key mode is required for this provider.",
       "MissingKeyTitle": "Record not found",
       "MissingKeyDescription": "No record was found for '{0}'.",
-      "ResultsLoadedHint": "Select a record to inspect it in the right-hand pane.",
-      "ValuePreviewUnavailableTitle": "Preview unavailable",
       "ValuePreviewUnavailable": "This provider cannot load a preview for the selected record.",
-      "CreateUnavailable": "Create is disabled for this provider or workspace.",
-      "EditUnavailable": "Edit is disabled for this provider or workspace.",
-      "DeleteUnavailable": "Delete is disabled for this provider or workspace.",
-      "BulkDeleteUnavailable": "Bulk delete is disabled for this provider or workspace."
+      "ValueRefreshFailed": "The write succeeded, but the value could not be reloaded. The retained input below is not a verified current value. {0}",
+      "PreviewRetainedTitle": "Retained input — reload not verified",
+      "ProviderSwitchCleanupFailed": "The store changed, but some previous work could not be retired cleanly: {0}"
     },
     "Statuses": {
       "SelectToInspect": "Select a record to inspect",
@@ -183,9 +164,9 @@
       "DeleteKeyCancel": "Cancel",
       "BatchDeleteTitle": "Batch Delete Keys",
       "BatchDeleteMessage": "Are you sure you want to delete {0} selected Keys?",
-      "BatchDeleteConfirm": "Delete All",
-      "ViewKeyTitle": "View Key: {0}",
-      "EditKeyTitle": "Edit Key: {0}"
+      "BatchDeleteConfirm": "Delete selected keys",
+      "ViewKeyTitle": "View value",
+      "EditKeyTitle": "Edit key"
     }
   },
   "KeyEditor": {
@@ -194,14 +175,15 @@
       "ETag": "ETag",
       "TTL": "TTL (seconds, 0 for permanent)",
       "TTLUnit": "seconds",
-      "JsonValue": "JSON Value",
-      "JsonHelperText": "Enter valid JSON value"
+      "JsonValue": "Value",
+      "JsonHelperText": "JSON is parsed; other input is stored as text."
     },
     "Actions": {
       "FormatJson": "Format JSON",
       "MinifyJson": "Minify JSON",
       "Cancel": "Cancel",
-      "Save": "Save"
+      "Save": "Save",
+      "Close": "Close"
     },
     "Messages": {
       "FormatFailed": "JSON formatting failed: {0}",
@@ -210,15 +192,15 @@
   },
   "KeyCreate": {
     "Dialogs": {
-      "Title": "Create Key"
+      "Title": "Create key"
     },
     "Labels": {
       "KeyName": "Key Name",
       "KeyNameRequired": "Please enter Key name",
       "TTL": "TTL (seconds, 0 for permanent)",
       "TTLUnit": "seconds",
-      "JsonValue": "JSON Value",
-      "JsonHelperText": "Enter valid JSON value"
+      "JsonValue": "Value",
+      "JsonHelperText": "JSON is parsed; other input is stored as text."
     },
     "Placeholders": {
       "KeyNameExample": "e.g., user:123, session:abc",
@@ -245,7 +227,9 @@
     }
   },
   "Service": {
-    "Labels": { "DefaultProvider": "default" },
+    "Labels": {
+      "DefaultProvider": "default"
+    },
     "Errors": {
       "ProviderList": "Failed to load registered providers",
       "ProviderNotFound": "Provider not found: {0}",
@@ -262,6 +246,10 @@
       "KeysDelete": "Failed to delete selected keys",
       "OperationDetail": "{0}: {1}"
     },
-    "Success": { "KeySaved": "Key saved successfully", "KeyDeleted": "Key deleted successfully", "KeysDeleted": "Deleted {0} keys" }
+    "Success": {
+      "KeySaved": "Key saved successfully",
+      "KeyDeleted": "Key deleted successfully",
+      "KeysDeleted": "Deleted {0} keys"
+    }
   }
 }

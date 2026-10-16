@@ -1,0 +1,11 @@
+.runtime-sample-detail { padding: 4px 4px 10px; color: var(--mud-palette-text-primary); }
+.runtime-detail-note { color: color-mix(in srgb, var(--mud-palette-text-secondary) 60%, var(--mud-palette-text-primary)); font-size: 12px; line-height: 1.8; margin-bottom: 20px; }
+.runtime-detail-identity { display: grid; gap: 16px; padding: 18px; border-radius: 8px; background: color-mix(in srgb, var(--mud-palette-background) 75%, var(--mud-palette-surface)); }
+.runtime-sample-detail dt { font-size: 11px; color: color-mix(in srgb, var(--mud-palette-text-secondary) 60%, var(--mud-palette-text-primary)); }
+.runtime-sample-detail dd { margin: 7px 0 0; font-family: var(--mo-font-family-mono); font-size: 12px; overflow-wrap: anywhere; }
+.runtime-sample-detail h3 { font-weight: 500; font-size: 15px; margin: 25px 0 6px; }
+.runtime-detail-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; margin-bottom: 22px; }
+.runtime-detail-values > div { min-width: 0; padding: 16px 0; border-bottom: 1px solid var(--mud-palette-lines-default); }
+.runtime-detail-values small { display: block; margin-top: 4px; font-size: 10px; }
+.runtime-detail-values code { color: inherit; background: none; padding: 0; font-size: inherit; }
+@media (max-width: 500px) { .runtime-detail-values { grid-template-columns: minmax(0, 1fr); } }

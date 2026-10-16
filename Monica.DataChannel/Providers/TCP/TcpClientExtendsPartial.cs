@@ -1,143 +1,72 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using Monica.DataChannel.Providers.TCP.Utils;
-using Monica.Tool.Extensions;
 
 namespace Monica.DataChannel.Providers.TCP;
 
 internal sealed partial class TcpClientExtends
 {
     private CancellationTokenSource? _source;
+    private Task? _runTask;
 
     internal void Init(TcpClientOptions metadata, ILogger logger)
     {
+        metadata.EnrichOrValidate();
+        ConnectionName = metadata.ClientAddress.Key;
         _source = new CancellationTokenSource();
-        var cancellationToken = _source.Token;
-        _ = Task.Factory.StartNew(
-            () => RunClientLoopAsync(metadata, logger, cancellationToken),
-            cancellationToken,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default).Unwrap();
+        _runTask = RunClientLoopAsync(metadata, logger, _source.Token);
     }
 
-    private async Task RunClientLoopAsync(
-        TcpClientOptions metadata,
-        ILogger logger,
-        CancellationToken cancellationToken)
+    private async Task RunClientLoopAsync(TcpClientOptions metadata, ILogger logger, CancellationToken cancellationToken)
     {
-        var reconnectCount = 0;
-        var connectionName = metadata.ClientAddress.Key;
-
         while (metadata.IsClient && !cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var address = metadata.ClientAddress.Value.Address
-                    ?? throw new InvalidOperationException("TCP client address is not configured.");
-
-                await ConnectAsync(
-                    metadata.ClientAddress.Key,
-                    address.Item2,
-                    address.Item1,
-                    logger,
-                    metadata.ClientAddress.Value.IsMainConnected,
-                    cancellationToken);
-
-                connectionName = ConnectionName ?? metadata.ClientAddress.Key;
-                _runtime.ReceiveClient(this, logger, cancellationToken);
+                var address = metadata.ClientAddress.Value.Address!;
+                var client = new TcpClient();
+                Client = client;
+                await client.ConnectAsync(address.Item1, address.Item2, cancellationToken);
+                ConnectionEpoch = Guid.NewGuid();
+                Connected = true;
+                IsMainThread = metadata.ClientAddress.Value.IsMainConnected;
+                _runtime.SetClient(ConnectionName!, this);
+                logger.LogInformation("TCP client {ConnectionName} connected to {Host}:{Port}.", ConnectionName, address.Item1, address.Item2);
+                await _runtime.ReceiveClientAsync(this, logger, cancellationToken);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (SocketException exception)
-            {
-                logger.LogError(exception, "TCP client {ConnectionName} failed to connect.", connectionName);
-            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { break; }
+            catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested) { break; }
             catch (Exception exception)
             {
-                logger.LogError(exception, "TCP client {ConnectionName} failed to initialize.", connectionName);
-                throw;
+                logger.LogWarning(exception, "TCP client {ConnectionName} disconnected; reconnecting after a delay.", ConnectionName);
             }
-
-            reconnectCount++;
-            logger.LogWarning(
-                "TCP client {ConnectionName} disconnected; reconnect attempt {ReconnectCount} will start after a delay.",
-                connectionName,
-                reconnectCount);
-            await Task.Delay(TcpConnectionRuntime.ReconnectDelay, cancellationToken);
-        }
-    }
-
-    private async Task ConnectAsync(
-        string connectionName,
-        int port,
-        string hostName,
-        ILogger logger,
-        bool isMainConnection,
-        CancellationToken cancellationToken)
-    {
-        if (_runtime.TryGetClient(connectionName, out var existingClient))
-        {
-            if (existingClient is not null && IsConnected(existingClient, logger))
+            finally
             {
-                return;
+                Connected = false;
+                Client?.Dispose();
+                Client = null;
             }
-
-            existingClient?.Client?.Dispose();
+            try { await Task.Delay(TcpConnectionRuntime.ReconnectDelay, cancellationToken); }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { break; }
         }
-
-        var client = new TcpClient();
-        await client.ConnectAsync(hostName, port, cancellationToken);
-
-        Client = client;
-        Connected = true;
-        IsMainThread = isMainConnection;
-        ConnectionName = connectionName;
-        _runtime.SetClient(connectionName, this);
-
-        logger.LogInformation(
-            "TCP client {ConnectionName} connected to {HostName}:{Port}.",
-            connectionName,
-            hostName,
-            port);
     }
 
-    private static bool IsConnected(TcpClientExtends connection, ILogger logger)
+    public async ValueTask DisposeAsync()
     {
+        var source = _source;
+        source?.Cancel();
+        Connected = false;
+        Client?.Dispose();
         try
         {
-            var socket = connection.Client?.Client;
-            if (socket is null || !connection.Connected)
-            {
-                return false;
-            }
-
-            if (!socket.Poll(0, SelectMode.SelectRead))
-            {
-                return true;
-            }
-
-            var buffer = new byte[1];
-            return socket.Receive(buffer, SocketFlags.Peek) != 0;
+            if (_runTask is not null) await _runTask;
         }
-        catch (Exception exception)
+        finally
         {
-            logger.LogDebug(exception, "TCP connection health check failed.");
-            return false;
-        }
-    }
-
-    public void Dispose()
-    {
-        _source.SafeCancelAndDispose();
-        _source = null;
-        Client?.Dispose();
-        Client = null;
-        Connected = false;
-        if (!IsServerConnection)
-        {
-            _runtime.UnregisterOutboundClient(this);
+            source?.Dispose();
+            _source = null;
+            Client = null;
+            if (!IsServerConnection) _runtime.UnregisterOutboundClient(this);
         }
     }
 }

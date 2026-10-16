@@ -1,146 +1,139 @@
+@using System.Globalization
 @using Monica.Profiling.RuntimeMetrics.Models
+@using Monica.Profiling.UIRuntimeMetrics.Support
 @inject IStringLocalizer<RuntimeMetricsResource> L
 
-<section class="runtime-trend-layout">
-    <article class="runtime-trend-panel runtime-trend-panel--chart">
-        <header class="runtime-trend-panel__header">
-            <div>
-                <MudText Typo="Typo.overline" Class="runtime-trend-eyebrow">@L["Trend:Eyebrow"]</MudText>
-                <MudText Typo="Typo.h6">@L["Trend:Title"]</MudText>
+<div class="runtime-evidence">
+    <section class="runtime-history" aria-labelledby="runtime-history-title">
+        <header class="runtime-section-header">
+            <div><span class="runtime-section-eyebrow">@L["Trend:Eyebrow"]</span><h2 id="runtime-history-title">@L["Trend:Title"]</h2><p>@L["Trend:Scope"]</p></div>
+            <div class="runtime-metric-controls">
+                <MudChipSet T="string" SelectedValues="_selectedMetrics" SelectedValuesChanged="OnMetricSelectionChanged" SelectionMode="SelectionMode.MultiSelection">
+                    <MudChip T="string" Value="@("cpu")" Color="Color.Primary">@L["Trend:Metrics:Cpu"]</MudChip>
+                    <MudChip T="string" Value="@("memory")" Color="Color.Primary">@L["Trend:Metrics:Memory"]</MudChip>
+                </MudChipSet>
             </div>
-            <MudChipSet T="string"
-                        SelectedValuesChanged="OnMetricSelectionChanged"
-                        SelectionMode="SelectionMode.MultiSelection">
-                <MudChip T="string" Value="@("cpu")" Default="true" Color="Color.Primary">@L["Trend:Metrics:Cpu"]</MudChip>
-                <MudChip T="string" Value="@("memory")" Default="true" Color="Color.Success">@L["Trend:Metrics:Memory"]</MudChip>
-            </MudChipSet>
         </header>
-
-        @if (TrendData?.DataPoints.Count > 1)
-        {
-            <div class="runtime-trend-chart" aria-label="@L["Trend:ChartAriaLabel"]">
-                <MudChart ChartType="ChartType.Line"
-                          ChartSeries="@_chartSeries"
-                          ChartLabels="@_timeLabels"
-                          Width="100%"
-                          Height="360px"
-                          ChartOptions="@_chartOptions" />
+        <div class="runtime-window">
+            <div><span>@L["Trend:Retained"]</span><strong data-window-count="@(TrendData is null ? null : Points.Count.ToString(CultureInfo.InvariantCulture))">@(TrendData is null ? L["Common:Unavailable"] : L["Trend:Capacity", Points.Count, TrendData.MaxHistoryPoints])</strong></div>
+            <div><span>@L["Trend:Window"]</span>
+                <strong>@WindowDuration</strong>
+                <small><time data-window-start datetime="@MachineTime(TrendData?.StartTime)" title="@FullLocalTime(TrendData?.StartTime)">@RuntimeMetricsDisplayFormatter.LocalTime(TrendData?.StartTime)</time><span aria-hidden="true"> → </span><time data-window-end datetime="@MachineTime(TrendData?.EndTime)" title="@FullLocalTime(TrendData?.EndTime)">@RuntimeMetricsDisplayFormatter.LocalTime(TrendData?.EndTime)</time></small>
             </div>
-        }
-        else if (!IsLoading)
+            <div><span>@L["Trend:CollectorInterval"]</span><strong data-sample-interval="@TrendData?.SampleIntervalMs">@(TrendData is null ? L["Common:Unavailable"] : L["Trend:Seconds", TrendData.SampleIntervalMs / 1000d])</strong></div>
+        </div>
+        @if (_selectedMetrics.Count == 0)
         {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Trend:Waiting"]</MudAlert>
+            <div class="runtime-history-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.ShowChart" /><h3>@L["Trend:NoSelectionTitle"]</h3><p>@L["Trend:NoSelection"]</p></div>
+        }
+        else if (Points.Count >= 2)
+        {
+            <div class="runtime-charts">
+                @if (_selectedMetrics.Contains("cpu"))
+                {
+                    <article class="runtime-history-chart" data-metric="cpu" data-unit="%" aria-label="@L["Trend:CpuChart"]">
+                        <header><h3>@L["Vitals:Cpu"]</h3><span>@L["Trend:UtcPercent"]</span></header>
+                        <RuntimeTrendPlot Points="Points" Metric="RuntimeTrendMetric.Cpu" SeriesLabel="@L["Trend:Series:Cpu"]" />
+                    </article>
+                }
+                @if (_selectedMetrics.Contains("memory"))
+                {
+                    <article class="runtime-history-chart" data-metric="memory" data-unit="MB" aria-label="@L["Trend:MemoryChart"]">
+                        <header><h3>@L["Vitals:WorkingSet"]</h3><span>@L["Trend:UtcMegabytes"]</span></header>
+                        <RuntimeTrendPlot Points="Points" Metric="RuntimeTrendMetric.WorkingSetMegabytes" SeriesLabel="@L["Trend:Series:WorkingSet"]" />
+                    </article>
+                }
+            </div>
         }
         else
         {
-            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
+            <div class="runtime-history-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.ShowChart" /><h3>@EmptyTitle</h3><p>@EmptyHelp</p></div>
         }
-    </article>
+        <p class="runtime-history-note">@L["Trend:MeasurementHelp"]</p>
+    </section>
 
-    <article class="runtime-trend-panel runtime-trend-panel--table">
-        <header class="runtime-trend-panel__header">
-            <div>
-                <MudText Typo="Typo.overline" Class="runtime-trend-eyebrow">@L["Recent:Eyebrow"]</MudText>
-                <MudText Typo="Typo.h6">@L["Recent:Title"]</MudText>
-            </div>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                @L["Recent:Count", Math.Min(TrendData?.DataPoints.Count ?? 0, 10)]
-            </MudChip>
-        </header>
-
-        @if (TrendData?.DataPoints.Count > 0)
+    <section class="runtime-sample-ledger" aria-labelledby="runtime-ledger-title">
+        <header class="runtime-section-header"><div><span class="runtime-section-eyebrow">@L["Recent:Eyebrow"]</span><h2 id="runtime-ledger-title">@L["Recent:Title"]</h2></div><p>@L["Recent:Scope"]</p></header>
+        @if (Points.Count > 0)
         {
-            <div class="runtime-table-scroll">
-                <MudSimpleTable Dense="true" Hover="true" FixedHeader="true">
-                    <thead>
-                        <tr>
-                            <th>@L["Recent:Columns:Time"]</th>
-                            <th>@L["Recent:Columns:Cpu"]</th>
-                            <th>@L["Recent:Columns:WorkingSet"]</th>
-                            <th>@L["Recent:Columns:GcHeap"]</th>
-                            <th>@L["Recent:Columns:Threads"]</th>
-                            <th>@L["Recent:Columns:GcTime"]</th>
-                            <th>@L["Recent:Columns:AllocationRate"]</th>
-                        </tr>
-                    </thead>
+            <div class="runtime-table-frame">
+                <MudSimpleTable Hover="true" Elevation="0">
+                    <thead><tr>
+                        <th scope="col">@L["Recent:Columns:Time"]</th><th scope="col">@L["Recent:Columns:Cpu"]</th>
+                        <th scope="col">@L["Recent:Columns:WorkingSet"]</th><th scope="col">@L["Recent:Columns:GcHeap"]</th>
+                        <th scope="col">@L["Recent:Columns:Threads"]</th><th scope="col">@L["Recent:Columns:GcTime"]</th>
+                        <th scope="col">@L["Recent:Columns:AllocationRate"]</th><th scope="col"><span class="runtime-visually-hidden">@L["Recent:Columns:Inspect"]</span></th>
+                    </tr></thead>
                     <tbody>
-                        @foreach (var point in TrendData.DataPoints.TakeLast(10).Reverse())
+                        @foreach (var point in VisiblePoints)
                         {
-                            <tr>
-                                <td class="diagnostic-value">@ProfilingDisplayFormatter.FormatLocalTime(point.Timestamp)</td>
-                                <td><span class="@ProfilingSeverityColorResolver.GetCpuClass(point.CpuUsagePercent)">@point.CpuUsagePercent.ToString("F1")%</span></td>
-                                <td>@point.WorkingSetMB.ToString("F1") MB</td>
-                                <td>@point.GcHeapSizeMB.ToString("F1") MB</td>
-                                <td>@point.ThreadCount</td>
-                                <td><span class="@ProfilingSeverityColorResolver.GetGcTimeClass(point.TimeInGcPercent)">@point.TimeInGcPercent.ToString("F1")%</span></td>
-                                <td>@ProfilingDisplayFormatter.FormatBytesPerSecond(point.AllocationRateBps)</td>
+                            <tr @key="point.Timestamp" data-sample-timestamp="@RuntimeMetricsDisplayFormatter.MachineTime(point.Timestamp)">
+                                <td data-label="@L["Recent:Columns:Time"]" class="runtime-sample-time"><time datetime="@RuntimeMetricsDisplayFormatter.MachineTime(point.Timestamp)">@RuntimeMetricsDisplayFormatter.LocalTime(point.Timestamp)</time></td>
+                                <td data-label="@L["Recent:Columns:Cpu"]">@RuntimeMetricsDisplayFormatter.Percent(point.CpuUsagePercent)</td>
+                                <td data-label="@L["Recent:Columns:WorkingSet"]">@RuntimeMetricsDisplayFormatter.Megabytes(point.WorkingSetMB)</td>
+                                <td data-label="@L["Recent:Columns:GcHeap"]">@RuntimeMetricsDisplayFormatter.Megabytes(point.GcHeapSizeMB)</td>
+                                <td data-label="@L["Recent:Columns:Threads"]">@point.ThreadCount</td>
+                                <td data-label="@L["Recent:Columns:GcTime"]">@RuntimeMetricsDisplayFormatter.Percent(point.TimeInGcPercent)</td>
+                                <td data-label="@L["Recent:Columns:AllocationRate"]">@RuntimeMetricsDisplayFormatter.ReportedAllocationRate(point.AllocationRateBps)</td>
+                                <td class="runtime-sample-action"><MudIconButton Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" Color="Color.Primary"
+                                    aria-label="@L["Recent:Inspect", RuntimeMetricsDisplayFormatter.MachineTime(point.Timestamp)]"
+                                    OnClick="@(() => InspectAsync(point))" Disabled="@(CapturedAt is null)" /></td>
                             </tr>
                         }
                     </tbody>
                 </MudSimpleTable>
             </div>
+            <footer class="runtime-ledger-footer"><span>@L["Recent:Range", FirstVisible, LastVisible, Points.Count]</span>
+                @if (PageCount > 1)
+                {
+                    <MudPagination Count="PageCount" Selected="_page" SelectedChanged="ChangePage" ShowFirstButton="true" ShowLastButton="true" Size="Size.Small" Color="Color.Primary" aria-label="@L["Recent:Pagination"]" />
+                }
+            </footer>
         }
         else
         {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Recent:Empty"]</MudAlert>
+            <div class="runtime-ledger-empty">@L["Recent:Empty"]</div>
         }
-    </article>
-</section>
+    </section>
+</div>
 
 @code {
     [Parameter] public RuntimeMetricsTrend? TrendData { get; set; }
     [Parameter] public bool IsLoading { get; set; }
-
-    private List<ChartSeries<double>> _chartSeries = [];
-    private string[] _timeLabels = [];
-    private bool _showCpu = true;
-    private bool _showMemory = true;
-    private readonly ChartOptions _chartOptions = new();
-
-    protected override void OnParametersSet() => UpdateChartData();
-
-    private void OnMetricSelectionChanged(IReadOnlyCollection<string> selectedValues)
+    /// <summary>Gets or sets the successful view capture time associated with these retained samples.</summary>
+    [Parameter] public DateTimeOffset? CapturedAt { get; set; }
+    /// <summary>Requests frozen sample inspection. The handler completes on dismissal so missing-trigger focus can be restored.</summary>
+    [Parameter] public EventCallback<RuntimeSampleEvidence> OnInspect { get; set; }
+    /// <summary>Restores focus to a stable page action when polling removes the inspected row before its dialog closes.</summary>
+    [Parameter] public EventCallback OnInspectTriggerRemoved { get; set; }
+    private const int PageSize = 12;
+    private int _page = 1;
+    private IReadOnlyCollection<string> _selectedMetrics = new[] { "cpu", "memory" };
+    private IReadOnlyList<RuntimeMetricsPoint> Points => TrendData?.DataPoints ?? [];
+    private int PageCount => Math.Max(1, (Points.Count + PageSize - 1) / PageSize);
+    private IEnumerable<RuntimeMetricsPoint> VisiblePoints => Points.Reverse().Skip((_page - 1) * PageSize).Take(PageSize);
+    private int FirstVisible => (_page - 1) * PageSize + 1;
+    private int LastVisible => Math.Min(_page * PageSize, Points.Count);
+    private string WindowDuration => TrendData?.StartTime is { } start && TrendData.EndTime is { } end
+        ? L["Trend:Seconds", (end - start).TotalSeconds] : L["Common:Unavailable"];
+    private string EmptyTitle => TrendData is null && IsLoading ? L["Common:LoadingValue"]
+        : TrendData?.MaxHistoryPoints == 0 ? L["Trend:NoRetentionTitle"]
+        : Points.Count == 1 ? L["Trend:SingleTitle"] : L["Trend:WaitingTitle"];
+    private string EmptyHelp => TrendData?.MaxHistoryPoints == 0 ? L["Trend:NoRetention"]
+        : TrendData?.MaxHistoryPoints == 1 ? L["Trend:SingleRetention"]
+        : Points.Count == 1 ? L["Trend:SingleWaiting"] : L["Trend:Waiting"];
+    protected override void OnParametersSet()
     {
-        _showCpu = selectedValues.Contains("cpu");
-        _showMemory = selectedValues.Contains("memory");
-        UpdateChartData();
+        _page = Math.Min(_page, PageCount);
     }
-
-    private void UpdateChartData()
+    private void OnMetricSelectionChanged(IReadOnlyCollection<string> selectedValues) => _selectedMetrics = selectedValues;
+    private void ChangePage(int value) => _page = Math.Clamp(value, 1, PageCount);
+    private static string? MachineTime(DateTime? timestamp) => timestamp is { } value ? RuntimeMetricsDisplayFormatter.MachineTime(value) : null;
+    private static string FullLocalTime(DateTime? timestamp) => RuntimeMetricsDisplayFormatter.LocalDateTime(timestamp is { } value ? new DateTimeOffset(value.ToUniversalTime()) : null);
+    private async Task InspectAsync(RuntimeMetricsPoint point)
     {
-        if (TrendData?.DataPoints is not { Count: >= 2 } dataPoints)
-        {
-            _chartSeries = [];
-            _timeLabels = [];
-            return;
-        }
-
-        var step = Math.Max(1, dataPoints.Count / 50);
-        var sampledData = dataPoints
-            .Where((_, index) => index % step == 0 || index == dataPoints.Count - 1)
-            .ToList();
-
-        _timeLabels = sampledData
-            .Select(point => ProfilingDisplayFormatter.FormatLocalTime(point.Timestamp))
-            .ToArray();
-
-        _chartSeries = [];
-        if (_showCpu)
-        {
-            _chartSeries.Add(new ChartSeries<double>
-            {
-                Name = L["Trend:Series:Cpu"],
-                Data = sampledData.Select(point => point.CpuUsagePercent).ToArray()
-            });
-        }
-
-        if (_showMemory)
-        {
-            _chartSeries.Add(new ChartSeries<double>
-            {
-                Name = L["Trend:Series:WorkingSet"],
-                Data = sampledData.Select(point => point.WorkingSetMB).ToArray()
-            });
-        }
+        if (CapturedAt is not { } capturedAt) return;
+        await OnInspect.InvokeAsync(new RuntimeSampleEvidence(point, capturedAt));
+        if (!VisiblePoints.Any(item => item.Timestamp == point.Timestamp)) await OnInspectTriggerRemoved.InvokeAsync();
     }
 }

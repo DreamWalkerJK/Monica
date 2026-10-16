@@ -1,0 +1,19 @@
+@using Monica.Framework.UI.UIEventBus.Models
+@using Monica.Framework.UI.UIEventBus.Support
+@using Monica.UI.Shared.Components.Dialogs
+@inject IStringLocalizer<EventBusResource> L
+
+<MudDialog>
+    <TitleContent><MoDialogHeading Text="@L["Registry:RemoveTitle"]" /></TitleContent>
+    <DialogContent><div class="subscription-remove"><p>@L["Registry:RemoveHelp"]</p><dl>
+        <div><dt>@L["SubscriptionDetail:Fields:SubscriptionId"]</dt><dd><code>@Subscription.SubscriptionId</code></dd></div>
+        <div><dt>@L["SubscriptionDetail:Fields:EventType"]</dt><dd><code>@Subscription.EventType</code></dd></div>
+        <div><dt>@L["SubscriptionDetail:Fields:TopicName"]</dt><dd><code>@Subscription.TopicName</code></dd></div>
+        <div><dt>@L["Registry:ProviderScope"]</dt><dd><code>@EventBusPresentation.KeyText(Subscription.ServiceKey, L)</code> · @L.GetSubscriptionScopeText(Subscription.Scope)</dd></div>
+    </dl><p>@L["Registry:RemoveListenerHelp"]</p></div></DialogContent>
+    <DialogActions><MudButton OnClick="() => MudDialog.Cancel()">@L["Registry:Cancel"]</MudButton><MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="() => MudDialog.Close(DialogResult.Ok(true))">@L["Registry:ConfirmRemove"]</MudButton></DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public SubscriptionViewModel Subscription { get; set; } = null!;
+}

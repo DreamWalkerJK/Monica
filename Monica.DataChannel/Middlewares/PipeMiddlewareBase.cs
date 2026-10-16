@@ -64,9 +64,9 @@ public abstract class PipelineInfoDisplayMiddlewareBase : PipelineMonitorMiddlew
     protected readonly ConcurrentDictionary<string, object> InfoDictionary = new();
 
     /// <summary>
-    /// Gets a read-only snapshot of the information dictionary.
+    /// Gets a read-only view of current information entries. Values may remain caller-owned and mutable.
     /// </summary>
-    /// <returns>A read-only view of the information dictionary.</returns>
+    /// <returns>A live read-only view. Management captures serialize values separately to detach their evidence.</returns>
     public IReadOnlyDictionary<string, object> GetInfoDictionary()
     {
         return InfoDictionary.AsReadOnly();

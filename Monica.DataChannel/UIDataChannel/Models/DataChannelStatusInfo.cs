@@ -9,9 +9,18 @@ public class DataChannelStatusInfo
     /// Channel ID
     /// </summary>
     public string Id { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the exact pipeline group ID; null or empty indicates ungrouped.</summary>
+    public string? GroupId { get; set; }
+
+    /// <summary>Gets or sets the UTC time of this channel's tracker capture.</summary>
+    public DateTime CapturedAt { get; set; }
+
+    /// <summary>Gets or sets shared observable retention capacity, including ordinary records.</summary>
+    public int MaxHistorySize { get; set; }
     
     /// <summary>
-    /// Configured middleware instances.
+    /// Detached captures of the configured middleware registrations.
     /// </summary>
     public List<PipelineComponentInfo> Middlewares { get; set; } = new();
     
@@ -41,12 +50,12 @@ public class DataChannelStatusInfo
     public bool IsInitializing { get; set; }
     
     /// <summary>
-    /// Indicates whether the channel has outstanding exceptions.
+    /// Indicates whether the captured history retains any exception records.
     /// </summary>
     public bool HasExceptions { get; set; }
     
     /// <summary>
-    /// Number of active exceptions in the channel.
+    /// Number of retained exception records; this is not an active failure count.
     /// </summary>
     public int ExceptionCount { get; set; }
     

@@ -64,21 +64,13 @@ public sealed class Mediator(
     {
         var handler = serviceProvider.GetRequiredService<IRequestHandler<TRequest, TResponse>>();
         var handlerType = handler.GetType();
-        var entryMethod = handlerType.GetInterfaceMap(typeof(IRequestHandler<TRequest, TResponse>)).TargetMethods.Single();
-        var readOnly = typeof(TRequest).IsDefined(typeof(ReadOnlyOperationAttribute), inherit: true)
-            || handlerType.IsDefined(typeof(ReadOnlyOperationAttribute), inherit: true)
-            || entryMethod.IsDefined(typeof(ReadOnlyOperationAttribute), inherit: true)
-            || readOnlyConventions.Any(convention => convention.IsReadOnly(typeof(TRequest)));
-        var transactionMode = (entryMethod.GetCustomAttribute<ExecutionTransactionAttribute>(inherit: true)
-            ?? handlerType.GetCustomAttribute<ExecutionTransactionAttribute>(inherit: true)
-            ?? typeof(TRequest).GetCustomAttribute<ExecutionTransactionAttribute>(inherit: true))?.Mode
-            ?? (readOnly ? ExecutionTransactionMode.None : ExecutionTransactionMode.Automatic);
+        var readOnly = readOnlyConventions.Any(convention => convention.IsReadOnly(typeof(TRequest)));
         var descriptor = ExecutionDescriptor.ForInterface<TRequest, TResponse>(
             MediatorExecutionPoints.Request,
             handlerType,
             typeof(IRequestHandler<TRequest, TResponse>),
             isBusinessOperation: true,
-            transactionMode: transactionMode);
+            transactionMode: readOnly ? ExecutionTransactionMode.None : ExecutionTransactionMode.Automatic);
 
         return await serviceProvider
             .GetRequiredService<IExecutionPipeline>()

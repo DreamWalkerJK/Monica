@@ -11,24 +11,22 @@ namespace Monica.AI.Facades;
 /// </summary>
 public sealed class ProviderFacade(IAIProviderFactory providerFactory)
 {
+    /// <summary>Returns current provider metadata without acquiring network clients.</summary>
     public IReadOnlyList<AIProviderInfo> GetProviders()
     {
         return providerFactory.GetAllProviderInfos();
     }
 
-    public Task<Res> TestProviderAsync(string providerId, CancellationToken ct = default)
+    /// <summary>Runs the provider's small inference connectivity check under a captured configuration lease.</summary>
+    public async Task<Res> TestProviderAsync(string providerId, CancellationToken ct = default)
     {
-        var provider = providerFactory.GetProvider(providerId);
+        using var lease = providerFactory.AcquireProvider(providerId);
+        var provider = lease?.Provider;
         if (provider == null)
         {
-            return Task.FromResult(Res.Fail($"Provider '{providerId}' not found"));
+            return Res.Fail($"Provider '{providerId}' not found");
         }
 
-        return TestProviderCoreAsync(provider, ct);
-    }
-
-    private static async Task<Res> TestProviderCoreAsync(IAIProvider provider, CancellationToken ct)
-    {
         try
         {
             await provider.TestConnectionAsync(ct);
@@ -36,13 +34,15 @@ public sealed class ProviderFacade(IAIProviderFactory providerFactory)
         }
         catch (Exception ex)
         {
-            return Res.Fail(ex.GetMessageRecursively());
+            return Res.Fail(lease!.RedactDiagnostic(ex.GetMessageRecursively()));
         }
     }
 
+    /// <summary>Sends a small inference request to one configured chat model.</summary>
     public async Task<Res> TestModelAsync(string providerId, string modelName, CancellationToken ct = default)
     {
-        var provider = providerFactory.GetProvider(providerId);
+        using var lease = providerFactory.AcquireProvider(providerId);
+        var provider = lease?.Provider;
         if (provider == null)
         {
             return Res.Fail($"Provider '{providerId}' not found");
@@ -66,26 +66,16 @@ public sealed class ProviderFacade(IAIProviderFactory providerFactory)
         }
         catch (Exception ex)
         {
-            return Res.Fail($"Model test failed: {ex.GetMessageRecursively()}");
+            return Res.Fail($"Model test failed: {lease!.RedactDiagnostic(ex.GetMessageRecursively())}");
         }
     }
 
-    public Res UpdateProviderSystemPrompt(string providerId, string? systemPrompt)
-    {
-        var provider = providerFactory.GetProvider(providerId);
-        if (provider == null)
-        {
-            return Res.Fail($"Provider '{providerId}' not found");
-        }
-
-        provider.UpdateSystemPrompt(systemPrompt);
-        return Res.Ok();
-    }
-
+    /// <summary>Lists remote models without inference or automatic configuration changes.</summary>
     public async Task<Res<IReadOnlyList<AIRemoteModelInfo>>> FetchRemoteModelsAsync(
         string providerId, CancellationToken ct = default)
     {
-        var provider = providerFactory.GetProvider(providerId);
+        using var lease = providerFactory.AcquireProvider(providerId);
+        var provider = lease?.Provider;
         if (provider == null)
         {
             return Res.Fail($"Provider '{providerId}' not found");
@@ -103,13 +93,14 @@ public sealed class ProviderFacade(IAIProviderFactory providerFactory)
         }
         catch (Exception ex)
         {
-            return Res.Fail(ex.GetMessageRecursively());
+            return Res.Fail(lease!.RedactDiagnostic(ex.GetMessageRecursively()));
         }
     }
 
+    /// <summary>Whether the configured protocol offers a remote model-list operation.</summary>
     public bool SupportsRemoteModelListing(string providerId)
     {
-        var provider = providerFactory.GetProvider(providerId);
+        var provider = providerFactory.GetProviderInfo(providerId);
         return provider?.SupportsRemoteModelListing ?? false;
     }
 
@@ -120,7 +111,8 @@ public sealed class ProviderFacade(IAIProviderFactory providerFactory)
     public async Task<Res<int>> ProbeEmbeddingDimensionsAsync(
         string providerId, string modelName, CancellationToken ct = default)
     {
-        var provider = providerFactory.GetProvider(providerId);
+        using var lease = providerFactory.AcquireProvider(providerId);
+        var provider = lease?.Provider;
         if (provider == null)
             return Res.Fail($"Provider '{providerId}' not found");
 
@@ -142,7 +134,7 @@ public sealed class ProviderFacade(IAIProviderFactory providerFactory)
         }
         catch (Exception ex)
         {
-            return Res.Fail($"Embedding probe failed: {ex.GetMessageRecursively()}");
+            return Res.Fail($"Embedding probe failed: {lease!.RedactDiagnostic(ex.GetMessageRecursively())}");
         }
     }
 }

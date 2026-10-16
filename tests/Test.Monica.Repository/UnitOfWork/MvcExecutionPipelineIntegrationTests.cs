@@ -22,9 +22,13 @@ namespace Test.Monica.Repository.UnitOfWork;
 public sealed class MvcExecutionPipelineIntegrationTests
 {
     [Theory]
+    [InlineData("GET", "direct", ExecutionTransactionMode.None)]
+    [InlineData("HEAD", "safe", ExecutionTransactionMode.None)]
+    [InlineData("OPTIONS", "safe", ExecutionTransactionMode.None)]
+    [InlineData("POST", "write", ExecutionTransactionMode.Automatic)]
     [InlineData("GET", "forced-write", ExecutionTransactionMode.Automatic)]
     [InlineData("POST", "orchestrate", ExecutionTransactionMode.None)]
-    public async Task ActionTransactionOverride_ShouldTakePrecedenceOverHttpConvention(string method, string route,
+    public async Task Action_WhenHttpConventionOrMethodOverrideApplies_ShouldSelectTransactionMode(string method, string route,
         ExecutionTransactionMode expected)
     {
         await using var application = await StartApplicationAsync();
@@ -236,6 +240,13 @@ internal sealed class DerivedRuntimeDirectController : DeclaredDirectController;
 [Route("execution-pipeline-test")]
 public sealed class MvcExecutionPipelineTestController(IMediator mediator) : ControllerBase
 {
+    [HttpHead("safe")]
+    [HttpOptions("safe")]
+    public IActionResult Safe() => Ok();
+
+    [HttpPost("write")]
+    public IActionResult Write() => Ok();
+
     [HttpGet("forced-write")]
     [ExecutionTransaction(ExecutionTransactionMode.Automatic)]
     public IActionResult ForcedWrite() => Ok();

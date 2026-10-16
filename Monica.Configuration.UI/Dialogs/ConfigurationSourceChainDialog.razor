@@ -1,11 +1,15 @@
 @using Monica.Configuration.UI.Localization
+@using Monica.UI.Shared.Components.Dialogs
 @inject ConfigurationFacade Facade
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
+@implements IAsyncDisposable
 
-<MudDialog>
+<MudDialog ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent><MoDialogHeading Text="@L["Sources:Chain:Title"]" /></TitleContent>
     <DialogContent>
+        <div class="configuration-source-chain">
         @if (_loading)
         {
             <MudProgressLinear Indeterminate="true" />
@@ -21,122 +25,169 @@
         else
         {
             <MudStack Spacing="2">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@_chain.ConfigurationPath</MudText>
+                <code class="configuration-source-chain-path">@_chain.ConfigurationPath</code>
                 @foreach (var value in _chain.Values)
                 {
-                    <MudPaper Outlined="true" Class="@SourceCardClass(value)">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                    <div class="@SourceCardClass(value)">
+                    <MudPaper Square="true" Elevation="0" Class="configuration-source-card">
+                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                             <MudStack Spacing="0">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudText Typo="Typo.subtitle2">@value.Source.DisplayName</MudText>
                                     @if (value.IsEffective)
                                     {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">@L["Sources:Effective"]</MudChip>
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined" Class="configuration-source-effective">@L["Sources:Effective"]</MudChip>
                                     }
                                     <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">@value.Source.PriorityIndex</MudChip>
                                 </MudStack>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@SourcePath(value.Source)</MudText>
+                                <code class="configuration-source-chain-path">@SourcePath(value.Source)</code>
                             </MudStack>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudChip T="string" Size="Size.Small" Color="@(value.Source.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined">
+                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined" Class="@(value.Source.IsWritable ? "configuration-source-writable" : null)">
                                     @(value.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
                                 </MudChip>
-                                @if (AllowSourceEdit && value.Source.IsWritable && value.Source.Kind == ConfigurationSourceKind.JsonFile)
+                                @if (CanEdit(value))
                                 {
                                     <MudTooltip Text="@L["Sources:Actions:EditSource"]">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                        <MudIconButton Icon="@Icons.Material.Outlined.Edit"
+                                                       aria-label="@L["Sources:Actions:EditSource"]"
                                                        Size="Size.Small"
-                                                       Color="Color.Primary"
+                                                       Color="Color.Default"
                                                        OnClick="() => EditSourceAsync(value)" />
                                     </MudTooltip>
                                 }
                             </MudStack>
                         </MudStack>
                         <MudDivider Class="my-2" />
-                        <MudText Typo="Typo.body2">@DisplayValue(value)</MudText>
+                        <p class="configuration-source-chain-value">@DisplayValue(value)</p>
                         @if (!value.Source.IsWritable && !string.IsNullOrWhiteSpace(value.Source.ReadOnlyReason))
                         {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@value.Source.ReadOnlyReason</MudText>
+                            <p class="configuration-source-chain-reason">@value.Source.ReadOnlyReason</p>
                         }
                     </MudPaper>
+                    </div>
                 }
             </MudStack>
         }
+        </div>
     </DialogContent>
     <DialogActions>
+        <div class="configuration-source-chain-actions">
         <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+            </div>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    /// <summary>Gets the locally discovered authoritative definition inspected by this native dialog.</summary>
     [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
+    /// <summary>Gets the schema node used by an explicitly permitted scalar source editor.</summary>
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
+    /// <summary>Gets an optional exact diagnostic path; it may inspect a path beyond the supplied ancestor schema.</summary>
     [Parameter] public LogicalPath? LogicalPath { get; set; }
+    /// <summary>Gets whether the caller permits editing writable JSON sources; the default is true.</summary>
+    /// <remarks>Diagnostic paths without an exact matching schema node remain inspectable and cannot be edited here.</remarks>
     [Parameter] public bool AllowSourceEdit { get; set; } = true;
 
+    private readonly ConfigurationOperationLifetime _operations = new();
+    private ConfigurationDefinition _definition = null!;
+    private ConfigurationNodeDefinition _node = null!;
+    private LogicalPath _path = null!;
+    private bool _allowSourceEdit;
     private ConfigurationSourceChain? _chain;
     private string? _error;
     private bool _loading = true;
+    private bool _editing;
+    private long _loadGeneration;
 
     protected override async Task OnInitializedAsync()
     {
+        // Native parameters define one frozen diagnostic target for this dialog's lifetime.
+        _definition = Definition;
+        _node = Node;
+        _path = LogicalPath ?? Node.RelativePath;
+        _allowSourceEdit = AllowSourceEdit;
         await LoadAsync();
     }
 
+    private bool CanEdit(ConfigurationSourceValue value) => !_operations.IsRetired && _allowSourceEdit
+        && _node.RelativePath.Equals(_path) && value.Source.IsWritable
+        && value.Source.Kind == ConfigurationSourceKind.JsonFile;
+
     private async Task LoadAsync()
     {
+        if (_operations.IsRetired) return;
+        var generation = ++_loadGeneration;
+        var definitionKey = _definition.DefinitionKey;
+        var path = _path;
         _loading = true;
-        var result = await Facade.GetSourceChainAsync(Definition.DefinitionKey, LogicalPath ?? Node.RelativePath);
-        if (result.IsFailed(out var error, out var chain))
+        try
         {
-            _error = error.Message;
+            await _operations.RunAsync(async token =>
+            {
+                var result = await Facade.GetSourceChainAsync(definitionKey, path);
+                token.ThrowIfCancellationRequested();
+                _operations.TryApply(() =>
+                {
+                    if (generation != _loadGeneration) return;
+                    if (result.IsFailed(out var error, out var chain)) _error = error.Message;
+                    else { _chain = chain; _error = null; }
+                    _loading = false;
+                });
+            });
         }
-        else
-        {
-            _chain = chain;
-            _error = null;
-        }
-
-        _loading = false;
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
     }
 
     private async Task EditSourceAsync(ConfigurationSourceValue value)
     {
-        var parameters = new DialogParameters<ConfigurationSourceValueEditDialog>();
-        parameters.Add(dialog => dialog.Definition, Definition);
-        parameters.Add(dialog => dialog.Node, Node);
-        parameters.Add(dialog => dialog.SourceValue, value);
-        var dialog = await DialogService.ShowAsync<ConfigurationSourceValueEditDialog>(L["Sources:Edit:Title"], parameters, new DialogOptions
+        if (!CanEdit(value) || _editing) return;
+        var definition = _definition;
+        var node = _node;
+        var capturedValue = value;
+        _editing = true; // Admission only; keep the native opener available for focus restoration.
+        try
         {
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true
-        });
-        var result = await dialog.Result;
-        if (result is { Canceled: false })
-        {
-            Snackbar.Add(L["Sources:Edit:Saved"], Severity.Success);
-            await LoadAsync();
+            await _operations.RunAsync(async _ =>
+            {
+                var parameters = new DialogParameters<ConfigurationSourceValueEditDialog>();
+                parameters.Add(dialog => dialog.Definition, definition);
+                parameters.Add(dialog => dialog.Node, node);
+                parameters.Add(dialog => dialog.SourceValue, capturedValue);
+                var result = await _operations.ShowDialogAsync(() => DialogService.ShowAsync<ConfigurationSourceValueEditDialog>(
+                    L["Sources:Edit:Title"], parameters, new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }));
+                if (_operations.IsRetired || result is not { Canceled: false, Data: ConfigurationMutationGroupApplyResult applied }) return;
+                var issues = applied.PostCommitIssues;
+                Snackbar.Add(applied.Status == ConfigurationMutationGroupApplyStatus.PartiallyApplied
+                        ? L["Group:PartiallyApplied"] : L["Sources:Edit:Saved"],
+                    issues.Count == 0 && applied.Status == ConfigurationMutationGroupApplyStatus.Applied ? Severity.Success : Severity.Warning);
+                await LoadAsync();
+                if (_operations.IsRetired || issues.Count == 0) return;
+                var issueParameters = new DialogParameters<ConfigurationPostCommitIssuesDialog>();
+                issueParameters.Add(dialog => dialog.Issues, issues);
+                await _operations.ShowDialogAsync(() => DialogService.ShowAsync<ConfigurationPostCommitIssuesDialog>(
+                    L["Dialogs:PostCommitIssues:Title"], issueParameters, ConfigurationPostCommitIssuesDialog.DefaultOptions));
+            });
         }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+        finally { _editing = false; }
     }
 
-    private string SourcePath(ConfigurationSourceDescriptor source)
-    {
-        return source.PhysicalPath ?? source.SourcePath ?? source.ProviderType;
-    }
+    private static string SourcePath(ConfigurationSourceDescriptor source) => source.PhysicalPath ?? source.SourcePath ?? source.ProviderType;
 
-    private string DisplayValue(ConfigurationSourceValue value)
-    {
-        return value.IsSensitive ? L["State:Value:Sensitive"] : value.DisplayValue ?? L["Value:States:Empty"];
-    }
+    private string DisplayValue(ConfigurationSourceValue value) => value.IsSensitive
+        ? L["State:Value:Sensitive"] : value.DisplayValue ?? L["Value:States:Empty"];
 
-    private static string SourceCardClass(ConfigurationSourceValue value)
-    {
-        return value.IsEffective ? "pa-3 configuration-source-card effective-source" : "pa-3 configuration-source-card";
-    }
+    private static string SourceCardClass(ConfigurationSourceValue value) => value.IsEffective
+        ? "configuration-source-card-shell effective-source" : "configuration-source-card-shell";
 
     private void Close()
     {
-        MudDialog.Close();
+        if (!_operations.IsRetired) MudDialog.Close();
     }
+
+    /// <summary>Closes and drains actual nested native results and in-flight source reads exactly once.</summary>
+    /// <remarks>Facade, dialog service and snackbar are borrowed; retirement never disposes them.</remarks>
+    public ValueTask DisposeAsync() => _operations.RetireAsync();
 }

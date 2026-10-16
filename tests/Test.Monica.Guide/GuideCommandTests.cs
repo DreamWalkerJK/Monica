@@ -201,11 +201,11 @@ public sealed class GuideCommandTests
     public async Task Runner_ReportsCorruptLedgerAsAStableUnhealthyJsonEnvelope()
     {
         var root = Path.Combine(Path.GetTempPath(), $"guide-corrupt-{Guid.NewGuid():N}");
-        var previousRoot = Environment.GetEnvironmentVariable("MONICA_GUIDE_DATA_ROOT");
         try
         {
-            Environment.SetEnvironmentVariable("MONICA_GUIDE_DATA_ROOT", root);
             var paths = new GuidePaths(root);
+            var environment = new FakeHostEnvironment(root, root, Path.Combine(root, "product"));
+            var productPaths = AgentProductPaths.ForCurrentUser(Product, environment);
             Directory.CreateDirectory(Path.GetDirectoryName(paths.GuideLedgerFile)!);
             await File.WriteAllTextAsync(
                 paths.GuideLedgerFile,
@@ -219,10 +219,12 @@ public sealed class GuideCommandTests
                 ["status", "--json"],
                 output,
                 error,
-                TestContext.Current.CancellationToken);
+                TestContext.Current.CancellationToken,
+                enginePaths: paths,
+                productPaths: productPaths);
+            Assert.True(exitCode == 3, $"Expected an unhealthy ledger report. Error output: {error}");
             using var document = JsonDocument.Parse(output.ToString());
 
-            Assert.Equal(3, exitCode);
             Assert.Equal("error", document.RootElement.GetProperty("status").GetString());
             Assert.Contains(
                 document.RootElement.GetProperty("checks").EnumerateArray(),
@@ -234,7 +236,6 @@ public sealed class GuideCommandTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("MONICA_GUIDE_DATA_ROOT", previousRoot);
             if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
         }
     }

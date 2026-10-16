@@ -1,94 +1,84 @@
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using Monica.Tool.Extensions;
 
 namespace Monica.DataChannel.Providers.TCP;
 
 internal sealed partial class TcpServerExtends
 {
+    private readonly object _taskLock = new();
+    private readonly HashSet<Task> _clientTasks = [];
     private CancellationTokenSource? _source;
+    private Task? _acceptTask;
     private string? _serverKey;
 
     internal void Init(TcpServerOptions metadata, ILogger logger)
     {
+        metadata.EnrichOrValidate();
+        if (!metadata.IsServer) return;
+        var address = metadata.ServerAddress.Value.Address!;
+        var listener = new TcpListener(IPAddress.Parse(address.Item1), address.Item2);
+        listener.Start(); // Binding is part of initialization, so failures reach the pipeline diagnostics.
+        Server = listener;
+        _serverKey = metadata.ServerAddress.Key;
+        _runtime.SetServer(_serverKey, this);
         _source = new CancellationTokenSource();
-        var cancellationToken = _source.Token;
-        _ = Task.Run(() => RunServerLoopAsync(metadata, logger, cancellationToken), cancellationToken);
+        _acceptTask = RunServerLoopAsync(listener, metadata, logger, _source.Token);
     }
 
-    private async Task RunServerLoopAsync(
-        TcpServerOptions metadata,
-        ILogger logger,
-        CancellationToken cancellationToken)
+    private async Task RunServerLoopAsync(TcpListener listener, TcpServerOptions metadata, ILogger logger, CancellationToken cancellationToken)
     {
-        var address = metadata.ServerAddress.Value.Address
-            ?? throw new InvalidOperationException("TCP server address is not configured.");
-
-        StartServer(metadata.ServerAddress.Key, address.Item2, address.Item1, logger);
-        var server = Server ?? throw new InvalidOperationException("TCP server listener is not initialized.");
-
-        while (metadata.IsServer && !cancellationToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
             TcpClient client;
-            try
+            try { client = await listener.AcceptTcpClientAsync(cancellationToken); }
+            catch (Exception) when (cancellationToken.IsCancellationRequested) { break; }
+            var remote = (IPEndPoint?)client.Client.RemoteEndPoint;
+            if (remote is null) { client.Dispose(); continue; }
+            var group = $"{metadata.ServerAddress.Key}:{GetNetworkGroup(remote.Address)}";
+            var name = $"{metadata.ServerAddress.Key}|{remote.Address}:{remote.Port}";
+            var connection = new TcpClientExtends(_runtime)
             {
-                client = await server.AcceptTcpClientAsync(cancellationToken);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                Client = client,
+                Connected = true,
+                ConnectionName = name
+            };
+            _runtime.RegisterServerClient(group, name, connection);
+            var task = RunConnectionAsync(connection, metadata, logger, cancellationToken);
+            lock (_taskLock) _clientTasks.Add(task);
+            _ = task.ContinueWith(completed =>
             {
-                break;
-            }
-
-            var remoteEndpoint = (IPEndPoint?)client.Client.RemoteEndPoint;
-            if (remoteEndpoint is null)
-            {
-                client.Dispose();
-                continue;
-            }
-
-            logger.LogInformation("Accepted TCP client {RemoteEndpoint}.", remoteEndpoint);
-            RegisterAcceptedClient(client, remoteEndpoint, metadata, logger, cancellationToken);
+                lock (_taskLock) _clientTasks.Remove(completed);
+            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
     }
 
-    private void RegisterAcceptedClient(
-        TcpClient client,
-        IPEndPoint remoteEndpoint,
-        TcpServerOptions metadata,
-        ILogger logger,
-        CancellationToken cancellationToken)
+    private async Task RunConnectionAsync(TcpClientExtends connection, TcpServerOptions metadata, ILogger logger, CancellationToken cancellationToken)
     {
-        var address = remoteEndpoint.Address.ToString();
-        var addressGroup = $"{metadata.ServerAddress.Key}:{GetNetworkGroup(remoteEndpoint.Address)}";
-        var connectionName = $"{metadata.ServerAddress.Key}|{address}:{remoteEndpoint.Port}";
-        var connection = new TcpClientExtends(_runtime)
+        using var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var heartbeat = RunHeartbeatAsync(connection, metadata.SendTime, logger, source.Token);
+        try
         {
-            Client = client,
-            Connected = true,
-            ConnectionName = connectionName
-        };
-        _runtime.RegisterServerClient(addressGroup, connectionName, connection);
-        _ = Task.Run(
-            () => _runtime.ReceiveServer(connection, logger, connectionName, ReceivedMsgEvent, cancellationToken),
-            cancellationToken);
-        _ = Task.Run(
-            () => _runtime.SendServerHeartbeatAsync(connection, logger, metadata.SendTime, cancellationToken),
-            cancellationToken);
+            await _runtime.ReceiveServerAsync(connection, logger, ReceivedMsgEvent, source.Token);
+        }
+        finally
+        {
+            source.Cancel();
+            connection.Client?.Dispose();
+            await heartbeat;
+        }
     }
 
-    private void StartServer(string key, int port, string host, ILogger logger)
+    private async Task RunHeartbeatAsync(TcpClientExtends connection, TimeSpan? interval, ILogger logger, CancellationToken cancellationToken)
     {
-        if (_runtime.TryGetServer(key, out var existingServer))
+        try { await _runtime.SendServerHeartbeatAsync(connection, logger, interval, cancellationToken); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception exception)
         {
-            existingServer?.Server?.Stop();
+            logger.LogWarning(exception, "TCP heartbeat failed for {ConnectionName}.", connection.ConnectionName);
+            connection.Connected = false;
+            connection.Client?.Dispose();
         }
-
-        Server = new TcpListener(IPAddress.Parse(host), port);
-        Server.Start();
-        _serverKey = key;
-        _runtime.SetServer(key, this);
-        logger.LogInformation("TCP listener {Key} started on {Host}:{Port}.", key, host, port);
     }
 
     private static string GetNetworkGroup(IPAddress address)
@@ -99,16 +89,26 @@ internal sealed partial class TcpServerExtends
             : Convert.ToHexString(bytes.AsSpan(0, Math.Min(8, bytes.Length)));
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _source.SafeCancelAndDispose();
-        _source = null;
+        var source = _source;
+        source?.Cancel();
         Server?.Stop();
-        Server = null;
-        if (_serverKey is { } serverKey)
+        if (_serverKey is { } key) _runtime.UnregisterServer(key, this);
+        try
         {
-            _runtime.UnregisterServer(serverKey, this);
+            if (_acceptTask is not null) await _acceptTask;
+            Task[] clients;
+            lock (_taskLock) clients = _clientTasks.ToArray();
+            await Task.WhenAll(clients);
+        }
+        finally
+        {
+            source?.Dispose();
+            _source = null;
+            _acceptTask = null;
             _serverKey = null;
+            Server = null;
         }
     }
 }

@@ -1,22 +1,23 @@
 {
   "Pages": {
     "UtilitiesToolbox": {
-      "Title": "实用工具箱"
+      "Title": "连接探测"
+    },
+    "TextTransform": {
+      "Title": "文本与 JSON"
     }
   },
   "Page": {
-    "DocumentTitle": "实用工具箱",
-    "Title": "实用工具箱",
-    "Subtitle": "在 Monica Shell 内直接完成连通性诊断，以及转义文本或 JSON 清洗，无需切换到外部工具。",
-    "Eyebrow": "运维助手"
+    "Title": "实用工具",
+    "Navigation": "实用工具工作区"
   },
   "Tabs": {
-    "Connectivity": "连通性探测",
+    "Connectivity": "连接探测",
     "TextJson": "文本与 JSON"
   },
   "Connectivity": {
-    "Title": "连通性探测",
-    "Subtitle": "从当前宿主机验证 DNS 解析、ICMP Ping 可达性、TCP 端口连通性，以及可选的 HTTP/HTTPS 应用响应情况。",
+    "Title": "连接探测",
+    "Subtitle": "从应用宿主机探测主机、端口或 HTTP 端点。",
     "TargetHost": "Host 或 IP",
     "TargetHostPlaceholder": "example.com 或 10.0.0.8",
     "ProbeKind": "探测类型",
@@ -25,8 +26,6 @@
     "Timeout": "超时（毫秒）",
     "Path": "HTTP 路径",
     "PathPlaceholder": "/health 或 /",
-    "AllowInvalidCertificate": "允许无效的 HTTPS 证书",
-    "AllowInvalidCertificateHelper": "适用于使用自签名证书的内网环境。常规 TLS 校验场景请保持关闭。",
     "HintPing": "Ping 模式适合先快速确认目标是否能收到 ICMP 回显，再决定是否继续做端口或应用层探测。",
     "HintTcp": "TCP 模式适合确认目标端口是否可达，以及链路或防火墙规则是否放通。",
     "HintHttp": "HTTP/HTTPS 模式会在传输层握手成功后继续验证应用是否有响应。",
@@ -35,14 +34,8 @@
     "Running": "正在执行探测...",
     "NoResultTitle": "还没有探测结果",
     "NoResultSubtitle": "输入目标 host 后发起探测，即可查看可达性、延迟和 HTTP 返回细节。",
-    "ResultTitle": "最近一次探测结果",
-    "ResultSubtitle": "网络失败本身也是有效诊断结果。这里会直接展示失败原因，而不是把它吞成泛化异常。",
-    "Succeeded": "探测成功",
-    "Failed": "探测失败",
-    "Endpoint": "目标端点",
     "StartedAt": "开始时间",
     "Duration": "总耗时",
-    "ResolvedAddresses": "解析地址",
     "ResolutionError": "解析信息",
     "PingTitle": "ICMP 回显",
     "TcpTitle": "TCP 握手",
@@ -67,18 +60,49 @@
     },
     "Summary": {
       "PingSucceeded": "对 {0} 的 Ping 已由 {1} 响应，耗时 {2} 毫秒。",
-      "PingFailed": "对 {0} 的 Ping 失败：{1}。",
+      "PingFailed": "对 {0} 的 Ping 失败：{1}",
       "TcpSucceeded": "已成功连接 TCP 端点 {0}，耗时 {1} 毫秒。",
-      "TcpFailed": "连接 TCP 端点 {0} 失败：{1}。",
+      "TcpFailed": "连接 TCP 端点 {0} 失败：{1}",
       "HttpSucceeded": "对 {0} 的 HTTP 探测返回 {1}，耗时 {2} 毫秒。",
-      "HttpFailed": "对 {0} 的 HTTP 探测失败：{1}。",
+      "HttpFailed": "对 {0} 的 HTTP 探测失败：{1}",
       "HttpResponse": "响应",
       "UnknownError": "未知错误"
-    }
+    },
+    "RequestTitle": "探测请求",
+    "ScopeNote": "从应用宿主机执行",
+    "TimeoutHelper": "超时适用于各项探测操作；总耗时可能更长。",
+    "SkipCertificateValidation": "跳过 HTTPS 证书校验",
+    "CertificateBypassHelper": "选中后，本次探测会跳过服务器证书校验。",
+    "CertificateBypassWarning": "本次请求将跳过证书校验。",
+    "LatestCompleted": "最近完成的探测",
+    "PreviousCompleted": "此前完成的探测",
+    "NoCompletedResult": "本次尝试没有完成结果",
+    "NoCompletedResultHelper": "请修正请求后重新探测。",
+    "RunningTarget": "正在探测 {0}…",
+    "EchoReceived": "已收到回显响应",
+    "PortReachable": "端口可达",
+    "HttpResponseReceived": "已收到 HTTP 响应",
+    "TransportFailed": "网络探测未成功完成",
+    "StageSucceeded": "成功",
+    "StageFailed": "失败",
+    "NotAttempted": "未执行",
+    "NotAvailable": "不可用",
+    "NoneReported": "未报告",
+    "AddressResolution": "地址解析",
+    "AddressResolved": "已报告地址",
+    "AddressResolutionFailed": "已报告解析信息",
+    "ProbeType": "探测类型",
+    "Host": "主机",
+    "EffectiveTimeout": "操作超时",
+    "TlsRequestOption": "HTTPS 请求选项",
+    "CertificateValidated": "启用证书校验",
+    "CertificateBypassed": "跳过证书校验",
+    "HttpErrorResponseNote": "端点返回 HTTP {0}；收到响应表示已成功建立联系，并非传输失败。",
+    "ErrorTitle": "请求未能完成"
   },
   "TextJson": {
-    "Title": "文本与 JSON 清洗",
-    "Subtitle": "解码 JSON 风格的转义字符，将 JSON 格式化为可读 Unicode 输出，或将其压缩为便于传输的紧凑格式。",
+    "Title": "文本与 JSON",
+    "Subtitle": "解码转义文本、格式化 JSON，或生成保留可读 Unicode 的紧凑 JSON。",
     "Input": "输入",
     "InputPlaceholder": "将转义文本或 JSON 粘贴到这里",
     "Output": "输出",
@@ -89,10 +113,7 @@
     "UseOutputAsInput": "将输出作为下一次输入",
     "Clear": "清空",
     "Hint": "格式化和压缩会保留可读的 Unicode 字符，不会把中文等内容重新写回 \\uXXXX。",
-    "NoOutputTitle": "还没有转换结果",
-    "NoOutputSubtitle": "粘贴转义文本或 JSON 后，执行上方任一操作即可查看结果。",
     "ResultTitle": "转换摘要",
-    "Operation": "操作",
     "InputLength": "输入长度",
     "OutputLength": "输出长度",
     "DecodePasses": "解码轮次",
@@ -109,17 +130,22 @@
       "FormattedWithLayers": "移除 {0} 层 JSON 字符串包装后，已将内容格式化为可读的 Unicode JSON。",
       "Minified": "已将 JSON 压缩为可读的 Unicode 内容。",
       "MinifiedWithLayers": "移除 {0} 层 JSON 字符串包装后，已将内容压缩为可读的 Unicode JSON。"
-    }
+    },
+    "OutputCurrent": "成功输出 · {0}",
+    "OutputPrevious": "上一次成功输出 · {0}",
+    "DraftChanged": "输入已在此结果生成后更改。",
+    "AttemptFailed": "上次转换失败 · {0}",
+    "AttemptDraftChanged": "此错误属于上次尝试的输入，该输入与当前草稿不同。",
+    "FailedOutputRetained": "失败的转换未替换此输出。",
+    "NoAcceptedOutput": "尚无成功输出",
+    "LengthUnits": "长度以 UTF-16 代码单元计。格式化和压缩会先去除输入两端空白。"
   },
   "Messages": {
-    "ProbeCompleted": "探测已完成。",
-    "ProbeFailed": "探测已经执行完成，但结果显示目标不可达或应用未响应。",
     "TransformCompleted": "转换已完成。",
     "OutputReused": "已将输出内容放回输入编辑器。"
   },
   "ServiceMessages": {
     "ConnectivityProbeFailed": "连通性探测失败：{0}",
     "TextTransformFailed": "文本转换失败：{0}"
-  },
-  "Common:Empty": "-"
+  }
 }

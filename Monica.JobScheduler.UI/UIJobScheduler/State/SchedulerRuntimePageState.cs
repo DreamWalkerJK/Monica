@@ -1,9 +1,11 @@
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Results;
 using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.UIJobScheduler.Abstractions;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.State;
 
@@ -33,6 +35,14 @@ internal sealed class SchedulerRuntimePageStateFactory(
 /// Owns one scheduler runtime snapshot, its optional worker-instance insight, authorization boundary, refresh
 /// loop, and async lifetime.
 /// </summary>
+/// <remarks>
+/// Concurrent refreshes join one authorization and read round. Core and optional registry evidence are accepted
+/// independently; a failed refresh retains the corresponding prior evidence and its acceptance time. Denied or
+/// failed authorization clears both evidence planes. Subscriber publication is owned separately from the shared
+/// read completion, allowing a subscriber to await another refresh without joining its own notification.
+/// Subscribers must not await initialization or retirement that is waiting for those subscribers to complete.
+/// A subscriber that requests another refresh must bound its reentry to avoid an unconditional feedback loop.
+/// </remarks>
 public sealed class SchedulerRuntimePageState : IAsyncDisposable
 {
     private readonly Func<CancellationToken, Task<Res<JobSchedulerRuntimeOverview>>> _loadOverview;
@@ -40,11 +50,12 @@ public sealed class SchedulerRuntimePageState : IAsyncDisposable
     private readonly IJobSchedulerWorkerInsightProvider? _workerInsight;
     private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _refreshInterval;
-    private readonly CancellationTokenSource _lifetimeCancellation = new();
-    private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private readonly SchedulerOperationLifetime _lifetime = new();
+    private TaskCompletionSource? _initialization;
+    private TaskCompletionSource? _refreshRead;
     private PeriodicTimer? _timer;
     private Task? _refreshLoop;
-    private int _disposed;
+    private bool _isLoading;
 
     internal SchedulerRuntimePageState(
         Func<CancellationToken, Task<Res<JobSchedulerRuntimeOverview>>> loadOverview,
@@ -70,6 +81,13 @@ public sealed class SchedulerRuntimePageState : IAsyncDisposable
     /// </summary>
     public JobSchedulerRuntimeOverview? Overview { get; private set; }
 
+    /// <summary>Gets whether a valid core snapshot, including an empty owner inventory, has been accepted.</summary>
+    public bool HasLoadedSnapshot { get; private set; }
+
+    /// <summary>Gets whether the latest core read or authorization provider failed.</summary>
+    /// <remarks>A failed or null result remains explicit even when it supplies no diagnostic message.</remarks>
+    public bool IsQueryFailed { get; private set; }
+
     /// <summary>
     /// Gets the latest worker-instance insight; empty until a provider-backed refresh succeeds.
     /// </summary>
@@ -80,14 +98,26 @@ public sealed class SchedulerRuntimePageState : IAsyncDisposable
     /// </summary>
     public bool HasWorkerInsight => _workerInsight is not null;
 
+    /// <summary>Gets whether a valid optional registry list, including an empty one, has been accepted.</summary>
+    /// <remarks>A missing provider does not constitute a successful empty registry read.</remarks>
+    public bool HasLoadedWorkerInsight { get; private set; }
+
+    /// <summary>Gets whether the latest configured registry read failed or returned no list.</summary>
+    public bool IsWorkerInsightFailed { get; private set; }
+
+    /// <summary>Gets when the independently accepted registry list was observed by this session.</summary>
+    /// <remarks>Core refreshes and failed registry reads do not advance this time or reclassify retained rows.</remarks>
+    public DateTimeOffset? WorkerInsightObservedAtUtc { get; private set; }
+
     /// <summary>
     /// Gets the most recent worker-insight load failure while preserving any prior instance list.
     /// </summary>
     public string? WorkerInsightError { get; private set; }
 
     /// <summary>
-    /// Gets whether the first access check completed.
+    /// Gets whether the latest access provider returned a decision, including denial.
     /// </summary>
+    /// <remarks>An access provider fault sets this to false and clears inaccessible evidence.</remarks>
     public bool AccessChecked { get; private set; }
 
     /// <summary>
@@ -98,7 +128,7 @@ public sealed class SchedulerRuntimePageState : IAsyncDisposable
     /// <summary>
     /// Gets whether a refresh currently owns the facade boundary.
     /// </summary>
-    public bool IsLoading { get; private set; }
+    public bool IsLoading => !IsDisposed && _isLoading;
 
     /// <summary>
     /// Gets the most recent runtime load failure while preserving any prior snapshot.
@@ -106,104 +136,202 @@ public sealed class SchedulerRuntimePageState : IAsyncDisposable
     public string? Error { get; private set; }
 
     /// <summary>
-    /// Gets when the latest snapshot was accepted.
+    /// Gets when the latest valid core snapshot was accepted by this session.
     /// </summary>
+    /// <remarks>Use <see cref="JobSchedulerRuntimeOverview.CapturedAtUtc"/> for owner-observation freshness.
+    /// A failed refresh retains this acceptance time; lost access clears it.</remarks>
     public DateTimeOffset? LastRefreshedUtc { get; private set; }
 
     /// <summary>
-    /// Performs the first access-checked load and starts automatic refresh when enabled.
+    /// Performs one shared first load and starts one automatic refresh loop when the interval is positive.
     /// </summary>
-    public async Task InitializeAsync()
+    /// <remarks>Repeated initialization joins its original completion, including a fault. A nonpositive interval
+    /// disables automatic refresh. Subscribers are published before the loop starts.</remarks>
+    /// <exception cref="OperationCanceledException">The session has retired or an admitted read is canceled.</exception>
+    public Task InitializeAsync() => _lifetime.RunAsync(JoinInitializationAsync);
+
+    private Task JoinInitializationAsync(CancellationToken token)
     {
-        ThrowIfDisposed();
-        await RefreshAsync();
-        if (_refreshInterval > TimeSpan.Zero && !IsDisposed)
+        TaskCompletionSource? completion = null;
+        var startsInitialization = false;
+        if (!_lifetime.TryApply(() =>
+            {
+                if (_initialization is null)
+                {
+                    _initialization = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                    startsInitialization = true;
+                }
+                completion = _initialization;
+            })) throw new OperationCanceledException(token);
+        return startsInitialization ? CompleteInitializationAsync(completion!, token) : completion!.Task;
+    }
+
+    private async Task CompleteInitializationAsync(TaskCompletionSource completion, CancellationToken token)
+    {
+        try
         {
-            _timer = new PeriodicTimer(_refreshInterval, _timeProvider);
-            _refreshLoop = RunRefreshLoopAsync(_timer, _lifetimeCancellation.Token);
+            await RefreshAsync();
+            token.ThrowIfCancellationRequested();
+            if (_refreshInterval > TimeSpan.Zero)
+            {
+                var timer = new PeriodicTimer(_refreshInterval, _timeProvider);
+                if (!_lifetime.TryApply(() => _timer = timer))
+                {
+                    timer.Dispose();
+                    throw new OperationCanceledException(token);
+                }
+
+                // Initialization owns publication of this task until retirement can safely observe it.
+                _refreshLoop = _lifetime.RunAsync(loopToken => RunRefreshLoopAsync(timer, loopToken));
+            }
+            completion.TrySetResult();
         }
+        catch (OperationCanceledException exception) { completion.TrySetCanceled(exception.CancellationToken); }
+        catch (Exception exception) { completion.TrySetException(exception); }
+        await completion.Task;
     }
 
     /// <summary>
     /// Re-evaluates authorization and refreshes the runtime snapshot and optional worker insight.
     /// </summary>
-    public async Task RefreshAsync()
+    /// <remarks>Overlapping calls share the actual reads. The initiating call also awaits its loading and final
+    /// notifications; joiners await the read completion. Every notification remains owned until retirement drains it.
+    /// Each authorized round attempts both producers independently. Provider faults become panel diagnostics;
+    /// subscriber faults remain observable to the initiating caller.</remarks>
+    /// <exception cref="OperationCanceledException">The session has retired or an admitted read is canceled.</exception>
+    public Task RefreshAsync() => _lifetime.RunAsync(JoinRefreshAsync);
+
+    private Task JoinRefreshAsync(CancellationToken token)
     {
-        var cancellationToken = _lifetimeCancellation.Token;
-        await _refreshGate.WaitAsync(cancellationToken);
+        TaskCompletionSource? completion = null;
+        var startsRead = false;
+        if (!_lifetime.TryApply(() =>
+            {
+                if (_refreshRead is null)
+                {
+                    _refreshRead = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _isLoading = true;
+                    startsRead = true;
+                }
+                completion = _refreshRead;
+            })) throw new OperationCanceledException(token);
+        return startsRead ? CompleteRefreshAsync(completion!, token) : completion!.Task;
+    }
+
+    private async Task CompleteRefreshAsync(TaskCompletionSource completion, CancellationToken token)
+    {
+        // A loading subscriber can join this read. Awaiting it before producing the read would deadlock.
+        var loadingNotification = _lifetime.RunAsync(_ => NotifyChangedAsync());
+        Exception? readFailure = null;
         try
         {
-            ThrowIfDisposed();
-            IsLoading = true;
-            await NotifyChangedAsync();
-
-            IsAuthorized = await _authorize(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            AccessChecked = true;
-            if (!IsAuthorized)
-            {
-                Overview = null;
-                Workers = [];
-                WorkerInsightError = null;
-                Error = null;
-                return;
-            }
-
-            var result = await _loadOverview(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (result.IsFailed(out var error, out var overview))
-            {
-                Error = error.Message;
-                return;
-            }
-
-            Overview = overview;
-            Error = null;
-            LastRefreshedUtc = _timeProvider.GetUtcNow();
-            await RefreshWorkerInsightAsync(cancellationToken);
+            await ReadAsync(token);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
+        catch (Exception exception) { readFailure = exception; }
         finally
         {
-            if (!IsDisposed)
-            {
-                IsLoading = false;
-                await NotifyChangedAsync();
-            }
+            if (!_lifetime.TryApply(() =>
+                {
+                    _refreshRead = null;
+                    _isLoading = false;
+                }) && readFailure is null) readFailure = new OperationCanceledException(token);
+            if (readFailure is OperationCanceledException canceled)
+                completion.TrySetCanceled(canceled.CancellationToken);
+            else if (readFailure is not null) completion.TrySetException(readFailure);
+            else completion.TrySetResult();
+        }
 
-            _refreshGate.Release();
+        var failures = new List<Exception>();
+        OperationCanceledException? cancellation = null;
+        await ObserveAsync(completion.Task);
+        await ObserveAsync(loadingNotification);
+        if (!token.IsCancellationRequested) await ObserveAsync(NotifyChangedAsync());
+        if (failures.Count != 0) ThrowFailures(failures);
+        if (cancellation is not null) ExceptionDispatchInfo.Capture(cancellation).Throw();
+
+        async Task ObserveAsync(Task task)
+        {
+            try { await task; }
+            catch (OperationCanceledException exception) when (token.IsCancellationRequested)
+            {
+                cancellation ??= exception;
+            }
+            catch (Exception exception) { failures.Add(exception); }
         }
     }
 
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    private async Task ReadAsync(CancellationToken token)
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        bool authorized;
+        try
         {
+            authorized = await _authorize(token);
+            token.ThrowIfCancellationRequested();
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception)
+        {
+            token.ThrowIfCancellationRequested();
+            Apply(() =>
+            {
+                ClearEvidence();
+                AccessChecked = false;
+                IsAuthorized = false;
+                IsQueryFailed = true;
+                Error = exception.Message;
+            }, token);
             return;
         }
 
-        Changed = null;
-        await _lifetimeCancellation.CancelAsync();
-        _timer?.Dispose();
-        if (_refreshLoop is not null)
+        Apply(() =>
         {
-            await _refreshLoop;
-        }
+            AccessChecked = true;
+            IsAuthorized = authorized;
+            if (!authorized) ClearEvidence();
+        }, token);
+        if (!authorized) return;
 
-        await _refreshGate.WaitAsync();
-        _refreshGate.Release();
-        _refreshGate.Dispose();
-        _lifetimeCancellation.Dispose();
+        await RefreshOverviewAsync(token);
+        await RefreshWorkerInsightAsync(token);
     }
 
-    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+    private async Task RefreshOverviewAsync(CancellationToken token)
+    {
+        try
+        {
+            var result = await _loadOverview(token);
+            token.ThrowIfCancellationRequested();
+            if (result.IsFailed(out _, out var overview))
+            {
+                Apply(() => { IsQueryFailed = true; Error = result.Message; }, token);
+                return;
+            }
+            if (overview is null)
+            {
+                Apply(() => { IsQueryFailed = true; Error = null; }, token);
+                return;
+            }
+            var observedAt = _timeProvider.GetUtcNow();
+            Apply(() =>
+            {
+                Overview = overview;
+                HasLoadedSnapshot = true;
+                IsQueryFailed = false;
+                Error = null;
+                LastRefreshedUtc = observedAt;
+            }, token);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception)
+        {
+            token.ThrowIfCancellationRequested();
+            Apply(() => { IsQueryFailed = true; Error = exception.Message; }, token);
+        }
+    }
 
     // Worker insight is an optional enrichment: its failure degrades only its own panel and never the runtime
     // snapshot that the rest of the page renders.
-    private async Task RefreshWorkerInsightAsync(CancellationToken cancellationToken)
+    private async Task RefreshWorkerInsightAsync(CancellationToken token)
     {
         if (_workerInsight is null)
         {
@@ -212,19 +340,71 @@ public sealed class SchedulerRuntimePageState : IAsyncDisposable
 
         try
         {
-            Workers = await _workerInsight.GetWorkerInstancesAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            WorkerInsightError = null;
+            var workers = await _workerInsight.GetWorkerInstancesAsync(token);
+            token.ThrowIfCancellationRequested();
+            if (workers is null)
+            {
+                Apply(() => { IsWorkerInsightFailed = true; WorkerInsightError = null; }, token);
+                return;
+            }
+            var observedAt = _timeProvider.GetUtcNow();
+            Apply(() =>
+            {
+                Workers = workers;
+                HasLoadedWorkerInsight = true;
+                IsWorkerInsightFailed = false;
+                WorkerInsightError = null;
+                WorkerInsightObservedAtUtc = observedAt;
+            }, token);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception exception)
         {
-            WorkerInsightError = exception.Message;
+            token.ThrowIfCancellationRequested();
+            Apply(() => { IsWorkerInsightFailed = true; WorkerInsightError = exception.Message; }, token);
         }
     }
+
+    private void ClearEvidence()
+    {
+        Overview = null;
+        HasLoadedSnapshot = false;
+        LastRefreshedUtc = null;
+        IsQueryFailed = false;
+        Error = null;
+        Workers = [];
+        HasLoadedWorkerInsight = false;
+        WorkerInsightObservedAtUtc = null;
+        IsWorkerInsightFailed = false;
+        WorkerInsightError = null;
+    }
+
+    private void Apply(Action update, CancellationToken token)
+    {
+        if (!_lifetime.TryApply(update)) throw new OperationCanceledException(token);
+    }
+
+    /// <summary>Gets whether retirement has begun and new admissions are canceled.</summary>
+    public bool IsDisposed => _lifetime.IsRetired;
+
+    /// <summary>Cancels new admissions and joins the actual completion of all reads, notifications, and the loop.</summary>
+    /// <remarks>Repeated callers share retirement completion. Late producers cannot replace accepted evidence;
+    /// cancellation or subscriber faults do not skip independent timer and lifetime cleanup.</remarks>
+    /// <exception cref="AggregateException">Cancellation, admitted work, or independent cleanup failed.</exception>
+    public ValueTask DisposeAsync() => _lifetime.RetireAsync(async () =>
+    {
+        Changed = null;
+        var failures = new List<Exception>();
+        try { _timer?.Dispose(); }
+        catch (Exception exception) { failures.Add(exception); }
+        if (_refreshLoop is not null)
+        {
+            try { await _refreshLoop; }
+            catch (OperationCanceledException) when (IsDisposed) { }
+            catch (Exception exception) { failures.Add(exception); }
+        }
+        if (failures.Count != 0) ThrowFailures(failures);
+    });
 
     private async Task RunRefreshLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
     {
@@ -243,12 +423,20 @@ public sealed class SchedulerRuntimePageState : IAsyncDisposable
 
     private async Task NotifyChangedAsync()
     {
-        var handlers = Changed?.GetInvocationList().Cast<Func<Task>>().ToArray() ?? [];
+        var handlers = _lifetime.SnapshotHandlers(Changed);
+        var failures = new List<Exception>();
         foreach (var handler in handlers)
         {
-            await handler();
+            if (IsDisposed) break;
+            try { await handler(); }
+            catch (Exception exception) { failures.Add(exception); }
         }
+        if (failures.Count != 0) ThrowFailures(failures);
     }
 
-    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(IsDisposed, this);
+    private static void ThrowFailures(List<Exception> failures)
+    {
+        if (failures.Count == 1) ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        throw new AggregateException("Scheduler runtime publication or cleanup failed.", failures);
+    }
 }

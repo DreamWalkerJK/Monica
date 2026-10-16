@@ -7,20 +7,26 @@ using MudBlazor;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 
-/// <summary>
-/// Owns one execution-ledger page's filters, paging, durable query results, mutations, and async lifetime.
-/// </summary>
+/// <summary>Owns one execution ledger's draft filters, admitted query snapshots, mutations, and async lifetime.</summary>
+/// <remarks>
+/// Each read copies its query intent before awaiting authorization or serialization. Only the newest admitted read
+/// can replace rendered evidence. Retirement rejects new work with cancellation, drains actual admitted
+/// initialization, reads, and mutations, then releases serialization resources.
+/// </remarks>
 internal sealed class JobExecutionsPageState : IAsyncDisposable
 {
     private readonly JobSchedulerFacade _facade;
     private readonly IJobSchedulerUiAccess _access;
     private readonly TimeProvider _timeProvider;
     private readonly SchedulerTimePresentation _timePresentation;
-    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SchedulerOperationLifetime _lifetime = new();
     private readonly SemaphoreSlim _loadGate = new(1, 1);
     private readonly SemaphoreSlim _mutationGate = new(1, 1);
-    private HashSet<JobExecutionState> _selectedStates = [];
-    private bool _disposed;
+    private IReadOnlyCollection<JobExecutionState> _selectedStates = [];
+    private QueryIntent? _loadedIntent;
+    private int _loadVersion;
+    private int _accessVersion;
+    private int _pendingMutations;
 
     internal JobExecutionsPageState(
         JobSchedulerFacade facade,
@@ -37,200 +43,199 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
         PageSizeOptions = [.. new[] { 10, 20, 50, 100, PageSize }.Distinct().Order()];
     }
 
-    /// <summary>
-    /// Raised when consumers should render a new ledger snapshot.
-    /// </summary>
+    /// <summary>Raised outside owner locks when consumers should render the current evidence.</summary>
     public event Func<Task>? StateChanged;
 
-    /// <summary>
-    /// Gets the current bounded execution page.
-    /// </summary>
+    /// <summary>Gets the successfully accepted bounded execution page, if one exists.</summary>
     public IReadOnlyList<JobExecutionInstance> Executions { get; private set; } = [];
 
-    /// <summary>
-    /// Gets whether authorization has been evaluated for the current page.
-    /// </summary>
+    /// <summary>Gets whether authorization has been evaluated.</summary>
     public bool AccessChecked { get; private set; }
 
-    /// <summary>
-    /// Gets whether the current operator can inspect scheduler data.
-    /// </summary>
+    /// <summary>Gets whether current authorization evidence permits inspecting scheduler data.</summary>
     public bool IsAuthorized { get; private set; }
 
-    /// <summary>
-    /// Gets whether a ledger query is in progress.
-    /// </summary>
+    /// <summary>Gets whether the newest admitted ledger read is pending or running.</summary>
     public bool IsLoading { get; private set; }
 
-    /// <summary>
-    /// Gets whether an operator mutation is in progress.
-    /// </summary>
+    /// <summary>Gets whether admitted cancellation work is pending or running.</summary>
     public bool IsMutating { get; private set; }
 
-    /// <summary>
-    /// Gets the latest query error, if any.
-    /// </summary>
+    /// <summary>Gets whether the current logical query has a successfully accepted snapshot, including zero rows.</summary>
+    public bool HasLoadedSnapshot { get; private set; }
+
+    /// <summary>Gets whether the newest read failed instead of producing a valid empty or populated page.</summary>
+    public bool IsQueryFailed { get; private set; }
+
+    /// <summary>Gets the latest read or authorization diagnostic, when the failing provider supplies one.</summary>
+    /// <remarks><see cref="IsQueryFailed"/> remains true for a failed read whose result has no diagnostic message.</remarks>
     public string? Error { get; private set; }
 
-    /// <summary>
-    /// Gets or sets the case-insensitive instance or job-key search value.
-    /// </summary>
+    /// <summary>Gets the immutable facade request that produced the accepted snapshot.</summary>
+    /// <remarks>
+    /// The facade pins the configured scheduler scope. The empty scope placeholder here does not mean an unscoped
+    /// read. Failed same-intent refreshes retain these actual UTC bounds and the prior observation time.
+    /// </remarks>
+    public JobExecutionQuery? LoadedQuery { get; private set; }
+
+    /// <summary>Gets the newest immutable facade request, with rolling UTC bounds captured at admission.</summary>
+    /// <remarks>The facade owns and pins scheduler scope; this request never selects another scope.</remarks>
+    public JobExecutionQuery? RequestedQuery { get; private set; }
+
+    /// <summary>Gets or sets the unnormalized case-insensitive instance or job-key search draft.</summary>
     public string? SearchText { get; set; }
 
-    /// <summary>
-    /// Gets the selected execution states. An empty collection includes every state.
-    /// </summary>
+    /// <summary>Gets the immutable selected state set. An empty set includes every defined execution state.</summary>
     public IReadOnlyCollection<JobExecutionState> SelectedStates => _selectedStates;
 
-    /// <summary>
-    /// Gets or sets the enqueue-time range preset.
-    /// </summary>
+    /// <summary>Gets or sets the enqueue-time range draft.</summary>
     public ExecutionTimeRange TimeRange { get; set; }
 
-    /// <summary>
-    /// Gets or sets the optional custom scheduler-zone start date.
-    /// </summary>
+    /// <summary>Gets or sets the optional custom scheduler-calendar start date.</summary>
     public DateTime? CustomStartDate { get; set; }
 
-    /// <summary>
-    /// Gets or sets the optional custom scheduler-zone end date.
-    /// </summary>
+    /// <summary>Gets or sets the optional custom scheduler-calendar end date.</summary>
     public DateTime? CustomEndDate { get; set; }
 
-    /// <summary>
-    /// Gets whether the custom start date is later than the custom end date.
-    /// </summary>
-    public bool HasInvalidCustomRange =>
-        TimeRange == ExecutionTimeRange.Custom
-        && CustomStartDate.HasValue
-        && CustomEndDate.HasValue
-        && CustomStartDate.Value.Date > CustomEndDate.Value.Date;
+    /// <summary>Gets whether the custom start calendar date is later than its end date.</summary>
+    public bool HasInvalidCustomRange => TimeRange == ExecutionTimeRange.Custom
+        && CustomStartDate is { } start && CustomEndDate is { } end && start.Date > end.Date;
 
-    /// <summary>
-    /// Gets the selected backend sort field.
-    /// </summary>
+    /// <summary>Gets the newest admitted backend ordering.</summary>
     public JobExecutionSortField SortField { get; private set; } = JobExecutionSortField.CreatedAtUtc;
 
-    /// <summary>
-    /// Gets whether the ledger is ordered newest-first for the selected field.
-    /// </summary>
+    /// <summary>Gets whether the newest admitted ordering is descending.</summary>
     public bool SortDescending { get; private set; } = true;
 
-    /// <summary>
-    /// Gets the current one-based page number.
-    /// </summary>
+    /// <summary>Gets the newest admitted one-based page number.</summary>
     public int PageNumber { get; private set; } = 1;
 
-    /// <summary>
-    /// Gets the available native table page-size choices, including the configured default.
-    /// </summary>
+    /// <summary>Gets native table page-size choices, including the configured default.</summary>
     public int[] PageSizeOptions { get; }
 
-    /// <summary>
-    /// Gets the selected bounded page size.
-    /// </summary>
+    /// <summary>Gets the newest admitted page size, bounded to 1 through 200.</summary>
     public int PageSize { get; private set; }
 
-    /// <summary>
-    /// Gets the total number of executions matching the current query.
-    /// </summary>
+    /// <summary>Gets the accepted query's count; meaningful only when <see cref="HasLoadedSnapshot"/> is true.</summary>
     public int TotalCount { get; private set; }
 
-    /// <summary>
-    /// Gets when the current ledger snapshot was observed.
-    /// </summary>
+    /// <summary>Gets when the accepted read completed, rather than when pending authorization began.</summary>
     public DateTimeOffset? ObservedAtUtc { get; private set; }
 
-    /// <summary>
-    /// Evaluates access before the native table requests its first server page.
-    /// </summary>
-    public async Task InitializeAsync()
+    /// <summary>Gets whether retirement has stopped new async work.</summary>
+    public bool IsDisposed => _lifetime.IsRetired;
+
+    /// <summary>Evaluates access before the native table requests its first page.</summary>
+    /// <exception cref="OperationCanceledException">The state retired before actual initialization completed.</exception>
+    public Task InitializeAsync() => _lifetime.RunAsync(async token =>
     {
-        ThrowIfDisposed();
-        var cancellationToken = _lifetimeCancellation.Token;
+        var version = _loadVersion;
+        var entered = false;
         try
         {
-            IsLoading = true;
-            await NotifyStateChangedAsync();
-            IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            AccessChecked = true;
-            if (!IsAuthorized)
-            {
-                ClearResults();
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            Error = exception.Message;
-            AccessChecked = true;
-            IsAuthorized = false;
+            token.ThrowIfCancellationRequested();
+            _lifetime.TryApply(() => { if (version == _loadVersion) IsLoading = true; });
+            await NotifyChangedAsync();
+            await _loadGate.WaitAsync(token);
+            entered = true;
+            await EnsureAuthorizedAsync(token);
         }
         finally
         {
-            if (!_disposed)
-            {
-                IsLoading = false;
-                await NotifyStateChangedAsync();
-            }
+            if (entered) _loadGate.Release();
+            if (_lifetime.TryApply(() => { if (version == _loadVersion) IsLoading = false; }))
+                await NotifyChangedAsync();
         }
-    }
+    });
 
-    /// <summary>
-    /// Loads one server-backed table page using the table's native sort and paging state.
-    /// </summary>
-    public async Task<TableData<JobExecutionInstance>> LoadTableAsync(
-        TableState tableState,
-        CancellationToken requestCancellation)
+    /// <summary>Rechecks current access before the caller opens an operator confirmation.</summary>
+    /// <remarks>
+    /// The confirmed mutation performs its own authorization check. Denial returns false; a provider fault also
+    /// returns false, clears inaccessible evidence, and retains its diagnostic in <see cref="Error"/>.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">The owning state retired.</exception>
+    public Task<bool> ReauthorizeAsync() => _lifetime.RunAsync(async token =>
     {
-        ThrowIfDisposed();
+        var authorization = await EnsureAuthorizedAsync(token);
+        await NotifyChangedAsync();
+        return authorization.IsAuthorized;
+    });
+
+    /// <summary>Loads one native table page from copied filter, calendar, paging, and ordering intent.</summary>
+    /// <remarks>
+    /// Each caller receives its own result. Only the newest request can publish shared evidence. Changed intent clears
+    /// prior rows; failed same-intent refreshes retain prior evidence with its actual bounds and observation time.
+    /// Authorization denial or provider faults clear evidence, and an older authorized read cannot restore it.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">The caller canceled or the owning state retired.</exception>
+    public Task<TableData<JobExecutionInstance>> LoadTableAsync(TableState tableState, CancellationToken requestCancellation)
+    {
         ArgumentNullException.ThrowIfNull(tableState);
-
-        PageNumber = tableState.Page + 1;
-        PageSize = Math.Clamp(tableState.PageSize, 1, 200);
-        SortField = ResolveSortField(tableState.SortLabel);
-        SortDescending = tableState.SortDirection != SortDirection.Ascending;
-
-        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
-            _lifetimeCancellation.Token,
-            requestCancellation);
-        await LoadPageAsync(linkedCancellation.Token);
-        linkedCancellation.Token.ThrowIfCancellationRequested();
-        return new TableData<JobExecutionInstance>
+        var intent = new QueryIntent(SearchText, Array.AsReadOnly(_selectedStates.Order().ToArray()), TimeRange,
+            CustomStartDate?.Date, CustomEndDate?.Date, Math.Max(1, tableState.Page + 1),
+            Math.Clamp(tableState.PageSize, 1, 200), ResolveSortField(tableState.SortLabel),
+            tableState.SortDirection != SortDirection.Ascending);
+        return _lifetime.RunAsync(async token =>
         {
-            Items = Executions,
-            TotalItems = TotalCount
-        };
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, requestCancellation);
+            linked.Token.ThrowIfCancellationRequested();
+            var version = 0;
+            if (!_lifetime.TryApply(() =>
+                {
+                    version = ++_loadVersion;
+                    RequestedQuery = null;
+                    PageNumber = intent.PageNumber;
+                    PageSize = intent.PageSize;
+                    SortField = intent.SortField;
+                    SortDescending = intent.SortDescending;
+                    if (_loadedIntent is null || !_loadedIntent.Matches(intent)) ClearSnapshot();
+                    IsLoading = true;
+                    IsQueryFailed = false;
+                    Error = null;
+                })) throw RetiredCancellation();
+            JobExecutionQuery query;
+            try { query = CreateQuery(intent, _timeProvider.GetUtcNow()); }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _lifetime.TryApply(() =>
+                {
+                    if (version != _loadVersion) return;
+                    IsLoading = false;
+                    IsQueryFailed = true;
+                    Error = exception.Message;
+                });
+                await NotifyChangedAsync();
+                return EmptyPage();
+            }
+            if (!_lifetime.TryApply(() => { if (version == _loadVersion) RequestedQuery = query; }))
+                throw RetiredCancellation();
+            return await LoadAsync(intent, query, version, linked.Token);
+        });
     }
 
-    /// <summary>
-    /// Applies optional route query values before the initial ledger query.
-    /// </summary>
+    /// <summary>Applies route search and defined states without rewriting the supplied search value.</summary>
+    /// <remarks>Search remains the store's case-insensitive identifier search, not an exact-ID query.</remarks>
+    /// <exception cref="ObjectDisposedException">This synchronous draft update targets a retired state.</exception>
     public void ApplyInitialQuery(string? states, string? instanceId)
     {
-        ThrowIfDisposed();
-        _selectedStates = ParseStates(states);
-        SearchText = string.IsNullOrWhiteSpace(instanceId) ? null : instanceId.Trim();
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+        _selectedStates = CopyStates(ParseStates(states));
+        SearchText = instanceId;
     }
 
-    /// <summary>
-    /// Replaces the multi-state selection without executing a query.
-    /// </summary>
+    /// <summary>Copies the defined multi-state selection without executing a query.</summary>
+    /// <exception cref="ObjectDisposedException">This synchronous draft update targets a retired state.</exception>
     public void SetSelectedStates(IEnumerable<JobExecutionState>? states)
     {
-        ThrowIfDisposed();
-        _selectedStates = states?.ToHashSet() ?? [];
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+        _selectedStates = CopyStates(states ?? []);
     }
 
-    /// <summary>
-    /// Clears all filters while preserving the native table's current ordering.
-    /// </summary>
+    /// <summary>Clears filter drafts while preserving native table ordering.</summary>
+    /// <exception cref="ObjectDisposedException">This synchronous draft update targets a retired state.</exception>
     public void ResetFilters()
     {
-        ThrowIfDisposed();
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         SearchText = null;
         _selectedStates = [];
         TimeRange = ExecutionTimeRange.All;
@@ -238,242 +243,248 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
         CustomEndDate = null;
     }
 
-    /// <summary>
-    /// Reauthorizes and durably requests cancellation before refreshing the ledger.
-    /// </summary>
-    public async Task<ExecutionCancellationUiResult> RequestCancellationAsync(string instanceId)
+    /// <summary>Reauthorizes and requests durable cancellation for the exact captured instance identifier.</summary>
+    /// <remarks>The caller owns any subsequent ledger reload. Store outcomes are not inferred from UI state.</remarks>
+    /// <exception cref="ArgumentException">The identifier is blank.</exception>
+    /// <exception cref="OperationCanceledException">The state retired before the operation completed.</exception>
+    public Task<ExecutionCancellationUiResult> RequestCancellationAsync(string instanceId)
     {
-        ThrowIfDisposed();
-        var cancellationToken = _lifetimeCancellation.Token;
-        try
+        ArgumentException.ThrowIfNullOrWhiteSpace(instanceId);
+        return _lifetime.RunAsync<ExecutionCancellationUiResult>(async token =>
         {
-            await _mutationGate.WaitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return new ExecutionCancellationUiResult(IsAuthorized, null, null);
-        }
-
-        try
-        {
-            ThrowIfDisposed();
-            IsMutating = true;
-            await NotifyStateChangedAsync();
-
-            IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            AccessChecked = true;
-            if (!IsAuthorized)
+            if (!_lifetime.TryApply(() => { _pendingMutations++; IsMutating = true; })) throw RetiredCancellation();
+            var entered = false;
+            try
             {
-                ClearResults();
-                return new ExecutionCancellationUiResult(false, null, null);
+                token.ThrowIfCancellationRequested();
+                await NotifyChangedAsync();
+                await _mutationGate.WaitAsync(token);
+                entered = true;
+                var authorization = await EnsureAuthorizedAsync(token);
+                if (!authorization.IsAuthorized) return new(false, null, authorization.Error);
+                var result = await _facade.CancelExecutionAsync(instanceId, cancellationToken: token);
+                token.ThrowIfCancellationRequested();
+                return result.IsFailed(out var error, out var cancellation)
+                    ? new(true, null, error.Message) : new(true, cancellation.Status, null);
             }
-
-            var result = await _facade.CancelExecutionAsync(instanceId, cancellationToken: cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (result.IsFailed(out var error, out var cancellation))
+            catch (OperationCanceledException) { throw; }
+            catch (Exception exception) { return new(IsAuthorized, null, exception.Message); }
+            finally
             {
-                return new ExecutionCancellationUiResult(true, null, error.Message);
+                if (entered) _mutationGate.Release();
+                if (_lifetime.TryApply(() => { _pendingMutations--; IsMutating = _pendingMutations > 0; }))
+                    await NotifyChangedAsync();
             }
-
-            return new ExecutionCancellationUiResult(true, cancellation.Status, null);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return new ExecutionCancellationUiResult(IsAuthorized, null, null);
-        }
-        catch (Exception exception)
-        {
-            return new ExecutionCancellationUiResult(true, null, exception.Message);
-        }
-        finally
-        {
-            if (!_disposed)
-            {
-                IsMutating = false;
-                await NotifyStateChangedAsync();
-            }
-
-            _mutationGate.Release();
-        }
+        });
     }
 
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    /// <summary>Cancels and drains actual admitted work before releasing serialization resources.</summary>
+    /// <remarks>Repeated calls share the same completion, including unexpected faults.</remarks>
+    /// <exception cref="AggregateException">Cancellation callbacks, admitted work, or cleanup failed unexpectedly.</exception>
+    public ValueTask DisposeAsync()
     {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _disposed = true;
         StateChanged = null;
-        await _lifetimeCancellation.CancelAsync();
-        await WaitForGateAsync(_loadGate);
-        await WaitForGateAsync(_mutationGate);
-        _loadGate.Dispose();
-        _mutationGate.Dispose();
-        _lifetimeCancellation.Dispose();
+        return _lifetime.RetireAsync(() =>
+        {
+            try { _loadGate.Dispose(); }
+            finally { _mutationGate.Dispose(); }
+        });
     }
 
-    private async Task LoadPageAsync(CancellationToken cancellationToken)
+    private async Task<TableData<JobExecutionInstance>> LoadAsync(
+        QueryIntent intent, JobExecutionQuery query, int version, CancellationToken token)
     {
-        ThrowIfDisposed();
-        if (HasInvalidCustomRange)
-        {
-            ClearResults();
-            await NotifyStateChangedAsync();
-            return;
-        }
-
+        var entered = false;
+        int? authorizedVersion = null;
         try
         {
-            await _loadGate.WaitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-
-        try
-        {
-            ThrowIfDisposed();
-            IsLoading = true;
-            Error = null;
-            await NotifyStateChangedAsync();
-
-            IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            AccessChecked = true;
-            if (!IsAuthorized)
+            token.ThrowIfCancellationRequested();
+            await NotifyChangedAsync();
+            await _loadGate.WaitAsync(token);
+            entered = true;
+            var authorization = await EnsureAuthorizedAsync(token);
+            authorizedVersion = authorization.Version;
+            if (!authorization.IsAuthorized)
             {
-                ClearResults();
-                return;
+                _lifetime.TryApply(() => { if (version == _loadVersion) IsQueryFailed = authorization.Error is not null; });
+                return EmptyPage();
             }
-
-            var observedAtUtc = _timeProvider.GetUtcNow();
-            var (createdAfterUtc, createdBeforeUtc) = ResolveTimeRange(observedAtUtc);
-            var result = await _facade.QueryExecutionsAsync(new JobExecutionQuery
-            {
-                SchedulerScopeKey = string.Empty,
-                SearchText = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim(),
-                States = _selectedStates.Count == 0 ? null : _selectedStates.ToArray(),
-                CreatedAfterUtc = createdAfterUtc,
-                CreatedBeforeUtc = createdBeforeUtc,
-                SortField = SortField,
-                SortDescending = SortDescending,
-                PageNumber = PageNumber,
-                PageSize = PageSize
-            }, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
+            if (intent.HasInvalidRange) return EmptyPage();
+            var result = await _facade.QueryExecutionsAsync(query, token);
+            token.ThrowIfCancellationRequested();
             if (result.IsFailed(out var error, out var page))
             {
-                Error = error.Message;
-                return;
+                FailQuery(version, authorization.Version, error.Message);
+                return RetainedPage(intent, authorization.Version);
             }
-
-            Executions = page.Items;
-            TotalCount = page.TotalCount;
-            ObservedAtUtc = observedAtUtc;
+            var observedAtUtc = _timeProvider.GetUtcNow();
+            var acceptedAccess = false;
+            if (!_lifetime.TryApply(() =>
+                {
+                    acceptedAccess = CanAcceptAccess(authorization.Version);
+                    if (!acceptedAccess || version != _loadVersion) return;
+                    Executions = page.Items;
+                    TotalCount = page.TotalCount;
+                    LoadedQuery = query;
+                    _loadedIntent = intent;
+                    HasLoadedSnapshot = true;
+                    IsQueryFailed = false;
+                    Error = null;
+                    ObservedAtUtc = observedAtUtc;
+                })) throw RetiredCancellation();
+            return acceptedAccess ? new() { Items = page.Items, TotalItems = page.TotalCount } : EmptyPage();
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception exception)
         {
-            Error = exception.Message;
+            _lifetime.TryApply(() =>
+            {
+                if (version != _loadVersion || (authorizedVersion is { } accessVersion && !CanAcceptAccess(accessVersion))) return;
+                IsQueryFailed = true;
+                Error = exception.Message;
+            });
+            return RetainedPage(intent, authorizedVersion ?? _accessVersion);
         }
         finally
         {
-            if (!_disposed)
-            {
-                IsLoading = false;
-                await NotifyStateChangedAsync();
-            }
-
-            _loadGate.Release();
+            if (entered) _loadGate.Release();
+            if (_lifetime.TryApply(() => { if (version == _loadVersion) IsLoading = false; }))
+                await NotifyChangedAsync();
         }
     }
 
-    private (DateTimeOffset? StartUtc, DateTimeOffset? EndUtc) ResolveTimeRange(DateTimeOffset observedAtUtc)
+    private JobExecutionQuery CreateQuery(QueryIntent intent, DateTimeOffset admittedAtUtc)
     {
-        return TimeRange switch
+        (DateTimeOffset? Start, DateTimeOffset? End) range = intent.TimeRange switch
         {
-            ExecutionTimeRange.LastHour => (observedAtUtc.AddHours(-1), null),
-            ExecutionTimeRange.Last24Hours => (observedAtUtc.AddDays(-1), null),
-            ExecutionTimeRange.Last7Days => (observedAtUtc.AddDays(-7), null),
-            ExecutionTimeRange.Last30Days => (observedAtUtc.AddDays(-30), null),
-            ExecutionTimeRange.Custom => (
-                ToUtcCalendarBoundary(CustomStartDate, endOfDay: false),
-                ToUtcCalendarBoundary(CustomEndDate, endOfDay: true)),
+            ExecutionTimeRange.LastHour => (admittedAtUtc.AddHours(-1), null),
+            ExecutionTimeRange.Last24Hours => (admittedAtUtc.AddDays(-1), null),
+            ExecutionTimeRange.Last7Days => (admittedAtUtc.AddDays(-7), null),
+            ExecutionTimeRange.Last30Days => (admittedAtUtc.AddDays(-30), null),
+            ExecutionTimeRange.Custom when !intent.HasInvalidRange => (
+                intent.StartDate is { } startDate ? _timePresentation.GetStartOfSchedulerCalendarDayUtc(startDate) : null,
+                intent.EndDate is { } endDate ? _timePresentation.GetStartOfSchedulerCalendarDayUtc(endDate.AddDays(1)).AddTicks(-1) : null),
             _ => (null, null)
+        };
+        return new()
+        {
+            SchedulerScopeKey = string.Empty,
+            SearchText = intent.SearchText,
+            States = intent.States.Count == 0 ? null : intent.States,
+            CreatedAfterUtc = range.Start,
+            CreatedBeforeUtc = range.End,
+            PageNumber = intent.PageNumber,
+            PageSize = intent.PageSize,
+            SortField = intent.SortField,
+            SortDescending = intent.SortDescending
         };
     }
 
-    private static HashSet<JobExecutionState> ParseStates(string? values)
+    private async Task<(bool IsAuthorized, string? Error, int Version)> EnsureAuthorizedAsync(CancellationToken token)
     {
-        if (string.IsNullOrWhiteSpace(values))
+        var version = 0;
+        if (!_lifetime.TryApply(() => version = _accessVersion)) throw RetiredCancellation();
+        try
         {
-            return [];
+            var authorized = await _access.IsAuthorizedAsync(token);
+            token.ThrowIfCancellationRequested();
+            var accepted = false;
+            if (!_lifetime.TryApply(() =>
+                {
+                    if (!authorized)
+                    {
+                        _accessVersion++;
+                        IsAuthorized = false;
+                        AccessChecked = true;
+                        ClearSnapshot();
+                        Error = null;
+                        return;
+                    }
+                    if (version != _accessVersion) return;
+                    IsAuthorized = true;
+                    AccessChecked = true;
+                    accepted = true;
+                })) throw RetiredCancellation();
+            return (accepted, null, version);
         }
-
-        HashSet<JobExecutionState> states = [];
-        foreach (var value in values.Split(
-                     ',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception)
         {
-            if (Enum.TryParse<JobExecutionState>(value, ignoreCase: true, out var state))
+            token.ThrowIfCancellationRequested();
+            if (!_lifetime.TryApply(() =>
+                {
+                    _accessVersion++;
+                    IsAuthorized = false;
+                    AccessChecked = true;
+                    ClearSnapshot();
+                    Error = exception.Message;
+                })) throw RetiredCancellation();
+            return (false, exception.Message, version);
+        }
+    }
+
+    private bool CanAcceptAccess(int version) => IsAuthorized && version == _accessVersion;
+
+    private void FailQuery(int version, int accessVersion, string? error) => _lifetime.TryApply(() =>
+    {
+        if (version != _loadVersion || !CanAcceptAccess(accessVersion)) return;
+        IsQueryFailed = true;
+        Error = error;
+    });
+
+    private TableData<JobExecutionInstance> RetainedPage(QueryIntent intent, int accessVersion)
+    {
+        var result = EmptyPage();
+        if (!_lifetime.TryApply(() =>
             {
-                states.Add(state);
-            }
-        }
-
-        return states;
+                if (CanAcceptAccess(accessVersion) && HasLoadedSnapshot && _loadedIntent?.Matches(intent) == true)
+                    result = new() { Items = Executions, TotalItems = TotalCount };
+            })) throw RetiredCancellation();
+        return result;
     }
 
-    private static JobExecutionSortField ResolveSortField(string? sortLabel) =>
-        Enum.TryParse<JobExecutionSortField>(sortLabel, ignoreCase: false, out var field)
-            ? field
-            : JobExecutionSortField.CreatedAtUtc;
-
-    private DateTimeOffset? ToUtcCalendarBoundary(DateTime? value, bool endOfDay)
-    {
-        if (!value.HasValue)
-        {
-            return null;
-        }
-
-        var schedulerWallTime = endOfDay
-            ? value.Value.Date.AddDays(1).AddTicks(-1)
-            : value.Value.Date;
-        return _timePresentation.ConvertSchedulerWallTimeToUtc(schedulerWallTime);
-    }
-
-    private void ClearResults()
+    private void ClearSnapshot()
     {
         Executions = [];
         TotalCount = 0;
-        PageNumber = 1;
+        LoadedQuery = null;
+        _loadedIntent = null;
+        HasLoadedSnapshot = false;
+        IsQueryFailed = false;
         ObservedAtUtc = null;
-        Error = null;
     }
 
-    private async Task NotifyStateChangedAsync()
+    private async Task NotifyChangedAsync()
     {
-        var handlers = StateChanged?.GetInvocationList().Cast<Func<Task>>().ToArray() ?? [];
-        foreach (var handler in handlers)
-        {
-            await handler();
-        }
+        foreach (var handler in _lifetime.SnapshotHandlers(StateChanged)) await handler();
     }
 
-    private static async Task WaitForGateAsync(SemaphoreSlim gate)
-    {
-        await gate.WaitAsync();
-        gate.Release();
-    }
+    private static IEnumerable<JobExecutionState> ParseStates(string? values) =>
+        (values ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(value => Enum.TryParse<JobExecutionState>(value, true, out var state) && Enum.IsDefined(state)
+            ? (JobExecutionState?)state : null)
+        .OfType<JobExecutionState>();
 
-    private void ThrowIfDisposed()
+    private static IReadOnlyCollection<JobExecutionState> CopyStates(IEnumerable<JobExecutionState> states) =>
+        Array.AsReadOnly(states.Where(state => Enum.IsDefined(state)).Distinct().Order().ToArray());
+
+    private static JobExecutionSortField ResolveSortField(string? label) =>
+        Enum.TryParse<JobExecutionSortField>(label, false, out var field) && Enum.IsDefined(field)
+            ? field : JobExecutionSortField.CreatedAtUtc;
+
+    private static TableData<JobExecutionInstance> EmptyPage() => new() { Items = [], TotalItems = 0 };
+    private static OperationCanceledException RetiredCancellation() => new(new CancellationToken(canceled: true));
+
+    private sealed record QueryIntent(string? SearchText, IReadOnlyCollection<JobExecutionState> States,
+        ExecutionTimeRange TimeRange, DateTime? StartDate, DateTime? EndDate, int PageNumber, int PageSize,
+        JobExecutionSortField SortField, bool SortDescending)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        internal bool HasInvalidRange => TimeRange == ExecutionTimeRange.Custom
+            && StartDate is { } start && EndDate is { } end && start > end;
+
+        internal bool Matches(QueryIntent other) => SearchText == other.SearchText && States.SequenceEqual(other.States)
+            && TimeRange == other.TimeRange && StartDate == other.StartDate && EndDate == other.EndDate
+            && PageNumber == other.PageNumber && PageSize == other.PageSize
+            && SortField == other.SortField && SortDescending == other.SortDescending;
     }
 }

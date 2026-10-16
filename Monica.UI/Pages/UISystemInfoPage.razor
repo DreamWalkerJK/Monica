@@ -17,7 +17,7 @@
 <PageTitle>@L["Page:Title"]</PageTitle>
 
 <div class="system-info-page">
-    <SystemInfoPageHeader EnableRestart="@SystemInfoUIOptions.Value.EnableSelfRestartAction"
+    <SystemInfoPageHeader Snapshot="@_session?.Snapshot" EnableRestart="@SystemInfoUIOptions.Value.EnableSelfRestartAction"
                           IsRefreshing="@(_session?.IsRefreshing == true)"
                           RestartRequested="@(_session?.RestartRequested == true)"
                           RefreshRequested="RefreshAsync"
@@ -36,7 +36,6 @@
         var snapshot = _session.Snapshot;
 
         <SystemInfoServiceHero Snapshot="@snapshot" NowUtc="@_session.NowUtc" />
-        <SystemInfoPulseStrip Snapshot="@snapshot" NowUtc="@_session.NowUtc" />
 
         @* Operational destinations stay near the top, before the detailed dossier. *@
         <SystemInfoCustomLinkPanel Links="@SystemInfoUIOptions.Value.CustomLinks" />

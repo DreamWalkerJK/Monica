@@ -3,7 +3,7 @@ using Monica.DataChannel.Providers.TCP.Utils;
 
 namespace Monica.DataChannel.Providers.TCP;
 
-internal sealed partial class TcpServerExtends : IDisposable
+internal sealed partial class TcpServerExtends : IAsyncDisposable
 {
     private readonly TcpConnectionRuntime _runtime;
 
@@ -13,5 +13,5 @@ internal sealed partial class TcpServerExtends : IDisposable
     }
 
     internal TcpListener? Server { get; set; }
-    internal TcpReceiveEventHander? ReceivedMsgEvent { get; set; }
+    internal Func<MsgReceivedEventArgs, CancellationToken, Task>? ReceivedMsgEvent { get; set; }
 }

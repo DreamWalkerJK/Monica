@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
+using Monica.WebApi.Swagger.Abstractions;
 using Monica.WebApi.Swagger.Models;
 using Monica.WebApi.Swagger.Services.Support;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -15,8 +16,12 @@ namespace Monica.Modules;
 public class ModuleSwagger : MonicaModule<ModuleSwaggerOption>, IWebHostRequiredModule
 {
     /// <inheritdoc />
-    public override void Describe(ModuleDescriptor module) =>
+    public override void Describe(ModuleDescriptor module)
+    {
         module.Require<ModuleResultEnvelope, ModuleResultEnvelopeOption>();
+        // The native Swagger middleware can complete a request before later middleware runs.
+        module.AfterIfPresent<ModuleLocalization, ModuleLocalizationOption>();
+    }
     private SwaggerDocumentCatalog? _documentCatalog;
 
     public override void ConfigureApplicationBuilder(WebModuleContext<ModuleSwaggerOption> context)
@@ -29,6 +34,12 @@ public class ModuleSwagger : MonicaModule<ModuleSwaggerOption>, IWebHostRequired
                 Option,
                 GetDocumentCatalog(),
                 Application.Application);
+
+            foreach (var enhancer in context.ApplicationBuilder.ApplicationServices
+                         .GetServices<ISwaggerUIOptionsEnhancer>())
+            {
+                enhancer.Apply(swaggerUiOptions);
+            }
         });
     }
 
@@ -78,6 +89,10 @@ public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>
     /// <summary>
     /// Callback that can extend Swagger UI configuration after Monica has registered the default document endpoints.
     /// </summary>
+    /// <remarks>
+    /// Monica then rebases retained default document links and applies registered
+    /// <see cref="ISwaggerUIOptionsEnhancer"/> services to these final options.
+    /// </remarks>
     public Action<SwaggerUIOptions>? ExtendSwaggerUIAction { get; set; }
 
     /// <summary>
@@ -138,8 +153,12 @@ public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>
     public bool DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly { get; set; }
 
     /// <summary>
-    /// Require authentication for Swagger UI.
+    /// Adds JWT Bearer security metadata to generated OpenAPI documents. Defaults to <see langword="false"/>.
     /// </summary>
+    /// <remarks>
+    /// This option enables native token authorization controls. It does not enforce an authorization policy
+    /// on the Swagger UI, document endpoints, or application operations; configure their access policy separately.
+    /// </remarks>
     public bool UseAuth { get; set; }
 
     /// <summary>
@@ -150,5 +169,9 @@ public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>
     /// <summary>
     /// Swagger UI route prefix (defaults to "swagger"); set to an empty string to expose Swagger at the application root.
     /// </summary>
+    /// <remarks>
+    /// This configures the UI route only. Generated documents remain under <c>swagger/{documentName}/swagger.json</c>.
+    /// Monica's default document links resolve from the final UI prefix and retain the application's PathBase.
+    /// </remarks>
     public string RoutePrefix { get; set; } = "swagger";
 }

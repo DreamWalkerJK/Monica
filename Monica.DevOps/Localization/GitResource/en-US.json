@@ -1,67 +1,25 @@
 {
   "Pages": {
     "GitRepositories": {
-      "Title": "Git Repositories"
+      "Title": "Git repositories"
+    },
+    "GitCredentials": {
+      "Title": "Git credentials & resolvers"
     }
   },
   "GitDashboard": {
-    "PageTitle": "Git Repositories",
-    "Title": "Git Repositories",
-    "Eyebrow": "Monica / Source control",
-    "Description": "Coordinate working copies, synchronization state, credentials, and resolver ownership from one host-level control surface.",
-    "Summary": {
-      "AriaLabel": "Git repository runtime summary",
-      "Repositories": "Repositories",
-      "Ready": "Ready",
-      "Dirty": "Dirty worktrees",
-      "Credentials": "Credentials"
-    },
-    "Ownership": {
-      "Title": "Host ownership blocks repository {0}",
-      "Description": "The host process cannot safely operate the working copy at {0}. Align filesystem ownership or explicitly configure Git safe-directory policy for this trusted path."
-    },
-    "Sections": {
-      "Repositories": "Repositories",
-      "RepositoriesDescription": "Configured working copies and their current synchronization evidence.",
-      "Details": "Repository Details",
-      "DetailsDescription": "Resolved identity and operational state for the selected repository.",
-      "Credentials": "Credentials",
-      "CredentialsDescription": "Registered credential references without exposing secret material.",
-      "Resolvers": "Credential Resolvers",
-      "ResolversDescription": "Host-owned resolution order used for remote authentication."
-    },
     "Columns": {
-      "Id": "Id",
-      "Provider": "Provider",
-      "Branch": "Branch",
-      "State": "State",
-      "Commit": "Commit",
-      "Updated": "Updated",
-      "Actions": "Actions",
-      "CredentialId": "Credential",
-      "Type": "Type",
-      "UserName": "User Name",
-      "HasSecret": "Has Secret",
-      "Resolver": "Resolver",
-      "Order": "Order",
-      "Size": "Size"
+      "State": "State"
     },
     "Labels": {
       "RemoteUrl": "Remote URL",
       "ResolvedLocalPath": "Resolved Local Path",
       "ResolvedBranch": "Resolved Branch",
-      "Available": "Available",
-      "Dirty": "Dirty",
       "Credential": "Credential",
-      "CurrentCommit": "Current Commit",
-      "LastSync": "Last Sync"
+      "CurrentCommit": "Current Commit"
     },
     "Actions": {
-      "Refresh": "Refresh",
-      "SyncAll": "Sync All",
-      "Sync": "Sync",
-      "Select": "View",
-      "DeleteLocal": "Delete Local"
+      "Refresh": "Refresh"
     },
     "States": {
       "NotReady": "Not Ready",
@@ -72,22 +30,7 @@
       "No": "No",
       "None": "(None)"
     },
-    "Dialogs": {
-      "DeleteLocalRepository": {
-        "Title": "Delete Local Repository",
-        "Message": "Delete the local working copy for repository '{0}'? You can sync again later to clone it back.",
-        "Confirm": "Delete",
-        "Cancel": "Cancel"
-      }
-    },
     "Messages": {
-      "LoadFailed": "Failed to load Git dashboard: {0}",
-      "SyncAllSuccess": "All repositories synchronized successfully.",
-      "SyncAllInProgress": "Synchronizing all repositories...",
-      "SyncRepositorySuccess": "Repository '{0}' synchronized successfully.",
-      "SyncInProgress": "Repository '{0}' is synchronizing...",
-      "DeleteRepositorySuccess": "Repository '{0}' local working copy deleted successfully.",
-      "OperationFailed": "Operation failed: {0}",
       "NoRepositories": "No Git repositories configured.",
       "NoCredentials": "No Git credentials configured.",
       "NoResolvers": "No credential resolvers registered.",
@@ -99,6 +42,109 @@
       "Fetching": "Fetching remote changes",
       "Checkout": "Checking out files",
       "Deleting": "Deleting local repository"
+    }
+  },
+  "Workspace": {
+    "Navigation": {
+      "Label": "Git workspace",
+      "Repositories": "Repositories",
+      "Credentials": "Credentials & resolvers"
+    },
+    "AuthenticationTypes": {
+      "Token": "Token",
+      "UserPassword": "User name and password"
+    },
+    "Credentials": {
+      "Title": "Git credentials & resolvers",
+      "Description": "Inspect registered credential references and the resolver order used for remote authentication.",
+      "PresenceHint": "Registered secret presence is not an authentication test. Runtime resolvers may supply credentials.",
+      "Loading": "Loading credential and resolver metadata…",
+      "ReadFailed": "Credential or resolver metadata could not be read.",
+      "PreviousData": "Previously accepted metadata remains visible; it may be stale.",
+      "Observed": "Metadata observed at",
+      "ReferenceMissing": "Credential reference '{0}' is not in the accepted registrations.",
+      "ReferenceFiltered": "The referenced credential registration is outside the current search.",
+      "Registrations": "Credential registrations",
+      "Results": "{0} of {1} credential registrations",
+      "Search": "Search credential metadata",
+      "Id": "Credential ID",
+      "AuthenticationType": "Authentication type",
+      "UserName": "User name",
+      "Secret": "Registered secret",
+      "Present": "Present",
+      "NotPresent": "Not present in registration",
+      "NoMatches": "No credential registrations match this search.",
+      "RowsPerPage": "Rows per page",
+      "PageInfo": "{first_item}–{last_item} of {all_items}",
+      "EvaluationOrder": "Evaluation order",
+      "ResolverRule": "Higher order runs first; matching orders use resolver ID order. The first resolver that returns a credential wins.",
+      "Order": "Order",
+      "ResolverId": "Resolver ID",
+      "ImplementationType": "Implementation type"
+    },
+    "Repositories": {
+      "Title": "Git repositories",
+      "Description": "Inspect and maintain this host’s configured working copies.",
+      "Catalog": "Working copies",
+      "Search": "Search repository identity",
+      "Results": "{0} of {1} configured working copies",
+      "Changes": "Local changes",
+      "ChangesOnly": "Local changes only",
+      "Choose": "Choose repository",
+      "Change": "Change repository",
+      "ClearFilters": "Clear filters",
+      "NoMatches": "No working copies match these filters.",
+      "EmptyInspection": "No working copies are available to inspect. Register a repository in this host’s Git configuration.",
+      "NoAcceptedData": "No repository snapshot has been accepted. Refresh to retry.",
+      "FilteredSelection": "The selected working copy is outside the current filter.",
+      "Remote": "Remote source",
+      "Worktree": "Local worktree",
+      "ConfiguredBranch": "Configured branch",
+      "AutomaticBranch": "Automatic resolution",
+      "ConfiguredPath": "Configured local path",
+      "ConfiguredResolvedPath": "Configured and resolved local path",
+      "Available": "Local path available",
+      "AvailabilityHint": "Availability is local disk evidence, not remote connectivity.",
+      "Dirty": "Local changes reported",
+      "DirtyUnavailable": "Local changes are not established for an unavailable working copy.",
+      "LastSuccessfulSync": "Last successful sync",
+      "NeverSynced": "No successful sync is recorded in this host runtime.",
+      "Size": "Reported directory size",
+      "SizeHint": "Best-effort size includes Git data and may retain a prior value during an operation.",
+      "Sync": "Sync working copy…",
+      "SyncAll": "Sync all…",
+      "Delete": "Delete local copy…",
+      "LossHint": "Synchronization replaces tracked local changes and removes untracked files.",
+      "ManualDisabled": "Manual synchronization is disabled by host configuration.",
+      "ReadFailed": "Refresh failed; accepted evidence remains visible.",
+      "MetadataFailed": "Credential metadata could not be read.",
+      "CredentialMissing": "This credential reference is not in the accepted registrations.",
+      "AwaitingConfirmation": "Awaiting confirmation",
+      "RequestingSync": "Requesting synchronization",
+      "RequestingDelete": "Deleting local copy",
+      "Outcome": "Operation outcome",
+      "OutcomeSummary": "{0} succeeded; {1} failed",
+      "OperationFailed": "Operation failed: {0}",
+      "OperationSucceeded": "Operation completed.",
+      "Loading": "Loading working-copy evidence…",
+      "ResultSucceeded": "Succeeded",
+      "ResultFailed": "Failed",
+      "ServiceMessage": "Service message"
+    },
+    "Confirm": {
+      "SyncTitle": "Synchronize working copy",
+      "SyncAllTitle": "Synchronize all configured working copies",
+      "DeleteTitle": "Delete local copy",
+      "AllTargets": "All {0} configured repositories, independent of inventory filters.",
+      "SyncEffect": "Synchronization fetches or clones the remote, forcibly checks out and hard-resets to the target branch, and removes untracked files. Tracked changes and divergent local state can be discarded.",
+      "DeleteEffect": "The complete local directory, including Git data and local-only files, will be removed. Registration and remote remain configured. Synchronizing can clone the remote again, but cannot restore discarded local-only content.",
+      "EvidenceHint": "These are frozen confirmation targets; local disk contents can change before execution.",
+      "Cancel": "Cancel",
+      "SyncAction": "Synchronize and replace",
+      "SyncAllAction": "Synchronize all {0}",
+      "DeleteAction": "Delete local copy",
+      "TargetId": "Repository ID",
+      "ObservedChanges": "Local changes reported"
     }
   }
 }

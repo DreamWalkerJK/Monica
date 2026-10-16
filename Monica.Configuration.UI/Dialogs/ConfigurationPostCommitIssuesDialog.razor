@@ -1,3 +1,4 @@
+@implements IAsyncDisposable
 @inject Microsoft.JSInterop.IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
@@ -45,6 +46,8 @@
 </MudDialog>
 
 @code {
+    private readonly ConfigurationOperationLifetime _operations = new();
+
     internal static DialogOptions DefaultOptions => new()
     {
         MaxWidth = MaxWidth.Large,
@@ -75,14 +78,22 @@
 
     private async Task CopyAsync(string text)
     {
+        if (_operations.IsRetired) return;
         try
         {
-            var copied = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", new object?[] { text });
-            Snackbar.Add(
-                copied ? L["Dialogs:PostCommitIssues:CopySuccess"] : L["Dialogs:PostCommitIssues:CopyFailed"],
-                copied ? Severity.Success : Severity.Error);
+            await _operations.RunAsync(async token =>
+            {
+                token.ThrowIfCancellationRequested();
+                // Retain the actual tokenless interop completion; retirement cannot undo a clipboard write.
+                var copied = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", new object?[] { text });
+                if (_operations.IsRetired) return;
+                Snackbar.Add(
+                    copied ? L["Dialogs:PostCommitIssues:CopySuccess"] : L["Dialogs:PostCommitIssues:CopyFailed"],
+                    copied ? Severity.Success : Severity.Error);
+            });
         }
-        catch
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+        catch (Exception) when (!_operations.IsRetired)
         {
             Snackbar.Add(L["Dialogs:PostCommitIssues:CopyFailed"], Severity.Error);
         }
@@ -90,6 +101,13 @@
 
     private void Close()
     {
-        MudDialog.Close();
+        if (!_operations.IsRetired) MudDialog.Close();
     }
+
+    /// <summary>Rejects new clipboard work and joins every admitted native clipboard call.</summary>
+    /// <remarks>
+    /// Repeated disposal shares the actual completion. Injected services are borrowed, a completed clipboard
+    /// write is not reversed, and no late snackbar is adopted after retirement.
+    /// </remarks>
+    public ValueTask DisposeAsync() => _operations.RetireAsync();
 }

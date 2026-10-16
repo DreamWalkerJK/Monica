@@ -6,9 +6,13 @@ namespace Monica.OpenTelemetry.InProcessCollector.Models;
 public sealed class HistogramSnapshot
 {
     /// <summary>
-    /// Gets the number of retained samples used to calculate the histogram statistics.
+    /// Gets the number of finite retained samples used to calculate these window statistics.
+    /// This is not a lifetime observation count or an OpenTelemetry SDK histogram aggregate.
     /// </summary>
     public long Count { get; init; }
+
+    /// <summary>Gets the retained NaN/infinite count excluded from these finite-only statistics.</summary>
+    public long NonFiniteSampleCount { get; init; }
 
     /// <summary>
     /// Gets the minimum retained value.

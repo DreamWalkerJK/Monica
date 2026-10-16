@@ -1,0 +1,14 @@
+<nav class="mo-workbench-navigation @Class" aria-label="@Label">
+    @ChildContent
+</nav>
+
+@code {
+    /// <summary>Gets or sets the localized accessible name for this group of related routes.</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets native route links; callers own URLs, localized labels, and exact aria-current state.</summary>
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Gets or sets an optional identification class without changing the shared navigation treatment.</summary>
+    [Parameter] public string? Class { get; set; }
+}

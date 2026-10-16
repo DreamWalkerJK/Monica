@@ -12,43 +12,29 @@ namespace Test.Monica.Core.Mediator;
 public sealed class MediatorExecutionPipelineTests
 {
     [Fact]
-    public async Task Send_WhenOrchestrationOwnsSeparateScopes_ShouldHonorItsTransactionOverride()
+    public async Task Send_WhenHandlerMethodDeclaresNone_ShouldSkipAutomaticTransaction()
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddTransient<IRequestHandler<OrchestrationRequest, string>, OrchestrationHandler>();
-        builder.Services.AddTransient<IRequestHandler<ReadOnlyRequest, string>, WriteOverrideHandler>();
         builder.AddMonica(monica =>
         {
             monica.AddMediator();
             monica.AddExecutionPipeline()
-                .AddBehavior<TransactionModeBehavior<OrchestrationRequest>>()
-                .AddBehavior<TransactionModeBehavior<ReadOnlyRequest>>();
+                .AddBehavior<TransactionModeBehavior<OrchestrationRequest>>();
         });
         using var host = builder.Build();
         using var scope = host.Services.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         (await mediator.Send(new OrchestrationRequest(), TestContext.Current.CancellationToken))
             .Should().Be(nameof(ExecutionTransactionMode.None));
-        (await mediator.Send(new ReadOnlyRequest(), TestContext.Current.CancellationToken))
-            .Should().Be(nameof(ExecutionTransactionMode.Automatic));
     }
 
     private sealed record OrchestrationRequest : IRequest<string>;
 
-    [ReadOnlyOperation]
-    private sealed record ReadOnlyRequest : IRequest<string>;
-
-    [ExecutionTransaction(ExecutionTransactionMode.None)]
     private sealed class OrchestrationHandler : IRequestHandler<OrchestrationRequest, string>
     {
+        [ExecutionTransaction(ExecutionTransactionMode.None)]
         public Task<string> Handle(OrchestrationRequest request, CancellationToken cancellationToken) => Task.FromResult("handled");
-    }
-
-    [ExecutionTransaction(ExecutionTransactionMode.None)]
-    private sealed class WriteOverrideHandler : IRequestHandler<ReadOnlyRequest, string>
-    {
-        [ExecutionTransaction(ExecutionTransactionMode.Automatic)]
-        public Task<string> Handle(ReadOnlyRequest request, CancellationToken cancellationToken) => Task.FromResult("handled");
     }
 
     private sealed class TransactionModeBehavior<TRequest> : IExecutionBehavior<TRequest, string>

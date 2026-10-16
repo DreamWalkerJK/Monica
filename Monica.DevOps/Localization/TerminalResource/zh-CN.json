@@ -7,48 +7,97 @@
   "Page": {
     "DocumentTitle": "终端",
     "Title": "终端",
-    "Subtitle": "在 Monica 宿主进程环境中执行本地命令。",
-    "Eyebrow": "本地进程"
+    "Subtitle": "在 Monica 宿主环境中运行本地命令。"
   },
   "Actions": {
     "Run": "运行",
-    "Cancel": "取消",
-    "Clear": "清空",
+    "Cancel": "取消命令",
+    "Clear": "清空输出",
     "NewSession": "新建会话",
-    "CloseSession": "关闭会话"
+    "CloseSession": "关闭会话",
+    "SelectSession": "选择会话",
+    "More": "会话操作",
+    "Latest": "跳至最新输出",
+    "CloseContext": "关闭详情",
+    "Retry": "重试",
+    "Details": "详情"
   },
   "Labels": {
+    "LocalProcess": "本地进程",
     "Session": "会话",
+    "SessionName": "名称",
+    "SessionId": "会话 ID",
     "WorkingDirectory": "工作目录",
-    "Shell": "Shell",
+    "RunningDirectory": "运行目录",
+    "Shell": "Shell 可执行文件",
+    "ShellArguments": "Shell 参数",
     "OperatingSystem": "操作系统",
     "Architecture": "架构",
-    "Runtime": "运行时",
-    "BaseDirectory": "基础目录",
+    "Runtime": "运行时标识",
+    "BaseDirectory": "应用程序基目录",
+    "DefaultDirectory": "宿主默认目录",
     "Command": "命令",
-    "History": "历史",
+    "History": "历史命令",
+    "SessionHost": "会话与宿主",
+    "Host": "宿主",
     "ExitCode": "退出码",
     "Duration": "耗时",
-    "Status": "状态"
+    "DurationValue": "{0} 秒",
+    "Transcript": "输出",
+    "LatestResult": "最近完成的命令",
+    "CurrentCommand": "当前命令",
+    "ResultDirectory": "命令目录",
+    "CreatedAt": "创建时间",
+    "ActivityAt": "最近活动"
   },
   "States": {
-    "Loading": "正在加载终端...",
+    "Loading": "正在加载终端…",
     "Ready": "就绪",
     "Running": "运行中",
-    "NoSession": "当前没有活动终端会话。",
-    "NoOutput": "运行命令后会在这里显示输出。",
+    "NoOutput": "尚无保留输出。请在下方输入命令。",
     "Canceled": "已取消",
-    "TimedOut": "已超时"
+    "TimedOut": "已超时",
+    "Completed": "已完成",
+    "Exited": "退出码为 {0}",
+    "CancellationRequested": "已请求取消",
+    "NoSession": "当前没有活动的终端会话。请创建会话以继续。"
   },
   "Messages": {
-    "CreateSessionFailed": "创建终端会话失败。",
+    "OwnerStorageFailed": "无法保存浏览器会话分区。请重试后再运行命令。",
+    "InitializationFailed": "终端初始化失败：{0}",
+    "RefreshFailed": "会话刷新失败，仍显示先前已确认的信息：{0}",
+    "OperationFailed": "操作失败：{0}",
+    "BrowserFailure": "浏览器输出控件失败：{0}",
     "LoadEnvironmentFailed": "加载终端环境失败。",
-    "RunCommandFailed": "运行命令失败。",
-    "CancelFailed": "取消命令失败。",
-    "SessionClosed": "终端会话已关闭。"
+    "LoadSessionsFailed": "加载终端会话失败。",
+    "CreateSessionFailed": "创建终端会话失败。",
+    "RunCommandFailed": "运行终端命令失败。",
+    "CancelFailed": "请求取消命令失败。",
+    "SessionClosed": "终端会话已关闭。",
+    "CloseSessionFailed": "关闭终端会话失败。",
+    "OutputCleared": "终端输出已清空。",
+    "ClearOutputFailed": "清空终端输出失败。"
+  },
+  "History": {
+    "Scope": "最近 {0} 条命令，共保留 {1} 条。选择命令将其复制到输入框。",
+    "Empty": "此会话尚无保留的历史命令。",
+    "Reuse": "复用命令：{0}"
+  },
+  "Behavior": {
+    "Title": "命令运行方式",
+    "Shell": "每条命令均启动一个新的 Shell，且不支持交互输入。Shell 变量和环境变更在每条命令后重置。",
+    "Directory": "使用独立的 cd 命令更改此会话的工作目录。复合 Shell 命令不会更新保留的目录。",
+    "Lifetime": "会话及输出保留在宿主内存中，直至会话关闭或宿主重启。离开此页面后，已接受的命令仍会继续运行。取消操作不会撤销已生效的变更。",
+    "Partition": "此浏览器标识用于分组保留会话，不用于验证用户身份或授权执行命令。"
+  },
+  "Streams": {
+    "Input": "已提交命令",
+    "Output": "标准输出",
+    "Error": "标准错误",
+    "System": "系统信息"
   },
   "Input": {
     "Placeholder": "输入命令",
-    "Helper": "命令会使用检测到的 Shell 在 Monica 宿主机上运行。"
+    "Helper": "每条命令后 Shell 状态都会重置。使用 cd 更改此会话的目录。"
   }
 }

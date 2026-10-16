@@ -8,238 +8,58 @@ namespace Monica.AI.UI.UIChat.State;
 
 public sealed partial class ChatPageState
 {
-    private async Task LoadPersistedPreferencesAsync()
+    /// <summary>Atomically selects a provider and model for subsequent requests.</summary>
+    public async Task SelectModelAsync((string ProviderId, string ModelName) selection) => _ = await RunCommandAsync(async () =>
     {
-        var savedProviderId = await _browserStorage.GetDefaultProviderAsync();
-        var savedModelName = await _browserStorage.GetDefaultModelAsync();
-        ToolDebugEnabled = await _browserStorage.GetToolDebugEnabledAsync();
-
-        if (string.IsNullOrEmpty(savedProviderId))
-        {
-            return;
-        }
-
-        var provider = ChatProviderResolver.FindProvider(Providers, savedProviderId);
-        if (provider != null)
-        {
-            ApplyProviderSelection(provider, savedModelName);
-            return;
-        }
-
-        await ClearInvalidPreferencesAsync();
-    }
-
-    private void ApplyProviderSelection(AIProviderInfo provider, string? savedModelName)
-    {
-        DefaultProviderId = provider.ProviderId;
-        CurrentProviderName = provider.DisplayName;
-        CurrentProviderModels = ChatProviderResolver.GetChatModels(provider);
-
-        if (ChatProviderResolver.IsChatModelValid(provider, savedModelName))
-        {
-            DefaultModelName = savedModelName;
-        }
-        else
-        {
-            DefaultModelName = ChatProviderResolver.GetPreferredChatModel(provider, provider.DefaultModel);
-            if (!string.IsNullOrEmpty(savedModelName))
-            {
-                _ = _browserStorage.RemoveAsync("ai-chat:default-model");
-            }
-        }
-
-        SupportsReasoning = ChatProviderResolver.GetReasoningSupport(
-            Providers,
-            DefaultProviderId,
-            DefaultModelName);
-    }
-
-    private async Task ClearInvalidPreferencesAsync()
-    {
-        await _browserStorage.RemoveAsync("ai-chat:default-provider");
-        await _browserStorage.RemoveAsync("ai-chat:default-model");
-    }
-
-    /// <summary>
-    /// Change the current provider selection.
-    /// </summary>
-    public async Task ChangeProviderAsync(string providerId)
-    {
-        var provider = ChatProviderResolver.FindProvider(Providers, providerId);
-        if (provider == null)
-        {
-            return;
-        }
-
-        var resolvedModelName = ChatProviderResolver.GetPreferredChatModel(provider, provider.DefaultModel);
-
-        DefaultProviderId = providerId;
-        DefaultModelName = resolvedModelName;
-        CurrentProviderName = provider.DisplayName;
-        CurrentProviderModels = ChatProviderResolver.GetChatModels(provider);
-        SupportsReasoning = ChatProviderResolver.GetReasoningSupport(
-            Providers,
-            providerId,
-            resolvedModelName);
-
-        await _browserStorage.SaveDefaultProviderAsync(providerId);
-        if (!string.IsNullOrEmpty(resolvedModelName))
-        {
-            await _browserStorage.SaveDefaultModelAsync(resolvedModelName);
-        }
-        else
-        {
-            await _browserStorage.RemoveAsync("ai-chat:default-model");
-        }
-
-        var currentSession = CurrentSession;
-        if (currentSession != null)
-        {
-            _ = _chatFacade.UpdateSettings(
-                currentSession,
-                currentSession.Settings with
-                {
-                    ProviderId = providerId,
-                    ModelName = resolvedModelName
-                });
-            await _workspace.SaveSessionAsync(currentSession);
-        }
-
+        RefreshProviders();
+        var provider = ChatProviderResolver.FindProvider(Providers, selection.ProviderId);
+        if (provider is not { IsValid: true } || !ChatProviderResolver.GetChatModels(provider).Any(model => model.ModelName == selection.ModelName)) return false;
+        if (CurrentSession is { } session && !await SaveSettingsCoreAsync(session, session.Settings with { ProviderId = selection.ProviderId, ModelName = selection.ModelName, ReasoningLevel = null })) return false;
+        if (_disposed) return false;
+        DefaultProviderId = selection.ProviderId;
+        DefaultModelName = selection.ModelName;
         NotifyStateChanged();
-    }
+        return true;
+    });
 
-    private async Task ChangeModelAsync(string modelName)
+    /// <summary>Persists a model-defined reasoning level for the next request.</summary>
+    public async Task ChangeReasoningAsync(string? level) => _ = await RunCommandAsync(() => CurrentSession is { } session
+        ? SaveSettingsCoreAsync(session, session.Settings with { ReasoningLevel = level }) : Task.FromResult(false));
+
+    /// <summary>Updates automatic compaction for this conversation.</summary>
+    public async Task SetAutomaticCompactionAsync(bool enabled) => _ = await RunCommandAsync(() => CurrentSession is { } session
+        ? SaveSettingsCoreAsync(session, session.Settings with { AutomaticCompaction = enabled }) : Task.FromResult(false));
+
+    /// <summary>Updates the occupancy threshold and complete recent turns retained during compaction.</summary>
+    public async Task SetCompactionPreferencesAsync((double Threshold, int RetainedTurns, int? OutputBudget) preferences) => _ = await RunCommandAsync(() => CurrentSession is { } session
+        ? SaveSettingsCoreAsync(session, session.Settings with { CompactionThreshold = preferences.Threshold, RetainedTurns = preferences.RetainedTurns, MaxOutputTokens = preferences.OutputBudget }) : Task.FromResult(false));
+
+    /// <summary>Edits conversation instructions; changes affect the next request.</summary>
+    public async Task OpenPromptSettingsAsync() => _ = await RunCommandAsync(async () =>
     {
-        DefaultModelName = modelName;
-        await _browserStorage.SaveDefaultModelAsync(modelName);
-
-        var currentSession = CurrentSession;
-        if (currentSession != null)
-        {
-            _ = _chatFacade.UpdateSettings(
-                currentSession,
-                currentSession.Settings with { ModelName = modelName });
-            await _workspace.SaveSessionAsync(currentSession);
-        }
-
-        SupportsReasoning = ChatProviderResolver.GetReasoningSupport(
-            Providers,
-            CurrentProviderId,
-            modelName);
-
-        NotifyStateChanged();
-    }
-
-    /// <summary>
-    /// Open the system-prompt settings dialog for the current provider.
-    /// </summary>
-    public async Task OpenPromptSettingsAsync()
-    {
-        var provider = ChatProviderResolver.FindProvider(Providers, CurrentProviderId)
-                       ?? Providers.FirstOrDefault();
-        if (provider == null)
-        {
-            _snackbar.Add(_localizer["Provider:NotFound"], Severity.Warning);
-            return;
-        }
-
-        var session = CurrentSession;
-        var hasStarted = session?.Messages.Count > 0;
-        var currentPrompt = hasStarted ? session?.SystemPrompt : provider.SystemPrompt;
-
+        if (CurrentSession is not { } session) return false;
+        var capturedSettings = session.Settings;
+        var capturedRevision = session.PersistenceRevision;
         var parameters = new DialogParameters
         {
-            [nameof(ProviderSystemPromptDialog.ProviderName)] = provider.DisplayName,
-            [nameof(ProviderSystemPromptDialog.SystemPrompt)] = currentPrompt,
-            [nameof(ProviderSystemPromptDialog.IsReadOnly)] = hasStarted
+            [nameof(ProviderSystemPromptDialog.ProviderName)] = CurrentProviderName,
+            [nameof(ProviderSystemPromptDialog.SystemPrompt)] = session.SystemPrompt,
+            [nameof(ProviderSystemPromptDialog.IsReadOnly)] = false
         };
+        var result = await ShowDialogAsync<ProviderSystemPromptDialog>(
+            localizer["Provider:Settings:SystemPrompt"], parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true }, _lifetime.Token);
+        if (_disposed || CurrentSession != session || session.Settings != capturedSettings || session.PersistenceRevision != capturedRevision || result is not { Canceled: false }) return false;
+        return await SaveSettingsCoreAsync(session, capturedSettings with { SystemPrompt = result.Data as string });
+    });
 
-        var dialog = await _dialogService.ShowAsync<ProviderSystemPromptDialog>(
-            _localizer["Provider:Settings:SystemPrompt"],
-            parameters,
-            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
-
-        var result = await dialog.Result;
-        if (result is not { Canceled: false } || hasStarted)
-        {
-            return;
-        }
-
-        var prompt = result.Data as string;
-        var updateResult = _providerFacade.UpdateProviderSystemPrompt(provider.ProviderId, prompt);
-        if (updateResult.IsFailed(out var error))
-        {
-            _snackbar.Add($"{_localizer["Provider:Settings:UpdateFailed"]}: {error.Message}", Severity.Error);
-            return;
-        }
-
-        if (session != null && session.Messages.Count == 0)
-        {
-            _ = _chatFacade.UpdateSettings(
-                session,
-                session.Settings with { SystemPrompt = prompt });
-            await _workspace.SaveSessionAsync(session);
-        }
-
-        Providers = ChatProviderResolver.GetChatProviders(_chatFacade.GetProviders());
-        _snackbar.Add(_localizer["Provider:Settings:UpdateSuccess"], Severity.Success);
-        NotifyStateChanged();
-    }
-
-    private async Task SetReasoningEnabled(bool enabled)
+    private async Task<bool> SaveSettingsCoreAsync(ChatSession session, ChatSessionSettings settings)
     {
-        ReasoningEnabled = enabled;
-        if (CurrentSession is not null)
-        {
-            _ = _chatFacade.UpdateSettings(
-                CurrentSession,
-                CurrentSession.Settings with { ReasoningEnabled = enabled });
-            await _workspace.SaveSessionAsync(CurrentSession);
-        }
-
+        if (_disposed || HasHistoryConflict || HasHistoryLoadFailure || CurrentSession != session) return false;
+        var result = chatFacade.UpdateSettings(session, settings);
+        if (result.IsFailed(out var error)) { SetError(error.Message); return false; }
+        var saved = await workspace.SaveSessionAsync(session, _lifetime.Token);
         NotifyStateChanged();
-    }
-
-    private void SetSelectedKnowledgeBases(List<string> selectedIds)
-    {
-        SelectedKnowledgeBaseIds = selectedIds;
-
-        var currentSession = CurrentSession;
-        if (currentSession == null)
-        {
-            return;
-        }
-
-        _ = _chatFacade.UpdateRuntimeContext(currentSession, BuildRuntimeContext(selectedIds));
-        UpdateCurrentSession();
-        NotifyStateChanged();
-    }
-
-    /// <summary>
-    /// Toggle tool-call debug display.
-    /// </summary>
-    public async Task ToggleToolDebugAsync()
-    {
-        ToolDebugEnabled = !ToolDebugEnabled;
-        await _browserStorage.SaveToolDebugEnabledAsync(ToolDebugEnabled);
-        NotifyStateChanged();
-    }
-
-    private async Task LoadKnowledgeBasesAsync()
-    {
-        if (!_options.ShowKnowledgeBaseSelector)
-        {
-            return;
-        }
-
-        var knowledgeBaseResult = await _knowledgeBaseFacade.GetAllAsync();
-        if (knowledgeBaseResult.IsFailed(out var error, out var knowledgeBases))
-        {
-            SetPageError(error.Message ?? _localizer["Error:Generic"], showSnackbar: false);
-            KnowledgeBases = [];
-            return;
-        }
-
-        KnowledgeBases = knowledgeBases;
+        return saved;
     }
 }

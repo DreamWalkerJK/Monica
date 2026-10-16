@@ -3,22 +3,30 @@
 @inject IDialogService DialogService
 @inject IStringLocalizer<ConfigurationUIResource> L
 @inject Microsoft.Extensions.Options.IOptions<Monica.Modules.ModuleConfigurationUIOption> UIOptions
+@implements IAsyncDisposable
+@using Monica.UI.Shared.Components.Dialogs
 
 <MudDialog Class="configuration-save-group-dialog">
+    <TitleContent><MoDialogHeading Text="@L["Workbench:Review"]" /></TitleContent>
     <DialogContent>
+        <p class="configuration-save-group-intro">@L["Workbench:SaveHelp"]</p>
         <div class="configuration-save-group-dialog-body">
-            <div class="configuration-save-group-form">
+            <section class="configuration-save-group-form" aria-label="@L["Workbench:AuditDetails"]">
+                <h3>@L["Workbench:AuditDetails"]</h3>
                 <MudStack Spacing="3">
                     <MudTextField T="string"
                                   @bind-Value="_label"
                                   Label="@L["Group:Label"]"
                                   Variant="Variant.Outlined"
                                   Margin="Margin.Dense"
-                                  Required="true" />
+                                  Disabled="_saving"
+                                  Required="true"
+                                  RequiredError="@L["Workbench:LabelRequired"]" />
                     <MudTextField T="string"
                                   @bind-Value="_reason"
                                   Label="@L["Group:Reason"]"
                                   Variant="Variant.Outlined"
+                                  Disabled="_saving"
                                   Lines="2" />
 
                     @if (!string.IsNullOrWhiteSpace(_error))
@@ -38,16 +46,31 @@
                         </MudAlert>
                     }
                 </MudStack>
-            </div>
+            </section>
 
-            <div class="configuration-save-group-preview">
+            <section class="configuration-save-group-preview" aria-label="@L["Workbench:ChangeReview"]">
+                <h3>@L["Workbench:ChangeReview"]</h3>
                 <ConfigurationPendingReviewTabs Review="_review"
                                                 ActionMode="ConfigurationPendingReviewActionMode.Undo"
-                                                ActionsDisabled="_saving"
+                                                ActionsDisabled="@(_saving || _previewing)"
                                                 JumpIssueRequested="JumpToIssue"
                                                 JumpChangeRequested="JumpToChange"
                                                 UndoRequested="UndoReviewAsync" />
-            </div>
+                @if (_previewing)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:PreviewPending"]</MudAlert>
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else if (_validationPreview is not null)
+                {
+                    <h3 class="configuration-validation-heading">@L["Workbench:Validation"]</h3>
+                    <ConfigurationMutationValidationPreview Preview="_validationPreview" JumpRequested="JumpToIssue" />
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:PreviewRequired"]</MudAlert>
+                }
+            </section>
 
             @if (_saving)
             {
@@ -57,11 +80,14 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="_saving">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="RefreshValidationAsync" Disabled="@(_saving || _previewing)">
+            @L["Validation:PreviewRefresh"]
+        </MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    StartIcon="@Icons.Material.Filled.Save"
                    OnClick="SaveAsync"
-                   Disabled="@(_saving || _review.Changes.Count == 0 || _review.ValidationIssues.Count > 0 || string.IsNullOrWhiteSpace(_label))">
+                   Disabled="@(!CanSave)">
             @L["Group:SaveCount", _review.Changes.Count]
         </MudButton>
     </DialogActions>
@@ -72,18 +98,35 @@
     [Parameter] public IReadOnlyList<PendingChange> Changes { get; set; } = [];
     [Parameter] public IReadOnlyList<ConfigurationValidationIssue> ValidationIssues { get; set; } = [];
     [Parameter] public EventCallback<ConfigurationPendingReviewUndoRequest> UndoRequested { get; set; }
+    /// <summary>Reconciles actual applied outcomes against the parent's captured drafts, including after retirement.</summary>
+    [Parameter] public EventCallback<ConfigurationMutationGroupApplyResult> Applied { get; set; }
 
     private string _label = string.Empty;
     private string? _reason;
     private string? _error;
     private bool _saving;
+    private bool _previewing;
+    private bool _disposed;
+    private long _previewGeneration;
+    private readonly ConfigurationOperationLifetime _operations = new();
+    private ConfigurationMutationGroupValidationPreview? _validationPreview;
+    private ConfigurationMutationGroupApplyRequest? _previewRequest;
     private ConfigurationPendingReviewState _review = null!;
 
     private int ExternalChangeCount => _review.Changes.Count(change => change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource);
 
-    protected override void OnParametersSet()
+    private bool CanSave => !_disposed && !_saving && !_previewing
+        && _review.Changes.Count > 0 && _review.ValidationIssues.Count == 0
+        && !string.IsNullOrWhiteSpace(_label) && _previewRequest is not null
+        && _validationPreview?.CanApply == true;
+
+    protected override async Task OnParametersSetAsync()
     {
-        _review ??= new ConfigurationPendingReviewState(Changes, ValidationIssues);
+        if (_review is null)
+        {
+            _review = new ConfigurationPendingReviewState(Changes, ValidationIssues);
+            await RefreshValidationAsync();
+        }
     }
 
     protected override void OnInitialized()
@@ -93,51 +136,151 @@
 
     private async Task SaveAsync()
     {
-        if (_review.Changes.Count == 0)
+        if (_disposed) return;
+        try { await _operations.RunAsync(_ => SaveCoreAsync()); }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+    }
+
+    private async Task SaveCoreAsync()
+    {
+        if (!CanSave || _previewRequest is null || _validationPreview is null)
         {
             return;
         }
 
-        var changes = _review.Changes;
-        _saving = true;
-        _error = null;
-
-        if (UIOptions.Value.EnableAffectedServiceConfirmation
-            && !await ConfirmAffectedServicesAsync(changes))
-        {
-            _saving = false;
-            return;
-        }
-
-        var commandResult = await BuildCommandsAsync(changes);
-        if (commandResult.IsFailed(out var commandError, out var commands))
-        {
-            _error = commandError.Message;
-            _saving = false;
-            return;
-        }
-
-        var applyResult = await Facade.ApplyMutationGroupAsync(new ConfigurationMutationGroupApplyRequest
+        var generation = _previewGeneration;
+        var request = _previewRequest with
         {
             Label = _label,
             Reason = _reason,
             Context = new ConfigurationMutationContext { Reason = _reason },
-            Commands = commands
-        });
-        if (applyResult.IsFailed(out var applyError, out var result))
+            ExpectedValidationFingerprint = _validationPreview.ValidationFingerprint
+        };
+        var capturedChanges = _review.Changes.ToArray();
+        var applied = Applied;
+        var options = MudDialog.Options;
+        _saving = true;
+        _error = null;
+
+        try
         {
-            if (applyError.Message?.Contains(nameof(ConfigurationConcurrencyConflictException), StringComparison.Ordinal) is true)
+            if (UIOptions.Value.EnableAffectedServiceConfirmation
+                && !await ConfirmAffectedServicesAsync(capturedChanges))
             {
-                MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.ConcurrencyConflict(applyError.Message)));
                 return;
             }
 
-            _error = applyError.Message;
-            _saving = false;
+            if (_disposed || generation != _previewGeneration)
+            {
+                return;
+            }
+
+            await MudDialog.SetOptionsAsync(options with { CloseOnEscapeKey = false, BackdropClick = false, CloseButton = false });
+            if (_disposed) return;
+            // Persistence is admitted without a caller cancellation token. Retirement drains its actual result.
+            var applyResult = await Facade.ApplyMutationGroupAsync(request);
+            if (applyResult.Data is { } persisted && persisted.Outcomes.Any(outcome => outcome.Status == ConfigurationMutationOutcomeStatus.Applied))
+            {
+                await applied.InvokeAsync(persisted);
+            }
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (applyResult.IsFailed(out var applyError, out var result))
+            {
+                _error = applyError.Message;
+                _validationPreview = applyResult.Data?.ValidationPreview;
+                _previewRequest = null;
+                return;
+            }
+
+            if (!result.Outcomes.Any(outcome => outcome.Status == ConfigurationMutationOutcomeStatus.Applied))
+            {
+                _error = L["Validation:NotApplied"].Value;
+                _validationPreview = result.ValidationPreview;
+                _previewRequest = null;
+                return;
+            }
+
+            MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.Saved(result)));
+        }
+        finally
+        {
+            if (!_disposed)
+            {
+                _saving = false;
+                await MudDialog.SetOptionsAsync(options);
+            }
+        }
+    }
+
+    private async Task RefreshValidationAsync()
+    {
+        if (_disposed) return;
+        try { await _operations.RunAsync(RefreshValidationCoreAsync); }
+        catch (OperationCanceledException) when (_operations.IsRetired) { }
+    }
+
+    private async Task RefreshValidationCoreAsync(CancellationToken cancellationToken)
+    {
+        var generation = ++_previewGeneration;
+        _previewRequest = null;
+        _validationPreview = null;
+        _error = null;
+        if (_review.Changes.Count == 0 || _review.ValidationIssues.Count > 0 || _disposed)
+        {
             return;
         }
 
-        MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.Saved(result)));
+        _previewing = true;
+        try
+        {
+            var commandResult = await BuildCommandsAsync(_review.Changes);
+            if (_disposed || generation != _previewGeneration)
+            {
+                return;
+            }
+
+            if (commandResult.IsFailed(out var commandError, out var commands))
+            {
+                _error = commandError.Message;
+                return;
+            }
+
+            var request = new ConfigurationMutationGroupApplyRequest
+            {
+                Label = _label,
+                Reason = _reason,
+                Commands = commands
+            };
+            var result = await Facade.PreviewMutationGroupAsync(request, cancellationToken);
+            if (_disposed || generation != _previewGeneration)
+            {
+                return;
+            }
+
+            if (result.IsFailed(out var error, out var preview))
+            {
+                _error = error.Message;
+                _validationPreview = result.Data;
+                return;
+            }
+
+            _validationPreview = preview;
+            _previewRequest = request;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (!_disposed && generation == _previewGeneration)
+            {
+                _previewing = false;
+            }
+        }
     }
 
     private async Task<bool> ConfirmAffectedServicesAsync(IReadOnlyList<PendingChange> changes)
@@ -158,19 +301,19 @@
             analysisError = impactError.Message;
         }
 
+        if (_disposed)
+        {
+            return false;
+        }
+
         var parameters = new DialogParameters<ConfigurationAffectedServiceConfirmationDialog>();
         parameters.Add(dialog => dialog.ChangeCount, changes.Count);
         parameters.Add(dialog => dialog.Impact, impact);
         parameters.Add(dialog => dialog.AnalysisError, analysisError);
-        var dialog = await DialogService.ShowAsync<ConfigurationAffectedServiceConfirmationDialog>(
+        var result = await _operations.ShowDialogAsync(() => DialogService.ShowAsync<ConfigurationAffectedServiceConfirmationDialog>(
             L["Dialogs:SaveGroup:Impact:Title"],
             parameters,
-            new DialogOptions
-            {
-                MaxWidth = MaxWidth.Large,
-                FullWidth = true
-            });
-        var result = await dialog.Result;
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true }));
         return result is { Canceled: false } && result.Data is true;
     }
 
@@ -252,5 +395,14 @@
         }
 
         await UndoRequested.InvokeAsync(request);
+        await RefreshValidationAsync();
+    }
+
+    /// <summary>Retires previews and native children, then drains admitted persistence and outcome reconciliation.</summary>
+    public ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        ++_previewGeneration;
+        return _operations.RetireAsync();
     }
 }

@@ -1,9 +1,11 @@
 ---
 name: monica-application-unit-testing
-description: Create or review Monica application tests through real host composition, business pipelines, scoped database arrange/act/assert, durable event assertions, and isolated provider seams.
+description: Apply Monica application testing rules when creating, refactoring, or reviewing behavior tests, host scenarios, persistence isolation, and provider seams. Load monica-application and the repository's project specification first.
 ---
 
 # Monica Application Unit Testing
+
+Load `$monica-application` and the repository-designated project specification before test design or edits, including direct invocation of this skill. Use its validation contract and adopted architecture/unit rules. The [shared specification](../monica-application/references/00-application-specification.md) defines rule strength; use [specification evolution](../monica-application/references/01-specification-evolution.md) before introducing a new testing or execution model.
 
 Test business behavior through a complete Monica host when composition matters. Each scenario owns its host and database; registrations are finalized before build. Arrange, act and assert use independent scopes.
 
@@ -72,6 +74,13 @@ Default seams retain the real audit policy. Replace ICurrentUser, TimeProvider a
 - A built service provider is immutable. CreateScope never replaces registrations.
 - Never share a MonicaApplication across root providers.
 - Independent scenarios run in parallel. Serialize only a named real external resource that cannot be isolated.
+
+## Requirement and Unit Traits
+
+- Declare the governing requirement once per test class with `[Trait("REQ", "<requirement-id>")]`; add a method-level REQ trait only when one test exercises an additional requirement.
+- Add `[Trait("Unit", "<project-relative-path>::<runtime-key>")]` using the project-qualified catalog reference when `{TypeUnderTest}Tests` is absent or ambiguous. Class traits apply to every method; method traits add associations only for that method. Explicit Unit traits take precedence over naming inference.
+- `REQ` and `Unit` declare separate relationships. A unit association does not imply verification of every requirement on that unit. `dotnet test --filter "REQ=<requirement-id>"` selects declared tests; verify the selected count and execution result before claiming coverage. Runtime result formats may expose traits for CI cross-checks.
+- Trait arguments must be constant, non-empty strings. Requirement IDs must resolve to current Knowledge; use the allocated opaque identity, not a historical title or rewritten ID. Other trait keys stay free for repository-local tooling.
 
 ## Smaller Boundaries
 

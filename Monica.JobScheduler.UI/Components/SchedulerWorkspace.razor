@@ -1,56 +1,56 @@
 @using Monica.JobScheduler.UI.Localization
+@using Monica.UI.Shared.Components.Navigation
 
 @inject IStringLocalizer<JobSchedulerResource> L
 @inject SchedulerTimePresentation TimePresentation
+@inject IOptions<ModuleJobSchedulerOption> SchedulerOptions
 
 <div class="scheduler-workspace mo-page-shell mo-page-shell--full-width">
     <header class="scheduler-workspace__header">
         <div class="scheduler-workspace__heading">
-            <MudText Typo="Typo.overline" Color="Color.Primary">@L["Workspace:Eyebrow"]</MudText>
+            <MudText Typo="Typo.overline" Class="scheduler-workspace__eyebrow">@L["Workspace:Eyebrow"]</MudText>
             <MudText Typo="Typo.h4" HtmlTag="h1" Class="scheduler-workspace__title">@Title</MudText>
             <MudText Typo="Typo.body1" Class="scheduler-workspace__description">@Description</MudText>
         </div>
-        <div class="scheduler-workspace__contract" aria-label="@L["Workspace:ContractLabel"]">
-            <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Size="Size.Medium" Color="Color.Primary" />
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Workspace:ContractLabel"]</MudText>
-                <MudText Typo="Typo.subtitle2">@L["Workspace:ContractValue"]</MudText>
-                <span class="scheduler-workspace__timezone" title="@TimePresentation.TimeZoneDisplayName">
+        <div class="scheduler-workspace__metadata">
+            <div class="scheduler-workspace__context">
+                <MudIcon Icon="@Icons.Material.Outlined.Layers" aria-hidden="true" />
+                <span title="@SchedulerOptions.Value.SchedulerScopeKey">
+                    @L["Workspace:Scope", SchedulerOptions.Value.SchedulerScopeKey]
+                </span>
+            </div>
+            <div class="scheduler-workspace__context">
+                <MudIcon Icon="@Icons.Material.Outlined.Schedule" aria-hidden="true" />
+                <span title="@TimePresentation.TimeZoneDisplayName">
                     @L["Workspace:TimeZone", TimePresentation.TimeZoneId]
                 </span>
             </div>
         </div>
     </header>
 
-    <div class="scheduler-workspace__nav-wrap">
-        <MudTabs Elevation="0"
-                 Rounded="true"
-                 Outlined="true"
-                 ApplyEffectsToContainer="true"
-                 TabPanelsClass="scheduler-workspace__unused-panels"
-                 ActivePanelIndex="@ActivePanelIndex"
-                 ActivePanelIndexChanged="NavigateAsync">
-            <MudTabPanel Icon="@Icons.Material.Filled.SpaceDashboard" Text="@L["Workspace:Navigation:Overview"]" />
-            <MudTabPanel Icon="@Icons.Material.Filled.Inventory2" Text="@L["Workspace:Navigation:Catalog"]" />
-            <MudTabPanel Icon="@Icons.Material.Filled.ReceiptLong" Text="@L["Workspace:Navigation:Executions"]" />
-            <MudTabPanel Icon="@Icons.Material.Filled.QueryStats" Text="@L["Workspace:Navigation:Statistics"]" />
-            <MudTabPanel Icon="@Icons.Material.Filled.MonitorHeart" Text="@L["Workspace:Navigation:Runtime"]" />
-        </MudTabs>
-    </div>
+    <MoWorkbenchNavigation Label="@L["Workspace:Navigation:AriaLabel"]">
+        @foreach (var route in ROUTES)
+        {
+            <a href="@route.Url" aria-current="@(IsCurrentRoute(route.Url) ? "page" : null)">
+                <MudIcon Icon="@route.Icon" aria-hidden="true" />
+                <span>@L[route.LabelKey]</span>
+            </a>
+        }
+    </MoWorkbenchNavigation>
 
-    <main class="scheduler-workspace__content">
+    <div class="scheduler-workspace__content">
         @ChildContent
-    </main>
+    </div>
 </div>
 
 @code {
-    private static readonly string[] ROUTES =
+    private static readonly (string Url, string LabelKey, string Icon)[] ROUTES =
     [
-        "/job-scheduler",
-        "/job-scheduler/catalog",
-        "/job-scheduler/executions",
-        "/job-scheduler/statistics",
-        "/job-scheduler/runtime"
+        ("/job-scheduler", "Workspace:Navigation:Overview", Icons.Material.Outlined.SpaceDashboard),
+        ("/job-scheduler/catalog", "Workspace:Navigation:Catalog", Icons.Material.Outlined.Inventory2),
+        ("/job-scheduler/executions", "Workspace:Navigation:Executions", Icons.Material.Outlined.ReceiptLong),
+        ("/job-scheduler/statistics", "Workspace:Navigation:Statistics", Icons.Material.Outlined.QueryStats),
+        ("/job-scheduler/runtime", "Workspace:Navigation:Runtime", Icons.Material.Outlined.MonitorHeart)
     ];
 
     /// <summary>
@@ -66,8 +66,9 @@
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the selected workspace section.
+    /// Gets or sets the legacy section hint supplied by existing callers.
     /// </summary>
+    /// <remarks>The exact current URL path determines the active route link.</remarks>
     [Parameter]
     public int ActivePanelIndex { get; set; }
 
@@ -80,13 +81,8 @@
     [Inject]
     private NavigationManager Navigation { get; set; } = null!;
 
-    private Task NavigateAsync(int index)
-    {
-        if (index >= 0 && index < ROUTES.Length && index != ActivePanelIndex)
-        {
-            Navigation.NavigateTo(ROUTES[index]);
-        }
-
-        return Task.CompletedTask;
-    }
+    private bool IsCurrentRoute(string route) => string.Equals(
+        Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath.TrimEnd('/'),
+        route,
+        StringComparison.OrdinalIgnoreCase);
 }

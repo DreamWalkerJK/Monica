@@ -7,7 +7,7 @@ namespace Monica.ServiceDiscovery.UIServiceDiscovery.Support;
 public sealed class ServiceInstanceEvictionTracker(IOptions<ModuleServiceDiscoveryUIOption> uiOptions)
 {
     private readonly object _syncRoot = new();
-    private readonly Dictionary<string, InstanceState> _previousInstancesSnapshot = new();
+    private readonly Dictionary<(string AppId, string InstanceId), InstanceState> _previousInstancesSnapshot = new();
     private readonly Dictionary<string, Queue<EvictedInstanceInfo>> _evictedInstances = new(StringComparer.OrdinalIgnoreCase);
 
     public List<RegisteredServiceStatus> Apply(List<RegisteredServiceStatus> services)
@@ -22,7 +22,7 @@ public sealed class ServiceInstanceEvictionTracker(IOptions<ModuleServiceDiscove
 
     private void DetectAndTrackEvictions(List<RegisteredServiceStatus> currentServices)
     {
-        var currentInstances = new Dictionary<string, InstanceState>();
+        var currentInstances = new Dictionary<(string AppId, string InstanceId), InstanceState>();
 
         foreach (var service in currentServices)
         {
@@ -72,7 +72,7 @@ public sealed class ServiceInstanceEvictionTracker(IOptions<ModuleServiceDiscove
         _previousInstancesSnapshot.Clear();
         foreach (var (key, instance) in currentInstances)
         {
-            _previousInstancesSnapshot[key] = instance;
+            _previousInstancesSnapshot[key] = ServiceDiscoverySnapshot.Copy(instance);
         }
     }
 
@@ -86,6 +86,6 @@ public sealed class ServiceInstanceEvictionTracker(IOptions<ModuleServiceDiscove
         }
     }
 
-    private static string BuildInstanceKey(InstanceState instance)
-        => $"{instance.AppId}:{instance.InstanceId}";
+    private static (string AppId, string InstanceId) BuildInstanceKey(InstanceState instance)
+        => (instance.AppId.ToUpperInvariant(), instance.InstanceId);
 }

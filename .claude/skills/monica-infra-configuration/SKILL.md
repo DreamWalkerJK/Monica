@@ -1,12 +1,18 @@
 ---
 name: monica-infra-configuration
-description: Use when integrating Monica managed configuration, bootstrap input plans, file or EF Core stores, runtime reload and validation, or the configuration operator UI.
+description: Use when integrating Monica managed configuration, bootstrap input plans, file or EF Core stores, pure object validation, observed options diagnostics, reviewed mutations and rollback, or the configuration operator UI.
 ---
 
 # Monica managed configuration
 
-Use an immutable `MonicaConfigurationInputPlan` when startup code and the runtime module must read the same managed store and JSON sources. Read [the usage reference](references/usage.md) for the input-plan flow, annotated options, storage, runtime mutation and reload, and UI. The reference is sufficient for ordinary integration; inspect the linked implementation and tests for a custom store, cross-process reload, schema migration, or surprising precedence.
+Choose bootstrap guidance when managed values determine host construction; choose options guidance for validation ownership and diagnostics, and runtime changes for reviewed writes.
 
-Treat bootstrap values and later runtime values as distinct snapshots. A bootstrap read does not publish metadata or write effective values. Runtime activation projects managed values into Microsoft configuration and binds annotated options. Choose validation behavior deliberately: the default reports invalid effective values without blocking startup or options resolution; `FailFast` enforces them. Configuration stored in an EF Core store needs host-owned migrations before startup loading.
+| Task | Read |
+| --- | --- |
+| Select a managed store, compose an input plan, or read values before host construction | [Bootstrap and stores](references/bootstrap-and-stores.md) |
+| Declare managed options and pure object rules, validate a supplied instance, choose binding identity, or distinguish source reports from observed options | [Options and validation](references/options-and-validation.md) |
+| Inspect source precedence, preview complete mutation groups, change or roll back values, reload replicas, or use the operator UI | [Runtime changes](references/runtime-changes.md) |
 
-For module implementation changes, also use `$monica-development`. For configuration UI component work, use `$monica-ui-development` and `$monica-ui-localization`.
+For module implementation, use `$monica-framework`, then `$monica-development`; for building configuration UI components, use `$monica-ui-development`.
+
+If a routed authoring skill is unavailable, use `$monica-guide` to resolve the verified Monica checkout (`source resolve --repository monica --json`) and read its canonical `skills/<name>/SKILL.md`.

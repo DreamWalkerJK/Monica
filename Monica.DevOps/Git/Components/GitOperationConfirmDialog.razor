@@ -1,0 +1,24 @@
+@using Monica.DevOps.Git.State
+@using Monica.UI.Shared.Components.Dialogs
+
+<MudDialog DefaultFocus="DefaultFocus.FirstChild" Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px">
+    <TitleContent><MoDialogHeading Text="@Title" /></TitleContent>
+    <DialogContent><div class="git-confirmation">
+        @if (Kind == GitCommandKind.SyncAll) { <p class="batch-scope">@L["Workspace:Confirm:AllTargets", Targets.Count]</p> }
+        <p class="command-effect">@L[Kind == GitCommandKind.DeleteLocal ? "Workspace:Confirm:DeleteEffect" : "Workspace:Confirm:SyncEffect"]</p>
+        <p class="evidence-note">@L["Workspace:Confirm:EvidenceHint"]</p>
+        <div class="target-ledger">
+            @foreach (var target in Targets)
+            {
+                <section class="confirmation-target"><h3>@L["Workspace:Confirm:TargetId"] <span class="technical">@target.Id</span></h3><dl>
+                    <div><dt>@L["GitDashboard:Labels:ResolvedLocalPath"]</dt><dd class="technical">@target.Path</dd></div>
+                    <div><dt>@L["GitDashboard:Labels:RemoteUrl"]</dt><dd class="technical">@target.Remote</dd></div>
+                    <div><dt>@L["Workspace:Repositories:ConfiguredBranch"]</dt><dd class="technical">@Branch(target.ConfiguredBranch)</dd></div>
+                    <div><dt>@L["GitDashboard:Labels:ResolvedBranch"]</dt><dd class="technical">@(string.IsNullOrWhiteSpace(target.ResolvedBranch) ? L["GitDashboard:States:None"].Value : target.ResolvedBranch)</dd></div>
+                    <div><dt>@L["Workspace:Confirm:ObservedChanges"]</dt><dd>@L[!target.IsAvailable ? "Workspace:Repositories:DirtyUnavailable" : target.IsDirty ? "GitDashboard:States:Yes" : "GitDashboard:States:No"]</dd></div>
+                </dl></section>
+            }
+        </div>
+    </div></DialogContent>
+    <DialogActions><div class="git-confirmation-actions"><MudButton OnClick="@(() => Dialog.Cancel())">@L["Workspace:Confirm:Cancel"]</MudButton><MudButton Color="@(Kind == GitCommandKind.DeleteLocal ? Color.Error : Color.Primary)" Variant="Variant.Outlined" OnClick="@(() => Dialog.Close(DialogResult.Ok(true)))">@ConfirmText</MudButton></div></DialogActions>
+</MudDialog>

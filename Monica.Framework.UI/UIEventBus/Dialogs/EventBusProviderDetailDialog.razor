@@ -1,395 +1,274 @@
-@using Monica.EventBus.Abstractions
-@using Monica.Framework.UI.UIEventBus.Models
 @using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
+@using Monica.EventBus.Abstractions
+@using Monica.EventBus.Models
+@using Monica.Framework.UI.UIEventBus.Models
+@using Monica.Framework.UI.UIEventBus.State
+@using Monica.Framework.UI.UIEventBus.Support
 @using Monica.Core.Modularity.Diagnostics.Facades
 @using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.Core.Results
+@using Monica.UI.Shared.Components.Dialogs
 @using Monica.UI.Shell.Support
 @using Monica.UI.UIModuleSystem.Components
-@implements IDisposable
+@implements IAsyncDisposable
 @inject IServiceProvider Services
 @inject OperationalPageAccessEvaluator OperationalPageAccess
 @inject IStringLocalizer<EventBusResource> L
+@inject ILogger<EventBusProviderDetailDialog> Logger
 
-<MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChanged" Options="DialogOptions">
+<MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChangedAsync" Options="InlineOptions">
+    <TitleContent><MoDialogHeading Text="@L["ProviderInspector:Title"]" /></TitleContent>
     <DialogContent>
-        @if (Provider != null)
-        {
-            <div class="provider-detail-header mb-4">
-                <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-2">
-                    <MudAvatar Color="@GetProviderColor()" Size="Size.Medium" Class="mr-2">
-                        <MudIcon Icon="@GetProviderIcon()" />
-                    </MudAvatar>
-                    @L.GetProviderDisplayName(Provider)
-                </MudText>
-                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-                    @Provider.ImplementationType
-                </MudText>
-            </div>
-
-            <MudTabs Elevation="2"
-                     Rounded="true"
-                     ApplyEffectsToContainer="true"
-                     ActivePanelIndex="@_activeTabIndex"
-                     ActivePanelIndexChanged="OnActiveTabChanged">
-                <MudTabPanel Text="@L["Providers:Detail:Tabs:Info"]" Icon="@Icons.Material.Filled.Info">
-                    <div class="tab-content pa-4">
-                        <MudGrid Spacing="3">
-                            <MudItem xs="12" sm="6">
-                                <MudPaper Class="pa-4" Elevation="2">
-                                    <div class="d-flex align-center mb-2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Class="provider-detail__field-label">@L["Providers:Detail:Fields:ProviderType"]</MudText>
+        <div class="provider-inspector">
+            @if (_provider is not null)
+            {
+                <header class="provider-inspector-identity">
+                    <div><span class="provider-inspector-kicker">@L.GetProviderModeText(_provider.IsDistributed)</span><h2>@L.GetProviderKindText(_provider.ProviderType)</h2><code>@ProviderKey</code><p>@_provider.ImplementationType</p></div>
+                    <div class="provider-inspector-capture"><span>@L["ProviderInspector:Captured"]</span><time>@_capturedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff")</time></div>
+                </header>
+                <p class="provider-inspector-scope">@L["ProviderInspector:Scope"]</p>
+                <div class="provider-inspector-tabs">
+                    <MudTabs Elevation="0" Rounded="false" ActivePanelIndex="@_activeTabIndex" ActivePanelIndexChanged="OnActiveTabChangedAsync">
+                        <MudTabPanel Text="@L["Providers:Detail:Tabs:Info"]">
+                            <section class="provider-inspector-section">
+                                <dl class="provider-inspector-facts">
+                                    <div><dt>@L["Providers:Detail:Fields:ProviderType"]</dt><dd>@L.GetProviderKindText(_provider.ProviderType)</dd></div>
+                                    <div><dt>@L["Providers:Detail:Fields:BusMode"]</dt><dd>@L.GetProviderModeText(_provider.IsDistributed)</dd></div>
+                                    <div><dt>@L["Providers:Detail:Fields:ServiceKey"]</dt><dd><code>@ProviderKey</code></dd></div>
+                                    <div><dt>@L["Providers:Detail:Fields:ImplementationType"]</dt><dd><code>@_provider.ImplementationType</code></dd></div>
+                                </dl>
+                                <div class="provider-inspector-counts">
+                                    <div><span>@L["ProviderDirectory:Registrations"]</span><strong>@_provider.SubscriptionCount</strong></div>
+                                    <div><span>@L["ProviderDirectory:Active"]</span><strong>@_provider.ActiveSubscriptionCount</strong></div>
+                                    <div><span>@L["ProviderDirectory:ReportedProblems"]</span><strong data-attention="@(_provider.UnhealthyTopicCount > 0 ? "true" : "false")">@_provider.UnhealthyTopicCount</strong></div>
+                                </div>
+                                <p class="provider-inspector-note">@L["ProviderDirectory:CountsHelp"]</p>
+                                <section class="provider-inspector-capabilities">
+                                    <h3>@L["Providers:Detail:Fields:Capabilities"]</h3>
+                                    <div>
+                                        @if (_provider.SupportsBulkPublish) { <span>@L["Providers:Capabilities:BulkPublish"]</span> }
+                                        @if (_provider.SupportsStreaming) { <span>@L["Providers:Capabilities:Streaming"]</span> }
+                                        @if (_provider.SupportsDeadLetterQueue) { <span>@L["Providers:Capabilities:DeadLetterQueue"]</span> }
+                                        @if (_provider.Capabilities == EventBusProviderCapabilities.None) { <span>@L["Providers:Capabilities:Basic"]</span> }
                                     </div>
-                                    <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
-                                        @L.GetProviderKindText(Provider.ProviderType)
-                                    </MudChip>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudPaper Class="pa-4" Elevation="2">
-                                    <div class="d-flex align-center mb-2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Key" Color="Color.Info" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Class="provider-detail__field-label">@L["Providers:Detail:Fields:ServiceKey"]</MudText>
+                                    <p class="provider-inspector-note">@L["ProviderInspector:CapabilitiesHelp"]</p>
+                                </section>
+                            </section>
+                        </MudTabPanel>
+                        <MudTabPanel Text="@L["Providers:Detail:Tabs:Options"]">
+                            <section class="provider-inspector-section">
+                                @if (_provider.OptionDiagnosticsTarget is null)
+                                {
+                                    <div class="provider-inspector-empty"><MudIcon Icon="@Icons.Material.Outlined.Settings" /><p>@L["Providers:Detail:Options:NoDedicatedConfiguration"]</p></div>
+                                }
+                                else if (_optionDiagnosticsAccessDenied)
+                                {
+                                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Providers:Detail:Options:AccessDenied"]</MudAlert>
+                                }
+                                else if (_optionDiagnosticsFailed)
+                                {
+                                    <div class="provider-inspector-empty" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" /><p>@L["Providers:Detail:Options:LoadFailed"]</p></div>
+                                }
+                                else if (_optionDiagnostics is not null)
+                                {
+                                    @if (_optionDiagnostics.ProfileResolution == ModuleOptionProfileResolution.DefaultFallback)
+                                    {
+                                        <div class="provider-inspector-fallback">@L["Providers:Detail:Options:DefaultProfileFallback", _optionDiagnostics.RequestedProfileName ?? _provider.ServiceKey ?? string.Empty]</div>
+                                    }
+                                    <ModuleOptionDiagnosticsPanel Diagnostics="@_optionDiagnostics" />
+                                }
+                                else
+                                {
+                                    <div class="provider-inspector-empty" role="status"><MudProgressCircular Indeterminate="true" Size="Size.Small" /><p>@L["ProviderInspector:LoadingOptions"]</p></div>
+                                }
+                                @if (_provider.OptionDiagnosticsTarget is not null)
+                                {
+                                    <div class="provider-inspector-option-actions"><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="BeginOptionLoadAsync" Disabled="@_retired" aria-disabled="@(_optionLoading ? "true" : "false")" aria-busy="@(_optionLoading ? "true" : "false")">@L["ProviderInspector:ReloadOptions"]</MudButton></div>
+                                }
+                            </section>
+                        </MudTabPanel>
+                        <MudTabPanel Text="@L["Providers:Detail:Tabs:Subscriptions"]">
+                            <section class="provider-inspector-section">
+                                <p class="provider-inspector-note">@L["ProviderInspector:SubscriptionScope", _subscriptions.Count]</p>
+                                @if (_subscriptions.Count == 0)
+                                {
+                                    <div class="provider-inspector-empty"><MudIcon Icon="@Icons.Material.Outlined.Subscriptions" /><p>@L["Providers:Detail:States:NoSubscriptions"]</p></div>
+                                }
+                                else
+                                {
+                                    <div class="provider-inspector-table">
+                                        <MudTable T="SubscriptionViewModel" Items="@_subscriptions" Square="true" Elevation="0" Hover="true" Breakpoint="Breakpoint.Xs" RowsPerPage="10">
+                                            <HeaderContent><MudTh>@L["Providers:Columns:EventType"]</MudTh><MudTh>@L["Providers:Columns:Topic"]</MudTh><MudTh>@L["ProviderInspector:Registration"]</MudTh><MudTh>@L["ProviderInspector:Runtime"]</MudTh><MudTh>@L["Providers:Columns:DiscoveryMode"]</MudTh></HeaderContent>
+                                            <RowTemplate>
+                                                <MudTd DataLabel="@L["Providers:Columns:EventType"]"><div class="provider-inspector-event"><strong>@context.EventTypeShortName</strong><code>@context.EventType</code></div></MudTd>
+                                                <MudTd DataLabel="@L["Providers:Columns:Topic"]"><code>@context.TopicName</code></MudTd>
+                                                <MudTd DataLabel="@L["ProviderInspector:Registration"]"><span class="provider-inspector-state" data-tone="@context.StateColor">@L.GetSubscriptionStateText(context.State)</span></MudTd>
+                                                <MudTd DataLabel="@L["ProviderInspector:Runtime"]">
+                                                    @if (context.Scope == EventSubscriptionScope.Local) { <span class="provider-inspector-unreported">@L["ProviderInspector:NotApplicable"]</span> }
+                                                    else if (context.TopicStatus is { } status) { <span class="provider-inspector-state" data-tone="@EventBusPresentation.RuntimeColor(status.State)">@L.GetTopicRuntimeStateText(status.State)</span> }
+                                                    else { <span class="provider-inspector-unreported">@L["ProviderInspector:NotReported"]</span> }
+                                                </MudTd>
+                                                <MudTd DataLabel="@L["Providers:Columns:DiscoveryMode"]">@L.GetDiscoveryModeText(context.IsAutoDiscovered)</MudTd>
+                                            </RowTemplate>
+                                            <PagerContent><MudTablePager PageSizeOptions="@(new[] { 10, 25, 50 })" /></PagerContent>
+                                        </MudTable>
                                     </div>
-                                    <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                        @(Provider.ServiceKey ?? L["Services:Common:DefaultProviderKeyWithNoKey"].Value)
-                                    </MudText>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudPaper Class="pa-4" Elevation="2">
-                                    <div class="d-flex align-center mb-2">
-                                        <MudIcon Icon="@(Provider.IsDistributed ? Icons.Material.Filled.Cloud : Icons.Material.Filled.Memory)"
-                                                 Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
-                                                 Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Class="provider-detail__field-label">@L["Providers:Detail:Fields:BusMode"]</MudText>
-                                    </div>
-                                    <MudChip T="string"
-                                             Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
-                                             Size="Size.Small">
-                                        @L.GetProviderModeText(Provider.IsDistributed)
-                                    </MudChip>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudPaper Class="pa-4" Elevation="2">
-                                    <div class="d-flex align-center mb-2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Secondary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Class="provider-detail__field-label">@L["Providers:Detail:Fields:ImplementationType"]</MudText>
-                                    </div>
-                                    <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                        @Provider.ImplementationType
-                                    </MudText>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudPaper Class="pa-4" Elevation="2">
-                                    <div class="d-flex align-center mb-3">
-                                        <MudIcon Icon="@Icons.Material.Filled.Extension" Color="Color.Tertiary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Class="provider-detail__field-label">@L["Providers:Detail:Fields:Capabilities"]</MudText>
-                                    </div>
-                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                                        @if (Provider.SupportsBulkPublish)
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                                                <MudIcon Icon="@Icons.Material.Filled.DynamicFeed" Size="Size.Small" Class="mr-1" />
-                                                @L["Providers:Capabilities:BulkPublish"]
-                                            </MudChip>
-                                        }
-                                        @if (Provider.SupportsStreaming)
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                                                <MudIcon Icon="@Icons.Material.Filled.Stream" Size="Size.Small" Class="mr-1" />
-                                                @L["Providers:Capabilities:Streaming"]
-                                            </MudChip>
-                                        }
-                                        @if (Provider.SupportsDeadLetterQueue)
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                                                <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Class="mr-1" />
-                                                @L["Providers:Capabilities:DeadLetterQueue"]
-                                            </MudChip>
-                                        }
-                                        @if (Provider.Capabilities == EventBusProviderCapabilities.None)
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
-                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
-                                                @L["Providers:Capabilities:Basic"]
-                                            </MudChip>
-                                        }
-                                    </MudStack>
-                                </MudPaper>
-                            </MudItem>
-                        </MudGrid>
-                    </div>
-                </MudTabPanel>
-
-                <MudTabPanel Text="@L["Providers:Detail:Tabs:Options"]" Icon="@Icons.Material.Filled.Settings">
-                    <div class="tab-content pa-4">
-                        @if (Provider.OptionDiagnosticsTarget is null)
-                        {
-                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                                @L["Providers:Detail:Options:NoDedicatedConfiguration"]
-                            </MudAlert>
-                        }
-                        else if (_optionDiagnosticsAccessDenied)
-                        {
-                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                                @L["Providers:Detail:Options:AccessDenied"]
-                            </MudAlert>
-                        }
-                        else if (_optionDiagnosticsFailed)
-                        {
-                            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-                                @L["Providers:Detail:Options:LoadFailed"]
-                                <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="LoadOptionDiagnosticsAsync">
-                                    @L["Providers:Detail:Options:Retry"]
-                                </MudButton>
-                            </MudAlert>
-                        }
-                        else if (_optionDiagnostics is not null)
-                        {
-                            @if (_optionDiagnostics.ProfileResolution == ModuleOptionProfileResolution.DefaultFallback)
-                            {
-                                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-3">
-                                    @L[
-                                        "Providers:Detail:Options:DefaultProfileFallback",
-                                        _optionDiagnostics.RequestedProfileName ?? Provider.ServiceKey ?? string.Empty]
-                                </MudAlert>
-                            }
-                            <ModuleOptionDiagnosticsPanel Diagnostics="@_optionDiagnostics" />
-                        }
-                        else
-                        {
-                            <div class="d-flex justify-center pa-4" role="status">
-                                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                            </div>
-                        }
-                    </div>
-                </MudTabPanel>
-
-                <MudTabPanel Text="@L["Providers:Detail:Tabs:Subscriptions"]" Icon="@Icons.Material.Filled.Subscriptions" BadgeData="@Subscriptions.Count.ToString()" BadgeColor="Color.Primary">
-                    <div class="tab-content pa-4">
-                        @if (!Subscriptions.Any())
-                        {
-                            <MudAlert Severity="Severity.Info">
-                                @L["Providers:Detail:States:NoSubscriptions"]
-                            </MudAlert>
-                        }
-                        else
-                        {
-                            <MudDataGrid T="SubscriptionViewModel" Items="@Subscriptions" Dense="true" Hover="true">
-                                <Columns>
-                                    <PropertyColumn Property="x => x.EventTypeShortName" Title="@L["Providers:Columns:EventType"]" />
-                                    <PropertyColumn Property="x => x.TopicName" Title="@L["Providers:Columns:Topic"]" />
-                                    <TemplateColumn Title="@L["Providers:Columns:State"]">
-                                        <CellTemplate>
-                                            <MudChip T="string" Size="Size.Small" Color="@context.Item.DisplayStateColor">
-                                                @L.GetSubscriptionDisplayStateText(context.Item)
-                                            </MudChip>
-                                        </CellTemplate>
-                                    </TemplateColumn>
-                                    <TemplateColumn Title="@L["Providers:Columns:DiscoveryMode"]">
-                                        <CellTemplate>
-                                            <MudChip T="string" Size="Size.Small"
-                                                     Color="@(context.Item.IsAutoDiscovered ? Color.Info : Color.Secondary)"
-                                                     Variant="Variant.Outlined">
-                                                @L.GetDiscoveryModeText(context.Item.IsAutoDiscovered)
-                                            </MudChip>
-                                        </CellTemplate>
-                                    </TemplateColumn>
-                                </Columns>
-                            </MudDataGrid>
-                        }
-                    </div>
-                </MudTabPanel>
-            </MudTabs>
-        }
+                                }
+                            </section>
+                        </MudTabPanel>
+                    </MudTabs>
+                </div>
+            }
+            else
+            {
+                <div class="provider-inspector-empty"><p>@L["ProviderInspector:NotSelected"]</p></div>
+            }
+        </div>
     </DialogContent>
-    <DialogActions>
-        <MudButton Color="Color.Primary" OnClick="OnClose" StartIcon="@Icons.Material.Filled.Close">
-            @L["Shared:Common:Close"]
-        </MudButton>
-    </DialogActions>
+    <DialogActions><MudButton Color="Color.Default" OnClick="CloseAsync">@L["Shared:Common:Close"]</MudButton></DialogActions>
 </MudDialog>
 
 @code {
-    /// <summary>
-    /// Whether to display the dialog box
-    /// </summary>
+    /// <summary>Gets or sets visibility when the component is used as an inline native dialog.</summary>
     [Parameter] public bool IsVisible { get; set; }
-
-    /// <summary>
-    /// Whether to display dialog change events
-    /// </summary>
+    /// <summary>Gets or sets the callback for inline native dialog visibility changes.</summary>
     [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
-
-    /// <summary>
-    /// Provider information
-    /// </summary>
+    /// <summary>Gets or sets the provider registration to freeze when the inspector opens.</summary>
     [Parameter] public EventBusProviderInfo? Provider { get; set; }
-
-    /// <summary>
-    /// This Provider's subscription list
-    /// </summary>
+    /// <summary>Gets or sets subscriptions belonging to this provider's exact service key and bus scope.</summary>
     [Parameter] public List<SubscriptionViewModel> Subscriptions { get; set; } = [];
+    /// <summary>Gets or sets the source snapshot's capture time; compatibility callers fall back to the open time.</summary>
+    [Parameter] public DateTimeOffset? CapturedAt { get; set; }
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
 
-    /// <summary>
-    /// Dialog options
-    /// </summary>
-    private DialogOptions DialogOptions = new()
-    {
-        CloseButton = true,
-        CloseOnEscapeKey = true,
-        FullWidth = true,
-        MaxWidth = MaxWidth.Large
-    };
-
+    private static readonly DialogOptions InlineOptions = new() { CloseButton = true, CloseOnEscapeKey = true, FullWidth = true, MaxWidth = MaxWidth.Large };
+    private EventBusProviderInfo? _provider;
+    private List<SubscriptionViewModel> _subscriptions = [];
+    private DateTimeOffset _capturedAt;
     private int _activeTabIndex;
-    private string? _providerIdentity;
+    private int _optionLoadVersion;
     private ModuleOptionDiagnostics? _optionDiagnostics;
     private bool _optionDiagnosticsFailed;
     private bool _optionDiagnosticsAccessDenied;
-    private int _optionLoadVersion;
-    private bool _disposed;
+    private bool _optionLoading;
+    private bool _closed;
+    private bool _retired;
+    private Task? _optionTask;
+    private Task? _disposeTask;
+    private bool IsOpen => !_closed && (MudDialog is not null || IsVisible);
+    private string ProviderKey => EventBusPresentation.KeyText(_provider?.ServiceKey, L);
 
     protected override void OnParametersSet()
     {
-        var providerIdentity = Provider?.UniqueId;
-        if (!string.Equals(_providerIdentity, providerIdentity, StringComparison.Ordinal))
+        if (_retired) return;
+        if (MudDialog is null && !IsVisible)
         {
-            _providerIdentity = providerIdentity;
-            ClearOptionDiagnostics(resetTab: true);
-        }
-
-        if (!IsVisible)
-        {
-            ClearOptionDiagnostics(resetTab: true);
-        }
-    }
-
-    /// <summary>
-    /// Close dialog
-    /// </summary>
-    private Task OnClose() => SetVisibilityAsync(false);
-
-    private Task OnVisibleChanged(bool isVisible) => SetVisibilityAsync(isVisible);
-
-    private async Task SetVisibilityAsync(bool isVisible)
-    {
-        if (IsVisible == isVisible)
-        {
+            _closed = false;
+            _provider = null;
+            _subscriptions = [];
+            ResetOptions();
+            _activeTabIndex = 0;
             return;
         }
-
-        IsVisible = isVisible;
-        if (!isVisible)
+        if (Provider is null || string.Equals(_provider?.UniqueId, Provider.UniqueId, StringComparison.Ordinal)) return;
+        _closed = false;
+        _provider = new EventBusProviderInfo
         {
-            ClearOptionDiagnostics(resetTab: true);
-        }
-
-        await IsVisibleChanged.InvokeAsync(isVisible);
+            ServiceKey = Provider.ServiceKey, ProviderType = Provider.ProviderType, IsDistributed = Provider.IsDistributed,
+            Capabilities = Provider.Capabilities, ImplementationType = Provider.ImplementationType,
+            OptionDiagnosticsTarget = Provider.OptionDiagnosticsTarget, SubscriptionCount = Provider.SubscriptionCount,
+            ActiveSubscriptionCount = Provider.ActiveSubscriptionCount, UnhealthyTopicCount = Provider.UnhealthyTopicCount
+        };
+        _subscriptions = Subscriptions.Where(subscription => string.Equals(subscription.ServiceKey, _provider.ServiceKey, StringComparison.Ordinal)
+            && subscription.Scope == (_provider.IsDistributed ? EventSubscriptionScope.Distributed : EventSubscriptionScope.Local)).Select(EventBusWorkbenchState.CloneSubscription).ToList();
+        _capturedAt = CapturedAt ?? DateTimeOffset.UtcNow;
+        _activeTabIndex = 0;
+        ResetOptions();
     }
 
-    private async Task OnActiveTabChanged(int tabIndex)
+    private Task OnActiveTabChangedAsync(int index)
     {
-        if (tabIndex != 1)
-        {
-            ClearOptionDiagnostics(resetTab: false);
-            _activeTabIndex = tabIndex;
-            return;
-        }
-
-        _activeTabIndex = tabIndex;
-        if (Provider?.OptionDiagnosticsTarget is not null
-            && _optionDiagnostics is null
-            && !_optionDiagnosticsFailed
-            && !_optionDiagnosticsAccessDenied)
-        {
-            await LoadOptionDiagnosticsAsync();
-        }
+        if (_retired || !IsOpen) return Task.CompletedTask;
+        _activeTabIndex = index;
+        ResetOptions();
+        return index == 1 ? BeginOptionLoadAsync() : Task.CompletedTask;
     }
 
-    private async Task LoadOptionDiagnosticsAsync()
+    private Task BeginOptionLoadAsync()
     {
-        var target = Provider?.OptionDiagnosticsTarget;
-        if (target is null)
-        {
-            return;
-        }
-
-        var providerIdentity = _providerIdentity;
-        var requestVersion = ++_optionLoadVersion;
+        if (_retired || !IsOpen || _optionLoading || _activeTabIndex != 1 || _provider?.OptionDiagnosticsTarget is not { } target) return Task.CompletedTask;
+        var version = ++_optionLoadVersion;
+        var identity = _provider.UniqueId;
         _optionDiagnostics = null;
         _optionDiagnosticsFailed = false;
         _optionDiagnosticsAccessDenied = false;
-
-        var isAuthorized = await OperationalPageAccess.IsAuthorizedAsync();
-        if (!CanApplyOptionLoad(requestVersion, providerIdentity))
-        {
-            return;
-        }
-
-        if (!isAuthorized)
-        {
-            _optionDiagnosticsAccessDenied = true;
-            return;
-        }
-
-        var facade = Services.GetService<ModuleDiagnosticsFacade>();
-        if (facade is null)
-        {
-            _optionDiagnosticsFailed = true;
-            return;
-        }
-
-        var result = facade.GetModuleOptions(target.ModuleKey, target.ProfileSelector);
-        if (result.IsFailed(out _, out var diagnostics))
-        {
-            _optionDiagnosticsFailed = true;
-            return;
-        }
-
-        _optionDiagnostics = diagnostics;
+        _optionLoading = true;
+        return _optionTask = LoadOptionsAsync(_optionTask, target, version, identity);
     }
 
-    private bool CanApplyOptionLoad(int requestVersion, string? providerIdentity) =>
-        !_disposed
-        && requestVersion == _optionLoadVersion
-        && IsVisible
-        && _activeTabIndex == 1
-        && string.Equals(_providerIdentity, providerIdentity, StringComparison.Ordinal);
+    private async Task LoadOptionsAsync(Task? previous, ModuleOptionDiagnosticsTarget target, int version, string identity)
+    {
+        try
+        {
+            if (previous is not null) await previous;
+            if (!CanAdopt(version, identity)) return;
+            var authorized = await OperationalPageAccess.IsAuthorizedAsync();
+            if (!CanAdopt(version, identity)) return;
+            if (!authorized) { _optionDiagnosticsAccessDenied = true; return; }
+            var facade = Services.GetService<ModuleDiagnosticsFacade>();
+            if (facade is null) { _optionDiagnosticsFailed = true; return; }
+            var result = facade.GetModuleOptions(target.ModuleKey, target.ProfileSelector);
+            if (!CanAdopt(version, identity)) return;
+            if (result.IsFailed(out _, out var diagnostics)) { _optionDiagnosticsFailed = true; return; }
+            _optionDiagnostics = diagnostics;
+        }
+        catch (Exception error)
+        {
+            Logger.LogError(error, "Loading provider option diagnostics failed for {ProviderIdentity}", identity);
+            if (CanAdopt(version, identity)) _optionDiagnosticsFailed = true;
+        }
+        finally
+        {
+            if (CanAdopt(version, identity)) _optionLoading = false;
+        }
+    }
 
-    private void ClearOptionDiagnostics(bool resetTab)
+    private bool CanAdopt(int version, string identity) => !_retired && IsOpen && _activeTabIndex == 1 &&
+        _optionLoadVersion == version && string.Equals(_provider?.UniqueId, identity, StringComparison.Ordinal);
+
+    private void ResetOptions()
     {
         _optionLoadVersion++;
         _optionDiagnostics = null;
         _optionDiagnosticsFailed = false;
         _optionDiagnosticsAccessDenied = false;
-        if (resetTab)
-        {
-            _activeTabIndex = 0;
-        }
+        _optionLoading = false;
     }
 
-    public void Dispose()
+    private async Task OnVisibleChangedAsync(bool visible)
     {
-        _disposed = true;
-        ClearOptionDiagnostics(resetTab: true);
+        IsVisible = visible;
+        if (!visible) { _closed = true; ResetOptions(); }
+        else _closed = false;
+        await IsVisibleChanged.InvokeAsync(visible);
     }
 
-    private string GetProviderIcon() => Provider?.ProviderType switch
+    private Task CloseAsync()
     {
-        EventBusProviderKind.Local => Icons.Material.Filled.Memory,
-        EventBusProviderKind.Dapr => Icons.Material.Filled.Cloud,
-        _ => Icons.Material.Filled.Help
-    };
+        if (_retired) return Task.CompletedTask;
+        _closed = true;
+        ResetOptions();
+        if (MudDialog is not null) { MudDialog.Close(); return Task.CompletedTask; }
+        return OnVisibleChangedAsync(false);
+    }
 
-    private Color GetProviderColor() => Provider?.ProviderType switch
+    public ValueTask DisposeAsync() => new(_disposeTask ??= RetireAsync());
+
+    private async Task RetireAsync()
     {
-        EventBusProviderKind.Local => Color.Success,
-        EventBusProviderKind.Dapr => Color.Info,
-        _ => Color.Default
-    };
+        _retired = true;
+        ResetOptions();
+        if (_optionTask is not null) await _optionTask;
+    }
 }

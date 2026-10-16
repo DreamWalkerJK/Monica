@@ -1,21 +1,68 @@
-@using Monica.Configuration.UI.Localization
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<ConfigurationUIResource> L
 
-<MudDialog Class="configuration-unified-version-diff-dialog">
+<MudDialog ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent><MoDialogHeading Text="@DialogTitle" /></TitleContent>
     <DialogContent>
-        <ConfigurationUnifiedVersionDiffPanel Comparison="Comparison" />
+        <div class="unified-version-diff-dialog">
+            <div class="unified-version-diff-context">
+                @foreach (var item in SnapshotContexts)
+                {
+                    var summary = item.Snapshot.Summary;
+                    <section data-snapshot="@item.Kind">
+                        <p class="unified-version-diff-label">@item.Label</p>
+                        <h3>@VersionLabel(summary.Version)</h3>
+                        <p>@L["Versions:Current:DefinitionCount", summary.DefinitionCount]</p>
+                        <dl>
+                            <div><dt>@L["History:Columns:Time"]</dt><dd><time datetime="@summary.CreatedTime.ToString("O")">@FormatTime(summary.CreatedTime)</time></dd></div>
+                            <div><dt>@L["History:Dialog:Operator"]</dt><dd>@ValueOrEmpty(summary.ModifierName)<code>@ValueOrEmpty(summary.ModifierId)</code></dd></div>
+                            @if (summary.MutationGroupId is not null)
+                            {
+                                <div class="unified-version-diff-wide"><dt>@L["History:Dialog:MutationGroup"]</dt><dd><code>@summary.MutationGroupId</code></dd></div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(summary.Reason))
+                            {
+                                <div class="unified-version-diff-wide"><dt>@L["Group:Reason"]</dt><dd>@summary.Reason</dd></div>
+                            }
+                        </dl>
+                    </section>
+                }
+            </div>
+            <ConfigurationUnifiedVersionDiffPanel Comparison="@_comparison" ShowSummaryHeader="false" />
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+        <div class="unified-version-diff-actions"><MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton></div>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    /// <summary>Gets the immutable version comparison frozen when this native dialog is initialized.</summary>
+    /// <remarks>The child comparison panel owns its definition reads and privacy-aware display.</remarks>
     [Parameter, EditorRequired] public ConfigurationUnifiedVersionComparison Comparison { get; set; } = null!;
+    private ConfigurationUnifiedVersionComparison _comparison = null!;
+    private string DialogTitle => L["Versions:Diff:Title", VersionLabel(_comparison.Origin.Summary.Version), VersionLabel(_comparison.Target.Summary.Version)];
+    private IEnumerable<(string Kind, string Label, ConfigurationUnifiedVersionSnapshot Snapshot)> SnapshotContexts =>
+    [
+        ("origin", L["Versions:Diff:Origin"], _comparison.Origin),
+        ("target", L["Versions:Diff:Target"], _comparison.Target)
+    ];
 
-    private void Close()
+    protected override void OnInitialized() => _comparison = Comparison with
     {
-        MudDialog.Close();
-    }
+        Origin = FreezeSnapshot(Comparison.Origin), Target = FreezeSnapshot(Comparison.Target), Changes = Comparison.Changes.ToArray()
+    };
+    private static ConfigurationUnifiedVersionSnapshot FreezeSnapshot(ConfigurationUnifiedVersionSnapshot snapshot) => snapshot with
+    {
+        Summary = snapshot.Summary with
+        {
+            DefinitionKeys = snapshot.Summary.DefinitionKeys.ToArray(), TriggerDefinitionKeys = snapshot.Summary.TriggerDefinitionKeys.ToArray()
+        },
+        Definitions = snapshot.Definitions.Select(definition => definition with { SourceContributions = definition.SourceContributions.ToArray() }).ToArray()
+    };
+    private static string VersionLabel(long version) => ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version);
+    private static string FormatTime(DateTimeOffset value) => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fffffff zzz");
+    private string ValueOrEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? L["Common:States:Empty"] : value;
+    private void Close() => MudDialog.Close();
 }

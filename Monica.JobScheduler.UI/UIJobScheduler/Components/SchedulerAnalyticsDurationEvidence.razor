@@ -1,0 +1,105 @@
+@using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
+
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+<section class="analytics-duration" aria-labelledby="@_headingId">
+    <header class="analytics-duration__heading">
+        <div>
+            <h2 id="@_headingId">@L["Analytics:Duration:Title"]</h2>
+            <p>@L["Analytics:Duration:Description"]</p>
+        </div>
+        <span class="analytics-duration__samples">@L["Analytics:Duration:Samples", Snapshot.Duration.Count]</span>
+    </header>
+
+    <dl class="analytics-duration__percentiles" aria-label="@L["Analytics:Duration:PercentilesAriaLabel"]">
+        @foreach (var metric in Percentiles)
+        {
+            <div>
+                <dt>@metric.Label</dt>
+                <dd>@FormatDuration(metric.Value)</dd>
+                <dd class="analytics-duration__explanation">@metric.Description</dd>
+            </div>
+        }
+    </dl>
+    <dl class="analytics-duration__summary">
+        <div><dt>@L["Analytics:Duration:Minimum"]</dt><dd>@FormatDuration(Snapshot.Duration.Minimum)</dd></div>
+        <div><dt>@L["Analytics:Duration:Average"]</dt><dd>@FormatDuration(Snapshot.Duration.Average)</dd></div>
+        <div><dt>@L["Analytics:Duration:Maximum"]</dt><dd>@FormatDuration(Snapshot.Duration.Maximum)</dd></div>
+    </dl>
+
+    <header class="analytics-duration__slow-heading">
+        <h3>@L["Analytics:Slowest:Top"]</h3>
+        <p>@L["Analytics:Slowest:Description"]</p>
+    </header>
+    @if (Snapshot.SlowestExecutions.Count == 0)
+    {
+        <div class="analytics-duration__empty">
+            <MudIcon Icon="@Icons.Material.Outlined.Timer" Size="Size.Medium" />
+            <p>@L["Analytics:Slowest:Empty"]</p>
+        </div>
+    }
+    else
+    {
+        <ol class="analytics-duration__slow-list">
+            @for (var index = 0; index < Snapshot.SlowestExecutions.Count; index++)
+            {
+                var capture = Snapshot.SlowestExecutions[index];
+                <li @key="capture.InstanceId" data-instance-id="@capture.InstanceId">
+                    <MudButton @key="capture.InstanceId" Variant="Variant.Text" Class="analytics-duration__inspect"
+                               aria-label="@L["Analytics:Slowest:OpenDetails", index + 1, capture.JobName, capture.InstanceId, L[$"ExecutionStates:{capture.State}"], TimePresentation.FormatTimestampWithOffset(capture.CompletedAtUtc), FormatDuration(capture.Duration)]"
+                               OnClick="@(() => InspectExecution.InvokeAsync(capture))">
+                        <span class="analytics-duration__slow-row">
+                            <span class="analytics-duration__rank" aria-hidden="true">@(index + 1)</span>
+                            <span class="analytics-duration__identity">
+                                <strong>@capture.JobName</strong>
+                                <span class="analytics-duration__fact"><span>@L["ExecutionDetail:Owner"]</span><code>@capture.OwnerKey</code></span>
+                                <span class="analytics-duration__fact"><span>@L["ExecutionDetail:Job"]</span><code>@capture.JobKey</code></span>
+                            </span>
+                            <span class="analytics-duration__record">
+                                <span class="analytics-duration__state" data-state="@capture.State.ToString().ToLowerInvariant()">
+                                    <MudIcon Icon="@ExecutionUiPresentation.GetStateIcon(capture.State)" Size="Size.Small" />
+                                    @L[$"ExecutionStates:{capture.State}"]
+                                </span>
+                                <span class="analytics-duration__fact"><span>@L["ExecutionDetail:Instance"]</span><code>@capture.InstanceId</code></span>
+                                <span class="analytics-duration__fact"><span>@L["ExecutionDetail:Completed"]</span><time datetime="@capture.CompletedAtUtc.ToString("O")">@TimePresentation.FormatTimestampWithOffset(capture.CompletedAtUtc)</time></span>
+                            </span>
+                            <span class="analytics-duration__value">
+                                <b>@FormatDuration(capture.Duration)</b>
+                                <span>@L["Analytics:Slowest:Inspect"]<MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></span>
+                            </span>
+                        </span>
+                    </MudButton>
+                </li>
+            }
+        </ol>
+    }
+</section>
+
+@code {
+    private readonly string _headingId = $"analytics-duration-{Guid.NewGuid():N}";
+
+    /// <summary>Gets the accepted duration population and per-job longest records.</summary>
+    [Parameter, EditorRequired]
+    public JobExecutionAnalyticsSnapshot Snapshot { get; set; } = null!;
+
+    /// <summary>Gets the callback receiving the exact immutable displayed execution capture.</summary>
+    /// <remarks>
+    /// Native opener identity is keyed by the exact instance ID and remains enabled during parent-owned modal work.
+    /// The parent must freshly authorize inspection and own admission, native reference/Result and retirement.
+    /// </remarks>
+    [Parameter, EditorRequired]
+    public EventCallback<JobExecutionAnalyticsSlowExecution> InspectExecution { get; set; }
+
+    private IReadOnlyList<DurationMetric> Percentiles =>
+    [
+        new(L["Analytics:Duration:P50"], L["Analytics:Duration:P50Description"], Snapshot.Duration.P50),
+        new(L["Analytics:Duration:P90"], L["Analytics:Duration:P90Description"], Snapshot.Duration.P90),
+        new(L["Analytics:Duration:P95"], L["Analytics:Duration:P95Description"], Snapshot.Duration.P95),
+        new(L["Analytics:Duration:P99"], L["Analytics:Duration:P99Description"], Snapshot.Duration.P99)
+    ];
+
+    private string FormatDuration(TimeSpan? value) => value is null ? L["Common:NotAvailable"] : TimePresentation.FormatDuration(value);
+    private sealed record DurationMetric(string Label, string Description, TimeSpan? Value);
+}

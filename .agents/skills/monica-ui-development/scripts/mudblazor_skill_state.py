@@ -6,14 +6,20 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from skill_repository import find_repository_root
+
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-PROJECT_ROOT = SKILL_ROOT.parents[2]
-STATE_DIR = PROJECT_ROOT / ".tmp" / "monica-ui-development"
-VARIABLES_JSON_FILE = STATE_DIR / "mudblazor-css-variables.json"
+PROJECT_ROOT = find_repository_root(__file__)
+STATE_DIR = PROJECT_ROOT / ".tmp" / "monica-ui-development" if PROJECT_ROOT else None
+VARIABLES_JSON_FILE = STATE_DIR / "mudblazor-css-variables.json" if STATE_DIR else None
 MUDBLAZOR_SOURCE_PATH_ENV = "MUDBLAZOR_SOURCE_PATH"
 
 
 def ensure_state_dir() -> Path:
+    """Create the repository cache, or require an explicit portable output."""
+
+    if STATE_DIR is None:
+        raise FileNotFoundError("No Monica repository cache; pass --output-json to the generator.")
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     return STATE_DIR
 

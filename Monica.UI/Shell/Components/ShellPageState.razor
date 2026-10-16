@@ -1,0 +1,86 @@
+<div class="shell-page-state" data-tone="@Tone">
+    <section class="shell-page-state__surface" aria-labelledby="@HeadingId" aria-busy="@(IsChecking ? "true" : "false")">
+        <span class="shell-page-state__icon" aria-hidden="true">
+            <MudIcon Icon="@Icon" />
+        </span>
+
+        <div class="shell-page-state__copy">
+            <h1 id="@HeadingId" @ref="_heading" tabindex="-1">@Title</h1>
+            <p class="shell-page-state__description" role="@(IsChecking ? "status" : null)">
+                @if (IsChecking)
+                {
+                    <span class="shell-page-state__progress" aria-hidden="true"></span>
+                }
+                @Description
+            </p>
+            @if (!string.IsNullOrEmpty(RecoveryHint))
+            {
+                <p class="shell-page-state__recovery">@RecoveryHint</p>
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(HomeLabel))
+        {
+            <div class="shell-page-state__action">
+                <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Home">
+                    @HomeLabel
+                </MudButton>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(EvidenceValue))
+        {
+            <div class="shell-page-state__evidence">
+                <span>@EvidenceLabel</span>
+                <code>@EvidenceValue</code>
+            </div>
+        }
+    </section>
+
+    @ChildContent
+</div>
+
+@code {
+    private ElementReference _heading;
+
+    internal ElementReference HeadingReference => _heading;
+    private string Tone => Severity switch
+    {
+        Severity.Warning => "warning",
+        Severity.Error => "error",
+        _ => "info"
+    };
+
+    /// <summary>Gets or sets the stable local ID naming this state section.</summary>
+    [Parameter, EditorRequired] public string HeadingId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the already localized state heading.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the already localized explanation.</summary>
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the decorative state glyph.</summary>
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the semantic tone. Info is the default; Warning and Error have distinct treatments.</summary>
+    [Parameter] public Severity Severity { get; set; } = Severity.Info;
+
+    /// <summary>Gets or sets whether access is pending. Pending copy is a polite status and the section is busy.</summary>
+    [Parameter] public bool IsChecking { get; set; }
+
+    /// <summary>Gets or sets an optional already localized recovery hint.</summary>
+    [Parameter] public string? RecoveryHint { get; set; }
+
+    /// <summary>Gets or sets the localized label for the host-owned root destination. A null or empty label omits the link.</summary>
+    [Parameter] public string? HomeLabel { get; set; }
+
+    /// <summary>Gets or sets the localized label for optional request evidence.</summary>
+    [Parameter] public string? EvidenceLabel { get; set; }
+
+    /// <summary>Gets or sets plain-text request evidence, encoded by Razor when rendered and selectable in the browser. A null or empty value omits its entire row.</summary>
+    [Parameter] public string? EvidenceValue { get; set; }
+
+    /// <summary>Gets or sets subordinate page content rendered beneath the common state surface.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

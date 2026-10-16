@@ -43,7 +43,8 @@ public class ModuleDependencyInjectionUI : MonicaModule<ModuleDependencyInjectio
                     Icons.Material.Filled.AccountTree,
                     BuiltInNavigationCategoryIds.Infrastructure,
                     addToNav: true,
-                    navOrder: 10)));
+                    navOrder: 10,
+                    descriptionKey: "Pages:DependencyInjection:Description")));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleDependencyInjectionUIOption> context)

@@ -7,9 +7,9 @@ namespace Monica.ProjectUnits.CodeAnalysis.Models;
 public static class ProjectUnitSourceAnalysisContract
 {
     /// <summary>
-    /// Current source catalog contract version. Version 3 aligns discovery-control attributes with the runtime catalog.
+    /// Version 6 includes request associations for response-less and custom-result application services.
     /// </summary>
-    public const string Version = "monica-project-units-source/v3";
+    public const string Version = "monica-project-units-source/v6";
 
     /// <summary>Architectural roles the current source classifier can produce.</summary>
     public static IReadOnlySet<ProjectUnitSourceType> DiscoverableUnitTypes { get; } = new[]
@@ -137,9 +137,14 @@ public enum ProjectUnitSourceAnalysisStage
 }
 
 /// <summary>Workspace and project input for one source analysis.</summary>
+/// <remarks>
+/// Project paths are analyzed for ProjectUnits; test project paths are analyzed only for test classes —
+/// they contribute no units of their own.
+/// </remarks>
 public sealed record ProjectUnitSourceAnalysisRequest(
     string WorkspaceRoot,
-    IReadOnlyList<string> ProjectPaths);
+    IReadOnlyList<string> ProjectPaths,
+    IReadOnlyList<string>? TestProjectPaths = null);
 
 /// <summary>Progress reported while loading and analyzing projects.</summary>
 public sealed record ProjectUnitSourceAnalysisProgress(
@@ -185,7 +190,42 @@ public sealed record ProjectUnitSourceUnit(
     IReadOnlyList<string> ExecutionPoints,
     IReadOnlyList<string> Dependencies,
     IReadOnlyList<string> DependedBy,
-    IReadOnlyList<ProjectUnitSourceDiagnostic> Diagnostics);
+    IReadOnlyList<ProjectUnitSourceDiagnostic> Diagnostics)
+{
+    /// <summary>Declared outgoing symbols, including targets outside this analysis scope.</summary>
+    public IReadOnlyList<ProjectUnitSourceReference> OutgoingReferences { get; init; } = [];
+}
+
+/// <summary>A scope-independent outgoing type reference. MissingDiagnosticCode identifies required unit associations.</summary>
+public sealed record ProjectUnitSourceReference(string AssemblyName, string RuntimeKey, string? MissingDiagnosticCode = null);
+
+/// <summary>One key/value pair declared through a trait attribute on a test class or one of its test methods.</summary>
+public sealed record ProjectUnitSourceTestTrait(string Key, string Value)
+{
+    /// <summary>Location of the declaration, when available.</summary>
+    public ProjectUnitSourceLocation? Source { get; init; }
+}
+
+/// <summary>One declared test method and only its method-level traits; class traits are inherited by consumers.</summary>
+public sealed record ProjectUnitSourceTestMethod(string Name, ProjectUnitSourceLocation Source, IReadOnlyList<ProjectUnitSourceTestTrait> Traits);
+
+/// <summary>
+/// A concrete test class declared in a test project: it owns at least one Fact/Theory test method and
+/// retains class traits separately from each method's declarations.
+/// </summary>
+public sealed record ProjectUnitSourceTestClass(
+    string RuntimeKey,
+    string ProjectPath,
+    string ProjectName,
+    string Namespace,
+    string Name,
+    ProjectUnitSourceLocation Source,
+    int TestMethodCount,
+    IReadOnlyList<ProjectUnitSourceTestTrait> Traits)
+{
+    /// <summary>Individual test methods, preserving trait pairing and source locations.</summary>
+    public IReadOnlyList<ProjectUnitSourceTestMethod> Methods { get; init; } = [];
+}
 
 /// <summary>Serializable result of a multi-project semantic ProjectUnit analysis.</summary>
 public sealed record ProjectUnitSourceCatalog(
@@ -195,4 +235,42 @@ public sealed record ProjectUnitSourceCatalog(
     bool IsPartial,
     DateTimeOffset CompletedAtUtc,
     IReadOnlyList<ProjectUnitSourceUnit> Units,
-    IReadOnlyList<ProjectUnitSourceDiagnostic> Diagnostics);
+    IReadOnlyList<ProjectUnitSourceTestClass> TestClasses,
+    IReadOnlyList<ProjectUnitSourceDiagnostic> Diagnostics)
+{
+    /// <summary>Absolute evaluated imports, source, metadata and analyzer inputs for each requested project and its project-reference closure.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> InputPaths { get; init; } = new Dictionary<string, IReadOnlyList<string>>();
+    /// <summary>MSBuild global and target selection properties for the evaluated contexts of each project, keyed by absolute project path.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> EvaluationContexts { get; init; } = new Dictionary<string, IReadOnlyList<IReadOnlyDictionary<string, string>>>();
+    /// <summary>Whether evaluated input paths or their file stamps moved during semantic analysis.</summary>
+    public bool InputsChangedDuringAnalysis { get; init; }
+    /// <summary>Ending file/directory stamps, allowing consumers to detect edits before publishing the observation.</summary>
+    public IReadOnlyList<ProjectUnitSourceInput> InputObservations { get; init; } = [];
+}
+
+/// <summary>One evaluated input stamp. It is a freshness heuristic, not a content digest.</summary>
+public sealed record ProjectUnitSourceInput(string Path, bool Exists, bool IsDirectory, long Length, long LastWriteTimeUtcTicks)
+{
+    /// <summary>Direct entry names for source directories, excluding disposable build output directories.</summary>
+    public string? DirectoryEntries { get; init; }
+    /// <summary>Observes the current file or directory at an absolute input path.</summary>
+    public static ProjectUnitSourceInput Observe(string path)
+    {
+        if (Directory.Exists(path)) return new(path, true, true, 0, 0)
+        {
+            DirectoryEntries = string.Join('\n', Directory.EnumerateFileSystemEntries(path)
+                .Select(System.IO.Path.GetFileName).Where(name => name is not null && !IgnoredDirectoryNames.Contains(name))
+                .Order(StringComparer.OrdinalIgnoreCase))
+        };
+        var info = new FileInfo(path);
+        return info.Exists ? new(path, true, false, info.Length, info.LastWriteTimeUtc.Ticks) : new(path, false, false, 0, 0);
+    }
+
+    /// <summary>Checks whether this ending stamp still describes its input.</summary>
+    public bool MatchesCurrent() => this == Observe(Path);
+
+    private static readonly HashSet<string> IgnoredDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "bin", "obj", ".git", ".gitnexus", ".idea", ".vs", "node_modules", "TestResults", "test-results", ".workflow", ".pending", ".tmp"
+    };
+}

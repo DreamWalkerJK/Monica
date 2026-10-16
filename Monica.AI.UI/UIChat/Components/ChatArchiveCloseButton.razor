@@ -1,0 +1,21 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+<MudButton @ref="_button" Disabled="@Disabled" OnClick="@OnClick">@L["Common:Actions:Close"]</MudButton>
+
+@code {
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public int FocusRequest { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    private MudButton? _button;
+    private int _focusedRequest;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The button owns its post-render focus because MudDialog renders actions in a portal.
+        if (Disabled || FocusRequest == 0 || FocusRequest == _focusedRequest || _button is not { } button) return;
+        _focusedRequest = FocusRequest;
+        await button.FocusAsync();
+    }
+}

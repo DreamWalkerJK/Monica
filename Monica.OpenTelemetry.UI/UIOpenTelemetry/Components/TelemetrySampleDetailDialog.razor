@@ -1,0 +1,51 @@
+@using System.Globalization
+@using Monica.OpenTelemetry.UI.UIOpenTelemetry.Support
+@using Monica.UI.Shared.Components.Dialogs
+@inject IStringLocalizer<OpenTelemetryUIResource> L
+
+<MudDialog>
+    <TitleContent><MoDialogHeading Text="@L["Inspector:Title"]" /></TitleContent>
+    <DialogContent>
+        <div class="telemetry-sample-detail" data-sample-evidence="@Evidence.Instrument.InstrumentId">
+            <p class="detail-note">@L["Inspector:Frozen"]</p>
+            <div class="detail-identity"><span>@L["Dossier:Title"]</span><code data-field="InstrumentName">@Evidence.Instrument.Name</code><code data-field="MeterName">@Evidence.Instrument.MeterName</code></div>
+            <dl class="detail-context">
+                <div><dt>@L["Inspector:InstrumentIdentity"]</dt><dd><code data-field="InstrumentId">@Evidence.Instrument.InstrumentId</code></dd></div>
+                <div><dt>@L["Inspector:MeterVersion"]</dt><dd><code data-field="MeterVersion">@(Evidence.Instrument.MeterVersion ?? "—")</code></dd></div>
+                <div><dt>@L["Dossier:Kind"]</dt><dd data-field="Kind">@Evidence.Instrument.Kind</dd></div>
+                <div><dt>@L["Instrument:Unit"]</dt><dd><code data-field="Unit">@(Evidence.Instrument.Unit ?? L["Series:Unitless"].Value)</code></dd></div>
+                <div><dt>@L["Workbench:SourceCapture"] · UTC</dt><dd><time data-field="SnapshotTimestampUtc" datetime="@Evidence.SnapshotTimestampUtc.ToString("O")">@Evidence.SnapshotTimestampUtc.ToString("O")</time></dd></div>
+                <div><dt>@L["Workbench:ViewRead"] · UTC</dt><dd><time data-field="CapturedAt" datetime="@Evidence.CapturedAt.ToString("O")">@Evidence.CapturedAt.ToString("O")</time></dd></div>
+            </dl>
+            <section class="detail-point"><span>@L["Ledger:Raw"]</span><strong data-field="Value">@Raw(Evidence.Point.Value)</strong><span>@MetricValueFormatter.Format(Evidence.Point.Value, Evidence.Instrument.Unit, L)</span><time data-field="TimestampUtc" datetime="@Evidence.Point.TimestampUtc.ToString("O")">@Evidence.Point.TimestampUtc.ToString("O")</time></section>
+            <h3>@L["Inspector:SeriesContext"]</h3>
+            <dl class="detail-context">
+                <div><dt>@L["Inspector:SourceIndex"]</dt><dd><code data-field="SourceIndex">@Evidence.SourceIndex</code></dd></div>
+                <div><dt>@L["Inspector:SeriesKey"]</dt><dd><code data-field="SeriesKey">@System.Text.Json.JsonSerializer.Serialize(Evidence.Series.Key)</code></dd></div>
+                <div><dt>@L["Table:Samples"]</dt><dd><code data-field="SampleCount">@Evidence.Series.Samples.Count</code></dd></div>
+                <div><dt>@L["Inspector:FiniteCount"]</dt><dd><code data-field="FiniteSampleCount">@Evidence.Series.FiniteSampleCount</code></dd></div>
+                <div><dt>@L["Inspector:NonFiniteCount"]</dt><dd><code data-field="NonFiniteSampleCount">@Evidence.Series.NonFiniteSampleCount</code></dd></div>
+                <div><dt>@L["Series:LatestReading"]</dt><dd><code data-field="CurrentValue">@Raw(Evidence.Series.CurrentValue)</code></dd></div>
+                <div><dt>@L["Series:AdjacentDelta"]</dt><dd><code data-field="Delta">@Raw(Evidence.Series.Delta)</code></dd></div>
+                <div><dt>@L["Series:LastObservation"] · UTC</dt><dd><time data-field="LastUpdatedUtc" datetime="@Evidence.Series.LastUpdatedUtc.ToString("O")">@Evidence.Series.LastUpdatedUtc.ToString("O")</time></dd></div>
+            </dl>
+            <h3>@L["Table:Tags"]</h3>
+            @if (Evidence.Series.Tags.Count == 0) { <p class="detail-note">@L["Series:Untagged"]</p> }
+            else { <dl class="detail-tags">@foreach (var tag in Evidence.Series.Tags) { <div><dt><code>@tag.Key</code></dt><dd><code>@tag.Value</code></dd></div> }</dl> }
+            @if (Evidence.Series.Histogram is { } histogram)
+            {
+                <h3>@L["Histogram:WindowTitle"]</h3><p class="detail-note">@L["Histogram:WindowHelp"]</p>
+                <dl class="detail-context"><div><dt>@L["Histogram:Count"]</dt><dd><code>@histogram.Count</code></dd></div><div><dt>@L["Histogram:Average"]</dt><dd><code>@Raw(histogram.Average)</code></dd></div><div><dt>@L["Histogram:Min"]</dt><dd><code>@Raw(histogram.Min)</code></dd></div><div><dt>@L["Histogram:Max"]</dt><dd><code>@Raw(histogram.Max)</code></dd></div><div><dt>@L["Histogram:P50"]</dt><dd><code>@Raw(histogram.P50)</code></dd></div><div><dt>@L["Histogram:P95"]</dt><dd><code>@Raw(histogram.P95)</code></dd></div><div><dt>@L["Histogram:P99"]</dt><dd><code>@Raw(histogram.P99)</code></dd></div></dl>
+                <div class="detail-bucket-frame"><table><thead><tr><th scope="col">@L["Histogram:LowerBound"]</th><th scope="col">@L["Histogram:UpperBound"]</th><th scope="col">@L["Histogram:BucketCount"]</th></tr></thead><tbody>@foreach (var bucket in histogram.Buckets) { <tr><td><code>@Raw(bucket.LowerBound)</code></td><td><code>@Raw(bucket.UpperBound)</code></td><td><code>@bucket.Count</code></td></tr> }</tbody></table></div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions><MudButton Variant="Variant.Text" OnClick="@(() => MudDialog.Close())">@L["Inspector:Close"]</MudButton></DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    /// <summary>Gets or sets immutable source evidence frozen from an admitted row in a detached view.</summary>
+    [Parameter, EditorRequired] public OpenTelemetrySampleEvidence Evidence { get; set; } = null!;
+    private static string Raw(double value) => value.ToString("G17", CultureInfo.InvariantCulture);
+}

@@ -1,306 +1,90 @@
 using Microsoft.Extensions.Options;
-using Monica.Core.Extensions;
-using Monica.Core.Results;
 using Monica.EventBus.Kafka.Facades;
 using Monica.EventBus.Kafka.Models;
 using Monica.Modules;
 
 namespace Monica.EventBus.Kafka.UIEventBusKafka.State;
 
-/// <summary>
-/// Creates dialog-owned Kafka consumer metrics polling sessions.
-/// </summary>
+/// <summary>Creates independently owned native-dialog consumer metrics samplers.</summary>
 public sealed class KafkaConsumerMetricsPollingStateFactory(
     KafkaConsoleFacade facade,
     IOptions<ModuleEventBusKafkaUIOption> uiOptions)
 {
-    /// <summary>
-    /// Creates an independent polling session whose caller owns disposal.
-    /// </summary>
+    /// <summary>Creates a sampler whose caller owns cancellation, drainage and disposal.</summary>
     public KafkaConsumerMetricsPollingState Create() => new(facade, uiOptions);
 }
 
-/// <summary>
-/// Owns live sampling for one consumer-group member and partition detail view.
-/// </summary>
-public sealed class KafkaConsumerMetricsPollingState(
-    KafkaConsoleFacade facade,
-    IOptions<ModuleEventBusKafkaUIOption> uiOptions) : IAsyncDisposable
+/// <summary>Owns live member and partition evidence for one frozen consumer-group inspector.</summary>
+public sealed class KafkaConsumerMetricsPollingState : IAsyncDisposable
 {
-    private readonly CancellationTokenSource _lifetimeCts = new();
-    private readonly SemaphoreSlim _captureGate = new(1, 1);
-    private PeriodicTimer? _timer;
-    private CancellationTokenSource? _loopCts;
-    private Task? _loopTask;
-    private string? _clusterId;
-    private string? _groupId;
-    private string? _topicName;
-    private TimeSpan _refreshInterval = NormalizeInterval(uiOptions.Value.PerformanceRefreshInterval);
-    private bool _isEnabled = uiOptions.Value.EnablePerformanceAutoRefresh;
-    private bool _disposed;
+    private readonly KafkaPollingSession<KafkaConsumerMetricsSnapshot> _session;
 
-    /// <summary>
-    /// Gets the latest captured member and partition metrics.
-    /// </summary>
-    public KafkaConsumerMetricsSnapshot? Snapshot { get; private set; }
-
-    /// <summary>
-    /// Gets whether automatic refresh is enabled.
-    /// </summary>
-    public bool IsAutomaticRefreshEnabled => _isEnabled;
-
-    /// <summary>
-    /// Gets the current interval in whole seconds.
-    /// </summary>
-    public int RefreshIntervalSeconds => (int)_refreshInterval.TotalSeconds;
-
-    /// <summary>
-    /// Gets whether a Kafka metrics query is in progress.
-    /// </summary>
-    public bool IsSampling { get; private set; }
-
-    /// <summary>
-    /// Gets the latest sampling error or provider diagnostic.
-    /// </summary>
-    public string? LastError { get; private set; }
-
-    /// <summary>
-    /// Raised whenever the capture state changes.
-    /// </summary>
-    public event Action? StateChanged;
-
-    /// <summary>
-    /// Activates sampling for one consumer group and an optional topic filter.
-    /// </summary>
-    /// <param name="clusterId">Target cluster identifier.</param>
-    /// <param name="groupId">Consumer group identifier.</param>
-    /// <param name="topicName">Optional topic filter.</param>
-    /// <param name="cancellationToken">Cancellation token for the initial capture.</param>
-    public async Task ActivateAsync(
-        string clusterId,
-        string groupId,
-        string? topicName,
-        CancellationToken cancellationToken = default)
+    /// <summary>Creates a dialog-owned sampler.</summary>
+    /// <param name="facade">Real Kafka console operations.</param>
+    /// <param name="uiOptions">Initial periodic settings.</param>
+    public KafkaConsumerMetricsPollingState(KafkaConsoleFacade facade, IOptions<ModuleEventBusKafkaUIOption> uiOptions)
     {
-        ThrowIfDisposed();
+        _session = new KafkaPollingSession<KafkaConsumerMetricsSnapshot>(
+            (target, token) => facade.CaptureConsumerMetricsAsync(target.ClusterId, target.TopicName, target.GroupId, token),
+            _ => true,
+            snapshot => snapshot.Message,
+            snapshot => snapshot.CapturedAt,
+            uiOptions.Value.EnablePerformanceAutoRefresh,
+            uiOptions.Value.PerformanceRefreshInterval);
+    }
+
+    /// <summary>Gets the latest consumer metrics evidence, retaining it on a later failed capture.</summary>
+    public KafkaConsumerMetricsSnapshot? Snapshot => _session.Snapshot;
+
+    /// <summary>Gets whether periodic sampling is enabled.</summary>
+    public bool IsAutomaticRefreshEnabled => _session.IsEnabled;
+
+    /// <summary>Gets the current sampling interval in whole seconds.</summary>
+    public int RefreshIntervalSeconds => (int)_session.RefreshInterval.TotalSeconds;
+
+    /// <summary>Gets whether a broker query is admitted.</summary>
+    public bool IsSampling => _session.IsSampling;
+
+    /// <summary>Gets the latest attempt diagnostic.</summary>
+    public string? LastError => _session.LastError;
+
+    /// <summary>Gets the timestamp of the latest completed attempt, including failed attempts.</summary>
+    public DateTimeOffset? LastAttemptedAt => _session.LastAttemptedAt;
+
+    /// <summary>Raised when evidence changes; owners must retire and drain their render callbacks.</summary>
+    public event Action? StateChanged
+    {
+        add => _session.StateChanged += value;
+        remove => _session.StateChanged -= value;
+    }
+
+    /// <summary>Activates exact frozen consumer-group and optional topic identities.</summary>
+    /// <param name="clusterId">Exact target cluster identifier.</param>
+    /// <param name="groupId">Exact target group identifier.</param>
+    /// <param name="topicName">Optional exact topic filter.</param>
+    /// <param name="cancellationToken">Cancellation token for activation.</param>
+    public Task ActivateAsync(string clusterId, string groupId, string? topicName, CancellationToken cancellationToken = default)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(clusterId);
         ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
-
-        await StopLoopAsync();
-        _clusterId = clusterId.Trim();
-        _groupId = groupId.Trim();
-        _topicName = string.IsNullOrWhiteSpace(topicName) ? null : topicName.Trim();
-        Snapshot = null;
-        LastError = null;
-        NotifyStateChanged();
-
-        await CaptureOnceAsync(cancellationToken, waitForSlot: true);
-        if (_isEnabled)
-        {
-            StartLoop();
-        }
+        return _session.ActivateAsync(new KafkaSamplingTarget(clusterId, groupId, topicName), cancellationToken, captureWhenDisabled: true);
     }
 
-    /// <summary>
-    /// Captures one sample immediately.
-    /// </summary>
+    /// <summary>Captures fresh evidence regardless of the periodic setting.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns><see langword="true"/> when a snapshot was captured.</returns>
-    public Task<bool> CaptureNowAsync(CancellationToken cancellationToken = default)
-    {
-        return CaptureOnceAsync(cancellationToken, waitForSlot: true);
-    }
+    /// <returns>True when usable evidence was returned, including partial optional diagnostics.</returns>
+    public Task<bool> CaptureNowAsync(CancellationToken cancellationToken = default) => _session.CaptureAsync(cancellationToken);
 
-    /// <summary>
-    /// Enables or disables automatic refresh.
-    /// </summary>
-    /// <param name="enabled">Whether automatic refresh should run.</param>
-    /// <param name="cancellationToken">Cancellation token for an immediate enabling capture.</param>
-    public async Task SetAutomaticRefreshAsync(bool enabled, CancellationToken cancellationToken = default)
-    {
-        ThrowIfDisposed();
-        if (_isEnabled == enabled)
-        {
-            return;
-        }
+    /// <summary>Enables or disables periodic refresh after draining the previous loop.</summary>
+    /// <param name="enabled">Whether periodic refresh should run.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public Task SetAutomaticRefreshAsync(bool enabled, CancellationToken cancellationToken = default) =>
+        _session.SetEnabledAsync(enabled, cancellationToken);
 
-        _isEnabled = enabled;
-        await StopLoopAsync();
-        NotifyStateChanged();
-        if (_isEnabled && _clusterId is not null)
-        {
-            await CaptureOnceAsync(cancellationToken, waitForSlot: true);
-            StartLoop();
-        }
-    }
-
-    /// <summary>
-    /// Changes the automatic refresh interval.
-    /// </summary>
-    /// <param name="seconds">Requested interval in seconds.</param>
-    public async Task SetRefreshIntervalAsync(int seconds)
-    {
-        ThrowIfDisposed();
-        var normalized = NormalizeInterval(TimeSpan.FromSeconds(seconds));
-        if (normalized == _refreshInterval)
-        {
-            return;
-        }
-
-        _refreshInterval = normalized;
-        await StopLoopAsync();
-        NotifyStateChanged();
-        if (_isEnabled && _clusterId is not null)
-        {
-            StartLoop();
-        }
-    }
+    /// <summary>Changes the refresh interval after draining the previous loop.</summary>
+    /// <param name="seconds">Requested seconds, clamped to the documented sampler limits.</param>
+    public Task SetRefreshIntervalAsync(int seconds) => _session.SetIntervalAsync(seconds);
 
     /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        await StopLoopAsync();
-        _disposed = true;
-        _lifetimeCts.Cancel();
-        await _captureGate.WaitAsync();
-        _captureGate.Release();
-        _captureGate.Dispose();
-        _lifetimeCts.Dispose();
-    }
-
-    private async Task<bool> CaptureOnceAsync(CancellationToken cancellationToken, bool waitForSlot)
-    {
-        ThrowIfDisposed();
-        if (_clusterId is null || _groupId is null)
-        {
-            return false;
-        }
-
-        if (waitForSlot)
-        {
-            await _captureGate.WaitAsync(cancellationToken);
-        }
-        else if (!await _captureGate.WaitAsync(0, cancellationToken))
-        {
-            return false;
-        }
-
-        if (_disposed)
-        {
-            _captureGate.Release();
-            return false;
-        }
-
-        IsSampling = true;
-        NotifyStateChanged();
-        try
-        {
-            var result = await facade.CaptureConsumerMetricsAsync(
-                _clusterId,
-                _topicName,
-                _groupId,
-                cancellationToken);
-            if (result.IsFailed(out var error))
-            {
-                LastError = error.Message;
-                return false;
-            }
-
-            Snapshot = result.Data!;
-            LastError = Snapshot.Message;
-            return true;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            LastError = ex.GetMessageRecursively();
-            return false;
-        }
-        finally
-        {
-            IsSampling = false;
-            _captureGate.Release();
-            NotifyStateChanged();
-        }
-    }
-
-    private void StartLoop()
-    {
-        if (_disposed || !_isEnabled || _clusterId is null || _loopTask is { IsCompleted: false })
-        {
-            return;
-        }
-
-        _loopCts = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
-        _timer = new PeriodicTimer(_refreshInterval);
-        _loopTask = RunLoopAsync(_timer, _loopCts.Token);
-    }
-
-    private async Task RunLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
-    {
-        try
-        {
-            while (await timer.WaitForNextTickAsync(cancellationToken))
-            {
-                await CaptureOnceAsync(cancellationToken, waitForSlot: false);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            // Closing the dialog and changing sampling controls are normal cancellation paths.
-        }
-        catch (ObjectDisposedException) when (_disposed)
-        {
-            // Disposal can race an already queued timer tick.
-        }
-    }
-
-    private async Task StopLoopAsync()
-    {
-        var loopCts = _loopCts;
-        var loopTask = _loopTask;
-        _loopCts = null;
-        _loopTask = null;
-        _timer?.Dispose();
-        _timer = null;
-        if (loopCts is null)
-        {
-            return;
-        }
-
-        loopCts.Cancel();
-        if (loopTask is not null)
-        {
-            await loopTask;
-        }
-
-        loopCts.Dispose();
-    }
-
-    private static TimeSpan NormalizeInterval(TimeSpan interval)
-    {
-        var seconds = Math.Clamp(
-            (int)Math.Round(interval.TotalSeconds),
-            KafkaPerformancePollingState.MinimumRefreshIntervalSeconds,
-            KafkaPerformancePollingState.MaximumRefreshIntervalSeconds);
-        return TimeSpan.FromSeconds(seconds);
-    }
-
-    private void NotifyStateChanged()
-    {
-        StateChanged?.Invoke();
-    }
-
-    private void ThrowIfDisposed()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-    }
+    public ValueTask DisposeAsync() => _session.DisposeAsync();
 }

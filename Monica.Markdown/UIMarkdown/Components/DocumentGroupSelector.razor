@@ -1,4 +1,7 @@
 @using Monica.Markdown.Models
+@using Microsoft.Extensions.Localization
+@using Monica.Markdown.Localization
+@inject IStringLocalizer<MarkdownResource> L
 
 <div class="group-list">
     @foreach (var group in Groups)
@@ -15,7 +18,6 @@
                     <span class="group-name">@group.Title</span>
 
                     <div class="group-meta">
-                        <span class="group-count">@group.DocumentCount</span>
 
                         @if (group.HasConfigurationError)
                         {
@@ -36,6 +38,9 @@
                 </div>
 
                 <span class="group-description">@GetDescription(group)</span>
+                <span class="group-count">@(group.IsMultilingual
+                    ? L["MarkdownViewer:Dialogs:AllLanguagesCount", group.DocumentCount]
+                    : L["MarkdownViewer:Navbar:KnowledgeBaseDocumentCount", group.DocumentCount])</span>
             </div>
         </button>
     }

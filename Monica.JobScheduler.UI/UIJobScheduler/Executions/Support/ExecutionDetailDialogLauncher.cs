@@ -32,7 +32,7 @@ internal static class ExecutionDetailDialogLauncher
 
         var parameters = new DialogParameters<ExecutionDetailDialog>
         {
-            { dialog => dialog.InstanceId, instanceId.Trim() }
+            { dialog => dialog.InstanceId, instanceId }
         };
         return dialogService.ShowAsync<ExecutionDetailDialog>(
             localizer["ExecutionDetail:Title"],

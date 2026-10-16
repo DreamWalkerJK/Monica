@@ -4,7 +4,7 @@ Profiles are optional repository initialization presets. Installing or exploring
 
 ## Application
 
-Initialize with `--capability microservice` or `--capability modular-monolith` (exactly one; `ui` is optional). The managed instruction block routes to `$monica-guide` and `$monica-application`. No source binding is required.
+Initialize with `--capability microservice` or `--capability modular-monolith` (exactly one; `ui` is optional). The managed instruction block routes to `$monica-guide`, `$monica-application`, and the repository-designated project application specification before application work. The repository owns and designates that local specification skill; Guide does not own or install it. No source binding is required.
 
 ## Extension author
 

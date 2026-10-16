@@ -1,97 +1,73 @@
 @inject IStringLocalizer<SeederResource> L
 
 <section class="seeder-table-section" aria-labelledby="seeder-table-title">
-    <div class="seeder-table-heading">
+    <header class="seeder-table-heading">
         <div>
-            <MudText Typo="Typo.overline">@L["Table:Eyebrow"]</MudText>
-            <MudText Typo="Typo.h6" id="seeder-table-title">@L["Table:Title"]</MudText>
+            <span class="seeder-table-eyebrow">@L["Table:Eyebrow"]</span>
+            <h2 id="seeder-table-title">@L["Table:Title"]</h2>
         </div>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Table:Subtitle"]</MudText>
-    </div>
+        <p>@L["Table:Subtitle"]</p>
+    </header>
+
+    <SeederFilters Session="@Session" />
 
     <div class="seeder-table-scroll">
         <MudTable T="SeederExecutionRow"
                   Items="@Rows"
                   Dense="true"
                   Hover="true"
-                  Breakpoint="Breakpoint.Sm"
+                  Breakpoint="Breakpoint.None"
                   Elevation="0"
                   AriaLabel="@L["Table:Title"]"
                   Class="seeder-execution-table">
             <HeaderContent>
                 <MudTh>@L["Table:Columns:Name"]</MudTh>
+                <MudTh>@L["Table:Columns:Policy"]</MudTh>
                 <MudTh>@L["Table:Columns:Status"]</MudTh>
-                <MudTh>@L["Table:Columns:Criticality"]</MudTh>
-                <MudTh>@L["Table:Columns:ExecutionMode"]</MudTh>
-                <MudTh>@L["Table:Columns:FailureBehavior"]</MudTh>
                 <MudTh>@L["Table:Columns:Attempts"]</MudTh>
                 <MudTh>@L["Table:Columns:Duration"]</MudTh>
-                <MudTh>@L["Table:Columns:Dependencies"]</MudTh>
                 <MudTh>@L["Table:Columns:Actions"]</MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="@L["Table:Columns:Name"]">
-                    <MudTooltip Text="@context.Seeder.SeederTypeName">
-                        <span class="seeder-name">
-                            <strong>@context.Seeder.SeederName</strong>
-                            <small>@context.Seeder.SeederTypeName</small>
+                <MudTd DataLabel="@L["Table:Columns:Name"]" Class="seeder-identity-cell">
+                    <div class="seeder-name">
+                        <strong>@context.Seeder.SeederName</strong>
+                        <code>@context.Seeder.SeederTypeName</code>
+                        <span class="seeder-dependencies" title="@string.Join(", ", context.Seeder.Dependencies)">
+                            <span>@L["Table:Columns:Dependencies"]</span>
+                            @if (context.Seeder.Dependencies.Length == 0)
+                            {
+                                <span>@L["Common:None"]</span>
+                            }
+                            else
+                            {
+                                <span>@L.FormatSeederDependencyCount(context.Seeder.Dependencies.Length)</span>
+                            }
                         </span>
-                    </MudTooltip>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["Table:Columns:Policy"]">
+                    <dl class="seeder-row-policy">
+                        <div><dt>@L["Table:Columns:Criticality"]</dt><dd>@L.GetText(context.Seeder.Criticality)</dd></div>
+                        <div><dt>@L["Table:Columns:ExecutionMode"]</dt><dd>@L.GetText(context.Seeder.ExecutionMode)</dd></div>
+                        <div><dt>@L["Table:Columns:FailureBehavior"]</dt><dd>@L.GetText(context.Seeder.FailureBehavior)</dd></div>
+                    </dl>
                 </MudTd>
                 <MudTd DataLabel="@L["Table:Columns:Status"]">
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Variant="Variant.Outlined"
-                             Color="@SeederDisplay.Color(context.Seeder.Status)"
-                             Icon="@SeederDisplay.Icon(context.Seeder.Status)">
-                        @L.GetText(context.Seeder.Status)
-                    </MudChip>
-                </MudTd>
-                <MudTd DataLabel="@L["Table:Columns:Criticality"]">
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Variant="Variant.Text"
-                             Color="@SeederDisplay.Color(context.Seeder.Criticality)">
-                        @L.GetText(context.Seeder.Criticality)
-                    </MudChip>
-                </MudTd>
-                <MudTd DataLabel="@L["Table:Columns:ExecutionMode"]">
-                    @L.GetText(context.Seeder.ExecutionMode)
-                </MudTd>
-                <MudTd DataLabel="@L["Table:Columns:FailureBehavior"]">
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Variant="Variant.Outlined"
-                             Color="@SeederDisplay.Color(context.Seeder.FailureBehavior)">
-                        @L.GetText(context.Seeder.FailureBehavior)
-                    </MudChip>
+                    <span class="seeder-row-status seeder-row-status--@context.Seeder.Status.ToString().ToLowerInvariant()">
+                        <i aria-hidden="true"></i>@L.GetText(context.Seeder.Status)
+                    </span>
                 </MudTd>
                 <MudTd DataLabel="@L["Table:Columns:Attempts"]">
-                    @L["Table:AttemptsValue", context.Seeder.Attempts, context.Seeder.MaxAttempts]
+                    <span class="seeder-row-reading">@L["Table:AttemptsValue", context.Seeder.Attempts, context.Seeder.MaxAttempts]</span>
                 </MudTd>
                 <MudTd DataLabel="@L["Table:Columns:Duration"]">
-                    @L.FormatSeederDuration(context.Seeder.Duration)
+                    <span class="seeder-row-reading">@L.FormatSeederDuration(context.Seeder.Duration)</span>
                 </MudTd>
-                <MudTd DataLabel="@L["Table:Columns:Dependencies"]">
-                    @if (context.Seeder.Dependencies.Length == 0)
-                    {
-                        <span class="seeder-muted">@L["Common:None"]</span>
-                    }
-                    else
-                    {
-                        var dependencies = string.Join(", ", context.Seeder.Dependencies);
-                        <MudTooltip Text="@dependencies">
-                            <span class="seeder-dependencies">
-                                @L.FormatSeederDependencyCount(context.Seeder.Dependencies.Length)
-                                <small>@dependencies</small>
-                            </span>
-                        </MudTooltip>
-                    }
-                </MudTd>
-                <MudTd DataLabel="@L["Table:Columns:Actions"]">
+                <MudTd DataLabel="@L["Table:Columns:Actions"]" Class="seeder-action-cell">
                     <MudTooltip Text="@L["Actions:Details"]">
                         <MudIconButton id="@SeederDisplay.DetailsTriggerId(context.Seeder.SeederTypeName)"
-                                       Icon="@Icons.Material.Filled.OpenInNew"
+                                       Icon="@Icons.Material.Outlined.ChevronRight"
                                        Color="Color.Primary"
                                        Size="Size.Small"
                                        OnClick="@(() => Session.OpenDetailsAsync(context.Seeder))"
@@ -106,15 +82,16 @@
                 <div class="seeder-table-empty" data-testid="seeder-table-empty">
                     @if (Session.Snapshot?.Run.TotalCount == 0)
                     {
-                        <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Secondary" Size="Size.Large" />
-                        <MudText Typo="Typo.body1">@L["Table:NoSeeders"]</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Table:NoSeedersDescription"]</MudText>
+                        <MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Large" />
+                        <strong>@L["Table:NoSeeders"]</strong>
+                        <p>@L["Table:NoSeedersDescription"]</p>
                     }
                     else
                     {
-                        <MudIcon Icon="@Icons.Material.Filled.FilterAltOff" Color="Color.Secondary" Size="Size.Large" />
-                        <MudText Typo="Typo.body1">@L["Table:Empty"]</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Table:EmptyDescription"]</MudText>
+                        <MudIcon Icon="@Icons.Material.Outlined.FilterAltOff" Size="Size.Large" />
+                        <strong>@L["Table:Empty"]</strong>
+                        <p>@L["Table:EmptyDescription"]</p>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@Session.ClearFiltersAsync">@L["Actions:ClearFilters"]</MudButton>
                     }
                 </div>
             </NoRecordsContent>
@@ -134,8 +111,7 @@
             seeder.SeederTypeName,
             StringComparison.Ordinal);
 
-    // MudTable keys rows by the item. Stable type-name equality lets live snapshots
-    // update row content without replacing the focused DOM row during polling.
+    // Stable type-name equality preserves row focus as live snapshots replace their evidence.
     private sealed class SeederExecutionRow(SeederExecutionSnapshot seeder) : IEquatable<SeederExecutionRow>
     {
         public SeederExecutionSnapshot Seeder { get; } = seeder;

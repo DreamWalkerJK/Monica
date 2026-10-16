@@ -16,7 +16,7 @@ namespace Test.Monica.Repository.UnitOfWork;
 public sealed class UnitOfWorkPipelineIntegrationTests
 {
     [Fact]
-    public async Task Mediator_WhenRequestIsReadOnly_ShouldSkipTransactionAndRetainEnclosingSession()
+    public async Task Mediator_WhenHandlerDeclaresNone_ShouldSkipTransactionAndRetainEnclosingSession()
     {
         var builder = Host.CreateApplicationBuilder();
         builder.AddMonica(monica =>
@@ -35,11 +35,11 @@ public sealed class UnitOfWorkPipelineIntegrationTests
             cancellationToken: TestContext.Current.CancellationToken);
     }
 
-    [ReadOnlyOperation]
     public sealed record ReadQuery : IRequest<bool>;
 
     private sealed class ReadQueryHandler(IUnitOfWorkManager manager) : IRequestHandler<ReadQuery, bool>
     {
+        [ExecutionTransaction(ExecutionTransactionMode.None)]
         public Task<bool> Handle(ReadQuery request, CancellationToken cancellationToken)
             => Task.FromResult(manager.Current is not null);
     }

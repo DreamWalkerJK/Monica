@@ -197,6 +197,7 @@ public sealed class KafkaClusterService(
         {
             var topics = await adminProvider.ListTopicMetadataAsync(summary.Config, cancellationToken);
             summary.TopicCount = topics.Count;
+            summary.HasTopicInventory = true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -211,6 +212,7 @@ public sealed class KafkaClusterService(
         {
             var groups = await adminProvider.ListConsumerGroupsAsync(summary.Config, cancellationToken);
             summary.ConsumerGroupCount = groups.Count;
+            summary.HasConsumerGroupInventory = true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

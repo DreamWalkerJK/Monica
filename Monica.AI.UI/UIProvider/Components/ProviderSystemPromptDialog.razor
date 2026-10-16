@@ -1,13 +1,17 @@
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
+@using Monica.UI.Shared.Components.Dialogs
 @inject IStringLocalizer<AIResource> L
 
-<MudDialog Class="prompt-dialog">
+<MudDialog Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px" Gutters="false" TitleClass="pa-0" ContentClass="pa-0" ActionsClass="pa-0">
+    <TitleContent>
+        <div class="prompt-dialog-heading">
+            <MoDialogHeading Text="@L["Provider:Settings:SystemPrompt"]" />
+            <p>@ProviderName</p>
+        </div>
+    </TitleContent>
     <DialogContent>
-        <MudText Typo="Typo.h6">@L["Provider:Settings:Title"]</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="prompt-subtitle">
-            @ProviderName
-        </MudText>
+        <div class="prompt-form">
 
         <MudTextField T="string"
                       @bind-Value="_prompt"
@@ -15,46 +19,53 @@
                       Lines="6"
                       Sizing="InputSizing.Auto"
                       MaxLines="12"
-                      Disabled="@IsReadOnly"
+                      Label="@L["Provider:Settings:SystemPrompt"]"
+                      ReadOnly="@IsReadOnly"
                       Class="prompt-input" />
 
         @if (IsReadOnly)
         {
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
+            <MudText Typo="Typo.body2">
                 @L["Provider:Settings:ReadOnlyMessage"]
             </MudText>
         }
         else
         {
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
+            <MudText Typo="Typo.body2">
                 @L["Provider:Settings:NewSessionMessage"]
             </MudText>
         }
+        </div>
     </DialogContent>
     <DialogActions>
+        <div class="prompt-dialog-actions">
         <MudButton Variant="Variant.Text" OnClick="Cancel">@L["Common:Actions:Close"]</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="@IsReadOnly">
             @L["Common:Actions:Save"]
         </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
-    [Parameter] public string ProviderName { get; set; } = "Provider";
+    [Parameter] public string ProviderName { get; set; } = string.Empty;
     [Parameter] public string? SystemPrompt { get; set; }
     [Parameter] public bool IsReadOnly { get; set; }
 
     private string _prompt = string.Empty;
+    private bool _initialized;
 
     protected override void OnParametersSet()
     {
+        if (_initialized) return;
+        _initialized = true;
         _prompt = SystemPrompt ?? string.Empty;
     }
 
     private void Save()
     {
-        Dialog.Close(DialogResult.Ok(_prompt));
+        if (!IsReadOnly) Dialog.Close(DialogResult.Ok(_prompt));
     }
 
     private void Cancel()

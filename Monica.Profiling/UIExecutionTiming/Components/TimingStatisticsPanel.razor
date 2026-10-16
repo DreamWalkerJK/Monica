@@ -1,0 +1,136 @@
+@using System.Globalization
+@using Monica.Profiling.ExecutionTiming.Models
+@inject IStringLocalizer<ExecutionTimingResource> L
+
+<section class="timing-statistics timing-evidence-panel">
+    <header class="timing-panel-heading">
+        <div><span class="timing-panel-eyebrow">@L["Statistics:Eyebrow"]</span><h2>@L["Statistics:Title"]</h2></div>
+        <span class="timing-result-count">@L["Common:VisibleCount", Matches.Count, Statistics.Count]</span>
+    </header>
+    @if (Statistics.Count != 0)
+    {
+        <div class="timing-ledger-controls">
+            <div><MudTextField T="string" @ref="_searchField" Value="_query" ValueChanged="SearchChanged" Immediate="true" DebounceInterval="180"
+                              Label="@L["Statistics:Search"]" Placeholder="@L["Statistics:SearchPlaceholder"]" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" /></div>
+            <div><MudSelect T="StatisticsOrder" Value="_order" ValueChanged="OrderChanged" Label="@L["Common:Order"]"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="@StatisticsOrder.Mean">@L["Statistics:Ordering:Mean"]</MudSelectItem>
+                <MudSelectItem Value="@StatisticsOrder.Latest">@L["Statistics:Ordering:Latest"]</MudSelectItem>
+                <MudSelectItem Value="@StatisticsOrder.Samples">@L["Statistics:Ordering:Samples"]</MudSelectItem>
+                <MudSelectItem Value="@StatisticsOrder.Identity">@L["Statistics:Ordering:Identity"]</MudSelectItem>
+            </MudSelect></div>
+            @if (_query.Length != 0)
+            {
+                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Close" OnClick="ClearSearchAsync">@L["Common:Clear"]</MudButton>
+            }
+        </div>
+    }
+    @if (Matches.Count != 0)
+    {
+        <div class="timing-ledger-paint">
+            <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+                <thead><tr><th class="timing-identity-column">@L["Columns:Name"]</th><th class="timing-measure-column">@L["Statistics:DurationPair"]</th>
+                    <th class="timing-frequency-column">@L["Statistics:FrequencyPair"]</th><th class="timing-allocation-column">@L["Statistics:AllocationPair"]</th>
+                    <th class="timing-action-column"><span class="timing-accessible-label">@L["Common:Details"]</span></th></tr></thead>
+                <tbody>
+                    @foreach (var item in PageItems)
+                    {
+                        <tr @key="item.OperationKey" data-operation-key="@item.OperationKey">
+                            <td class="timing-identity-column">
+                                @if (!string.Equals(item.DisplayName, item.OperationKey, StringComparison.Ordinal))
+                                {
+                                    <strong class="timing-operation-name">@item.DisplayName</strong>
+                                }
+                                <code class="timing-operation-key" title="@item.OperationKey">@item.OperationKey</code>
+                            </td>
+                            <td class="timing-measure-column">
+                                <span class="timing-stacked-label">@L["Statistics:DurationPair"]</span>
+                                <div class="timing-number-pair"><div><span>@L["Columns:AverageDuration"]</span><strong>@ExecutionTimingDisplayFormatter.FormatDuration(item.AverageDurationMs)</strong></div>
+                                    <div><span>@L["Columns:LastDuration"]</span><strong>@ExecutionTimingDisplayFormatter.FormatDuration(item.LastDurationMs)</strong></div></div>
+                                @if (PeakMean > 0)
+                                {
+                                    <div class="timing-relative-track" role="img" aria-label="@L["Statistics:RelativeMean", RelativeMean(item).ToString("0.##")]">
+                                        <span style="@($"width: {RelativeMean(item).ToString("0.###", CultureInfo.InvariantCulture)}%")"></span>
+                                    </div>
+                                }
+                            </td>
+                            <td class="timing-frequency-column"><span class="timing-stacked-label">@L["Statistics:FrequencyPair"]</span><div class="timing-number-pair">
+                                <div><span>@L["Columns:Executions"]</span><strong>@item.ExecutionCount.ToString("N0")</strong></div>
+                                <div><span>@L["Columns:Rate"]</span><strong>@ExecutionTimingDisplayFormatter.FormatRatePerMinute(item, CapturedAt)</strong></div>
+                            </div></td>
+                            <td class="timing-allocation-column"><span class="timing-stacked-label">@L["Statistics:AllocationPair"]</span><div class="timing-number-pair">
+                                <div><span>@L["Columns:AverageMemory"]</span><strong>@ExecutionTimingDisplayFormatter.FormatMemory(item.AverageMemoryBytes)</strong></div>
+                                <div><span>@L["Columns:LastMemory"]</span><strong>@ExecutionTimingDisplayFormatter.FormatMemory(item.LastMemoryBytes)</strong></div>
+                            </div></td>
+                            <td class="timing-action-column"><MudIconButton Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small"
+                                Color="Color.Primary" aria-label="@L["Common:Inspect", item.OperationKey]"
+                                OnClick="@(() => OnInspect.InvokeAsync(new TimingCompletedEvidence(item, CapturedAt)))" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        </div>
+    }
+    else
+    {
+        <div class="timing-empty" role="status"><MudIcon Icon="@(Statistics.Count == 0 ? Icons.Material.Outlined.QueryStats : Icons.Material.Outlined.SearchOff)" />
+            <div><strong>@(Statistics.Count == 0 ? L["Statistics:Empty"] : L["Common:NoMatches"])</strong>
+                <p>@(Statistics.Count == 0 ? L["Statistics:EmptyHelp"] : L["Common:NoMatchesHelp"])</p></div></div>
+    }
+    <footer class="timing-ledger-footer">
+        <div><p>@L["Statistics:ComparisonHelp"]</p><p>@L["Statistics:RateHelp"]</p></div>
+        @if (PageCount > 1)
+        {
+            <MudPagination Count="@PageCount" Selected="_page" SelectedChanged="ChangePage" ShowFirstButton="true" ShowLastButton="true"
+                           Size="Size.Small" Color="Color.Primary" aria-label="@L["Statistics:Pagination"]" />
+        }
+        <span>@L["Common:PageRange", FirstVisible, LastVisible, Matches.Count]</span>
+    </footer>
+</section>
+
+@code {
+    /// <summary>Gets or sets the complete ranked successful collector result.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<ExecutionTimingStatistics> Statistics { get; set; } = [];
+    /// <summary>Gets or sets the successful page capture used for cumulative rates.</summary>
+    [Parameter, EditorRequired] public DateTimeOffset CapturedAt { get; set; }
+    /// <summary>Gets or sets the action that opens immutable captured evidence.</summary>
+    [Parameter] public EventCallback<TimingCompletedEvidence> OnInspect { get; set; }
+    private const int PageSize = 12;
+    private string _query = string.Empty;
+    private MudTextField<string>? _searchField;
+    private StatisticsOrder _order;
+    private int _page = 1;
+    private enum StatisticsOrder { Mean, Latest, Samples, Identity }
+    private IReadOnlyList<ExecutionTimingStatistics> Matches
+    {
+        get
+        {
+            var terms = _query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var matches = Statistics.Where(item => terms.All(term => item.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || item.OperationKey.Contains(term, StringComparison.OrdinalIgnoreCase)));
+            return _order switch
+            {
+                StatisticsOrder.Latest => matches.OrderByDescending(item => item.LastDurationMs).ThenBy(item => item.OperationKey, StringComparer.Ordinal).ToArray(),
+                StatisticsOrder.Samples => matches.OrderByDescending(item => item.ExecutionCount).ThenBy(item => item.OperationKey, StringComparer.Ordinal).ToArray(),
+                StatisticsOrder.Identity => matches.OrderBy(item => item.OperationKey, StringComparer.Ordinal).ToArray(),
+                _ => matches.ToArray()
+            };
+        }
+    }
+    private double PeakMean => Statistics.Count == 0 ? 0 : Statistics.Max(item => item.AverageDurationMs);
+    private double RelativeMean(ExecutionTimingStatistics item) => PeakMean > 0 ? Math.Clamp(item.AverageDurationMs / PeakMean * 100, 0, 100) : 0;
+    private int PageCount => Math.Max(1, (Matches.Count + PageSize - 1) / PageSize);
+    private IEnumerable<ExecutionTimingStatistics> PageItems => Matches.Skip((_page - 1) * PageSize).Take(PageSize);
+    private int FirstVisible => Matches.Count == 0 ? 0 : (_page - 1) * PageSize + 1;
+    private int LastVisible => Math.Min(_page * PageSize, Matches.Count);
+    protected override void OnParametersSet() => _page = Math.Clamp(_page, 1, PageCount);
+    private void SearchChanged(string value) { _query = value ?? string.Empty; _page = 1; }
+    private async Task ClearSearchAsync()
+    {
+        SearchChanged(string.Empty);
+        if (_searchField is not null) await _searchField.ClearAsync();
+    }
+    private void OrderChanged(StatisticsOrder value) { _order = value; _page = 1; }
+    private void ChangePage(int value) => _page = Math.Clamp(value, 1, PageCount);
+}

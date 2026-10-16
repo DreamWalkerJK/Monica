@@ -3,28 +3,30 @@ using Monica.AI.Models;
 namespace Monica.AI.Services;
 
 /// <summary>
-/// Global AI model information catalog
+/// Code-defined model metadata templates. Runtime identity and overrides are provider-scoped;
+/// this catalog supplies explicit registration defaults and exact metadata for official endpoint discovery.
 /// </summary>
 internal sealed class AIModelCatalog
 {
-    private readonly Dictionary<string, AIModelInfo> _models = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ModelTemplate> _models = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Add a model to the catalog. If a model with the same name already exists, it is replaced.
+    /// Registers an explicit developer template, replacing any built-in template with the same name.
+    /// Code-defined providers may reference this template on any endpoint through SupportedModels.
     /// </summary>
     public void AddModel(AIModelInfo model)
     {
-        _models[model.ModelName] = model;
+        _models[model.ModelName] = new ModelTemplate(model, IsExplicit: true);
     }
 
     /// <summary>
-    /// Add multiple models to the catalog
+    /// Adds built-in templates without replacing explicit developer registrations.
     /// </summary>
-    public void AddModels(IEnumerable<AIModelInfo> models)
+    public void AddReservedModels(IEnumerable<AIModelInfo> models)
     {
         foreach (var model in models)
         {
-            AddModel(model);
+            _models.TryAdd(model.ModelName, new ModelTemplate(model, IsExplicit: false));
         }
     }
 
@@ -33,7 +35,7 @@ internal sealed class AIModelCatalog
     /// </summary>
     public IReadOnlyList<AIModelInfo> GetModels()
     {
-        return _models.Values.ToList().AsReadOnly();
+        return _models.Values.Select(static template => template.Model).ToList().AsReadOnly();
     }
 
     /// <summary>
@@ -45,10 +47,14 @@ internal sealed class AIModelCatalog
     }
 
     /// <summary>
-    /// Get a specific model by name (case-insensitive)
+    /// Gets an exact template by name (case-insensitive). Explicit code registrations are always eligible;
+    /// callers must disable built-in templates when a custom endpoint may use the same name for another model.
     /// </summary>
-    public AIModelInfo? GetModel(string modelName)
+    public AIModelInfo? GetModel(string modelName, bool allowBuiltInTemplates = true)
     {
-        return _models.GetValueOrDefault(modelName);
+        return _models.TryGetValue(modelName, out var template) && (template.IsExplicit || allowBuiltInTemplates)
+            ? template.Model : null;
     }
+
+    private sealed record ModelTemplate(AIModelInfo Model, bool IsExplicit);
 }

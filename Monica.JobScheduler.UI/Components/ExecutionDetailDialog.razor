@@ -1,228 +1,110 @@
-@using Microsoft.JSInterop
-@using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Localization
-@using Monica.JobScheduler.UI.Pages
-@using Monica.JobScheduler.UI.UIJobScheduler.Executions.State
-@using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
-@using Monica.JobScheduler.UI.UIJobScheduler.Shared
+@using Monica.UI.Shared.Components.Dialogs
 
-@inject JobExecutionsStateFactory PageStateFactory
-@inject IStringLocalizer<JobSchedulerResource> L
-@inject IDialogService DialogService
-@inject IJSRuntime JsRuntime
-@inject ISnackbar Snackbar
-@inject NavigationManager Navigation
-@inject SchedulerTimePresentation TimePresentation
-@inject TimeProvider TimeProvider
-
-@implements IAsyncDisposable
-
-<MudDialog>
+<MudDialog Gutters="false" TitleClass="pa-0" ContentClass="pa-0" ActionsClass="pa-0">
     <TitleContent>
         <div class="execution-detail__dialog-title">
-            <MudIcon Icon="@Icons.Material.Filled.FactCheck" Color="Color.Primary" />
-            <MudText Typo="Typo.h6" HtmlTag="h1">@L["ExecutionDetail:Title"]</MudText>
+            <MudIcon Icon="@Icons.Material.Outlined.FactCheck" />
+            <MoDialogHeading Text="@L["ExecutionDetail:Title"]" />
+            <MudTooltip Text="@L["Common:Refresh"]">
+                <MudIconButton Icon="@Icons.Material.Outlined.Refresh" aria-disabled="@(_state is null || _state.IsLoading ? "true" : "false")"
+                               OnClick="RefreshAsync" aria-label="@L["Common:Refresh"]" />
+            </MudTooltip>
         </div>
     </TitleContent>
     <DialogContent>
         <div class="execution-detail__viewport">
-            @if (DetailState.IsLoading && DetailState.Execution is null)
+            @if (_state is not { } state || !state.AccessChecked || state.IsLoading && !state.HasLoadedSnapshot)
             {
-                <div class="execution-detail__loading">
+                <div class="execution-detail__empty" role="status">
                     <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
+                    <MudText Typo="Typo.body2">@L["Common:Loading"]</MudText>
                 </div>
             }
-            else if (DetailState.AccessChecked && !DetailState.IsAuthorized)
+            else if (!state.IsAuthorized)
             {
                 <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-                    @L["Access:DeniedDescription"]
+                    @(state.Error ?? L["Access:DeniedDescription"].Value)
                 </MudAlert>
             }
-            else if (DetailState.Error is not null && DetailState.Execution is null)
+            else if (state.Error is not null && !state.HasLoadedSnapshot)
             {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@DetailState.Error</MudAlert>
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@state.Error</MudAlert>
             }
-            else if (DetailState.IsNotFound)
+            else if (state.IsNotFound)
             {
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                    @L["ExecutionDetail:NotFound"]
-                </MudAlert>
+                <div class="execution-detail__empty" role="status">
+                    <MudIcon Icon="@Icons.Material.Outlined.FindInPage" Size="Size.Large" />
+                    <h3>@L["ExecutionDetail:NotFound"]</h3>
+                    <code>@InstanceId</code>
+                    @if (state.Error is not null)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@state.Error</MudAlert>
+                    }
+                </div>
             }
-            else if (DetailState.Execution is { } execution)
+            else if (state.Execution is { } execution && state.ObservedAtUtc is { } observedAtUtc)
             {
-                var observedAtUtc = DetailState.ObservedAtUtc ?? TimeProvider.GetUtcNow();
                 <div class="execution-detail">
-                    @if (DetailState.IsLoading)
+                    @if (state.IsLoading)
                     {
-                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" aria-label="@L["Common:Loading"]" />
                     }
-
-                    @if (DetailState.Error is not null)
+                    @if (state.Error is not null)
                     {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                            @DetailState.Error
-                        </MudAlert>
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">@L["ExecutionDetail:RefreshFailed", state.Error]</MudAlert>
                     }
-
                     @if (execution.CancellationRequestedAtUtc.HasValue && !execution.IsTerminal)
                     {
                         <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
                             @L["ExecutionDetail:CancellationPending", TimePresentation.FormatTimestamp(execution.CancellationRequestedAtUtc)]
                         </MudAlert>
                     }
-
                     <ExecutionDetailHero Execution="@execution" ObservedAtUtc="@observedAtUtc" />
-                    <ExecutionEvidenceFacts Execution="@execution" ObservedAtUtc="@observedAtUtc" />
-                    <ExecutionHistoryLedger Entries="@execution.History" />
+                    <div class="execution-detail__tabs">
+                        <MudTabs Elevation="0" Rounded="false" Border="false" MinimumTabWidth="120px">
+                            <MudTabPanel Text="@L["ExecutionDetail:Tabs:Evidence"]">
+                                <ExecutionEvidenceFacts Execution="@execution" ObservedAtUtc="@observedAtUtc" />
+                            </MudTabPanel>
+                            <MudTabPanel Text="@L["ExecutionDetail:Tabs:History", execution.History.Count]">
+                                <ExecutionHistoryLedger Entries="@execution.History" />
+                            </MudTabPanel>
+                        </MudTabs>
+                    </div>
                 </div>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@L["Executions:SnapshotUnavailable"]</MudAlert>
             }
         </div>
     </DialogContent>
     <DialogActions>
         <div class="execution-detail__actions">
-            <MudButton Variant="Variant.Text"
-                       StartIcon="@Icons.Material.Filled.Inventory2"
-                       OnClick="OpenJobDetails">
-                @L["ExecutionDetail:Actions:ViewCatalog"]
-            </MudButton>
-            <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.ContentCopy"
-                       Disabled="@(DetailState.Execution is null)"
-                       OnClick="CopyDiagnosticsAsync">
-                @L["ExecutionDetail:Actions:CopyDiagnostics"]
-            </MudButton>
-            <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.Refresh"
-                       Disabled="@DetailState.IsLoading"
-                       OnClick="@DetailState.RefreshAsync">
-                @L["Common:Refresh"]
-            </MudButton>
-            @if (DetailState.Execution is { IsTerminal: false } execution)
-            {
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Warning"
-                           StartIcon="@Icons.Material.Filled.Cancel"
-                           Disabled="@DetailState.IsMutating"
-                           OnClick="@(() => CancelAsync(execution))">
-                    @L["Executions:Actions:Cancel"]
+            <div class="execution-detail__secondary-actions">
+                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.ContentCopy"
+                           Disabled="@(_state?.Execution is null)" OnClick="CopyDiagnosticsAsync">
+                    @L["ExecutionDetail:Actions:CopySnapshot"]
                 </MudButton>
-            }
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close">
-                @L["Common:Close"]
-            </MudButton>
+                <MudMenu Icon="@Icons.Material.Outlined.MoreHoriz" AriaLabel="@L["ExecutionDetail:Actions:More"]">
+                    <MudMenuItem Icon="@Icons.Material.Outlined.Refresh" Disabled="@(_state is null || _state.IsLoading)" OnClick="RefreshAsync">
+                        @L["Common:Refresh"]
+                    </MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.Inventory2" OnClick="OpenJobDetails">
+                        @L["ExecutionDetail:Actions:ViewCatalog"]
+                    </MudMenuItem>
+                </MudMenu>
+            </div>
+            <div class="execution-detail__primary-actions">
+                @if (_state?.Execution is { } execution && (!execution.IsTerminal || _retainCancellationOpener))
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Warning"
+                               aria-disabled="@(_state.IsMutating || execution.IsTerminal ? "true" : "false")" OnClick="@(() => CancelAsync(execution))">
+                        @L["Executions:Actions:Cancel"]
+                    </MudButton>
+                }
+                <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close">@L["Common:Close"]</MudButton>
+            </div>
         </div>
     </DialogActions>
 </MudDialog>
-
-@code {
-    [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = null!;
-
-    /// <summary>
-    /// Gets or sets the durable execution identifier whose complete evidence should be loaded.
-    /// </summary>
-    [Parameter, EditorRequired]
-    public string InstanceId { get; set; } = string.Empty;
-
-    private ExecutionDetailState DetailState { get; set; } = null!;
-    private bool _disposed;
-
-    protected override async Task OnInitializedAsync()
-    {
-        DetailState = PageStateFactory.CreateDetailState();
-        DetailState.StateChanged += HandleStateChangedAsync;
-        await DetailState.InitializeAsync(InstanceId);
-    }
-
-    private async Task CopyDiagnosticsAsync()
-    {
-        if (DetailState.Execution is not { } execution)
-        {
-            return;
-        }
-
-        var cancellationToken = DetailState.LifetimeToken;
-        try
-        {
-            var copied = await JsRuntime.InvokeAsync<bool>(
-                "MoClipboard.copyText",
-                cancellationToken,
-                ExecutionUiPresentation.ExportDiagnostics(
-                    execution,
-                    DetailState.ObservedAtUtc ?? TimeProvider.GetUtcNow()));
-            if (!_disposed)
-            {
-                Snackbar.Add(
-                    copied ? L["ExecutionDetail:Copied"] : L["ExecutionDetail:CopyFailed"],
-                    copied ? Severity.Success : Severity.Warning);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch
-        {
-            if (!_disposed)
-            {
-                Snackbar.Add(L["ExecutionDetail:CopyFailed"], Severity.Warning);
-            }
-        }
-    }
-
-    private async Task CancelAsync(JobExecutionInstance execution)
-    {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            L["Executions:Cancel:Title"],
-            L["Executions:Cancel:Message", execution.InstanceId],
-            yesText: L["Executions:Actions:Cancel"],
-            cancelText: L["Common:Keep"]);
-        if (confirmed != true || _disposed)
-        {
-            return;
-        }
-
-        var result = await DetailState.RequestCancellationAsync();
-        if (_disposed)
-        {
-            return;
-        }
-
-        var feedback = ExecutionUiPresentation.GetCancellationFeedback(result, L);
-        Snackbar.Add(feedback.Message, feedback.Severity);
-    }
-
-    private void OpenJobDetails()
-    {
-        MudDialog.Close();
-        var template = DetailState.Execution?.Template;
-        Navigation.NavigateTo(template is null
-            ? JobCatalogPage.PAGE_URL
-            : JobSchedulerUiUrls.JobDefinition(new JobId(template.OwnerKey, template.JobKey)));
-    }
-
-    private void Close() => MudDialog.Close();
-
-    private Task HandleStateChangedAsync() => InvokeAsync(() =>
-    {
-        if (!_disposed)
-        {
-            StateHasChanged();
-        }
-    });
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _disposed = true;
-        if (DetailState is not null)
-        {
-            DetailState.StateChanged -= HandleStateChangedAsync;
-            await DetailState.DisposeAsync();
-        }
-    }
-}

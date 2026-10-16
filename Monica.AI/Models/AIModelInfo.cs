@@ -1,3 +1,5 @@
+using Monica.AI.Configuration.Models;
+
 namespace Monica.AI.Models;
 
 /// <summary>
@@ -9,6 +11,9 @@ public abstract class AIModelInfo
     /// Model name.
     /// </summary>
     public required string ModelName { get; init; }
+
+    /// <summary>Optional human-readable name; consumers fall back to <see cref="ModelName"/>.</summary>
+    public string? DisplayName { get; init; }
 
     /// <summary>
     /// Model description.
@@ -24,12 +29,24 @@ public class LLMModelInfo : AIModelInfo
     /// <summary>
     /// Indicates whether image input is supported.
     /// </summary>
-    public bool SupportsImage { get; init; }
+    public bool? SupportsImage { get; init; }
+
+    /// <summary>Whether native document input is supported; null means unverified.</summary>
+    public bool? SupportsDocuments { get; init; }
+
+    /// <summary>Whether structured tool calls are supported; null means unverified.</summary>
+    public bool? SupportsTools { get; init; }
 
     /// <summary>
     /// Indicates whether reasoning is supported.
     /// </summary>
-    public bool SupportsReasoning { get; init; }
+    public bool? SupportsReasoning { get; init; }
+
+    /// <summary>Explicit reasoning choices and protocol mappings. Empty means no verified choices.</summary>
+    public IReadOnlyList<AIReasoningLevel> ReasoningLevels { get; init; } = [];
+
+    /// <summary>Default reasoning-level identifier; null retains the provider's default.</summary>
+    public string? DefaultReasoningLevel { get; init; }
 
     /// <summary>
     /// Context window size, if available.

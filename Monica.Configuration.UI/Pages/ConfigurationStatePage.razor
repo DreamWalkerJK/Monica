@@ -12,123 +12,177 @@
 <PageTitle>@L["Pages:ConfigurationState:Title"]</PageTitle>
 
 <div class="configuration-state-page">
-    <MudContainer MaxWidth="MaxWidth.False" Class="configuration-state-container">
-        <MudStack Spacing="3" Class="configuration-state-layout">
-            <div class="configuration-state-header-shell">
-                <ConfigurationPageHeader Title="@L["Pages:ConfigurationState:Title"]"
-                                         Subtitle="@L["State:Subtitle"]"
-                                         Icon="@Icons.Material.Filled.Tune">
-                    <TitleAccessory>
-                        <div class="configuration-state-title-row">
-                            @if (!_loadingDefinitions)
-                            {
-                                <span class="configuration-runtime-validation-anchor">
-                                    <ConfigurationStatusIconButton Icon="@RuntimeValidationStatusIcon"
-                                                                   Color="@RuntimeValidationStatusColor"
-                                                                   Count="@RuntimeValidationIssueCount"
-                                                                   ShowCount="@(RuntimeValidationIssueCount > 0)"
-                                                                   Tooltip="@RuntimeValidationStatusTooltip"
-                                                                   AriaLabel="@L["State:RuntimeValidation:OpenDetails"].Value"
-                                                                   OnClick="ToggleRuntimeValidationPopover" />
-                                </span>
-                            }
-                            <ConfigurationReloadStatusButton @ref="_reloadStatusButton"
-                                                             Reloaded="OnRuntimeConfigurationReloadedAsync" />
-                        </div>
-                    </TitleAccessory>
-                    <Actions>
-                        <div class="configuration-state-actions">
-                            <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Import")">
-                                <MudButton Variant="Variant.Outlined"
-                                           StartIcon="@Icons.Material.Filled.UploadFile"
-                                           Disabled="@(!CanUseCatalogOperations)"
-                                           OnClick="OpenImportDialog">
-                                    @L["Common:Actions:Import"]
-                                </MudButton>
-                            </MudTooltip>
-                            <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Export")">
-                                <MudButton Variant="Variant.Outlined"
-                                           StartIcon="@Icons.Material.Filled.Download"
-                                           Disabled="@(!CanUseCatalogOperations)"
-                                           OnClick="() => OpenExportDialog(null, null)">
-                                    @L["Common:Actions:Export"]
-                                </MudButton>
-                            </MudTooltip>
-                            <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                               Variant="Variant.Outlined"
-                                               OnClick="LoadDefinitionsAsync"
-                                               aria-label="@L["Common:Actions:Refresh"]" />
-                            </MudTooltip>
-                        </div>
-                    </Actions>
-                </ConfigurationPageHeader>
-                @if (!_loadingDefinitions)
+    <ConfigurationPageHeader Title="@L["Pages:ConfigurationState:Title"]" Subtitle="@L["State:Subtitle"]">
+        <TitleAccessory>
+            @if (!_loadingDefinitions)
+            {
+                @foreach (var panelIndex in new[] { SOURCE_VALIDATION_PANEL, OPTIONS_VALIDATION_PANEL })
                 {
-                    <div class="configuration-runtime-validation-popover-anchor">
-                        <MudPopover Open="@_runtimeValidationPopoverOpen"
-                                    AnchorOrigin="Origin.BottomLeft"
-                                    TransformOrigin="Origin.TopLeft"
-                                    Class="configuration-runtime-validation-popover"
-                                    Paper="false">
-                            <div class="configuration-runtime-validation-popover-surface">
-                                <MudPaper Elevation="6" Class="pa-3">
-                                    <MudStack Spacing="2">
-                                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                <MudIcon Icon="@RuntimeValidationStatusIcon"
-                                                         Color="@RuntimeValidationStatusColor" />
-                                                <MudStack Spacing="0">
-                                                    <MudText Typo="Typo.subtitle1">@L["State:RuntimeValidation:Title"]</MudText>
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@RuntimeValidationSummary</MudText>
+                    var isOptions = panelIndex == OPTIONS_VALIDATION_PANEL;
+                    <span class="configuration-runtime-validation-anchor">
+                        <ConfigurationStatusIconButton Icon="@(isOptions ? OptionsValidationStatusIcon : RuntimeValidationStatusIcon)"
+                                                       Color="@(isOptions ? OptionsValidationStatusColor : RuntimeValidationStatusColor)"
+                                                       Count="@(isOptions ? OptionsValidationIssueCount : RuntimeValidationIssueCount)"
+                                                       ShowCount="@((isOptions ? OptionsValidationIssueCount : RuntimeValidationIssueCount) > 0)"
+                                                       Tooltip="@(isOptions ? OptionsValidationTooltip : RuntimeValidationStatusTooltip)"
+                                                       AriaLabel="@(isOptions ? L["Validation:OptionsTitle"].Value : L["State:RuntimeValidation:OpenDetails"].Value)"
+                                                       OnClick="() => ToggleRuntimeValidationPopover(panelIndex)" />
+                        @if (_validationPanelIndex == panelIndex)
+                        {
+                            <MudPopover Open="@_runtimeValidationPopoverOpen"
+                                        AnchorOrigin="Origin.BottomCenter"
+                                        TransformOrigin="Origin.TopCenter"
+                                        OverflowBehavior="OverflowBehavior.FlipAlways"
+                                        Class="configuration-runtime-validation-popover"
+                                        Style="width: min(44rem, calc(100vw - 48px)); box-sizing: border-box;"
+                                        Paper="false">
+                                <div class="configuration-runtime-validation-popover-surface">
+                                    <MudPaper Elevation="0" Outlined="true" Class="pa-3">
+                                        <MudStack Spacing="2">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudIcon Icon="@ValidationPopoverStatusIcon"
+                                                             Color="@ValidationPopoverStatusColor" />
+                                                    <MudStack Spacing="0">
+                                                        <MudText Typo="Typo.subtitle1">@ValidationPopoverTitle</MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@ValidationPopoverSummary</MudText>
+                                                    </MudStack>
+                                                </MudStack>
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudChip T="int"
+                                                             Size="Size.Small"
+                                                             Color="@ValidationPopoverStatusColor"
+                                                             Variant="Variant.Outlined">
+                                                        @ValidationPopoverIssueCount
+                                                    </MudChip>
+                                                    <MudTooltip Text="@L["Common:Actions:Close"]">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                                       Size="Size.Small"
+                                                                       OnClick="CloseRuntimeValidationPopover"
+                                                                       aria-label="@L["Common:Actions:Close"]" />
+                                                    </MudTooltip>
                                                 </MudStack>
                                             </MudStack>
-                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                <MudChip T="int"
-                                                         Size="Size.Small"
-                                                         Color="@RuntimeValidationStatusColor"
-                                                         Variant="Variant.Outlined">
-                                                    @RuntimeValidationIssueCount
-                                                </MudChip>
-                                                <MudTooltip Text="@L["Common:Actions:Close"]">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Close"
-                                                                   Size="Size.Small"
-                                                                   OnClick="CloseRuntimeValidationPopover"
-                                                                   aria-label="@L["Common:Actions:Close"]" />
-                                                </MudTooltip>
-                                            </MudStack>
-                                        </MudStack>
 
-                                        @if (_runtimeValidationReport is null)
-                                        {
-                                            <MudAlert Severity="Severity.Warning">@L["State:RuntimeValidation:Unavailable"]</MudAlert>
-                                        }
-                                        else if (_runtimeValidationReport.IsValid)
-                                        {
-                                            <MudAlert Severity="Severity.Success">@L["State:RuntimeValidation:Valid"]</MudAlert>
-                                        }
-                                        else
-                                        {
-                                            <ConfigurationValidationIssueList Issues="@RuntimeValidationIssues"
-                                                                              ShowRuntimeMetadata="true"
-                                                                              ShowSourceChain="true"
-                                                                              ValueLabel="@L["State:RuntimeValidation:CurrentValue"].Value"
-                                                                              ReasonLabel="@L["State:RuntimeValidation:Problem"].Value"
-                                                                              JumpRequested="JumpToRuntimeValidationIssueAsync"
-                                                                              SourceChainRequested="OpenRuntimeIssueSourceChainAsync" />
-                                        }
-                                    </MudStack>
-                                </MudPaper>
-                            </div>
-                        </MudPopover>
-                        <MudOverlay Visible="@_runtimeValidationPopoverOpen"
-                                    AutoClose="true"
-                                    OnClosed="CloseRuntimeValidationPopover"
-                                    LockScroll="false"
-                                    Modal="false" />
-                    </div>
+                                            @if (_validationLoading)
+                                            {
+                                                <MudProgressLinear Indeterminate="true" />
+                                            }
+                                            else
+                                            {
+                                                <MudTabs @bind-ActivePanelIndex="_validationPanelIndex">
+                                                    <MudTabPanel Text="@L["Validation:SourceTitle"].Value">
+                                                        @if (_runtimeValidationReport is null)
+                                                        {
+                                                            <MudAlert Severity="Severity.Warning">@(_runtimeValidationError ?? L["State:RuntimeValidation:Unavailable"].Value)</MudAlert>
+                                                        }
+                                                        else if (_runtimeValidationReport.DefinitionReports.Count > 0)
+                                                        {
+                                                            <MudExpansionPanels MultiExpansion="true">
+                                                                @foreach (var definition in _runtimeValidationReport.DefinitionReports)
+                                                                {
+                                                                    <MudExpansionPanel Text="@ValidationDefinitionName(definition.DefinitionKey)">
+                                                                        <ConfigurationValidationReportView Title="@definition.DefinitionKey"
+                                                                           Coverage="@definition.Coverage" Scope="@definition.Scope"
+                                                                           ValidationRevision="@definition.ValidationRevision"
+                                                                           IsValid="@definition.IsValid" IsSchemaValid="@definition.IsSchemaValid"
+                                                                           Issues="@RuntimeValidationIssues.Where(issue => string.Equals(issue.DefinitionKey, definition.DefinitionKey, StringComparison.OrdinalIgnoreCase)).ToArray()"
+                                                                           ShowRuntimeMetadata="true" ShowSourceChain="true"
+                                                                           JumpRequested="JumpToRuntimeValidationIssueAsync"
+                                                                           SourceChainRequested="OpenRuntimeIssueSourceChainAsync" />
+                                                                    </MudExpansionPanel>
+                                                                }
+                                                            </MudExpansionPanels>
+                                                        }
+                                                        else
+                                                        {
+                                                            <ConfigurationValidationReportView Coverage="@_runtimeValidationReport.Coverage"
+                                                               Scope="@_runtimeValidationReport.Scope" ValidationRevision="@_runtimeValidationReport.ValidationRevision"
+                                                               IsValid="@_runtimeValidationReport.IsValid" IsSchemaValid="@_runtimeValidationReport.IsSchemaValid"
+                                                               Issues="@RuntimeValidationIssues" ShowRuntimeMetadata="true" ShowSourceChain="true"
+                                                               JumpRequested="JumpToRuntimeValidationIssueAsync" SourceChainRequested="OpenRuntimeIssueSourceChainAsync" />
+                                                        }
+                                                    </MudTabPanel>
+                                                    <MudTabPanel Text="@L["Validation:OptionsTitle"].Value">
+                                                        <MudStack Spacing="2" Class="pt-2">
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Validation:OptionsNotice"]</MudText>
+                                                            @if (_optionsValidationError is not null)
+                                                            {
+                                                                <MudAlert Severity="Severity.Error">@_optionsValidationError</MudAlert>
+                                                            }
+                                                            else
+                                                            {
+                                                                @foreach (var definitionKey in UnobservedDefinitionKeys)
+                                                                {
+                                                                    <MudAlert Severity="Severity.Info" Dense="true">@ValidationDefinitionName(definitionKey): @L["Validation:NoObserved"]</MudAlert>
+                                                                }
+                                                                @if (_optionsValidationReports.Count == 0 && !UnobservedDefinitionKeys.Any())
+                                                                {
+                                                                    <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:NoObserved"]</MudAlert>
+                                                                }
+                                                                @foreach (var attempt in _optionsValidationReports)
+                                                                {
+                                                                    <ConfigurationValidationReportView Title="@ValidationDefinitionName(attempt.DefinitionKey)"
+                                                                       Coverage="@attempt.Coverage" Scope="@attempt.Scope"
+                                                                       ValidationRevision="@attempt.ValidationRevision" IsValid="@attempt.IsValid"
+                                                                       IsSchemaValid="@attempt.IsSchemaValid"
+                                                                       Issues="@attempt.Issues.Select(issue => ConfigurationValidationPresentation.FromRuntime(issue, actualOptions: true)).ToArray()"
+                                                                       JumpRequested="JumpToRuntimeValidationIssueAsync">
+                                                                        <MudText Typo="Typo.caption">@L["Validation:ObservedAt", attempt.AttemptedAt.LocalDateTime]</MudText>
+                                                                        <MudText Typo="Typo.caption">@L["Validation:Attempt", attempt.AttemptId]</MudText>
+                                                                        <MudText Typo="Typo.caption">@(string.IsNullOrEmpty(attempt.OptionsName) ? L["Validation:DefaultName"].Value : attempt.OptionsName)</MudText>
+                                                                    </ConfigurationValidationReportView>
+                                                                }
+                                                            }
+                                                        </MudStack>
+                                                    </MudTabPanel>
+                                                </MudTabs>
+                                            }
+                                        </MudStack>
+                                    </MudPaper>
+                                </div>
+                            </MudPopover>
+                        }
+                    </span>
                 }
+                <MudOverlay Visible="@_runtimeValidationPopoverOpen"
+                            AutoClose="true"
+                            OnClosed="CloseRuntimeValidationPopover"
+                            LockScroll="false"
+                            Modal="false" />
+            }
+            <ConfigurationReloadStatusButton @ref="_reloadStatusButton"
+                                             Reloaded="OnRuntimeConfigurationReloadedAsync" />
+        </TitleAccessory>
+        <Actions>
+            <div class="configuration-state-actions">
+                <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Import")">
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.UploadFile"
+                               Disabled="@(!CanUseCatalogOperations)"
+                               OnClick="OpenImportDialog">
+                        @L["Common:Actions:Import"]
+                    </MudButton>
+                </MudTooltip>
+                <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Export")">
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Download"
+                               Disabled="@(!CanUseCatalogOperations)"
+                               OnClick="() => OpenExportDialog(null, null)">
+                        @L["Common:Actions:Export"]
+                    </MudButton>
+                </MudTooltip>
+                <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Variant="Variant.Outlined"
+                                   OnClick="LoadDefinitionsAsync"
+                                   aria-label="@L["Common:Actions:Refresh"]" />
+                </MudTooltip>
             </div>
+        </Actions>
+    </ConfigurationPageHeader>
+
+            <ConfigurationWorkbenchNavigation ActiveRoute="@ConfigurationUiRoutes.STATE_ROUTE" />
 
             @if (_metadataStoreDiagnostic is not null)
             {
@@ -145,7 +199,9 @@
                             <div class="configuration-runtime-validation-banner-message">
                                 <MudText Typo="Typo.subtitle2">@L["State:RuntimeValidation:WarningTitle"]</MudText>
                                 <MudText Typo="Typo.body2">
-                                    @L["State:RuntimeValidation:WarningMessage", RuntimeValidationIssueCount, RuntimeValidationCountsByDefinition.Count]
+                                    @(_runtimeValidationReport.Coverage == ConfigurationValidationCoverage.Complete
+                                        ? L["State:RuntimeValidation:WarningMessage", RuntimeValidationIssueCount, RuntimeValidationCountsByDefinition.Count].Value
+                                        : RuntimeValidationSummary)
                                 </MudText>
                             </div>
                             <div class="configuration-runtime-validation-banner-action">
@@ -171,8 +227,8 @@
             }
             else
             {
-                <MudGrid Spacing="3" Class="configuration-state-grid">
-                    <MudItem xs="12" md="3" Class="configuration-state-left">
+                <div class="configuration-state-grid">
+                    <aside class="configuration-state-catalog" aria-label="@L["Workbench:Catalog"]">
                         <ConfigurationDefinitionList Definitions="@_definitions"
                                                      SelectedDefinition="@_selectedSummary"
                                                      SelectedDefinitionChanged="SelectDefinitionAsync"
@@ -191,9 +247,9 @@
                                                      CanSaveGroup="@CanSavePendingGroup"
                                                      SaveGroup="OpenSaveGroupDialog"
                                                      UndoAll="UndoAll" />
-                    </MudItem>
+                    </aside>
 
-                    <MudItem xs="12" md="9" Class="configuration-state-right">
+                    <section class="configuration-state-editor" aria-label="@L["Workbench:Editor"]">
                         @if (_selectedDefinition is null)
                         {
                             @if (_definitions.Count == 0)
@@ -216,24 +272,18 @@
                         }
                         else
                         {
-                            <MudPaper Outlined="true" Class="pa-3 configuration-definition-shell">
-                                <MudStack Spacing="3" Class="configuration-definition-content">
+                            <section class="configuration-definition-shell">
+                                <div class="configuration-definition-content">
                                     <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                                         <MudStack Spacing="0">
                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                <MudText Typo="Typo.h5">@_selectedDefinition.DisplayName</MudText>
-                                                @if (!string.IsNullOrWhiteSpace(_selectedDefinition.Description))
-                                                {
-                                                    <MudTooltip Text="@_selectedDefinition.Description">
-                                                        <span class="configuration-description-icon">
-                                                            <MudIcon Icon="@Icons.Material.Filled.Info"
-                                                                     Size="Size.Small"
-                                                                     Color="Color.Info" />
-                                                        </span>
-                                                    </MudTooltip>
-                                                }
+                                                <h2 class="configuration-definition-name">@_selectedDefinition.DisplayName</h2>
                                             </MudStack>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@_selectedDefinition.DefinitionKey</MudText>
+                                            <code class="configuration-definition-key">@_selectedDefinition.DefinitionKey</code>
+                                            @if (!string.IsNullOrWhiteSpace(_selectedDefinition.Description))
+                                            {
+                                                <p class="configuration-definition-description">@_selectedDefinition.Description</p>
+                                            }
                                         </MudStack>
                                         <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1" Class="configuration-definition-meta-actions">
                                             @if (!string.IsNullOrWhiteSpace(_selectedDefinition.Category))
@@ -267,6 +317,7 @@
                                             <ConfigurationSchemaMetadataChip SchemaVersion="@_selectedDefinition.SchemaVersion"
                                                                              DefinitionRevision="@_selectedDefinition.DefinitionRevision"
                                                                              SchemaHash="@_selectedDefinition.SchemaHash"
+                                                                             ValidationContract="@_selectedDefinition.ValidationContract"
                                                                              OnClick="() => OpenSelectedDefinitionPublicationAsync(ConfigurationDefinitionPublicationTab.RevisionHistory)" />
                                             <MudTooltip Text="@L["State:Definitions:ReloadContributorsTooltip", ReloadBehaviorLabel(_selectedDefinition.ReloadBehavior)]">
                                                 <MudChip T="string"
@@ -283,6 +334,7 @@
                                                     <MudIconButton Icon="@Icons.Material.Filled.DataObject"
                                                                    Size="Size.Small"
                                                                    Variant="Variant.Outlined"
+                                                                   aria-label="@L["Common:Actions:EditJson"]"
                                                                    OnClick="OpenSelectedDefinitionJsonEditAsync" />
                                                 </MudTooltip>
                                             }
@@ -290,7 +342,8 @@
                                                 <MudIconButton Icon="@Icons.Material.Filled.History"
                                                                Size="Size.Small"
                                                                Variant="Variant.Outlined"
-                                                               OnClick="OpenSelectedDefinitionHistoryAsync" />
+                                                               aria-label="@L["History:Actions:ViewDefinitionHistory"]"
+                                                                   OnClick="OpenSelectedDefinitionHistoryAsync" />
                                             </MudTooltip>
                                             @if (CanMutateSelectedDefinition)
                                             {
@@ -298,6 +351,7 @@
                                                     <MudIconButton Icon="@Icons.Material.Filled.Download"
                                                                    Size="Size.Small"
                                                                    Variant="Variant.Outlined"
+                                                                   aria-label="@L["ImportExport:Export:DefinitionAction"]"
                                                                    OnClick="() => OpenExportDialog(_selectedDefinition.DefinitionKey, _selectedDefinition.DisplayName)" />
                                                 </MudTooltip>
                                             }
@@ -307,6 +361,7 @@
                                                     <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
                                                                    Size="Size.Small"
                                                                    Variant="Variant.Outlined"
+                                                                   aria-label="@L["Sources:Definition:Title"]"
                                                                    OnClick="OpenDefinitionSourcesAsync" />
                                                 </MudTooltip>
                                             }
@@ -337,1415 +392,68 @@
                                     }
                                     else
                                     {
-                                        <MudGrid Spacing="3" Class="configuration-detail-grid">
-                                            <MudItem xs="12" lg="4" Class="configuration-detail-left">
-                                                <MudPaper Outlined="true" Class="pa-3 configuration-section-panel">
-                                                    <MudText Typo="Typo.subtitle2" Class="mb-2">@L["State:Sections:Title"]</MudText>
-                                                    <div class="configuration-section-list">
-                                                        @foreach (var sectionItem in SectionItems)
-                                                        {
-                                                            var isSelectedSection = IsSelectedNode(sectionItem.Node);
-                                                            <MudButton Variant="Variant.Text"
-                                                                       Color="@(isSelectedSection ? Color.Primary : Color.Default)"
-                                                                       StartIcon="@sectionItem.Icon"
-                                                                       FullWidth="true"
-                                                                       Class="@(isSelectedSection
-                                                                           ? "configuration-section-button configuration-section-button-selected"
-                                                                           : "configuration-section-button")"
-                                                                       aria-pressed="@isSelectedSection"
-                                                                       OnClick="() => OnSelectedNodeChanged(sectionItem.Node)">
-                                                                <MudStack Spacing="1" AlignItems="AlignItems.Start" Class="configuration-section-content">
-                                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1" Class="configuration-section-title-row">
-                                                                        <MudText Typo="Typo.body2">
-                                                                            <MudHighlighter Text="@sectionItem.Title" HighlightedTexts="@SearchTerms" />
-                                                                        </MudText>
-                                                                        <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">@sectionItem.ScalarCount</MudChip>
-                                                                    </MudStack>
-                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@sectionItem.PathLabel</MudText>
-                                                                    @if (!string.IsNullOrWhiteSpace(sectionItem.Description))
+                                        <nav class="configuration-section-navigation" aria-label="@L["State:Sections:Title"]">
+                                            <span class="configuration-section-label">@L["State:Sections:Title"]</span>
+                                            <div class="configuration-section-list">
+                                                @foreach (var sectionItem in SectionItems)
+                                                {
+                                                    var isSelectedSection = IsSelectedNode(sectionItem.Node);
+                                                    <MudTooltip Text="@sectionItem.Description">
+                                                        <MudButton Variant="Variant.Text"
+                                                                   Color="@(isSelectedSection ? Color.Primary : Color.Default)"
+                                                                   StartIcon="@sectionItem.Icon"
+                                                                   Class="@(isSelectedSection ? "configuration-section-button is-selected" : "configuration-section-button")"
+                                                                   aria-pressed="@isSelectedSection"
+                                                                   OnClick="() => OnSelectedNodeChanged(sectionItem.Node)">
+                                                            <span class="configuration-section-content">
+                                                                <span class="configuration-section-title">
+                                                                    <MudHighlighter Text="@sectionItem.Title" HighlightedTexts="@SearchTerms" />
+                                                                    @if (sectionItem.ScalarCount > 0)
                                                                     {
-                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@sectionItem.Description</MudText>
+                                                                        <span class="configuration-section-count" title="@L["Workbench:ScalarFields", sectionItem.ScalarCount]">@sectionItem.ScalarCount</span>
                                                                     }
-                                                                </MudStack>
-                                                            </MudButton>
-                                                        }
-                                                    </div>
-                                                </MudPaper>
-                                            </MudItem>
-
-                                            <MudItem xs="12" lg="8" Class="configuration-detail-right">
-                                                <MudStack Spacing="2" Class="configuration-values-panel">
-                                                    @foreach (var node in VisibleNodes)
-                                                    {
-                                                        <ConfigurationValueRow Definition="@_selectedDefinition"
-                                                                               Node="@node"
-                                                                               EffectiveValue="@GetEffectiveValue(node)"
-                                                                               ExternalEffectiveSource="@GetExternalEffectiveSource(node)"
-                                                                               HighlightedPath="@_highlightedPath"
-                                                                               ReadOnly="@(!CanMutateSelectedDefinition)"
-                                                                               Changed="RefreshPendingCount"
-                                                                               CommittedChanged="ReloadSelectedEffectiveValuesAndValidationAsync" />
-                                                    }
-                                                </MudStack>
-                                            </MudItem>
-                                        </MudGrid>
+                                                                </span>
+                                                                <span class="configuration-section-path">@sectionItem.PathLabel</span>
+                                                            </span>
+                                                        </MudButton>
+                                                    </MudTooltip>
+                                                }
+                                            </div>
+                                        </nav>
+                                        <div class="configuration-values-panel">
+                                            @foreach (var node in VisibleNodes)
+                                            {
+                                                <ConfigurationValueRow Definition="@_selectedDefinition"
+                                                                       Node="@node"
+                                                                       EffectiveValue="@GetEffectiveValue(node)"
+                                                                       ExternalEffectiveSource="@GetExternalEffectiveSource(node)"
+                                                                       HighlightedPath="@_highlightedPath"
+                                                                       ReadOnly="@(!CanMutateSelectedDefinition)"
+                                                                       Changed="RefreshPendingCount"
+                                                                       CommittedChanged="ReloadSelectedEffectiveValuesAndValidationAsync" />
+                                            }
+                                        </div>
                                     }
-                                </MudStack>
-                            </MudPaper>
+                                </div>
+                            </section>
                         }
-                    </MudItem>
-                </MudGrid>
+                    </section>
+                </div>
             }
-        </MudStack>
-    </MudContainer>
+            @if (_pendingCount > 0 || _validationIssueCount > 0)
+            {
+                <section class="configuration-draft-dock" aria-label="@L["Workbench:Pending"]">
+                    <div class="configuration-draft-summary">
+                        <MudIcon Icon="@Icons.Material.Outlined.EditNote" Color="Color.Primary" />
+                        <div><strong>@L["Workbench:PendingCount", _pendingCount]</strong><p>@L["Workbench:PendingHelp"]</p></div>
+                        @if (_validationIssueCount > 0) { <span class="configuration-draft-errors">@L["Workbench:DraftIssues", _validationIssueCount]</span> }
+                    </div>
+                    <div class="configuration-draft-actions">
+                        <MudButton StartIcon="@Icons.Material.Outlined.Undo" OnClick="UndoAll">@L["State:Actions:UndoAll"]</MudButton>
+                        <MudTooltip Text="@(CanSavePendingGroup ? L["Workbench:Review"] : L["State:Footer:SaveBlockedMetadata"])">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.FactCheck" Disabled="@(!CanSavePendingGroup)" OnClick="OpenSaveGroupDialog">@L["Workbench:Review"]</MudButton>
+                        </MudTooltip>
+                    </div>
+                </section>
+            }
 </div>
-
-@code {
-    public const string PAGE_URL = ConfigurationUiRoutes.STATE_ROUTE;
-
-    private readonly List<ConfigurationDefinitionSummary> _definitions = [];
-    private readonly Dictionary<string, ConfigurationDefinition> _definitionDetails = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<LogicalPath, ConfigurationEffectiveValue> _effectiveValues = [];
-    private readonly Dictionary<LogicalPath, ConfigurationSourceDescriptor> _externalEffectiveSources = [];
-    private ConfigurationDefinitionSummary? _selectedSummary;
-    private ConfigurationDefinition? _selectedDefinition;
-    private ConfigurationNodeDefinition? _selectedNode;
-    private string _searchText = string.Empty;
-    private ConfigurationDefinitionLifecycleFilter _lifecycleFilter = ConfigurationDefinitionLifecycleFilter.Active;
-    private bool _loadingDefinitions = true;
-    private bool _loadingDefinition;
-    private int _pendingCount;
-    private int _validationIssueCount;
-    private string? _requestedDefinitionKey;
-    private LogicalPath? _requestedPath;
-    private LogicalPath? _highlightedPath;
-    private ConfigurationValidationReport? _runtimeValidationReport;
-    private bool _runtimeValidationPopoverOpen;
-    private ConfigurationReloadStatusButton? _reloadStatusButton;
-    private ConfigurationMetadataStoreDiagnostic? _metadataStoreDiagnostic;
-    private bool _definitionCatalogHealthy;
-    private bool _disposed;
-    private Task _pendingStateRender = Task.CompletedTask;
-
-    private bool CanInspectSelectedDefinitionSources =>
-        _selectedDefinition?.Origin == ConfigurationDefinitionOrigin.LocalScan;
-
-    private bool CanMutateSelectedDefinition => _selectedSummary?.CanMutate is true;
-
-    private bool IsSelectedDefinitionRetired =>
-        _selectedSummary?.LifecycleState == ConfigurationDefinitionLifecycleState.Retired;
-
-    private bool CanUseCatalogOperations => !_loadingDefinitions && _definitionCatalogHealthy;
-
-    private bool CanSavePendingGroup
-    {
-        get
-        {
-            var affectedDefinitionKeys = StateStore.GetPending()
-                .Select(static change => change.DefinitionKey)
-                .Concat(StateStore.GetValidationIssues().Select(static issue => issue.DefinitionKey))
-                .Distinct(StringComparer.OrdinalIgnoreCase);
-            return affectedDefinitionKeys.All(definitionKey => _definitions.Any(definition =>
-                definition.CanMutate
-                && string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase)));
-        }
-    }
-
-    private string CatalogOperationTooltip(string actionKey)
-    {
-        return CanUseCatalogOperations
-            ? L[actionKey].Value
-            : L["State:Definitions:CatalogOperationBlocked"].Value;
-    }
-
-    private string ReloadBehaviorLabel(ConfigurationReloadBehavior behavior)
-    {
-        return ConfigurationReloadBehaviorFormatter.Label(behavior, L);
-    }
-
-    private static Color ReloadBehaviorColor(ConfigurationReloadBehavior behavior)
-    {
-        return behavior.RequiresProcessRestart() ? Color.Warning : Color.Info;
-    }
-
-    private IReadOnlyList<string> SearchTerms => string.IsNullOrWhiteSpace(_searchText)
-        ? []
-        : _searchText
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-    private IReadOnlyDictionary<string, IReadOnlyList<ConfigurationNodeSearchMatch>> NodeSearchMatches =>
-        string.IsNullOrWhiteSpace(_searchText)
-            ? new Dictionary<string, IReadOnlyList<ConfigurationNodeSearchMatch>>(StringComparer.OrdinalIgnoreCase)
-            : BuildNodeSearchMatches();
-
-    private IReadOnlyDictionary<string, int> PendingCountsByDefinition =>
-        StateStore.GetPending()
-            .GroupBy(change => change.DefinitionKey, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
-
-    private IReadOnlyDictionary<string, int> RuntimeValidationCountsByDefinition =>
-        _runtimeValidationReport?.Issues
-            .GroupBy(issue => issue.DefinitionKey, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase)
-        ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-    private int RuntimeValidationIssueCount => _runtimeValidationReport?.IssueCount ?? 0;
-
-    private Color RuntimeValidationStatusColor =>
-        _runtimeValidationReport is null
-            ? Color.Warning
-            : RuntimeValidationIssueCount == 0
-                ? Color.Success
-                : Color.Warning;
-
-    private string RuntimeValidationStatusIcon =>
-        _runtimeValidationReport is null
-            ? Icons.Material.Filled.Help
-            : RuntimeValidationIssueCount == 0
-                ? Icons.Material.Filled.CheckCircle
-                : Icons.Material.Filled.Warning;
-
-    private string RuntimeValidationStatusTooltip =>
-        $"{L["State:RuntimeValidation:Title"]}: {RuntimeValidationSummary}";
-
-    private string RuntimeValidationSummary =>
-        _runtimeValidationReport is null
-            ? L["State:RuntimeValidation:Unavailable"].Value
-            : RuntimeValidationIssueCount == 0
-                ? L["State:RuntimeValidation:ValidSummary"].Value
-                : L["State:RuntimeValidation:InvalidSummary", RuntimeValidationIssueCount, RuntimeValidationCountsByDefinition.Count].Value;
-
-    private IReadOnlyList<ConfigurationValidationIssue> RuntimeValidationIssues =>
-        _runtimeValidationReport?.Issues.Select(ToUiValidationIssue).ToArray() ?? [];
-
-    private IReadOnlyList<ConfigurationSectionItem> SectionItems =>
-        _selectedDefinition is null
-            ? []
-            : EnumerateSectionNodes(_selectedDefinition.Root)
-                .Select(BuildSectionItem)
-                .ToArray();
-
-    private IEnumerable<ConfigurationNodeDefinition> VisibleNodes
-    {
-        get
-        {
-            if (_selectedNode is null)
-            {
-                return [];
-            }
-
-            if (IsSimpleEditableNode(_selectedNode))
-            {
-                return [_selectedNode];
-            }
-
-            if (_selectedNode.RelativePath.Depth == 0)
-            {
-                var rootItems = EnumerateNodes(_selectedNode)
-                    .Where(node => node.RelativePath.Depth > 0
-                                   && (IsSimpleEditableNode(node) || IsComplexNodeItem(node)))
-                    .ToArray();
-                return rootItems.Length == 0 ? [_selectedNode] : rootItems;
-            }
-
-            var leaves = EnumerateNodes(_selectedNode).Where(IsSimpleEditableNode).ToArray();
-            return leaves.Length == 0 ? [_selectedNode] : leaves;
-        }
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        ReadRouteTarget();
-        StateStore.Changed += OnStateStoreChanged;
-        await LoadDefinitionsAsync();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _disposed = true;
-        StateStore.Changed -= OnStateStoreChanged;
-        await _pendingStateRender;
-    }
-
-    private async Task LoadDefinitionsAsync()
-    {
-        _loadingDefinitions = true;
-        _definitionCatalogHealthy = false;
-        var previouslySelectedKey = _selectedSummary?.DefinitionKey;
-        var result = await Facade.GetDefinitionCatalogAsync();
-        if (_disposed)
-        {
-            return;
-        }
-
-        if (result.IsFailed(out var error, out var catalog))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            _definitions.Clear();
-            _metadataStoreDiagnostic = null;
-            _runtimeValidationReport = null;
-            ClearSelectedDefinition();
-            _loadingDefinitions = false;
-            return;
-        }
-
-        _definitions.Clear();
-        _definitions.AddRange(catalog.Definitions);
-        _metadataStoreDiagnostic = catalog.StoreDiagnostic;
-        _definitionCatalogHealthy = catalog.IsHealthy;
-        _definitionDetails.Clear();
-        ClearSelectedDefinition();
-        await LoadRuntimeValidationReportAsync();
-        _loadingDefinitions = false;
-
-        var requestedSummary = ResolveRequestedDefinitionSummary();
-        if (!string.IsNullOrWhiteSpace(_requestedDefinitionKey) && requestedSummary is null)
-        {
-            var message = _metadataStoreDiagnostic is null
-                ? L["State:Definitions:RequestedDefinitionNotFound", _requestedDefinitionKey]
-                : L["State:Definitions:RequestedDefinitionUnresolved", _requestedDefinitionKey];
-            Snackbar.Add(message, Severity.Warning);
-            ClearRequestedRouteTarget();
-            return;
-        }
-
-        if (requestedSummary is { CanManage: false })
-        {
-            ClearRequestedRouteTarget();
-            await ShowDefinitionMetadataProblemAsync(requestedSummary);
-            return;
-        }
-
-        if (requestedSummary is not null
-            && !_lifecycleFilter.Includes(requestedSummary.LifecycleState))
-        {
-            _lifecycleFilter = requestedSummary.LifecycleState == ConfigurationDefinitionLifecycleState.Retired
-                ? ConfigurationDefinitionLifecycleFilter.Retired
-                : ConfigurationDefinitionLifecycleFilter.Active;
-        }
-
-        var initialSummary = requestedSummary
-            ?? _definitions.FirstOrDefault(definition =>
-                definition.CanManage
-                && _lifecycleFilter.Includes(definition.LifecycleState)
-                && string.Equals(definition.DefinitionKey, previouslySelectedKey, StringComparison.OrdinalIgnoreCase))
-              ?? _definitions.FirstOrDefault(definition =>
-                  definition.CanMutate && _lifecycleFilter.Includes(definition.LifecycleState))
-              ?? _definitions.FirstOrDefault(definition =>
-                  definition.CanManage && _lifecycleFilter.Includes(definition.LifecycleState));
-        if (initialSummary is not null)
-        {
-            await SelectDefinitionAsync(initialSummary);
-            if (requestedSummary is not null)
-            {
-                ApplyRequestedPath();
-            }
-            else
-            {
-                ClearRequestedRouteTarget();
-            }
-        }
-        else
-        {
-            ClearRequestedRouteTarget();
-        }
-    }
-
-    private void ClearSelectedDefinition()
-    {
-        _selectedSummary = null;
-        _selectedDefinition = null;
-        _selectedNode = null;
-        _highlightedPath = null;
-        _effectiveValues.Clear();
-        _externalEffectiveSources.Clear();
-    }
-
-    private async Task LoadRuntimeValidationReportAsync()
-    {
-        var result = await Facade.GetRuntimeValidationReportAsync();
-        if (result.IsFailed(out var error, out var report))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            _runtimeValidationReport = null;
-            CloseRuntimeValidationPopover();
-            return;
-        }
-
-        _runtimeValidationReport = report;
-    }
-
-    private void ToggleRuntimeValidationPopover()
-    {
-        _runtimeValidationPopoverOpen = !_runtimeValidationPopoverOpen;
-    }
-
-    private void OpenRuntimeValidationPopover()
-    {
-        _runtimeValidationPopoverOpen = true;
-    }
-
-    private void CloseRuntimeValidationPopover()
-    {
-        _runtimeValidationPopoverOpen = false;
-    }
-
-    private static ConfigurationValidationIssue ToUiValidationIssue(ConfigurationRuntimeValidationIssue issue)
-    {
-        return new ConfigurationValidationIssue
-        {
-            DefinitionKey = issue.DefinitionKey,
-            DefinitionDisplayName = issue.DefinitionDisplayName,
-            LogicalPath = issue.LogicalPath,
-            NodeDisplayName = issue.NodeDisplayName,
-            InvalidDisplayValue = issue.EffectiveDisplayValue,
-            ConfigurationPath = issue.ConfigurationPath,
-            ValidationError = issue.Problem,
-            EffectiveSource = issue.EffectiveSource,
-            IsMissing = issue.IsMissing,
-            IsSensitive = issue.IsSensitive,
-            ValidationRules = issue.ValidationRules
-        };
-    }
-
-    private void ReadRouteTarget()
-    {
-        _requestedDefinitionKey = ConfigurationUiRoutes.ReadDefinitionKey(NavigationManager.Uri);
-        try
-        {
-            var requestedPath = ConfigurationUiRoutes.ReadPath(NavigationManager.Uri);
-            _requestedPath = requestedPath.Depth == 0 ? null : requestedPath;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"{L["Common:Errors:InvalidPath"]}: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private ConfigurationDefinitionSummary? ResolveRequestedDefinitionSummary()
-    {
-        return string.IsNullOrWhiteSpace(_requestedDefinitionKey)
-            ? null
-            : _definitions.FirstOrDefault(definition =>
-                string.Equals(definition.DefinitionKey, _requestedDefinitionKey, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private void ApplyRequestedPath()
-    {
-        if (_requestedPath is not null)
-        {
-            JumpToCurrentDefinitionPath(_requestedPath);
-        }
-
-        ClearRequestedRouteTarget();
-    }
-
-    private void ClearRequestedRouteTarget()
-    {
-        _requestedPath = null;
-        _requestedDefinitionKey = null;
-    }
-
-    private async Task ShowDefinitionMetadataProblemAsync(ConfigurationDefinitionSummary summary)
-    {
-        if (summary.MetadataDiagnostic is null)
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters<ConfigurationDefinitionMetadataProblemDialog>();
-        parameters.Add(dialog => dialog.Definition, summary);
-        await DialogService.ShowAsync<ConfigurationDefinitionMetadataProblemDialog>(
-            L["State:Definitions:ProblemDetailsTitle", summary.DisplayName],
-            parameters,
-            new DialogOptions
-            {
-                MaxWidth = MaxWidth.Medium,
-                FullWidth = true,
-                CloseButton = true
-            });
-    }
-
-    private async Task SelectDefinitionAsync(ConfigurationDefinitionSummary summary)
-    {
-        if (!summary.CanManage)
-        {
-            return;
-        }
-
-        _selectedSummary = summary;
-        _loadingDefinition = true;
-        _effectiveValues.Clear();
-        _externalEffectiveSources.Clear();
-        try
-        {
-            var result = await Facade.GetDefinitionStateAsync(summary.DefinitionKey);
-            if (result.IsFailed(out var error, out var definitionState))
-            {
-                Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-                ClearSelectedDefinition();
-                return;
-            }
-
-            ApplyDefinitionState(definitionState, resetSelection: true);
-            await LoadExternalEffectiveSourcesAsync();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {ex.Message}", Severity.Error);
-            ClearSelectedDefinition();
-        }
-        finally
-        {
-            _loadingDefinition = false;
-        }
-    }
-
-    private async Task LoadEffectiveValuesAsync()
-    {
-        if (_selectedDefinition is null)
-        {
-            return;
-        }
-
-        var result = await Facade.GetDefinitionStateAsync(_selectedDefinition.DefinitionKey);
-        if (result.IsFailed(out var error, out var definitionState))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            return;
-        }
-
-        ApplyDefinitionState(definitionState, resetSelection: false);
-        await LoadExternalEffectiveSourcesAsync();
-    }
-
-    private void ApplyDefinitionState(ConfigurationDefinitionState state, bool resetSelection)
-    {
-        var selectedPath = resetSelection ? LogicalPath.Root : _selectedNode?.RelativePath ?? LogicalPath.Root;
-        _selectedDefinition = state.Definition;
-        _definitionDetails[state.Definition.DefinitionKey] = state.Definition;
-        _selectedNode = ResolveNodeByPath(state.Definition.Root, selectedPath) ?? state.Definition.Root;
-        _effectiveValues.Clear();
-        foreach (var effectiveValue in state.EffectiveValues)
-        {
-            _effectiveValues[effectiveValue.LogicalPath] = effectiveValue;
-        }
-
-        _externalEffectiveSources.Clear();
-        if (resetSelection)
-        {
-            _highlightedPath = null;
-        }
-    }
-
-    private async Task LoadExternalEffectiveSourcesAsync()
-    {
-        if (_selectedDefinition?.Origin != ConfigurationDefinitionOrigin.LocalScan)
-        {
-            return;
-        }
-
-        var nodes = EnumerateNodes(_selectedDefinition.Root)
-            .Where(IsComplexNodeItem)
-            .ToArray();
-        var result = await Facade.GetSourceChainsAsync(
-            _selectedDefinition.DefinitionKey,
-            nodes.Select(static node => node.RelativePath).ToArray());
-        if (result.IsFailed(out _, out var sourceChains))
-        {
-            return;
-        }
-
-        for (var index = 0; index < nodes.Length; index++)
-        {
-            var externalSource = ResolveExternalEffectiveSource(nodes[index], sourceChains[index]);
-            if (externalSource is not null)
-            {
-                _externalEffectiveSources[nodes[index].RelativePath] = externalSource;
-            }
-        }
-    }
-
-    private ConfigurationSourceDescriptor? ResolveExternalEffectiveSource(
-        ConfigurationNodeDefinition node,
-        ConfigurationSourceChain sourceChain)
-    {
-        // Complex values can be composed from several providers. Prefer exact external winners from
-        // already loaded scalar descendants, then fall back to the aggregate source chain for dynamic collections.
-        var descendantSource = _effectiveValues
-            .Where(pair => ConfigurationPathTokenizer.StartsWith(pair.Key, node.RelativePath))
-            .Select(pair => pair.Value.EffectiveSource)
-            .Where(IsExternalSource)
-            .OrderByDescending(source => source!.PriorityIndex)
-            .FirstOrDefault();
-
-        return descendantSource
-               ?? sourceChain.Values
-                   .Where(value => value.IsEffective)
-                   .Select(value => value.Source)
-                   .FirstOrDefault(IsExternalSource);
-    }
-
-    private static bool IsExternalSource(ConfigurationSourceDescriptor? source)
-    {
-        return source is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore };
-    }
-
-    private async Task ReloadSelectedEffectiveValuesAndValidationAsync()
-    {
-        await LoadEffectiveValuesAsync();
-        await LoadRuntimeValidationReportAsync();
-        if (_reloadStatusButton is not null)
-        {
-            await _reloadStatusButton.RefreshAsync();
-        }
-    }
-
-    private async Task OnRuntimeConfigurationReloadedAsync()
-    {
-        await LoadEffectiveValuesAsync();
-        await RefreshPendingChangeBaselinesAsync();
-        await LoadRuntimeValidationReportAsync();
-    }
-
-    private ConfigurationEffectiveValue? GetEffectiveValue(ConfigurationNodeDefinition node)
-    {
-        return _effectiveValues.GetValueOrDefault(node.RelativePath);
-    }
-
-    private ConfigurationSourceDescriptor? GetExternalEffectiveSource(ConfigurationNodeDefinition node)
-    {
-        return _externalEffectiveSources.GetValueOrDefault(node.RelativePath);
-    }
-
-    private async Task<Res<ConfigurationDefinitionDetail>> LoadDefinitionDetailAsync(string definitionKey)
-    {
-        if (_definitionDetails.TryGetValue(definitionKey, out var cachedDefinition))
-        {
-            return Res.Ok(new ConfigurationDefinitionDetail
-            {
-                Definition = cachedDefinition
-            });
-        }
-
-        var result = await Facade.GetDefinitionAsync(definitionKey);
-        if (!result.IsFailed(out _, out var detail))
-        {
-            _definitionDetails[definitionKey] = detail.Definition;
-        }
-
-        return result;
-    }
-
-    private static IEnumerable<ConfigurationNodeDefinition> EnumerateNodes(ConfigurationNodeDefinition node)
-    {
-        yield return node;
-        foreach (var child in node.Children)
-        {
-            foreach (var descendant in EnumerateNodes(child))
-            {
-                yield return descendant;
-            }
-        }
-    }
-
-    private IReadOnlyDictionary<string, IReadOnlyList<ConfigurationNodeSearchMatch>> BuildNodeSearchMatches()
-    {
-        return _definitionDetails.Values
-            .Select(definition => new
-            {
-                definition.DefinitionKey,
-                Matches = EnumerateNodes(definition.Root)
-                    .Where(node => node.RelativePath.Depth > 0 && IsNodeSearchMatch(node))
-                    .Select(node => new ConfigurationNodeSearchMatch
-                    {
-                        DefinitionKey = definition.DefinitionKey,
-                        Node = node,
-                        DisplayName = GetNodeLabel(node),
-                        PathLabel = node.RelativePath.ToCanonicalString(),
-                        Description = node.Description
-                    })
-                    .ToArray()
-            })
-            .Where(group => group.Matches.Length > 0)
-            .ToDictionary(group => group.DefinitionKey, group => (IReadOnlyList<ConfigurationNodeSearchMatch>)group.Matches, StringComparer.OrdinalIgnoreCase);
-    }
-
-    private bool IsNodeSearchMatch(ConfigurationNodeDefinition node)
-    {
-        return SearchTerms.Count > 0
-               && (ContainsAnySearchTerm(node.Name)
-                   || ContainsAnySearchTerm(node.DisplayName)
-                   || ContainsAnySearchTerm(node.Description)
-                   || ContainsAnySearchTerm(node.RelativePath.ToCanonicalString()));
-    }
-
-    private bool ContainsAnySearchTerm(string? value)
-    {
-        return !string.IsNullOrWhiteSpace(value)
-               && SearchTerms.Any(term => value.Contains(term, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private IEnumerable<ConfigurationNodeDefinition> EnumerateSectionNodes(ConfigurationNodeDefinition root)
-    {
-        yield return root;
-        foreach (var node in EnumerateNodes(root).Where(node => node.RelativePath.Depth > 0 && !IsSimpleEditableNode(node)))
-        {
-            yield return node;
-        }
-    }
-
-    private ConfigurationSectionItem BuildSectionItem(ConfigurationNodeDefinition node)
-    {
-        var isRoot = node.RelativePath.Depth == 0;
-        var scalarCount = EnumerateNodes(node).Count(IsSimpleEditableNode);
-        return new ConfigurationSectionItem(
-            node,
-            GetNodeLabel(node),
-            isRoot ? L["State:Sections:RootDescription"].Value : node.Description,
-            isRoot ? L["State:Tree:Root"].Value : node.RelativePath.ToCanonicalString(),
-            SectionIcon(node),
-            scalarCount);
-    }
-
-    private string GetNodeLabel(ConfigurationNodeDefinition node)
-    {
-        if (node.RelativePath.Depth == 0)
-        {
-            return L["State:Tree:Root"];
-        }
-
-        if (string.IsNullOrWhiteSpace(node.DisplayName)
-            || string.Equals(node.DisplayName, node.Name, StringComparison.OrdinalIgnoreCase))
-        {
-            return node.Name;
-        }
-
-        return node.DisplayName!;
-    }
-
-    private static string SectionIcon(ConfigurationNodeDefinition node)
-    {
-        return node.NodeKind switch
-        {
-            ConfigurationNodeKind.Dictionary => Icons.Material.Filled.DataObject,
-            ConfigurationNodeKind.List => Icons.Material.Filled.FormatListBulleted,
-            _ when node.RelativePath.Depth == 0 => Icons.Material.Filled.Home,
-            _ => Icons.Material.Filled.Folder
-        };
-    }
-
-    private static bool IsComplexNodeItem(ConfigurationNodeDefinition node)
-    {
-        return !node.IsScalarCollection()
-               && node.NodeKind is (ConfigurationNodeKind.Object or ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List);
-    }
-
-    private static bool IsSimpleEditableNode(ConfigurationNodeDefinition node)
-    {
-        return node.NodeKind == ConfigurationNodeKind.Scalar || node.IsScalarCollection();
-    }
-
-    private bool IsSelectedNode(ConfigurationNodeDefinition node)
-    {
-        return _selectedNode?.RelativePath.Equals(node.RelativePath) is true;
-    }
-
-    private Task OnSelectedNodeChanged(ConfigurationNodeDefinition? node)
-    {
-        _selectedNode = node;
-        _highlightedPath = null;
-        return Task.CompletedTask;
-    }
-
-    private async Task OnSearchChanged(string searchText)
-    {
-        _searchText = searchText;
-        if (!string.IsNullOrWhiteSpace(searchText))
-        {
-            await EnsureDefinitionDetailsAsync();
-        }
-    }
-
-    private async Task OnLifecycleFilterChangedAsync(ConfigurationDefinitionLifecycleFilter lifecycleFilter)
-    {
-        _lifecycleFilter = lifecycleFilter;
-        if (!string.IsNullOrWhiteSpace(_searchText))
-        {
-            await EnsureDefinitionDetailsAsync();
-        }
-
-        if (_selectedSummary is not null && lifecycleFilter.Includes(_selectedSummary.LifecycleState))
-        {
-            return;
-        }
-
-        var nextDefinition = _definitions.FirstOrDefault(definition =>
-            definition.CanManage && lifecycleFilter.Includes(definition.LifecycleState));
-        if (nextDefinition is null)
-        {
-            ClearSelectedDefinition();
-            return;
-        }
-
-        await SelectDefinitionAsync(nextDefinition);
-    }
-
-    private async Task EnsureDefinitionDetailsAsync()
-    {
-        foreach (var summary in _definitions)
-        {
-            if (!summary.CanManage
-                || !_lifecycleFilter.Includes(summary.LifecycleState)
-                || _definitionDetails.ContainsKey(summary.DefinitionKey))
-            {
-                continue;
-            }
-
-            var result = await Facade.GetDefinitionAsync(summary.DefinitionKey);
-            if (!result.IsFailed(out _, out var detail))
-            {
-                _definitionDetails[summary.DefinitionKey] = detail.Definition;
-            }
-        }
-    }
-
-    private async Task SelectSearchMatchAsync(ConfigurationNodeSearchMatch match)
-    {
-        await JumpToConfigurationPathAsync(match.DefinitionKey, match.Node.RelativePath, null);
-    }
-
-    private static ConfigurationNodeDefinition? ResolveNodeByPath(ConfigurationNodeDefinition? root, LogicalPath path)
-    {
-        return root is null
-            ? null
-            : EnumerateNodes(root).FirstOrDefault(node => node.RelativePath.Equals(path));
-    }
-
-    private static ConfigurationNodeDefinition? ResolveSchemaNodeByPath(ConfigurationNodeDefinition? root, LogicalPath path)
-    {
-        var current = root;
-        foreach (var segment in path.Segments)
-        {
-            current = segment switch
-            {
-                PropertySegment property => current?.Children.FirstOrDefault(child =>
-                    string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
-                DictionaryKeySegment => current?.DictionaryTemplate?.ValueTemplate,
-                ListItemKeySegment or ListIndexSegment => current?.ListTemplate?.ItemTemplate,
-                _ => null
-            };
-
-            if (current is null)
-            {
-                return null;
-            }
-        }
-
-        return current;
-    }
-
-    private async Task OpenSaveGroupDialog()
-    {
-        var changes = StateStore.GetPending();
-        if (await ShouldBlockSaveForRuntimeVersionDriftAsync(changes))
-        {
-            return;
-        }
-
-        var validationIssues = StateStore.GetValidationIssues();
-        var parameters = new DialogParameters<SaveMutationGroupDialog>();
-        parameters.Add(dialog => dialog.Changes, changes);
-        parameters.Add(dialog => dialog.ValidationIssues, validationIssues);
-        parameters.Add(
-            dialog => dialog.UndoRequested,
-            EventCallback.Factory.Create<ConfigurationPendingReviewUndoRequest>(this, UndoPendingReviewAsync));
-        var dialog = await DialogService.ShowAsync<SaveMutationGroupDialog>(L["Dialogs:SaveGroup:Title"], parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.False,
-            FullWidth = true
-        });
-        var result = await dialog.Result;
-        if (result is not { Canceled: false })
-        {
-            return;
-        }
-
-        if (result.Data is SaveMutationGroupDialogResult { JumpChangeTarget: { } jumpChangeTarget })
-        {
-            await JumpToPendingChangeAsync(jumpChangeTarget);
-            return;
-        }
-
-        if (result.Data is SaveMutationGroupDialogResult { JumpTarget: { } jumpTarget })
-        {
-            await JumpToValidationIssueAsync(jumpTarget);
-            return;
-        }
-
-        if (result.Data is SaveMutationGroupDialogResult { ConcurrencyConflictMessage: { } conflictMessage })
-        {
-            await RefreshPendingChangeBaselinesAsync();
-            Snackbar.Add($"{L["Group:ConcurrencyConflict"]} {conflictMessage}", Severity.Warning);
-            return;
-        }
-
-        if (result.Data is SaveMutationGroupDialogResult { ApplyResult: { } applyResult })
-        {
-            var pendingByRequestId = StateStore.GetPending()
-                .ToDictionary(static change => change.RequestId, StringComparer.Ordinal);
-            foreach (var outcome in applyResult.Outcomes.Where(static outcome =>
-                         outcome.Status == ConfigurationMutationOutcomeStatus.Applied))
-            {
-                if (pendingByRequestId.TryGetValue(outcome.RequestId, out var appliedChange))
-                {
-                    StateStore.Undo(appliedChange.DefinitionKey, appliedChange.LogicalPath);
-                }
-            }
-
-            if (applyResult.Status == ConfigurationMutationGroupApplyStatus.PartiallyApplied)
-            {
-                await RefreshPendingChangeBaselinesAsync();
-                Snackbar.Add(L["Group:PartiallyApplied"], Severity.Warning);
-            }
-            else
-            {
-                await RefreshPendingCount();
-                Snackbar.Add(L["Group:Saved"], Severity.Success);
-            }
-
-            await ReloadSelectedEffectiveValuesAndValidationAsync();
-            if (applyResult.PostCommitIssues.Count > 0)
-            {
-                await ShowPostCommitIssuesAsync(applyResult.PostCommitIssues);
-            }
-        }
-    }
-
-    private async Task ShowPostCommitIssuesAsync(IReadOnlyList<ConfigurationPostCommitIssue> issues)
-    {
-        var parameters = new DialogParameters<ConfigurationPostCommitIssuesDialog>();
-        parameters.Add(dialog => dialog.Issues, issues);
-        var dialog = await DialogService.ShowAsync<ConfigurationPostCommitIssuesDialog>(
-            L["Dialogs:PostCommitIssues:Title"],
-            parameters,
-            ConfigurationPostCommitIssuesDialog.DefaultOptions);
-        await dialog.Result;
-    }
-
-    private Task UndoAll()
-    {
-        StateStore.Clear();
-        return Task.CompletedTask;
-    }
-
-    private Task UndoPendingReviewAsync(ConfigurationPendingReviewUndoRequest request)
-    {
-        request.ApplyTo(StateStore);
-        return RefreshPendingCount();
-    }
-
-    private async Task OpenImportDialog()
-    {
-        var dialog = await DialogService.ShowAsync<ConfigurationImportDialog>(
-            L["ImportExport:Import:Title"],
-            new DialogOptions
-            {
-                MaxWidth = MaxWidth.False,
-                FullWidth = true
-            });
-        var result = await dialog.Result;
-        if (result is not { Canceled: false, Data: ConfigurationImportReport report })
-        {
-            return;
-        }
-
-        foreach (var draft in report.Drafts.Where(draft => draft.HasState))
-        {
-            StateStore.ReplaceScope(draft.DefinitionKey, draft.ScopePath, draft.Changes, draft.ValidationIssues);
-        }
-
-        await RefreshPendingCount();
-        Snackbar.Add(L["ImportExport:Import:Staged", report.Changes.Count, report.ValidationIssues.Count], Severity.Success);
-    }
-
-    private async Task OpenExportDialog(string? definitionKey, string? definitionDisplayName)
-    {
-        var parameters = new DialogParameters<ConfigurationExportDialog>();
-        parameters.Add(dialog => dialog.DefinitionKey, definitionKey);
-        parameters.Add(dialog => dialog.DefinitionDisplayName, definitionDisplayName);
-        await DialogService.ShowAsync<ConfigurationExportDialog>(L["ImportExport:Export:Title"], parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true
-        });
-    }
-
-    private async Task OpenSelectedDefinitionJsonEditAsync()
-    {
-        if (_selectedDefinition is null || !CanMutateSelectedDefinition)
-        {
-            return;
-        }
-
-        try
-        {
-            var effectiveValue = await PackageService.LoadEffectiveValueAsync(_selectedDefinition.DefinitionKey, LogicalPath.Root);
-            var scalarValues = await PackageService.LoadScalarEffectiveValuesAsync(
-                _selectedDefinition,
-                _selectedDefinition.Root,
-                effectiveValue);
-            var parameters = new DialogParameters<ConfigurationJsonEditDialog>();
-            parameters.Add(dialog => dialog.Definition, _selectedDefinition);
-            parameters.Add(dialog => dialog.Node, _selectedDefinition.Root);
-            parameters.Add(dialog => dialog.EffectiveValue, effectiveValue);
-            parameters.Add(dialog => dialog.ScalarEffectiveValues, scalarValues);
-            parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
-            parameters.Add(dialog => dialog.CompactChanges, false);
-            var dialog = await DialogService.ShowAsync<ConfigurationJsonEditDialog>(L["ImportExport:JsonEditor:Title"], parameters, new DialogOptions
-            {
-                MaxWidth = MaxWidth.ExtraLarge,
-                FullWidth = true
-            });
-            var result = await dialog.Result;
-            if (result is { Canceled: false, Data: ConfigurationJsonDraftResult draft })
-            {
-                StateStore.ReplaceScope(_selectedDefinition.DefinitionKey, LogicalPath.Root, draft.Changes, draft.ValidationIssues);
-                await RefreshPendingCount();
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task OpenSelectedDefinitionHistoryAsync()
-    {
-        if (_selectedDefinition is null)
-        {
-            return;
-        }
-
-        var request = new ConfigurationHistoryPageRequest
-        {
-            DefinitionKey = _selectedDefinition.DefinitionKey
-        };
-        var result = await Facade.QueryHistoryPageAsync(request);
-        if (result.IsFailed(out var error, out var page))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            return;
-        }
-
-        var parameters = new DialogParameters<ConfigurationHistoryDiffDialog>();
-        parameters.Add(dialog => dialog.HistoryRequest, request);
-        parameters.Add(dialog => dialog.InitialPage, page);
-        parameters.Add(dialog => dialog.Definitions, _definitions);
-        parameters.Add(dialog => dialog.Definition, _selectedDefinition);
-        parameters.Add(dialog => dialog.AllowRollback, CanMutateSelectedDefinition);
-        parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", _selectedDefinition.DisplayName]);
-        var dialog = await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:Title"], parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true
-        });
-        var dialogResult = await dialog.Result;
-        if (dialogResult is { Canceled: false, Data: ConfigurationHistoryRollbackDialogResult rollback })
-        {
-            await ConfigurationRollbackCompletionPresenter.ShowAsync(rollback, DialogService, Snackbar, L);
-            await LoadEffectiveValuesAsync();
-            await RefreshPendingCount();
-        }
-    }
-
-    private async Task OpenSelectedDefinitionPublicationAsync(ConfigurationDefinitionPublicationTab initialTab)
-    {
-        if (_selectedDefinition is null)
-        {
-            return;
-        }
-
-        var result = await Facade.GetDefinitionPublicationOverviewAsync(_selectedDefinition.DefinitionKey, 50);
-        if (result.IsFailed(out var error, out var overview))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            return;
-        }
-
-        var parameters = new DialogParameters<ConfigurationDefinitionPublicationDialog>();
-        parameters.Add(dialog => dialog.Definition, _selectedDefinition);
-        parameters.Add(dialog => dialog.Overview, overview);
-        parameters.Add(dialog => dialog.InitialTab, initialTab);
-        await DialogService.ShowAsync<ConfigurationDefinitionPublicationDialog>(
-            L["DefinitionPublication:Title", _selectedDefinition.DisplayName],
-            parameters,
-            new DialogOptions
-            {
-                MaxWidth = MaxWidth.ExtraLarge,
-                FullWidth = true
-            });
-    }
-
-    private async Task OpenSelectedDefinitionPurgeAsync()
-    {
-        if (_selectedSummary is null)
-        {
-            return;
-        }
-
-        await OpenDefinitionPurgeAsync(_selectedSummary);
-    }
-
-    private async Task OpenDefinitionPurgeAsync(ConfigurationDefinitionSummary summary)
-    {
-        if (summary.LifecycleState != ConfigurationDefinitionLifecycleState.Retired)
-        {
-            return;
-        }
-
-        var previewResult = await Facade.PreviewDefinitionPurgeAsync(summary.DefinitionKey);
-        if (previewResult.IsFailed(out var previewError, out var preview))
-        {
-            Snackbar.Add(
-                L["DefinitionPurge:Messages:PreviewFailed", previewError.Message ?? string.Empty],
-                Severity.Error);
-            return;
-        }
-
-        var parameters = new DialogParameters<ConfigurationDefinitionPurgeDialog>();
-        parameters.Add(dialog => dialog.Preview, preview);
-        var dialog = await DialogService.ShowAsync<ConfigurationDefinitionPurgeDialog>(
-            L["DefinitionPurge:Title", preview.DisplayName],
-            parameters,
-            new DialogOptions
-            {
-                MaxWidth = MaxWidth.Medium,
-                FullWidth = true,
-                CloseButton = true
-            });
-        var dialogResult = await dialog.Result;
-        if (dialogResult is not { Canceled: false, Data: ConfigurationDefinitionPurgeRequest request })
-        {
-            return;
-        }
-
-        var purgeResult = await Facade.PurgeDefinitionAsync(request);
-        if (purgeResult.IsFailed(out var purgeError))
-        {
-            Snackbar.Add(
-                L["DefinitionPurge:Messages:PurgeFailed", purgeError.Message ?? string.Empty],
-                Severity.Error);
-            return;
-        }
-
-        StateStore.UndoScope(request.DefinitionKey, LogicalPath.Root);
-        Snackbar.Add(L["DefinitionPurge:Messages:Succeeded", preview.DisplayName], Severity.Success);
-        await LoadDefinitionsAsync();
-    }
-
-    private async Task OpenDefinitionSourcesAsync()
-    {
-        if (_selectedDefinition is null)
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters<ConfigurationDefinitionSourcesDialog>();
-        parameters.Add(dialog => dialog.Definition, _selectedDefinition);
-        await DialogService.ShowAsync<ConfigurationDefinitionSourcesDialog>(L["Sources:Definition:Title"], parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true
-        });
-    }
-
-    private async Task OpenRuntimeIssueSourceChainAsync(ConfigurationValidationIssue issue)
-    {
-        CloseRuntimeValidationPopover();
-        var result = await LoadDefinitionDetailAsync(issue.DefinitionKey);
-        if (result.IsFailed(out var error, out var detail))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            return;
-        }
-
-        var node = ResolveSchemaNodeByPath(detail.Definition.Root, issue.LogicalPath)
-                   ?? ResolveNodeByPathOrNearestAncestor(detail.Definition.Root, issue.LogicalPath);
-        if (node is null)
-        {
-            Snackbar.Add(L["State:RuntimeValidation:SourceChainUnavailable"], Severity.Error);
-            return;
-        }
-
-        var parameters = new DialogParameters<ConfigurationSourceChainDialog>();
-        parameters.Add(dialog => dialog.Definition, detail.Definition);
-        parameters.Add(dialog => dialog.Node, node);
-        parameters.Add(dialog => dialog.LogicalPath, issue.LogicalPath);
-        parameters.Add(dialog => dialog.AllowSourceEdit, false);
-        await DialogService.ShowAsync<ConfigurationSourceChainDialog>(L["Sources:Chain:Title"], parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true
-        });
-    }
-
-    private Task RefreshPendingCount()
-    {
-        _pendingCount = StateStore.GetPending().Count;
-        _validationIssueCount = StateStore.GetValidationIssues().Count;
-        return Task.CompletedTask;
-    }
-
-    private async Task RefreshPendingChangeBaselinesAsync()
-    {
-        var pendingChanges = StateStore.GetPending();
-        if (pendingChanges.Count == 0)
-        {
-            return;
-        }
-
-        var refreshedChanges = new List<PendingChange>(pendingChanges.Count);
-        foreach (var definitionChanges in pendingChanges.GroupBy(
-                     static change => change.DefinitionKey,
-                     StringComparer.OrdinalIgnoreCase))
-        {
-            var result = await LoadDefinitionDetailAsync(definitionChanges.Key);
-            if (result.IsFailed(out _, out var detail))
-            {
-                refreshedChanges.AddRange(definitionChanges);
-                continue;
-            }
-
-            var rootValueResult = await Facade.GetEffectiveValueAsync(definitionChanges.Key, LogicalPath.Root);
-            if (rootValueResult.IsFailed(out _, out var rootValue))
-            {
-                refreshedChanges.AddRange(definitionChanges);
-                continue;
-            }
-
-            // One persisted document version guards every Monica mutation for this definition.
-            foreach (var change in definitionChanges)
-            {
-                var schema = ResolveSchemaNodeByPath(detail.Definition.Root, change.LogicalPath);
-                if (schema is null)
-                {
-                    refreshedChanges.Add(change);
-                    continue;
-                }
-
-                var effectiveValueResult = await Facade.GetEffectiveValueAsync(change.DefinitionKey, change.LogicalPath);
-                if (effectiveValueResult.IsFailed(out _, out var effectiveValue))
-                {
-                    refreshedChanges.Add(change);
-                    continue;
-                }
-
-                var refreshedChange = change.RebaseBaseline(
-                    detail.Definition,
-                    schema,
-                    effectiveValue,
-                    rootValue.Version,
-                    L);
-                if (!refreshedChange.HasSameOriginalAndNewValue())
-                {
-                    refreshedChanges.Add(refreshedChange);
-                }
-            }
-        }
-
-        StateStore.ReplacePending(refreshedChanges);
-        await RefreshPendingCount();
-    }
-
-    private async Task<bool> ShouldBlockSaveForRuntimeVersionDriftAsync(IReadOnlyList<PendingChange> changes)
-    {
-        var monicaDefinitionKeys = changes
-            .Where(static change => change.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore)
-            .Select(static change => change.DefinitionKey)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (monicaDefinitionKeys.Count == 0)
-        {
-            return false;
-        }
-
-        var statusResult = await Facade.GetRuntimeReloadStatusAsync();
-        if (statusResult.IsFailed(out var error, out var report))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            return true;
-        }
-
-        var driftedDefinitions = report.Definitions
-            .Where(definition =>
-                monicaDefinitionKeys.Contains(definition.DefinitionKey)
-                && definition.RuntimeLoadedVersion != definition.EffectiveStoreVersion)
-            .OrderBy(static definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        if (driftedDefinitions.Length == 0)
-        {
-            return false;
-        }
-
-        var details = string.Join("; ", driftedDefinitions.Select(FormatSaveBlockedReloadDefinition));
-        Snackbar.Add(L["State:ReloadStatus:SaveBlockedPendingDefinitions", details], Severity.Warning);
-        if (_reloadStatusButton is not null)
-        {
-            await _reloadStatusButton.OpenAsync(report);
-        }
-
-        return true;
-    }
-
-    private string FormatSaveBlockedReloadDefinition(ConfigurationDefinitionReloadStatus definition)
-    {
-        return L["State:ReloadStatus:SaveBlockedDefinitionVersion",
-            definition.DisplayName,
-            FormatReloadVersion(definition.RuntimeLoadedVersion),
-            FormatReloadVersion(definition.EffectiveStoreVersion)].Value;
-    }
-
-    private string FormatReloadVersion(long? version)
-    {
-        return version is null ? L["State:ReloadStatus:UnknownValue"].Value : L["State:ReloadStatus:VersionValue", version.Value].Value;
-    }
-
-    private void OnStateStoreChanged()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _pendingCount = StateStore.GetPending().Count;
-        _validationIssueCount = StateStore.GetValidationIssues().Count;
-        _pendingStateRender = InvokeAsync(() =>
-        {
-            if (!_disposed)
-            {
-                StateHasChanged();
-            }
-        });
-    }
-
-    private Task JumpToPendingChangeAsync(PendingChange change)
-    {
-        return JumpToConfigurationPathAsync(
-            change.DefinitionKey,
-            change.LogicalPath,
-            L["Dialogs:SaveGroup:Actions:JumpFailed"].Value);
-    }
-
-    private Task JumpToValidationIssueAsync(ConfigurationValidationIssue issue)
-    {
-        return JumpToConfigurationPathAsync(
-            issue.DefinitionKey,
-            issue.LogicalPath,
-            L["Dialogs:SaveGroup:Validation:JumpFailed"].Value);
-    }
-
-    private Task JumpToRuntimeValidationIssueAsync(ConfigurationValidationIssue issue)
-    {
-        CloseRuntimeValidationPopover();
-        return JumpToConfigurationPathAsync(
-            issue.DefinitionKey,
-            issue.LogicalPath,
-            L["State:RuntimeValidation:JumpFailed"].Value);
-    }
-
-    private async Task JumpToConfigurationPathAsync(string definitionKey, LogicalPath path, string? failureMessage)
-    {
-        var summary = _definitions.FirstOrDefault(definition =>
-            string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase));
-        if (summary is null || !summary.CanManage)
-        {
-            ShowJumpFailure(failureMessage);
-            return;
-        }
-
-        await SelectDefinitionAsync(summary);
-        if (!JumpToCurrentDefinitionPath(path))
-        {
-            ShowJumpFailure(failureMessage);
-        }
-    }
-
-    private bool JumpToCurrentDefinitionPath(LogicalPath path)
-    {
-        var root = _selectedDefinition?.Root;
-        if (root is null)
-        {
-            return false;
-        }
-
-        var target = ResolveNodeByPathOrNearestAncestor(root, path);
-        if (target is null)
-        {
-            return false;
-        }
-
-        _selectedNode = ResolveDisplaySectionForTarget(root, target) ?? root;
-        _highlightedPath = target.RelativePath;
-        return true;
-    }
-
-    private static ConfigurationNodeDefinition? ResolveDisplaySectionForTarget(
-        ConfigurationNodeDefinition root,
-        ConfigurationNodeDefinition target)
-    {
-        if (target.RelativePath.Depth == 0 || !IsSimpleEditableNode(target))
-        {
-            return target;
-        }
-
-        for (var depth = target.RelativePath.Depth - 1; depth >= 0; depth--)
-        {
-            var candidatePath = new LogicalPath(target.RelativePath.Segments.Take(depth).ToArray());
-            var candidate = ResolveNodeByPath(root, candidatePath);
-            if (candidate is not null && !IsSimpleEditableNode(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return root;
-    }
-
-    private static ConfigurationNodeDefinition? ResolveNodeByPathOrNearestAncestor(ConfigurationNodeDefinition? root, LogicalPath path)
-    {
-        if (root is null)
-        {
-            return null;
-        }
-
-        for (var depth = path.Depth; depth >= 0; depth--)
-        {
-            var candidatePath = new LogicalPath(path.Segments.Take(depth).ToArray());
-            var candidate = ResolveNodeByPath(root, candidatePath);
-            if (candidate is not null)
-            {
-                return candidate;
-            }
-        }
-
-        return root;
-    }
-
-    private void ShowJumpFailure(string? failureMessage)
-    {
-        if (!string.IsNullOrWhiteSpace(failureMessage))
-        {
-            Snackbar.Add(failureMessage, Severity.Error);
-        }
-    }
-
-    private sealed record ConfigurationSectionItem(
-        ConfigurationNodeDefinition Node,
-        string Title,
-        string? Description,
-        string PathLabel,
-        string Icon,
-        int ScalarCount);
-}

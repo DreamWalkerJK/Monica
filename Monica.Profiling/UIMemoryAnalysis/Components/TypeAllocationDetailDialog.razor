@@ -1,0 +1,46 @@
+@using Monica.Profiling.TypeAllocation.Models
+@using Monica.Profiling.UIMemoryAnalysis.Support
+@using Monica.UI.Shared.Components.Dialogs
+@inject IStringLocalizer<MemoryAnalysisResource> L
+
+<MudDialog>
+    <TitleContent><MoDialogHeading Text="@L["Allocation:Details:Title"]" /></TitleContent>
+    <DialogContent>
+        <div class="allocation-detail" data-evidence-source="@Evidence.Source" data-type-evidence="@Evidence.TypeName">
+            <p class="allocation-detail-note">@L["Allocation:Details:Frozen"]</p>
+            <div class="allocation-detail-identity">
+                <span>@L["Allocation:Details:FullName"]</span>
+                <code data-field="TypeName">@Evidence.TypeName</code>
+            </div>
+            <dl class="allocation-detail-context">
+                <div><dt>@L["Allocation:Details:Source"]</dt><dd data-field="Source">@L[Heap ? "Allocation:Sources:HeapTitle" : "Allocation:Sources:LiveTitle"]</dd></div>
+                <div><dt>@L["Allocation:Sources:Timestamp"] · UTC</dt><dd><time data-field="SnapshotTimestamp" datetime="@MemoryAnalysisDisplayFormatter.MachineTime(Evidence.SnapshotTimestamp)">@MemoryAnalysisDisplayFormatter.MachineTime(Evidence.SnapshotTimestamp)</time></dd></div>
+                <div><dt>@L["Allocation:Sources:ViewRead"]</dt><dd><time data-field="CapturedAt" datetime="@Evidence.CapturedAt.ToString("O")">@MemoryAnalysisDisplayFormatter.LocalDateTime(Evidence.CapturedAt)</time></dd></div>
+                <div><dt>@L["Allocation:Details:LastSeen"]</dt><dd><time data-field="LastSeenUtc" datetime="@MemoryAnalysisDisplayFormatter.MachineTime(Evidence.LastSeenUtc)">@MemoryAnalysisDisplayFormatter.MachineTime(Evidence.LastSeenUtc)</time></dd></div>
+            </dl>
+            <p class="allocation-detail-note">@L[Heap ? "Allocation:Sources:HeapHelp" : "Allocation:Sources:LiveHelp"]</p>
+            <dl class="allocation-detail-values">
+                <div data-field="Count"><dt>@L[Heap ? "Allocation:Ranking:Columns:Objects" : "Allocation:Ranking:Columns:Ticks"]</dt><dd><code>@MemoryAnalysisDisplayFormatter.Raw(Evidence.Count)</code></dd></div>
+                <div data-field="Bytes"><dt>@L[Heap ? "Allocation:Ranking:Columns:HeapBytes" : "Allocation:Ranking:Columns:EstimatedBytes"] <small>@L["Allocation:Details:Bytes"]</small></dt><dd><code>@MemoryAnalysisDisplayFormatter.Raw(Evidence.Bytes)</code></dd></div>
+                <div data-field="CountShare"><dt>@L["Allocation:Details:CountShare"]</dt><dd><code>@MemoryAnalysisDisplayFormatter.Raw(Evidence.CountShare)</code></dd></div>
+                <div data-field="ByteShare"><dt>@L["Allocation:Details:ByteShare"]</dt><dd><code>@MemoryAnalysisDisplayFormatter.Raw(Evidence.ByteShare)</code></dd></div>
+                <div data-field="SourceCount"><dt>@L[Heap ? "Allocation:Details:SourceObjects" : "Allocation:Details:SourceTicks"]</dt><dd><code>@MemoryAnalysisDisplayFormatter.Raw(Evidence.SourceCount)</code></dd></div>
+                <div data-field="SourceBytes"><dt>@L[Heap ? "Allocation:Details:SourceHeapBytes" : "Allocation:Details:SourceEstimatedBytes"] <small>@L["Allocation:Details:Bytes"]</small></dt><dd><code>@MemoryAnalysisDisplayFormatter.Raw(Evidence.SourceBytes)</code></dd></div>
+                @if (!Heap) { <div data-field="DroppedEventCount"><dt>@L["Allocation:Details:DroppedEvents"]</dt><dd><code>@MemoryAnalysisDisplayFormatter.Raw(Evidence.DroppedEventCount)</code></dd></div> }
+                <div data-field="Duration"><dt>@L["Allocation:Details:Duration"]</dt><dd><code>@MemoryAnalysisDisplayFormatter.Raw(Evidence.Duration.TotalSeconds)</code></dd></div>
+            </dl>
+            <p class="allocation-detail-note">@L["Allocation:Sources:DurationHelp"]</p>
+            <p class="allocation-detail-note">@L["Allocation:Sources:Timing"]</p>
+            @if (!Heap) { <p class="allocation-detail-note">@L["Allocation:Details:NoObjectSize"]</p> }
+        </div>
+    </DialogContent>
+    <DialogActions><MudButton Variant="Variant.Text" OnClick="@(() => MudDialog.Close())">@L["Allocation:Details:Close"]</MudButton></DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    /// <summary>Gets or sets exact scalar type evidence frozen from one detached registry view.</summary>
+    /// <remarks>Live tick counts and heap object counts have distinct measurement bases; no provider is read here.</remarks>
+    [Parameter, EditorRequired] public TypeAllocationEvidence Evidence { get; set; } = null!;
+    private bool Heap => Evidence.Source == TypeAllocationDataSource.HeapSnapshot;
+}

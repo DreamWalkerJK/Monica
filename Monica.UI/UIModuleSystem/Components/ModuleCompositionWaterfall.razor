@@ -1,3 +1,4 @@
+
 @using Microsoft.Extensions.Localization
 @using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.Core.Modularity.Models
@@ -13,65 +14,41 @@
              data-zoom-level="@_zoomLevel"
              data-axis-start="@SvgNumber(AxisRange.StartMs)"
              data-axis-width="@SvgNumber(AxisRange.WidthMs)">
-        <div class="timeline-waterfall__heading">
-            <div>
-                <MudText Typo="Typo.overline">@L["Performance:Waterfall:Eyebrow"]</MudText>
-                <MudText Typo="Typo.h6" HtmlTag="h2" id="waterfall-title">@L["Performance:Waterfall:Title"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Performance:Waterfall:Hint"]</MudText>
+        <header class="timeline-waterfall__heading">
+            <div class="timeline-waterfall__identity">
+                <span class="timeline-waterfall__eyebrow">@L["Performance:Waterfall:Eyebrow"]</span>
+                <h2 id="waterfall-title">@L["Performance:Waterfall:Title"]</h2>
+                <p>@L["Performance:Waterfall:Hint"]</p>
             </div>
             <div class="timeline-waterfall__summary">
-                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                    @L["Performance:Waterfall:Duration", ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TotalCompositionDurationMs)]
-                </MudChip>
-                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
-                    @L["Performance:Waterfall:VisibleCount", VisibleTimelineRows.Count, snapshot.TraceSpans.Length]
-                </MudChip>
+                <strong title="@ModuleDiagnosticsDisplay.ExactMilliseconds(snapshot.Summary.TotalCompositionDurationMs)">@L["Performance:Waterfall:Duration", ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TotalCompositionDurationMs)]</strong>
+                <span>@L["Performance:Waterfall:VisibleCount", VisibleTimelineRows.Count, snapshot.TraceSpans.Length]</span>
             </div>
-        </div>
+        </header>
 
         <div class="timeline-waterfall__toolbar">
             <div class="timeline-waterfall__legend" aria-label="@L["Performance:Waterfall:Legend"]">
                 @foreach (var kind in TimelineKinds)
                 {
-                    <span class="timeline-waterfall__legend-item @SpanKindClass(kind)">
-                        @L[$"Enums:TraceKind:{kind}"]
-                    </span>
+                    <span class="timeline-waterfall__legend-item @SpanKindClass(kind)">@L[$"Enums:TraceKind:{kind}"]</span>
                 }
                 @if (Session.Comparison is not null)
                 {
-                    <span class="timeline-waterfall__legend-item timeline-waterfall__legend-item--baseline">
-                        @L["Comparison:BaselineTimeline"]
-                    </span>
+                    <span class="timeline-waterfall__legend-item timeline-waterfall__legend-item--baseline">@L["Comparison:BaselineTimeline"]</span>
                 }
             </div>
             <div class="timeline-waterfall__zoom" aria-label="@L["Performance:Waterfall:Zoom"]">
                 <MudTooltip Text="@L["Performance:Waterfall:ZoomOut"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.ZoomOut"
-                                   Size="Size.Small"
-                                   Disabled="@(_zoomLevel == MIN_ZOOM_LEVEL)"
-                                   OnClick="ZoomOut"
-                                   aria-label="@L["Performance:Waterfall:ZoomOut"]" />
+                    <MudIconButton Icon="@Icons.Material.Outlined.ZoomOut" Size="Size.Small" Disabled="@(_zoomLevel == MIN_ZOOM_LEVEL)" OnClick="ZoomOut" aria-label="@L["Performance:Waterfall:ZoomOut"]" />
                 </MudTooltip>
                 <MudTooltip Text="@L["Performance:Waterfall:Fit"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.FitScreen"
-                                   Size="Size.Small"
-                                   OnClick="FitTimeline"
-                                   aria-label="@L["Performance:Waterfall:Fit"]" />
+                    <MudIconButton Icon="@Icons.Material.Outlined.FitScreen" Size="Size.Small" OnClick="FitTimeline" aria-label="@L["Performance:Waterfall:Fit"]" />
                 </MudTooltip>
                 <MudTooltip Text="@L["Performance:Waterfall:FocusSelected"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.CenterFocusStrong"
-                                   Size="Size.Small"
-                                   Color="Color.Primary"
-                                   Disabled="@(SelectedSpan is null)"
-                                   OnClick="FocusSelected"
-                                   aria-label="@L["Performance:Waterfall:FocusSelected"]" />
+                    <MudIconButton Icon="@Icons.Material.Outlined.CenterFocusStrong" Size="Size.Small" Disabled="@(SelectedSpan is null)" OnClick="FocusSelected" aria-label="@L["Performance:Waterfall:FocusSelected"]" />
                 </MudTooltip>
                 <MudTooltip Text="@L["Performance:Waterfall:ZoomIn"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.ZoomIn"
-                                   Size="Size.Small"
-                                   Disabled="@(_zoomLevel == MAX_ZOOM_LEVEL)"
-                                   OnClick="ZoomIn"
-                                   aria-label="@L["Performance:Waterfall:ZoomIn"]" />
+                    <MudIconButton Icon="@Icons.Material.Outlined.ZoomIn" Size="Size.Small" Disabled="@(_zoomLevel == MAX_ZOOM_LEVEL)" OnClick="ZoomIn" aria-label="@L["Performance:Waterfall:ZoomIn"]" />
                 </MudTooltip>
                 <span>@L["Performance:Waterfall:ZoomLevel", _zoomLevel]</span>
             </div>
@@ -79,86 +56,59 @@
 
         @if (TimelineRows.Count < snapshot.TraceSpans.Length)
         {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+            <p class="timeline-waterfall__projection-note">
+                <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
                 @L["Performance:Waterfall:Omitted", snapshot.TraceSpans.Length - TimelineRows.Count]
-            </MudAlert>
+            </p>
         }
 
         @if (TimelineRows.Count == 0)
         {
             <div class="timeline-waterfall__empty">
-                <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Secondary" Size="Size.Large" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Performance:Waterfall:Empty"]</MudText>
+                <MudIcon Icon="@Icons.Material.Outlined.Timeline" Size="Size.Large" />
+                <p>@L["Performance:Waterfall:Empty"]</p>
             </div>
         }
         else
         {
-            <div class="timeline-waterfall__viewport"
-                 role="region"
-                 aria-label="@L["Performance:Waterfall:TimelineRegion"]"
-                 tabindex="0">
+            <div class="timeline-waterfall__viewport" role="region" aria-label="@L["Performance:Waterfall:TimelineRegion"]" tabindex="0">
                 <div class="timeline-waterfall__canvas">
                     <div class="timeline-waterfall__axis">
                         <span>@L["Performance:Columns:Span"]</span>
                         <div>
                             @foreach (var tick in AxisTicks)
                             {
-                                <span>@ModuleDiagnosticsDisplay.Duration(AxisRange.StartMs + AxisRange.WidthMs * tick)</span>
+                                <span style="left: @(SvgNumber(tick * 100))%">@AxisTickLabel(AxisRange.StartMs + AxisRange.WidthMs * tick)</span>
                             }
                         </div>
                     </div>
-
                     @foreach (var span in VisibleTimelineRows)
                     {
                         var display = ModuleDiagnosticsDisplay.TraceSpan(span, snapshot, L);
                         var isSelected = IsSelected(span);
-                        <article class="timeline-waterfall__row @(isSelected ? "timeline-waterfall__row--selected" : null)"
-                                 data-span-id="@span.SpanId">
-                            <button type="button"
-                                    class="timeline-waterfall__label"
-                                    data-span-id="@span.SpanId"
-                                    aria-pressed="@isSelected"
-                                    @onclick="@(() => SelectSpanAsync(span))">
+                        <article class="timeline-waterfall__row @(isSelected ? "timeline-waterfall__row--selected" : null)" data-span-id="@span.SpanId">
+                            <button type="button" class="timeline-waterfall__label" data-span-id="@span.SpanId" aria-pressed="@(isSelected ? "true" : "false")" @onclick="@(() => SelectSpanAsync(span))">
                                 <span class="timeline-waterfall__kind @SpanKindClass(span.Kind)" aria-hidden="true"></span>
                                 <span>
-                                    <strong>@display.Primary</strong>
-                                    <small>@display.Secondary</small>
+                                    <strong title="@display.Primary">@display.Primary</strong>
+                                    <small title="@display.Secondary">@display.Secondary</small>
                                 </span>
-                                <code>@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</code>
+                                <code title="@ModuleDiagnosticsDisplay.ExactMilliseconds(span.DurationMs)">@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</code>
                             </button>
-                            <MudTooltip Text="@TimelineTooltip(span, display)">
-                                <button type="button"
-                                        class="timeline-waterfall__track-button"
-                                        data-span-id="@span.SpanId"
-                                        aria-label="@TimelineTooltip(span, display)"
-                                        aria-pressed="@isSelected"
-                                        @onclick="@(() => SelectSpanAsync(span))">
-                                    <svg viewBox="0 0 1000 32" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-                                        <line class="timeline-waterfall__grid-line" x1="0" y1="0" x2="0" y2="32" />
-                                        <line class="timeline-waterfall__grid-line" x1="250" y1="0" x2="250" y2="32" />
-                                        <line class="timeline-waterfall__grid-line" x1="500" y1="0" x2="500" y2="32" />
-                                        <line class="timeline-waterfall__grid-line" x1="750" y1="0" x2="750" y2="32" />
-                                        <line class="timeline-waterfall__grid-line" x1="1000" y1="0" x2="1000" y2="32" />
-                                        @if (BaselineTimelineRows.TryGetValue(span.SpanId, out var baselineSpan)
-                                             && BaselineTimelineWidth(baselineSpan) > 0)
-                                        {
-                                            <rect class="timeline-waterfall__baseline"
-                                                  x="@SvgNumber(BaselineTimelineX(baselineSpan))"
-                                                  y="4"
-                                                  width="@SvgNumber(BaselineTimelineWidth(baselineSpan))"
-                                                  height="24"
-                                                  rx="4" />
-                                        }
-                                        <rect class="timeline-waterfall__bar @SpanKindClass(span.Kind) @(span.IsFailed ? "timeline-waterfall__bar--failed" : null) @(isSelected ? "timeline-bar-selected" : null)"
-                                              data-span-id="@span.SpanId"
-                                              x="@SvgNumber(TimelineX(span.StartedOffsetMs))"
-                                              y="9"
-                                              width="@SvgNumber(TimelineWidth(span.StartedOffsetMs, span.EndedOffsetMs))"
-                                              height="14"
-                                              rx="4" />
-                                    </svg>
-                                </button>
-                            </MudTooltip>
+                            <div class="timeline-waterfall__track-owner">
+                                <MudTooltip Text="@TimelineTooltip(span, display)">
+                                    <button type="button" class="timeline-waterfall__track-button" data-span-id="@span.SpanId" aria-label="@TimelineTooltip(span, display)" aria-pressed="@(isSelected ? "true" : "false")" @onclick="@(() => SelectSpanAsync(span))">
+                                        <svg viewBox="0 0 1000 32" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                                            @if (BaselineTimelineRows.TryGetValue(span.SpanId, out var baselineSpan) && BaselineTimelineWidth(baselineSpan) > 0)
+                                            {
+                                                <rect class="timeline-waterfall__baseline" x="@SvgNumber(BaselineTimelineX(baselineSpan))" y="4" width="@SvgNumber(BaselineTimelineWidth(baselineSpan))" height="24" rx="4" />
+                                            }
+                                            <rect class="timeline-waterfall__bar @SpanKindClass(span.Kind) @(span.IsFailed ? "timeline-waterfall__bar--failed" : null) @(isSelected ? "timeline-bar-selected" : null)"
+                                                  data-span-id="@span.SpanId" x="@SvgNumber(TimelineX(span.StartedOffsetMs))" y="9" width="@SvgNumber(TimelineWidth(span.StartedOffsetMs, span.EndedOffsetMs))" height="14" rx="4" />
+                                        </svg>
+                                    </button>
+                                </MudTooltip>
+                            </div>
                         </article>
                     }
                 </div>
@@ -168,66 +118,48 @@
             {
                 var selectedDisplay = ModuleDiagnosticsDisplay.TraceSpan(selectedSpan, snapshot, L);
                 <aside class="timeline-waterfall__selection" aria-live="polite">
-                    <span class="timeline-waterfall__kind @SpanKindClass(selectedSpan.Kind)" aria-hidden="true"></span>
-                    <div>
-                        <small>@L["Performance:Waterfall:Selected"]</small>
+                    <div class="timeline-waterfall__selected-identity">
+                        <small><span class="timeline-waterfall__kind @SpanKindClass(selectedSpan.Kind)" aria-hidden="true"></span>@L["Performance:Waterfall:Selected"]</small>
                         <strong>@selectedDisplay.Primary</strong>
                         <span>@selectedDisplay.Secondary</span>
+                        <div class="timeline-waterfall__selected-id">
+                            <small>@L["Performance:Waterfall:SpanId"]</small>
+                            <IdentifierValue Value="@selectedSpan.SpanId" />
+                        </div>
                     </div>
                     <dl>
-                        <div>
-                            <dt>@L["Performance:Columns:Start"]</dt>
-                            <dd>@ModuleDiagnosticsDisplay.Duration(selectedSpan.StartedOffsetMs)</dd>
-                        </div>
-                        <div>
-                            <dt>@L["Performance:Columns:Duration"]</dt>
-                            <dd>@ModuleDiagnosticsDisplay.Duration(selectedSpan.DurationMs)</dd>
-                        </div>
-                        <div>
-                            <dt>@L["Performance:Columns:Kind"]</dt>
-                            <dd>@L[$"Enums:TraceKind:{selectedSpan.Kind}"]</dd>
-                        </div>
+                        <div><dt>@L["Performance:Columns:Start"]</dt><dd title="@ModuleDiagnosticsDisplay.ExactMilliseconds(selectedSpan.StartedOffsetMs)">@ModuleDiagnosticsDisplay.Duration(selectedSpan.StartedOffsetMs)</dd></div>
+                        <div><dt>@L["Performance:Columns:End"]</dt><dd title="@ModuleDiagnosticsDisplay.ExactMilliseconds(selectedSpan.EndedOffsetMs)">@ModuleDiagnosticsDisplay.Duration(selectedSpan.EndedOffsetMs)</dd></div>
+                        <div><dt>@L["Performance:Columns:Duration"]</dt><dd title="@ModuleDiagnosticsDisplay.ExactMilliseconds(selectedSpan.DurationMs)">@ModuleDiagnosticsDisplay.Duration(selectedSpan.DurationMs)</dd></div>
+                        <div><dt>@L["Performance:Columns:Kind"]</dt><dd class="timeline-waterfall__selected-kind">@L[$"Enums:TraceKind:{selectedSpan.Kind}"]</dd></div>
                     </dl>
                 </aside>
             }
 
-            <MudExpansionPanels Class="timeline-waterfall__table-alternative">
-                <MudExpansionPanel Text="@L["Performance:Waterfall:TableAlternative"]">
-                    <div class="timeline-waterfall__table-wrapper"
-                         role="region"
-                         aria-label="@L["Performance:Waterfall:TableAlternative"]"
-                         tabindex="0">
-                        <MudTable T="ModuleDiagnosticsTraceSpan"
-                                  Items="@TimelineRows"
-                                  Dense="true"
-                                  Hover="true"
-                                  FixedHeader="true"
-                                  Breakpoint="Breakpoint.None"
-                                  RowClassFunc="@TimelineRowClass">
-                            <HeaderContent>
-                                <MudTh>@L["Performance:Columns:Span"]</MudTh>
-                                <MudTh>@L["Performance:Columns:Start"]</MudTh>
-                                <MudTh>@L["Performance:Columns:Duration"]</MudTh>
-                                <MudTh>@L["Performance:Columns:Kind"]</MudTh>
-                            </HeaderContent>
-                            <RowTemplate Context="span">
-                                <MudTd DataLabel="@L["Performance:Columns:Span"]">
-                                    <button type="button"
-                                            class="timeline-value"
-                                            data-span-id="@span.SpanId"
-                                            aria-current="@(IsSelected(span) ? "true" : null)"
-                                            @onclick="@(() => SelectSpanAsync(span))">
-                                        @ModuleDiagnosticsDisplay.TraceSpan(span, snapshot, L).Primary
-                                    </button>
-                                </MudTd>
-                                <MudTd DataLabel="@L["Performance:Columns:Start"]">@ModuleDiagnosticsDisplay.Duration(span.StartedOffsetMs)</MudTd>
-                                <MudTd DataLabel="@L["Performance:Columns:Duration"]">@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</MudTd>
-                                <MudTd DataLabel="@L["Performance:Columns:Kind"]">@L[$"Enums:TraceKind:{span.Kind}"]</MudTd>
-                            </RowTemplate>
-                        </MudTable>
-                    </div>
-                </MudExpansionPanel>
-            </MudExpansionPanels>
+            <div class="timeline-waterfall__table-alternative">
+                <MudExpansionPanels>
+                    <MudExpansionPanel Text="@L["Performance:Waterfall:TableAlternative"]">
+                        <div class="timeline-waterfall__table-wrapper" role="region" aria-label="@L["Performance:Waterfall:TableAlternative"]" tabindex="0">
+                            <MudTable T="ModuleDiagnosticsTraceSpan" Items="@TimelineRows" Dense="true" Hover="true" FixedHeader="true" Breakpoint="Breakpoint.None" RowClassFunc="@TimelineRowClass">
+                                <HeaderContent>
+                                    <MudTh>@L["Performance:Columns:Span"]</MudTh>
+                                    <MudTh>@L["Performance:Columns:Start"]</MudTh>
+                                    <MudTh>@L["Performance:Columns:Duration"]</MudTh>
+                                    <MudTh>@L["Performance:Columns:Kind"]</MudTh>
+                                </HeaderContent>
+                                <RowTemplate Context="span">
+                                    <MudTd DataLabel="@L["Performance:Columns:Span"]">
+                                        <button type="button" class="timeline-value" data-span-id="@span.SpanId" aria-current="@(IsSelected(span) ? "true" : null)" @onclick="@(() => SelectSpanAsync(span))">@ModuleDiagnosticsDisplay.TraceSpan(span, snapshot, L).Primary</button>
+                                    </MudTd>
+                                    <MudTd DataLabel="@L["Performance:Columns:Start"]">@ModuleDiagnosticsDisplay.Duration(span.StartedOffsetMs)</MudTd>
+                                    <MudTd DataLabel="@L["Performance:Columns:Duration"]">@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</MudTd>
+                                    <MudTd DataLabel="@L["Performance:Columns:Kind"]">@L[$"Enums:TraceKind:{span.Kind}"]</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </div>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            </div>
         }
     </section>
 }
@@ -504,6 +436,9 @@
 
     private static string SvgNumber(double value) =>
         value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string AxisTickLabel(double milliseconds) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{milliseconds:0.##} ms");
 
     private sealed record TimelineProjection(
         IReadOnlyList<ModuleDiagnosticsTraceSpan> Current,

@@ -436,6 +436,53 @@ public sealed class GuideWorkspaceTests
     }
 
     [Fact]
+    public async Task Init_WhenClaudeContainsALegacyProductSpan_ShouldKeepOnlyTheImportAndUnownedText()
+    {
+        using var fixture = new WorkspaceFixture();
+        fixture.WriteClaudeInstallation();
+        var service = fixture.CreateService();
+        var claude = fixture.WorkspaceFile("CLAUDE.md");
+        var prefix = "# User instructions\r\n\r\n<!-- monica-workflow:managed:start -->\r\nSibling instructions.\r\n<!-- monica-workflow:managed:end -->\r\n\r\n";
+        var before = prefix + "@AGENTS.md\r\n\r\n" + WorkspaceFixture.MarkerStart + "\r\nObsolete rules.\r\n" + WorkspaceFixture.MarkerEnd + "\r\n";
+        await File.WriteAllTextAsync(claude, before, CancellationToken);
+        var request = fixture.InitRequest("application", "microservice");
+
+        var preview = await service.InitAsync(request, cancellationToken: CancellationToken);
+        Assert.Equal(before, await File.ReadAllTextAsync(claude, CancellationToken));
+        var applied = await service.InitAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        var after = await File.ReadAllTextAsync(claude, CancellationToken);
+
+        Assert.True(applied.Plan!.Applied);
+        Assert.StartsWith(prefix, after, StringComparison.Ordinal);
+        Assert.DoesNotContain("Obsolete rules.", after, StringComparison.Ordinal);
+        Assert.Equal(GuideClaudeImportStatus.Valid, GuideInstructionBlock.ClaudeImportState(after));
+        Assert.Equal(prefix + "@AGENTS.md\r\n", after);
+        Assert.DoesNotContain('\n', after.Replace("\r\n", string.Empty, StringComparison.Ordinal));
+        var repeat = await service.InitAsync(request, cancellationToken: CancellationToken);
+        Assert.True(repeat.Plan!.IsNoOp);
+    }
+
+    [Fact]
+    public async Task Init_WhenClaudeProductSpanIsMalformed_ShouldRejectBeforeAnyWrite()
+    {
+        using var fixture = new WorkspaceFixture();
+        var service = fixture.CreateService();
+        var claude = fixture.WorkspaceFile("CLAUDE.md");
+        var before = WorkspaceFixture.MarkerStart + "\nNo closing marker.\n";
+        await File.WriteAllTextAsync(claude, before, CancellationToken);
+        var request = fixture.InitRequest("application", "microservice");
+
+        var preview = await service.InitAsync(request, cancellationToken: CancellationToken);
+        var applied = await service.InitAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        Assert.Equal(GuideStatus.Error, preview.Status);
+        Assert.False(applied.Plan!.Applied);
+        Assert.False(File.Exists(fixture.ConfigFile));
+        Assert.False(File.Exists(fixture.WorkspaceFile("AGENTS.md")));
+        Assert.Equal(before, await File.ReadAllTextAsync(claude, CancellationToken));
+    }
+
+    [Fact]
     public async Task Forget_RemovesEveryGuideOwnedArtifact()
     {
         using var fixture = new WorkspaceFixture();
@@ -827,6 +874,8 @@ public sealed class GuideWorkspaceTests
         public GuideGitIdentity? FindIdentity(string path) => null;
 
         public string? ResolveTagCommit(string repositoryRoot, string tag) => null;
+
+        public int? CountCommitsAhead(string repositoryRoot, string fromCommit, string toCommit) => null;
     }
 
     /// <summary>
@@ -843,5 +892,7 @@ public sealed class GuideWorkspaceTests
                 : null;
 
         public string? ResolveTagCommit(string repositoryRoot, string tag) => null;
+
+        public int? CountCommitsAhead(string repositoryRoot, string fromCommit, string toCommit) => null;
     }
 }

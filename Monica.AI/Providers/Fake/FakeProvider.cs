@@ -12,14 +12,12 @@ namespace Monica.AI.Providers.Fake;
 /// </summary>
 internal sealed class FakeProvider : IAIProvider
 {
-    private const EAIProviderType ProviderKind = EAIProviderType.Fake;
+    private const EAIProviderType PROVIDER_KIND = EAIProviderType.Fake;
     private readonly FakeProviderOptions _options;
     private readonly IReadOnlyList<AIModelInfo> _models;
     private readonly string? _defaultModel;
     private readonly bool _isValid;
-    private readonly IReadOnlyList<string> _invalidModels;
     private readonly ConcurrentDictionary<string, IEmbeddingGenerator<string, Embedding<float>>> _generators = new(StringComparer.OrdinalIgnoreCase);
-    private string? _systemPrompt;
     private bool _disposed;
 
     public FakeProvider(FakeProviderOptions options, AIModelCatalog modelCatalog)
@@ -30,15 +28,13 @@ internal sealed class FakeProvider : IAIProvider
         _models = resolution.Models;
         _defaultModel = resolution.DefaultModel;
         _isValid = resolution.IsValid;
-        _invalidModels = resolution.MissingModels;
-        _systemPrompt = options.SystemPrompt;
     }
 
     /// <inheritdoc />
-    public string ProviderId => _options.ProviderId ?? ProviderKind.ToString();
+    public string ProviderId => _options.ProviderId ?? PROVIDER_KIND.ToString();
 
     /// <inheritdoc />
-    public string ProviderType => ProviderKind.ToString();
+    public string ProviderType => PROVIDER_KIND.ToString();
 
     /// <inheritdoc />
     public string DisplayName => _options.DisplayName ?? AIProviderNaming.BuildDisplayName(ProviderType, ProviderId);
@@ -51,10 +47,9 @@ internal sealed class FakeProvider : IAIProvider
         Description = "Fake embedding provider for development and testing.",
         ProviderType = ProviderType,
         DefaultModel = _defaultModel,
-        SystemPrompt = _systemPrompt,
+        SystemPrompt = _options.SystemPrompt,
         SupportedModels = _models,
         IsValid = _isValid,
-        InvalidModels = _invalidModels,
         IsDefault = _options.IsDefault,
         Icon = "science",
         SupportsRemoteModelListing = false
@@ -107,13 +102,6 @@ internal sealed class FakeProvider : IAIProvider
     public Task<IReadOnlyList<AIRemoteModelInfo>> FetchRemoteModelsAsync(CancellationToken ct = default)
     {
         throw new NotSupportedException("Fake provider does not support remote model listing.");
-    }
-
-    /// <inheritdoc />
-    public void UpdateSystemPrompt(string? systemPrompt)
-    {
-        _systemPrompt = systemPrompt;
-        _options.SystemPrompt = systemPrompt;
     }
 
     /// <inheritdoc />

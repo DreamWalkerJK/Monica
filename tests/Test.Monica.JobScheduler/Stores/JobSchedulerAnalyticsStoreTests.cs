@@ -15,6 +15,171 @@ public sealed class JobSchedulerAnalyticsStoreTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task GetExecutionAnalyticsAsync_WhenLongestRecordsTie_ShouldChooseOneExactJobWinnerBeforeLimiting(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, RANGE_START);
+        await fixture.SyncAsync(StoreFixture.OWNER_A,
+            StoreFixture.TriggeredDeclaration("jobs.alpha"),
+            StoreFixture.TriggeredDeclaration("jobs.beta"),
+            StoreFixture.TriggeredDeclaration("jobs.gamma"));
+        await fixture.SyncAsync(StoreFixture.OWNER_B, StoreFixture.TriggeredDeclaration("jobs.alpha"));
+        await RunAndCompleteAsync(fixture, StoreFixture.OWNER_A, "jobs.alpha", "z-alpha", JobAttemptOutcome.Succeeded, TimeSpan.FromMinutes(5));
+        await RunAndCompleteAsync(fixture, StoreFixture.OWNER_A, "jobs.alpha", "a-alpha", JobAttemptOutcome.Failed, TimeSpan.FromMinutes(5));
+        await RunAndCompleteAsync(fixture, StoreFixture.OWNER_A, "jobs.beta", "b-beta", JobAttemptOutcome.Succeeded, TimeSpan.FromMinutes(5));
+        await RunAndCompleteAsync(fixture, StoreFixture.OWNER_B, "jobs.alpha", "b-owner-alpha", JobAttemptOutcome.Succeeded, TimeSpan.FromMinutes(5));
+        await RunAndCompleteAsync(fixture, StoreFixture.OWNER_A, "jobs.gamma", "c-short", JobAttemptOutcome.Succeeded, TimeSpan.FromMinutes(1));
+        var query = new JobExecutionAnalyticsQuery
+        {
+            StartTimeUtc = RANGE_START, EndTimeUtc = RANGE_START.AddHours(1), SlowestExecutionLimit = 2,
+            OwnerKey = StoreFixture.OWNER_A
+        };
+
+        var owner = await fixture.Store.GetExecutionAnalyticsAsync(fixture.Scope, query, TestContext.Current.CancellationToken);
+        owner.SlowestExecutions.Select(item => item.InstanceId).Should().Equal("a-alpha", "b-beta");
+        var allOwners = await fixture.Store.GetExecutionAnalyticsAsync(fixture.Scope,
+            query with { OwnerKey = null, SlowestExecutionLimit = 3 }, TestContext.Current.CancellationToken);
+        allOwners.SlowestExecutions.Select(item => item.InstanceId).Should().Equal("a-alpha", "b-beta", "b-owner-alpha");
+        allOwners.SlowestExecutions.Select(item => new JobId(item.OwnerKey, item.JobKey)).Should().OnlyHaveUniqueItems();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetExecutionAnalyticsAsync_WhenCompletionsMeetWindowEdges_ShouldUseHalfOpenBucketsAndKeepEmptyIntervals(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, RANGE_START.AddMinutes(-1));
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.alpha"));
+        await RunAndCompleteAsync(fixture, StoreFixture.OWNER_A, "jobs.alpha", "at-start", JobAttemptOutcome.Succeeded, TimeSpan.FromMinutes(1));
+        await RunAndCompleteAsync(fixture, StoreFixture.OWNER_A, "jobs.alpha", "at-third-bucket", JobAttemptOutcome.Succeeded, TimeSpan.FromHours(3));
+        await RunAndCompleteAsync(fixture, StoreFixture.OWNER_A, "jobs.alpha", "at-exclusive-end", JobAttemptOutcome.Succeeded, TimeSpan.FromMinutes(30));
+        var end = RANGE_START.AddHours(3).AddMinutes(30);
+        var snapshot = await fixture.Store.GetExecutionAnalyticsAsync(fixture.Scope, new JobExecutionAnalyticsQuery
+        {
+            StartTimeUtc = RANGE_START, EndTimeUtc = end
+        }, TestContext.Current.CancellationToken);
+
+        snapshot.CompletedTerminalCount.Should().Be(2);
+        snapshot.StateTotals[JobExecutionState.Succeeded].Should().Be(2);
+        snapshot.ExecutedThroughputPerHour.Should().BeApproximately(2.0 / 3.5, 0.0001);
+        snapshot.Trend.Select(bucket => bucket.SucceededCount).Should().Equal(1, 0, 0, 1);
+        snapshot.Trend.Select(bucket => bucket.StartTimeUtc).Should().Equal(
+            RANGE_START, RANGE_START.AddHours(1), RANGE_START.AddHours(2), RANGE_START.AddHours(3));
+        snapshot.Trend[^1].EndTimeUtc.Should().Be(end);
+        snapshot.Trend[^1].EndTimeUtc.Subtract(snapshot.Trend[^1].StartTimeUtc).Should().Be(TimeSpan.FromMinutes(30));
+        snapshot.Duration.Count.Should().Be(2);
+        snapshot.Duration.Minimum.Should().Be(TimeSpan.FromMinutes(1));
+        snapshot.Duration.Maximum.Should().Be(TimeSpan.FromHours(3));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetExecutionAnalyticsAsync_WhenRecurringDispositionsMixWithOtherOrigins_ShouldUseOnlyScheduledDispatchDenominator(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, RANGE_START);
+        await fixture.SyncAsync(StoreFixture.OWNER_A,
+            StoreFixture.RecurringDeclaration("jobs.recurring", cron: "0 0 * * * *"),
+            StoreFixture.TriggeredDeclaration("jobs.triggered"));
+        var cursor = await fixture.SyncCursorAsync(StoreFixture.OWNER_A, "jobs.recurring");
+        var query = new JobExecutionAnalyticsQuery { StartTimeUtc = RANGE_START, EndTimeUtc = RANGE_START.AddHours(4) };
+        fixture.Time.Advance(TimeSpan.FromHours(1));
+        var first = await MaterializeAsync(fixture, cursor.Key, "scheduled-failed");
+        first.State.Should().Be(JobExecutionState.Queued);
+        fixture.Time.Advance(TimeSpan.FromHours(1));
+        var skipped = await MaterializeAsync(fixture, cursor.Key, "scheduled-skipped");
+        skipped.State.Should().Be(JobExecutionState.Skipped);
+
+        var onlySkipped = await fixture.Store.GetExecutionAnalyticsAsync(fixture.Scope, query, TestContext.Current.CancellationToken);
+        onlySkipped.RecurringScheduleDispositionCount.Should().Be(1);
+        onlySkipped.RecurringScheduleFulfillment.Should().Be(0);
+        onlySkipped.Reliability.Should().Be(0);
+        onlySkipped.Duration.Count.Should().Be(0);
+        var failedLease = (await fixture.ClaimAsync(StoreFixture.OWNER_A, WORKER, ["jobs.recurring"])).Single();
+        await fixture.Store.CompleteAttemptAsync(new JobAttemptCompletion
+        {
+            LeaseKey = failedLease.LeaseKey, Outcome = JobAttemptOutcome.Failed
+        }, TestContext.Current.CancellationToken);
+        fixture.Time.Advance(TimeSpan.FromHours(1));
+        await MaterializeAsync(fixture, cursor.Key, "scheduled-cancelled");
+        await fixture.Store.RequestCancellationAsync(fixture.Scope, "scheduled-cancelled", cancellationToken: TestContext.Current.CancellationToken);
+        await RunAndCompleteAsync(fixture, StoreFixture.OWNER_A, "jobs.triggered", "triggered-success", JobAttemptOutcome.Succeeded, TimeSpan.Zero);
+        await fixture.RunRecurringNowAsync(StoreFixture.OWNER_A, "jobs.recurring", "run-now-success");
+        var runNowLease = (await fixture.ClaimAsync(StoreFixture.OWNER_A, WORKER, ["jobs.recurring"])).Single();
+        await fixture.Store.CompleteAttemptAsync(new JobAttemptCompletion
+        {
+            LeaseKey = runNowLease.LeaseKey, Outcome = JobAttemptOutcome.Succeeded
+        }, TestContext.Current.CancellationToken);
+
+        var snapshot = await fixture.Store.GetExecutionAnalyticsAsync(fixture.Scope, query, TestContext.Current.CancellationToken);
+        snapshot.CompletedTerminalCount.Should().Be(5);
+        snapshot.RecurringScheduleDispositionCount.Should().Be(2);
+        snapshot.RecurringScheduleFulfillment.Should().Be(0.5);
+        snapshot.Reliability.Should().BeApproximately(2.0 / 3, 0.0001);
+        snapshot.ExecutedTerminalCount.Should().Be(3);
+        snapshot.Duration.Count.Should().Be(3);
+        snapshot.Duration.Minimum.Should().Be(TimeSpan.Zero);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetExecutionAnalyticsAsync_WhenFiveDurationsAreRecorded_ShouldUseNearestRankPercentiles(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, RANGE_START);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.alpha"));
+        for (var minutes = 1; minutes <= 5; minutes++)
+            await RunAndCompleteAsync(fixture, StoreFixture.OWNER_A, "jobs.alpha", $"duration-{minutes}",
+                JobAttemptOutcome.Succeeded, TimeSpan.FromMinutes(minutes));
+        var snapshot = await fixture.Store.GetExecutionAnalyticsAsync(fixture.Scope, new JobExecutionAnalyticsQuery
+        {
+            StartTimeUtc = RANGE_START, EndTimeUtc = RANGE_START.AddHours(1)
+        }, TestContext.Current.CancellationToken);
+        snapshot.Duration.Count.Should().Be(5);
+        snapshot.Duration.Minimum.Should().Be(TimeSpan.FromMinutes(1));
+        snapshot.Duration.Average.Should().Be(TimeSpan.FromMinutes(3));
+        snapshot.Duration.P50.Should().Be(TimeSpan.FromMinutes(3));
+        snapshot.Duration.P90.Should().Be(TimeSpan.FromMinutes(5));
+        snapshot.Duration.P95.Should().Be(TimeSpan.FromMinutes(5));
+        snapshot.Duration.P99.Should().Be(TimeSpan.FromMinutes(5));
+        snapshot.Duration.Maximum.Should().Be(TimeSpan.FromMinutes(5));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetExecutionAnalyticsAsync_WhenQueuedRetryIsCancelled_ShouldIncludeRecordedRetryWaitingInDuration(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, RANGE_START);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.retry") with { RetryCount = 1 });
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.retry", instanceId: "cancelled-retry");
+        var lease = (await fixture.ClaimAsync(StoreFixture.OWNER_A, WORKER, ["jobs.retry"], leaseDuration: TimeSpan.FromHours(1))).Single();
+        fixture.Time.Advance(TimeSpan.FromMinutes(1));
+        await fixture.Store.CompleteAttemptAsync(new JobAttemptCompletion
+        {
+            LeaseKey = lease.LeaseKey, Outcome = JobAttemptOutcome.Failed
+        }, TestContext.Current.CancellationToken);
+        var waiting = await fixture.Store.GetExecutionAsync(fixture.Scope, "cancelled-retry", TestContext.Current.CancellationToken);
+        Assert.NotNull(waiting);
+        waiting.State.Should().Be(JobExecutionState.Queued);
+        waiting.StartedAtUtc.Should().Be(RANGE_START);
+        waiting.CompletedAtUtc.Should().BeNull();
+        fixture.Time.Advance(TimeSpan.FromMinutes(9));
+        await fixture.Store.RequestCancellationAsync(fixture.Scope, "cancelled-retry", cancellationToken: TestContext.Current.CancellationToken);
+
+        var snapshot = await fixture.Store.GetExecutionAnalyticsAsync(fixture.Scope, new JobExecutionAnalyticsQuery
+        {
+            StartTimeUtc = RANGE_START, EndTimeUtc = RANGE_START.AddHours(1)
+        }, TestContext.Current.CancellationToken);
+        snapshot.CompletedTerminalCount.Should().Be(1);
+        snapshot.ExecutedTerminalCount.Should().Be(1);
+        snapshot.Duration.Count.Should().Be(1);
+        snapshot.Duration.Maximum.Should().Be(TimeSpan.FromMinutes(10));
+        snapshot.SlowestExecutions.Should().ContainSingle().Which.Duration.Should().Be(TimeSpan.FromMinutes(10));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Analytics_ShouldSeparateCreatedCohortFromCompletionWindowAndCalculateDurationDistribution(
         bool useEfCore)
     {
@@ -159,8 +324,22 @@ public sealed class JobSchedulerAnalyticsStoreTests
         {
             StartTimeUtc = RANGE_START,
             EndTimeUtc = RANGE_START
-        });
+        }, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
+
+    private static async Task<JobExecutionInstance> MaterializeAsync(
+        StoreFixture fixture, RecurringScheduleCursorKey key, string instanceId)
+    {
+        var due = (await fixture.Store.GetDueRecurringSchedulesAsync(
+            fixture.Scope, key.OwnerKey, 10, TestContext.Current.CancellationToken)).Single(item => item.Key.JobKey == key.JobKey);
+        var result = await fixture.Store.TryMaterializeRecurringOccurrenceAsync(new RecurringOccurrenceMaterialization
+        {
+            CursorKey = due.Key, ExpectedVersion = due.Version,
+            ExpectedOccurrenceUtc = due.NextOccurrenceUtc!.Value, InstanceId = instanceId
+        }, TestContext.Current.CancellationToken);
+        Assert.NotNull(result.Execution);
+        return result.Execution;
     }
 
     private static async Task RunAndCompleteAsync(
@@ -180,7 +359,7 @@ public sealed class JobSchedulerAnalyticsStoreTests
                 ownerKey,
                 WORKER,
                 [jobKey],
-                leaseDuration: TimeSpan.FromHours(2)))
+                leaseDuration: duration + TimeSpan.FromHours(1)))
             .Single(item => item.Execution.InstanceId == instanceId);
         fixture.Time.Advance(duration);
         await fixture.Store.CompleteAttemptAsync(new JobAttemptCompletion

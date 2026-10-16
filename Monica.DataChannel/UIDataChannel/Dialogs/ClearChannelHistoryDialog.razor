@@ -1,0 +1,34 @@
+@inject IStringLocalizer<DataChannelResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="history-confirmation">
+            <div class="history-confirmation__intro">
+                <MudIcon Icon="@Icons.Material.Outlined.DeleteSweep" Color="Color.Warning" Size="Size.Large" />
+                <p>@L["ClearHistory:Description"]</p>
+            </div>
+            <div class="history-confirmation__identity">
+                <span>@L["Exceptions:Columns:ChannelId"]</span>
+                <code>@ChannelId</code>
+            </div>
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["ClearHistory:Scope"]</MudAlert>
+            <p class="history-confirmation__help">@L["ClearHistory:LifetimeHelp"]</p>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <div class="history-confirmation-actions">
+            <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+            <MudButton Color="Color.Error" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.ClearAll" OnClick="Confirm">@L["ClearHistory:Confirm"]</MudButton>
+        </div>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    /// <summary>Gets or sets the exact channel identity being confirmed; this dialog does not mutate host history.</summary>
+    [Parameter, EditorRequired]
+    public string ChannelId { get; set; } = string.Empty;
+
+    private void Cancel() => Dialog.Cancel();
+    private void Confirm() => Dialog.Close(DialogResult.Ok(true));
+}

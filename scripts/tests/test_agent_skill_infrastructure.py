@@ -4,8 +4,10 @@ import errno
 import importlib.util
 import io
 import json
+import re
 import sys
 import tempfile
+import tracemalloc
 import unittest
 import zipfile
 from contextlib import redirect_stdout
@@ -61,6 +63,20 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
                 closure,
                 f"{profile_name} omits {sorted(closure - declared)}",
             )
+
+    def test_direct_application_skill_installations_include_specification_router_without_cycles(self) -> None:
+        granular_skills = {
+            "monica-application-microservice",
+            "monica-application-modular-monolith",
+            "monica-application-project-unit-development",
+            "monica-application-unit-testing",
+        }
+        self.assertEqual([], validator.find_required_cycles(self.catalog["skills"]))
+        for skill in granular_skills:
+            closure = validator.required_closure(self.catalog["skills"], [skill])
+            self.assertIn("monica-application", closure, skill)
+        router_closure = validator.required_closure(self.catalog["skills"], ["monica-application"])
+        self.assertFalse(router_closure & granular_skills)
 
     def test_profile_closure_uses_explicit_buckets_and_required_edges_only(self) -> None:
         framework = self.catalog["profiles"]["framework-contributor"]
@@ -266,7 +282,7 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
 
     def test_managed_instruction_rules_are_switchable_and_route_source_lookup_through_guide(self) -> None:
         instructions = self.catalog["managedInstructions"]
-        self.assertEqual(3, instructions["version"])
+        self.assertEqual(4, instructions["version"])
         for profile_name, template in instructions["templates"].items():
             rules = [rule["text"] for rule in template["rules"]]
             rule_ids = [rule["id"] for rule in template["rules"]]
@@ -313,6 +329,75 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
                     allowed_files=(source,),
                 ),
             )
+
+    def test_retired_alias_stream_preserves_boundaries_and_splitlines(self) -> None:
+        alias = next(iter(self.catalog["aliases"]))
+        suffix_alias = alias[-4:]
+        aliases = [alias, suffix_alias]
+        pattern = re.compile(
+            rf"(?<![a-z0-9-])({'|'.join(map(re.escape, aliases))})(?![a-z0-9-])"
+        )
+        text = (
+            f"{alias} {suffix_alias} x{alias} {alias}x {alias}-extra\r\n"
+            f"-{alias} {alias}9 X{alias} {alias}X\r"
+            + "".join(f"{alias}{separator}" for separator in
+                      ["\n", "\v", "\f", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029"])
+            + f"{alias} {suffix_alias}"
+        )
+        expected = [
+            f"source.txt:{line_number}:{match.group(1)}"
+            for line_number, line in enumerate(text.splitlines(), start=1)
+            for match in pattern.finditer(line)
+        ]
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source.txt"
+            source.write_bytes(text.encode("utf-8"))
+            for chunk_size in range(1, len(alias) * 2 + 2):
+                with self.subTest(chunk_size=chunk_size), mock.patch.object(
+                    validator, "SOURCE_SCAN_CHUNK_SIZE", chunk_size
+                ), mock.patch.object(validator, "repository_source_files", return_value=[source]):
+                    self.assertEqual(expected, validator.find_retired_alias_occurrences(root, aliases))
+
+    def test_retired_alias_stream_replaces_invalid_utf8_and_checks_paths(self) -> None:
+        alias = next(iter(self.catalog["aliases"]))
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / alias / "source.txt"
+            source.parent.mkdir()
+            source.write_bytes(b"\xff" + alias.encode("utf-8") + b"\r\n" + alias.encode("utf-8"))
+            with mock.patch.object(validator, "SOURCE_SCAN_CHUNK_SIZE", 2), mock.patch.object(
+                validator, "repository_source_files", return_value=[source]
+            ):
+                self.assertEqual(
+                    [f"{alias}/source.txt:path:{alias}",
+                     f"{alias}/source.txt:1:{alias}", f"{alias}/source.txt:2:{alias}"],
+                    validator.find_retired_alias_occurrences(root, [alias]),
+                )
+                self.assertEqual([], validator.find_retired_alias_occurrences(
+                    root, [alias], allowed_roots=(source.parent,)
+                ))
+
+    def test_retired_alias_scan_bounds_memory_for_one_giant_line(self) -> None:
+        alias = next(iter(self.catalog["aliases"]))
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source.json"
+            with source.open("wb") as output:
+                for _ in range(64):
+                    output.write(b"x" * validator.SOURCE_SCAN_CHUNK_SIZE)
+                output.write(f" {alias}".encode("utf-8"))
+            with mock.patch.object(validator, "repository_source_files", return_value=[source]), mock.patch.object(
+                Path, "read_text", side_effect=AssertionError("source scanning must use bounded reads")
+            ):
+                tracemalloc.start()
+                try:
+                    occurrences = validator.find_retired_alias_occurrences(root, [alias])
+                    _, peak = tracemalloc.get_traced_memory()
+                finally:
+                    tracemalloc.stop()
+            self.assertEqual([f"source.json:1:{alias}"], occurrences)
+            self.assertLess(peak, 2 * 1024 * 1024, "scan memory must not scale with line length")
 
     def test_required_dependency_graph_is_acyclic(self) -> None:
         self.assertEqual([], validator.find_required_cycles(self.catalog["skills"]))

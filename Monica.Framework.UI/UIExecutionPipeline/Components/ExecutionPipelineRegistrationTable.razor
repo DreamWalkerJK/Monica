@@ -3,89 +3,94 @@
 
 <section class="execution-pipeline-registrations" data-testid="execution-pipeline-registrations">
     <header>
-        <MudText Typo="Typo.h6">@L["Page:Registrations:Title"]</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Registrations:Description"]</MudText>
+        <div>
+            <span class="execution-pipeline-registrations__eyebrow">@L["Page:Registrations:Eyebrow"]</span>
+            <h2>@L["Page:Registrations:Title"]</h2>
+            <p>@L["Page:Registrations:Description"]</p>
+        </div>
+        <span class="execution-pipeline-registrations__count">@Registrations.Count</span>
     </header>
 
     @if (Registrations.Count == 0)
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" data-testid="execution-pipeline-registration-empty">
-            @L["Page:States:NoRegistrations"]
-        </MudAlert>
+        <div class="execution-pipeline-registrations__empty" data-testid="execution-pipeline-registration-empty">
+            <MudIcon Icon="@Icons.Material.Outlined.Extension" />
+            <p>@L["Page:States:NoRegistrations"]</p>
+        </div>
     }
     else
     {
-        <div class="execution-pipeline-registrations__table-scroll">
-            <MudTable T="ExecutionBehaviorRegistrationSnapshot"
-                      Items="@Registrations"
-                      Dense="true"
-                      Hover="true"
-                      Outlined="true">
-                <HeaderContent>
-                    <MudTh>
+        <table class="execution-pipeline-registrations__table" aria-label="@L["Page:Registrations:Title"]">
+            <colgroup>
+                <col class="execution-pipeline-registrations__behavior-column" />
+                <col class="execution-pipeline-registrations__order-column" />
+                <col class="execution-pipeline-registrations__policy-column" />
+                <col class="execution-pipeline-registrations__applicability-column" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th scope="col">
                         <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:Behavior"]"
                                                     HelpText="@L["Page:Help:Registrations:Behavior"]" />
-                    </MudTh>
-                    <MudTh>
+                    </th>
+                    <th scope="col">
                         <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:Order"]"
                                                     HelpText="@L["Page:Help:Concepts:BehaviorOrder"]" />
-                    </MudTh>
-                    <MudTh>
-                        <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:Lifetime"]"
-                                                    HelpText="@L["Page:Help:Concepts:Lifetime"]" />
-                    </MudTh>
-                    <MudTh>
-                        <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:Source"]"
-                                                    HelpText="@L["Page:Help:Concepts:Source"]" />
-                    </MudTh>
-                    <MudTh>
-                        <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:OpenGeneric"]"
-                                                    HelpText="@L["Page:Help:Registrations:OpenGeneric"]" />
-                    </MudTh>
-                    <MudTh>
-                        <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:DescriptorFilter"]"
-                                                    HelpText="@L["Page:Help:Registrations:DescriptorFilter"]" />
-                    </MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="@L["Page:Registrations:Behavior"]"
-                           Class="execution-pipeline-registrations__behavior"
-                           data-testid="execution-pipeline-registration-row">
-                        <MudTooltip Text="@context.BehaviorType.FullName" Arrow="true" Placement="Placement.Top">
-                            <div class="execution-pipeline-registrations__behavior-name">
-                                <strong>@context.BehaviorType.Name</strong>
-                                <small>@context.BehaviorType.FullName</small>
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
-                                    @context.BehaviorType.AssemblyName
-                                </MudChip>
-                            </div>
-                        </MudTooltip>
-                    </MudTd>
-                    <MudTd DataLabel="@L["Page:Registrations:Order"]">@context.Order</MudTd>
-                    <MudTd DataLabel="@L["Page:Registrations:Lifetime"]">
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L[$"Page:Lifetimes:{context.Lifetime}"]</MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="@L["Page:Registrations:Source"]">
-                        <ExecutionPipelineSourceBadge SourceModuleKey="@context.SourceModuleKey" />
-                    </MudTd>
-                    <MudTd DataLabel="@L["Page:Registrations:OpenGeneric"]">
-                        <MudChip T="bool" Value="@context.IsOpenGeneric" Size="Size.Small" Color="@(context.IsOpenGeneric ? Color.Primary : Color.Default)">
-                            @(context.IsOpenGeneric ? L["Page:Common:Yes"] : L["Page:Common:No"])
-                        </MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="@L["Page:Registrations:DescriptorFilter"]">
-                        <MudChip T="bool" Value="@context.HasDescriptorFilter" Size="Size.Small" Color="@(context.HasDescriptorFilter ? Color.Info : Color.Default)">
-                            @(context.HasDescriptorFilter ? L["Page:Common:Yes"] : L["Page:Common:No"])
-                        </MudChip>
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
-        </div>
+                    </th>
+                    <th scope="col">@L["Page:Registrations:PolicyColumn"]</th>
+                    <th scope="col">@L["Page:Registrations:ApplicabilityColumn"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var registration in Registrations)
+                {
+                    <tr>
+                        <td class="execution-pipeline-registrations__behavior" data-testid="execution-pipeline-registration-row">
+                            <span class="execution-pipeline-registrations__mobile-label">@L["Page:Registrations:Behavior"]</span>
+                            <strong>@registration.BehaviorType.Name</strong>
+                            <code>@registration.BehaviorType.FullName</code>
+                            <small>@registration.BehaviorType.AssemblyName</small>
+                        </td>
+                        <td class="execution-pipeline-registrations__order">
+                            <span class="execution-pipeline-registrations__mobile-label">@L["Page:Registrations:Order"]</span>
+                            <span>@registration.Order</span>
+                        </td>
+                        <td>
+                            <dl class="execution-pipeline-registrations__facts">
+                                <div>
+                                    <dt><ExecutionPipelineHelpLabel Text="@L["Page:Registrations:Lifetime"]"
+                                                                    HelpText="@L["Page:Help:Concepts:Lifetime"]" /></dt>
+                                    <dd>@L[$"Page:Lifetimes:{registration.Lifetime}"]</dd>
+                                </div>
+                                <div>
+                                    <dt><ExecutionPipelineHelpLabel Text="@L["Page:Registrations:Source"]"
+                                                                    HelpText="@L["Page:Help:Concepts:Source"]" /></dt>
+                                    <dd><ExecutionPipelineSourceBadge SourceModuleKey="@registration.SourceModuleKey" /></dd>
+                                </div>
+                            </dl>
+                        </td>
+                        <td>
+                            <dl class="execution-pipeline-registrations__facts">
+                                <div>
+                                    <dt><ExecutionPipelineHelpLabel Text="@L["Page:Registrations:OpenGeneric"]"
+                                                                    HelpText="@L["Page:Help:Registrations:OpenGeneric"]" /></dt>
+                                    <dd>@(registration.IsOpenGeneric ? L["Page:Common:Yes"] : L["Page:Common:No"])</dd>
+                                </div>
+                                <div>
+                                    <dt><ExecutionPipelineHelpLabel Text="@L["Page:Registrations:DescriptorFilter"]"
+                                                                    HelpText="@L["Page:Help:Registrations:DescriptorFilter"]" /></dt>
+                                    <dd>@(registration.HasDescriptorFilter ? L["Page:Common:Yes"] : L["Page:Common:No"])</dd>
+                                </div>
+                            </dl>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     }
 </section>
 
 @code {
     [Parameter, EditorRequired]
     public IReadOnlyList<ExecutionBehaviorRegistrationSnapshot> Registrations { get; set; } = [];
-
 }

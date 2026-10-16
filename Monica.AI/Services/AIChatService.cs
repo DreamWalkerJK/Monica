@@ -1,489 +1,373 @@
 using System.Runtime.CompilerServices;
-using System.Text.Json;
-using System.Text.Json.Nodes;
+using System.Runtime.ExceptionServices;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
-using Monica.AI.AgentCapabilities.Abstractions;
-using Monica.AI.AgentCapabilities.Models;
 using Monica.AI.Abstractions;
+using Monica.AI.AgentCapabilities.Abstractions;
+using Monica.AI.Chat.Abstractions;
 using Monica.AI.Chat.Models;
 using Monica.AI.Chat.Services;
 using Monica.AI.Models;
-using Monica.AI.Models.Internal;
 using Monica.AI.Services.Support;
+using Monica.Core.Extensions;
 using Monica.Modules;
 
 namespace Monica.AI.Services;
 
-/// <summary>
-/// Stateless AI chat service backed by the Microsoft Agent Framework.
-/// Creates and operates on ChatSession instances.
-/// Session persistence and page state are handled outside the service.
-/// </summary>
+/// <summary>Executes durable conversations through a leased provider and the shared Monica capability pipeline.</summary>
 internal sealed class AIChatService(
     IAIProviderFactory providerFactory,
     IOptions<ModuleAIOption> options,
     IAIChatAgentFactory agentFactory,
     IAgentCapabilityStateStore capabilityStateStore,
-    AgentStreamingCoordinator streamingCoordinator)
+    AgentStreamingCoordinator streamingCoordinator,
+    IChatAttachmentStore attachmentStore)
 {
-    private const string TOOL_APPROVAL_STATE_KEY = "toolApprovalState";
-    private const string AUTO_APPROVED_FUNCTION_CALLS_STATE_KEY = "_autoApprovedFunctionCalls";
-    private readonly ModuleAIOption _options = options.Value;
+    private readonly ChatContentMapper _contentMapper = new(attachmentStore);
 
-    /// <summary>
-    /// Create a new chat session backed by ChatClientAgent.
-    /// Registered tool providers can enrich the agent based on the session configuration.
-    /// </summary>
-    public async Task<ChatSession> CreateSessionAsync(
-        string? providerId = null,
-        string? modelName = null,
-        string? systemPrompt = null,
-        AIChatRuntimeContext? runtimeContext = null,
-        bool reasoningEnabled = false,
-        string? title = null,
-        CancellationToken ct = default)
+    internal Task<ChatSession> CreateSessionAsync(string? providerId = null, string? modelName = null,
+        string? systemPrompt = null, AIChatRuntimeContext? runtimeContext = null, string? reasoningLevel = null,
+        string? title = null, CancellationToken ct = default)
     {
-        var provider = ResolveProvider(providerId);
-        var resolvedProviderId = provider.ProviderId;
-
-        var resolvedPrompt = systemPrompt;
-        if (string.IsNullOrWhiteSpace(resolvedPrompt))
-        {
-            resolvedPrompt = provider.Info.SystemPrompt ?? _options.DefaultSystemPrompt;
-        }
-
-        var chatClient = provider.GetChatClient(modelName);
-        var capabilityState = await capabilityStateStore.LoadAsync(ct);
-
-        var runtime = await CreateAgentAsync(chatClient, resolvedPrompt, capabilityState, ct);
-        var session = await runtime.Agent.CreateSessionAsync(ct);
-
-        var state = new ChatSession(
-            runtime,
-            session,
-            new ChatSessionSettings(
-                resolvedProviderId,
-                modelName,
-                resolvedPrompt,
-                reasoningEnabled),
-            capabilityState.Revision,
-            title ?? "New Chat",
-            runtimeContext ?? AIChatRuntimeContext.Empty);
-
-        return state;
+        ct.ThrowIfCancellationRequested();
+        var provider = providerId is null ? providerFactory.GetDefaultProviderInfo() : providerFactory.GetProviderInfo(providerId);
+        if (provider is null) throw new InvalidOperationException("No configured chat provider is available.");
+        var session = new ChatSession(new ChatSessionSettings(provider.ProviderId, modelName, systemPrompt, reasoningLevel),
+            title ?? "New Chat", runtimeContext ?? AIChatRuntimeContext.Empty);
+        RefreshContextUsage(session);
+        return Task.FromResult(session);
     }
 
-    /// <summary>Restores the visible transcript without constructing an agent runtime.</summary>
-    public ChatSession RestoreSession(
-        ChatSessionSnapshot snapshot,
-        AIChatRuntimeContext? runtimeContext = null,
+    internal void UpdateSettings(ChatSession session, ChatSessionSettings settings)
+    {
+        var provider = providerFactory.GetProviderInfo(settings.ProviderId);
+        var effective = provider is null ? settings with { ContextWindow = ChatContextCapacity.Resolve(settings.ContextWindow, null).Tokens }
+            : ResolveSettings(settings, provider);
+        effective.Validate(provider is null ? null : FindModel(provider, effective.ModelName));
+        session.ApplySettings(settings);
+        if (!session.IsBusy) RefreshContextUsage(session, effective);
+    }
+
+    internal ChatSession RestoreSession(ChatSessionSnapshot snapshot, AIChatRuntimeContext? runtimeContext = null,
         string? expectedSessionId = null)
     {
-        ArgumentNullException.ThrowIfNull(snapshot);
         ChatSessionSnapshotValidator.Validate(snapshot, expectedSessionId);
-
-        return new ChatSession(
-            snapshot.SessionId,
-            snapshot.Title,
-            snapshot.CreatedAt,
-            snapshot.UpdatedAt,
-            snapshot.Settings,
-            snapshot.Turns.Select(ChatSessionSnapshotMapper.FromSnapshot),
-            snapshot.AgentSessionState,
-            snapshot.AgentHistoryMessageCount,
-            snapshot.Revision,
-            runtimeContext ?? AIChatRuntimeContext.Empty);
-    }
-
-    /// <summary>Captures a complete durable snapshot without activating a lazy session.</summary>
-    public async Task<ChatSessionSnapshot> CreateSnapshotAsync(
-        ChatSession state,
-        CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(state);
-
-        JsonElement? serializedAgentSession = state.SerializedAgentSession;
-        if (state.IsRuntimeActive)
-        {
-            serializedAgentSession = await state.Agent.SerializeSessionAsync(
-                state.AgentSession,
-                cancellationToken: ct);
-        }
-
-        return new ChatSessionSnapshot
-        {
-            SessionId = state.SessionId,
-            Title = state.Title,
-            CreatedAt = state.CreatedAt,
-            UpdatedAt = state.UpdatedAt,
-            Settings = state.Settings,
-            Turns = state.Turns.Select(ChatSessionSnapshotMapper.ToSnapshot).ToArray(),
-            AgentSessionState = RemovePendingApprovalState(serializedAgentSession),
-            AgentHistoryMessageCount = state.MessageCount,
-            Revision = state.PersistenceRevision
-        };
-    }
-
-    /// <summary>Constructs and restores the private runtime on first use.</summary>
-    public async Task ActivateSessionAsync(ChatSession state, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(state);
-        if (state.IsRuntimeActive)
-        {
-            return;
-        }
-
-        var provider = ResolveProvider(state.ProviderId);
-        var capabilityState = await capabilityStateStore.LoadAsync(ct);
-        var runtime = await CreateAgentAsync(
-            provider.GetChatClient(state.ModelName),
-            state.SystemPrompt,
-            capabilityState,
-            ct);
-
-        try
-        {
-            var usedTranscriptFallback = false;
-            var rebuiltFromTranscript = false;
-            AgentSession agentSession;
-            if (!state.NeedsRecreation && state.SerializedAgentSession is { } serializedState)
-            {
-                try
-                {
-                    agentSession = await runtime.Agent.DeserializeSessionAsync(
-                        serializedState,
-                        cancellationToken: ct);
-                }
-                catch (Exception ex) when (IsRecoverableSessionStateFailure(ex))
-                {
-                    agentSession = await CreateTranscriptFallbackSessionAsync(runtime.Agent, state, ct);
-                    usedTranscriptFallback = true;
-                    rebuiltFromTranscript = true;
-                }
-            }
-            else
-            {
-                agentSession = await CreateTranscriptFallbackSessionAsync(runtime.Agent, state, ct);
-                usedTranscriptFallback = state.SerializedAgentSession is null;
-                rebuiltFromTranscript = true;
-            }
-
-            if (rebuiltFromTranscript)
-            {
-                state.RebaseHistoryCheckpointsForTranscript();
-            }
-
-            state.ActivateRuntime(
-                runtime,
-                agentSession,
-                capabilityState.Revision,
-                usedTranscriptFallback);
-        }
-        catch
-        {
-            await runtime.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Recreate the agent and session for the given state with current configuration.
-    /// Preserves chat history by copying it to the new session.
-    /// Resets the NeedsRecreation flag after completion.
-    /// </summary>
-    public async Task RecreateAgentAsync(ChatSession state, CancellationToken ct = default)
-    {
-        var provider = providerFactory.GetProvider(state.ProviderId);
-        if (provider == null)
-            throw new InvalidOperationException($"Provider '{state.ProviderId}' not found.");
-        if (!provider.Info.IsValid)
-            throw new InvalidOperationException(
-                AIProviderAvailabilityMessages.BuildProviderUnavailableMessage(provider.Info));
-
-        var chatClient = provider.GetChatClient(state.ModelName);
-        var capabilityState = await capabilityStateStore.LoadAsync(ct);
-        var newRuntime = await CreateAgentAsync(chatClient, state.SystemPrompt, capabilityState, ct);
-        try
-        {
-            var oldHistory = state.ChatHistory is { } history ? history.ToList() : null;
-            var newSession = await CreateReplacementSessionAsync(
-                state.Agent,
-                state.AgentSession,
-                newRuntime.Agent,
-                ct);
-            CopyChatHistoryIfNeeded(newRuntime.Agent, newSession, oldHistory);
-            await state.ReplaceRuntimeAsync(newRuntime, newSession, capabilityState.Revision);
-        }
-        catch
-        {
-            await newRuntime.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Send a message and get a streaming response via agent framework.
-    /// Automatically recreates the agent if configuration has changed.
-    /// </summary>
-    public async IAsyncEnumerable<AgentResponseUpdate> SendMessageStreamingAsync(
-        ChatSession state,
-        string message,
-        [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        await foreach (var update in RunStreamingAsync(
-                           state,
-                           new ChatMessage(ChatRole.User, message),
-                           ct))
-        {
-            yield return update;
-        }
-    }
-
-    internal async IAsyncEnumerable<AgentResponseUpdate> ContinueApprovalStreamingAsync(
-        ChatSession state,
-        ToolApprovalResponseContent response,
-        [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        await foreach (var update in RunStreamingAsync(
-                           state,
-                           new ChatMessage(ChatRole.User, [response]),
-                           ct))
-        {
-            yield return update;
-        }
-    }
-
-    private async IAsyncEnumerable<AgentResponseUpdate> RunStreamingAsync(
-        ChatSession state,
-        ChatMessage input,
-        [EnumeratorCancellation] CancellationToken ct)
-    {
-        await ActivateSessionAsync(state, ct);
-        var capabilityState = await capabilityStateStore.LoadAsync(ct);
-        if (state.CapabilityRevision != capabilityState.Revision)
-        {
-            state.MarkCapabilityRevision(capabilityState.Revision);
-        }
-
-        // Recreate agent if configuration changed
-        if (state.NeedsRecreation)
-        {
-            await RecreateAgentAsync(state, ct);
-        }
-
-        var updateChannel = new AgentResponseUpdateChannel();
-        var runOptions = CreateRunOptions(state, updateChannel);
-        await foreach (var update in streamingCoordinator.RunAsync(
-                           state.Agent,
-                           state.AgentSession,
-                           input,
-                           state.RuntimeContext,
-                           runOptions,
-                           updateChannel,
-                           ct))
-        {
-            yield return update;
-        }
-
-        state.MarkUpdated();
-    }
-
-    /// <summary>
-    /// Send a message and get a non-streaming response.
-    /// Automatically recreates the agent if configuration has changed.
-    /// </summary>
-    public async Task<string> SendMessageAsync(
-        ChatSession state,
-        string message,
-        CancellationToken ct = default)
-    {
-        var fullContent = string.Empty;
-
-        await foreach (var update in SendMessageStreamingAsync(state, message, ct))
-        {
-            foreach (var content in update.Contents)
-            {
-                if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
-                {
-                    fullContent += text.Text;
-                }
-            }
-        }
-
-        return fullContent;
-    }
-
-    private IAIProvider ResolveProvider(string? providerId)
-    {
-        IAIProvider? provider;
-        if (!string.IsNullOrEmpty(providerId))
-        {
-            provider = providerFactory.GetProvider(providerId);
-            if (provider == null)
-            {
-                throw new InvalidOperationException($"Provider '{providerId}' not found.");
-            }
-
-            if (!provider.Info.IsValid)
-            {
-                throw new InvalidOperationException(
-                    AIProviderAvailabilityMessages.BuildProviderUnavailableMessage(provider.Info));
-            }
-
-            return provider;
-        }
-
-        provider = providerFactory.GetDefaultProvider();
-        if (provider != null && provider.Info.IsValid) return provider;
-
-        throw new InvalidOperationException(
-            AIProviderAvailabilityMessages.BuildNoEnabledProviderMessage(providerFactory.GetAllProviderInfos()));
-    }
-
-    /// <summary>
-    /// Creates a ChatClientAgent for the current session configuration.
-    /// </summary>
-    private async Task<AIChatAgentRuntime> CreateAgentAsync(
-        IChatClient chatClient,
-        string? instructions,
-        AgentCapabilityState capabilityState,
-        CancellationToken ct)
-    {
-        return await agentFactory.CreateAsync(
-            chatClient,
-            new AIChatAgentCreateContext
-            {
-                Instructions = instructions,
-                CapabilityState = capabilityState
-            },
-            ct);
-    }
-
-    private ChatClientAgentRunOptions CreateRunOptions(
-        ChatSession state,
-        AgentResponseUpdateChannel updateChannel)
-    {
-        ArgumentNullException.ThrowIfNull(updateChannel);
-
-        var runOptions = new ChatClientAgentRunOptions
-        {
-            AdditionalProperties = new AdditionalPropertiesDictionary()
-        };
-        runOptions.AdditionalProperties.Add(updateChannel);
-
-        if (state.ReasoningEnabled)
-        {
-            runOptions.ChatOptions = new ChatOptions
-            {
-                Reasoning = new ReasoningOptions { Effort = ReasoningEffort.Medium }
-            };
-        }
-
-        return runOptions;
-    }
-
-    private static async Task<AgentSession> CreateReplacementSessionAsync(
-        AIAgent oldAgent,
-        AgentSession oldSession,
-        AIAgent newAgent,
-        CancellationToken ct)
-    {
-        try
-        {
-            var serializedSession = await oldAgent.SerializeSessionAsync(
-                oldSession,
-                cancellationToken: ct);
-            return await newAgent.DeserializeSessionAsync(
-                serializedSession,
-                cancellationToken: ct);
-        }
-        catch (ArgumentException)
-        {
-            return await newAgent.CreateSessionAsync(ct);
-        }
-        catch (InvalidOperationException)
-        {
-            return await newAgent.CreateSessionAsync(ct);
-        }
-        catch (JsonException)
-        {
-            return await newAgent.CreateSessionAsync(ct);
-        }
-        catch (NotSupportedException)
-        {
-            return await newAgent.CreateSessionAsync(ct);
-        }
-    }
-
-    private static void CopyChatHistoryIfNeeded(
-        AIAgent newAgent,
-        AgentSession newSession,
-        IList<ChatMessage>? oldHistory)
-    {
-        if (oldHistory is not { Count: > 0 })
-        {
-            return;
-        }
-
-        var newProvider = newAgent.GetService<InMemoryChatHistoryProvider>();
-        if (newProvider is null || newProvider.GetMessages(newSession)?.Count > 0)
-        {
-            return;
-        }
-
-        // Preserve local history when the serialized session did not carry it,
-        // while keeping a deserialized Responses previous_response_id intact.
-        newProvider.SetMessages(newSession, [.. oldHistory]);
-    }
-
-    private static async Task<AgentSession> CreateTranscriptFallbackSessionAsync(
-        AIAgent agent,
-        ChatSession state,
-        CancellationToken ct)
-    {
-        var session = await agent.CreateSessionAsync(ct);
-        var historyProvider = agent.GetService<InMemoryChatHistoryProvider>();
-        if (historyProvider is not null)
-        {
-            historyProvider.SetMessages(
-                session,
-                state.Turns.SelectMany(static turn => GetVisibleHistoryMessages(turn)).ToList());
-        }
-
+        var session = new ChatSession(snapshot, runtimeContext ?? AIChatRuntimeContext.Empty);
+        RefreshContextUsage(session);
         return session;
     }
 
-    private static IEnumerable<ChatMessage> GetVisibleHistoryMessages(ChatTurn turn)
+    internal Task<ChatSessionSnapshot> CreateSnapshotAsync(ChatSession session, CancellationToken ct = default)
     {
-        yield return turn.UserMessage.ToChatMessage();
-        if (turn.AssistantMessage is not null)
+        ct.ThrowIfCancellationRequested();
+        return Task.FromResult(new ChatSessionSnapshot
         {
-            yield return turn.AssistantMessage.ToChatMessage();
+            SessionId = session.SessionId, Title = session.Title, CreatedAt = session.CreatedAt, UpdatedAt = session.UpdatedAt,
+            Settings = session.Settings, Turns = session.Turns.Select(ChatSessionSnapshotMapper.ToSnapshot).ToArray(),
+            ContextMessages = session.ContextMessages, ContextUsage = session.ContextUsage,
+            ExecutionSteps = session.ExecutionSteps, Revision = session.PersistenceRevision
+        });
+    }
+
+    internal IAsyncEnumerable<ChatStreamEvent> SendMessageStreamingAsync(ChatSession session, string message, CancellationToken ct = default)
+        => SendMessageStreamingAsync(session, ChatUserInput.FromText(message), ct);
+
+    internal IAsyncEnumerable<ChatStreamEvent> SendMessageStreamingAsync(ChatSession session, ChatUserInput input, CancellationToken ct = default)
+        => RunAsync(session, input, null, ct);
+
+    internal IAsyncEnumerable<ChatStreamEvent> ContinueApprovalStreamingAsync(ChatSession session,
+        ToolApprovalResponseContent response, CancellationToken ct = default) => RunAsync(session, null, response, ct);
+
+    private async IAsyncEnumerable<ChatStreamEvent> RunAsync(ChatSession session, ChatUserInput? input,
+        ToolApprovalResponseContent? approval, [EnumeratorCancellation] CancellationToken ct)
+    {
+        using var operation = session.BeginOperation();
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct, session.LifetimeCancellation, session.OperationCancellation);
+        if (input is not null) ValidateInput(input);
+        if (input is not null && session.ActiveTurn is not null)
+            throw new InvalidOperationException("Resolve the pending tool approval before starting another turn.");
+        var turn = input is null ? session.GetOpenTurn() : session.BeginTurn(input);
+        turn.Status = ChatExecutionStatus.Running;
+        turn.AssistantMessage!.IsStreaming = true;
+        var projector = new ChatTranscriptProjector(session, turn);
+        var awaitingApproval = false;
+        var completed = false;
+        Exception? failure = null;
+        ChatMessage? sdkInput = null;
+        AgentResponseUpdateChannel? channel = null;
+        try
+        {
+            try
+            {
+                if (input is not null)
+                {
+                    (sdkInput, channel) = await PrepareTurnAsync(session, turn, input, lifetime.Token);
+                }
+                else
+                {
+                    var run = session.RunContext ?? throw new InvalidOperationException("The approval runtime is no longer available; retry the turn.");
+                    channel = new AgentResponseUpdateChannel { RunContext = run };
+                    run.Channel = channel;
+                    sdkInput = new ChatMessage(ChatRole.User, [approval!]);
+                }
+            }
+            catch (Exception ex) { failure = ex; }
+
+            if (failure is not null) ThrowDiagnosticFailure(session.RunContext, failure);
+            ChatClientAgentRunOptions? runOptions = null;
+            try { runOptions = CreateRunOptions(session.RunContext!.Settings, session.RunContext.Model, channel!); }
+            catch (Exception ex) { failure = ex; }
+            if (failure is not null) ThrowDiagnosticFailure(session.RunContext, failure);
+            await using var enumerator = streamingCoordinator.RunAsync(session.Agent, session.AgentSession, sdkInput!,
+                session.RuntimeContext, runOptions!, channel!, lifetime.Token).GetAsyncEnumerator(lifetime.Token);
+            while (true)
+            {
+                bool hasNext;
+                try { hasNext = await enumerator.MoveNextAsync(); }
+                catch (Exception ex) { failure = ex; break; }
+                if (!hasNext) { completed = true; break; }
+                foreach (var update in projector.Apply(enumerator.Current))
+                {
+                    awaitingApproval |= update is ChatApprovalRequestEvent;
+                    yield return update;
+                }
+            }
+            if (failure is not null && failure is not OperationCanceledException) ThrowDiagnosticFailure(session.RunContext, failure);
+        }
+        finally
+        {
+            lifetime.Cancel();
+            CaptureContext(session, turn);
+            if (failure is not null && failure is not OperationCanceledException)
+                session.RecordError(turn, session.RunContext?.Redact(failure.GetMessageRecursively())
+                    ?? ChatInspectionRedactor.Redact(failure.GetMessageRecursively())!);
+            session.CompleteTurn(turn, failure is not null && failure is not OperationCanceledException ? ChatExecutionStatus.Failed
+                : !completed ? ChatExecutionStatus.Cancelled
+                : awaitingApproval ? ChatExecutionStatus.AwaitingApproval : ChatExecutionStatus.Completed);
+            RefreshContextUsage(session);
+            if (!awaitingApproval || !completed) await session.ReleaseRuntimeAsync();
+        }
+        yield return new ChatContextChangedEvent(session.ContextUsage);
+        yield return new ChatCompletedEvent(!completed, awaitingApproval);
+    }
+
+    private async Task<(ChatMessage Input, AgentResponseUpdateChannel Channel)> PrepareTurnAsync(
+        ChatSession session, ChatTurn turn, ChatUserInput input, CancellationToken ct)
+    {
+        var lease = AcquireProvider(session.ProviderId);
+        var transferred = false;
+        try
+        {
+            var provider = lease.Provider;
+            var settings = ResolveSettings(session.Settings, provider.Info);
+            var model = FindModel(provider.Info, settings.ModelName);
+            settings.Validate(model);
+            var run = new ChatRunContext(session, turn, settings, lease.ConfigurationRevision)
+            {
+                Model = model, RedactDiagnostic = lease.RedactDiagnostic
+            };
+            var channel = new AgentResponseUpdateChannel { RunContext = run };
+            run.Channel = channel;
+            session.ContextUsage = session.ContextUsage with
+            {
+                ContextWindow = settings.ContextWindow,
+                ContextWindowSource = ChatContextCapacity.Resolve(session.Settings.ContextWindow, model?.ContextWindow).Source,
+                ReservedOutputTokens = settings.MaxOutputTokens
+            };
+            var sdkInput = await _contentMapper.MaterializeAsync(session, new ChatContextMessage
+            {
+                TurnId = turn.Id, Role = AIChatRole.User, Parts = input.Parts
+            }, model, ct, settings);
+            var nextEstimate = ChatContextEstimator.Estimate(session.ContextMessages.Append(ChatContentMapper.Capture(sdkInput)), settings.SystemPrompt);
+            session.ContextUsage = session.ContextUsage with { EstimatedNextInputTokens = nextEstimate };
+            var client = provider.GetChatClient(settings.ModelName);
+            var capabilityState = await capabilityStateStore.LoadAsync(ct);
+            var runtime = await agentFactory.CreateAsync(new RecordingChatClient(client, run), new AIChatAgentCreateContext
+            {
+                Instructions = settings.SystemPrompt, CapabilityState = capabilityState
+            }, ct);
+            try
+            {
+                var agentSession = await runtime.Agent.CreateSessionAsync(ct);
+                var history = new List<ChatMessage>();
+                foreach (var message in session.ContextMessages)
+                    history.Add(await _contentMapper.MaterializeAsync(session, message, model, ct, settings));
+                var historyProvider = runtime.Agent.GetService<InMemoryChatHistoryProvider>()
+                    ?? throw new InvalidOperationException("Chat agents must expose the Monica-owned in-memory request history provider.");
+                historyProvider.SetMessages(agentSession, history);
+                await session.SetRuntimeAsync(runtime, agentSession, lease);
+                session.RunContext = run;
+                transferred = true;
+                return (sdkInput, channel);
+            }
+            catch
+            {
+                await runtime.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            var safe = ChatInspectionRedactor.Redact(lease.RedactDiagnostic(ex.GetMessageRecursively()))!;
+            if (safe == ex.GetMessageRecursively()) throw;
+            throw new InvalidOperationException(safe);
+        }
+        finally { if (!transferred) lease.Dispose(); }
+    }
+
+    internal async Task<ChatCompactionResult> CompactAsync(ChatSession session, CancellationToken ct = default)
+    {
+        using var operation = session.BeginOperation();
+        if (session.ActiveTurn is not null) throw new InvalidOperationException("Resolve the pending approval before compacting context.");
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct, session.LifetimeCancellation, session.OperationCancellation);
+        using var lease = AcquireProvider(session.ProviderId);
+        var settings = ResolveSettings(session.Settings, lease.Provider.Info);
+        settings.Validate(FindModel(lease.Provider.Info, settings.ModelName));
+        var run = new ChatRunContext(session, null, settings, lease.ConfigurationRevision) { RedactDiagnostic = lease.RedactDiagnostic };
+        try
+        {
+            var result = await ChatContextCompactor.CompactAsync(run, lease.Provider.GetChatClient(settings.ModelName), automatic: false, lifetime.Token);
+            RefreshContextUsage(session);
+            return result;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            ThrowDiagnosticFailure(run, ex);
+            throw;
         }
     }
 
-    private static bool IsRecoverableSessionStateFailure(Exception ex)
-        => ex is ArgumentException
-            or InvalidOperationException
-            or JsonException
-            or NotSupportedException;
-
-    private static JsonElement? RemovePendingApprovalState(JsonElement? serializedState)
+    internal async Task CancelAsync(ChatSession session)
     {
-        if (serializedState is not { ValueKind: JsonValueKind.Object } state)
-        {
-            return serializedState?.Clone();
-        }
+        await session.CancelOperationAsync();
+        using var operation = session.BeginOperation();
+        if (session.ActiveTurn is { } turn) session.CompleteTurn(turn, ChatExecutionStatus.Cancelled);
+        session.ClearPendingApprovals();
+        await session.ReleaseRuntimeAsync();
+    }
 
-        var root = JsonNode.Parse(state.GetRawText()) as JsonObject;
-        if (root?["stateBag"] is JsonObject stateBag)
-        {
-            stateBag.Remove(TOOL_APPROVAL_STATE_KEY);
-            stateBag.Remove(AUTO_APPROVED_FUNCTION_CALLS_STATE_KEY);
-        }
+    private static void ThrowDiagnosticFailure(ChatRunContext? run, Exception failure)
+    {
+        if (failure is OperationCanceledException) ExceptionDispatchInfo.Capture(failure).Throw();
+        var message = failure.GetMessageRecursively();
+        var safe = run?.Redact(message) ?? ChatInspectionRedactor.Redact(message)!;
+        if (safe == message) ExceptionDispatchInfo.Capture(failure).Throw();
+        throw new InvalidOperationException(safe);
+    }
 
-        return root is null ? state.Clone() : JsonSerializer.SerializeToElement(root);
+    internal async Task<string> SendMessageAsync(ChatSession session, string message, CancellationToken ct = default)
+    {
+        await foreach (var _ in SendMessageStreamingAsync(session, message, ct)) { }
+        return session.Turns.Last().AssistantMessage?.Content ?? string.Empty;
+    }
+
+    private IAIProviderLease AcquireProvider(string providerId)
+    {
+        var lease = providerFactory.AcquireProvider(providerId)
+            ?? throw new InvalidOperationException($"Provider '{providerId}' is not configured.");
+        if (lease.Provider.Info.IsValid) return lease;
+        var error = AIProviderAvailabilityMessages.BuildProviderUnavailableMessage(lease.Provider.Info);
+        lease.Dispose();
+        throw new InvalidOperationException(error);
+    }
+
+    private ChatSessionSettings ResolveSettings(ChatSessionSettings settings, AIProviderInfo provider)
+    {
+        var modelName = settings.ModelName ?? provider.DefaultModel;
+        var model = FindModel(provider, modelName);
+        var effective = settings with
+        {
+            ModelName = modelName,
+            SystemPrompt = settings.SystemPrompt ?? provider.SystemPrompt ?? options.Value.DefaultSystemPrompt,
+            ReasoningLevel = settings.ReasoningLevel ?? model?.DefaultReasoningLevel,
+            ContextWindow = ChatContextCapacity.Resolve(settings.ContextWindow, model?.ContextWindow).Tokens,
+            MaxOutputTokens = settings.MaxOutputTokens
+        };
+        return effective;
+    }
+
+    private static LLMModelInfo? FindModel(AIProviderInfo provider, string? name)
+        => provider.SupportedModels?.OfType<LLMModelInfo>().FirstOrDefault(model => string.Equals(model.ModelName, name, StringComparison.OrdinalIgnoreCase));
+
+    private static ChatClientAgentRunOptions CreateRunOptions(ChatSessionSettings settings, LLMModelInfo? model, AgentResponseUpdateChannel channel)
+    {
+        var chatOptions = new ChatOptions
+        {
+            ModelId = settings.ModelName, MaxOutputTokens = settings.MaxOutputTokens, Temperature = settings.Temperature
+        };
+        if (settings.ReasoningLevel is { } id)
+        {
+            var level = model?.ReasoningLevels.FirstOrDefault(level => level.Id == id)
+                ?? throw new InvalidOperationException($"Reasoning level '{id}' is not configured for model '{settings.ModelName}'.");
+            if (model?.SupportsReasoning == false) throw new NotSupportedException("The selected model does not support reasoning.");
+            var providerValue = level.ProviderValue;
+            var effort = providerValue?.ToLowerInvariant() switch
+            {
+                "none" => ReasoningEffort.None, "low" => ReasoningEffort.Low,
+                "medium" => ReasoningEffort.Medium, "high" => ReasoningEffort.High,
+                "xhigh" or "extra_high" or "extrahigh" => ReasoningEffort.ExtraHigh,
+                _ => (ReasoningEffort?)null
+            };
+            if (effort is not null) chatOptions.Reasoning = new ReasoningOptions { Effort = effort };
+            chatOptions.AdditionalProperties = new AdditionalPropertiesDictionary();
+            if (providerValue is not null) chatOptions.AdditionalProperties["monica.reasoning.effort"] = providerValue;
+            if (level.BudgetTokens is { } budget) chatOptions.AdditionalProperties["monica.reasoning.budget_tokens"] = budget;
+        }
+        var runOptions = new ChatClientAgentRunOptions { ChatOptions = chatOptions, AdditionalProperties = new AdditionalPropertiesDictionary() };
+        runOptions.AdditionalProperties.Add(channel);
+        return runOptions;
+    }
+
+    private static void ValidateInput(ChatUserInput input)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        if (input.Parts.Count == 0 || input.Parts.All(part => part.Kind == ChatContentKind.Text && string.IsNullOrWhiteSpace(part.Text)))
+            throw new ArgumentException("Enter a message or attach a file.", nameof(input));
+        if (input.Parts.Any(part => part.Kind is not (ChatContentKind.Text or ChatContentKind.Attachment)
+            || part.Kind == ChatContentKind.Attachment && part.Attachment is null))
+            throw new ArgumentException("User input may contain only text and uploaded attachment references.", nameof(input));
+    }
+
+    private static void CaptureContext(ChatSession session, ChatTurn turn)
+    {
+        var settings = session.RunContext?.Settings ?? session.Settings;
+        var history = session.ChatHistory?.Select(message => ChatContentMapper.Capture(message, turn.Id))
+            .Select(message => message with
+            {
+                Parts = message.Parts.Select(part => part.Kind == ChatContentKind.Reasoning && part.OriginProviderId is null
+                    ? part with { OriginProviderId = settings.ProviderId, OriginModelName = settings.ModelName } : part).ToArray()
+            }).ToArray() ?? [];
+        if (!history.Any(message => message.TurnId == turn.Id))
+        {
+            history = [.. session.ContextMessages, new ChatContextMessage
+            {
+                TurnId = turn.Id, Role = AIChatRole.User, Parts = turn.UserMessage.Parts
+            }, new ChatContextMessage { TurnId = turn.Id, Role = AIChatRole.Assistant, Parts = turn.AssistantMessage?.Parts ?? [] }];
+        }
+        session.ReplaceContext(ChatContentMapper.KeepCompleteToolPairs(history), turn);
+    }
+
+    private void RefreshContextUsage(ChatSession session, ChatSessionSettings? effectiveSettings = null)
+    {
+        var provider = providerFactory.GetProviderInfo(session.ProviderId);
+        var settings = effectiveSettings ?? (provider is null ? session.Settings : ResolveSettings(session.Settings, provider));
+        var capacity = ChatContextCapacity.Resolve(session.Settings.ContextWindow,
+            provider is null ? null : FindModel(provider, settings.ModelName)?.ContextWindow);
+        var lastRequest = session.ExecutionSteps.LastOrDefault(step => step.Request is { IsCompaction: false })?.Request;
+        var estimate = ChatContextEstimator.Estimate(session.ContextMessages, settings.SystemPrompt, lastRequest?.Tools);
+        var sameModel = lastRequest is not null && lastRequest.ModelName == settings.ModelName && lastRequest.ProviderId == settings.ProviderId;
+        if (sameModel && lastRequest?.Usage?.InputTokens is { } actual)
+            estimate = (int)Math.Clamp((long)actual + estimate - ChatContextEstimator.Estimate(lastRequest.Messages, lastRequest.Instructions, lastRequest.Tools), 0, int.MaxValue);
+        session.ContextUsage = session.ContextUsage with
+        {
+            EstimatedNextInputTokens = estimate,
+            LastRequestInputTokens = sameModel ? lastRequest?.Usage?.InputTokens : null,
+            ContextWindow = capacity.Tokens,
+            ContextWindowSource = capacity.Source,
+            ReservedOutputTokens = settings.MaxOutputTokens,
+            HasUnestimatedAttachments = session.ContextMessages.SelectMany(message => message.Parts)
+                .Any(part => part.Kind == ChatContentKind.Attachment && string.IsNullOrEmpty(part.Text))
+        };
     }
 }

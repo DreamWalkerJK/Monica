@@ -6,12 +6,14 @@ namespace Monica.Core.Execution;
 public enum ExecutionTransactionMode
 {
     /// <summary>
-    /// Does not create an automatic outer unit of work. The operation may still create explicit scopes when needed.
+    /// Skips the automatic outer unit of work, including its save, domain-event drain, and commit.
+    /// An enclosing unit of work remains active; independent writes require a fresh scope.
     /// </summary>
     None,
 
     /// <summary>
-    /// Allows the registered unit-of-work behavior to wrap the complete execution boundary.
+    /// Allows the registered unit-of-work behavior to wrap the complete execution boundary, save its changes,
+    /// and commit on success. Failures roll back the operation.
     /// </summary>
     Automatic
 }

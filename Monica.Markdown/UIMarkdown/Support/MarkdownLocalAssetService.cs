@@ -60,6 +60,11 @@ public class MarkdownLocalAssetService(
     /// <summary>
     /// Opens a local image asset after validating it against the registered group root.
     /// </summary>
+    /// <remarks>
+    /// <paramref name="assetPath"/> is the authored relative URL after HTTP query decoding.
+    /// Its percent escapes are decoded once before path validation. The document path is
+    /// already a catalog-relative filesystem path and is not URL-decoded again.
+    /// </remarks>
     public async Task<MarkdownLocalImageAsset> OpenImageAsync(
         string groupKey,
         string documentRelativePath,
@@ -88,7 +93,8 @@ public class MarkdownLocalAssetService(
         }
 
         var normalizedDocumentPath = NormalizeRelativePath(documentRelativePath);
-        var normalizedAssetPath = NormalizeRelativePath(assetPath);
+        // Query binding removes the endpoint transport encoding, leaving the authored URL encoding.
+        var normalizedAssetPath = NormalizeRelativePath(Uri.UnescapeDataString(assetPath));
 
         if (string.IsNullOrWhiteSpace(normalizedDocumentPath))
         {
@@ -96,6 +102,7 @@ public class MarkdownLocalAssetService(
         }
 
         if (string.IsNullOrWhiteSpace(normalizedAssetPath)
+            || normalizedAssetPath.IndexOfAny(Path.GetInvalidPathChars()) >= 0
             || normalizedAssetPath.StartsWith('/')
             || Path.IsPathRooted(normalizedAssetPath)
             || Uri.TryCreate(normalizedAssetPath, UriKind.Absolute, out _))

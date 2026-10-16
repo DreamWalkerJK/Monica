@@ -110,9 +110,12 @@ public sealed class EventHandlerInvokerTests
     }
 
     [Theory]
-    [InlineData(false, ExecutionTransactionMode.None)]
-    [InlineData(true, ExecutionTransactionMode.Automatic)]
-    public async Task InvokeAsync_ShouldHonorHandlerPolicyAndMethodPrecedence(bool methodOverride, ExecutionTransactionMode expected)
+    [InlineData(EventSubscriptionScope.Local, false, ExecutionTransactionMode.Automatic)]
+    [InlineData(EventSubscriptionScope.Local, true, ExecutionTransactionMode.None)]
+    [InlineData(EventSubscriptionScope.Distributed, false, ExecutionTransactionMode.Automatic)]
+    [InlineData(EventSubscriptionScope.Distributed, true, ExecutionTransactionMode.None)]
+    public async Task InvokeAsync_WhenHandlerMethodDeclaresPolicy_ShouldOverrideAutomaticDefault(
+        EventSubscriptionScope subscriptionScope, bool methodOverride, ExecutionTransactionMode expected)
     {
         var capture = new ExecutionCapture();
         await using var provider = new ServiceCollection()
@@ -122,8 +125,8 @@ public sealed class EventHandlerInvokerTests
             .BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
         var subscription = Substitute.For<IEventSubscription>();
-        subscription.Scope.Returns(EventSubscriptionScope.Local);
-        IEventHandler handler = methodOverride ? new MethodPolicyHandler() : new ClassPolicyHandler();
+        subscription.Scope.Returns(subscriptionScope);
+        IEventHandler handler = methodOverride ? new MethodPolicyHandler() : new DualContractHandler();
 
         await new EventHandlerInvoker().InvokeAsync(handler, new TestEvent("policy"), typeof(TestEvent),
             subscription, scope.ServiceProvider, TestContext.Current.CancellationToken);
@@ -131,17 +134,13 @@ public sealed class EventHandlerInvokerTests
         capture.TransactionMode.Should().Be(expected);
     }
 
-    [ExecutionTransaction(ExecutionTransactionMode.None)]
-    private sealed class ClassPolicyHandler : ILocalEventHandler<TestEvent>
+    private sealed class MethodPolicyHandler : ILocalEventHandler<TestEvent>, IDistributedEventHandler<TestEvent>
     {
-        public Task HandleEventAsync(TestEvent eventData, CancellationToken cancellationToken) => Task.CompletedTask;
-    }
-
-    [ExecutionTransaction(ExecutionTransactionMode.None)]
-    private sealed class MethodPolicyHandler : ILocalEventHandler<TestEvent>
-    {
-        [ExecutionTransaction(ExecutionTransactionMode.Automatic)]
+        [ExecutionTransaction(ExecutionTransactionMode.None)]
         Task ILocalEventHandler<TestEvent>.HandleEventAsync(TestEvent eventData, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        [ExecutionTransaction(ExecutionTransactionMode.None)]
+        Task IDistributedEventHandler<TestEvent>.HandleEventAsync(TestEvent eventData, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed record TestEvent(string Value);

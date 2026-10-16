@@ -1,0 +1,92 @@
+.history-confirmation {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    min-width: 0;
+    padding: 8px 4px 12px;
+}
+
+.history-confirmation__intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+}
+
+.history-confirmation__intro ::deep .mud-icon-root {
+    flex-shrink: 0;
+}
+
+.history-confirmation__intro p {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.history-confirmation p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.history-confirmation__identity {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    align-self: stretch;
+    padding: 16px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background: var(--mud-palette-background-gray);
+}
+
+.history-confirmation__identity span {
+    font-size: 11px;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+}
+
+.history-confirmation__identity code {
+    overflow-wrap: anywhere;
+    font-size: 13px;
+}
+
+.history-confirmation__help {
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary));
+}
+
+.history-confirmation ::deep .mud-alert-outlined-warning .mud-alert-message {
+    color: color-mix(in srgb, var(--mud-palette-warning) 45%, var(--mud-palette-text-primary));
+}
+
+.history-confirmation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0 16px 16px;
+}
+
+.history-confirmation-actions ::deep .mud-button-outlined-error {
+    color: color-mix(in srgb, var(--mud-palette-error) 45%, var(--mud-palette-text-primary));
+    border-color: color-mix(in srgb, var(--mud-palette-error) 65%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mud-palette-error) 8%, var(--mud-palette-surface));
+}
+
+.history-confirmation-actions ::deep .mud-button-outlined-error:hover,
+.history-confirmation-actions ::deep .mud-button-outlined-error:focus-visible,
+.history-confirmation-actions ::deep .mud-button-outlined-error:active {
+    background: color-mix(in srgb, var(--mud-palette-error) 12%, var(--mud-palette-surface));
+}
+
+.history-confirmation-actions ::deep .mud-button-outlined-error .mud-button-label {
+    color: inherit;
+}
+
+@media (max-width: 600px) {
+    .history-confirmation-actions {
+        padding: 0 8px 8px;
+    }
+}

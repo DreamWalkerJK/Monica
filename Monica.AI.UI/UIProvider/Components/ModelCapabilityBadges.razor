@@ -1,0 +1,28 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.Configuration.Models
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+<div class="model-capabilities">
+    @if (Model.Kind == AIModelKind.Embedding)
+    {
+        <span class="capability-badge embedding"><MudIcon Icon="@Icons.Material.Outlined.DataArray" />@L["Settings:Embedding"]</span>
+    }
+    else
+    {
+        <span class="capability-badge"><MudIcon Icon="@Icons.Material.Outlined.TextFields" />@L["Settings:TextInput"]</span>
+        @if (Model.SupportsImage == true) { <span class="capability-badge image"><MudIcon Icon="@Icons.Material.Outlined.Image" />@L["Settings:ImageInput"]</span> }
+        @if (Model.SupportsDocuments == true) { <span class="capability-badge document"><MudIcon Icon="@Icons.Material.Outlined.Description" />@L["Settings:NativeDocuments"]</span> }
+        @if (Model.SupportsTools == true) { <span class="capability-badge tool"><MudIcon Icon="@Icons.Material.Outlined.Build" />@L["Settings:FunctionTools"]</span> }
+        @if (Model.SupportsReasoning == true) { <span class="capability-badge reasoning"><MudIcon Icon="@Icons.Material.Outlined.Psychology" />@L["Workbench:Reasoning"]</span> }
+        @if (Model.SupportsImage is null || Model.SupportsDocuments is null || Model.SupportsTools is null || Model.SupportsReasoning is null)
+        {
+            <MudTooltip Text="@L["Settings:UnknownCapabilitiesHelp"]"><span class="unknown-capabilities"><MudIcon Icon="@Icons.Material.Outlined.Info" />@L["Settings:PartiallyKnown"]</span></MudTooltip>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>Model metadata to summarize; unknown capabilities remain visibly unverified.</summary>
+    [Parameter, EditorRequired] public required AIModelConfiguration Model { get; set; }
+}

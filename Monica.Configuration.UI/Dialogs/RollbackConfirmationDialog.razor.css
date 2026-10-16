@@ -1,0 +1,133 @@
+.configuration-rollback-dialog {
+    --rollback-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary));
+    container-type: inline-size;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    min-width: 0;
+    padding: 20px;
+    color: var(--mud-palette-text-primary);
+}
+.configuration-rollback-context {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-warning) 35%, var(--mud-palette-lines-default));
+    border-radius: var(--mud-default-borderradius);
+    background: color-mix(in srgb, var(--mud-palette-warning) 8%, var(--mud-palette-surface));
+}
+.configuration-rollback-context ::deep .mud-icon-root {
+    color: color-mix(in srgb, var(--mud-palette-warning) 25%, var(--mud-palette-text-primary));
+}
+.configuration-rollback-context p {
+    margin: 0 0 12px;
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+.configuration-rollback-context strong {
+    display: block;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.configuration-rollback-reason,
+.configuration-rollback-preview,
+.configuration-rollback-validation {
+    min-width: 0;
+}
+.configuration-rollback-validation {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+}
+.configuration-rollback-preview h3 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 650;
+}
+.configuration-rollback-target-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.configuration-rollback-target-counts span {
+    --rollback-tone: var(--mud-palette-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid color-mix(in srgb, var(--rollback-tone) 35%, var(--mud-palette-lines-default));
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: color-mix(in srgb, var(--rollback-tone) 25%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--rollback-tone) 7%, var(--mud-palette-surface));
+}
+.configuration-rollback-target-counts span[data-tone="warning"] {
+    --rollback-tone: var(--mud-palette-warning);
+}
+.configuration-rollback-identities {
+    margin: 20px 0;
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+.configuration-rollback-dialog dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 20px;
+    min-width: 0;
+    margin: 0;
+    padding: 16px 0;
+}
+.configuration-rollback-dialog dl + dl {
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+.configuration-rollback-dialog dl > div {
+    min-width: 0;
+}
+.configuration-rollback-dialog dt {
+    margin-bottom: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--rollback-muted);
+}
+.configuration-rollback-dialog dd {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+.configuration-rollback-dialog code {
+    font-family: var(--mo-font-family-mono);
+    font-size: 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.configuration-rollback-identity-wide {
+    grid-column: 1 / -1;
+}
+.configuration-rollback-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    width: 100%;
+    padding: 16px 20px;
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+.configuration-rollback-actions ::deep .configuration-rollback-confirm:not(:disabled) {
+    background: color-mix(in srgb, var(--mud-palette-warning) 45%, var(--mud-palette-text-primary));
+    color: var(--mud-palette-surface);
+}
+@container (max-width: 480px) {
+    .configuration-rollback-dialog dl { grid-template-columns: minmax(0, 1fr); }
+    .configuration-rollback-context { padding: 16px; }
+}
+@media (max-width: 600px) {
+    .configuration-rollback-dialog { padding: 16px; }
+    .configuration-rollback-actions { padding: 16px; }
+}

@@ -12,6 +12,12 @@ public sealed record ChatTextDeltaEvent(string Text) : ChatStreamEvent;
 /// <summary>Incremental model reasoning text.</summary>
 public sealed record ChatReasoningDeltaEvent(string Text) : ChatStreamEvent;
 
+/// <summary>A newly started or updated execution step; consumers replace its previous revision by ID.</summary>
+public sealed record ChatStepChangedEvent(ChatExecutionStep Step) : ChatStreamEvent;
+
+/// <summary>Updated measured and estimated context occupancy.</summary>
+public sealed record ChatContextChangedEvent(ChatContextUsage Usage) : ChatStreamEvent;
+
 /// <summary>Lifecycle event for one tool invocation.</summary>
 public sealed record ChatToolEvent(
     string ToolName,
@@ -42,5 +48,8 @@ public enum ChatToolEventStatus
     Completed,
 
     /// <summary>The tool invocation failed.</summary>
-    Failed
+    Failed,
+
+    /// <summary>The tool invocation was cancelled.</summary>
+    Cancelled
 }
