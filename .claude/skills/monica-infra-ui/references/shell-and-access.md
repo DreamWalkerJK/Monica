@@ -48,9 +48,13 @@ UI modules contribute routes and navigation during `Describe(...)` through `Modu
 
 Categories support multiple levels through the optional `parentId` argument on `RegisterCategory(...)` and `RegisterLocalizedCategory<TResource>(...)`. A missing parent argument creates a root category; `icon` optionally supplies that category's shell icon. Parent contributions may arrive later in startup, but every reference must resolve before the registry is sealed. Use stable category IDs independently of translated labels. The catalog publishes a flat immutable list of definitions with parent metadata; the shell evaluates each page's access policy before constructing its navigation tree and prunes branches with no authorized destinations.
 
+Organize built-in destinations as a root area, a capability group, and its actual pages. `Intelligence` contains the existing `AI` and `KnowledgeRetrieval` categories; `Platform` contains `Module` and `Configuration`. The existing `Monitor` identity displays Operations and contains scheduling and module-owned operational groups. Infrastructure, Documentation, and the existing `Debug` identity (displayed as Diagnostics) retain their own roots with module-owned capability groups. Stable IDs and page routes are independent of this presentation. A new capability group belongs directly beneath the appropriate root; contribute pages to an existing capability group when they already share its task, rather than adding a redundant workbench level. The hierarchy remains extensible for host-owned categories.
+
+Group counts come from `NavigationGroup.DestinationCount`, including its descendants after authorization filtering. They describe navigation destinations, not records, module instances, or unfiltered route registrations. Shared disclosure controls preserve the user's expansion choice through unrelated renders and reveal an active branch when its destination changes. Closing a branch removes its links from keyboard navigation; the native destination links retain routing and temporary-drawer dismissal ownership.
+
 Categories and pages accept an optional `description` on literal registrations or `descriptionKey` on localized registrations. Explain category capabilities and page purpose with module-owned text; localized descriptions use the same registered `TResource` as the label. Omitted descriptions remain null, supplied text or keys must be nonblank, and a conflicting category description rejects duplicate registration. `NavigationCategoryDefinition` and `PageDefinition` retain immutable `UIRegistryText? Description` metadata and resolve it through `ResolveDescription(ILocalizationCatalog)` for the current host. The authorized tree exposes resolved `NavigationGroup.Description` only for retained branches; descriptions do not create destinations or bypass access policies.
 
-For example, a feature module can add a localized branch beneath the shell's Module category in its navigation callback:
+For example, a feature module can add a localized capability beneath the shell's Platform category in its navigation callback:
 
 ```csharp
 module.Require<ModuleLocalization, ModuleLocalizationOption>(
@@ -62,7 +66,7 @@ module.Require<ModuleShellUI, ModuleShellUIOption>(static options =>
             "example.diagnostics",
             "Navigation:Diagnostics",
             order: 20,
-            parentId: BuiltInNavigationCategoryIds.Module,
+            parentId: BuiltInNavigationCategoryIds.Platform,
             icon: MoIcons.Cube,
             descriptionKey: "Navigation:DiagnosticsDescription");
         registry.RegisterLocalizedPage<ExampleDiagnosticsPage, ExampleResource>(
