@@ -1,7 +1,7 @@
 @* Semantic annotation: a soft state surface, an icon tile, and evidence linked to the responsible record. *@
 <div class="mo-vl-callout @Severity.ToCssClass() @Class" role="note">
     <span class="mo-vl-callout-mark" aria-hidden="true">
-        <MudIcon Icon="@ResolvedIcon" Size="Size.Small" />
+        <MoIcon Icon="@ResolvedIcon" Size="20px" />
     </span>
     <div class="mo-vl-callout-content">
         <p class="mo-vl-callout-title">@Title</p>
@@ -27,9 +27,9 @@
 
     private string ResolvedIcon => Icon ?? Severity switch
     {
-        MoVisualRole.Success => Icons.Material.Outlined.CheckCircleOutline,
-        MoVisualRole.Warning => Icons.Material.Outlined.WarningAmber,
-        MoVisualRole.Error => Icons.Material.Outlined.ErrorOutline,
-        _ => Icons.Material.Outlined.Info,
+        MoVisualRole.Success => MoIcons.Success,
+        MoVisualRole.Warning => MoIcons.Warning,
+        MoVisualRole.Error => MoIcons.Error,
+        _ => MoIcons.Info,
     };
 }

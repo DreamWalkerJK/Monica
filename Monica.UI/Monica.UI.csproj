@@ -27,6 +27,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Icons\Assets\**\*" Pack="false" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <Content Update="Icons\Assets\**\*" Pack="false" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <None Remove="Icons\Assets\Lucide\LICENSE" />
+    <None Include="Icons\Assets\Lucide\LICENSE" Pack="true" PackagePath="licenses/lucide/"
+          CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <ItemGroup>
     <_ContentIncludedByDefault Remove="Properties\launchSettings.json" />
   </ItemGroup>
 

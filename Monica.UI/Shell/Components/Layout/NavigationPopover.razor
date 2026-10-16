@@ -12,7 +12,7 @@
     @if (string.IsNullOrEmpty(Icon))
     {
         <MudButton Variant="Variant.Text" Color="Color.Inherit" Class="mud-menu-button-activator"
-                   StartIcon="@StartIcon" EndIcon="@ShellIcons.ChevronDown" OnClick="Toggle"
+                   StartIcon="@StartIcon" EndIcon="@MoIcons.ChevronDown" OnClick="Toggle"
                    aria-label="@Label" aria-expanded="@(_open ? "true" : "false")" aria-controls="@_popupId">
             @Label
         </MudButton>
@@ -58,7 +58,7 @@
                             {
                                 @foreach (var root in Groups)
                                 {
-                                    <MudNavGroup @key="root.Id" Title="@root.DisplayName" Icon="@root.Icon" ExpandIcon="@ShellIcons.ChevronDown" Expanded="@ContainsActive(root)">
+                                    <MudNavGroup @key="root.Id" Title="@root.DisplayName" Icon="@root.Icon" ExpandIcon="@MoIcons.ChevronDown" Expanded="@ContainsActive(root)">
                                         <NavigationTree Group="@root" ActiveItem="@ActiveItem" ShowPageIcons="@(!ShowOverview)" />
                                     </MudNavGroup>
                                 }

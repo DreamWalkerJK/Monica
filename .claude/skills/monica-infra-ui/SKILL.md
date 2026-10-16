@@ -1,15 +1,16 @@
 ---
 name: monica-infra-ui
-description: Register and use Monica Blazor UI modules, the shell, Markdown viewer, themes, navigation, and localization in a host. Use monica-ui-development for building components and monica-ui-localization for authoring resources.
+description: Register and use Monica Blazor UI modules, the shell, icons, Markdown viewer, themes, navigation, and localization in a host. Use monica-ui-development for building components and monica-ui-localization for authoring resources.
 ---
 
 # Monica UI hosting
 
-The shell hosts pages; feature UI modules add operational views, while Markdown provides searchable document groups.
+The shell hosts feature pages; Markdown adds searchable document groups.
 
 | Task | Read |
 | --- | --- |
 | Compose the shell, add feature pages, configure navigation, or authorize operational pages | [Shell and access](references/shell-and-access.md) |
+| Render local SVG icons or supply icons to controls and navigation | [MoIcon and icon catalog](references/icons.md) |
 | Inspect host identity, process evidence, startup timing, or configured operational links | [System information](references/system-information.md) |
 | Inspect registered DbContexts, provider sessions, or migration outcomes | [Repository diagnostics](../monica-infra-persistence/references/repository-diagnostics.md) |
 | Publish searchable documents, use the viewer, or serve local images | [Markdown](references/markdown.md) |
@@ -24,6 +25,6 @@ The shell hosts pages; feature UI modules add operational views, while Markdown 
 | Theme the standalone Swagger reference or add application destinations to its toolbar | [Swagger workbench](references/swagger-ui.md) |
 | Set theme/language defaults or integrate custom page localization | [Theme and localization](references/theme-and-localization.md) |
 
-For building components, use `$monica-ui-development`; for authoring translation resources, use `$monica-ui-localization`; configure each feature's underlying service through its owning infrastructure skill.
+Use `$monica-ui-development` for components and `$monica-ui-localization` for translations; configure underlying services through their infrastructure skills.
 
-If a routed authoring skill is unavailable, use `$monica-guide` to resolve the verified Monica checkout (`source resolve --repository monica --json`) and read its canonical `skills/<name>/SKILL.md`.
+For unavailable authoring skills, resolve Monica with `$monica-guide` (`source resolve --repository monica --json`) and read canonical `skills/<name>/SKILL.md`.

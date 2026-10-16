@@ -26,9 +26,9 @@
                 <div class="theme-dialog__section-heading">
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="appearance-mode-heading">@L["Theme:ColorMode"]</MudText>
                     <div class="theme-dialog__modes" aria-labelledby="appearance-mode-heading">
-                        <MudButton Variant="Variant.Text" Class="@GetModeClass(false)" StartIcon="@Icons.Material.Outlined.LightMode"
+                        <MudButton Variant="Variant.Text" Class="@GetModeClass(false)" StartIcon="@MoIcons.Sun"
                                    Disabled="@SelectionDisabled" aria-pressed="@(!_isDarkMode ? "true" : "false")" OnClick="() => SetMode(false)">@L["Theme:Light"]</MudButton>
-                        <MudButton Variant="Variant.Text" Class="@GetModeClass(true)" StartIcon="@Icons.Material.Outlined.DarkMode"
+                        <MudButton Variant="Variant.Text" Class="@GetModeClass(true)" StartIcon="@MoIcons.Moon"
                                    Disabled="@SelectionDisabled" aria-pressed="@(_isDarkMode ? "true" : "false")" OnClick="() => SetMode(true)">@L["Theme:Dark"]</MudButton>
                     </div>
                 </div>
@@ -48,7 +48,7 @@
                             <span class="theme-dialog__layout-copy"><strong>@L["Theme:Sidebar"]</strong><small>@L["Theme:SidebarDescription"]</small></span>
                             @if (_layout == ShellNavigationLayout.Sidebar)
                             {
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="theme-dialog__layout-check" />
+                                <MoIcon Icon="@MoIcons.Success" Size="20px" Class="theme-dialog__layout-check" />
                             }
                         </MudButton>
                     </div>
@@ -63,7 +63,7 @@
                             <span class="theme-dialog__layout-copy"><strong>@L["Theme:Topbar"]</strong><small>@L["Theme:TopbarDescription"]</small></span>
                             @if (_layout == ShellNavigationLayout.Topbar)
                             {
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="theme-dialog__layout-check" />
+                                <MoIcon Icon="@MoIcons.Success" Size="20px" Class="theme-dialog__layout-check" />
                             }
                         </MudButton>
                     </div>
@@ -96,7 +96,7 @@
                                     <span class="theme-dialog__theme-name"><strong>@option.DisplayName</strong>
                                         @if (selected)
                                         {
-                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                                            <MoIcon Icon="@MoIcons.Success" Size="20px" />
                                         }
                                     </span>
                                     <small>@option.Description</small>

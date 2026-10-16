@@ -16,7 +16,7 @@
 
     @if (Options.Value.NavBarNotificationsAction is not null)
     {
-        <MudIconButton Icon="@ShellIcons.Bell"
+        <MudIconButton Icon="@MoIcons.Bell"
                        Color="Color.Default"
                        Size="Size.Medium"
                        Class="action-button action-button--secondary"
@@ -40,7 +40,7 @@
             <ActivatorContent Context="menu">
                 <MudButton Variant="Variant.Text"
                            Class="user-button"
-                           StartIcon="@ShellIcons.UserCircle"
+                           StartIcon="@MoIcons.UserCircle"
                            OnClick="@(() => menu.ToggleAsync())">
                     <span class="user-name">@UserContext.UserName</span>
                 </MudButton>
@@ -48,13 +48,13 @@
             <ChildContent>
                 @if (Options.Value.UserProfileAction is not null)
                 {
-                    <MudMenuItem Icon="@ShellIcons.User" OnClick="OpenProfileAsync">
+                    <MudMenuItem Icon="@MoIcons.User" OnClick="OpenProfileAsync">
                         @L["Layout:UserMenu:Profile"]
                     </MudMenuItem>
                 }
                 @if (Options.Value.UserSettingsAction is not null)
                 {
-                    <MudMenuItem Icon="@ShellIcons.Sliders" OnClick="OpenSettingsAsync">
+                    <MudMenuItem Icon="@MoIcons.Sliders" OnClick="OpenSettingsAsync">
                         @L["Layout:UserMenu:Settings"]
                     </MudMenuItem>
                 }
@@ -64,7 +64,7 @@
                 }
                 @if (Options.Value.UserLogoutAction is not null)
                 {
-                    <MudMenuItem Icon="@ShellIcons.Logout" OnClick="LogoutAsync">
+                    <MudMenuItem Icon="@MoIcons.Logout" OnClick="LogoutAsync">
                         @L["Layout:UserMenu:Logout"]
                     </MudMenuItem>
                 }
@@ -74,7 +74,7 @@
     else
     {
         <div class="user-identity" aria-label="@UserContext.UserName">
-            <MudIcon Icon="@ShellIcons.UserCircle" />
+            <MoIcon Icon="@MoIcons.UserCircle" Size="24px" />
             <span class="user-name">@UserContext.UserName</span>
         </div>
     }

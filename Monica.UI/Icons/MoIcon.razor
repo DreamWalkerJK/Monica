@@ -1,0 +1,54 @@
+@namespace Monica.UI.Icons
+
+@if (!string.IsNullOrWhiteSpace(Icon))
+{
+    <svg @attributes="AdditionalAttributes"
+         class="@IconClass" style="@IconStyle"
+         viewBox="0 0 24 24" fill="currentColor" focusable="false"
+         role="@(HasLabel ? "img" : null)"
+         aria-hidden="@(HasLabel ? null : "true")"
+         aria-labelledby="@((string?)null)"
+         aria-label="@(HasLabel ? Label : null)">
+        @((MarkupString)Icon)
+    </svg>
+}
+
+@code {
+    /// <summary>
+    /// Gets or sets the trusted, developer-owned SVG body to render in a 24-unit view box.
+    /// Null, empty, or whitespace renders nothing. Use <see cref="MoIcons"/> or a local catalog
+    /// following the same SVG fragment contract; arbitrary uploaded SVG is not supported.
+    /// </summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional CSS size, such as <c>16px</c> or <c>1em</c>, for both dimensions.
+    /// When absent, the icon inherits <c>--mo-icon-size</c>, falling back to 20 pixels.
+    /// </summary>
+    [Parameter] public string? Size { get; set; }
+
+    /// <summary>
+    /// Gets or sets the localized accessible name of a meaningful standalone image.
+    /// Null or whitespace keeps the icon decorative and hidden from assistive technology.
+    /// An icon inside a button remains decorative; the button owns its accessible name.
+    /// </summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Gets or sets additional presentation classes. Color inherits from the surrounding content.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Gets or sets inline CSS declarations, applied after any explicit size declaration.</summary>
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>
+    /// Gets or sets additional attributes on the root SVG, such as an identifier or descriptive relationship.
+    /// Component-owned presentation, view box, focusability, and label semantics take precedence.
+    /// The enclosing button or link owns interaction and keyboard behavior.
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool HasLabel => !string.IsNullOrWhiteSpace(Label);
+    private string IconClass => string.IsNullOrWhiteSpace(Class) ? "mo-icon" : $"mo-icon {Class}";
+    private string? IconStyle => string.IsNullOrWhiteSpace(Size) ? Style : $"--mo-icon-size:{Size};{Style}";
+}
