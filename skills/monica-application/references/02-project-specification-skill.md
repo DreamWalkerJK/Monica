@@ -14,7 +14,7 @@ Local references own:
 - Validation: repository commands and focused behavioral checks for its adopted patterns.
 - Known migration gaps: actual drift, expected target, evidence, and boundaries for new work.
 
-Use one reference when that is enough. Split only when tasks need independent subsets, such as the macro view versus extension contracts. Preserve the language of existing repository artifacts. Do not reproduce the shared ProjectUnit catalog or add an approval workflow to the skill.
+Use one reference when that is enough. Split only when tasks need independent subsets, such as the macro view versus extension contracts. Preserve the language of existing repository artifacts. Do not reproduce the shared ProjectUnit catalog or add an approval workflow to the skill. Ordinary combinations of adopted units do not need individual adoption entries; route actual rule changes through shared specification evolution.
 
 ## Adoption and Maintenance
 

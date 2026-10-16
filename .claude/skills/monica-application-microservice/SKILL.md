@@ -5,7 +5,7 @@ description: Apply the Monica microservice specification when designing, impleme
 
 # Monica Application Microservice
 
-Before using this profile, load `$monica-application` and the repository-designated project specification. The [shared specification](../monica-application/references/00-application-specification.md) defines mandatory rules, allowed options, and examples; the project specification records the adopted profile and actual topology. Use [specification evolution](../monica-application/references/01-specification-evolution.md) for a new pattern or deviation.
+Before using this profile, load `$monica-application` and the repository-designated project specification. The [shared specification](../monica-application/references/00-application-specification.md) defines mandatory rules, allowed options, and examples; the project specification records the adopted profile and actual topology. Compose within those contracts; use [specification evolution](../monica-application/references/01-specification-evolution.md) for a concrete architectural gap or rule change.
 
 Split services by business capability and data ownership. The intended solution chain is `{Subdomain}Service.API → {Subdomain}Service.Domain → Platform.Infrastructure → Platform.Protocol → Platform.BuildingBlocks`. Put project-common libraries in `Platform.BuildingBlocks`, solution wiring in `Platform.Infrastructure`, shared business language in `Platform.Protocol`, and service-only dependencies in the owning Domain project. A service's API, Domain, and migrations move together; AppHost or gateway projects remain composition adapters. See [solution layout](references/00-solution-layout.md) and [new subdomain](references/01-create-subdomain-and-service.md) when changing topology.
 
