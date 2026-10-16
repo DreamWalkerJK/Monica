@@ -182,6 +182,12 @@ Verify open and closed temporary drawers, both shell layouts, and a narrow viewp
 
 Keep navigation measurement rails rendered at their natural width so overflow decisions remain accurate, but position the whole rail outside the viewport horizontally as well as vertically. `visibility: hidden` and an offscreen `top` do not prevent a wide absolute element from expanding the document's horizontal scroll area. Verify document width with a collapsed Sidebar near the desktop breakpoint and a wide or monospace theme, then confirm Topbar still moves destinations into More as space decreases.
 
+### Absolute page content belongs to the page scroll owner
+
+The shell's `.mo-body-content` establishes a positioned containing block as well as owning page overflow. An absolutely positioned descendant, including a one-pixel screen-reader label, can enlarge the browser document if its containing block is outside that scroll host. A theme wrapper's `position: relative` can expose this even while the shell has a fixed viewport height and clips its own overflow. Keep this positioning with the shared scroll owner; component-owned absolute layers still need their nearest deliberate local anchor.
+
+Verify a long populated page with hidden accessibility text, such as the OpenTelemetry sample ledger. Compare document and body client/scroll dimensions, the label's `offsetParent`, shell bounds, and main scrolling before and after moving to the end of the page. Repeat in Sidebar and Topbar, wide and narrow viewports, and every theme/mode. Native provider portals remain outside the page scroll owner and retain their own positioning contract.
+
 ### `MudTabs` with `ApplyEffectsToContainer="true"`
 
 MudBlazor applies rounded, outlined, and elevation classes to the root `.mud-tabs` element in this mode.
