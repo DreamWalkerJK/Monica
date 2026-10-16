@@ -1,0 +1,24 @@
+@* Fact grid: contiguous facts sharing one border with hairline internal separators; not separate cards. *@
+<dl class="mo-vl-facts @Class">
+    @foreach (var fact in Facts)
+    {
+        <div class="mo-vl-fact">
+            <dt>@fact.Label</dt>
+            <dd>
+                @fact.Value
+                @if (!string.IsNullOrWhiteSpace(fact.Unit))
+                {
+                    <small>@fact.Unit</small>
+                }
+            </dd>
+        </div>
+    }
+</dl>
+
+@code {
+    /// <summary>Gets or sets the ordered facts rendered in the grid.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<MoFact> Facts { get; set; } = [];
+
+    /// <summary>Gets or sets an optional identification class.</summary>
+    [Parameter] public string? Class { get; set; }
+}

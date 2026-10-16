@@ -103,6 +103,24 @@ internal static class ModuleDiagnosticsDisplay
             _ => localizer["Findings:Unknown", finding.Code]
         };
     }
+
+    internal static string FindingTitle(ModuleDiagnosticFinding finding, IStringLocalizer<ModuleSystemResource> localizer) => finding.Code switch
+    {
+        ModuleDiagnosticFindingCodes.PERFORMANCE_BUDGET_EXCEEDED => localizer[
+            "Overview:Findings:BudgetTitle",
+            finding.Evidence.PerformanceMetric is { } metric ? localizer[$"Enums:Budget:{metric}"] : localizer["Common:Unknown"]],
+        ModuleDiagnosticFindingCodes.REGISTRATION_FAILED => localizer["Overview:Findings:RegistrationFailed"],
+        ModuleDiagnosticFindingCodes.STARTUP_WORK_FAILED => localizer["Overview:Findings:StartupWorkFailed"],
+        ModuleDiagnosticFindingCodes.STARTUP_WORK_COMMIT_FAILED => localizer["Overview:Findings:StartupWorkCommitFailed"],
+        ModuleDiagnosticFindingCodes.COMPOSITION_FAILED => localizer["Overview:Findings:CompositionFailed"],
+        _ => localizer["Overview:Findings:Unknown"]
+    };
+
+    internal static string FindingEvidence(ModuleDiagnosticFinding finding, IStringLocalizer<ModuleSystemResource> localizer) => finding.Code == ModuleDiagnosticFindingCodes.PERFORMANCE_BUDGET_EXCEEDED
+        && finding.Evidence.ActualDurationMs is { } actual
+        && finding.Evidence.LimitDurationMs is { } limit
+        ? localizer["Overview:Findings:BudgetEvidence", Duration(actual), Duration(limit)]
+        : Finding(finding, localizer);
 }
 
 internal sealed record ModuleDiagnosticsTraceDisplay(string Primary, string Secondary);

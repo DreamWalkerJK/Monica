@@ -13,21 +13,31 @@
 
         @if (snapshot.Summary.PerformanceBudgets.Length > 0)
         {
-            <section class="performance-panel performance-budgets" aria-labelledby="performance-budgets-title">
-                <header class="performance-heading">
+            <section class="mo-vl-panel performance-panel performance-budgets" aria-labelledby="performance-budgets-title">
+                <header class="mo-vl-panel-head">
                     <div>
-                        <span class="performance-eyebrow">@L["Performance:Budgets:Eyebrow"]</span>
-                        <h2 id="performance-budgets-title">@L["Performance:Budgets:Title"]</h2>
+                        <p class="mo-vl-eyebrow">@L["Performance:Budgets:Eyebrow"]</p>
+                        <h2 id="performance-budgets-title" class="mo-vl-panel-title">@L["Performance:Budgets:Title"]</h2>
                     </div>
                 </header>
-                <div class="budget-grid">
+                <div class="budget-list">
                     @foreach (var budget in snapshot.Summary.PerformanceBudgets)
                     {
-                        <article data-budget-tone="@BudgetTone(budget.IsExceeded)">
-                            <strong>@L[$"Enums:Budget:{budget.Kind}"]</strong>
-                            <span>@L["Performance:Budgets:Measurement", ModuleDiagnosticsDisplay.Duration(budget.ActualDurationMs), ModuleDiagnosticsDisplay.Duration(budget.LimitDurationMs)]</span>
-                            <MudProgressLinear Value="@Math.Min(100, budget.Utilization * 100)" Color="@(budget.IsExceeded ? Color.Warning : Color.Success)" Rounded="true" />
-                            <small>@L["Performance:Budgets:Utilization", budget.Utilization.ToString("P0")]</small>
+                        <article class="budget-row" data-budget-exceeded="@(budget.IsExceeded ? "true" : "false")">
+                            <div class="budget-row__identity">
+                                <strong>@L[$"Enums:Budget:{budget.Kind}"]</strong>
+                                <span>@L["Performance:Budgets:Measurement",
+                                    ModuleDiagnosticsDisplay.Duration(budget.ActualDurationMs),
+                                    ModuleDiagnosticsDisplay.Duration(budget.LimitDurationMs)]</span>
+                            </div>
+                            <MoTwoRoleMeter PrimaryValue="@budget.ActualDurationMs"
+                                            ScaleMaximum="@budget.LimitDurationMs"
+                                            PrimaryRole="@(budget.IsExceeded ? MoVisualRole.Warning : MoVisualRole.Success)"
+                                            AccessibleDescription="@L["Performance:Budgets:MeterAria",
+                                                L[$"Enums:Budget:{budget.Kind}"],
+                                                ModuleDiagnosticsDisplay.Duration(budget.ActualDurationMs),
+                                                ModuleDiagnosticsDisplay.Duration(budget.LimitDurationMs)]" />
+                            <span class="budget-row__utilization mo-vl-mono">@L["Performance:Budgets:Utilization", budget.Utilization.ToString("P0")]</span>
                         </article>
                     }
                 </div>
@@ -35,11 +45,15 @@
         }
 
         <div class="performance-grid @(!snapshot.BlockingChain.IsEmpty ? "performance-grid--causal" : null)">
-            <section class="performance-panel performance-contributors" aria-labelledby="contributors-title">
-                <header class="performance-heading">
+            <section class="mo-vl-panel performance-panel performance-contributors" aria-labelledby="contributors-title">
+                <header class="mo-vl-panel-head">
                     <div>
-                        <span class="performance-eyebrow">@L["Performance:Contributors:Eyebrow"]</span>
-                        <h2 id="contributors-title">@L["Performance:Contributors:Title"] <span class="performance-record-count">@Session.PerformanceContributors.Count</span></h2>
+                        <p class="mo-vl-eyebrow">@L["Performance:Contributors:Eyebrow"]</p>
+                        <h2 id="contributors-title" class="mo-vl-panel-title">@L["Performance:Contributors:Title"] <span class="performance-record-count">@Session.PerformanceContributors.Count</span></h2>
+                    </div>
+                    <div class="mo-vl-legend">
+                        <span><i class="mo-vl-swatch mo-vl-role--primary"></i>@L["Modules:Cost:Callbacks"]</span>
+                        <span><i class="mo-vl-swatch mo-vl-role--info"></i>@L["Modules:Cost:StartupWork"]</span>
                     </div>
                 </header>
                 <div class="contributor-filters">
@@ -58,27 +72,12 @@
                         <MudSwitch T="bool" Label="@L["Performance:Filters:HideZero"]" Value="@Session.HideZeroDurationContributors" ValueChanged="@SetHideZero" Color="Color.Primary" />
                     </div>
                 </div>
-                <div class="contributors-table-wrapper" role="region" aria-labelledby="contributors-title" tabindex="0">
-                    <MudTable T="ModuleDiagnosticsModule" Items="@Session.PerformanceContributors" Dense="true" Hover="true" Breakpoint="Breakpoint.None">
-                        <HeaderContent>
-                            <MudTh>@L["Modules:Columns:Module"]</MudTh>
-                            <MudTh>@L["Performance:Columns:Callbacks"]</MudTh>
-                            <MudTh>@L["Performance:Columns:StartupWork"]</MudTh>
-                            <MudTh>@L["Performance:Columns:Total"]</MudTh>
-                        </HeaderContent>
-                        <RowTemplate Context="module">
-                            <MudTd DataLabel="@L["Modules:Columns:Module"]">
-                                <button type="button" class="performance-module-button" title="@module.FullTypeName" @onclick="@(() => ModuleSelected.InvokeAsync(module))">@module.TypeName</button>
-                            </MudTd>
-                            <MudTd DataLabel="@L["Performance:Columns:Callbacks"]"><code>@ModuleDiagnosticsDisplay.Duration(module.SerialCallbackDurationMs)</code></MudTd>
-                            <MudTd DataLabel="@L["Performance:Columns:StartupWork"]"><code>@ModuleDiagnosticsDisplay.Duration(module.StartupWorkDurationMs)</code></MudTd>
-                            <MudTd DataLabel="@L["Performance:Columns:Total"]">
-                                <ModuleCostBreakdownBar ModuleName="@module.TypeName" CallbackDurationMs="@module.SerialCallbackDurationMs" StartupWorkDurationMs="@module.StartupWorkDurationMs" MaximumDurationMs="@MaximumModuleCost" />
-                            </MudTd>
-                        </RowTemplate>
-                        <NoRecordsContent><p class="performance-empty">@L["Performance:Contributors:Empty"]</p></NoRecordsContent>
-                    </MudTable>
-                </div>
+                <MoRankedLedger Rows="@ContributorRows"
+                                AriaLabel="@L["Overview:Ledger:Aria"]"
+                                EmptyText="@L["Performance:Contributors:Empty"]"
+                                HeaderLabels="@ContributorHeaders"
+                                FooterNote="@L["Modules:Cost:ScaleHint"]"
+                                OnRowSelected="@SelectContributorAsync" />
             </section>
 
             @if (snapshot.BlockingChain.IsEmpty)
@@ -90,15 +89,18 @@
             }
             else
             {
-                <section class="performance-panel performance-blocking" aria-labelledby="blocking-title">
-                    <header class="performance-heading">
-                        <div><span class="performance-eyebrow">@L["Performance:Blocking:Eyebrow"]</span><h2 id="blocking-title">@L["Performance:Blocking:Title"]</h2></div>
+                <section class="mo-vl-panel performance-panel performance-blocking" aria-labelledby="blocking-title">
+                    <header class="mo-vl-panel-head">
+                        <div>
+                            <p class="mo-vl-eyebrow">@L["Performance:Blocking:Eyebrow"]</p>
+                            <h2 id="blocking-title" class="mo-vl-panel-title">@L["Performance:Blocking:Title"]</h2>
+                        </div>
                     </header>
                     <div class="blocking-list">
                         @foreach (var segment in snapshot.BlockingChain.OrderByDescending(static segment => segment.BlockingDurationMs))
                         {
                             var module = snapshot.Modules.FirstOrDefault(candidate => candidate.ModuleKey == segment.ModuleKey);
-                            <article>
+                            <article @key="segment.SegmentId">
                                 <button type="button" disabled="@(module is null)" @onclick="@(() => SelectModuleAsync(module))">
                                     <span><strong>@(module?.TypeName ?? segment.ModuleKey.Value)</strong><small>@L[$"Enums:Barrier:{segment.Barrier}"] · @segment.WorkItemId</small></span>
                                     <code>@ModuleDiagnosticsDisplay.Duration(segment.BlockingDurationMs)</code>
@@ -120,14 +122,16 @@
 
         @if (Session.Comparison is { } comparison)
         {
-            <section class="performance-panel comparison-evidence" aria-labelledby="comparison-evidence-title">
-                <header class="performance-heading"><div><span class="performance-eyebrow">@L["Comparison:Eyebrow"]</span><h2 id="comparison-evidence-title">@L["Comparison:EvidenceTitle"]</h2></div></header>
-                <dl class="comparison-kpis">
-                    <div><dt>@L["Overview:Kpis:Composition"]</dt><dd>@SignedDuration(comparison.TotalDurationDeltaMs)</dd></div>
-                    <div><dt>@L["Overview:Kpis:TypeDiscovery"]</dt><dd>@SignedDuration(comparison.TypeDiscoveryDurationDeltaMs)</dd></div>
-                    <div><dt>@L["Comparison:ModulesChanged"]</dt><dd>+@comparison.AddedModules.Count / -@comparison.RemovedModules.Count</dd></div>
-                    <div><dt>@L["Comparison:EdgesChanged"]</dt><dd>+@comparison.AddedEdges.Count / -@comparison.RemovedEdges.Count</dd></div>
-                </dl>
+            <section class="mo-vl-panel performance-panel comparison-evidence" aria-labelledby="comparison-evidence-title">
+                <header class="mo-vl-panel-head">
+                    <div>
+                        <p class="mo-vl-eyebrow">@L["Comparison:Eyebrow"]</p>
+                        <h2 id="comparison-evidence-title" class="mo-vl-panel-title">@L["Comparison:EvidenceTitle"]</h2>
+                    </div>
+                </header>
+                <div class="comparison-facts">
+                    <MoFactGrid Facts="ComparisonFacts(comparison)" />
+                </div>
                 <div class="comparison-changes">
                     <MudExpansionPanels MultiExpansion="true">
                         <MudExpansionPanel Text="@L["Comparison:AddedModules", comparison.AddedModules.Count]"><ChangeList Values="@comparison.AddedModules" EmptyText="@L["Comparison:NoChanges"]" /></MudExpansionPanel>
@@ -139,18 +143,36 @@
             </section>
         }
 
-        <section class="performance-panel performance-discovery" aria-labelledby="discovery-stages-title">
-            <header class="performance-heading"><div><span class="performance-eyebrow">@L["Performance:Discovery:Eyebrow"]</span><h2 id="discovery-stages-title">@L["Performance:Discovery:Title"]</h2></div></header>
+        <section class="mo-vl-panel performance-panel performance-discovery" aria-labelledby="discovery-stages-title">
+            <header class="mo-vl-panel-head">
+                <div>
+                    <p class="mo-vl-eyebrow">@L["Performance:Discovery:Eyebrow"]</p>
+                    <h2 id="discovery-stages-title" class="mo-vl-panel-title">@L["Performance:Discovery:Title"]</h2>
+                </div>
+            </header>
             <ol class="stage-strip" role="region" aria-labelledby="discovery-stages-title" tabindex="0">
                 @foreach (var stage in snapshot.TypeDiscovery.Stages)
                 {
-                    <li><span>@ModuleDiagnosticsDisplay.Stage(stage.Stage, L)</span><strong title="@ModuleDiagnosticsDisplay.ExactMilliseconds(stage.DurationMs)">@ModuleDiagnosticsDisplay.Duration(stage.DurationMs)</strong></li>
+                    <li>
+                        <span>@ModuleDiagnosticsDisplay.Stage(stage.Stage, L)</span>
+                        <MoTwoRoleMeter PrimaryValue="@stage.DurationMs"
+                                        ScaleMaximum="@TotalDiscoveryDurationMs"
+                                        AccessibleDescription="@L["Performance:Discovery:StageAria",
+                                            ModuleDiagnosticsDisplay.Stage(stage.Stage, L),
+                                            ModuleDiagnosticsDisplay.Duration(stage.DurationMs)]" />
+                        <strong title="@ModuleDiagnosticsDisplay.ExactMilliseconds(stage.DurationMs)">@ModuleDiagnosticsDisplay.Duration(stage.DurationMs)</strong>
+                    </li>
                 }
             </ol>
         </section>
 
-        <section class="performance-panel performance-startup-work" aria-labelledby="startup-work-title">
-            <header class="performance-heading"><div><span class="performance-eyebrow">@L["Performance:StartupWork:Eyebrow"]</span><h2 id="startup-work-title">@L["Performance:StartupWork:Title"]</h2></div></header>
+        <section class="mo-vl-panel performance-panel performance-startup-work" aria-labelledby="startup-work-title">
+            <header class="mo-vl-panel-head">
+                <div>
+                    <p class="mo-vl-eyebrow">@L["Performance:StartupWork:Eyebrow"]</p>
+                    <h2 id="startup-work-title" class="mo-vl-panel-title">@L["Performance:StartupWork:Title"]</h2>
+                </div>
+            </header>
             <div class="startup-work-table-wrapper" role="region" aria-labelledby="startup-work-title" tabindex="0">
                 <MudTable T="ModuleDiagnosticsTraceSpan" Items="@StartupWorkSpans" RowsPerPage="10" Dense="true" Hover="true" Breakpoint="Breakpoint.None">
                     <HeaderContent>
@@ -172,7 +194,7 @@
                         </MudTd>
                     </RowTemplate>
                     <NoRecordsContent><p class="performance-empty">@L["Performance:StartupWork:Empty"]</p></NoRecordsContent>
-                    <PagerContent><MudTablePager PageSizeOptions="@(new[] { 10, 25, 50 })" /></PagerContent>
+                    <PagerContent><MudTablePager PageSizeOptions="@(new[] { 10, 25, 50 })" RowsPerPageString="@L["Common:RowsPerPage"]" InfoFormat="@L["Common:PagerInfo"]" /></PagerContent>
                 </MudTable>
             </div>
         </section>
@@ -183,7 +205,27 @@
     [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
     [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
 
-    private static string BudgetTone(bool isExceeded) => isExceeded ? "warning" : "success";
+    private MoLedgerHeaderLabels ContributorHeaders => new(
+        L["Overview:Ledger:Column:Rank"],
+        L["Modules:Columns:Module"],
+        L["Modules:Columns:Cost"],
+        L["Performance:Columns:Total"]);
+
+    private IReadOnlyList<MoLedgerRow> ContributorRows => Session.PerformanceContributors
+        .Select(module => new MoLedgerRow(
+            module.TypeName,
+            module.AssemblyName,
+            PrimaryValue: module.SerialCallbackDurationMs,
+            SecondaryValue: module.StartupWorkDurationMs,
+            MeterScale: MaximumModuleCost,
+            MeterPrimaryCaption: L["Overview:Ledger:Cap:Callback", ModuleDiagnosticsDisplay.Duration(module.SerialCallbackDurationMs)],
+            MeterSecondaryCaption: L["Overview:Ledger:Cap:Work", ModuleDiagnosticsDisplay.Duration(module.StartupWorkDurationMs)],
+            Total: ModuleDiagnosticsDisplay.Duration(ModuleCost(module)),
+            Key: module.ModuleKey.Id))
+        .ToArray();
+
+    private Task SelectContributorAsync(MoLedgerRow row) => SelectModuleAsync(
+        Session.Snapshot?.Modules.FirstOrDefault(module => module.ModuleKey.Id == row.Key));
 
     private IReadOnlyList<ModuleDiagnosticsTraceSpan> StartupWorkSpans => Session.Snapshot?.TraceSpans
         .Where(static span => span.Kind == ModuleDiagnosticsTraceSpanKind.StartupWork)
@@ -224,6 +266,17 @@
 
     private static double ModuleCost(ModuleDiagnosticsModule module) =>
         module.SerialCallbackDurationMs + module.StartupWorkDurationMs;
+
+    private IReadOnlyList<MoFact> ComparisonFacts(ModuleDiagnosticsComparison comparison) =>
+    [
+        new(L["Overview:Kpis:Composition"], SignedDuration(comparison.TotalDurationDeltaMs)),
+        new(L["Overview:Kpis:TypeDiscovery"], SignedDuration(comparison.TypeDiscoveryDurationDeltaMs)),
+        new(L["Comparison:ModulesChanged"], $"+{comparison.AddedModules.Count} / -{comparison.RemovedModules.Count}"),
+        new(L["Comparison:EdgesChanged"], $"+{comparison.AddedEdges.Count} / -{comparison.RemovedEdges.Count}"),
+    ];
+
+    private double TotalDiscoveryDurationMs => Session.Snapshot?.TypeDiscovery.Stages
+        .Sum(static stage => stage.DurationMs) ?? 0;
 
     private static string SignedDuration(double duration) =>
         $"{(duration > 0 ? "+" : duration < 0 ? "-" : string.Empty)}{ModuleDiagnosticsDisplay.Duration(Math.Abs(duration))}";

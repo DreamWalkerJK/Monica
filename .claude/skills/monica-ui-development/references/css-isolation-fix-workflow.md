@@ -73,7 +73,23 @@ Check if:
 }
 ```
 
+### Keep compact button content inside its clipping owner
+
+MudBlazor start icons can retain a negative leading margin that assumes the button's default horizontal padding. When restyling a button as a compact navigation entry, inspect the generated icon and text against the button's own bounds. Reset that margin locally when reducing padding, and keep active indicators inside the button's clipping region. Verify the icon, text, underline and keyboard focus independently; a page with no horizontal overflow can still clip these children inside a ripple-enabled button.
+
 ## Specific Fixing Steps
+
+### Keep tab body padding off tab controls
+
+Inspect both the tab strip and content DOM before styling a generated panel class. In MudBlazor v9, `.mud-tab-panel` can appear on both the tab control and the content body. Applying body insets to that class alone also enlarges the tab strip. Scope content padding to the actual panel beneath its panels owner:
+
+```css
+.inspector-wrapper ::deep .mud-tabs-panels > [role="tabpanel"] {
+    padding: 20px 22px 28px;
+}
+```
+
+Set control padding separately on the actual tab controls. Verify computed padding and height on both regions, every opened tab's text-to-surface inset, and the phone layout. A correctly scoped `::deep` selector can still target the wrong generated elements.
 
 ### Step 1: Read the component files
 

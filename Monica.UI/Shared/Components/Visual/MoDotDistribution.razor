@@ -1,0 +1,27 @@
+@* Dot distribution: small squares per counted item, tinted by role intensity, with the exact count beside each row. *@
+<div class="mo-vl-dots @Class">
+    @foreach (var row in Rows)
+    {
+        <div class="mo-vl-dots-row">
+            <span class="mo-vl-dots-key">@row.Key</span>
+            <span class="mo-vl-dots-strip" aria-hidden="true">
+                @for (var index = 0; index < row.Count; index++)
+                {
+                    <i class="mo-vl-dot @row.Role.ToCssClass()" style="@IntensityStyle(row.Intensity)"></i>
+                }
+            </span>
+            <span class="mo-vl-dots-count">@row.Count</span>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Gets or sets the distribution rows; use it for small counted populations, not large totals.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<MoDotRow> Rows { get; set; } = [];
+
+    /// <summary>Gets or sets an optional identification class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private static string IntensityStyle(double intensity) =>
+        FormattableString.Invariant($"--mo-vl-intensity:{Math.Clamp(intensity, 0, 1).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}");
+}

@@ -1,14 +1,14 @@
-.option-diagnostics { display: grid; gap: 20px; min-width: 0; }
+.option-diagnostics { container: module-option-panel / inline-size; display: grid; gap: 20px; min-width: 0; }
 .option-policy-message { display: grid; gap: 4px; min-width: 0; color: var(--mud-palette-text-primary); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
 .option-policy-message strong { font-size: 13px; font-weight: 600; }
 .option-projection-header { display: flex; align-items: start; justify-content: space-between; gap: 12px; min-width: 0; padding-bottom: 20px; border-bottom: 1px solid var(--mud-palette-lines-default); }
 .option-projection-identity { display: grid; gap: 4px; min-width: 0; }
-.option-projection-identity > span { color: var(--module-workbench-accent-ink, var(--mud-palette-text-primary)); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.option-projection-identity > span { color: var(--module-workbench-accent-ink, var(--mud-palette-text-primary)); font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
 .option-projection-identity strong { font-family: var(--mo-font-family-mono); font-size: 12px; font-weight: 500; line-height: 1.8; }
 .option-projection-identity strong, .option-projection-identity small { overflow-wrap: anywhere; white-space: normal; }
-.option-projection-identity small { color: var(--module-workbench-muted-text, var(--mud-palette-text-primary)); font-size: 11px; }
+.option-projection-identity small { color: var(--module-workbench-muted-text, var(--mud-palette-text-primary)); font-size: 12px; }
 .option-projection-metrics { display: flex; flex: 0 0 auto; justify-content: flex-end; gap: 4px; flex-wrap: wrap; max-width: 45%; }
-.option-diagnostics ::deep .mud-chip { height: auto; min-height: 24px; margin: 0; border-radius: 4px; font-size: 10px; }
+.option-diagnostics ::deep .mud-chip { height: auto; min-height: 24px; margin: 0; border-radius: 4px; font-size: 12px; }
 .option-diagnostics ::deep .mud-chip-content { white-space: normal; }
 .option-diagnostics ::deep .mud-chip-outlined.mud-chip-color-primary { color: color-mix(in srgb, var(--mud-palette-primary) 80%, var(--mud-palette-text-primary)); }
 .option-diagnostics ::deep .mud-chip-outlined.mud-chip-color-warning { color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary)); }
@@ -19,7 +19,7 @@
 .option-empty-state > div { display: grid; gap: 5px; min-width: 0; font-size: 12px; line-height: 1.8; }
 .option-empty-state strong { color: var(--mud-palette-text-primary); font-size: 13px; font-weight: 500; }
 .option-tree { display: grid; gap: 0; min-width: 0; }
-@media (max-width: 520px) {
+@container module-option-panel (max-width: 520px) {
     .option-projection-header { flex-direction: column; }
     .option-projection-metrics { justify-content: flex-start; max-width: 100%; }
 }

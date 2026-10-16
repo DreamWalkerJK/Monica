@@ -1,0 +1,180 @@
+@* Ranked ledger: mono rank, record name, provenance metadata with capability badges, a two-role meter, a right-aligned total, and a chevron affordance. *@
+<section class="mo-vl-ledger @Class" aria-label="@AriaLabel">
+    @if (HeaderLabels is not null)
+    {
+        <div class="mo-vl-ledger-head" aria-hidden="true">
+            <span>@HeaderLabels.Rank</span>
+            <span>@HeaderLabels.Name</span>
+            <span>@HeaderLabels.Meter</span>
+            <span data-align="end">@HeaderLabels.Total</span>
+            <span></span>
+        </div>
+    }
+    @{
+        var visibleRows = VisibleRows();
+    }
+    @if (visibleRows.Count == 0)
+    {
+        <p class="mo-vl-ledger-empty">@EmptyText</p>
+    }
+    else
+    {
+        foreach (var (row, index) in visibleRows.Select(static (item, position) => (item, position)))
+        {
+            var rowClass = $"mo-vl-ledger-row {(row.Disabled ? "is-disabled" : null)}".TrimEnd();
+            if (OnRowSelected.HasDelegate)
+            {
+                <button type="button"
+                        @key="row.Key"
+                        class="@rowClass"
+                        aria-label="@RowAriaLabel(row)"
+                        @onclick="() => OnRowSelected.InvokeAsync(row)">
+                    @RenderRowCells(row, index)
+                </button>
+            }
+            else
+            {
+                <div class="@rowClass" @key="row.Key">
+                    @RenderRowCells(row, index)
+                </div>
+            }
+        }
+    }
+    @{
+        var hiddenCount = Rows.Count - visibleRows.Count;
+        var hasToggle = TopN is > 0 && Rows.Count > TopN;
+    }
+    <footer class="mo-vl-ledger-foot">
+        @if (FooterNote is not null)
+        {
+            <span>@FooterNote</span>
+        }
+        @if (hasToggle && hiddenCount > 0 && !_expanded)
+        {
+            <button type="button" class="mo-vl-link" @onclick="Expand">@ShowMoreLabel</button>
+        }
+        else if (hasToggle && _expanded)
+        {
+            <button type="button" class="mo-vl-link" @onclick="Collapse">@ShowLessLabel</button>
+        }
+    </footer>
+</section>
+
+@code {
+    /// <summary>Gets or sets the ranked rows in descending order of importance.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<MoLedgerRow> Rows { get; set; } = [];
+
+    /// <summary>Gets or sets the localized accessible name for the ledger.</summary>
+    [Parameter, EditorRequired] public string AriaLabel { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets localized header labels; omit to hide the header row.</summary>
+    [Parameter] public MoLedgerHeaderLabels? HeaderLabels { get; set; }
+
+    /// <summary>Gets or sets the number of rows shown before the explicit expand control; null or non-positive shows all rows.</summary>
+    [Parameter] public int? TopN { get; set; }
+
+    /// <summary>Gets or sets the localized text shown when the ledger has no rows.</summary>
+    [Parameter] public string? EmptyText { get; set; }
+
+    /// <summary>Gets or sets the footer summary of the remainder, such as a hidden-row count with the stated denominator.</summary>
+    [Parameter] public string? FooterNote { get; set; }
+
+    /// <summary>Gets or sets the localized label of the explicit expand control.</summary>
+    [Parameter] public string ShowMoreLabel { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the localized label that collapses the ledger back to its top N.</summary>
+    [Parameter] public string ShowLessLabel { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the inspection callback, including rows representing disabled records; rows render statically without it.</summary>
+    [Parameter] public EventCallback<MoLedgerRow> OnRowSelected { get; set; }
+
+    /// <summary>Gets or sets an optional identification class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private bool _expanded;
+
+    private int EffectiveTopN => TopN is int limit && limit > 0 ? limit : 0;
+
+    private IReadOnlyList<MoLedgerRow> VisibleRows()
+    {
+        if (!_expanded && EffectiveTopN > 0 && Rows.Count > EffectiveTopN)
+        {
+            return Rows.Take(EffectiveTopN).ToArray();
+        }
+
+        return Rows;
+    }
+
+    private string RowAriaLabel(MoLedgerRow row) => string.IsNullOrWhiteSpace(row.Total)
+        ? row.Name
+        : $"{row.Name}, {row.Total}";
+
+    private RenderFragment RenderRowCells(MoLedgerRow row, int index) => __builder =>
+    {
+        <span class="mo-vl-ledger-rank">@(index + 1)</span>
+        <span class="mo-vl-ledger-id">
+            <span class="mo-vl-ledger-name">@row.Name</span>
+            <span class="mo-vl-ledger-meta">
+                @if (!string.IsNullOrWhiteSpace(row.Metadata))
+                {
+                    <span class="mo-vl-ledger-meta-text">@row.Metadata</span>
+                }
+                @if (row.Badges is { Count: > 0 })
+                {
+                    foreach (var badge in row.Badges)
+                    {
+                        <span class="mo-vl-badge @badge.Role.ToCssClass()">@badge.Text</span>
+                    }
+                }
+            </span>
+        </span>
+        <span class="mo-vl-ledger-metercell">
+            @if (row.MeterScale > 0 && (row.PrimaryValue > 0 || row.SecondaryValue > 0))
+            {
+                var primaryWidth = Math.Clamp(row.PrimaryValue / row.MeterScale * 100, 0, 100);
+                var secondaryWidth = Math.Clamp(row.SecondaryValue / row.MeterScale * 100, 0, 100 - primaryWidth);
+                <span class="mo-vl-meter" aria-hidden="true">
+                    @if (primaryWidth > 0)
+                    {
+                        <span class="mo-vl-meter__seg mo-vl-meter__seg--primary" style="@WidthStyle(primaryWidth)"></span>
+                    }
+                    @if (secondaryWidth > 0)
+                    {
+                        <span class="mo-vl-meter__seg mo-vl-meter__seg--info" style="@WidthStyle(secondaryWidth)"></span>
+                    }
+                </span>
+                @if (row.MeterPrimaryCaption is not null || row.MeterSecondaryCaption is not null)
+                {
+                    <span class="mo-vl-meter-cap">
+                        @if (row.MeterPrimaryCaption is not null)
+                        {
+                            <span class="mo-vl-meter-cap--primary"><i aria-hidden="true"></i>@row.MeterPrimaryCaption</span>
+                        }
+                        @if (row.MeterSecondaryCaption is not null)
+                        {
+                            <span class="mo-vl-meter-cap--info"><i aria-hidden="true"></i>@row.MeterSecondaryCaption</span>
+                        }
+                    </span>
+                }
+            }
+        </span>
+        <span class="mo-vl-ledger-total @(row.TotalWarn ? "mo-vl-ledger-total--warn" : null)">@row.Total</span>
+        @if (OnRowSelected.HasDelegate)
+        {
+            <span class="mo-vl-ledger-chevron" aria-hidden="true">
+                <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" />
+            </span>
+        }
+        else
+        {
+            <span class="mo-vl-ledger-chevron" aria-hidden="true"></span>
+        }
+    };
+
+    private void Expand() => _expanded = true;
+
+    private void Collapse() => _expanded = false;
+
+    private static string WidthStyle(double percent) =>
+        FormattableString.Invariant($"width:{percent.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}%");
+}

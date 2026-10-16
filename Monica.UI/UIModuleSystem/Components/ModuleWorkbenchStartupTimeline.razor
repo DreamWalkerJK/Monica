@@ -1,0 +1,281 @@
+@using Microsoft.Extensions.Localization
+@using System.Globalization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.Core.Modularity.Models
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<div class="startup-timeline">
+    <header class="timeline-head">
+        <p>@L["Timeline:Origin"]</p>
+        @if (SystemStageCount > 0)
+        {
+            <button type="button" class="timeline-disclosure" aria-expanded="@(_showIndividualStages ? "true" : "false")" @onclick="ToggleStages">
+                <span>@(_showIndividualStages ? L["Timeline:Collapse"] : L["Timeline:Expand", SystemStageCount])</span>
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
+            </button>
+        }
+    </header>
+
+    @if (_lanes.Count == 0)
+    {
+        <p class="timeline-empty">@L["Timeline:Empty"]</p>
+    }
+    else
+    {
+        <div class="timeline-chart @(_showIndividualStages ? "is-expanded" : null)">
+            <div class="timeline-axis" aria-hidden="true">
+                <span></span>
+                <div class="timeline-track">
+                    @foreach (var tick in AxisTicks())
+                    {
+                        <span class="timeline-tick @(tick == DomainMs ? "is-end" : tick > 0 ? "is-interior" : null)" style="@LeftStyle(tick)">@TickText(tick)</span>
+                    }
+                </div>
+            </div>
+            <div class="timeline-lanes">
+                @foreach (var lane in _lanes)
+                {
+                    var isActive = lane.Id == SelectedLane?.Id;
+                    <button type="button" class="timeline-lane @(isActive ? "is-active" : null) @lane.CssClass"
+                            aria-label="@LaneAriaLabel(lane)" aria-pressed="@(isActive ? "true" : "false")"
+                            @onclick="() => SelectLane(lane)">
+                        <span class="timeline-label">
+                            <i class="timeline-dot" aria-hidden="true"></i>
+                            <span class="timeline-name">@lane.Name</span>
+                        </span>
+                        <span class="timeline-track">
+                            @foreach (var segment in lane.Spans)
+                            {
+                                <i class="timeline-bar @(segment.IsFailed ? "is-failed" : null) @(!segment.IsComplete ? "is-live" : null)" style="@BarStyle(segment)" aria-hidden="true"></i>
+                            }
+                            <span class="timeline-rail" aria-hidden="true"></span>
+                        </span>
+                    </button>
+                }
+                <div class="timeline-grid" aria-hidden="true">
+                    @foreach (var tick in AxisTicks().Where(tick => tick > 0))
+                    {
+                        <i style="@LeftStyle(tick)"></i>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (SelectedLane is { } selected)
+        {
+            <div class="timeline-inspector @selected.CssClass">
+                <div class="timeline-selection">
+                    <i class="timeline-dot" aria-hidden="true"></i>
+                    <strong>@selected.Name</strong>
+                    <span>@L["Timeline:Detail:Aggregate", selected.Spans.Count, ModuleDiagnosticsDisplay.Duration(selected.Spans.Sum(static span => span.DurationMs))]</span>
+                </div>
+                <div class="timeline-span-picker">
+                    <MudSelect T="string"
+                               @key="selected.Id"
+                               Value="@SelectedSpan?.SpanId"
+                               ValueChanged="@SelectSpan"
+                               Label="@L["Timeline:Detail:Select"]"
+                               ToStringFunc="@SpanOptionText"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Dense="true"
+                               SelectionOnEnter="true"
+                               FullWidth="true"
+                               MaxHeight="320"
+                               AnchorOrigin="Origin.BottomLeft"
+                               TransformOrigin="Origin.TopLeft">
+                        @foreach (var span in selected.Spans)
+                        {
+                            var display = ModuleDiagnosticsDisplay.TraceSpan(span, Snapshot!, L);
+                            <MudSelectItem T="string" Value="@span.SpanId" @key="span.SpanId">
+                                <span class="timeline-span-option">
+                                    <span class="timeline-span-option__name">@display.Primary</span>
+                                    <span class="timeline-span-option__duration">@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</span>
+                                    <span class="timeline-span-option__detail">@display.Secondary</span>
+                                </span>
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </div>
+                @if (SelectedSpan is { } inspected)
+                {
+                    <div class="timeline-readout" aria-live="polite">
+                        <span>@L["Timeline:Detail:Interval", ModuleDiagnosticsDisplay.ExactMilliseconds(inspected.StartedOffsetMs), ModuleDiagnosticsDisplay.ExactMilliseconds(inspected.EndedOffsetMs)]</span>
+                        <strong>@L["Timeline:Detail:Duration", ModuleDiagnosticsDisplay.Duration(inspected.DurationMs)]</strong>
+                        @if (!inspected.IsComplete || inspected.IsFailed)
+                        {
+                            <span class="timeline-span-state">@L[inspected.IsFailed ? "Enums:Outcome:Failed" : "Common:Live"]</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        <footer class="timeline-foot">
+            <p>@L["Timeline:Note:Intervals"]</p>
+        </footer>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+
+    private sealed record TimelineLane(string Id, string Name, IReadOnlyList<ModuleDiagnosticsTraceSpan> Spans, string CssClass);
+
+    private bool _showIndividualStages;
+    private string? _selectedLaneId;
+    private string? _selectedSpanId;
+    private string? _lastExternalSpanId;
+    private ModuleSystemWorkbenchSession? _selectionSession;
+    private IReadOnlyList<TimelineLane> _lanes = [];
+    private double _domainMs = 1;
+
+    private ModuleDiagnosticsSnapshot? Snapshot => Session.Snapshot;
+    private int SystemStageCount => Snapshot?.TraceSpans.Count(static span => span.Kind == ModuleDiagnosticsTraceSpanKind.SystemStage) ?? 0;
+    private double DomainMs => _domainMs;
+    private TimelineLane? SelectedLane => _lanes.FirstOrDefault(lane => lane.Id == _selectedLaneId) ?? _lanes.FirstOrDefault();
+    private ModuleDiagnosticsTraceSpan? SelectedSpan => SelectedLane?.Spans.FirstOrDefault(span => span.SpanId == _selectedSpanId) ?? SelectedLane?.Spans.FirstOrDefault();
+
+    protected override void OnParametersSet()
+    {
+        BuildLanes();
+        if (!ReferenceEquals(_selectionSession, Session))
+        {
+            _selectionSession = Session;
+            _lastExternalSpanId = null;
+        }
+
+        var externalSpanId = Session.SelectedTraceSpanId;
+        if (externalSpanId is null)
+        {
+            _lastExternalSpanId = null;
+        }
+        else if (externalSpanId != _lastExternalSpanId
+            && _lanes.FirstOrDefault(lane => lane.Spans.Any(span => span.SpanId == externalSpanId)) is { } lane)
+        {
+            _lastExternalSpanId = externalSpanId;
+            _selectedLaneId = lane.Id;
+            _selectedSpanId = externalSpanId;
+        }
+    }
+
+    private void ToggleStages()
+    {
+        var selectedSpanId = SelectedSpan?.SpanId;
+        _showIndividualStages = !_showIndividualStages;
+        BuildLanes();
+        if (selectedSpanId is not null && _lanes.FirstOrDefault(lane => lane.Spans.Any(span => span.SpanId == selectedSpanId)) is { } lane)
+        {
+            _selectedLaneId = lane.Id;
+            _selectedSpanId = selectedSpanId;
+        }
+    }
+
+    private void BuildLanes()
+    {
+        if (Snapshot is not { } snapshot)
+        {
+            _lanes = [];
+            return;
+        }
+
+        var traceEnd = snapshot.TraceSpans.Select(static span => span.EndedOffsetMs).DefaultIfEmpty(0).Max();
+        _domainMs = traceEnd > 0 ? traceEnd : 1;
+        var lanes = new List<TimelineLane>();
+        var stages = snapshot.TraceSpans.Where(static span => span.Kind == ModuleDiagnosticsTraceSpanKind.SystemStage).ToArray();
+        if (_showIndividualStages)
+        {
+            foreach (var stage in stages)
+            {
+                lanes.Add(new TimelineLane($"stage:{stage.SpanId}", ModuleDiagnosticsDisplay.TraceSpan(stage, snapshot, L).Primary, [stage], IsDiscovery(stage) ? "timeline-role-discovery" : "timeline-role-framework"));
+            }
+        }
+        else
+        {
+            AddGroup("framework", "Timeline:Lane:Framework", "timeline-role-framework", stages.Where(static span => !IsDiscovery(span)));
+            AddGroup("discovery", "Timeline:Lane:Discovery", "timeline-role-discovery", stages.Where(IsDiscovery));
+        }
+
+        var callbacks = snapshot.TraceSpans.Where(static span => span.Kind == ModuleDiagnosticsTraceSpanKind.ModuleCallback).ToArray();
+        AddGroup("registration", "Timeline:Lane:Registration", "timeline-role-registration", callbacks.Where(IsServiceCallback));
+        AddGroup("lifecycle", "Timeline:Lane:Lifecycle", "timeline-role-lifecycle", callbacks.Where(static span => !IsServiceCallback(span)));
+        AddGroup("work", "Timeline:Lane:Work", "timeline-role-work", snapshot.TraceSpans.Where(static span => span.Kind == ModuleDiagnosticsTraceSpanKind.StartupWork));
+        AddGroup("barriers", "Timeline:Lane:Barriers", "timeline-role-barrier", snapshot.TraceSpans.Where(static span => span.Kind == ModuleDiagnosticsTraceSpanKind.StartupBarrier));
+        _lanes = lanes;
+
+        void AddGroup(string id, string key, string cssClass, IEnumerable<ModuleDiagnosticsTraceSpan> source)
+        {
+            var spans = source.ToArray();
+            if (spans.Length > 0)
+            {
+                lanes.Add(new TimelineLane(id, L[key], spans, cssClass));
+            }
+        }
+    }
+
+    private static bool IsDiscovery(ModuleDiagnosticsTraceSpan span) => span.SystemStage is >= ModuleSystemStage.TypeDiscoveryPlanDeclaration and <= ModuleSystemStage.TypeDiscoveryRegistrationCommit;
+
+    private static bool IsServiceCallback(ModuleDiagnosticsTraceSpan span) => span.ModulePhase is ModulePhase.ConfigureBuilder or ModulePhase.ConfigureServices or ModulePhase.PostConfigureServices;
+
+    private void SelectLane(TimelineLane lane)
+    {
+        _selectedLaneId = lane.Id;
+        _selectedSpanId = null;
+    }
+
+    private void SelectSpan(string? spanId)
+    {
+        if (SelectedLane?.Spans.FirstOrDefault(span => span.SpanId == spanId) is { } span)
+        {
+            _selectedSpanId = span.SpanId;
+            _lastExternalSpanId = span.SpanId;
+            Session.SelectTraceSpan(span);
+        }
+    }
+
+    private string? SpanOptionText(string? spanId)
+    {
+        if (Snapshot?.TraceSpans.FirstOrDefault(span => span.SpanId == spanId) is not { } span)
+        {
+            return null;
+        }
+
+        var display = ModuleDiagnosticsDisplay.TraceSpan(span, Snapshot!, L);
+        return $"{display.Primary} · {display.Secondary} · {ModuleDiagnosticsDisplay.Duration(span.DurationMs)}";
+    }
+
+    private string LaneAriaLabel(TimelineLane lane) => lane.Spans.Count == 1
+        ? L["Timeline:Lane:Aria", lane.Name, ModuleDiagnosticsDisplay.Duration(lane.Spans[0].DurationMs)]
+        : L["Timeline:Lane:AggregateAria", lane.Name, lane.Spans.Count, ModuleDiagnosticsDisplay.Duration(lane.Spans.Sum(static span => span.DurationMs))];
+
+    private IEnumerable<double> AxisTicks()
+    {
+        var target = DomainMs / 4;
+        var magnitude = Math.Pow(10, Math.Floor(Math.Log10(target)));
+        var normalized = target / magnitude;
+        var step = (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude;
+        yield return 0;
+        for (var tick = step; tick < DomainMs - step * 0.45; tick += step)
+        {
+            yield return tick;
+        }
+        yield return DomainMs;
+    }
+
+    private string TickText(double milliseconds)
+    {
+        var scale = DomainMs >= 1000 ? 1000d : 1d;
+        var precision = Math.Clamp((int)Math.Ceiling(-Math.Log10(DomainMs / scale / 4)) + 1, 1, 6);
+        var format = "0." + new string('#', precision);
+        var value = (milliseconds / scale).ToString(format, CultureInfo.InvariantCulture);
+        return $"{value} {(scale > 1 ? "s" : "ms")}";
+    }
+
+    private string LeftStyle(double milliseconds) => $"left:{Percent(milliseconds).ToString("0.###", CultureInfo.InvariantCulture)}%";
+
+    private string BarStyle(ModuleDiagnosticsTraceSpan span) => $"left:{Percent(span.StartedOffsetMs).ToString("0.###", CultureInfo.InvariantCulture)}%;width:{Math.Max(0, Percent(span.EndedOffsetMs) - Percent(span.StartedOffsetMs)).ToString("0.###", CultureInfo.InvariantCulture)}%";
+
+    private double Percent(double milliseconds) => Math.Clamp(milliseconds / DomainMs * 100, 0, 100);
+}

@@ -7,3 +7,14 @@
 .relationship-button:focus-visible { outline:2px solid var(--mud-palette-primary); outline-offset:2px; }
 .relationship-list code { min-width:0; color:var(--module-workbench-muted-text, var(--mud-palette-text-secondary)); font-family:var(--mo-font-family-mono); font-size:10px; line-height:1.7; white-space:normal; overflow-wrap:anywhere; }
 .relationship-list > span { padding:10px 0; color:var(--module-workbench-muted-text, var(--mud-palette-text-secondary)); font-size:12px; line-height:1.7; }
+
+.relationship-list--compact { display:flex; flex-wrap:wrap; align-items:flex-start; gap:6px; }
+.relationship-list--compact ::deep .mud-typography { display:flex; align-items:baseline; gap:6px; flex:0 0 100%; margin:0 0 2px; color:var(--module-workbench-muted-text, var(--mud-palette-text-secondary)); font-size:12px; line-height:1.6; }
+.relationship-count { font-family:var(--mo-font-family-mono); font-weight:400; }
+.relationship-list--compact > div,
+.relationship-list--compact .relationship-button { display:inline-flex; gap:0; width:auto; max-width:100%; padding:4px 10px; border:1px solid var(--mud-palette-lines-inputs); border-radius:7px; background:var(--mud-palette-surface); }
+.relationship-list--compact strong { font-family:var(--mo-font-family-mono); font-size:12px; line-height:1.5; font-weight:400; white-space:normal; overflow-wrap:anywhere; }
+.relationship-list--compact code { display:none; }
+.relationship-list--compact .relationship-button:hover { border-color:var(--mud-palette-primary); background:var(--mud-palette-surface); color:var(--mud-palette-primary); }
+.relationship-list--compact .relationship-button:focus-visible { border-color:var(--mud-palette-primary); color:var(--mud-palette-primary); outline:2px solid var(--mud-palette-primary); outline-offset:2px; }
+.relationship-list--compact > span { flex-basis:100%; padding:0; font-size:12px; }

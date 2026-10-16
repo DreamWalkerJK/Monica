@@ -1,5 +1,6 @@
 
 @using Microsoft.Extensions.Localization
+@using System.Globalization
 @using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.State
@@ -35,28 +36,16 @@
             </header>
 
             <div class="topology-scope-summary">
-                <span class="topology-scope-evidence">
-                    <MudIcon Icon="@Icons.Material.Outlined.Hub" Size="Size.Small" />
-                    @(Session.ShowFullDependencyGraph
-                        ? L["Dependencies:Graph:FullHostMode"]
-                        : L["Dependencies:Graph:NeighborhoodMode", Session.DependencyNeighborhoodDepth])
-                </span>
-                <dl class="topology-facts" aria-label="@L["Dependencies:Overview:Label"]">
+                <div class="topology-scope-evidence">
+                    <strong>@Session.VisibleDependencyModules.Count</strong>
                     <div>
-                        <dt>@L["Dependencies:Overview:Modules"]</dt>
-                        <dd title="@L["Dependencies:Graph:Nodes", Session.VisibleDependencyModules.Count]">@Session.VisibleDependencyModules.Count</dd>
+                        <span>@L["Dependencies:Overview:Modules"]</span>
+                        <small>@(Session.ShowFullDependencyGraph
+                            ? L["Dependencies:Graph:FullHostMode"]
+                            : L["Dependencies:Graph:NeighborhoodMode", Session.DependencyNeighborhoodDepth])</small>
                     </div>
-                    <div>
-                        <dt>@L["Dependencies:Overview:Edges"]</dt>
-                        <dd title="@L["Dependencies:Graph:Edges", Session.VisibleDependencyEdges.Count]">@Session.VisibleDependencyEdges.Count</dd>
-                    </div>
-                    <div>
-                        <dt>@L["Dependencies:Overview:Depth"]</dt>
-                        <dd>@Session.VisibleDependencyModules.Select(static module => module.DependencyDepth).DefaultIfEmpty().Max()</dd>
-                    </div>
-                    <div><dt>@L["Dependencies:Overview:UiModules"]</dt><dd>@Session.VisibleDependencyModules.Count(static module => module.IsUiModule)</dd></div>
-                    <div><dt>@L["Dependencies:Overview:WebModules"]</dt><dd>@Session.VisibleDependencyModules.Count(static module => module.IsWebModule)</dd></div>
-                </dl>
+                </div>
+                <div class="topology-facts"><MoFactGrid Facts="@TopologyFacts" /></div>
             </div>
 
             <div class="graph-command-deck" aria-label="@L["Dependencies:Controls:Label"]">
@@ -145,7 +134,7 @@
 
                 @if (Session.SelectedModule is { } selected)
                 {
-                    <aside class="dependency-inspector" aria-label="@L["Aria:DependencyInspector"]">
+                    <aside class="dependency-inspector @(selected.IsUiModule ? "mo-vl-role--info" : selected.IsWebModule ? "mo-vl-role--secondary" : "mo-vl-role--primary")" aria-label="@L["Aria:DependencyInspector"]" @key="selected.ModuleKey">
                         <header class="selected-module-identity">
                             <span class="topology-eyebrow">@L["Dependencies:Selected:Eyebrow"]</span>
                             <h3>@selected.TypeName</h3>
@@ -209,6 +198,16 @@
 
     [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
     [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    private IReadOnlyList<MoFact> TopologyFacts => Session.Snapshot is null
+        ? []
+        :
+        [
+            new(L["Dependencies:Overview:Edges"], Session.VisibleDependencyEdges.Count.ToString(CultureInfo.InvariantCulture)),
+            new(L["Dependencies:Overview:Depth"], Session.VisibleDependencyModules.Select(static module => module.DependencyDepth).DefaultIfEmpty().Max().ToString(CultureInfo.InvariantCulture)),
+            new(L["Dependencies:Overview:UiModules"], Session.VisibleDependencyModules.Count(static module => module.IsUiModule).ToString(CultureInfo.InvariantCulture)),
+            new(L["Dependencies:Overview:WebModules"], Session.VisibleDependencyModules.Count(static module => module.IsWebModule).ToString(CultureInfo.InvariantCulture)),
+        ];
 
     private void SetGraphScope(bool fullHost) => Session.SetShowFullDependencyGraph(fullHost);
     private void SetLayout(string value) => _layout = value;

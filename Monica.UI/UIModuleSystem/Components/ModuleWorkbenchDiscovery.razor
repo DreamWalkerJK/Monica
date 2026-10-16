@@ -1,4 +1,5 @@
 @using Microsoft.Extensions.Localization
+@using System.Globalization
 @using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.State
@@ -14,20 +15,20 @@
                 <h2 id="discovery-title">@L["Discovery:Title"]</h2>
                 <p>@L["Discovery:Description"]</p>
             </div>
-            <dl class="discovery-counts" aria-label="@L["Aria:SummaryMetrics"]">
-                <div class="discovery-count discovery-count--types"><dt>@L["Discovery:Counts:Types"]</dt><dd>@snapshot.TypeDiscovery.Statistics.EnumeratedTypeCount</dd></div>
-                <div class="discovery-count"><dt>@L["Discovery:Counts:Assemblies"]</dt><dd>@snapshot.TypeDiscovery.Statistics.AssemblyCount</dd></div>
-                <div class="discovery-count"><dt>@L["Discovery:Counts:Plans"]</dt><dd>@snapshot.TypeDiscovery.Statistics.PlanCount</dd></div>
-                <div class="discovery-count"><dt>@L["Discovery:Counts:Queries"]</dt><dd>@snapshot.TypeDiscovery.Statistics.DistinctQueryCount</dd></div>
-                <div class="discovery-count"><dt>@L["Discovery:Counts:Matches"]</dt><dd>@snapshot.TypeDiscovery.Statistics.MatchCount</dd></div>
-            </dl>
+            <div class="discovery-type-total">
+                <span>@snapshot.TypeDiscovery.Statistics.EnumeratedTypeCount.ToString("N0", CultureInfo.CurrentCulture)</span>
+                <small>@L["Discovery:Counts:Types"]</small>
+            </div>
+            <div class="discovery-counts"><MoFactGrid Facts="@DiscoveryFacts" /></div>
             <p class="discovery-count-scope">@L["Discovery:Counts:ScopeHint"]</p>
         </header>
 
         <section class="discovery-stage-ledger" aria-labelledby="discovery-stages-title">
             <header class="discovery-stage-heading">
+                <span class="discovery-stage-heading__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" /></span>
                 <h3 id="discovery-stages-title">@L["Discovery:Stages:Title"]</h3>
                 <p>@L["Discovery:Stages:Description"]</p>
+                <span class="discovery-stage-total">@L["Performance:Waterfall:Duration", ModuleDiagnosticsDisplay.Duration(TotalStageDurationMs)]</span>
             </header>
             @if (snapshot.TypeDiscovery.Stages.Length == 0)
             {
@@ -35,17 +36,20 @@
             }
             else
             {
-                <ol class="discovery-stages" style="@($"--discovery-stage-count: {snapshot.TypeDiscovery.Stages.Length};")">
+                <ol class="discovery-stages">
                     @for (var stageIndex = 0; stageIndex < snapshot.TypeDiscovery.Stages.Length; stageIndex++)
                     {
                         var stage = snapshot.TypeDiscovery.Stages[stageIndex];
-                        <li class="discovery-stage">
-                            <div class="discovery-stage-head">
-                                <span class="discovery-stage-marker" aria-hidden="true"><MudIcon Icon="@StageIcon(stage.Stage)" Size="Size.Small" /></span>
-                                <span class="discovery-stage-number" aria-hidden="true">@((stageIndex + 1).ToString("D2"))</span>
-                            </div>
+                        <li class="discovery-stage @StageRole(stage.Stage).ToCssClass()" @key="stage.SpanId">
+                            <span class="discovery-stage-number" aria-hidden="true">@((stageIndex + 1).ToString("D2"))</span>
                             <span class="discovery-stage-name">@ModuleDiagnosticsDisplay.Stage(stage.Stage, L)</span>
-                            <strong class="discovery-stage-duration">@ModuleDiagnosticsDisplay.Duration(stage.DurationMs)</strong>
+                            <MoTwoRoleMeter PrimaryValue="@stage.DurationMs"
+                                            ScaleMaximum="@TotalStageDurationMs"
+                                            PrimaryRole="@StageRole(stage.Stage)"
+                                            AccessibleDescription="@L["Performance:Discovery:StageAria",
+                                                ModuleDiagnosticsDisplay.Stage(stage.Stage, L),
+                                                ModuleDiagnosticsDisplay.Duration(stage.DurationMs)]" />
+                            <strong class="discovery-stage-duration" title="@ModuleDiagnosticsDisplay.ExactMilliseconds(stage.DurationMs)">@ModuleDiagnosticsDisplay.Duration(stage.DurationMs)</strong>
                             <details class="discovery-stage-evidence">
                                 <summary>@L["Discovery:Stages:SpanId"]</summary>
                                 <IdentifierValue Value="@stage.SpanId" />
@@ -97,13 +101,7 @@
                     <h3 id="commit-title">@L["Discovery:Commit:Title"]</h3>
                     <p>@L["Discovery:Commit:Description"]</p>
                 </header>
-                <dl class="commit-facts">
-                    <div><dt>@L["Discovery:Commit:Callbacks"]</dt><dd>@snapshot.TypeDiscovery.Statistics.CommitCallbackCount</dd></div>
-                    <div><dt>@L["Discovery:Commit:Added"]</dt><dd>@snapshot.TypeDiscovery.Statistics.ServiceRegistrations.AddedCount</dd></div>
-                    <div><dt>@L["Discovery:Commit:Replaced"]</dt><dd>@snapshot.TypeDiscovery.Statistics.ServiceRegistrations.ReplacedCount</dd></div>
-                    <div><dt>@L["Discovery:Commit:Skipped"]</dt><dd>@snapshot.TypeDiscovery.Statistics.ServiceRegistrations.SkippedCount</dd></div>
-                    <div><dt>@L["Discovery:Commit:Excluded"]</dt><dd>@snapshot.TypeDiscovery.Statistics.ExcludedTypeCount</dd></div>
-                </dl>
+                <div class="discovery-commit-facts"><MoFactGrid Facts="@CommitFacts" /></div>
             </section>
         </div>
     </div>
@@ -112,17 +110,37 @@
 @code {
     [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
 
+    private IReadOnlyList<MoFact> DiscoveryFacts => Session.Snapshot is { } snapshot
+        ?
+        [
+            new(L["Discovery:Counts:Assemblies"], snapshot.TypeDiscovery.Statistics.AssemblyCount.ToString(CultureInfo.InvariantCulture)),
+            new(L["Discovery:Counts:Plans"], snapshot.TypeDiscovery.Statistics.PlanCount.ToString(CultureInfo.InvariantCulture)),
+            new(L["Discovery:Counts:Queries"], snapshot.TypeDiscovery.Statistics.DistinctQueryCount.ToString(CultureInfo.InvariantCulture)),
+            new(L["Discovery:Counts:Matches"], snapshot.TypeDiscovery.Statistics.MatchCount.ToString(CultureInfo.InvariantCulture)),
+        ]
+        : [];
+
+    private IReadOnlyList<MoFact> CommitFacts => Session.Snapshot is { } snapshot
+        ?
+        [
+            new(L["Discovery:Commit:Callbacks"], snapshot.TypeDiscovery.Statistics.CommitCallbackCount.ToString(CultureInfo.InvariantCulture)),
+            new(L["Discovery:Commit:Added"], snapshot.TypeDiscovery.Statistics.ServiceRegistrations.AddedCount.ToString(CultureInfo.InvariantCulture)),
+            new(L["Discovery:Commit:Replaced"], snapshot.TypeDiscovery.Statistics.ServiceRegistrations.ReplacedCount.ToString(CultureInfo.InvariantCulture)),
+            new(L["Discovery:Commit:Skipped"], snapshot.TypeDiscovery.Statistics.ServiceRegistrations.SkippedCount.ToString(CultureInfo.InvariantCulture)),
+            new(L["Discovery:Commit:Excluded"], snapshot.TypeDiscovery.Statistics.ExcludedTypeCount.ToString(CultureInfo.InvariantCulture)),
+        ]
+        : [];
+
+    private double TotalStageDurationMs => Session.Snapshot?.TypeDiscovery.Stages.Sum(static stage => stage.DurationMs) ?? 0;
+
     private string ConsumerNames(TypeDiscoveryQuerySummary query) => string.Join(", ", query.ConsumerModules.Select(key =>
         Session.Snapshot?.Modules.FirstOrDefault(module => module.ModuleKey == key)?.TypeName ?? key.Value));
 
-    private static string StageIcon(ModuleSystemStage stage) => stage switch
+    private static MoVisualRole StageRole(ModuleSystemStage stage) => stage switch
     {
-        ModuleSystemStage.TypeDiscoveryPlanDeclaration => Icons.Material.Outlined.Article,
-        ModuleSystemStage.TypeDiscoveryAssemblyResolution => Icons.Material.Outlined.Inventory2,
-        ModuleSystemStage.TypeDiscoveryTypeEnumeration => Icons.Material.Outlined.DataArray,
-        ModuleSystemStage.TypeDiscoveryQueryEvaluation => Icons.Material.Outlined.FilterAlt,
-        ModuleSystemStage.TypeDiscoveryRegistrationCommit => Icons.Material.Outlined.DoneAll,
-        _ => Icons.Material.Outlined.Settings
+        ModuleSystemStage.TypeDiscoveryAssemblyResolution or ModuleSystemStage.TypeDiscoveryTypeEnumeration => MoVisualRole.Info,
+        ModuleSystemStage.TypeDiscoveryQueryEvaluation => MoVisualRole.Secondary,
+        _ => MoVisualRole.Primary
     };
 
 }
