@@ -33,6 +33,7 @@
                 @if (!ReadOnly)
                 {
                     <MudNumericField @bind-Value="ttlSeconds"
+                                     HideSpinButtons="true"
                                      Disabled="isSaving"
                                      UserAttributes="structuredInputAttributes"
                                      Label="@L["KeyEditor:Labels:TTL"]"

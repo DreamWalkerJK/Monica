@@ -5,10 +5,12 @@
 @using Monica.StateStore.UI.Models
 @using Monica.StateStore.UI.Services
 @using Monica.StateStore.UI.UIStateStore.Components
+@using Monica.StateStore.UI.Support
 @using Monica.Core.Results
 @inject StateStoreUIService StateStoreService
 @inject IOptions<ModuleStateStoreUIOption> Options
 @inject IStringLocalizer<StateStoreResource> L
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <PageTitle>@L["Dashboard:PageTitle"]</PageTitle>
@@ -30,13 +32,17 @@
     {
         <StateStoreKeyExplorer Providers="_providers"
                                Options="Options.Value"
+                               ProviderIdentity="@ProviderIdentity"
+                               ProviderIdentityChanged="ChangeProviderRoute"
                                OnRefreshProviders="LoadProvidersAsync">
             <HeaderContent>@PageIdentity</HeaderContent>
+            <NavigationContent><StateStoreWorkbenchNavigation ProviderIdentity="@ProviderIdentity" /></NavigationContent>
         </StateStoreKeyExplorer>
     }
     else
     {
         @PageIdentity
+        <StateStoreWorkbenchNavigation ProviderIdentity="@ProviderIdentity" />
         @if (_providerError is null)
         {
             <section class="provider-empty-state" role="status"><MoContentState>
@@ -55,18 +61,19 @@
 
 @code {
     public const string PAGE_URL = "/state-store-dashboard";
+    /// <summary>Gets or sets the exact registration selected by a provider-page deep link.</summary>
+    [SupplyParameterFromQuery(Name = "provider")] public string? ProviderIdentity { get; set; }
 
     private List<StateStoreProviderInfo> _providers = [];
     private string? _providerError;
     private bool _disposed;
 
     private RenderFragment PageIdentity => @<header class="state-page-identity">
+        <span class="eyebrow">@L["Workbench:Eyebrow"]</span>
         <h1>@L["Dashboard:Title"]</h1>
-        @if (_providers.Count > 0 || _providerError is null)
-        {
-            <p>@(_providers.Count == 1 ? L["Dashboard:Summary:RegisteredProvider"] : L["Dashboard:Summary:RegisteredProviders", _providers.Count])</p>
-        }
     </header>;
+
+    private void ChangeProviderRoute(string? identity) => Navigation.NavigateTo(StateStoreUi.Browser(identity));
 
     protected override Task OnInitializedAsync() => LoadProvidersAsync();
 

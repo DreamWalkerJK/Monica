@@ -58,6 +58,13 @@ public class ModuleStateStoreUI : MonicaModule<ModuleStateStoreUIOption>, IUIMod
                     category,
                     addToNav: true,
                     navOrder: 20);
+                registry.RegisterLocalizedPage<UIStateStoreProvidersPage, StateStoreResource>(
+                    UIStateStoreProvidersPage.PAGE_URL,
+                    "Workbench:Providers",
+                    MoIcons.Database,
+                    category,
+                    addToNav: true,
+                    navOrder: 10);
             }));
     }
 
