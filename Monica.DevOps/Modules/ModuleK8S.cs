@@ -311,8 +311,8 @@ public class ModuleK8SOption : MinimalApiModuleOptions<ModuleK8S>
 {
     /// <summary>
     /// Gets or sets optional in-cluster NodePort address publication. Disabled by default; when enabled,
-    /// one attempt completes in the host's StartingAsync phase before any hosted service StartAsync runs.
-    /// Consumers must read the published environment variable after this phase, rather than in constructors.
+    /// one attempt runs in the background without delaying host startup. Addresses published after initial
+    /// registration are collected by service discovery on a subsequent heartbeat when configured as metadata.
     /// </summary>
     public K8SNodePortAddressOptions NodePortAddresses { get; set; } = new();
 

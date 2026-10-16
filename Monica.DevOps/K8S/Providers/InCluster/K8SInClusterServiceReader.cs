@@ -28,8 +28,8 @@ internal sealed class K8SInClusterServiceReader(ILogger<K8SInClusterServiceReade
         var port = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_PORT_HTTPS");
         var serviceUrl = $"https://{host}:{port}/api/v1/namespaces/{namespaceName}/services/{serviceName}";
 
-        var token = await File.ReadAllTextAsync(
-            Path.Combine(SERVICE_ACCOUNT_DIRECTORY, "token"), cancellationToken);
+        var token = (await File.ReadAllTextAsync(
+            Path.Combine(SERVICE_ACCOUNT_DIRECTORY, "token"), cancellationToken)).Trim();
         using var caCertificate = X509CertificateLoader.LoadCertificateFromFile(
             Path.Combine(SERVICE_ACCOUNT_DIRECTORY, "ca.crt"));
         using var handler = new HttpClientHandler();

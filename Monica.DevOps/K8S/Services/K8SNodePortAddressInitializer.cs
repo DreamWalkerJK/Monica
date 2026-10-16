@@ -6,18 +6,19 @@ using Monica.Modules;
 namespace Monica.DevOps.K8S.Services;
 
 /// <summary>
-/// Publishes external addresses before hosted services begin registering instance metadata.
+/// Publishes external addresses once in the background without delaying host startup.
 /// </summary>
 internal sealed class K8SNodePortAddressInitializer(
     K8SNodePortAddressResolver resolver,
     IOptions<ModuleK8SOption> options,
-    ILogger<K8SNodePortAddressInitializer> logger) : IHostedLifecycleService
+    ILogger<K8SNodePortAddressInitializer> logger) : BackgroundService
 {
-    public async Task StartingAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
-            var addresses = await resolver.ResolveAsync(cancellationToken);
+            var addresses = await resolver.ResolveAsync(stoppingToken);
+            stoppingToken.ThrowIfCancellationRequested();
             if (addresses is not null)
             {
                 Environment.SetEnvironmentVariable(
@@ -25,7 +26,7 @@ internal sealed class K8SNodePortAddressInitializer(
                     string.Join(";", addresses));
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
         }
         catch (Exception exception)
@@ -33,14 +34,4 @@ internal sealed class K8SNodePortAddressInitializer(
             logger.LogError(exception, "Failed to publish Kubernetes Service NodePort addresses.");
         }
     }
-
-    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    public Task StartedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    public Task StoppingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

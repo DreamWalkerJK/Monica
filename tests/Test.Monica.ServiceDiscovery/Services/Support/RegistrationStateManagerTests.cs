@@ -17,9 +17,11 @@ namespace Test.Monica.ServiceDiscovery.Services.Support;
 public sealed class RegistrationStateManagerTests
 {
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
     public async Task RegisterOrHeartbeatAsync_WhenMetadataIsConfigured_ShouldPersistCurrentMetadataOnEveryWrite(
+        bool initiallyMissing,
         bool changeEnvironmentValue)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -32,7 +34,7 @@ public sealed class RegistrationStateManagerTests
 
         try
         {
-            Environment.SetEnvironmentVariable(environmentVariable, initialAddresses);
+            Environment.SetEnvironmentVariable(environmentVariable, initiallyMissing ? null : initialAddresses);
             using var memoryCache = new MemoryCache(new MemoryCacheOptions());
             var store = new MemoryCacheProvider(memoryCache, NullLogger<MemoryCacheProvider>.Instance);
             var options = Options.Create(new ModuleServiceDiscoveryOption
@@ -57,7 +59,14 @@ public sealed class RegistrationStateManagerTests
             registration.ErrorMessage.Should().BeNull();
             var registered = await store.GetStateAsync<InstanceState>(registrationKey, cancellationToken);
             registered.Should().NotBeNull();
-            registered!.Metadata.Should().Contain(environmentVariable, initialAddresses);
+            if (initiallyMissing)
+            {
+                registered!.Metadata.Should().NotContainKey(environmentVariable);
+            }
+            else
+            {
+                registered!.Metadata.Should().Contain(environmentVariable, initialAddresses);
+            }
             registered.Metadata.Should().Contain(
                 IServiceDiscoveryClientInfo.LISTENING_ADDRESS_METADATA_KEY, listeningAddress);
 
@@ -75,6 +84,18 @@ public sealed class RegistrationStateManagerTests
                 IServiceDiscoveryClientInfo.LISTENING_ADDRESS_METADATA_KEY, listeningAddress);
             heartbeating.RegistrationTime.Should().Be(registered.RegistrationTime);
             heartbeating.LastHeartbeatTime.Should().BeOnOrAfter(registered.LastHeartbeatTime);
+
+            var followingHeartbeat = await manager.RegisterOrHeartbeatAsync(cancellationToken);
+
+            followingHeartbeat.Success.Should().BeTrue();
+            followingHeartbeat.ErrorMessage.Should().BeNull();
+            var following = await store.GetStateAsync<InstanceState>(registrationKey, cancellationToken);
+            following.Should().NotBeNull();
+            following!.Metadata.Should().Contain(environmentVariable, expectedAddresses);
+            following.Metadata.Should().Contain(
+                IServiceDiscoveryClientInfo.LISTENING_ADDRESS_METADATA_KEY, listeningAddress);
+            following.RegistrationTime.Should().Be(registered.RegistrationTime);
+            following.LastHeartbeatTime.Should().BeOnOrAfter(heartbeating.LastHeartbeatTime);
 
             var discovered = (await manager.GetAllInstancesAsync(cancellationToken)).Should().ContainSingle().Subject;
             discovered.Metadata.Should().Contain(environmentVariable, expectedAddresses);

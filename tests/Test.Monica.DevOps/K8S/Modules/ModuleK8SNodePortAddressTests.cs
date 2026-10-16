@@ -1,7 +1,5 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Monica.Core.Modularity.Abstractions;
 using Monica.DevOps.K8S.Providers.InCluster;
@@ -35,11 +33,8 @@ public sealed class ModuleK8SNodePortAddressTests
         Assert.Equal("previous-address", environment.Output);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task AddK8S_WhenPublicationIsPending_ShouldPublishBeforeEveryHostedServiceStarts(
-        bool startConcurrently)
+    [Fact]
+    public async Task AddK8S_WhenPublicationIsPending_ShouldStartTheHostAndPublishWhenTheRequestCompletes()
     {
         using var environment = new NodePortAddressTestEnvironment();
         var requestStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -49,32 +44,26 @@ public sealed class ModuleK8SNodePortAddressTests
             requestStarted.TrySetResult(true);
             return response.Task.WaitAsync(cancellationToken);
         });
-        var beforeModule = new AddressStartObserver(environment.OutputVariable);
-        var afterModule = new AddressStartObserver(environment.OutputVariable);
-        var factory = new NodePortAddressApplicationFactory(
-            environment, enabled: true, startConcurrently, beforeModule, afterModule);
-        var startup = factory.CreateAsync(
+        var startup = new NodePortAddressApplicationFactory(environment, enabled: true).CreateAsync(
             scenario => scenario.With<IK8SInClusterServiceReader>(reader),
             TestContext.Current.CancellationToken);
         MonicaTestApplication? application = null;
         try
         {
+            application = await startup.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
             await requestStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+            var publication = GetInitializer(application).ExecuteTask!;
 
-            Assert.False(beforeModule.Started);
-            Assert.False(afterModule.Started);
+            Assert.False(response.Task.IsCompleted);
+            Assert.False(publication.IsCompleted);
             Assert.Equal("previous-address", environment.Output);
 
             response.SetResult(NODE_PORT_SERVICE);
-            application = await startup;
+            await publication.WaitAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal(EXPECTED_ADDRESSES, environment.Output);
-            Assert.Equal(EXPECTED_ADDRESSES, beforeModule.ValueWhenStarted);
-            Assert.Equal(EXPECTED_ADDRESSES, afterModule.ValueWhenStarted);
             Assert.Equal("inventory-service", reader.LastServiceName);
             Assert.Equal(1, reader.CallCount);
-            Assert.Single(application.Services.GetServices<IHostedService>()
-                .OfType<K8SNodePortAddressInitializer>());
         }
         finally
         {
@@ -110,15 +99,11 @@ public sealed class ModuleK8SNodePortAddressTests
                 """{"spec":{"type":"ClusterIP","ports":[{"port":80}]}}"""),
             _ => throw new ArgumentOutOfRangeException(nameof(failure))
         });
-        var observer = new AddressStartObserver(environment.OutputVariable);
-
-        await using var application = await new NodePortAddressApplicationFactory(
-                environment, enabled: true, afterModule: observer)
+        await using var application = await new NodePortAddressApplicationFactory(environment, enabled: true)
             .CreateAsync(scenario => scenario.With<IK8SInClusterServiceReader>(reader),
                 TestContext.Current.CancellationToken);
+        await GetInitializer(application).ExecuteTask!.WaitAsync(TestContext.Current.CancellationToken);
 
-        Assert.True(observer.Started);
-        Assert.Equal("previous-address", observer.ValueWhenStarted);
         Assert.Equal("previous-address", environment.Output);
         Assert.Equal(1, reader.CallCount);
     }
@@ -138,6 +123,7 @@ public sealed class ModuleK8SNodePortAddressTests
         await using var application = await new NodePortAddressApplicationFactory(environment, enabled: true)
             .CreateAsync(scenario => scenario.With<IK8SInClusterServiceReader>(reader),
                 TestContext.Current.CancellationToken);
+        await GetInitializer(application).ExecuteTask!.WaitAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(0, reader.CallCount);
         Assert.Equal("previous-address", environment.Output);
@@ -153,29 +139,48 @@ public sealed class ModuleK8SNodePortAddressTests
         await using var application = await new NodePortAddressApplicationFactory(environment, enabled: true)
             .CreateAsync(scenario => scenario.With<IK8SInClusterServiceReader>(reader),
                 TestContext.Current.CancellationToken);
+        await GetInitializer(application).ExecuteTask!.WaitAsync(TestContext.Current.CancellationToken);
 
         Assert.True(string.IsNullOrEmpty(environment.Output));
         Assert.Equal(1, reader.CallCount);
     }
 
     [Fact]
-    public async Task StartingAsync_WhenItsCancellationTokenIsCanceled_ShouldLeaveThePublishedValueUnchanged()
+    public async Task AddK8S_WhenTheHostStopsBeforeTheRequestCompletes_ShouldCancelAndPreserveThePreviousValue()
     {
         using var environment = new NodePortAddressTestEnvironment();
-        using var canceled = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        await canceled.CancelAsync();
-        var reader = new ControlledInClusterServiceReader((_, cancellationToken) =>
-            Task.FromCanceled<string?>(cancellationToken));
-        var options = Options.Create(new ModuleK8SOption { NodePortAddresses = environment.CreateOptions() });
-        var resolver = new K8SNodePortAddressResolver(
-            options, reader, NullLogger<K8SNodePortAddressResolver>.Instance);
-        var initializer = new K8SNodePortAddressInitializer(
-            resolver, options, NullLogger<K8SNodePortAddressInitializer>.Instance);
+        var requestStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var requestCanceled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var response = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reader = new ControlledInClusterServiceReader(async (_, cancellationToken) =>
+        {
+            using var registration = cancellationToken.Register(() => requestCanceled.TrySetResult(true));
+            requestStarted.TrySetResult(true);
+            return await response.Task;
+        });
+        await using var application = await new NodePortAddressApplicationFactory(environment, enabled: true)
+            .CreateAsync(scenario => scenario.With<IK8SInClusterServiceReader>(reader),
+                TestContext.Current.CancellationToken);
+        var initializer = GetInitializer(application);
+        await requestStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
 
-        await initializer.StartingAsync(canceled.Token);
+        var shutdown = application.DisposeAsync().AsTask();
+        try
+        {
+            await requestCanceled.Task.WaitAsync(TestContext.Current.CancellationToken);
+            Assert.True(reader.LastCancellationToken.IsCancellationRequested);
+            response.SetResult(NODE_PORT_SERVICE);
+            await shutdown.WaitAsync(TestContext.Current.CancellationToken);
+            await initializer.ExecuteTask!.WaitAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(canceled.Token, reader.LastCancellationToken);
-        Assert.Equal("previous-address", environment.Output);
+            Assert.Equal("previous-address", environment.Output);
+            Assert.Equal(1, reader.CallCount);
+        }
+        finally
+        {
+            response.TrySetResult(NODE_PORT_SERVICE);
+            await shutdown;
+        }
     }
 
     [Fact]
@@ -194,6 +199,8 @@ public sealed class ModuleK8SNodePortAddressTests
 
         await using var firstApplication = await firstStartup;
         await using var secondApplication = await secondStartup;
+        await Task.WhenAll(GetInitializer(firstApplication).ExecuteTask!, GetInitializer(secondApplication).ExecuteTask!)
+            .WaitAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(EXPECTED_ADDRESSES, firstEnvironment.Output);
         Assert.Equal("http://192.0.2.9:32080", secondEnvironment.Output);
@@ -205,23 +212,14 @@ public sealed class ModuleK8SNodePortAddressTests
         Assert.Equal(1, secondReader.CallCount);
     }
 
+    private static K8SNodePortAddressInitializer GetInitializer(MonicaTestApplication application) =>
+        Assert.Single(application.Services.GetServices<IHostedService>().OfType<K8SNodePortAddressInitializer>());
+
     private sealed class NodePortAddressApplicationFactory(
         NodePortAddressTestEnvironment environment,
-        bool? enabled = null,
-        bool startConcurrently = false,
-        AddressStartObserver? beforeModule = null,
-        AddressStartObserver? afterModule = null)
+        bool? enabled = null)
         : MonicaTestApplicationFactory<ModuleK8SNodePortAddressTests>
     {
-        protected override void ConfigureHost(WebApplicationBuilder builder)
-        {
-            builder.Services.Configure<HostOptions>(options => options.ServicesStartConcurrently = startConcurrently);
-            if (beforeModule is not null)
-            {
-                builder.Services.AddSingleton<IHostedService>(beforeModule);
-            }
-        }
-
         protected override void ConfigureMonica(IMonicaBuilder builder)
         {
             builder.AddK8S(options =>
@@ -233,30 +231,5 @@ public sealed class ModuleK8SNodePortAddressTests
                 }
             });
         }
-
-        protected override void ConfigureServices(IServiceCollection services)
-        {
-            base.ConfigureServices(services);
-            if (afterModule is not null)
-            {
-                services.AddSingleton<IHostedService>(afterModule);
-            }
-        }
-    }
-
-    private sealed class AddressStartObserver(string outputVariable) : IHostedService
-    {
-        public bool Started { get; private set; }
-
-        public string? ValueWhenStarted { get; private set; }
-
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            ValueWhenStarted = Environment.GetEnvironmentVariable(outputVariable);
-            Started = true;
-            return Task.CompletedTask;
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

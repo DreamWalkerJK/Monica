@@ -1,7 +1,7 @@
 namespace Monica.DevOps.K8S.Models;
 
 /// <summary>
-/// Configures startup publication of this Pod's Service NodePort addresses to a process environment variable.
+/// Configures background publication of this Pod's Service NodePort addresses to a process environment variable.
 /// </summary>
 /// <remarks>
 /// This capability uses the mounted ServiceAccount and requires permission to get the current Service.
@@ -10,7 +10,8 @@ namespace Monica.DevOps.K8S.Models;
 public sealed class K8SNodePortAddressOptions
 {
     /// <summary>
-    /// Gets or sets whether to attempt publication once during host startup. Defaults to <see langword="false"/>.
+    /// Gets or sets whether to attempt publication once in the background when the host starts.
+    /// Defaults to <see langword="false"/>. Host startup does not wait for the query to complete.
     /// Failures are logged without failing application startup or replacing an existing published value.
     /// </summary>
     public bool Enabled { get; set; }
@@ -30,6 +31,7 @@ public sealed class K8SNodePortAddressOptions
     /// Gets or sets the destination environment variable. Defaults to <c>K8S_LISTENING_ADDRESSES</c>.
     /// Addresses use HTTP and are separated by semicolons in Service port order. Service discovery consumers
     /// must separately include this key in their metadata collection and display options.
+    /// Addresses published after initial registration are collected on a subsequent heartbeat.
     /// </summary>
     public string ListeningAddressesEnvironmentVariable { get; set; } = "K8S_LISTENING_ADDRESSES";
 }
