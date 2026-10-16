@@ -56,20 +56,24 @@
             @foreach (var category in AllCategories)
             {
                 <div @key="category.Id" class="rail-category @(IsSelectedCategory(category) ? "selected" : null)" data-navigation-category-id="@category.Id.Value">
-                    @if (Shell.SidebarCollapsed)
-                    {
-                        <MudIconButton @ref="_contextNavigationTriggers[category.Id]" Icon="@GetCategoryIcon(category)"
-                                       OnClick="@(() => OpenContextNavigation(category))"
-                                       title="@category.DisplayName" aria-label="@category.DisplayName"
-                                       aria-expanded="@(IsContextCategoryOpen(category) ? "true" : "false")"
-                                       aria-controls="mo-context-navigation" />
-                    }
-                    else
-                    {
-                        <MudIconButton Icon="@GetCategoryIcon(category)" OnClick="@(() => SelectCategory(category))"
-                                       title="@category.DisplayName" aria-label="@category.DisplayName"
-                                       aria-pressed="@(category == SelectedCategory ? "true" : "false")" />
-                    }
+                    <MudTooltip Text="@category.DisplayName" Placement="Placement.Right" Delay="0" Duration="0" Arrow="false"
+                                Class="mo-navigation-rail-tooltip" Visible="@(_visibleCategoryTooltipId == category.Id)"
+                                VisibleChanged="@((bool visible) => SetCategoryTooltipVisible(category.Id, visible))">
+                        @if (Shell.SidebarCollapsed)
+                        {
+                            <MudIconButton @ref="_contextNavigationTriggers[category.Id]" Icon="@GetCategoryIcon(category)"
+                                           OnClick="@(() => OpenContextNavigation(category))"
+                                           aria-label="@category.DisplayName"
+                                           aria-expanded="@(IsContextCategoryOpen(category) ? "true" : "false")"
+                                           aria-controls="mo-context-navigation" />
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@GetCategoryIcon(category)" OnClick="@(() => SelectCategory(category))"
+                                           aria-label="@category.DisplayName"
+                                           aria-pressed="@(category == SelectedCategory ? "true" : "false")" />
+                        }
+                    </MudTooltip>
                 </div>
             }
         </nav>
