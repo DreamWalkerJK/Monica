@@ -73,6 +73,10 @@ Check if:
 }
 ```
 
+### Keep compact button content inside its clipping owner
+
+MudBlazor start icons can retain a negative leading margin that assumes the button's default horizontal padding. When restyling a button as a compact navigation entry, inspect the generated icon and text against the button's own bounds. Reset that margin locally when reducing padding, and keep active indicators inside the button's clipping region. Verify the icon, text, underline and keyboard focus independently; a page with no horizontal overflow can still clip these children inside a ripple-enabled button.
+
 ## Specific Fixing Steps
 
 ### Keep tab body padding off tab controls
