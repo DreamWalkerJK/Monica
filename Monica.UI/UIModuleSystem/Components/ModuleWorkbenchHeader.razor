@@ -6,6 +6,8 @@
 @using Monica.UI.UIModuleSystem.State
 @using Monica.UI.UIModuleSystem.Support
 @inject IStringLocalizer<ModuleSystemResource> L
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
 
 <header class="mo-vl-masthead">
     <div class="mo-vl-masthead__identity">
@@ -21,7 +23,12 @@
                 <span class="mo-vl-sep" aria-hidden="true"></span>
                 <span>@L["Common:Revision"] <span class="mo-vl-mono">#@current.Revision</span></span>
                 <span class="mo-vl-sep" aria-hidden="true"></span>
-                <IdentifierValue Value="@current.CompositionId" />
+                <MudTooltip Text="@current.CompositionId">
+                    <button type="button" class="mo-vl-id-chip" aria-label="@L["Actions:CopyCompositionId"]" @onclick="() => CopyCompositionIdAsync(current.CompositionId)">
+                        <span class="mo-vl-mono">@ShortIdentity(current.CompositionId)</span>
+                        <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" />
+                    </button>
+                </MudTooltip>
                 <span class="mo-vl-sep" aria-hidden="true"></span>
                 <span>@L["Common:CapturedAt", current.CapturedAtUtc.ToLocalTime().ToString("t", CultureInfo.CurrentCulture)]</span>
             </div>
@@ -93,6 +100,32 @@ else if (Session.BaselineError != ModuleDiagnosticsBaselineError.None)
     [Parameter] public EventCallback ExportRequested { get; set; }
     [Parameter] public EventCallback<InputFileChangeEventArgs> BaselineSelected { get; set; }
     [Parameter] public EventCallback HelpRequested { get; set; }
+
+    private static string ShortIdentity(string identity) => identity.Length > 16
+        ? $"{identity[..8]}…{identity[^4..]}"
+        : identity;
+
+    private async Task CopyCompositionIdAsync(string identity)
+    {
+        try
+        {
+            if (await JS.InvokeAsync<bool>("MoClipboard.copyText", identity))
+            {
+                Snackbar.Add(L["Common:Copied"], Severity.Success);
+                return;
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            return;
+        }
+        catch (Exception exception) when (exception is JSException or TaskCanceledException)
+        {
+            // A denied browser clipboard write receives the same localized feedback as a refused copy.
+        }
+
+        Snackbar.Add(L["Common:CopyFailed"], Severity.Error);
+    }
 
     private static string OutcomeRoleClass(ModuleCompositionOutcome? outcome) => outcome switch
     {

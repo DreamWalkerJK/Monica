@@ -40,8 +40,7 @@
     cursor: pointer;
 }
 
-.timeline-disclosure svg,
-.timeline-span-picker svg {
+.timeline-disclosure svg {
     width: 16px;
     height: 16px;
     fill: none;
@@ -59,7 +58,6 @@
 }
 
 .timeline-disclosure:focus-visible,
-.timeline-span-picker select:focus-visible,
 .timeline-lane:focus-visible {
     outline: 2px solid var(--mud-palette-primary);
     outline-offset: 2px;
@@ -271,37 +269,43 @@
 }
 
 .timeline-span-picker {
-    position: relative;
     min-width: 0;
+    padding-block: 6px 2px;
 }
 
-.timeline-span-picker select {
-    display: block;
+.timeline-span-picker ::deep .mud-input-control { margin-top: 0; }
+.timeline-span-picker ::deep .mud-input-outlined { border-radius: 8px; background: var(--mud-palette-surface); }
+.timeline-span-picker ::deep .mud-input-label { font-size: 12px; }
+.timeline-span-picker ::deep .mud-input-slot { height: auto; min-width: 0; white-space: normal; }
+
+/* Native item content is reused by MudSelect's selected-value presenter. */
+.timeline-span-option {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 3px 14px;
     width: 100%;
     min-width: 0;
-    height: 28px;
-    padding: 0 25px 0 0;
-    border: 0;
-    border-radius: 0;
-    appearance: none;
-    background: transparent;
-    color: var(--mud-palette-text-primary);
-    font: inherit;
-    font-size: .75rem;
-    text-overflow: ellipsis;
-    cursor: pointer;
+    text-align: start;
+    line-height: 1.5;
 }
-
-.timeline-span-picker option {
-    background: var(--mud-palette-surface);
+.timeline-span-option__name {
     color: var(--mud-palette-text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
 }
-
-.timeline-span-picker svg {
-    position: absolute;
-    top: 6px;
-    right: 0;
-    pointer-events: none;
+.timeline-span-option__duration {
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 90%, var(--mud-palette-text-primary));
+    font-family: var(--mo-font-family-mono);
+    font-size: 12px;
+    white-space: nowrap;
+}
+.timeline-span-option__detail {
+    grid-column: 1 / -1;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 90%, var(--mud-palette-text-primary));
+    font-size: 12px;
+    overflow-wrap: anywhere;
 }
 
 .timeline-readout {

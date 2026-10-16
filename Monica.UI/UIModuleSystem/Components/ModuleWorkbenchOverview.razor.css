@@ -38,9 +38,16 @@
 .ledger-tools .mo-vl-chips { flex: 1 1 auto; }
 .ledger-heading { align-items: start; }
 .ledger-heading .mo-vl-legend { padding-top: 4px; }
-.findings-list { padding: 0 20px 20px; display: grid; gap: 12px; }
-.findings-list ::deep .mo-vl-callout { padding: 14px; }
+.findings-list { padding: 0 16px 16px; display: grid; gap: 10px; }
 .findings-list .mo-vl-link { overflow-wrap: anywhere; }
+.finding-evidence { margin: 0; }
+.finding-module { margin-top: 4px; text-align: start; }
+.finding-diagnostics { margin-top: 9px; color: inherit; font-size: .75rem; }
+.finding-diagnostics summary { width: fit-content; max-width: 100%; cursor: pointer; }
+.finding-diagnostics summary:hover { color: var(--mud-palette-text-primary); }
+.finding-diagnostics summary:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 3px; border-radius: 3px; }
+.finding-diagnostics code { display: block; margin-top: 6px; padding: 6px 8px; border-radius: 5px; background: var(--mud-palette-surface); color: var(--mud-palette-text-secondary); white-space: normal; overflow-wrap: anywhere; }
+.finding-overflow-list { display: grid; gap: 10px; }
 .compact-empty-state { display: flex; align-items: center; gap: 10px; padding: 12px 4px; margin: 0; color: var(--mud-palette-text-secondary); font-size: 13px; line-height: 1.7; }
 .compact-empty-state ::deep .mud-icon-root { flex: none; }
 .depth-body { padding: 0 24px 24px; }

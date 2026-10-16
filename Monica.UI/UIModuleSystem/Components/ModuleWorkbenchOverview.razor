@@ -120,13 +120,17 @@
                         foreach (var finding in snapshot.Findings.Take(MaxVisibleFindings))
                         {
                             <MoSemanticCallout Severity="@FindingRole(finding.Severity)"
-                                                Title="@ModuleDiagnosticsDisplay.Finding(finding, L)">
-                                <span class="mo-vl-mono">@finding.Code</span>
+                                                Title="@FindingTitle(finding)">
+                                <p class="finding-evidence">@FindingEvidence(finding)</p>
                                 @if (finding.RelatedModules.Length > 0)
                                 {
                                     var relatedModule = finding.RelatedModules[0];
-                                    <button type="button" class="mo-vl-link" @onclick="() => SelectFindingModuleAsync(relatedModule)">@relatedModule.Value</button>
+                                    <button type="button" class="mo-vl-link finding-module" @onclick="() => SelectFindingModuleAsync(relatedModule)">@FindingModuleName(relatedModule)</button>
                                 }
+                                <details class="finding-diagnostics">
+                                    <summary>@L["Overview:Findings:DiagnosticCode"]</summary>
+                                    <code class="mo-vl-mono">@finding.Code</code>
+                                </details>
                             </MoSemanticCallout>
                         }
                         @if (snapshot.Findings.Length > MaxVisibleFindings)
@@ -137,13 +141,17 @@
                                         @foreach (var finding in snapshot.Findings.Skip(MaxVisibleFindings))
                                         {
                                             <MoSemanticCallout Severity="@FindingRole(finding.Severity)"
-                                                                Title="@ModuleDiagnosticsDisplay.Finding(finding, L)">
-                                                <span class="mo-vl-mono">@finding.Code</span>
+                                                                Title="@FindingTitle(finding)">
+                                                <p class="finding-evidence">@FindingEvidence(finding)</p>
                                                 @if (finding.RelatedModules.Length > 0)
                                                 {
                                                     var relatedModule = finding.RelatedModules[0];
-                                                    <button type="button" class="mo-vl-link" @onclick="() => SelectFindingModuleAsync(relatedModule)">@relatedModule.Value</button>
+                                                    <button type="button" class="mo-vl-link finding-module" @onclick="() => SelectFindingModuleAsync(relatedModule)">@FindingModuleName(relatedModule)</button>
                                                 }
+                                                <details class="finding-diagnostics">
+                                                    <summary>@L["Overview:Findings:DiagnosticCode"]</summary>
+                                                    <code class="mo-vl-mono">@finding.Code</code>
+                                                </details>
                                             </MoSemanticCallout>
                                         }
                                     </div>
@@ -355,6 +363,29 @@
         .FirstOrDefault(module => module.ModuleKey == moduleKey) is { } module
             ? ModuleSelected.InvokeAsync(module)
             : Task.CompletedTask;
+
+    private string FindingModuleName(ModuleKey moduleKey) => Session.Snapshot?.Modules
+        .FirstOrDefault(module => module.ModuleKey == moduleKey)?.TypeName ?? moduleKey.Value;
+
+    private string FindingTitle(ModuleDiagnosticFinding finding) => finding.Code switch
+    {
+        ModuleDiagnosticFindingCodes.PERFORMANCE_BUDGET_EXCEEDED => L[
+            "Overview:Findings:BudgetTitle",
+            finding.Evidence.PerformanceMetric is { } metric ? L[$"Enums:Budget:{metric}"] : L["Common:Unknown"]],
+        ModuleDiagnosticFindingCodes.REGISTRATION_FAILED => L["Overview:Findings:RegistrationFailed"],
+        ModuleDiagnosticFindingCodes.STARTUP_WORK_FAILED => L["Overview:Findings:StartupWorkFailed"],
+        ModuleDiagnosticFindingCodes.STARTUP_WORK_COMMIT_FAILED => L["Overview:Findings:StartupWorkCommitFailed"],
+        ModuleDiagnosticFindingCodes.COMPOSITION_FAILED => L["Overview:Findings:CompositionFailed"],
+        _ => L["Overview:Findings:Unknown"]
+    };
+
+    private string FindingEvidence(ModuleDiagnosticFinding finding) => finding.Code == ModuleDiagnosticFindingCodes.PERFORMANCE_BUDGET_EXCEEDED
+        && finding.Evidence.ActualDurationMs is { } actual
+        && finding.Evidence.LimitDurationMs is { } limit
+        ? L["Overview:Findings:BudgetEvidence",
+            ModuleDiagnosticsDisplay.Duration(actual),
+            ModuleDiagnosticsDisplay.Duration(limit)]
+        : ModuleDiagnosticsDisplay.Finding(finding, L);
 
     private static MoVisualRole FindingRole(ModuleDiagnosticFindingSeverity severity) => severity switch
     {

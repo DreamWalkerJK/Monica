@@ -6,11 +6,11 @@
 @inject IStringLocalizer<ModuleSystemResource> L
 
 <section class="critical-ribbon @(CriticalSpans.Count == 0 ? "critical-ribbon--empty" : null)" aria-labelledby="critical-ribbon-title">
-    <div class="ribbon-heading">
+    <header class="ribbon-heading">
         <h2 id="critical-ribbon-title">@L["Overview:CriticalPath:Title"]</h2>
         <span class="ribbon-count">@L["Overview:CriticalPath:Count", CriticalSpans.Count]</span>
-    </div>
-    <p class="ribbon-hint">@L["Overview:CriticalPath:Hint"]</p>
+        <p class="ribbon-hint">@L["Overview:CriticalPath:Hint"]</p>
+    </header>
 
     @if (CriticalSpans.Count == 0)
     {
@@ -26,30 +26,26 @@
     else
     {
         <ol class="ribbon-segments">
-            @foreach (var item in CriticalSpans.Select((span, index) => (span, index)))
+            @foreach (var span in CriticalSpans)
             {
-                var isSelected = IsSelected(item.span);
-                var display = TraceDisplay(item.span);
-                var detail = InformativeDetail(display);
-                <li class="ribbon-segment-shell @SpanKindClass(item.span.Kind)" @key="item.span.SpanId">
-                    <span class="ribbon-segment__sequence" aria-hidden="true">@(item.index + 1)</span>
-                    <MudTooltip Text="@SpanTooltip(item.span, display)">
+                var isSelected = IsSelected(span);
+                var display = TraceDisplay(span);
+                var subject = SpineDisplay(span, display);
+                <li class="ribbon-segment-shell @SpanKindClass(span.Kind)" @key="span.SpanId">
+                    <span class="ribbon-segment__node" aria-hidden="true"></span>
+                    <MudTooltip Text="@SpanTooltip(span, display)">
                         <button type="button"
-                                class="ribbon-segment @SpanKindClass(item.span.Kind) @(isSelected ? "selected" : null)"
-                                data-span-id="@item.span.SpanId"
-                                aria-label="@SpanTooltip(item.span, display)"
+                                class="ribbon-segment @(isSelected ? "selected" : null)"
+                                data-span-id="@span.SpanId"
+                                aria-label="@SpanTooltip(span, display)"
                                 aria-current="@(isSelected ? "step" : null)"
                                 aria-pressed="@(isSelected ? "true" : "false")"
-                                @onclick="@(() => SelectSpanAsync(item.span))">
+                                @onclick="@(() => SelectSpanAsync(span))">
                             <span class="ribbon-segment__identity">
-                                <span class="ribbon-segment__kind">@L[$"Enums:TraceKind:{item.span.Kind}"]</span>
-                                <strong>@display.Primary</strong>
-                                @if (detail is not null)
-                                {
-                                    <small>@detail</small>
-                                }
+                                <strong>@subject.Primary</strong>
+                                <small>@subject.Secondary</small>
                             </span>
-                            <code title="@ModuleDiagnosticsDisplay.ExactMilliseconds(item.span.DurationMs)">@ModuleDiagnosticsDisplay.Duration(item.span.DurationMs)</code>
+                            <code title="@ModuleDiagnosticsDisplay.ExactMilliseconds(span.DurationMs)">@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</code>
                         </button>
                     </MudTooltip>
                 </li>
@@ -128,11 +124,33 @@
         display.Secondary,
         ModuleDiagnosticsDisplay.Duration(span.DurationMs)];
 
-    private static string? InformativeDetail(ModuleDiagnosticsTraceDisplay display) =>
-        string.IsNullOrWhiteSpace(display.Secondary)
-        || string.Equals(display.Primary, display.Secondary, StringComparison.OrdinalIgnoreCase)
-            ? null
-            : display.Secondary;
+    private ModuleDiagnosticsTraceDisplay SpineDisplay(
+        ModuleDiagnosticsTraceSpan span,
+        ModuleDiagnosticsTraceDisplay display)
+    {
+        var workName = span.Kind == ModuleDiagnosticsTraceSpanKind.StartupWork
+            ? span.Name
+            : span.CallbackKind == ModuleCallbackKind.StartupWorkCommit
+                && span.WorkItemId is not null
+                ? Session.Snapshot?.TraceSpans.FirstOrDefault(candidate =>
+                    candidate.Kind == ModuleDiagnosticsTraceSpanKind.StartupWork
+                    && string.Equals(candidate.WorkItemId, span.WorkItemId, StringComparison.Ordinal))?.Name
+                : null;
+
+        if (!string.IsNullOrWhiteSpace(workName)
+            && !string.Equals(workName, display.Primary, StringComparison.Ordinal))
+        {
+            var activity = span.CallbackKind is { } callback
+                ? ModuleDiagnosticsDisplay.Callback(callback, L)
+                : L[$"Enums:TraceKind:{span.Kind}"].Value;
+            return new ModuleDiagnosticsTraceDisplay(workName, $"{activity} · {display.Primary}");
+        }
+
+        return string.IsNullOrWhiteSpace(display.Secondary)
+            || string.Equals(display.Primary, display.Secondary, StringComparison.OrdinalIgnoreCase)
+                ? display with { Secondary = L[$"Enums:TraceKind:{span.Kind}"] }
+                : display;
+    }
 
     private static string SpanKindClass(ModuleDiagnosticsTraceSpanKind kind) => kind switch
     {

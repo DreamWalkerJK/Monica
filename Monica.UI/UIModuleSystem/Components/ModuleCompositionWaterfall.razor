@@ -78,7 +78,7 @@
                         <div>
                             @foreach (var tick in AxisTicks)
                             {
-                                <span>@ModuleDiagnosticsDisplay.Duration(AxisRange.StartMs + AxisRange.WidthMs * tick)</span>
+                                <span style="left: @(SvgNumber(tick * 100))%">@AxisTickLabel(AxisRange.StartMs + AxisRange.WidthMs * tick)</span>
                             }
                         </div>
                     </div>
@@ -99,11 +99,6 @@
                                 <MudTooltip Text="@TimelineTooltip(span, display)">
                                     <button type="button" class="timeline-waterfall__track-button" data-span-id="@span.SpanId" aria-label="@TimelineTooltip(span, display)" aria-pressed="@(isSelected ? "true" : "false")" @onclick="@(() => SelectSpanAsync(span))">
                                         <svg viewBox="0 0 1000 32" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-                                            <line class="timeline-waterfall__grid-line" x1="0" y1="0" x2="0" y2="32" />
-                                            <line class="timeline-waterfall__grid-line" x1="250" y1="0" x2="250" y2="32" />
-                                            <line class="timeline-waterfall__grid-line" x1="500" y1="0" x2="500" y2="32" />
-                                            <line class="timeline-waterfall__grid-line" x1="750" y1="0" x2="750" y2="32" />
-                                            <line class="timeline-waterfall__grid-line" x1="1000" y1="0" x2="1000" y2="32" />
                                             @if (BaselineTimelineRows.TryGetValue(span.SpanId, out var baselineSpan) && BaselineTimelineWidth(baselineSpan) > 0)
                                             {
                                                 <rect class="timeline-waterfall__baseline" x="@SvgNumber(BaselineTimelineX(baselineSpan))" y="4" width="@SvgNumber(BaselineTimelineWidth(baselineSpan))" height="24" rx="4" />
@@ -441,6 +436,9 @@
 
     private static string SvgNumber(double value) =>
         value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string AxisTickLabel(double milliseconds) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{milliseconds:0.##} ms");
 
     private sealed record TimelineProjection(
         IReadOnlyList<ModuleDiagnosticsTraceSpan> Current,

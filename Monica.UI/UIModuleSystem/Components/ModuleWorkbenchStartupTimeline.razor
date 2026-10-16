@@ -72,16 +72,34 @@
                     <strong>@selected.Name</strong>
                     <span>@L["Timeline:Detail:Aggregate", selected.Spans.Count, ModuleDiagnosticsDisplay.Duration(selected.Spans.Sum(static span => span.DurationMs))]</span>
                 </div>
-                <label class="timeline-span-picker">
-                    <span class="timeline-sr-only">@L["Timeline:Detail:Select"]</span>
-                    <select value="@SelectedSpan?.SpanId" @onchange="SelectSpan">
+                <div class="timeline-span-picker">
+                    <MudSelect T="string"
+                               @key="selected.Id"
+                               Value="@SelectedSpan?.SpanId"
+                               ValueChanged="@SelectSpan"
+                               Label="@L["Timeline:Detail:Select"]"
+                               ToStringFunc="@SpanOptionText"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Dense="true"
+                               SelectionOnEnter="true"
+                               FullWidth="true"
+                               MaxHeight="320"
+                               AnchorOrigin="Origin.BottomLeft"
+                               TransformOrigin="Origin.TopLeft">
                         @foreach (var span in selected.Spans)
                         {
-                            <option value="@span.SpanId">@SpanOption(span)</option>
+                            var display = ModuleDiagnosticsDisplay.TraceSpan(span, Snapshot!, L);
+                            <MudSelectItem T="string" Value="@span.SpanId" @key="span.SpanId">
+                                <span class="timeline-span-option">
+                                    <span class="timeline-span-option__name">@display.Primary</span>
+                                    <span class="timeline-span-option__duration">@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</span>
+                                    <span class="timeline-span-option__detail">@display.Secondary</span>
+                                </span>
+                            </MudSelectItem>
                         }
-                    </select>
-                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
-                </label>
+                    </MudSelect>
+                </div>
                 @if (SelectedSpan is { } inspected)
                 {
                     <div class="timeline-readout" aria-live="polite">
@@ -207,9 +225,8 @@
         _selectedSpanId = null;
     }
 
-    private void SelectSpan(ChangeEventArgs args)
+    private void SelectSpan(string? spanId)
     {
-        var spanId = args.Value?.ToString();
         if (SelectedLane?.Spans.FirstOrDefault(span => span.SpanId == spanId) is { } span)
         {
             _selectedSpanId = span.SpanId;
@@ -218,8 +235,13 @@
         }
     }
 
-    private string SpanOption(ModuleDiagnosticsTraceSpan span)
+    private string? SpanOptionText(string? spanId)
     {
+        if (Snapshot?.TraceSpans.FirstOrDefault(span => span.SpanId == spanId) is not { } span)
+        {
+            return null;
+        }
+
         var display = ModuleDiagnosticsDisplay.TraceSpan(span, Snapshot!, L);
         return $"{display.Primary} · {display.Secondary} · {ModuleDiagnosticsDisplay.Duration(span.DurationMs)}";
     }
