@@ -47,7 +47,7 @@ Consumers that embed the public components must migrate the toolbar and metadata
 
 `DocumentContentViewer` renders the article, breadcrumb, metadata, loading/error/missing-translation states, and reports `HeadingsChanged`. Supply `ContentError` and `DocumentSidebar.TreeError` from the page's load owner; both default to null and neither child retries the load. `DocumentTableOfContentsPanel.OnClose` is optional: without a callback, it omits the close control; with one, the page closes the pane and handles focus restoration as appropriate.
 
-The metadata summary uses the selected document's author, modification time, and tags. Its initially collapsed About panel shows the navigation path, culture, group, byte count, exact UTC modification timestamp, and every parsed front-matter field, including nested values. It collapses when group, document-relative path, or document culture changes. Pass the actual document rather than constructing a front-matter-only substitute.
+The metadata summary uses the selected document's author, a compact localized modification date, and tags. Its initially collapsed About panel shows the navigation path, culture, group, byte count, exact UTC modification timestamp, and every parsed front-matter field, including nested values. The summary's date also exposes the exact timestamp through its native title. The compact disclosure expands within the article's reading scroll owner and collapses when group, document-relative path, or document culture changes. Pass the actual document rather than constructing a front-matter-only substitute.
 
 ## Local image assets
 

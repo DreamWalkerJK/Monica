@@ -3,10 +3,10 @@
 @using Monica.Markdown.Models
 @inject IStringLocalizer<MarkdownResource> L
 
-<header class="reader-toolbar">
+<header class="@(ShowLanguageSwitcher ? "reader-toolbar has-language" : "reader-toolbar")">
     <button type="button" class="reader-library-button" @onclick="OnOpenGroupSwitcher"
             title="@CurrentGroup?.Title" aria-label="@L["MarkdownViewer:Navbar:OpenKnowledgeBaseSwitcher"]">
-        <MoIcon Icon="@MoIcons.Book" Size="1.5rem" />
+        <span class="reader-library-symbol"><MoIcon Icon="@MoIcons.Book" Size="1.35rem" /></span>
         <span class="reader-library-copy"><span class="reader-library-name">@(CurrentGroup?.Title ?? L["MarkdownViewer:Navbar:UnknownKnowledgeBase"])</span>
         <span class="reader-library-count">@L["MarkdownViewer:Navbar:KnowledgeBaseDocumentCount", CurrentGroup?.ResolveLanguage(CurrentCulture)?.DocumentCount ?? CurrentGroup?.DocumentCount ?? 0]</span></span>
         <MoIcon Icon="@MoIcons.ChevronDown" Size="1.25rem" />

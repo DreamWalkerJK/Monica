@@ -1,11 +1,11 @@
 .toc-panel {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
     height: 100%;
     min-width: 0;
     min-height: 0;
-    padding: 16px;
+    padding: 20px 16px 16px;
     color: var(--mud-palette-text-primary);
     font-family: var(--mud-typography-default-family, var(--mo-font-family-body));
 }
@@ -24,8 +24,9 @@
     margin: 0;
     font-family: inherit;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     line-height: 1.5;
+    letter-spacing: 0.015em;
     overflow-wrap: anywhere;
 }
 
@@ -33,13 +34,14 @@
     flex-shrink: 0;
     width: 36px;
     height: 36px;
-    color: var(--mud-palette-text-primary);
+    color: var(--mud-palette-text-secondary);
 }
 
 .toc-list {
     flex: 1;
     min-width: 0;
     min-height: 0;
+    padding: 2px 3px 2px 0;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -50,13 +52,13 @@
     display: block;
     width: 100%;
     min-width: 0;
-    min-height: 36px;
-    margin: 0 0 3px;
-    padding: 8px 10px 8px 12px;
+    min-height: 38px;
+    margin: 0;
+    padding: 9px 10px 9px 14px;
     border: 0;
-    border-inline-start: 2px solid transparent;
-    border-radius: 0 6px 6px 0;
-    color: color-mix(in srgb, var(--mud-palette-text-primary) 85%, var(--mud-palette-text-secondary));
+    border-inline-start: 2px solid var(--mud-palette-lines-default);
+    border-radius: 0;
+    color: color-mix(in srgb, var(--mud-palette-text-primary) 75%, var(--mud-palette-text-secondary));
     background: transparent;
     font-family: inherit;
     font-size: 13px;
@@ -66,18 +68,20 @@
     cursor: pointer;
 }
 
+.toc-link.level-1 { font-weight: 500; }
 .toc-link.level-2 { padding-inline-start: 24px; }
-.toc-link.level-3 { padding-inline-start: 36px; }
+.toc-link.level-3 { padding-inline-start: 34px; }
 
 .toc-link:hover {
-    background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface));
+    color: var(--mud-palette-text-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
 }
 
 .toc-link.is-active {
     border-inline-start-color: var(--mud-palette-primary);
-    color: var(--mud-palette-text-primary);
-    background: color-mix(in srgb, var(--mud-palette-primary) 12%, var(--mud-palette-surface));
-    font-weight: 500;
+    color: color-mix(in srgb, var(--mud-palette-primary) 65%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
+    font-weight: 600;
 }
 
 .toc-link:focus-visible {
@@ -103,8 +107,12 @@
 }
 
 .toc-empty-state ::deep .toc-empty-icon {
-    color: color-mix(in srgb, var(--mud-palette-text-primary) 70%, var(--mud-palette-text-secondary));
-    font-size: 32px;
+    box-sizing: content-box;
+    padding: 10px;
+    border-radius: 12px;
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 9%, var(--mud-palette-surface));
+    font-size: 30px;
 }
 
 .toc-empty-state ::deep .toc-empty-copy {

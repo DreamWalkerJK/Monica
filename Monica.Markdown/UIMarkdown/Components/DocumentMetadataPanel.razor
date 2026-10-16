@@ -5,7 +5,7 @@
 @using Monica.Markdown.UIMarkdown.Support
 @inject IStringLocalizer<MarkdownResource> L
 
-<div class="document-metadata">
+<div class="@(_expanded ? "document-metadata is-expanded" : "document-metadata")">
     <div class="metadata-summary">
         @if (AuthorDisplay is not null)
         {
@@ -18,7 +18,7 @@
         <span class="metadata-summary-item">
             <span class="metadata-label">@L["MarkdownViewer:Metadata:Modified"]</span>
             <time datetime="@ModifiedTimestamp" title="@ModifiedTimestamp">
-                @Document.LastModifiedUtc.ToLocalTime().ToString("F", CultureInfo.CurrentCulture)
+                @Document.LastModifiedUtc.ToLocalTime().ToString("d", CultureInfo.CurrentCulture)
             </time>
         </span>
 

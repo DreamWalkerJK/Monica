@@ -114,6 +114,7 @@
                  data-markdown-group="@Document.GroupKey"
                  data-markdown-document="@Document.RelativePath"
                  data-markdown-culture="@Document.Culture">
+                <header class="article-heading">
                 <div class="content-breadcrumb-bar">
                     @if (_breadcrumbs.Count > 0)
                     {
@@ -149,8 +150,7 @@
                 <h1 class="doc-title" data-markdown-document-heading="true" tabindex="-1">@Document.Title</h1>
 
                 <DocumentMetadataPanel Document="Document" />
-
-                <MudDivider Class="article-divider" />
+                </header>
 
                 <div class="markdown-body" data-markdown-body="true">
                     @if (string.IsNullOrWhiteSpace(_strippedContent))

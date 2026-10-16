@@ -3,6 +3,7 @@
 
 <PageTitle>@L["Pages:MarkdownDocuments:Title"]</PageTitle>
 <div class="@LayoutClass">
+    <div class="doc-reading-desk">
     @if (!PageState.IsLoading && PageState.Groups is { Count: > 0 })
     {
         <DocumentViewerToolbar CurrentGroup="PageState.CurrentGroup" CurrentCulture="@PageState.SelectedCulture"
@@ -78,6 +79,7 @@
                 </MudDrawer>
             }
         }
+    </div>
     </div>
 </div>
 

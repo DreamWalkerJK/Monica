@@ -1,5 +1,9 @@
 .document-metadata {
     container: markdown-metadata / inline-size;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 180px;
+    align-items: start;
+    gap: 12px 18px;
     min-width: 0;
     color: var(--mud-palette-text-primary);
     font-family: var(--mud-typography-default-family, var(--mo-font-family-body));
@@ -17,7 +21,7 @@
 
 .metadata-summary {
     row-gap: 10px;
-    margin-bottom: 12px;
+    padding-top: 6px;
     font-size: 13px;
     line-height: 1.6;
 }
@@ -38,35 +42,42 @@
 .metadata-tag {
     max-width: 100%;
     padding: 2px 8px;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 6px;
-    color: var(--mud-palette-text-primary);
-    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-info) 18%, var(--mud-palette-lines-default));
+    border-radius: 5px;
+    color: color-mix(in srgb, var(--mud-palette-info) 65%, var(--mud-palette-text-primary));
+    background: color-mix(in srgb, var(--mud-palette-info) 8%, var(--mud-palette-surface));
     font-size: 12px;
     overflow-wrap: anywhere;
 }
 
 .document-metadata ::deep .metadata-panels {
     min-width: 0;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 8px;
-    background: var(--mud-palette-surface);
+    width: 180px;
+    max-width: 100%;
+    align-self: start;
+    border-radius: 6px;
+    background: transparent;
 }
 
 .document-metadata ::deep .metadata-about {
     min-width: 0;
     margin: 0;
     border-radius: inherit;
-    background: var(--mud-palette-surface);
+    background: transparent;
 }
 
 .document-metadata ::deep .metadata-about-header {
-    min-height: 40px;
-    padding: 8px 12px;
-    color: var(--mud-palette-text-primary);
-    font-size: 13px;
+    min-height: 34px;
+    padding: 6px 10px;
+    gap: 10px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 6px;
+    color: var(--mud-palette-text-secondary);
+    background: var(--mud-palette-surface);
+    font-size: 12px;
     font-weight: 500;
     line-height: 1.5;
+    white-space: normal;
 }
 
 .document-metadata ::deep .metadata-about-header:focus-visible {
@@ -82,8 +93,23 @@
 
 .metadata-inspector {
     min-width: 0;
-    padding: 16px;
-    border-top: 1px solid var(--mud-palette-lines-default);
+    margin-top: 12px;
+    padding: 18px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background: var(--mud-palette-surface);
+}
+
+.document-metadata.is-expanded {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.document-metadata.is-expanded ::deep .metadata-about-header {
+    width: fit-content;
+}
+
+.document-metadata.is-expanded ::deep .metadata-panels {
+    width: 100%;
 }
 
 .metadata-fields {
@@ -150,4 +176,10 @@
 @container markdown-metadata (min-width: 640px) {
     .metadata-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .metadata-authored-fields { grid-template-columns: minmax(0, 1fr); }
+}
+
+@container markdown-reader (max-width: 699px) {
+    .document-metadata { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .document-metadata ::deep .metadata-panels { justify-self: start; max-width: 100%; }
+    .document-metadata.is-expanded ::deep .metadata-panels { justify-self: stretch; }
 }
