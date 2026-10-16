@@ -46,8 +46,8 @@ public class RegistrationStateManager(
             var regKey = GetRegistrationKey();
             var now = DateTime.UtcNow;
 
-            // Get the base instance status (contains all service information and metadata)
-            var instanceState = clientInfo.GetServiceStatus();
+            // Every heartbeat replaces the complete registration, including its metadata.
+            var instanceState = clientInfo.GetServiceStatus(isHeartbeatInfo: false);
 
             // Use cached registration time to avoid Get operations for every heartbeat
             DateTime registrationTime;
