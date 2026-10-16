@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using System.Globalization
 @using Monica.SignalR.Models
@@ -25,7 +26,14 @@
         }
         @if (IsLoading)
         {
-            <div class="connected-users-loading" role="status"><MudProgressCircular Size="Size.Small" Indeterminate="true" /><span>@L["UISignalR:ConnectedUsers:Loading"]</span></div>
+            @if (!DataLoaded)
+            {
+                <MoContentState Loading="true" Compact="true"><MudProgressCircular Size="Size.Small" Indeterminate="true" /><span>@L["UISignalR:ConnectedUsers:Loading"]</span></MoContentState>
+            }
+            else
+            {
+                <div class="connected-users-loading" role="status"><MudProgressCircular Size="Size.Small" Indeterminate="true" /><span>@L["UISignalR:ConnectedUsers:Loading"]</span></div>
+            }
         }
 
         @if (!DataLoaded)

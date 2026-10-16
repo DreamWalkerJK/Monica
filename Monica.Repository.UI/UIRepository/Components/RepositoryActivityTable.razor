@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using System.Globalization
 @using System.Diagnostics.CodeAnalysis
@@ -31,11 +32,18 @@
         <MudAlert Severity="Severity.Error" Dense="true" Icon="@MoIcons.Error">@_dialogError</MudAlert>
     }
 
-    @if (IsLoading)
+    @if (IsLoading && _snapshot is null)
+    {
+        <MoContentState Loading="true">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+            <span>@L["Activity:Loading"]</span>
+        </MoContentState>
+    }
+    else if (IsLoading)
     {
         <div class="activity-refresh" role="status">
             <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
-            <span>@(_snapshot is null ? L["Activity:Loading"] : L["Workbench:Activity:RetainedSnapshot"])</span>
+            <span>@L["Workbench:Activity:RetainedSnapshot"]</span>
         </div>
     }
 

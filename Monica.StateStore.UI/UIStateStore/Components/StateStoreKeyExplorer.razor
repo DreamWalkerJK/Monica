@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @using Monica.UI.Shared.Components.Dialogs
 @using Monica.Modules
 @using Monica.StateStore.UI.Models
@@ -70,7 +71,7 @@
     }
     @if (isSearching)
     {
-        <div class="workspace-state" role="status"><MudProgressCircular Size="Size.Small" Indeterminate="true" /><p>@GetSearchActionText()</p></div>
+        <div class="workspace-state"><MoContentState Loading="true"><MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small" /><p>@GetSearchActionText()</p></MoContentState></div>
     }
     else if (!string.IsNullOrWhiteSpace(browseError))
     {
@@ -78,15 +79,15 @@
     }
     else if (!hasBrowsed || selectedProvider is null)
     {
-        <div class="workspace-state"><h2>@L[selectedProvider is null ? "KeyExplorer:Workspace:NoProviderTitle" : "KeyExplorer:Workspace:ReadyTitle"]</h2><p>@L[selectedProvider is null ? "KeyExplorer:Workspace:NoProviderSubtitle" : "KeyExplorer:Workspace:ReadySubtitle"]</p></div>
+        <div class="workspace-state"><MoContentState><h2>@L[selectedProvider is null ? "KeyExplorer:Workspace:NoProviderTitle" : "KeyExplorer:Workspace:ReadyTitle"]</h2><p>@L[selectedProvider is null ? "KeyExplorer:Workspace:NoProviderSubtitle" : "KeyExplorer:Workspace:ReadySubtitle"]</p></MoContentState></div>
     }
     else if (browseResult?.IsMissing == true)
     {
-        <div class="workspace-state"><h2>@L["KeyExplorer:Messages:MissingKeyTitle"]</h2><p>@L["KeyExplorer:Messages:MissingKeyDescription", browseResult.Query]</p></div>
+        <div class="workspace-state"><MoContentState><h2>@L["KeyExplorer:Messages:MissingKeyTitle"]</h2><p>@L["KeyExplorer:Messages:MissingKeyDescription", browseResult.Query]</p></MoContentState></div>
     }
     else if (keys.Count == 0)
     {
-        <div class="workspace-state"><h2>@L["KeyExplorer:Messages:NoKeysFound"]</h2><p>@L["KeyExplorer:Messages:NoKeysFoundHint"]</p></div>
+        <div class="workspace-state"><MoContentState><h2>@L["KeyExplorer:Messages:NoKeysFound"]</h2><p>@L["KeyExplorer:Messages:NoKeysFoundHint"]</p></MoContentState></div>
     }
     else
     {

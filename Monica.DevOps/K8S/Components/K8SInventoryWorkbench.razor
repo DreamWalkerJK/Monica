@@ -60,7 +60,7 @@
         {
             @if (!Visit.ContextMatchesCapture) { <div class="k8s-read-status"><MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["Workbench:Inventory:Retained", Visit.Namespace, KindLabel(Visit.ResourceType)]</MudAlert></div> }
             @if (capture.Items.Count == 0)
-            { <div class="k8s-empty"><p>@CaptureLabel(capture)</p><p>@L["Workbench:Inventory:Empty", KindLabel(capture.ResourceType)]</p></div> }
+            { <MoContentState Compact="true"><p>@CaptureLabel(capture)</p><p>@L["Workbench:Inventory:Empty", KindLabel(capture.ResourceType)]</p></MoContentState> }
             else
             {
                 <MudDataGrid @key="capture.ResourceType" @ref="_grid" T="K8SResourceSummary" Items="capture.Items" QuickFilter="MatchesSearch" SortMode="SortMode.Multiple" Filterable="true" Dense="true" Hover="true" MultiSelection="true" SelectOnRowClick="@(!Visit.IsBusy && Visit.ContextMatchesCapture)" RowsPerPage="20" Comparer="@K8SResourceIdentity.Comparer" SelectedItems="@Visit.SelectedRows" SelectedItemsChanged="SelectRows" FixedHeader="true" Height="auto" Breakpoint="Breakpoint.Xs" Class="k8s-resource-grid" SortIcon="@MoIcons.ArrowUp" DragIndicatorIcon="@MoIcons.GripVertical" FilterIconEmpty="@MoIcons.Filter" FilterIconFilled="@MoIcons.Filter" FilterIconClear="@MoIcons.FilterOff" ColumnOptionsIcon="@MoIcons.MoreVertical">
@@ -121,7 +121,7 @@
                             </div></CellTemplate>
                         </TemplateColumn>
                     </Columns>
-                    <NoRecordsContent><div class="k8s-empty">@L["Workbench:Inventory:NoMatches"]</div></NoRecordsContent>
+                    <NoRecordsContent><MoContentState Compact="true">@L["Workbench:Inventory:NoMatches"]</MoContentState></NoRecordsContent>
                     <PagerContent><div class="k8s-pager">
                         <MudDataGridPager T="K8SResourceSummary" PageSizeOptions="PageSizes" RowsPerPageString="@L["Workbench:Pager:Rows"]" InfoFormat="@L["Workbench:Pager:Info"]" ShowNavigation="false" />
                         <div class="k8s-pager-buttons">
@@ -135,7 +135,7 @@
             }
         }
         else if (!Visit.IsBusy && Visit.ContextFailure is null && Visit.ReadFailure is null)
-        { <div class="k8s-empty">@L[Visit.Namespaces?.Count == 0 ? "Workbench:Inventory:NoNamespaces" : "Page:SelectNamespace"]</div> }
+        { <MoContentState Compact="true">@L[Visit.Namespaces?.Count == 0 ? "Workbench:Inventory:NoNamespaces" : "Page:SelectNamespace"]</MoContentState> }
     </section>
 </div>
 

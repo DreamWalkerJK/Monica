@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @using Monica.Profiling.UIRuntimeMetrics.Support
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.Profiling.TypeAllocation.Models
@@ -172,6 +173,7 @@
             else
             {
                 <div class="allocation-empty">
+                    <MoContentState Loading="@(Busy && snapshot is null)">
                     @if (Busy && snapshot is null)
                     {
                         <MudProgressCircular Indeterminate="true" Size="Size.Small" /><p>@L["Common:LoadingValue"]</p>
@@ -181,6 +183,7 @@
                         <MoIcon Icon="@MoIcons.Shapes" aria-hidden="true" Size="1.5rem" />
                         <h3>@EmptyTitle(view)</h3><p>@EmptyHelp(view)</p>
                     }
+                    </MoContentState>
                 </div>
             }
         </div>

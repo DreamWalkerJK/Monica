@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @using Monica.StateStore.Abstractions
 @using Monica.StateStore.UI.Models
 @using Microsoft.Extensions.DependencyInjection
@@ -118,9 +119,7 @@
                                 }
                                 else
                                 {
-                                    <div class="provider-dialog__configuration-loading" role="status">
-                                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                                    </div>
+                                    <MoContentState Loading="true" Compact="true"><MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small" /></MoContentState>
                                 }
                             </div>
                         </div>

@@ -74,10 +74,10 @@
                             CountLabel="@L["Page:Sections:Endpoints:ListeningCount", Snapshot.Endpoints.Length]" />
             @if (Snapshot.Endpoints.Length == 0)
             {
-                <div class="system-info-empty-state">
+                <MoContentState Compact="true">
                     <strong>@L["Page:Sections:Endpoints:EmptyTitle"]</strong>
                     <p>@L["Page:Sections:Endpoints:EmptyDescription"]</p>
-                </div>
+                </MoContentState>
             }
             else
             {

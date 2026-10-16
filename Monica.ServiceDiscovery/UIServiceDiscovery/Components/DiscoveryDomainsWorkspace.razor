@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.ServiceDiscovery.Facades
 @using Monica.ServiceDiscovery.Localization
@@ -23,8 +24,8 @@
                     <button type="button" aria-pressed="@(Selected?.Name.Equals(domain.Name,StringComparison.OrdinalIgnoreCase) == true ? "true" : "false")" @onclick="() => Select(domain.Name)"><span>@(domain.DisplayName ?? domain.Name)</span><code>@domain.Name</code><MoIcon Icon="@MoIcons.ChevronRight" Size="1.25rem" /></button>
                 }
             </nav>
-            @if (_hasCatalog && _domains.Count == 0) { <p class="domain-index-empty">@L["Workbench:CatalogEmpty"]</p> }
-            else if (_hasCatalog && !VisibleDomains.Any()) { <p class="domain-index-empty">@L["Workbench:FilterMiss"]</p> }
+            @if (_hasCatalog && _domains.Count == 0) { <MoContentState Compact="true"><p>@L["Workbench:CatalogEmpty"]</p></MoContentState> }
+            else if (_hasCatalog && !VisibleDomains.Any()) { <MoContentState Compact="true"><p>@L["Workbench:FilterMiss"]</p></MoContentState> }
         </aside>
         <div class="domain-detail-workspace">
             @if (Selected is { } selected)

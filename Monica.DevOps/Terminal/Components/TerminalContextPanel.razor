@@ -24,7 +24,7 @@
             <p class="terminal-context__intro">@L["History:Scope", Math.Min(12, Session.History.Length), Session.History.Length]</p>
             @if (Session.History.Length == 0)
             {
-                <p class="terminal-context__empty">@L["History:Empty"]</p>
+                <MoContentState Compact="true">@L["History:Empty"]</MoContentState>
             }
             else
             {

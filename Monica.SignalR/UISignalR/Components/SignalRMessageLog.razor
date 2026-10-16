@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.SignalR.UISignalR.Models
 @inject IStringLocalizer<SignalRResource> L
@@ -39,11 +40,11 @@
 
     @if (Messages.Count == 0)
     {
-        <div class="signalr-trace-empty">@L["UISignalR:MessageLog:Empty"]</div>
+        <div class="signalr-trace-empty"><MoContentState Compact="true">@L["UISignalR:MessageLog:Empty"]</MoContentState></div>
     }
     else if (FilteredMessages.Count == 0)
     {
-        <div class="signalr-trace-empty">@L["UISignalR:MessageLog:NoMatches"]</div>
+        <div class="signalr-trace-empty"><MoContentState Compact="true">@L["UISignalR:MessageLog:NoMatches"]</MoContentState></div>
     }
     else
     {

@@ -220,9 +220,11 @@
 
             @if (_loadingDefinitions)
             {
-                <MudPaper Outlined="true" Class="pa-6 configuration-loading">
+                <MudPaper Outlined="true">
+                    <MoContentState Loading="true">
                     <MudProgressCircular Indeterminate="true" />
                     <MudText>@L["Common:States:Loading"]</MudText>
+                    </MoContentState>
                 </MudPaper>
             }
             else

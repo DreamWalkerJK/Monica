@@ -29,7 +29,7 @@
     {
         @RenderCatalog()
     }
-    else if (_state?.Error is null) { <div class="initial-loading" role="status">@L["Capabilities:Administration:Loading"]</div> }
+    else if (_state?.Error is null) { <MoContentState Loading="true">@L["Capabilities:Administration:Loading"]</MoContentState> }
 </div>
 
 @code {
@@ -80,7 +80,7 @@
                                 <span class="entry-source">@GetSourceText(catalogEntry)</span>
                             </button>
                         }
-                        @if (_state.VisibleEntries.Count == 0) { <MudText Typo="Typo.body2" Class="catalog-empty">@L[_state.CurrentEntries.Count == 0 ? "Capabilities:Administration:CatalogEmpty" : "Capabilities:Administration:NoMatches"]</MudText> }
+                        @if (_state.VisibleEntries.Count == 0) { <MoContentState Compact="true"><MudText Typo="Typo.body2">@L[_state.CurrentEntries.Count == 0 ? "Capabilities:Administration:CatalogEmpty" : "Capabilities:Administration:NoMatches"]</MudText></MoContentState> }
                     </div>
                 </div>
             </aside>

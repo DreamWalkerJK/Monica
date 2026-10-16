@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.Profiling.RuntimeMetrics.Models
 @using Monica.Profiling.UIRuntimeMetrics.Components
@@ -47,7 +48,7 @@
                 <div><dt>@L["Gc:Generations:Names:Poh"]</dt><dd>@MemoryAnalysisDisplayFormatter.ReportedBytes(latest.PohSizeBytes)</dd></div>
             </dl>
         }
-        else { <p class="memory-generation-empty">@L["Trend:Recent:Empty"]</p> }
+        else { <MoContentState Compact="true">@L["Trend:Recent:Empty"]</MoContentState> }
     </article>
     <article class="memory-sample-ledger">
         <header class="memory-history-heading"><div><span class="memory-history-eyebrow">@L["Trend:Recent:Eyebrow"]</span><h2>@L["Trend:Recent:Title"]</h2></div><p>@L["Trend:Recent:Help"]</p></header>
@@ -70,7 +71,7 @@
             <footer class="memory-ledger-footer"><span>@L["Trend:Recent:Range", (_page - 1) * PageSize + 1, Math.Min(_page * PageSize, Points.Count), Points.Count]</span>
                 @if (PageCount > 1) { <MudPagination Count="PageCount" Selected="_page" SelectedChanged="ChangePage" ShowFirstButton="true" ShowLastButton="true" Size="Size.Small" Color="Color.Default" aria-label="@L["Trend:Recent:Pagination"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /> }</footer>
         }
-        else { <div class="memory-ledger-empty">@L["Trend:Recent:Empty"]</div> }
+        else { <MoContentState Compact="true">@L["Trend:Recent:Empty"]</MoContentState> }
     </article>
 </section>
 

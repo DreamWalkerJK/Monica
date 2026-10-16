@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using System.Globalization
 @using Monica.Profiling.RuntimeMetrics.Models
@@ -93,7 +94,7 @@
         }
         else
         {
-            <div class="runtime-ledger-empty">@L["Recent:Empty"]</div>
+            <MoContentState Compact="true">@L["Recent:Empty"]</MoContentState>
         }
     </section>
 </div>

@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.Framework.UI.Localization
 @using Monica.Framework.UI.UIObservableInstance.Models
@@ -7,7 +8,7 @@
 <div class="history-timeline">
     @if (History == null || !History.Any())
     {
-        <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["Shared:States:NoStateHistory"]</MudAlert>
+        <MoContentState Compact="true"><MoIcon Icon="@MoIcons.Info" Size="1.5rem" /><p>@L["Shared:States:NoStateHistory"]</p></MoContentState>
     }
     else
     {

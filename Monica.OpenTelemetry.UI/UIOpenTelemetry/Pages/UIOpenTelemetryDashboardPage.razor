@@ -33,7 +33,7 @@
     </header>
     @if (_state is null)
     {
-        <section class="telemetry-empty" role="status"><h2>@L["Workbench:UnavailableTitle"]</h2><p>@L["Workbench:Unavailable"]</p></section>
+        <section class="telemetry-empty"><MoContentState role="status"><h2>@L["Workbench:UnavailableTitle"]</h2><p>@L["Workbench:Unavailable"]</p></MoContentState></section>
     }
     else
     {
@@ -69,7 +69,7 @@
         }
         else if (_state.IsLoading)
         {
-            <section class="telemetry-empty" role="status"><MudProgressLinear Indeterminate="true" Color="Color.Primary" /><p>@L["Status:Loading"]</p></section>
+            <section class="telemetry-empty"><MoContentState Loading="true"><MudProgressLinear Indeterminate="true" Color="Color.Primary" /><p>@L["Status:Loading"]</p></MoContentState></section>
         }
     }
 </div>

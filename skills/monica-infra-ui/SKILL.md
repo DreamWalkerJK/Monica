@@ -23,7 +23,8 @@ description: Register and use Monica Blazor UI modules, the shell, icons, Markdo
 | Theme the standalone Swagger reference or add application destinations to its toolbar | [Swagger workbench](references/swagger-ui.md) |
 | Set theme/language defaults or integrate custom page localization | [Theme and localization](references/theme-and-localization.md) |
 | Configure page timestamp formats and deployment timezone display | [Page time display](references/time-display.md) |
+| Center loading or empty regions | [Content states](references/content-states.md) |
 
 Use `$monica-ui-development` for components and `$monica-ui-localization` for translations; configure underlying services through their infrastructure skills.
 
-For unavailable authoring skills, resolve Monica with `$monica-guide` (`source resolve --repository monica --json`) and read canonical `skills/<name>/SKILL.md`.
+For unavailable authoring skills, use `$monica-guide`.

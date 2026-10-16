@@ -61,15 +61,15 @@
                         @if (_hasLoadedHistory && !string.IsNullOrWhiteSpace(_historyLoadError)) { <div class="configuration-history-query-error"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_historyLoadError</MudAlert></div> }
                         @if (_loading)
                         {
-                            <div class="configuration-history-empty"><MudProgressCircular Size="Size.Medium" Indeterminate="true" Color="Color.Primary" /><p>@L["Common:States:Loading"]</p></div>
+                            <MoContentState Loading="true"><MudProgressCircular Size="Size.Medium" Indeterminate="true" Color="Color.Primary" /><p>@L["Common:States:Loading"]</p></MoContentState>
                         }
                         else if (!string.IsNullOrWhiteSpace(_historyLoadError) && !_hasLoadedHistory)
                         {
-                            <div class="configuration-history-empty"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_historyLoadError</MudAlert></div>
+                            <MoContentState><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_historyLoadError</MudAlert></MoContentState>
                         }
                         else if (_displayHistory.Count == 0)
                         {
-                            <div class="configuration-history-empty"><MoIcon Icon="@MoIcons.History" Size="1.5rem" /><h3>@L["History:States:Empty"]</h3><p>@L["History:Workbench:EmptyHelp"]</p></div>
+                            <MoContentState><MoIcon Icon="@MoIcons.History" Size="1.5rem" /><h3>@L["History:States:Empty"]</h3><p>@L["History:Workbench:EmptyHelp"]</p></MoContentState>
                         }
                         else
                         {
@@ -115,15 +115,15 @@
                         @if (_hasLoadedGroups && !string.IsNullOrWhiteSpace(_groupLoadError)) { <div class="configuration-history-query-error"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_groupLoadError</MudAlert></div> }
                         @if (_loading)
                         {
-                            <div class="configuration-history-empty"><MudProgressCircular Size="Size.Medium" Indeterminate="true" Color="Color.Primary" /><p>@L["Common:States:Loading"]</p></div>
+                            <MoContentState Loading="true"><MudProgressCircular Size="Size.Medium" Indeterminate="true" Color="Color.Primary" /><p>@L["Common:States:Loading"]</p></MoContentState>
                         }
                         else if (!string.IsNullOrWhiteSpace(_groupLoadError) && !_hasLoadedGroups)
                         {
-                            <div class="configuration-history-empty"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_groupLoadError</MudAlert></div>
+                            <MoContentState><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_groupLoadError</MudAlert></MoContentState>
                         }
                         else if (_groups.Count == 0)
                         {
-                            <div class="configuration-history-empty"><MoIcon Icon="@MoIcons.FolderOpen" Size="1.5rem" /><h3>@L["Group:Empty"]</h3><p>@L["History:Workbench:EmptyHelp"]</p></div>
+                            <MoContentState><MoIcon Icon="@MoIcons.FolderOpen" Size="1.5rem" /><h3>@L["Group:Empty"]</h3><p>@L["History:Workbench:EmptyHelp"]</p></MoContentState>
                         }
                         else
                         {

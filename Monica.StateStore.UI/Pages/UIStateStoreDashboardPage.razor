@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @attribute [Route(PAGE_URL)]
 @using Microsoft.Extensions.Options
 @using Monica.Modules
@@ -38,7 +39,7 @@
         @PageIdentity
         @if (_providerError is null)
         {
-            <section class="provider-empty-state" role="status">
+            <section class="provider-empty-state" role="status"><MoContentState>
                 <MoIcon Icon="@MoIcons.Database" Size="1.5rem" Style="color:var(--mud-palette-primary);" />
                 <div>
                     <h2>@L["Dashboard:Messages:NoProviders"]</h2>
@@ -47,7 +48,7 @@
                 <MudButton Color="Color.Primary" Variant="Variant.Outlined" OnClick="LoadProvidersAsync">
                     @L["KeyExplorer:Actions:RefreshProviders"]
                 </MudButton>
-            </section>
+            </MoContentState></section>
         }
     }
 </div>

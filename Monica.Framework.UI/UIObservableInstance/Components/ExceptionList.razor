@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.Framework.UI.Localization
 @using Monica.Framework.UI.UIObservableInstance.Models
@@ -7,7 +8,7 @@
 <div class="exception-list">
     @if (Exceptions == null || !Exceptions.Any())
     {
-        <MudAlert Icon="@MoIcons.Success" Severity="Severity.Success">@L["Shared:States:NoExceptions"]</MudAlert>
+        <MoContentState Compact="true"><MoIcon Icon="@MoIcons.Success" Size="1.5rem" /><p>@L["Shared:States:NoExceptions"]</p></MoContentState>
     }
     else
     {

@@ -33,24 +33,15 @@
 }
 
 .provider-discovery-error,
-.provider-empty-state,
-.provider-empty-state > div {
+.provider-empty-state {
     min-width: 0;
 }
 
 .provider-empty-state {
-    display: flex;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 16px;
-    padding: 24px;
+
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
     background: var(--mud-palette-surface);
-}
-
-.provider-empty-state > div {
-    flex: 1 1 16rem;
 }
 
 .provider-empty-state h2 {
@@ -72,5 +63,5 @@
 
 @media (max-width: 600px) {
     .state-store-dashboard-page { padding: 12px; gap: 16px; }
-    .provider-empty-state { padding: 18px; }
+
 }

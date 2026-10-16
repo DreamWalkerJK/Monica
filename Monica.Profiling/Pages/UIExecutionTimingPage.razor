@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @attribute [Route(PAGE_URL)]
 @using Monica.Profiling.ExecutionTiming.Models
@@ -63,7 +64,7 @@
     }
     else if (PageState.LoadError is null)
     {
-        <div class="timing-awaiting" role="status">@L["Page:Loading"]</div>
+        <div class="timing-awaiting"><MoContentState Loading="true">@L["Page:Loading"]</MoContentState></div>
     }
 </div>
 

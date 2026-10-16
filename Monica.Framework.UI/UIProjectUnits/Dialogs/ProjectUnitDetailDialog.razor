@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @using Monica.Core.Results
 @using Monica.Framework.UI.UIProjectUnits.Services
 @using Monica.ProjectUnits.Models
@@ -12,14 +13,13 @@
     <DialogContent>
         @if (_loading)
         {
-            <div class="pu-dossier__state" data-testid="project-unit-detail-loading" role="status">
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <MoContentState Loading="true" data-testid="project-unit-detail-loading" role="status"><MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small" />
                 <p>@L["ProjectUnitDetailDialog:States:Loading"]</p>
-            </div>
+            </MoContentState>
         }
         else if (_loadError is not null)
         {
-            <div class="pu-dossier__error" data-testid="project-unit-detail-error" role="status">@_loadError</div>
+            <MoContentState data-testid="project-unit-detail-error" role="status">@_loadError</MoContentState>
         }
         else if (_detail is not null)
         {

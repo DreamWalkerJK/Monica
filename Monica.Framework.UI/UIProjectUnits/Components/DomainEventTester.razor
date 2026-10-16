@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @using Monica.ProjectUnits.Facades
 @using Monica.Core.Results
 @using System.Text.Json
@@ -53,7 +54,7 @@
                 }
                 @if (!_loading && _loadError is null && _domainEvents.Count == 0)
                 {
-                    <p class="event-desk__empty">@L["DomainEventTester:States:Empty"]</p>
+                    <MoContentState Compact="true"><p>@L["DomainEventTester:States:Empty"]</p></MoContentState>
                 }
             </div>
         </section>

@@ -6,7 +6,7 @@
 <section class="telemetry-dossier" aria-label="@L["Dossier:Title"]">
     @if (Instrument is not { } instrument)
     {
-        <div class="dossier-empty" role="status"><MoIcon Icon="@MoIcons.Sliders" Size="2.25rem" /><h2>@L["Dossier:ChooseTitle"]</h2><p>@L["Dossier:Choose"]</p></div>
+        <div class="dossier-empty"><MoContentState role="status"><MoIcon Icon="@MoIcons.Sliders" Size="2.25rem" /><h2>@L["Dossier:ChooseTitle"]</h2><p>@L["Dossier:Choose"]</p></MoContentState></div>
     }
     else
     {
@@ -15,7 +15,7 @@
         @if (instrument.Overflow) { <div class="dossier-overflow" role="note"><MoIcon Icon="@MoIcons.Info" Size="1.25rem" /><p>@L["Dossier:Overflow", instrument.DroppedSamples]</p></div> }
         @if (instrument.TagSets.Count == 0)
         {
-            <div class="dossier-no-series" role="status"><h3>@L["Dossier:UnmeasuredTitle"]</h3><p>@L["Dossier:Unmeasured"]</p></div>
+            <div class="dossier-no-series"><MoContentState role="status" Compact="true"><h3>@L["Dossier:UnmeasuredTitle"]</h3><p>@L["Dossier:Unmeasured"]</p></MoContentState></div>
         }
         else
         {
@@ -36,7 +36,7 @@
                 <div class="series-evidence"><div class="section-heading"><h3>@L["Series:HistoryTitle"]</h3><span>@L["Series:Finite", series.FiniteSampleCount, series.Samples.Count]</span></div><TelemetrySeriesPlot Samples="series.Samples" Unit="@instrument.Unit" Label="@(instrument.Name + " · " + TagText(series))" /><p class="series-basis">@L[instrument.Kind == "Histogram" ? "Series:HistogramBasis" : !instrument.IsObservable && instrument.Kind is "Counter" or "UpDownCounter" ? "Series:CounterBasis" : "Series:MeasurementBasis"]</p></div>
                 @if (series.Histogram is { } histogram) { <HistogramView Histogram="histogram" Unit="@instrument.Unit" /> }
                 <div class="series-ledger-heading"><div><h3>@L["Ledger:Title"]</h3><p>@L["Ledger:Help"]</p></div><span>@series.Samples.Count</span></div>
-                @if (series.Samples.Count == 0) { <p class="ledger-empty" role="status">@L["Series:NoSamples"]</p> }
+                @if (series.Samples.Count == 0) { <MoContentState role="status" Compact="true">@L["Series:NoSamples"]</MoContentState> }
                 else
                 {
                     <div class="sample-frame"><table class="sample-table"><thead><tr><th scope="col">@L["Ledger:Timestamp"]</th><th scope="col">@L["Ledger:Raw"]</th><th scope="col">@L["Ledger:Value"]</th><th scope="col"><span class="visually-hidden">@L["Inspector:Open"]</span></th></tr></thead><tbody>
@@ -47,7 +47,7 @@
                     </tbody></table><footer class="dossier-pager"><span>@L["Registry:Shown", (_samplePage - 1) * SamplePageSize + 1, Math.Min(_samplePage * SamplePageSize, series.Samples.Count), series.Samples.Count]</span>@if (SamplePageCount > 1) { <MudPagination Count="@SamplePageCount" Selected="_samplePage" SelectedChanged="SetSamplePageAsync" ShowFirstButton="true" ShowLastButton="true" Color="Color.Default" Size="Size.Small" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /> }</footer></div>
                 }
             }
-            else { <p class="dossier-no-series" role="status">@L["Series:Choose"]</p> }
+            else { <MoContentState role="status" Compact="true">@L["Series:Choose"]</MoContentState> }
         }
     }
 </section>

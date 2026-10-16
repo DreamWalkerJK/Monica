@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.ServiceDiscovery.Facades
 @using Monica.ServiceDiscovery.Localization
@@ -141,7 +142,7 @@
                     }
                 </ul>
             }
-            @if (_hasSnapshot && NativeEvidenceCount == 0) { <p class="atlas-native__empty">@L[NativeEvidenceEmptyKey]</p> }
+            @if (_hasSnapshot && NativeEvidenceCount == 0) { <MoContentState Compact="true"><p>@L[NativeEvidenceEmptyKey]</p></MoContentState> }
             <footer class="atlas-native__footer"><span>@L["Atlas:Shared:Captured"]</span><time>@(UiTime.FormatTime(_capturedAt) ?? L["Shared:Values:NotAvailable"].Value)</time></footer>
         </section>
     </div>

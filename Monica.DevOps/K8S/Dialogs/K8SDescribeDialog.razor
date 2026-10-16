@@ -43,7 +43,7 @@
                             <MudText Typo="Typo.subtitle1">@L["DescribeDialog:RelatedWorkloads"]</MudText>
                             @if (Details.RelatedWorkloads.Count == 0)
                             {
-                                <MudText Typo="Typo.body2">@L["DescribeDialog:NoRelatedWorkloads"]</MudText>
+                                <MoContentState Compact="true"><MudText Typo="Typo.body2">@L["DescribeDialog:NoRelatedWorkloads"]</MudText></MoContentState>
                             }
                             else
                             {
@@ -68,7 +68,7 @@
                             }
                             @if (Details.RelatedPods.Count == 0)
                             {
-                                <MudText Typo="Typo.body2">@L["DescribeDialog:NoRelatedPods"]</MudText>
+                                <MoContentState Compact="true"><MudText Typo="Typo.body2">@L["DescribeDialog:NoRelatedPods"]</MudText></MoContentState>
                             }
                             else
                             {

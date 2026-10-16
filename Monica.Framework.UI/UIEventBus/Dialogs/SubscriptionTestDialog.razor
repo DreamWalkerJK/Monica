@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.Core.Results
 @using Monica.EventBus.Models
@@ -16,7 +17,7 @@
         <div class="runtime-test">
             @if (_subscription is null || _subscriptionId is null)
             {
-                <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Variant="Variant.Outlined">@L["SubscriptionTestDialog:States:NotSelected"]</MudAlert>
+                <MoContentState Compact="true"><MoIcon Icon="@MoIcons.Info" Size="1.5rem" /><p>@L["SubscriptionTestDialog:States:NotSelected"]</p></MoContentState>
             }
             else
             {

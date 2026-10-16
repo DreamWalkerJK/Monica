@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.Core.Results;
 @using Monica.Framework.UI.Localization
@@ -10,7 +11,7 @@
 <div class="detail-panel">
     @if (Instance == null)
     {
-        <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["Shared:States:NoInstanceSelected"]</MudAlert>
+        <MoContentState Compact="true"><MoIcon Icon="@MoIcons.Info" Size="1.5rem" /><p>@L["Shared:States:NoInstanceSelected"]</p></MoContentState>
     }
     else
     {
@@ -148,7 +149,7 @@
             <MudStack Spacing="2" Class="pa-4">
                 @if (_loadingHistory)
                 {
-                    <MudProgressCircular Indeterminate="true" Color="Color.Info" />
+                    <MoContentState Loading="true" Compact="true"><MudProgressCircular Indeterminate="true" Color="Color.Info" /></MoContentState>
                 }
                 else
                 {
@@ -162,7 +163,7 @@
             <MudStack Spacing="2" Class="pa-4">
                 @if (_loadingExceptions)
                 {
-                    <MudProgressCircular Indeterminate="true" Color="Color.Info" />
+                    <MoContentState Loading="true" Compact="true"><MudProgressCircular Indeterminate="true" Color="Color.Info" /></MoContentState>
                 }
                 else
                 {

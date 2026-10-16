@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.DataChannel.UIDataChannel.Models
 @using Monica.DataChannel.UIDataChannel.Support
@@ -38,7 +39,7 @@
             <div class="exception-records">
                 @if (ExceptionInfo.Exceptions.Count == 0)
                 {
-                    <p class="exception-records-empty">@L["Exceptions:Details:Empty"]</p>
+                    <MoContentState Compact="true"><p>@L["Exceptions:Details:Empty"]</p></MoContentState>
                 }
                 else
                 {
@@ -76,7 +77,7 @@
                             </TemplateColumn>
                         </Columns>
                         <NoRecordsContent>
-                            <p class="exception-records-empty">@L["Exceptions:Details:NoMatches"]</p>
+                            <MoContentState Compact="true"><p>@L["Exceptions:Details:NoMatches"]</p></MoContentState>
                         </NoRecordsContent>
                     </MudDataGrid>
                 }

@@ -28,7 +28,7 @@
         </div>
         @if (_geometry.OmittedValueCount > 0) { <p class="plot-note">@L["Series:Omitted", _geometry.OmittedValueCount]</p> }
     }
-    else { <p class="plot-empty" role="status">@L[Samples.Count == 0 ? "Series:NoSamples" : "Series:NoFiniteSamples"]</p> }
+    else { <MoContentState role="status" Compact="true">@L[Samples.Count == 0 ? "Series:NoSamples" : "Series:NoFiniteSamples"]</MoContentState> }
 </div>
 
 @code {

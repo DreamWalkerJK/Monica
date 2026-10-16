@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Microsoft.Extensions.Logging
 @using Monica.Core.ObservableInstance.Models
@@ -21,7 +22,7 @@
         @foreach (var entry in Routes) { <a href="@Url(entry.Path)" aria-current="@(View == entry.View ? "page" : null)"><MoIcon Icon="@entry.Icon" Size="1.25rem" />@L[$"Workbench:{entry.View}"]</a> }
     </nav>
     @if (_error is not null) { <div class="observable-error" role="alert"><strong>@L["Workbench:ReadFailed"]</strong><p>@_error</p><span>@L["Workbench:StaleHelp"]</span></div> }
-    @if (_busy && Workspace.Capture is null) { <div class="observable-loading" role="status"><MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />@L["Page:States:LoadingInstances"]</div> }
+    @if (_busy && Workspace.Capture is null) { <MoContentState Loading="true" role="status"><MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small" />@L["Page:States:LoadingInstances"]</MoContentState> }
     else if (Workspace.Capture is { } capture)
     {
         @if (View == "Overview")
