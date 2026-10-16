@@ -11,6 +11,7 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.UI.Localization;
+using Monica.UI.Icons;
 using Monica.UI.Pages;
 using Monica.UI.Shell.Components;
 using Monica.UI.Shared.Components.Markdown;
@@ -111,7 +112,14 @@ public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequired
     {
         var services = context.Services;
         // Add MudBlazor service
-        services.AddMudServices();
+        services.AddMudServices(options =>
+        {
+            options.SnackbarConfiguration.NormalIcon = MoIcons.CalendarDays;
+            options.SnackbarConfiguration.InfoIcon = MoIcons.Info;
+            options.SnackbarConfiguration.SuccessIcon = MoIcons.Success;
+            options.SnackbarConfiguration.WarningIcon = MoIcons.Warning;
+            options.SnackbarConfiguration.ErrorIcon = MoIcons.Error;
+        });
         if (Option.EnableMarkdown)
         {
             services.AddMudMarkdownServices();

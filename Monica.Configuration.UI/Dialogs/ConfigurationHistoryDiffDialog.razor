@@ -28,7 +28,7 @@
             }
             @if (_entries.Count == 0)
             {
-                <MudAlert Severity="Severity.Info">@L["History:Dialog:NoPreview"]</MudAlert>
+                <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["History:Dialog:NoPreview"]</MudAlert>
             }
             else
             {
@@ -36,7 +36,7 @@
                     <nav class="configuration-history-diff-navigation" aria-label="@L["History:Dialog:Timeline"]">
                         <h3>@L["History:Dialog:Timeline"]</h3>
                         <div class="configuration-history-diff-native-selection">
-                            <MudSelect T="HistoryTimelineEntry" Value="@_selectedEntry" ValueChanged="SelectEntry"
+                            <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="HistoryTimelineEntry" Value="@_selectedEntry" ValueChanged="SelectEntry"
                                        Label="@L["History:Dialog:Timeline"]" Variant="Variant.Outlined" Dense="true"
                                        ToStringFunc="@(entry => entry?.Title ?? string.Empty)">
                                 @foreach (var entry in _entries)
@@ -58,7 +58,7 @@
                                     <MudButton Variant="Variant.Text" Color="Color.Default" FullWidth="true"
                                                aria-pressed="@(entry == _selectedEntry ? "true" : "false")" OnClick="() => SelectEntry(entry)">
                                         <div class="configuration-history-diff-entry-content">
-                                            <MudIcon Icon="@entry.Icon" Size="Size.Small" />
+                                            <MoIcon Icon="@entry.Icon" Size="1.25rem" />
                                             <div><strong>@entry.Title</strong><span>@entry.Subtitle</span><time datetime="@entry.Time.ToString("O")">@FormatTime(entry.Time)</time></div>
                                         </div>
                                     </MudButton>
@@ -72,14 +72,14 @@
                             <header class="configuration-history-diff-selection-heading">
                                 <h3>@selected.Title</h3><p>@selected.Subtitle</p>
                                 <div class="configuration-history-diff-selection-actions">
-                                    <span class="configuration-history-diff-badge" data-tone="@TargetTone(selected.Rows)"><MudIcon Icon="@TargetIcon(selected.Rows)" Size="Size.Small" />@TargetKindText(selected.Rows)</span>
+                                    <span class="configuration-history-diff-badge" data-tone="@TargetTone(selected.Rows)"><MoIcon Icon="@TargetIcon(selected.Rows)" Size="1.25rem" />@TargetKindText(selected.Rows)</span>
                                     <span class="configuration-history-diff-badge">@L["History:Dialog:Version", selected.Version]</span>
                                     @if (selected.Id != GROUP_SUMMARY_ENTRY_ID)
                                     {
                                         <span class="configuration-history-diff-badge" data-tone="@(selected.MutationKind == ConfigurationMutationKind.Remove ? "warning" : "info")">@MutationText(selected.MutationKind)</span>
                                     }
                                     <MudTooltip Text="@SelectedRollbackTooltip">
-                                        <MudButton Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Restore"
+                                        <MudButton Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined" StartIcon="@MoIcons.Restore"
                                                    Disabled="@(!CanRollbackSelectedEntry)" OnClick="RollbackSelectedEntryAsync">@L["Rollback:Confirm"]</MudButton>
                                     </MudTooltip>
                                 </div>
@@ -122,7 +122,7 @@
             }
             @if (_loadError is not null)
             {
-                <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
+                <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_loadError</MudAlert>
             }
         </div>
     </DialogContent>
@@ -130,7 +130,7 @@
         <div class="configuration-history-diff-dialog-actions">
             @if (_hasMore)
             {
-                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.ExpandMore" Disabled="@_loadingMore" OnClick="LoadMoreAsync">@L["History:Actions:LoadMore"]</MudButton>
+                <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.ChevronDown" Disabled="@_loadingMore" OnClick="LoadMoreAsync">@L["History:Actions:LoadMore"]</MudButton>
             }
             <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
         </div>
@@ -235,7 +235,7 @@
                 ConfigurationMutationKind.Set,
                 orderedRows.Max(row => row.Version),
                 Color.Primary,
-                Icons.Material.Outlined.Folder));
+                MoIcons.Folder));
         }
 
         foreach (var displayRow in ConfigurationHistoryDisplayGrouper.Collapse(orderedRows))
@@ -380,21 +380,21 @@
     private static string TargetIcon(IReadOnlyList<ConfigurationValueHistory> rows)
     {
         return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
-            ? Icons.Material.Outlined.Description
-            : Icons.Material.Outlined.Storage;
+            ? MoIcons.FileText
+            : MoIcons.Database;
     }
 
     private static string TimelineIcon(ConfigurationHistoryDisplayRow row)
     {
         return row.IsCollapsed
-            ? Icons.Material.Outlined.AccountTree
+            ? MoIcons.Workflow
             : TimelineIcon(row.Representative);
     }
 
     private static string TimelineIcon(ConfigurationValueHistory row)
     {
         return row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
-            ? Icons.Material.Outlined.Description
+            ? MoIcons.FileText
             : MutationIcon(row.MutationKind);
     }
 
@@ -436,8 +436,8 @@
     {
         return kind switch
         {
-            ConfigurationMutationKind.Remove => Icons.Material.Outlined.Delete,
-            _ => Icons.Material.Outlined.Edit
+            ConfigurationMutationKind.Remove => MoIcons.Delete,
+            _ => MoIcons.Edit
         };
     }
 

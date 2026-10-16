@@ -2,7 +2,7 @@
 
 <section class="signalr-message-sender" aria-label="@L["UISignalR:MessageSender:Title"]" aria-busy="@(_isSending ? "true" : "false")">
     <header class="signalr-sender-heading">
-        <MudIcon Icon="@Icons.Material.Outlined.Send" Color="Color.Primary" />
+        <MoIcon Icon="@MoIcons.Send" Size="1.5rem" Style="color:var(--mud-palette-primary);" />
         <h2>@L["UISignalR:MessageSender:Title"]</h2>
     </header>
 
@@ -26,11 +26,11 @@
 
     <div class="signalr-sender-footer">
         <div class="signalr-sender-actions">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Send"
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Send"
                        OnClick="SendMessageAsync" Disabled="@(!CanSend)">
                 @L[_isSending ? "UISignalR:MessageSender:Sending" : "UISignalR:MessageSender:Send"]
             </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.Clear"
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@MoIcons.Close"
                        OnClick="ClearMessageAsync" Disabled="@(_isSending || string.IsNullOrWhiteSpace(Message))">
                 @L["UISignalR:MessageSender:Clear"]
             </MudButton>

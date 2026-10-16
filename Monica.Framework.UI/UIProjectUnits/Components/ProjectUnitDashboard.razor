@@ -34,7 +34,7 @@
             <section class="pu-dashboard__identity">
                 <div class="pu-dashboard__identity-heading">
                     <span class="pu-dashboard__eyebrow">@L["ProjectUnitDashboard:Service:Eyebrow"]</span>
-                    <MudIcon Icon="@Icons.Material.Outlined.AccountTree" />
+                    <MoIcon Icon="@MoIcons.Workflow" Size="1.5rem" />
                 </div>
                 <h2>@_snapshot.Service.AppName</h2>
                 @if (!string.IsNullOrWhiteSpace(_snapshot.Service.AppVersion))
@@ -61,11 +61,11 @@
                 </div>
                 <p class="pu-dashboard__scope">@L["ProjectUnitDashboard:Service:Scope"]</p>
                 <div class="pu-dashboard__entry-links">
-                    <NavLink href="/project-units/catalog">@L["Page:Tabs:ProjectUnit"] <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></NavLink>
-                    <NavLink href="/project-units/graph">@L["Page:Tabs:ArchitectureVisualization"] <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></NavLink>
+                    <NavLink href="/project-units/catalog">@L["Page:Tabs:ProjectUnit"] <MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" /></NavLink>
+                    <NavLink href="/project-units/graph">@L["Page:Tabs:ArchitectureVisualization"] <MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" /></NavLink>
                 </div>
                 <MudButton Variant="Variant.Outlined" OnClick="LoadDashboardAsync" Disabled="@_loading"
-                           StartIcon="@Icons.Material.Outlined.Refresh" Class="pu-dashboard__refresh">
+                           StartIcon="@MoIcons.Refresh" Class="pu-dashboard__refresh">
                     @L["Shared:Actions:Refresh"]
                 </MudButton>
             </section>
@@ -109,7 +109,7 @@
         @if (_snapshot.TotalUnits == 0)
         {
             <div class="pu-dashboard__state" data-testid="project-unit-dashboard-empty">
-                <MudIcon Icon="@Icons.Material.Outlined.Inventory2" />
+                <MoIcon Icon="@MoIcons.Package" Size="1.5rem" />
                 <h3>@L["ProjectUnitDashboard:States:EmptyTitle"]</h3>
                 <p>@L["ProjectUnitDashboard:States:EmptyDescription"]</p>
             </div>
@@ -195,10 +195,10 @@
                                         </div>
                                         @if (gap.Unit.Alerts.Count != 0)
                                         {
-                                            <span class="pu-dashboard__gap-diagnostic" data-severity="@GetAlertTone(gap.Unit)"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />@L["ProjectUnitDashboard:Gaps:Alerts", gap.Unit.Alerts.Count]</span>
+                                            <span class="pu-dashboard__gap-diagnostic" data-severity="@GetAlertTone(gap.Unit)"><MoIcon Icon="@MoIcons.Info" Size="1.25rem" />@L["ProjectUnitDashboard:Gaps:Alerts", gap.Unit.Alerts.Count]</span>
                                         }
                                     </div>
-                                    <MudIconButton Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" Color="Color.Primary"
+                                    <MudIconButton Icon="@MoIcons.ArrowRight" Size="Size.Small" Color="Color.Primary"
                                                    aria-label="@L["ProjectUnitDashboard:Actions:Inspect", gap.Unit.Title]" OnClick="@(() => OpenDetail(gap.Unit))" />
                                 </li>
                             }
@@ -207,11 +207,11 @@
                             <span>@L["ProjectUnitDashboard:Gaps:PageRange", _gapPage * _gapPageSize + 1, Math.Min((_gapPage + 1) * _gapPageSize, _filteredGaps.Count), _filteredGaps.Count]</span>
                             <label>@L["ProjectUnitDashboard:Gaps:PageSize"]<select value="@_gapPageSize" @onchange="OnGapPageSizeChanged"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select></label>
                             <div class="pu-dashboard__page-actions">
-                                <button type="button" disabled="@(_gapPage == 0)" aria-label="@L["ProjectUnitDashboard:Gaps:FirstPage"]" @onclick="@(() => SetGapPage(0))"><MudIcon Icon="@Icons.Material.Outlined.FirstPage" Size="Size.Small" /></button>
-                                <button type="button" disabled="@(_gapPage == 0)" aria-label="@L["ProjectUnitDashboard:Gaps:PreviousPage"]" @onclick="@(() => SetGapPage(_gapPage - 1))"><MudIcon Icon="@Icons.Material.Outlined.ChevronLeft" Size="Size.Small" /></button>
+                                <button type="button" disabled="@(_gapPage == 0)" aria-label="@L["ProjectUnitDashboard:Gaps:FirstPage"]" @onclick="@(() => SetGapPage(0))"><MoIcon Icon="@MoIcons.FirstPage" Size="1.25rem" /></button>
+                                <button type="button" disabled="@(_gapPage == 0)" aria-label="@L["ProjectUnitDashboard:Gaps:PreviousPage"]" @onclick="@(() => SetGapPage(_gapPage - 1))"><MoIcon Icon="@MoIcons.ChevronLeft" Size="1.25rem" /></button>
                                 <span>@L["ProjectUnitDashboard:Gaps:PageNumber", _gapPage + 1, GapPageCount]</span>
-                                <button type="button" disabled="@(_gapPage >= GapPageCount - 1)" aria-label="@L["ProjectUnitDashboard:Gaps:NextPage"]" @onclick="@(() => SetGapPage(_gapPage + 1))"><MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" /></button>
-                                <button type="button" disabled="@(_gapPage >= GapPageCount - 1)" aria-label="@L["ProjectUnitDashboard:Gaps:LastPage"]" @onclick="@(() => SetGapPage(GapPageCount - 1))"><MudIcon Icon="@Icons.Material.Outlined.LastPage" Size="Size.Small" /></button>
+                                <button type="button" disabled="@(_gapPage >= GapPageCount - 1)" aria-label="@L["ProjectUnitDashboard:Gaps:NextPage"]" @onclick="@(() => SetGapPage(_gapPage + 1))"><MoIcon Icon="@MoIcons.ChevronRight" Size="1.25rem" /></button>
+                                <button type="button" disabled="@(_gapPage >= GapPageCount - 1)" aria-label="@L["ProjectUnitDashboard:Gaps:LastPage"]" @onclick="@(() => SetGapPage(GapPageCount - 1))"><MoIcon Icon="@MoIcons.LastPage" Size="1.25rem" /></button>
                             </div>
                         </footer>
                     }

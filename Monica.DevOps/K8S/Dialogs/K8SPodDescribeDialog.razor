@@ -8,7 +8,7 @@
     <TitleContent><MoDialogHeading @ref="_heading" Text="@L["PodDialog:Title", PodName, NamespaceName]" /></TitleContent>
     <DialogContent>
         <div class="k8s-pod-inspector">
-            <MudTabs Elevation="0" Rounded="false" KeepPanelsAlive="true">
+            <MudTabs Elevation="0" Rounded="false" KeepPanelsAlive="true" PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight">
                 <MudTabPanel Text="@L["Inspector:Summary"]">
                     <div class="tab-body">
                         <dl class="facts">
@@ -16,8 +16,8 @@
                             <dt>@L["PodDialog:Namespace"]</dt><dd>@NamespaceName</dd>
                             <dt>@L["PodDialog:Workload"]</dt><dd>@GetResolvedWorkload()</dd>
                             <dt>@L["PodDialog:ReportedOwner"]</dt><dd>@GetIdentity(Details.Summary.OwnerKind, Details.Summary.OwnerName)</dd>
-                            <dt>@L["PodDialog:Phase"]</dt><dd><MudChip T="string" Color="@GetPhaseColor()" Variant="Variant.Outlined" Size="Size.Small">@Details.Summary.PhaseDisplay</MudChip></dd>
-                            <dt>@L["PodDialog:Ready"]</dt><dd><span>@Details.Summary.ReadyDisplay</span><MudChip T="string" Color="@(Details.Summary.IsReady ? Color.Success : Color.Warning)" Variant="Variant.Outlined" Size="Size.Small">@(Details.Summary.IsReady ? L["DescribeDialog:ReadyStateReady"] : L["DescribeDialog:ReadyStateNotReady"])</MudChip></dd>
+                            <dt>@L["PodDialog:Phase"]</dt><dd><MudChip T="string" Color="@GetPhaseColor()" Variant="Variant.Outlined" Size="Size.Small" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@Details.Summary.PhaseDisplay</MudChip></dd>
+                            <dt>@L["PodDialog:Ready"]</dt><dd><span>@Details.Summary.ReadyDisplay</span><MudChip T="string" Color="@(Details.Summary.IsReady ? Color.Success : Color.Warning)" Variant="Variant.Outlined" Size="Size.Small" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@(Details.Summary.IsReady ? L["DescribeDialog:ReadyStateReady"] : L["DescribeDialog:ReadyStateNotReady"])</MudChip></dd>
                             <dt>@L["PodDialog:Restarts"]</dt><dd>@Details.Summary.RestartCount</dd>
                             <dt>@L["PodDialog:Started"]</dt><dd>@Details.Summary.StartTimeDisplay</dd>
                             <dt>@L["PodDialog:Node"]</dt><dd>@DisplayValue(Details.Summary.NodeName)</dd>
@@ -26,7 +26,7 @@
                         </dl>
                         @if (Details.Summary.HasIssue)
                         {
-                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["PodDialog:Attention"]</MudAlert>
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["PodDialog:Attention"]</MudAlert>
                         }
                     </div>
                 </MudTabPanel>

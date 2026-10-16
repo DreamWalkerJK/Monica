@@ -8,7 +8,7 @@
          aria-label="@L["ExecutionDetail:Identity"]">
     <header class="execution-detail-hero__header">
         <div class="execution-detail-hero__state">
-            <MudIcon Icon="@ExecutionUiPresentation.GetStateIcon(Execution.State)" Size="Size.Small" />
+            <MoIcon Icon="@ExecutionUiPresentation.GetStateIcon(Execution.State)" Size="1.25rem" />
             <span>@L[$"ExecutionStates:{Execution.State}"]</span>
         </div>
         <h2>@JobSchedulerUiPresentation.GetJobDisplayName(Execution.Template)</h2>
@@ -44,7 +44,7 @@
     @if (Execution.SkipReason is { } skipReason)
     {
         <div class="execution-detail-hero__notice">
-            <MudIcon Icon="@Icons.Material.Outlined.SkipNext" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.SkipNext" Size="1.25rem" />
             <div><strong>@L["ExecutionDetail:SkipReason"]</strong><span>@L[$"ExecutionSkipReasons:{skipReason}"]</span></div>
         </div>
     }

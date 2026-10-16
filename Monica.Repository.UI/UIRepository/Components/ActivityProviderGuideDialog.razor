@@ -18,13 +18,13 @@
                 <MudChip T="string" Variant="Variant.Outlined" Class="activity-guide-support"
                          data-tone="@(Guide.IsSupported ? "supported" : "unsupported")"
                          Color="@(Guide.IsSupported ? Color.Success : Color.Warning)"
-                         Icon="@(Guide.IsSupported ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.HelpOutline)">
+                         Icon="@(Guide.IsSupported ? MoIcons.Success : MoIcons.Help)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                     @(Guide.IsSupported ? L["Activity:Guide:Supported"] : L["Activity:Guide:Unsupported"])
                 </MudChip>
             </div>
 
             <MudAlert Severity="@(Guide.IsSupported ? Severity.Info : Severity.Warning)" Variant="Variant.Outlined" Dense="true"
-                      Class="activity-guide-description" data-tone="@(Guide.IsSupported ? "supported" : "unsupported")">
+                      Class="activity-guide-description" data-tone="@(Guide.IsSupported ? "supported" : "unsupported")" Icon="@(Guide.IsSupported ? MoIcons.Info : MoIcons.Warning)">
                 @ProviderDescription
             </MudAlert>
 
@@ -49,7 +49,7 @@
                             <MudText Typo="Typo.body2" Class="activity-guide__note">@SourceDescription</MudText>
                         </div>
                         <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                                   StartIcon="@Icons.Material.Outlined.ContentCopy"
+                                   StartIcon="@MoIcons.Copy"
                                    Disabled="@(_retired || string.IsNullOrWhiteSpace(Guide.Sql))"
                                    aria-disabled="@(_copying || _retired || string.IsNullOrWhiteSpace(Guide.Sql) ? "true" : "false")"
                                    OnClick="CopySqlAsync">

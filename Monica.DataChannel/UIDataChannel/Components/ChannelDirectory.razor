@@ -21,10 +21,10 @@
     }
     <div class="directory-query">
         <div class="directory-query__search">
-            <MudTextField T="string" @ref="_searchField" @bind-Value="_query" Immediate="true" Label="@L["Directory:Search"]" Placeholder="@L["Directory:SearchPlaceholder"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Clearable="true" />
+            <MudTextField T="string" @ref="_searchField" @bind-Value="_query" Immediate="true" Label="@L["Directory:Search"]" Placeholder="@L["Directory:SearchPlaceholder"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Clearable="true" ClearIcon="@MoIcons.Close" />
         </div>
         <div class="directory-query__group">
-            <MudSelect T="string" @bind-Value="_group" Label="@L["Directory:Group"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+            <MudSelect T="string" @bind-Value="_group" Label="@L["Directory:Group"]" Variant="Variant.Outlined" Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 <MudSelectItem Value="@("all")">@L["Directory:AllGroups"]</MudSelectItem>
                 <MudSelectItem Value="@("ungrouped")">@L["Workbench:Ungrouped"]</MudSelectItem>
                 @foreach (var group in Groups)
@@ -83,7 +83,7 @@
                 </MudTd>
                 <MudTd DataLabel="@L["Directory:Columns:Initialization"]">
                     <span class="channel-state" data-state="@DataChannelPresentation.Initialization(channel)">
-                        <MudIcon Icon="@DataChannelPresentation.InitializationIcon(channel)" Size="Size.Small" />@L[$"Channel:States:{DataChannelPresentation.Initialization(channel)}"]</span>
+                        <MoIcon Icon="@DataChannelPresentation.InitializationIcon(channel)" Size="1.25rem" />@L[$"Channel:States:{DataChannelPresentation.Initialization(channel)}"]</span>
                 </MudTd>
                 <MudTd DataLabel="@L["Directory:Columns:Exceptions"]">
                     <MudButton Class="retained-count" data-attention="@(channel.ExceptionCount > 0 ? "true" : "false")" Disabled="@IsBusy(channel.Id)" OnClick="() => OnViewExceptions.InvokeAsync(channel.Id)" aria-label="@L["Directory:InspectExceptionsFor", channel.Id]">@channel.ExceptionCount</MudButton>
@@ -91,23 +91,23 @@
                 <MudTd DataLabel="@L["Common:Columns:Actions"]">
                     <div class="directory-actions">
                         <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="() => OnInspect.InvokeAsync(channel)" aria-label="@L["Directory:InspectPipelineFor", channel.Id]">@L["Channel:Actions:Inspect"]</MudButton>
-                        <MudMenu Icon="@Icons.Material.Outlined.MoreVert" Size="Size.Small" AriaLabel="@L["Channel:Actions:OpenMenu", channel.Id]">
-                            <MudMenuItem Icon="@Icons.Material.Outlined.Refresh" Disabled="@IsBusy(channel.Id)" OnClick="() => OnReinitialize.InvokeAsync(channel.Id)">@L["Channel:Actions:Reinitialize"]</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.ErrorOutline" Disabled="@IsBusy(channel.Id)" OnClick="() => OnViewExceptions.InvokeAsync(channel.Id)">@L["Channel:Actions:ViewExceptions"]</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.ClearAll" Disabled="@IsBusy(channel.Id)" OnClick="() => OnClear.InvokeAsync(channel.Id)">@L["Channel:Actions:ClearHistory"]</MudMenuItem>
+                        <MudMenu Icon="@MoIcons.MoreVertical" Size="Size.Small" AriaLabel="@L["Channel:Actions:OpenMenu", channel.Id]">
+                            <MudMenuItem Icon="@MoIcons.Refresh" Disabled="@IsBusy(channel.Id)" OnClick="() => OnReinitialize.InvokeAsync(channel.Id)">@L["Channel:Actions:Reinitialize"]</MudMenuItem>
+                            <MudMenuItem Icon="@MoIcons.Error" Disabled="@IsBusy(channel.Id)" OnClick="() => OnViewExceptions.InvokeAsync(channel.Id)">@L["Channel:Actions:ViewExceptions"]</MudMenuItem>
+                            <MudMenuItem Icon="@MoIcons.ClearList" Disabled="@IsBusy(channel.Id)" OnClick="() => OnClear.InvokeAsync(channel.Id)">@L["Channel:Actions:ClearHistory"]</MudMenuItem>
                         </MudMenu>
                     </div>
                 </MudTd>
             </RowTemplate>
             <NoRecordsContent>
                 <div class="directory-empty">
-                    <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Large" />
+                    <MoIcon Icon="@MoIcons.Workflow" Size="2.25rem" />
                     <h3>@L[MissingChannel ? "Directory:MissingChannel" : Channels.Count == 0 ? "Directory:Empty" : "Directory:NoMatches"]</h3>
                     <p>@L[MissingChannel ? "Directory:MissingChannelHelp" : Channels.Count == 0 ? "Directory:EmptyHelp" : "Directory:NoMatchesHelp"]</p>
                 </div>
             </NoRecordsContent>
             <PagerContent>
-                <MudTablePager />
+                <MudTablePager FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
             </PagerContent>
         </MudTable>
     </div>

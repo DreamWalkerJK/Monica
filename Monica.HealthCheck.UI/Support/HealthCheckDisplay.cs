@@ -1,4 +1,5 @@
 using Monica.HealthCheck.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.HealthCheck.UI.Support;
@@ -26,12 +27,21 @@ public static class HealthCheckDisplay
         _ => MudBlazor.Severity.Normal
     };
 
-    /// <summary>Gets the Material icon for a health state.</summary>
+    /// <summary>Gets the shared Monica icon for a health state.</summary>
     public static string Icon(HealthCheckState state) => state switch
     {
-        HealthCheckState.Healthy => Icons.Material.Filled.CheckCircle,
-        HealthCheckState.Degraded => Icons.Material.Filled.Warning,
-        HealthCheckState.Unhealthy => Icons.Material.Filled.Error,
-        _ => Icons.Material.Filled.Help
+        HealthCheckState.Healthy => MoIcons.Success,
+        HealthCheckState.Degraded => MoIcons.Warning,
+        HealthCheckState.Unhealthy => MoIcons.Error,
+        _ => MoIcons.Help
+    };
+
+    /// <summary>Gets the theme color declaration for a standalone health status icon.</summary>
+    internal static string IconStyle(HealthCheckState state) => state switch
+    {
+        HealthCheckState.Healthy => "color:var(--mud-palette-success);",
+        HealthCheckState.Degraded => "color:var(--mud-palette-warning);",
+        HealthCheckState.Unhealthy => "color:var(--mud-palette-error);",
+        _ => "color:var(--mud-palette-text-secondary);"
     };
 }

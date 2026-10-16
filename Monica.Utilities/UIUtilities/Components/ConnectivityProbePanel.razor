@@ -9,7 +9,7 @@
     <div class="connectivity-panel__layout">
         <section class="connectivity-panel__request" @ref="_requestOwner">
             <header class="connectivity-panel__request-heading">
-                <MudIcon Icon="@Icons.Material.Outlined.TravelExplore" aria-hidden="true" />
+                <MoIcon Icon="@MoIcons.Globe" aria-hidden="true" Size="1.5rem" />
                 <div><h2>@L["Connectivity:RequestTitle"]</h2><p>@L["Connectivity:ScopeNote"]</p></div>
             </header>
             <form class="connectivity-panel__form" @onsubmit="RunProbeAsync" @onsubmit:preventDefault>
@@ -18,7 +18,7 @@
                                   Placeholder="@L["Connectivity:TargetHostPlaceholder"]" Variant="Variant.Outlined"
                                   Margin="Margin.Dense" Immediate="true" Disabled="@State.IsBusy" />
                     <MudSelect T="ConnectivityProbeKind" Value="State.ProbeKind" ValueChanged="State.SetProbeKind"
-                               Label="@L["Connectivity:ProbeKind"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@State.IsBusy">
+                               Label="@L["Connectivity:ProbeKind"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@State.IsBusy" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                         <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Ping">@L["Connectivity:Kinds:Ping"]</MudSelectItem>
                         <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Tcp">@L["Connectivity:Kinds:Tcp"]</MudSelectItem>
                         <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Http">@L["Connectivity:Kinds:Http"]</MudSelectItem>
@@ -46,7 +46,7 @@
                     {
                         <div class="connectivity-panel__certificate">
                             <MudCheckBox T="bool" @bind-Value="State.AllowInvalidCertificate" Color="Color.Warning"
-                                         Label="@L["Connectivity:SkipCertificateValidation"]" Disabled="@State.IsBusy" />
+                                         Label="@L["Connectivity:SkipCertificateValidation"]" Disabled="@State.IsBusy" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" />
                             <p class="connectivity-panel__helper">@L["Connectivity:CertificateBypassHelper"]</p>
                             @if (State.AllowInvalidCertificate)
                             {
@@ -71,7 +71,7 @@
                             }
                             else
                             {
-                                <MudIcon Icon="@Icons.Material.Outlined.PlayArrow" Class="mr-1" aria-hidden="true" />
+                                <MoIcon Icon="@MoIcons.Play" Class="mr-1" aria-hidden="true" Size="1.5rem" />
                                 @L["Connectivity:Run"]
                             }
                         </MudButton>
@@ -99,7 +99,7 @@
             @if (State.LastResult is not { } result)
             {
                 <div class="connectivity-panel__empty">
-                    <MudIcon Icon="@Icons.Material.Outlined.TravelExplore" aria-hidden="true" />
+                    <MoIcon Icon="@MoIcons.Globe" aria-hidden="true" Size="1.5rem" />
                     <h3>@(State.ErrorMessage is null ? L["Connectivity:NoResultTitle"] : L["Connectivity:NoCompletedResult"])</h3>
                     <p>@(State.ErrorMessage is null ? L["Connectivity:NoResultSubtitle"] : L["Connectivity:NoCompletedResultHelper"])</p>
                 </div>
@@ -108,7 +108,7 @@
             {
                 <div class="connectivity-panel__outcome @(result.Succeeded ? "connectivity-panel__outcome--success" : "connectivity-panel__outcome--warning")">
                     <div class="connectivity-panel__outcome-title">
-                        <MudIcon Icon="@(result.Succeeded ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.ReportProblem)" aria-hidden="true" />
+                        <MoIcon Icon="@(result.Succeeded ? MoIcons.Success : MoIcons.Warning)" aria-hidden="true" Size="1.5rem" />
                         <h3>@GetOutcomeText(result)</h3>
                     </div>
                     <p class="connectivity-panel__endpoint">@result.Endpoint</p>

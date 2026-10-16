@@ -8,6 +8,7 @@ using Monica.HealthCheck.UI.Pages;
 using Monica.HealthCheck.UI.State;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -50,7 +51,7 @@ public sealed class ModuleHealthCheckUI : MonicaModule<ModuleHealthCheckUIOption
                 HealthCheckResource>(
                 UIHealthCheckPage.PAGE_URL,
                 "Navigation:Title",
-                Icons.Material.Filled.MonitorHeart,
+                MoIcons.HeartPulse,
                 BuiltInNavigationCategoryIds.Monitor,
                 addToNav: true,
                 navOrder: 10,

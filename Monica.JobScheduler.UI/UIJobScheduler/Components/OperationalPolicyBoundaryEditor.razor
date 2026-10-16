@@ -7,7 +7,7 @@
 <article class="boundary-editor">
     <div class="boundary-editor__heading">
         <MudText Typo="Typo.subtitle2" HtmlTag="h5">@Label</MudText>
-        <MudIconButton Icon="@Icons.Material.Outlined.Restore"
+        <MudIconButton Icon="@MoIcons.Restore"
                        Size="Size.Small"
                        Disabled="@(Disabled || !Draft.HasOverride)"
                        OnClick="ResetAsync"
@@ -27,7 +27,7 @@
                        Variant="Variant.Outlined"
                        Margin="Margin.Dense"
                        Disabled="@Disabled"
-                       aria-label="@L["Policy:Schedule:BoundaryMode"]">
+                       aria-label="@L["Policy:Schedule:BoundaryMode"]" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 <MudSelectItem T="CronBoundaryOverrideMode" Value="CronBoundaryOverrideMode.Inherit">
                     @L["Policy:BoundaryModes:Inherit"]
                 </MudSelectItem>
@@ -46,13 +46,13 @@
                                    Label="@L["Policy:Schedule:BoundaryDate"]"
                                    Variant="Variant.Outlined"
                                    Margin="Margin.Dense"
-                                   Disabled="@Disabled" />
+                                   Disabled="@Disabled" AdornmentIcon="@MoIcons.Calendar" PreviousIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" ClearIcon="@MoIcons.Close" />
                     <MudTimePicker Time="@Draft.LocalTime"
                                    TimeChanged="SetTimeAsync"
                                    Label="@L["Policy:Schedule:BoundaryTime"]"
                                    Variant="Variant.Outlined"
                                    Margin="Margin.Dense"
-                                   Disabled="@Disabled" />
+                                   Disabled="@Disabled" AdornmentIcon="@MoIcons.Clock" ClearIcon="@MoIcons.Close" />
                 </div>
                 @if (Draft.ValidationFailure != CronBoundaryValidationFailure.None)
                 {

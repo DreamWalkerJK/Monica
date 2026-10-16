@@ -33,13 +33,13 @@
             {
                 @if (!string.IsNullOrWhiteSpace(_loadErrorMessage))
                 {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Variant="Variant.Outlined">
                         @_loadErrorMessage
                     </MudAlert>
                 }
                 else
                 {
-                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                    <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined">
                         @L["RAG:EmbeddingModel:NotConfigured"]
                     </MudAlert>
                 }
@@ -110,8 +110,8 @@
                                 @if (_testResults.TryGetValue(context.ModelKey, out var testResult))
                                 {
                                     <div class="test-result @(testResult.Succeeded ? "success" : "failed")" role="status">
-                                        <MudIcon Icon="@(testResult.Succeeded ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.ErrorOutline)"
-                                                 Size="Size.Small" />
+                                        <MoIcon Icon="@(testResult.Succeeded ? MoIcons.Success : MoIcons.Error)"
+                                                 Size="1.25rem" />
                                         <span>@BuildTestResultText(testResult)</span>
                                     </div>
                                 }
@@ -126,7 +126,7 @@
                                 <MudButton Variant="Variant.Outlined"
                                            Size="Size.Small"
                                            Color="Color.Primary"
-                                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                                           StartIcon="@MoIcons.Play"
                                            OnClick="@(() => TestModelAsync(context))"
                                            Disabled="@(!context.IsProviderValid)"
                                            aria-disabled="@(IsTesting(context) ? "true" : "false")">

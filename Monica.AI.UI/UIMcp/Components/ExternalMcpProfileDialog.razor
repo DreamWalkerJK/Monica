@@ -54,7 +54,7 @@
                               ErrorText="@EndpointValidationMessage" />
 
                 <div class="connection-grid">
-                        <MudSelect Disabled="@_isSaving" T="HttpTransportMode"
+                        <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" Disabled="@_isSaving" T="HttpTransportMode"
                                    @bind-Value="@TransportMode"
                                    Label="@L["Capabilities:Mcp:Dialog:TransportMode"]"
                                    Variant="Variant.Outlined"
@@ -89,7 +89,7 @@
                         <h3>@L["Capabilities:Mcp:Dialog:Headers"]</h3>
                         <MudButton Variant="Variant.Text"
                                    Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.Add"
+                                   StartIcon="@MoIcons.Add"
                                    OnClick="AddHeader">
                             @L["Capabilities:Mcp:Dialog:AddHeader"]
                         </MudButton>
@@ -110,7 +110,7 @@
                                 <div class="header-row" @key="header">
                                     <div class="header-row-heading">
                                         <span>@(string.IsNullOrWhiteSpace(header.Name) ? L["Capabilities:Mcp:Dialog:HeaderName"] : header.Name)</span>
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                    <MudIconButton Icon="@MoIcons.Delete"
                                                    Color="Color.Error"
                                                    Size="Size.Small"
                                                    OnClick="@(() => RemoveHeader(header))"
@@ -144,15 +144,15 @@
                 <p class="form-help">@L["Capabilities:Mcp:Dialog:TestHelp"]</p>
                 @if (_testedProfile is not null && !TestResultMatches)
                 {
-                    <MudAlert Severity="Severity.Info" Dense="true">@L["Capabilities:Mcp:Dialog:DraftChanged"]</MudAlert>
+                    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Capabilities:Mcp:Dialog:DraftChanged"]</MudAlert>
                 }
                 @if (_error is not null && (!_errorIsTest || TestResultMatches))
                 {
-                    <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+                    <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@_error</MudAlert>
                 }
                 @if (_lastTestResult is not null && TestResultMatches)
                 {
-                    <MudAlert Severity="@(_lastTestResult.Success ? Severity.Success : Severity.Error)" Dense="true">
+                    <MudAlert Icon="@(_lastTestResult.Success ? MoIcons.Success : MoIcons.Error)" Severity="@(_lastTestResult.Success ? Severity.Success : Severity.Error)" Dense="true">
                         <div class="test-result">
                             <MudText Typo="Typo.body2">@FormatConnectivityMessage(_lastTestResult)</MudText>
                             @if (_lastTestResult.Success)
@@ -182,7 +182,7 @@
     <DialogActions>
         <div class="external-mcp-actions">
         <MudButton Variant="Variant.Outlined"
-                   StartIcon="@Icons.Material.Filled.NetworkPing"
+                   StartIcon="@MoIcons.Pulse"
                    Disabled="@(!CanSubmit)"
                    aria-disabled="@((_isTesting || _isSaving || !CanSubmit).ToString().ToLowerInvariant())"
                    OnClick="TestAsync">

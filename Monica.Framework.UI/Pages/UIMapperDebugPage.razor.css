@@ -11,7 +11,7 @@
 .mapper-page__heading-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .mapper-page__identity { min-width: 0; }
 .mapper-page__eyebrow { display: flex; align-items: center; gap: .5rem; font-size: .75rem; margin-bottom: .5rem; }
-.mapper-page__eyebrow ::deep .mud-icon-root { width: 1.25rem; height: 1.25rem; color: var(--mud-palette-primary); }
+.mapper-page__eyebrow ::deep :is(.mud-icon-root, .mo-icon) { width: 1.25rem; height: 1.25rem; color: var(--mud-palette-primary); }
 .mapper-page h1 { font-family: var(--mud-typography-h1-family); font-size: 2rem; line-height: 1.2; font-weight: 500; margin: 0; }
 .mapper-page__description { margin: .75rem 0 .5rem; font-size: .875rem; line-height: 1.6; max-width: 60rem; }
 .mapper-page__read-context { min-height: 1.25rem; display: flex; flex-wrap: wrap; gap: .5rem 1rem; font-size: .75rem; line-height: 1.5; }
@@ -49,7 +49,7 @@
 .mapper-pair:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: -5px; }
 .mapper-pair__role { font-size: .71875rem; line-height: 1.4; }
 .mapper-pair__direction { display: flex; align-items: center; gap: .375rem; margin-top: .375rem; }
-.mapper-pair__direction ::deep .mud-icon-root { width: .875rem; height: .875rem; color: var(--mud-palette-primary); }
+.mapper-pair__direction ::deep :is(.mud-icon-root, .mo-icon) { width: .875rem; height: .875rem; color: var(--mud-palette-primary); }
 .mapper-pair code, .mapper-reader__pair code { color: var(--mud-palette-text-primary); font-family: var(--mo-font-family-mono, monospace); font-size: .8125rem; font-weight: 400; line-height: 1.65; white-space: normal; overflow-wrap: anywhere; min-width: 0; }
 .mapper-catalog__no-matches { padding: 1.5rem; }
 .mapper-catalog h3, .mapper-reader h3 { margin: 0 0 .75rem; font-size: .9375rem; line-height: 1.5; font-weight: 500; }
@@ -59,7 +59,7 @@
 .mapper-reader__heading { display: flex; align-items: center; gap: .75rem; padding: 1.25rem 1.5rem; background: var(--mud-palette-primary); color: var(--mud-palette-primary-text); }
 .mapper-reader__heading h2 { flex: 1; min-width: 0; }
 .mapper-reader__heading h2:focus { outline: 2px solid currentColor; outline-offset: 4px; border-radius: 2px; }
-.mapper-reader__heading ::deep .mud-icon-root { width: 1.25rem; height: 1.25rem; }
+.mapper-reader__heading ::deep :is(.mud-icon-root, .mo-icon) { width: 1.25rem; height: 1.25rem; }
 .mapper-reader__heading > span { font-family: var(--mo-font-family-mono, monospace); font-size: .75rem; }
 .mapper-reader__context { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; padding: 1rem 1.5rem; }
 .mapper-reader__receipt { font-size: .75rem; line-height: 1.6; }
@@ -100,8 +100,8 @@
 
 .mapper-page__state { grid-column: 1 / -1; padding: 1.5rem; display: flex; flex-direction: column; align-items: flex-start; gap: .75rem; }
 .mapper-page__state > p { max-width: 60rem; margin: 0; font-size: .875rem; line-height: 1.6; }
-.mapper-page__state > ::deep .mud-icon-root { color: var(--mud-palette-primary); }
-.mapper-page__state--failed > ::deep .mud-icon-root, .mapper-read-error__summary ::deep .mud-icon-root { color: var(--mud-palette-error); }
+.mapper-page__state > ::deep :is(.mud-icon-root, .mo-icon) { color: var(--mud-palette-primary); }
+.mapper-page__state--failed > ::deep :is(.mud-icon-root, .mo-icon), .mapper-read-error__summary ::deep :is(.mud-icon-root, .mo-icon) { color: var(--mud-palette-error); }
 .mapper-read-error { padding: 1.5rem; margin-bottom: 1.5rem; }
 .mapper-read-error__summary { display: flex; align-items: center; gap: .625rem; }
 .mapper-read-error p { font-size: .875rem; line-height: 1.6; margin-block: .75rem; }

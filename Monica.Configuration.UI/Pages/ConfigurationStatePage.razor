@@ -41,8 +41,8 @@
                                         <MudStack Spacing="2">
                                             <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                    <MudIcon Icon="@ValidationPopoverStatusIcon"
-                                                             Color="@ValidationPopoverStatusColor" />
+                                                    <MoIcon Icon="@ValidationPopoverStatusIcon"
+                                                             Style="@ValidationPopoverStatusIconStyle" Size="1.5rem" />
                                                     <MudStack Spacing="0">
                                                         <MudText Typo="Typo.subtitle1">@ValidationPopoverTitle</MudText>
                                                         <MudText Typo="Typo.caption" Color="Color.Secondary">@ValidationPopoverSummary</MudText>
@@ -56,7 +56,7 @@
                                                         @ValidationPopoverIssueCount
                                                     </MudChip>
                                                     <MudTooltip Text="@L["Common:Actions:Close"]">
-                                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                        <MudIconButton Icon="@MoIcons.Close"
                                                                        Size="Size.Small"
                                                                        OnClick="CloseRuntimeValidationPopover"
                                                                        aria-label="@L["Common:Actions:Close"]" />
@@ -70,18 +70,18 @@
                                             }
                                             else
                                             {
-                                                <MudTabs @bind-ActivePanelIndex="_validationPanelIndex">
+                                                <MudTabs PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" @bind-ActivePanelIndex="_validationPanelIndex">
                                                     <MudTabPanel Text="@L["Validation:SourceTitle"].Value">
                                                         @if (_runtimeValidationReport is null)
                                                         {
-                                                            <MudAlert Severity="Severity.Warning">@(_runtimeValidationError ?? L["State:RuntimeValidation:Unavailable"].Value)</MudAlert>
+                                                            <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning">@(_runtimeValidationError ?? L["State:RuntimeValidation:Unavailable"].Value)</MudAlert>
                                                         }
                                                         else if (_runtimeValidationReport.DefinitionReports.Count > 0)
                                                         {
                                                             <MudExpansionPanels MultiExpansion="true">
                                                                 @foreach (var definition in _runtimeValidationReport.DefinitionReports)
                                                                 {
-                                                                    <MudExpansionPanel Text="@ValidationDefinitionName(definition.DefinitionKey)">
+                                                                    <MudExpansionPanel Icon="@MoIcons.ChevronDown" Text="@ValidationDefinitionName(definition.DefinitionKey)">
                                                                         <ConfigurationValidationReportView Title="@definition.DefinitionKey"
                                                                            Coverage="@definition.Coverage" Scope="@definition.Scope"
                                                                            ValidationRevision="@definition.ValidationRevision"
@@ -108,17 +108,17 @@
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Validation:OptionsNotice"]</MudText>
                                                             @if (_optionsValidationError is not null)
                                                             {
-                                                                <MudAlert Severity="Severity.Error">@_optionsValidationError</MudAlert>
+                                                                <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_optionsValidationError</MudAlert>
                                                             }
                                                             else
                                                             {
                                                                 @foreach (var definitionKey in UnobservedDefinitionKeys)
                                                                 {
-                                                                    <MudAlert Severity="Severity.Info" Dense="true">@ValidationDefinitionName(definitionKey): @L["Validation:NoObserved"]</MudAlert>
+                                                                    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@ValidationDefinitionName(definitionKey): @L["Validation:NoObserved"]</MudAlert>
                                                                 }
                                                                 @if (_optionsValidationReports.Count == 0 && !UnobservedDefinitionKeys.Any())
                                                                 {
-                                                                    <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:NoObserved"]</MudAlert>
+                                                                    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Validation:NoObserved"]</MudAlert>
                                                                 }
                                                                 @foreach (var attempt in _optionsValidationReports)
                                                                 {
@@ -158,7 +158,7 @@
             <div class="configuration-state-actions">
                 <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Import")">
                     <MudButton Variant="Variant.Outlined"
-                               StartIcon="@Icons.Material.Filled.UploadFile"
+                               StartIcon="@MoIcons.FileUpload"
                                Disabled="@(!CanUseCatalogOperations)"
                                OnClick="OpenImportDialog">
                         @L["Common:Actions:Import"]
@@ -166,14 +166,14 @@
                 </MudTooltip>
                 <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Export")">
                     <MudButton Variant="Variant.Outlined"
-                               StartIcon="@Icons.Material.Filled.Download"
+                               StartIcon="@MoIcons.Download"
                                Disabled="@(!CanUseCatalogOperations)"
                                OnClick="() => OpenExportDialog(null, null)">
                         @L["Common:Actions:Export"]
                     </MudButton>
                 </MudTooltip>
                 <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                    <MudIconButton Icon="@MoIcons.Refresh"
                                    Variant="Variant.Outlined"
                                    OnClick="LoadDefinitionsAsync"
                                    aria-label="@L["Common:Actions:Refresh"]" />
@@ -192,7 +192,7 @@
             @if (_runtimeValidationReport is { IsValid: false })
             {
                 <div class="configuration-runtime-validation-banner">
-                    <MudAlert Severity="Severity.Warning"
+                    <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning"
                               Variant="Variant.Outlined"
                               Class="configuration-runtime-validation-banner-alert">
                         <div class="configuration-runtime-validation-banner-content">
@@ -208,7 +208,7 @@
                                 <MudButton Variant="Variant.Text"
                                            Color="Color.Warning"
                                            Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.Visibility"
+                                           StartIcon="@MoIcons.Eye"
                                            OnClick="OpenRuntimeValidationPopover">
                                     @L["State:RuntimeValidation:ViewIssues"]
                                 </MudButton>
@@ -254,20 +254,20 @@
                         {
                             @if (_definitions.Count == 0)
                             {
-                                <MudAlert Severity="Severity.Info">@L["State:Definitions:Empty"]</MudAlert>
+                                <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["State:Definitions:Empty"]</MudAlert>
                             }
                             else if (!_definitions.Any(static definition => definition.CanManage))
                             {
-                                <MudAlert Severity="Severity.Warning">@L["State:Definitions:NoAvailableDefinitions"]</MudAlert>
+                                <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning">@L["State:Definitions:NoAvailableDefinitions"]</MudAlert>
                             }
                             else if (!_definitions.Any(definition =>
                                          definition.CanManage && _lifecycleFilter.Includes(definition.LifecycleState)))
                             {
-                                <MudAlert Severity="Severity.Info">@L["State:Definitions:NoMatches"]</MudAlert>
+                                <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["State:Definitions:NoMatches"]</MudAlert>
                             }
                             else
                             {
-                                <MudAlert Severity="Severity.Info">@L["State:Definitions:SelectPrompt"]</MudAlert>
+                                <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["State:Definitions:SelectPrompt"]</MudAlert>
                             }
                         }
                         else
@@ -309,7 +309,7 @@
                                                              Size="Size.Small"
                                                              Color="Color.Warning"
                                                              Variant="Variant.Filled"
-                                                             Icon="@Icons.Material.Filled.Inventory2">
+                                                             Icon="@MoIcons.Package">
                                                         @L["State:Definitions:Retired"]
                                                     </MudChip>
                                                 </MudTooltip>
@@ -331,7 +331,7 @@
                                             @if (CanMutateSelectedDefinition)
                                             {
                                                 <MudTooltip Text="@L["Common:Actions:EditJson"]">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.DataObject"
+                                                    <MudIconButton Icon="@MoIcons.Braces"
                                                                    Size="Size.Small"
                                                                    Variant="Variant.Outlined"
                                                                    aria-label="@L["Common:Actions:EditJson"]"
@@ -339,7 +339,7 @@
                                                 </MudTooltip>
                                             }
                                             <MudTooltip Text="@L["History:Actions:ViewDefinitionHistory"]">
-                                                <MudIconButton Icon="@Icons.Material.Filled.History"
+                                                <MudIconButton Icon="@MoIcons.History"
                                                                Size="Size.Small"
                                                                Variant="Variant.Outlined"
                                                                aria-label="@L["History:Actions:ViewDefinitionHistory"]"
@@ -348,7 +348,7 @@
                                             @if (CanMutateSelectedDefinition)
                                             {
                                                 <MudTooltip Text="@L["ImportExport:Export:DefinitionAction"]">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Download"
+                                                    <MudIconButton Icon="@MoIcons.Download"
                                                                    Size="Size.Small"
                                                                    Variant="Variant.Outlined"
                                                                    aria-label="@L["ImportExport:Export:DefinitionAction"]"
@@ -358,7 +358,7 @@
                                             @if (CanInspectSelectedDefinitionSources)
                                             {
                                                 <MudTooltip Text="@L["Sources:Definition:Title"]">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
+                                                    <MudIconButton Icon="@MoIcons.Workflow"
                                                                    Size="Size.Small"
                                                                    Variant="Variant.Outlined"
                                                                    aria-label="@L["Sources:Definition:Title"]"
@@ -368,7 +368,7 @@
                                             @if (IsSelectedDefinitionRetired)
                                             {
                                                 <MudTooltip Text="@L["DefinitionPurge:Actions:Preview"]">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
+                                                    <MudIconButton Icon="@MoIcons.Delete"
                                                                    Size="Size.Small"
                                                                    Color="Color.Error"
                                                                    Variant="Variant.Outlined"
@@ -381,7 +381,7 @@
 
                                     @if (IsSelectedDefinitionRetired)
                                     {
-                                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                                        <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined">
                                             @L["State:Definitions:RetiredReadOnly"]
                                         </MudAlert>
                                     }
@@ -444,14 +444,14 @@
             {
                 <section class="configuration-draft-dock" aria-label="@L["Workbench:Pending"]">
                     <div class="configuration-draft-summary">
-                        <MudIcon Icon="@Icons.Material.Outlined.EditNote" Color="Color.Primary" />
+                        <MoIcon Icon="@MoIcons.NotebookEdit" Style="color:var(--mud-palette-primary)" Size="1.5rem" />
                         <div><strong>@L["Workbench:PendingCount", _pendingCount]</strong><p>@L["Workbench:PendingHelp"]</p></div>
                         @if (_validationIssueCount > 0) { <span class="configuration-draft-errors">@L["Workbench:DraftIssues", _validationIssueCount]</span> }
                     </div>
                     <div class="configuration-draft-actions">
-                        <MudButton StartIcon="@Icons.Material.Outlined.Undo" OnClick="UndoAll">@L["State:Actions:UndoAll"]</MudButton>
+                        <MudButton StartIcon="@MoIcons.Undo" OnClick="UndoAll">@L["State:Actions:UndoAll"]</MudButton>
                         <MudTooltip Text="@(CanSavePendingGroup ? L["Workbench:Review"] : L["State:Footer:SaveBlockedMetadata"])">
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.FactCheck" Disabled="@(!CanSavePendingGroup)" OnClick="OpenSaveGroupDialog">@L["Workbench:Review"]</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.ClipboardCheck" Disabled="@(!CanSavePendingGroup)" OnClick="OpenSaveGroupDialog">@L["Workbench:Review"]</MudButton>
                         </MudTooltip>
                     </div>
                 </section>

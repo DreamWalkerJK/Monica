@@ -13,14 +13,14 @@
     }
     else
     {
-        <span class="system-info-load-state__error-icon"><MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" /></span>
+        <span class="system-info-load-state__error-icon"><MoIcon Icon="@MoIcons.Error" Size="2.25rem" /></span>
         <h2>@L["Page:States:LoadFailedTitle"]</h2>
         <p>@L["Page:States:LoadFailedDescription"]</p>
         @if (!string.IsNullOrWhiteSpace(Error))
         {
             <small>@Error</small>
         }
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RetryRequested">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Refresh" OnClick="RetryRequested">
             @L["Page:Actions:Retry"]
         </MudButton>
     }

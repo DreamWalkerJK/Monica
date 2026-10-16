@@ -3,7 +3,7 @@
 <MudDialog>
     <DialogContent>
         <div class="configuration-definition-purge-content">
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+            <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined">
                 @L["DefinitionPurge:Warning"]
             </MudAlert>
 
@@ -17,7 +17,7 @@
                              Size="Size.Small"
                              Color="Color.Warning"
                              Variant="Variant.Filled"
-                             Icon="@Icons.Material.Filled.Inventory2">
+                             Icon="@MoIcons.Package">
                         @L["State:Definitions:Retired"]
                     </MudChip>
                     <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
@@ -28,7 +28,7 @@
 
             @if (!Preview.CanPurge)
             {
-                <MudAlert Severity="Severity.Error">
+                <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">
                     @PurgeBlockedMessage
                 </MudAlert>
             }
@@ -36,7 +36,7 @@
             <div class="configuration-definition-purge-impact-grid">
                 <MudPaper Outlined="true" Class="pa-3 configuration-definition-purge-impact-panel">
                     <div class="configuration-definition-purge-section-title">
-                        <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Color="Color.Error" />
+                        <MoIcon Icon="@MoIcons.Delete" Style="color:var(--mud-palette-error)" Size="1.5rem" />
                         <MudText Typo="Typo.subtitle2">@L["DefinitionPurge:Deleted:Title"]</MudText>
                     </div>
                     <div class="configuration-definition-purge-impact-list">
@@ -61,7 +61,7 @@
 
                 <MudPaper Outlined="true" Class="pa-3 configuration-definition-purge-impact-panel">
                     <div class="configuration-definition-purge-section-title">
-                        <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Color="Color.Info" />
+                        <MoIcon Icon="@MoIcons.ShieldCheck" Style="color:var(--mud-palette-info)" Size="1.5rem" />
                         <MudText Typo="Typo.subtitle2">@L["DefinitionPurge:Retained:Title"]</MudText>
                     </div>
                     <div class="configuration-definition-purge-impact-list">
@@ -87,11 +87,11 @@
                 </MudPaper>
             </div>
 
-            <MudAlert Severity="Severity.Info" Dense="true">
+            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">
                 @L["DefinitionPurge:AuditNotice"]
             </MudAlert>
 
-            <MudCheckBox T="bool"
+            <MudCheckBox CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="bool"
                          @bind-Value="_confirmed"
                          Color="Color.Error"
                          Disabled="@(!Preview.CanPurge)"
@@ -102,7 +102,7 @@
         <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
         <MudButton Color="Color.Error"
                    Variant="Variant.Filled"
-                   StartIcon="@Icons.Material.Filled.DeleteForever"
+                   StartIcon="@MoIcons.Delete"
                    Disabled="@(!Preview.CanPurge || !_confirmed)"
                    OnClick="Confirm">
             @L["DefinitionPurge:Actions:Purge"]

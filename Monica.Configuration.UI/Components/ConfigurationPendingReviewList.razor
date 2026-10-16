@@ -3,7 +3,7 @@
 
 @if (!Review.HasItems)
 {
-    <MudAlert Severity="Severity.Info">@L["PendingReview:Empty"]</MudAlert>
+    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["PendingReview:Empty"]</MudAlert>
 }
 else
 {
@@ -91,7 +91,7 @@ else
                                                         @if (JumpChangeRequested.HasDelegate)
                                                         {
                                                             <MudTooltip Text="@L["PendingReview:Actions:JumpToChange"]">
-                                                                <MudIconButton Icon="@Icons.Material.Filled.NearMe"
+                                                                <MudIconButton Icon="@MoIcons.Navigation"
                                                                                Size="Size.Small"
                                                                                Color="Color.Primary"
                                                                                aria-label="@L["PendingReview:Actions:JumpToChange"]"
@@ -145,8 +145,8 @@ else
         ? L["PendingReview:Actions:ExcludeDefinition"]
         : L["PendingReview:Actions:UndoDefinition"];
     private string RemovalIcon => IsExclusion
-        ? Icons.Material.Filled.RemoveCircleOutline
-        : Icons.Material.Filled.Undo;
+        ? MoIcons.MinusCircle
+        : MoIcons.Undo;
     private Color RemovalColor => IsExclusion ? Color.Error : Color.Warning;
 
     private string MutationKindText(ConfigurationMutationKind kind)

@@ -29,12 +29,12 @@
 
             <div class="seeder-run-identity">
                 <span class="seeder-run-symbol" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Outlined.AccountTree" />
+                    <MoIcon Icon="@MoIcons.Workflow" Size="1.5rem" />
                 </span>
                 <div class="seeder-run-state">
                     <h2 id="seeder-run-status-title">@L.GetText(run.Status)</h2>
                     <span class="seeder-run-readiness" data-readiness="@run.ReadinessStatus.ToString().ToLowerInvariant()">
-                        <MudIcon Icon="@SeederDisplay.Icon(run.ReadinessStatus)" />
+                        <MoIcon Icon="@SeederDisplay.Icon(run.ReadinessStatus)" Size="1.5rem" />
                         @L["Overview:Readiness", L.GetText(run.ReadinessStatus)]
                     </span>
                 </div>
@@ -103,7 +103,7 @@
             @if (!string.IsNullOrWhiteSpace(run.FailFastTriggerSeederTypeName))
             {
                 <div class="seeder-run-trigger">
-                    <MudIcon Icon="@Icons.Material.Outlined.ReportProblem" Size="Size.Small" />
+                    <MoIcon Icon="@MoIcons.Warning" Size="1.25rem" />
                     <span>@L["Overview:FailFastTrigger", run.FailFastTriggerSeederTypeName]</span>
                 </div>
             }

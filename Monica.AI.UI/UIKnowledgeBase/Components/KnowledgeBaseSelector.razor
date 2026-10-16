@@ -8,7 +8,7 @@
     <MudTooltip Text="@GetTooltipText()">
         <MudBadge Content="@SelectedIds.Count" Color="Color.Info"
                   Visible="@(SelectedIds.Count > 0)" Overlap="true">
-            <MudIconButton Icon="@Icons.Material.Filled.MenuBook"
+            <MudIconButton Icon="@MoIcons.Book"
                            Class="@($"kb-selector-button {(SelectedIds.Count > 0 ? "active" : "")}")"
                            Disabled="@Disabled"
                            OnClick="@TogglePopover" />
@@ -24,7 +24,7 @@
             <div class="kb-popover-header">
                 <div class="kb-popover-heading">
                     <span class="kb-popover-icon">
-                        <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.Book" Size="1.25rem" />
                     </span>
                     <div class="kb-popover-copy">
                         <MudText Typo="Typo.subtitle2" Class="kb-popover-title">
@@ -46,7 +46,7 @@
                             @L["Chat:KnowledgeBaseSelector:Clear"]
                         </MudButton>
                     }
-                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                    <MudIconButton Icon="@MoIcons.Close"
                                    Size="Size.Small"
                                    OnClick="@ClosePopover"
                                    Class="kb-close-button"
@@ -58,7 +58,7 @@
                           @bind-Value="_searchText"
                           Placeholder="@L["Chat:KnowledgeBaseSelector:SearchPlaceholder"]"
                           Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          AdornmentIcon="@MoIcons.Search"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Immediate="true"
@@ -69,8 +69,8 @@
                 @if (FilteredKnowledgeBases.Count == 0)
                 {
                     <div class="kb-empty">
-                        <MudIcon Icon="@Icons.Material.Filled.SearchOff"
-                                 Size="Size.Medium"
+                        <MoIcon Icon="@MoIcons.SearchOff"
+                                 Size="1.5rem"
                                  Class="kb-empty-icon" />
                         <MudText Typo="Typo.body2" Class="kb-empty-text">
                             @L["Chat:KnowledgeBaseSelector:NoMatching"]
@@ -87,7 +87,7 @@
                                 disabled="@Disabled"
                                 @onclick="() => ToggleKbAsync(kb.Id)">
                             <span class="kb-item-leading">
-                                <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" />
+                                <MoIcon Icon="@MoIcons.Book" Size="1.25rem" />
                             </span>
                             <span class="kb-item-info">
                                 <span class="kb-item-title-row">
@@ -114,10 +114,10 @@
                                 }
                             </span>
                             <span class="kb-item-trailing">
-                                <MudIcon Icon="@(isSelected
-                                                  ? Icons.Material.Filled.CheckCircle
-                                                  : Icons.Material.Outlined.RadioButtonUnchecked)"
-                                         Size="Size.Small" />
+                                <MoIcon Icon="@(isSelected
+                                                  ? MoIcons.Success
+                                                  : MoIcons.Circle)"
+                                         Size="1.25rem" />
                             </span>
                         </button>
                     }

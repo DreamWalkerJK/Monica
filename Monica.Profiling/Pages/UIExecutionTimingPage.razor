@@ -12,14 +12,14 @@
 <div class="execution-timing-page">
     <header class="timing-heading">
         <div>
-            <span class="timing-eyebrow"><MudIcon Icon="@Icons.Material.Outlined.Timer" Size="Size.Small" /> @L["Page:Eyebrow"]</span>
+            <span class="timing-eyebrow"><MoIcon Icon="@MoIcons.Timer" Size="1.25rem" /> @L["Page:Eyebrow"]</span>
             <h1>@L["Pages:ExecutionTiming:Title"]</h1><p>@L["Page:Subtitle"]</p>
         </div>
         <div class="timing-heading__controls">
             <div class="timing-heading__actions">
                 <MudSwitch T="bool" Value="PageState.AutoRefresh" ValueChanged="SetAutoRefresh" Disabled="@(!PageState.CanAutoRefresh)"
                            Color="Color.Primary" Label="@L["Page:Actions:AutoRefresh"]" />
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh"
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh"
                            OnClick="RefreshDataAsync" Disabled="@PageState.IsLoading">@L["Page:Actions:Refresh"]</MudButton>
             </div>
             <div class="timing-freshness">
@@ -34,7 +34,7 @@
     @if (PageState.LoadError is not null)
     {
         <div class="timing-error" role="status">
-            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.Info" Size="1.25rem" />
             <div><strong>@L["Page:Messages:RefreshFailed"]</strong><p>@(PageState.HasSnapshot ? L["Page:Messages:Retained"] : L["Page:Messages:NoSnapshot"])</p>
                 @if (!string.IsNullOrEmpty(PageState.LoadError)) { <p>@PageState.LoadError</p> }
             </div>

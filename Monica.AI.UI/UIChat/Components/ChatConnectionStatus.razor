@@ -1,7 +1,7 @@
 @if (IsVisible && Status != ConnectionStatus.Connected)
 {
     <div class="connection-status-wrapper">
-        <MudAlert Severity="@GetSeverity()"
+        <MudAlert Icon="@((GetSeverity()) switch { Severity.Success => MoIcons.Success, Severity.Warning => MoIcons.Warning, Severity.Error => MoIcons.Error, Severity.Normal => MoIcons.CalendarDays, _ => MoIcons.Info })" Severity="@GetSeverity()"
                   Variant="Variant.Filled"
                   Dense="true"
                   Class="connection-status-alert">
@@ -12,7 +12,7 @@
                 }
                 else
                 {
-                    <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Small" />
+                    <MoIcon Icon="@MoIcons.CloudOff" Size="1.25rem" />
                 }
                 <MudText Typo="Typo.body2">@GetStatusMessage()</MudText>
                 @if (Status == ConnectionStatus.Disconnected && ShowReconnect)
@@ -20,7 +20,7 @@
                     <MudButton Variant="Variant.Text"
                                Color="Color.Inherit"
                                Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Refresh"
+                               StartIcon="@MoIcons.Refresh"
                                OnClick="@HandleReconnect"
                                Class="reconnect-button">
                         Reconnect

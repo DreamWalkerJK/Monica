@@ -4,7 +4,7 @@
 @if (Outcome is { } outcome && (!outcome.Succeeded || ShowSuccess))
 {
     <div class="outcome" role="@(outcome.Succeeded ? "status" : null)" aria-live="polite">
-        <MudAlert Severity="@(outcome.Succeeded ? Severity.Success : Severity.Error)" Variant="Variant.Outlined">
+        <MudAlert Severity="@(outcome.Succeeded ? Severity.Success : Severity.Error)" Variant="Variant.Outlined" Icon="@(outcome.Succeeded ? MoIcons.Success : MoIcons.Error)">
             <strong>@Title(outcome)</strong>
             @if (!string.IsNullOrWhiteSpace(Target)) { <code>@Target</code> }
             @if (!outcome.Succeeded && !string.IsNullOrWhiteSpace(outcome.Message)) { <p>@outcome.Message</p> }

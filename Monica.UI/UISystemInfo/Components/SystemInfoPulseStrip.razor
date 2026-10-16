@@ -7,20 +7,20 @@
 
 <dl class="system-info-pulse" aria-label="@L["Page:Pulse:AriaLabel"]">
     <div>
-        <dt><MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />@L["Page:Pulse:ProcessUptime"]</dt>
+        <dt><MoIcon Icon="@MoIcons.Clock" Size="1.25rem" />@L["Page:Pulse:ProcessUptime"]</dt>
         <dd class="system-info-live-uptime">@SystemInfoDisplayFormatter.FormatDuration(Uptime)</dd>
     </div>
     <div>
-        <dt><MudIcon Icon="@Icons.Material.Outlined.Memory" Size="Size.Small" />@L["Page:Pulse:WorkingSet"] <span>@L["Page:Status:Snapshot"]</span></dt>
+        <dt><MoIcon Icon="@MoIcons.Cpu" Size="1.25rem" />@L["Page:Pulse:WorkingSet"] <span>@L["Page:Status:Snapshot"]</span></dt>
         <dd class="system-info-working-set" title="@L["Page:Sections:Runtime:WorkingSetAtCapture"]">@SystemInfoDisplayFormatter.FormatScaledBytes(Snapshot.Process.WorkingSetBytes, CultureInfo.CurrentCulture)</dd>
         <small>@SystemInfoDisplayFormatter.FormatByteCount(Snapshot.Process.WorkingSetBytes, CultureInfo.CurrentCulture)</small>
     </div>
     <div>
-        <dt><MudIcon Icon="@Icons.Material.Outlined.Tag" Size="Size.Small" />@L["Page:Pulse:ProcessId"]</dt>
+        <dt><MoIcon Icon="@MoIcons.Hash" Size="1.25rem" />@L["Page:Pulse:ProcessId"]</dt>
         <dd>@Snapshot.Process.ProcessId.ToString(CultureInfo.CurrentCulture)</dd>
     </div>
     <div>
-        <dt><MudIcon Icon="@Icons.Material.Outlined.Update" Size="Size.Small" />@L["Page:Pulse:EvidenceAge"]</dt>
+        <dt><MoIcon Icon="@MoIcons.History" Size="1.25rem" />@L["Page:Pulse:EvidenceAge"]</dt>
         <dd class="system-info-evidence-age">@EvidenceAge</dd>
     </div>
 </dl>

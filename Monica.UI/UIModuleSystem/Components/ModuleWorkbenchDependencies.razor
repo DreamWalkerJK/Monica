@@ -20,14 +20,14 @@
                 <div class="graph-scope-actions" aria-label="@L["Dependencies:Controls:Scope"]">
                     <MudButton Variant="@(Session.ShowFullDependencyGraph ? Variant.Filled : Variant.Text)"
                                Color="Color.Primary"
-                               StartIcon="@Icons.Material.Outlined.Public"
+                               StartIcon="@MoIcons.Globe"
                                aria-pressed="@(Session.ShowFullDependencyGraph ? "true" : "false")"
                                OnClick="@(() => SetGraphScope(true))">
                         @L["Dependencies:Controls:FullHost"]
                     </MudButton>
                     <MudButton Variant="@(!Session.ShowFullDependencyGraph ? Variant.Filled : Variant.Text)"
                                Color="Color.Primary"
-                               StartIcon="@Icons.Material.Outlined.CenterFocusStrong"
+                               StartIcon="@MoIcons.Focus"
                                aria-pressed="@(!Session.ShowFullDependencyGraph ? "true" : "false")"
                                OnClick="@(() => SetGraphScope(false))">
                         @L["Dependencies:Controls:Neighborhood"]
@@ -60,7 +60,7 @@
                                      CoerceValue="false"
                                      SelectValueOnTab="true"
                                      Variant="Variant.Outlined"
-                                     Margin="Margin.Dense" />
+                                     Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" />
                 </div>
                 <div class="graph-field graph-field--highlight">
                     <MudTextField T="string"
@@ -73,7 +73,7 @@
                                   Variant="Variant.Outlined"
                                   Margin="Margin.Dense"
                                   Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Outlined.Search" />
+                                  AdornmentIcon="@MoIcons.Search" ClearIcon="@MoIcons.Close" />
                 </div>
                 <div class="graph-field graph-field--layout">
                     <MudSelect T="string"
@@ -82,7 +82,7 @@
                                ValueChanged="@SetLayout"
                                Variant="Variant.Outlined"
                                Margin="Margin.Dense"
-                               Dense="true">
+                               Dense="true" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                         <MudSelectItem T="string" Value="@("force")">@L["Dependencies:Layouts:Force"]</MudSelectItem>
                         <MudSelectItem T="string" Value="@("layered")">@L["Dependencies:Layouts:Layered"]</MudSelectItem>
                         <MudSelectItem T="string" Value="@("radial")">@L["Dependencies:Layouts:Radial"]</MudSelectItem>
@@ -92,7 +92,7 @@
                     @if (!Session.ShowFullDependencyGraph)
                     {
                         <MudButton Variant="Variant.Outlined"
-                                   StartIcon="@Icons.Material.Outlined.ZoomOutMap"
+                                   StartIcon="@MoIcons.Maximize"
                                    Disabled="@(Session.DependencyNeighborhoodDepth >= 3)"
                                    OnClick="@Session.ExpandDependencyNeighborhood">
                             @L["Dependencies:Expand", Session.DependencyNeighborhoodDepth]
@@ -100,16 +100,16 @@
                     }
                     <div class="graph-viewport-actions">
                         <MudTooltip Text="@L["Dependencies:Controls:ZoomIn"]">
-                            <MudIconButton Icon="@Icons.Material.Outlined.ZoomIn" OnClick="@ZoomInAsync" aria-label="@L["Dependencies:Controls:ZoomIn"]" />
+                            <MudIconButton Icon="@MoIcons.ZoomIn" OnClick="@ZoomInAsync" aria-label="@L["Dependencies:Controls:ZoomIn"]" />
                         </MudTooltip>
                         <MudTooltip Text="@L["Dependencies:Controls:ZoomOut"]">
-                            <MudIconButton Icon="@Icons.Material.Outlined.ZoomOut" OnClick="@ZoomOutAsync" aria-label="@L["Dependencies:Controls:ZoomOut"]" />
+                            <MudIconButton Icon="@MoIcons.ZoomOut" OnClick="@ZoomOutAsync" aria-label="@L["Dependencies:Controls:ZoomOut"]" />
                         </MudTooltip>
                         <MudTooltip Text="@L["Dependencies:Controls:Fit"]">
-                            <MudIconButton Icon="@Icons.Material.Outlined.FitScreen" OnClick="@FitAsync" aria-label="@L["Dependencies:Controls:Fit"]" />
+                            <MudIconButton Icon="@MoIcons.Scan" OnClick="@FitAsync" aria-label="@L["Dependencies:Controls:Fit"]" />
                         </MudTooltip>
                         <MudTooltip Text="@L["Dependencies:Controls:FocusSelected"]">
-                            <MudIconButton Icon="@Icons.Material.Outlined.MyLocation" Disabled="@(Session.SelectedModule is null)" OnClick="@FocusSelectedAsync" aria-label="@L["Dependencies:Controls:FocusSelected"]" />
+                            <MudIconButton Icon="@MoIcons.Crosshair" Disabled="@(Session.SelectedModule is null)" OnClick="@FocusSelectedAsync" aria-label="@L["Dependencies:Controls:FocusSelected"]" />
                         </MudTooltip>
                     </div>
                 </div>
@@ -146,7 +146,7 @@
                                 @if (selected.RequiresWebHost) { <span>@L["ModuleDrawer:Capabilities:WebHost"]</span> }
                             </div>
                             <MudButton Variant="Variant.Text"
-                                       EndIcon="@Icons.Material.Outlined.ArrowForward"
+                                       EndIcon="@MoIcons.ArrowRight"
                                        OnClick="@(() => ModuleSelected.InvokeAsync(selected))">
                                 @L["Dependencies:Selected:Inspect"]
                             </MudButton>
@@ -167,7 +167,7 @@
 
             <section class="dependency-table-section">
                 <MudButton Variant="Variant.Text"
-                           StartIcon="@Icons.Material.Outlined.TableRows"
+                           StartIcon="@MoIcons.Rows"
                            OnClick="@(() => Session.SetShowDependencyTable(!Session.ShowDependencyTable))"
                            aria-expanded="@(Session.ShowDependencyTable ? "true" : "false")">
                     @(Session.ShowDependencyTable ? L["Dependencies:Table:Hide"] : L["Dependencies:Table:Show"])

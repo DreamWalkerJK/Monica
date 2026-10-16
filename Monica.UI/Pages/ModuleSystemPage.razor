@@ -30,7 +30,7 @@
     else if (!_isAuthorized || _session?.IsAccessDenied == true)
     {
         <div class="workbench-centered-state" role="alert">
-            <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Large" />
+            <MoIcon Icon="@MoIcons.Lock" Style="color:var(--mud-palette-warning)" Size="2.25rem" />
             <MudText Typo="Typo.h5">@L["Access:DeniedTitle"]</MudText>
             <MudText Typo="Typo.body1">@L["Access:DeniedDescription"]</MudText>
         </div>
@@ -63,7 +63,7 @@
                                Label="@L["Common:Section"]"
                                Value="@_session.Section"
                                ValueChanged="@NavigateToSection"
-                               FullWidth="true">
+                               FullWidth="true" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                         @foreach (var workbenchSection in Sections)
                         {
                             <MudSelectItem T="ModuleSystemWorkbenchSection" Value="@workbenchSection">
@@ -374,12 +374,12 @@
 
     private static string SectionIcon(ModuleSystemWorkbenchSection section) => section switch
     {
-        ModuleSystemWorkbenchSection.Overview => Icons.Material.Outlined.Dashboard,
-        ModuleSystemWorkbenchSection.Performance => Icons.Material.Outlined.Timeline,
-        ModuleSystemWorkbenchSection.Modules => Icons.Material.Outlined.ViewModule,
-        ModuleSystemWorkbenchSection.Dependencies => Icons.Material.Outlined.AccountTree,
-        ModuleSystemWorkbenchSection.Discovery => Icons.Material.Outlined.FindInPage,
-        _ => Icons.Material.Outlined.Dashboard
+        ModuleSystemWorkbenchSection.Overview => MoIcons.Dashboard,
+        ModuleSystemWorkbenchSection.Performance => MoIcons.ChartLine,
+        ModuleSystemWorkbenchSection.Modules => MoIcons.Grid,
+        ModuleSystemWorkbenchSection.Dependencies => MoIcons.Workflow,
+        ModuleSystemWorkbenchSection.Discovery => MoIcons.FileSearch,
+        _ => MoIcons.Dashboard
     };
 
     public async ValueTask DisposeAsync()

@@ -8,7 +8,7 @@
     <details class="@EntryClass" open="@(Level == 0)" role="listitem">
         <summary>
             <span class="option-entry__identity">
-                <span class="option-entry__icon"><MudIcon Icon="@EntryIcon" Size="Size.Small" /></span>
+                <span class="option-entry__icon"><MoIcon Icon="@EntryIcon" Size="1.25rem" /></span>
                 <span class="option-entry__name">
                     <strong title="@Entry.Path">@Entry.Name</strong>
                     <small title="@Entry.TypeName">@Entry.TypeName</small>
@@ -16,16 +16,16 @@
             </span>
             <span class="option-entry__summary">
                 <code>@FormattedValue</code>
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@EntryColor">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@EntryColor" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                     @KindText
                 </MudChip>
                 @if (ShowsSeparateTruncationIndicator)
                 {
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                         @L["ModuleDrawer:Options:EntryTruncated"]
                     </MudChip>
                 }
-                <MudIcon Class="option-entry__chevron" Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
+                <MoIcon Class="option-entry__chevron" Icon="@MoIcons.ChevronDown" Size="1.25rem" />
             </span>
         </summary>
         @if (!Entry.Children.IsEmpty)
@@ -45,7 +45,7 @@ else
 {
     <div class="@EntryClass" role="listitem">
         <span class="option-entry__identity">
-            <span class="option-entry__icon"><MudIcon Icon="@EntryIcon" Size="Size.Small" /></span>
+            <span class="option-entry__icon"><MoIcon Icon="@EntryIcon" Size="1.25rem" /></span>
             <span class="option-entry__name">
                 <strong title="@Entry.Path">@Entry.Name</strong>
                 <small title="@Entry.TypeName">@Entry.TypeName</small>
@@ -53,12 +53,12 @@ else
         </span>
         <span class="option-entry__summary">
             <code class="@(IsRevealedValue ? "option-entry__value--revealed" : null)">@FormattedValue</code>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@EntryColor">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@EntryColor" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                 @KindText
             </MudChip>
             @if (ShowsSeparateTruncationIndicator)
             {
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                     @L["ModuleDrawer:Options:EntryTruncated"]
                 </MudChip>
             }
@@ -97,13 +97,13 @@ else
 
     private string EntryIcon => Entry.Kind switch
     {
-        ModuleOptionDiagnosticValueKind.Value => Icons.Material.Filled.DataObject,
-        ModuleOptionDiagnosticValueKind.Presence => Icons.Material.Filled.Lock,
-        ModuleOptionDiagnosticValueKind.Count => Icons.Material.Filled.Numbers,
-        ModuleOptionDiagnosticValueKind.Object => Icons.Material.Filled.AccountTree,
-        ModuleOptionDiagnosticValueKind.Collection => Icons.Material.Filled.ListAlt,
-        ModuleOptionDiagnosticValueKind.Unavailable => Icons.Material.Filled.WarningAmber,
-        _ => Icons.Material.Filled.Block
+        ModuleOptionDiagnosticValueKind.Value => MoIcons.Braces,
+        ModuleOptionDiagnosticValueKind.Presence => MoIcons.Lock,
+        ModuleOptionDiagnosticValueKind.Count => MoIcons.Hash,
+        ModuleOptionDiagnosticValueKind.Object => MoIcons.Workflow,
+        ModuleOptionDiagnosticValueKind.Collection => MoIcons.ClipboardList,
+        ModuleOptionDiagnosticValueKind.Unavailable => MoIcons.Warning,
+        _ => MoIcons.Ban
     };
 
     private Color EntryColor => ContainsRevealedSensitiveContent

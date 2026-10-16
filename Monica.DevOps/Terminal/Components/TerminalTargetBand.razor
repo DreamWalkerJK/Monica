@@ -5,7 +5,7 @@
 <div class="terminal-target">
     <div class="terminal-target__handle">
         <span class="terminal-target__caption">@L["Labels:Session"]</span>
-        <MudMenu Label="@Session.Name" StartIcon="@Icons.Material.Outlined.Terminal" EndIcon="@Icons.Material.Filled.ExpandMore"
+        <MudMenu Label="@Session.Name" StartIcon="@MoIcons.Terminal" EndIcon="@MoIcons.ChevronDown"
                  Variant="Variant.Filled" Color="Color.Primary" AriaLabel="@L["Actions:SelectSession"]" Disabled="@Disabled"
                  AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" MaxHeight="360">
             <ChildContent>
@@ -28,9 +28,9 @@
         }
     </div>
     <div class="terminal-target__actions">
-        <MudMenu Icon="@Icons.Material.Filled.MoreHoriz" Disabled="@Disabled" AriaLabel="@L["Actions:More"]">
-            <MudMenuItem Icon="@Icons.Material.Outlined.DeleteSweep" Disabled="@Disabled" OnClick="Clear">@L["Actions:Clear"]</MudMenuItem>
-            <MudMenuItem Icon="@Icons.Material.Outlined.Close" Disabled="@Disabled" OnClick="CloseSession">@L["Actions:CloseSession"]</MudMenuItem>
+        <MudMenu Icon="@MoIcons.MoreHorizontal" Disabled="@Disabled" AriaLabel="@L["Actions:More"]">
+            <MudMenuItem Icon="@MoIcons.ClearList" Disabled="@Disabled" OnClick="Clear">@L["Actions:Clear"]</MudMenuItem>
+            <MudMenuItem Icon="@MoIcons.Close" Disabled="@Disabled" OnClick="CloseSession">@L["Actions:CloseSession"]</MudMenuItem>
         </MudMenu>
     </div>
 </div>

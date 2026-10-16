@@ -13,7 +13,7 @@
 <div class="runtime-metrics-page">
     @if (_pageState is null)
     {
-        <ProfilingModuleUnavailable HeadingId="runtime-metrics-unavailable-title" Icon="@Icons.Material.Outlined.Speed"
+        <ProfilingModuleUnavailable HeadingId="runtime-metrics-unavailable-title" Icon="@MoIcons.Gauge"
             Eyebrow="@ProfilingL["Unavailable:Eyebrow"]" Title="@ProfilingL["Unavailable:RuntimeMetrics:Title"]"
             Description="@ProfilingL["Unavailable:RuntimeMetrics:Description"]" />
     }
@@ -21,7 +21,7 @@
     {
         <header class="runtime-metrics-header">
             <div>
-                <span class="runtime-eyebrow"><MudIcon Icon="@Icons.Material.Outlined.Speed" Size="Size.Small" /> @L["Page:Eyebrow"]</span>
+                <span class="runtime-eyebrow"><MoIcon Icon="@MoIcons.Gauge" Size="1.25rem" /> @L["Page:Eyebrow"]</span>
                 <h1>@L["Pages:RuntimeMetrics:Title"]</h1>
                 <p>@L["Page:Subtitle"]</p>
             </div>
@@ -29,7 +29,7 @@
                 <div class="runtime-metrics-header__actions">
                     <MudSwitch T="bool" Value="_pageState.AutoRefresh" ValueChanged="SetAutoRefresh"
                                Disabled="@(!_pageState.CanAutoRefresh)" Color="Color.Primary" Label="@L["Page:Actions:AutoRefresh"]" />
-                    <MudButton @ref="_refreshButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh"
+                    <MudButton @ref="_refreshButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh"
                                OnClick="RefreshDataAsync" Disabled="_pageState.IsLoading">@L["Page:Actions:Refresh"]</MudButton>
                 </div>
                 <div class="runtime-freshness">
@@ -44,7 +44,7 @@
         @if (_pageState.LoadError is not null)
         {
             <div class="runtime-load-error" role="alert">
-                <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+                <MoIcon Icon="@MoIcons.Error" Size="1.25rem" />
                 <div><strong>@L["Page:Messages:RefreshFailed"]</strong>
                     <p>@(_pageState.HasSnapshot ? L["Page:Messages:Retained"] : L["Page:Messages:NoSnapshot"])</p>
                     @if (!string.IsNullOrEmpty(_pageState.LoadError)) { <p>@_pageState.LoadError</p> }

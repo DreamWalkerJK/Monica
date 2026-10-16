@@ -14,14 +14,14 @@
 
 <div class="k8s-workbench">
     <K8SFamilyHeader>
-        <Actions><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@Visit.IsBusy" OnClick="Visit.RefreshAllAsync">@L["Workbench:Inventory:RefreshAll"]</MudButton></Actions>
+        <Actions><MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh" Disabled="@Visit.IsBusy" OnClick="Visit.RefreshAllAsync">@L["Workbench:Inventory:RefreshAll"]</MudButton></Actions>
     </K8SFamilyHeader>
     <section class="k8s-inventory">
         <div class="k8s-scope">
             <div class="k8s-scope-identity">
-                <MudIcon Icon="@Icons.Material.Outlined.Dns" />
+                <MoIcon Icon="@MoIcons.Server" Size="1.5rem" />
                 <div class="k8s-namespace-field">
-                    <MudSelect T="string" Label="@L["Forms:Namespace"]" Value="@Visit.Namespace" ValueChanged="ChangeNamespaceAsync" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Visit.IsBusy">
+                    <MudSelect T="string" Label="@L["Forms:Namespace"]" Value="@Visit.Namespace" ValueChanged="ChangeNamespaceAsync" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Visit.IsBusy" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                         @if (!string.IsNullOrEmpty(Visit.Namespace) && Visit.Namespaces?.Any(x => x.Name == Visit.Namespace) != true)
                         { <MudSelectItem T="string" Value="@Visit.Namespace"><span class="k8s-select-option-label">@Visit.Namespace</span></MudSelectItem> }
                         @foreach (var item in Visit.Namespaces ?? [])
@@ -31,10 +31,10 @@
                 </div>
             </div>
             <div class="k8s-namespace-actions">
-                <MudMenu Label="@L["Workbench:Inventory:NamespaceOperations"]" Variant="Variant.Outlined" Disabled="@IsOperationLaunchDisabled(OperationLaunchKind.NamespaceMenu)" EndIcon="@Icons.Material.Filled.ExpandMore">
-                    <MudMenuItem Icon="@Icons.Material.Outlined.RestartAlt" Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.Restart, K8SOperationScope.Namespace, OperationLaunchKind.NamespaceMenu))">@L["Workbench:Inventory:NamespaceRestart"]</MudMenuItem>
-                    <MudMenuItem Icon="@Icons.Material.Outlined.KeyboardArrowDown" Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.ScaleDown, K8SOperationScope.Namespace, OperationLaunchKind.NamespaceMenu))">@L["Workbench:Inventory:NamespaceDown"]</MudMenuItem>
-                    <MudMenuItem Icon="@Icons.Material.Outlined.KeyboardArrowUp" Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.ScaleUp, K8SOperationScope.Namespace, OperationLaunchKind.NamespaceMenu))">@L["Workbench:Inventory:NamespaceUp"]</MudMenuItem>
+                <MudMenu Label="@L["Workbench:Inventory:NamespaceOperations"]" Variant="Variant.Outlined" Disabled="@IsOperationLaunchDisabled(OperationLaunchKind.NamespaceMenu)" EndIcon="@MoIcons.ChevronDown">
+                    <MudMenuItem Icon="@MoIcons.Restart" Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.Restart, K8SOperationScope.Namespace, OperationLaunchKind.NamespaceMenu))">@L["Workbench:Inventory:NamespaceRestart"]</MudMenuItem>
+                    <MudMenuItem Icon="@MoIcons.ChevronDown" Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.ScaleDown, K8SOperationScope.Namespace, OperationLaunchKind.NamespaceMenu))">@L["Workbench:Inventory:NamespaceDown"]</MudMenuItem>
+                    <MudMenuItem Icon="@MoIcons.ChevronUp" Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.ScaleUp, K8SOperationScope.Namespace, OperationLaunchKind.NamespaceMenu))">@L["Workbench:Inventory:NamespaceUp"]</MudMenuItem>
                 </MudMenu>
                 <p>@L["Workbench:Inventory:Scope"]</p>
             </div>
@@ -46,23 +46,23 @@
                 @foreach (var kind in Kinds)
                 { <MudButton Variant="@(Visit.ResourceType == kind ? Variant.Filled : Variant.Text)" Color="@(Visit.ResourceType == kind ? Color.Primary : Color.Default)" aria-pressed="@(Visit.ResourceType == kind ? "true" : "false")" Disabled="@Visit.IsBusy" OnClick="@(() => ChangeKindAsync(kind))">@KindLabel(kind)</MudButton> }
             </div>
-            <div class="k8s-kind-select"><MudSelect T="K8SResourceType" Label="@L["Workbench:Inventory:Kind"]" Value="@Visit.ResourceType" ValueChanged="ChangeKindAsync" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Visit.IsBusy">@foreach (var kind in Kinds) { <MudSelectItem T="K8SResourceType" Value="@kind"><span class="k8s-select-option-label">@KindLabel(kind)</span></MudSelectItem> }</MudSelect></div>
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@(Visit.IsBusy || !Visit.NamespaceExists)" OnClick="Visit.RefreshListAsync">@L["Workbench:Inventory:RefreshList"]</MudButton>
-            <div class="k8s-search"><MudTextField T="string" Label="@L["Forms:SearchCurrentList"]" Value="@Visit.Search" ValueChanged="SearchAsync" Immediate="true" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Variant="Variant.Outlined" Margin="Margin.Dense" /></div>
+            <div class="k8s-kind-select"><MudSelect T="K8SResourceType" Label="@L["Workbench:Inventory:Kind"]" Value="@Visit.ResourceType" ValueChanged="ChangeKindAsync" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Visit.IsBusy" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">@foreach (var kind in Kinds) { <MudSelectItem T="K8SResourceType" Value="@kind"><span class="k8s-select-option-label">@KindLabel(kind)</span></MudSelectItem> }</MudSelect></div>
+            <MudButton Variant="Variant.Text" StartIcon="@MoIcons.Refresh" Disabled="@(Visit.IsBusy || !Visit.NamespaceExists)" OnClick="Visit.RefreshListAsync">@L["Workbench:Inventory:RefreshList"]</MudButton>
+            <div class="k8s-search"><MudTextField T="string" Label="@L["Forms:SearchCurrentList"]" Value="@Visit.Search" ValueChanged="SearchAsync" Immediate="true" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Variant="Variant.Outlined" Margin="Margin.Dense" ClearIcon="@MoIcons.Close" /></div>
         </div>
         @if (Visit.IsBusy && Visit.Activity != K8SInventoryActivity.None)
         { <div class="k8s-read-status" role="status"><MudProgressLinear Indeterminate="true" Color="Color.Primary" /><span>@ActivityLabel()</span> <span>@Visit.ActivityIdentity</span></div> }
-        @if (Visit.ContextFailure is { } failure) { <div class="k8s-read-status"><MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@L["Workbench:Inventory:ReadFailure", Visit.Namespace, KindLabel(Visit.ResourceType), failure] @if (Visit.Capture is null) { <p>@L["Workbench:Inventory:FirstReadFailed"]</p> }</MudAlert></div> }
-        @if (Visit.ReadFailure is { } readFailure) { <div class="k8s-read-status"><MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@L["Workbench:Inventory:ReadFailure", readFailure.Namespace, KindLabel(readFailure.ResourceType), readFailure.Message]</MudAlert></div> }
-        @if (!string.IsNullOrEmpty(Visit.Namespace) && Visit.Namespaces is not null && !Visit.NamespaceExists) { <div class="k8s-read-status"><MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Workbench:Inventory:MissingNamespace", Visit.Namespace]</MudAlert></div> }
+        @if (Visit.ContextFailure is { } failure) { <div class="k8s-read-status"><MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@L["Workbench:Inventory:ReadFailure", Visit.Namespace, KindLabel(Visit.ResourceType), failure] @if (Visit.Capture is null) { <p>@L["Workbench:Inventory:FirstReadFailed"]</p> }</MudAlert></div> }
+        @if (Visit.ReadFailure is { } readFailure) { <div class="k8s-read-status"><MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@L["Workbench:Inventory:ReadFailure", readFailure.Namespace, KindLabel(readFailure.ResourceType), readFailure.Message]</MudAlert></div> }
+        @if (!string.IsNullOrEmpty(Visit.Namespace) && Visit.Namespaces is not null && !Visit.NamespaceExists) { <div class="k8s-read-status"><MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["Workbench:Inventory:MissingNamespace", Visit.Namespace]</MudAlert></div> }
         @if (Visit.Capture is { } capture)
         {
-            @if (!Visit.ContextMatchesCapture) { <div class="k8s-read-status"><MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Workbench:Inventory:Retained", Visit.Namespace, KindLabel(Visit.ResourceType)]</MudAlert></div> }
+            @if (!Visit.ContextMatchesCapture) { <div class="k8s-read-status"><MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["Workbench:Inventory:Retained", Visit.Namespace, KindLabel(Visit.ResourceType)]</MudAlert></div> }
             @if (capture.Items.Count == 0)
             { <div class="k8s-empty"><p>@CaptureLabel(capture)</p><p>@L["Workbench:Inventory:Empty", KindLabel(capture.ResourceType)]</p></div> }
             else
             {
-                <MudDataGrid @key="capture.ResourceType" @ref="_grid" T="K8SResourceSummary" Items="capture.Items" QuickFilter="MatchesSearch" SortMode="SortMode.Multiple" Filterable="true" Dense="true" Hover="true" MultiSelection="true" SelectOnRowClick="@(!Visit.IsBusy && Visit.ContextMatchesCapture)" RowsPerPage="20" Comparer="@K8SResourceIdentity.Comparer" SelectedItems="@Visit.SelectedRows" SelectedItemsChanged="SelectRows" FixedHeader="true" Height="auto" Breakpoint="Breakpoint.Xs" Class="k8s-resource-grid">
+                <MudDataGrid @key="capture.ResourceType" @ref="_grid" T="K8SResourceSummary" Items="capture.Items" QuickFilter="MatchesSearch" SortMode="SortMode.Multiple" Filterable="true" Dense="true" Hover="true" MultiSelection="true" SelectOnRowClick="@(!Visit.IsBusy && Visit.ContextMatchesCapture)" RowsPerPage="20" Comparer="@K8SResourceIdentity.Comparer" SelectedItems="@Visit.SelectedRows" SelectedItemsChanged="SelectRows" FixedHeader="true" Height="auto" Breakpoint="Breakpoint.Xs" Class="k8s-resource-grid" SortIcon="@MoIcons.ArrowUp" DragIndicatorIcon="@MoIcons.GripVertical" FilterIconEmpty="@MoIcons.Filter" FilterIconFilled="@MoIcons.Filter" FilterIconClear="@MoIcons.FilterOff" ColumnOptionsIcon="@MoIcons.MoreVertical">
                     <ToolBarContent>
                         <div class="k8s-list-metadata"><p>@CaptureLabel(capture)</p><span>@L["Workbench:Inventory:TimeExplanation"]</span></div>
                         @if (Visit.SelectedCount > 0)
@@ -75,12 +75,12 @@
                                 <span class="k8s-selection-spacer"></span>
                                 <div class="k8s-selected-wide">
                                     <MudButton Color="Color.Warning" Variant="Variant.Outlined" Disabled="@IsOperationLaunchDisabled(OperationLaunchKind.SelectedRestartButton)" aria-disabled="@(Visit.IsBusy && IsOperationLaunchOrigin(OperationLaunchKind.SelectedRestartButton) ? "true" : null)" OnClick="@(() => OperateAsync(K8SInventoryOperation.Restart, K8SOperationScope.Selected, OperationLaunchKind.SelectedRestartButton))">@L["Workbench:Selection:Restart"]</MudButton>
-                                    <MudMenu Label="@L["Workbench:Selection:ReplicaActions"]" Disabled="@IsOperationLaunchDisabled(OperationLaunchKind.SelectedReplicaMenu)" EndIcon="@Icons.Material.Filled.ExpandMore">
+                                    <MudMenu Label="@L["Workbench:Selection:ReplicaActions"]" Disabled="@IsOperationLaunchDisabled(OperationLaunchKind.SelectedReplicaMenu)" EndIcon="@MoIcons.ChevronDown">
                                         <MudMenuItem Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.ScaleDown, K8SOperationScope.Selected, OperationLaunchKind.SelectedReplicaMenu))">@L["Workbench:Selection:Down"]</MudMenuItem>
                                         <MudMenuItem Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.ScaleUp, K8SOperationScope.Selected, OperationLaunchKind.SelectedReplicaMenu))">@L["Workbench:Selection:Up"]</MudMenuItem>
                                     </MudMenu>
                                 </div>
-                                <div class="k8s-selected-compact"><MudMenu Label="@L["Workbench:Selection:Actions"]" Disabled="@IsOperationLaunchDisabled(OperationLaunchKind.CompactSelectedMenu)" EndIcon="@Icons.Material.Filled.ExpandMore">
+                                <div class="k8s-selected-compact"><MudMenu Label="@L["Workbench:Selection:Actions"]" Disabled="@IsOperationLaunchDisabled(OperationLaunchKind.CompactSelectedMenu)" EndIcon="@MoIcons.ChevronDown">
                                     <MudMenuItem Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.Restart, K8SOperationScope.Selected, OperationLaunchKind.CompactSelectedMenu))">@L["Workbench:Selection:Restart"]</MudMenuItem>
                                     <MudMenuItem Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.ScaleDown, K8SOperationScope.Selected, OperationLaunchKind.CompactSelectedMenu))">@L["Workbench:Selection:Down"]</MudMenuItem>
                                     <MudMenuItem Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.ScaleUp, K8SOperationScope.Selected, OperationLaunchKind.CompactSelectedMenu))">@L["Workbench:Selection:Up"]</MudMenuItem>
@@ -110,8 +110,8 @@
                         <TemplateColumn Title="@L["Columns:Actions"]" Sortable="false" Filterable="false">
                             <CellTemplate><div class="k8s-row-actions" @onclick:stopPropagation="true">
                                 <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@(_retired || Visit.IsRetired || Visit.IsBusy && !IsInspectionOrigin(context.Item))" aria-disabled="@(Visit.IsBusy && IsInspectionOrigin(context.Item) ? "true" : null)" OnClick="@(() => InspectAsync(context.Item))">@L["Actions:Describe"]</MudButton>
-                                <MudMenu Icon="@Icons.Material.Filled.MoreHoriz" aria-label="@L["Workbench:Selection:RowActions", context.Item.Name]" Disabled="@IsOperationLaunchDisabled(OperationLaunchKind.RowMenu, context.Item)">
-                                    <MudMenuItem Icon="@Icons.Material.Outlined.RestartAlt" Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.Restart, K8SOperationScope.Single, OperationLaunchKind.RowMenu, context.Item))">@L[context.Item.ResourceType == K8SResourceType.Service ? "Actions:RestartBackingWorkloads" : "Actions:Restart"]</MudMenuItem>
+                                <MudMenu Icon="@MoIcons.MoreHorizontal" aria-label="@L["Workbench:Selection:RowActions", context.Item.Name]" Disabled="@IsOperationLaunchDisabled(OperationLaunchKind.RowMenu, context.Item)">
+                                    <MudMenuItem Icon="@MoIcons.Restart" Disabled="@Visit.IsBusy" OnClick="@(() => OperateAsync(K8SInventoryOperation.Restart, K8SOperationScope.Single, OperationLaunchKind.RowMenu, context.Item))">@L[context.Item.ResourceType == K8SResourceType.Service ? "Actions:RestartBackingWorkloads" : "Actions:Restart"]</MudMenuItem>
                                 </MudMenu>
                             </div></CellTemplate>
                         </TemplateColumn>
@@ -120,10 +120,10 @@
                     <PagerContent><div class="k8s-pager">
                         <MudDataGridPager T="K8SResourceSummary" PageSizeOptions="PageSizes" RowsPerPageString="@L["Workbench:Pager:Rows"]" InfoFormat="@L["Workbench:Pager:Info"]" ShowNavigation="false" />
                         <div class="k8s-pager-buttons">
-                            <MudIconButton Icon="@Icons.Material.Filled.FirstPage" aria-label="@L["Workbench:Pager:First"]" Disabled="@(_grid?.CurrentPage is null or 0)" OnClick="@(() => _grid?.NavigateTo(Page.First))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.NavigateBefore" aria-label="@L["Workbench:Pager:Previous"]" Disabled="@(_grid?.CurrentPage is null or 0)" OnClick="@(() => _grid?.NavigateTo(Page.Previous))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.NavigateNext" aria-label="@L["Workbench:Pager:Next"]" Disabled="@LastPage" OnClick="@(() => _grid?.NavigateTo(Page.Next))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.LastPage" aria-label="@L["Workbench:Pager:Last"]" Disabled="@LastPage" OnClick="@(() => _grid?.NavigateTo(Page.Last))" />
+                            <MudIconButton Icon="@MoIcons.FirstPage" aria-label="@L["Workbench:Pager:First"]" Disabled="@(_grid?.CurrentPage is null or 0)" OnClick="@(() => _grid?.NavigateTo(Page.First))" />
+                            <MudIconButton Icon="@MoIcons.ChevronLeft" aria-label="@L["Workbench:Pager:Previous"]" Disabled="@(_grid?.CurrentPage is null or 0)" OnClick="@(() => _grid?.NavigateTo(Page.Previous))" />
+                            <MudIconButton Icon="@MoIcons.ChevronRight" aria-label="@L["Workbench:Pager:Next"]" Disabled="@LastPage" OnClick="@(() => _grid?.NavigateTo(Page.Next))" />
+                            <MudIconButton Icon="@MoIcons.LastPage" aria-label="@L["Workbench:Pager:Last"]" Disabled="@LastPage" OnClick="@(() => _grid?.NavigateTo(Page.Last))" />
                         </div>
                     </div></PagerContent>
                 </MudDataGrid>

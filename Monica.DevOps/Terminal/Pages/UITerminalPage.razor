@@ -20,7 +20,7 @@
         <div class="terminal-header__heading"><h1>@L["Page:Title"]</h1><p>@L["Page:Subtitle"]</p></div>
         @if (_visit is { IsInitialized: true, ActiveSession: not null } headingVisit)
         {
-            <div class="terminal-header__actions"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add"
+            <div class="terminal-header__actions"><MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Add"
                 Disabled="@(!headingVisit.CanChangeSession)" OnClick="headingVisit.CreateSessionAsync">@L["Actions:NewSession"]</MudButton></div>
         }
     </header>
@@ -31,7 +31,7 @@
             <div class="terminal-initialization">
                 @if (visit.InitializationFailure is not null)
                 {
-                    <MudAlert Severity="Severity.Error">@(visit.OwnerStorageFailure is not null ? L["Messages:OwnerStorageFailed"] : L["Messages:InitializationFailed", visit.InitializationFailure])</MudAlert>
+                    <MudAlert Severity="Severity.Error" Icon="@MoIcons.Error">@(visit.OwnerStorageFailure is not null ? L["Messages:OwnerStorageFailed"] : L["Messages:InitializationFailed", visit.InitializationFailure])</MudAlert>
                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@visit.IsLoading" OnClick="visit.InitializeAsync">@L["Actions:Retry"]</MudButton>
                 }
                 else
@@ -48,18 +48,18 @@
                                     Clear="ClearAsync" CloseSession="CloseSessionAsync" />
                 @if (visit.ReadFailure is not null)
                 {
-                    <div class="terminal-evidence-error"><MudAlert Severity="Severity.Error" Dense="true">@L["Messages:RefreshFailed", visit.ReadFailure]</MudAlert>
+                    <div class="terminal-evidence-error"><MudAlert Severity="Severity.Error" Dense="true" Icon="@MoIcons.Error">@L["Messages:RefreshFailed", visit.ReadFailure]</MudAlert>
                         <MudButton Size="Size.Small" Disabled="@visit.IsOperationPending" OnClick="visit.RefreshAsync">@L["Actions:Retry"]</MudButton></div>
                 }
                 @if (visit.OperationFailure is not null || session.LastExecutionFailure is not null)
                 {
-                    <div class="terminal-evidence-error"><MudAlert Severity="Severity.Error" Dense="true">@L["Messages:OperationFailed", visit.OperationFailure ?? session.LastExecutionFailure!.Message]</MudAlert></div>
+                    <div class="terminal-evidence-error"><MudAlert Severity="Severity.Error" Dense="true" Icon="@MoIcons.Error">@L["Messages:OperationFailed", visit.OperationFailure ?? session.LastExecutionFailure!.Message]</MudAlert></div>
                 }
                 <div class="terminal-body @(_context is not null && !_modal ? "terminal-body--context" : "")">
                     <div class="terminal-main">
                         <div class="terminal-toolbar">
                             <div class="terminal-toolbar__state" role="status" aria-live="polite"><strong>@L["Labels:Transcript"]</strong>
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(session.IsRunning ? Color.Info : Color.Default)" Class="@(session.IsRunning ? "terminal-toolbar__status--running" : null)">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(session.IsRunning ? Color.Info : Color.Default)" Class="@(session.IsRunning ? "terminal-toolbar__status--running" : null)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                     @(session.ActiveCommand?.CancellationRequested == true ? L["States:CancellationRequested"] : session.IsRunning ? L["States:Running"] : L["States:Ready"])
                                 </MudChip>
                                 @if (session.IsRunning) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" /> }
@@ -67,10 +67,10 @@
                             <div class="terminal-toolbar__actions">
                                 @if (_unseen && _unseenSessionId == session.Id)
                                 {
-                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowDownward" OnClick="RevealLatestAsync">@L["Actions:Latest"]</MudButton>
+                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@MoIcons.ArrowDown" OnClick="RevealLatestAsync">@L["Actions:Latest"]</MudButton>
                                 }
-                                <MudButton @ref="_historyButton" Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.History" OnClick="@(() => OpenContext("history", _historyButton))" aria-pressed="@(_context == "history" ? "true" : "false")">@L["Labels:History"]</MudButton>
-                                <MudButton @ref="_hostButton" Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Info" OnClick="@(() => OpenContext("host", _hostButton))" aria-pressed="@(_context == "host" ? "true" : "false")">@L["Labels:SessionHost"]</MudButton>
+                                <MudButton @ref="_historyButton" Size="Size.Small" Variant="Variant.Text" StartIcon="@MoIcons.History" OnClick="@(() => OpenContext("history", _historyButton))" aria-pressed="@(_context == "history" ? "true" : "false")">@L["Labels:History"]</MudButton>
+                                <MudButton @ref="_hostButton" Size="Size.Small" Variant="Variant.Text" StartIcon="@MoIcons.Info" OnClick="@(() => OpenContext("host", _hostButton))" aria-pressed="@(_context == "host" ? "true" : "false")">@L["Labels:SessionHost"]</MudButton>
                                 @if (session.ActiveCommand is not null) { <MudButton @ref="_currentButton" Size="Size.Small" Variant="Variant.Text" OnClick="CurrentDetails">@L["Labels:CurrentCommand"]</MudButton> }
                             </div>
                         </div>
@@ -114,8 +114,8 @@
         else
         {
             <div class="terminal-initialization"><p>@L["States:NoSession"]</p>
-                @if (visit.ReadFailure is not null) { <MudAlert Severity="Severity.Error">@L["Messages:RefreshFailed", visit.ReadFailure]</MudAlert> }
-                @if (visit.OperationFailure is not null) { <MudAlert Severity="Severity.Error">@L["Messages:OperationFailed", visit.OperationFailure]</MudAlert> }
+                @if (visit.ReadFailure is not null) { <MudAlert Severity="Severity.Error" Icon="@MoIcons.Error">@L["Messages:RefreshFailed", visit.ReadFailure]</MudAlert> }
+                @if (visit.OperationFailure is not null) { <MudAlert Severity="Severity.Error" Icon="@MoIcons.Error">@L["Messages:OperationFailed", visit.OperationFailure]</MudAlert> }
                 <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@(!visit.CanChangeSession)" OnClick="visit.CreateSessionAsync">@L["Actions:NewSession"]</MudButton>
             </div>
         }

@@ -30,7 +30,7 @@
     color: var(--mud-palette-primary-text);
 }
 
-.connectivity-panel__request-heading ::deep .mud-icon-root { color: inherit; flex: 0 0 auto; }
+.connectivity-panel__request-heading ::deep :is(.mud-icon-root, .mo-icon) { color: inherit; flex: 0 0 auto; }
 .connectivity-panel h2,
 .connectivity-panel h3,
 .connectivity-panel p { margin: 0; overflow-wrap: anywhere; }
@@ -56,7 +56,7 @@
 .connectivity-panel__live { padding: 12px 24px; font-size: 13px; line-height: 1.5; color: var(--mud-palette-text-secondary); }
 .connectivity-panel__live--completed { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .connectivity-panel__empty { padding: 28px 24px; display: flex; flex-direction: column; align-items: start; gap: 12px; }
-.connectivity-panel__empty ::deep .mud-icon-root { color: var(--mud-palette-text-secondary); }
+.connectivity-panel__empty ::deep :is(.mud-icon-root, .mo-icon) { color: var(--mud-palette-text-secondary); }
 .connectivity-panel__empty p { color: var(--mud-palette-text-secondary); font-size: 14px; line-height: 1.6; max-width: 48ch; }
 
 .connectivity-panel__outcome { padding: 24px; border-bottom: 1px solid var(--mud-palette-lines-default); }
@@ -64,7 +64,7 @@
 .connectivity-panel__outcome--warning { background: color-mix(in srgb, var(--mud-palette-warning) 9%, var(--mud-palette-surface)); }
 .connectivity-panel__outcome-title { display: flex; align-items: center; gap: 10px; }
 .connectivity-panel__outcome-title h3 { font-size: 24px; line-height: 1.25; }
-.connectivity-panel__outcome-title ::deep .mud-icon-root { flex: 0 0 auto; }
+.connectivity-panel__outcome-title ::deep :is(.mud-icon-root, .mo-icon) { flex: 0 0 auto; }
 .connectivity-panel__outcome--success .connectivity-panel__outcome-title { color: color-mix(in srgb, var(--mud-palette-success) 45%, var(--mud-palette-text-primary)); }
 .connectivity-panel__outcome--warning .connectivity-panel__outcome-title { color: color-mix(in srgb, var(--mud-palette-warning) 35%, var(--mud-palette-text-primary)); }
 .connectivity-panel__endpoint { margin-top: 12px !important; font-family: var(--mo-font-family-mono); font-size: 14px; line-height: 1.6; }

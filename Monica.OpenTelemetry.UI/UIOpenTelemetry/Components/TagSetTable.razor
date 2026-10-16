@@ -19,7 +19,7 @@
                 {
                     @foreach (var tag in context.Tags)
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                             @tag.Key=@tag.Value
                         </MudChip>
                     }

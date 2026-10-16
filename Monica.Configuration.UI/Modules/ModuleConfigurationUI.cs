@@ -8,6 +8,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -55,35 +56,35 @@ public sealed class ModuleConfigurationUI : MonicaModule<ModuleConfigurationUIOp
         registry.RegisterLocalizedPage<ConfigurationStatePage, ConfigurationUIResource>(
             ConfigurationUiRoutes.STATE_ROUTE,
             "Pages:ConfigurationState:Title",
-            Icons.Material.Filled.Tune,
+            MoIcons.Sliders,
             BuiltInNavigationCategoryIds.Configuration,
             addToNav: true,
             navOrder: 10);
         registry.RegisterLocalizedPage<ConfigurationHistoryPage, ConfigurationUIResource>(
             ConfigurationUiRoutes.HISTORY_ROUTE,
             "Pages:ConfigurationHistory:Title",
-            Icons.Material.Filled.History,
+            MoIcons.History,
             BuiltInNavigationCategoryIds.Configuration,
             addToNav: true,
             navOrder: 20);
         registry.RegisterLocalizedPage<ConfigurationVersionsPage, ConfigurationUIResource>(
             ConfigurationUiRoutes.VERSIONS_ROUTE,
             "Pages:ConfigurationVersions:Title",
-            Icons.Material.Filled.SettingsBackupRestore,
+            MoIcons.Restore,
             BuiltInNavigationCategoryIds.Configuration,
             addToNav: true,
             navOrder: 25);
         registry.RegisterLocalizedPage<ConfigurationDebugPage, ConfigurationUIResource>(
             ConfigurationUiRoutes.DEBUG_ROUTE,
             "Pages:ConfigurationDebug:Title",
-            Icons.Material.Filled.BugReport,
+            MoIcons.Bug,
             BuiltInNavigationCategoryIds.Configuration,
             addToNav: true,
             navOrder: 30);
         registry.RegisterLocalizedPage<ConfigurationStoragePage, ConfigurationUIResource>(
             ConfigurationUiRoutes.STORAGE_ROUTE,
             "Pages:ConfigurationStorage:Title",
-            Icons.Material.Filled.Storage,
+            MoIcons.Database,
             BuiltInNavigationCategoryIds.Configuration,
             addToNav: true,
             navOrder: 40);

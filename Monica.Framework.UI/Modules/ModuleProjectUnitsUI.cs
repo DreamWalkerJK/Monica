@@ -6,6 +6,7 @@ using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
 using Monica.Framework.UI.UIProjectUnits.Services;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -45,13 +46,13 @@ public class ModuleProjectUnitsUI : MonicaModule<ModuleProjectUnitsUIOption>, IU
                     "Pages:ProjectUnits:Title",
                     order: 20,
                     parentId: BuiltInNavigationCategoryIds.Monitor,
-                    icon: Icons.Material.Outlined.AccountTree,
+                    icon: MoIcons.Workflow,
                     descriptionKey: "Pages:ProjectUnits:Description");
 
                 registry.RegisterLocalizedPage<UIProjectUnitsPage, ProjectUnitsResource>(
                     UIProjectUnitsPage.PAGE_URL,
                     "Pages:ProjectUnits:Overview:Title",
-                    Icons.Material.Outlined.SpaceDashboard,
+                    MoIcons.Dashboard,
                     category,
                     addToNav: true,
                     navOrder: 0,
@@ -59,7 +60,7 @@ public class ModuleProjectUnitsUI : MonicaModule<ModuleProjectUnitsUIOption>, IU
                 registry.RegisterLocalizedPage<UIProjectUnitsCatalogPage, ProjectUnitsResource>(
                     UIProjectUnitsCatalogPage.PAGE_URL,
                     "Pages:ProjectUnits:Catalog:Title",
-                    Icons.Material.Outlined.AccountTree,
+                    MoIcons.Workflow,
                     category,
                     addToNav: true,
                     navOrder: 10,
@@ -67,7 +68,7 @@ public class ModuleProjectUnitsUI : MonicaModule<ModuleProjectUnitsUIOption>, IU
                 registry.RegisterLocalizedPage<UIProjectUnitsGraphPage, ProjectUnitsResource>(
                     UIProjectUnitsGraphPage.PAGE_URL,
                     "Pages:ProjectUnits:Graph:Title",
-                    Icons.Material.Outlined.Hub,
+                    MoIcons.Network,
                     category,
                     addToNav: true,
                     navOrder: 20,
@@ -75,7 +76,7 @@ public class ModuleProjectUnitsUI : MonicaModule<ModuleProjectUnitsUIOption>, IU
                 registry.RegisterLocalizedPage<UIProjectUnitsEventsPage, ProjectUnitsResource>(
                     UIProjectUnitsEventsPage.PAGE_URL,
                     "Pages:ProjectUnits:Events:Title",
-                    Icons.Material.Outlined.Event,
+                    MoIcons.Calendar,
                     category,
                     addToNav: true,
                     navOrder: 30,
@@ -83,7 +84,7 @@ public class ModuleProjectUnitsUI : MonicaModule<ModuleProjectUnitsUIOption>, IU
                 registry.RegisterLocalizedPage<UIProjectUnitsRequestFiltersPage, ProjectUnitsResource>(
                     UIProjectUnitsRequestFiltersPage.PAGE_URL,
                     "Pages:ProjectUnits:RequestFilters:Title",
-                    Icons.Material.Outlined.FilterAlt,
+                    MoIcons.Filter,
                     category,
                     addToNav: true,
                     navOrder: 40,
@@ -91,7 +92,7 @@ public class ModuleProjectUnitsUI : MonicaModule<ModuleProjectUnitsUIOption>, IU
                 registry.RegisterLocalizedPage<UIProjectUnitsEnumsPage, ProjectUnitsResource>(
                     UIProjectUnitsEnumsPage.PAGE_URL,
                     "Pages:ProjectUnits:Enums:Title",
-                    Icons.Material.Outlined.DataObject,
+                    MoIcons.Braces,
                     category,
                     addToNav: true,
                     navOrder: 50,

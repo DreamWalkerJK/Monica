@@ -3,11 +3,11 @@
 @inject IStringLocalizer<EventBusKafkaResource> L
 @{ var groups = FilteredGroups; }
 <div class="group-workspace">
-    <KafkaWorkspaceHeader Icon="@Icons.Material.Outlined.Groups" Title="@L["ConsumerGroups:Title"]"
+    <KafkaWorkspaceHeader Icon="@MoIcons.Users" Title="@L["ConsumerGroups:Title"]"
                           Subtitle="@(State.HasLoadedConsumerGroups ? L["ConsumerGroups:FilteredSummary", groups.Count, State.ConsumerGroups.Count] : L["Common:Values:Unavailable"])" />
     <div class="group-tools">
         <div class="group-search"><MudTextField T="string" @bind-Value="_search" Immediate="true" DebounceInterval="200" Clearable="true" Label="@L["ConsumerGroups:Search:Label"]" Placeholder="@L["ConsumerGroups:Search:Placeholder"]"
-                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Variant="Variant.Outlined" Margin="Margin.Dense" /></div>
+                           Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Variant="Variant.Outlined" Margin="Margin.Dense" ClearIcon="@MoIcons.Close" /></div>
         @if (State.HasLoadedConsumerGroups)
         {
         <div class="group-filters" aria-label="@L["ConsumerGroups:Columns:State"]">
@@ -20,22 +20,22 @@
         </div>
         }
     </div>
-    @if (!string.IsNullOrWhiteSpace(State.ConsumerGroupsError)) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@State.ConsumerGroupsError</MudAlert> }
+    @if (!string.IsNullOrWhiteSpace(State.ConsumerGroupsError)) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@State.ConsumerGroupsError</MudAlert> }
     @if (!State.CanAdminSelectedCluster)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Lock" Title="@L["ConsumerGroups:Title"]" Description="@L["ConsumerGroups:Unavailable"]" AccentColor="Color.Warning" />
+        <KafkaWorkspaceState Icon="@MoIcons.Lock" Title="@L["ConsumerGroups:Title"]" Description="@L["ConsumerGroups:Unavailable"]" AccentColor="Color.Warning" />
     }
     else if (!State.HasLoadedConsumerGroups)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Groups" Title="@L["ConsumerGroups:Title"]" Description="@(State.IsBusy || State.IsLoading ? L["ConsumerGroups:Loading"] : L["Common:Values:Unavailable"])" />
+        <KafkaWorkspaceState Icon="@MoIcons.Users" Title="@L["ConsumerGroups:Title"]" Description="@(State.IsBusy || State.IsLoading ? L["ConsumerGroups:Loading"] : L["Common:Values:Unavailable"])" />
     }
     else if (State.ConsumerGroups.Count == 0)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.GroupOff" Title="@L["ConsumerGroups:Title"]" Description="@L["ConsumerGroups:Empty"]" />
+        <KafkaWorkspaceState Icon="@MoIcons.UsersOff" Title="@L["ConsumerGroups:Title"]" Description="@L["ConsumerGroups:Empty"]" />
     }
     else if (groups.Count == 0)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.SearchOff" Title="@L["ConsumerGroups:Search:NoMatches"]" Description="@L["ConsumerGroups:Search:Placeholder"]" ActionLabel="@L["Common:Actions:ResetFilters"]" OnAction="ResetFilters" />
+        <KafkaWorkspaceState Icon="@MoIcons.SearchOff" Title="@L["ConsumerGroups:Search:NoMatches"]" Description="@L["ConsumerGroups:Search:Placeholder"]" ActionLabel="@L["Common:Actions:ResetFilters"]" OnAction="ResetFilters" />
     }
     else
     {
@@ -44,11 +44,11 @@
                 <HeaderContent><MudTh>@L["ConsumerGroups:Columns:GroupId"]</MudTh><MudTh>@L["ConsumerGroups:Columns:State"]</MudTh><MudTh>@L["ConsumerGroups:Columns:Members"]</MudTh><MudTh>@L["ConsumerGroups:Columns:Lag"]</MudTh></HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="@L["ConsumerGroups:Columns:GroupId"]"><div class="consumer-group-identity"><span class="consumer-group-id">@context.GroupId</span>@if (!string.IsNullOrWhiteSpace(context.ErrorMessage)) { <span class="consumer-group-diagnostic">@context.ErrorMessage</span> }</div></MudTd>
-                    <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@KafkaConsumerGroupStateDisplay.GetColor(context.State)">@KafkaConsumerGroupStateDisplay.GetText(context.State, L)</MudChip></MudTd>
-                    <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]"><MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Groups" Disabled="@IsBusy" aria-label="@L["ConsumerGroups:Actions:ViewMembers", context.GroupId]" OnClick="@(() => OnViewMembers.InvokeAsync(context))">@(string.IsNullOrWhiteSpace(context.ErrorMessage) ? context.MemberCount.ToString() : L["Common:Values:Unavailable"].Value)</MudButton></MudTd>
+                    <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@KafkaConsumerGroupStateDisplay.GetColor(context.State)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@KafkaConsumerGroupStateDisplay.GetText(context.State, L)</MudChip></MudTd>
+                    <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]"><MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.Users" Disabled="@IsBusy" aria-label="@L["ConsumerGroups:Actions:ViewMembers", context.GroupId]" OnClick="@(() => OnViewMembers.InvokeAsync(context))">@(string.IsNullOrWhiteSpace(context.ErrorMessage) ? context.MemberCount.ToString() : L["Common:Values:Unavailable"].Value)</MudButton></MudTd>
                     <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]"><span class="consumer-group-lag">@KafkaMetricDisplayFormatter.FormatOptionalInt64(context.TotalLag, L["ConsumerGroups:Values:LagUnknown"])</span></MudTd>
                 </RowTemplate>
-                <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
+                <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /></PagerContent>
             </MudTable>
         </KafkaTableSurface>
     }

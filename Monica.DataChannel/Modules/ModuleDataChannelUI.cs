@@ -6,6 +6,7 @@ using Monica.DataChannel.Localization;
 using Monica.DataChannel.Pages;
 using Monica.DataChannel.UIDataChannel.State;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -30,7 +31,7 @@ public class ModuleDataChannelUI : MonicaModule<ModuleDataChannelUIOption>, IUIM
                 registry.RegisterLocalizedPage<UIDataChannelPage, DataChannelResource>(
                     UIDataChannelPage.PAGE_URL,
                     "Pages:DataChannelManage:Title",
-                    Icons.Material.Outlined.AltRoute,
+                    MoIcons.Route,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 30,
@@ -38,7 +39,7 @@ public class ModuleDataChannelUI : MonicaModule<ModuleDataChannelUIOption>, IUIM
                 registry.RegisterLocalizedPage<UIDataChannelExceptionsPage, DataChannelResource>(
                     UIDataChannelExceptionsPage.PAGE_URL,
                     "Pages:DataChannelExceptions:Title",
-                    Icons.Material.Outlined.ReportProblem,
+                    MoIcons.Warning,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 31,

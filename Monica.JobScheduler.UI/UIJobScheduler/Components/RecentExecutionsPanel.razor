@@ -19,7 +19,7 @@
             <p>@L["Overview:Recent:Description"]</p>
         </div>
         <MudButton Href="@JobExecutionsPage.PAGE_URL" Variant="Variant.Text"
-                   EndIcon="@Icons.Material.Outlined.ArrowForward">
+                   EndIcon="@MoIcons.ArrowRight">
             @L["Overview:Recent:AllRecords"]
         </MudButton>
     </header>
@@ -27,7 +27,7 @@
     @if (Executions.Count == 0)
     {
         <div class="recent-panel__empty">
-            <MudIcon Icon="@Icons.Material.Outlined.Inbox" Size="Size.Large" />
+            <MoIcon Icon="@MoIcons.Inbox" Size="2.25rem" />
             <p>@L["Overview:Recent:Empty"]</p>
         </div>
     }
@@ -43,7 +43,7 @@
                                OnClick="@(() => _dialogs.OpenAsync(execution.InstanceId))">
                       <span class="recent-panel__record">
                         <span class="recent-panel__marker" aria-hidden="true">
-                            <MudIcon Icon="@ExecutionUiPresentation.GetStateIcon(execution.State)" Size="Size.Small" />
+                            <MoIcon Icon="@ExecutionUiPresentation.GetStateIcon(execution.State)" Size="1.25rem" />
                         </span>
                         <span class="recent-panel__event-copy">
                             <span class="recent-panel__event-heading">
@@ -62,8 +62,8 @@
                             </time>
                             <small>@TimePresentation.FormatExecutionDuration(execution, observedAtUtc)</small>
                         </span>
-                        <MudIcon Icon="@Icons.Material.Outlined.ChevronRight"
-                                 Size="Size.Small"
+                        <MoIcon Icon="@MoIcons.ChevronRight"
+                                 Size="1.25rem"
                                  Class="recent-panel__chevron" />
                       </span>
                     </MudButton>

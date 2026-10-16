@@ -7,10 +7,10 @@
 
 <div class="directory-actions-owner">
     <div class="directory-actions">
-        <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.CreateNewFolder" Disabled="@(Browse?.CanCreateDirectory != true || Busy && !CreateActive)" aria-disabled="@(CreateUnavailable ? "true" : "false")" OnClick="CreateAsync">@L["Actions:CreateDirectory"]</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@MoIcons.FolderPlus" Disabled="@(Browse?.CanCreateDirectory != true || Busy && !CreateActive)" aria-disabled="@(CreateUnavailable ? "true" : "false")" OnClick="CreateAsync">@L["Actions:CreateDirectory"]</MudButton>
         <MudTooltip Text="@UploadHint">
             <MudFileUpload T="IBrowserFile" FilesChanged="@((IBrowserFile? file) => file is null ? Task.CompletedTask : Upload.InvokeAsync(file))" MaximumFileCount="1" Disabled="@(Busy || Browse?.CanUpload != true)">
-                <CustomContent Context="upload"><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.UploadFile" Disabled="@(Busy || Browse?.CanUpload != true)" OnClick="upload.OpenFilePickerAsync">@L["Actions:Upload"]</MudButton></CustomContent>
+                <CustomContent Context="upload"><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.FileUpload" Disabled="@(Busy || Browse?.CanUpload != true)" OnClick="upload.OpenFilePickerAsync">@L["Actions:Upload"]</MudButton></CustomContent>
                 <SelectedTemplate></SelectedTemplate>
             </MudFileUpload>
         </MudTooltip>

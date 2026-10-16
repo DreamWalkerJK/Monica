@@ -8,6 +8,7 @@ using Monica.Framework.UI.Pages;
 using Monica.Framework.UI.UISeeder.State;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -49,7 +50,7 @@ public sealed class ModuleSeederUI : MonicaModule<ModuleSeederUIOption>, IUIModu
                 registry.RegisterLocalizedPage<UISeederPage, SeederResource>(
                     UISeederPage.PAGE_URL,
                     "Navigation:Title",
-                    Icons.Material.Filled.PlaylistAddCheckCircle,
+                    MoIcons.ListChecks,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 15,

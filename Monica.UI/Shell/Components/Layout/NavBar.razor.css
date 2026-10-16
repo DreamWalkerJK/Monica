@@ -105,8 +105,8 @@
     color: color-mix(in srgb, var(--mo-color-navigation-rail-text) 68%, var(--mo-color-navigation-rail-background));
 }
 .rail-category ::deep .mud-icon-button { width: 44px; height: 44px; padding: 10px; color: inherit; border-radius: 8px; }
-.rail-category ::deep .mud-icon-root,
-.rail-collapse ::deep .mud-icon-root { width: 20px; height: 20px; font-size: 20px; }
+.rail-category ::deep :is(.mud-icon-root, .mo-icon),
+.rail-collapse ::deep :is(.mud-icon-root, .mo-icon) { width: 20px; height: 20px; font-size: 20px; }
 .rail-category:hover { color: var(--mo-color-navigation-rail-text); }
 .rail-category.selected {
     color: var(--mo-color-navigation-rail-text);
@@ -146,7 +146,7 @@
 .context-navigation-content { min-height: 0; overflow: auto; padding: 26px 16px 20px; font-family: var(--mud-typography-default-family); }
 .context-navigation-header { position: relative; }
 .context-navigation-header ::deep .mud-icon-button { position: absolute; top: -15px; right: -12px; width: 28px; height: 28px; padding: 5px; color: var(--mud-palette-text-secondary); }
-.context-navigation-header ::deep .mud-icon-root { width: 18px; height: 18px; font-size: 18px; }
+.context-navigation-header ::deep :is(.mud-icon-root, .mo-icon) { width: 18px; height: 18px; font-size: 18px; }
 .context-navigation-header .sidebar-identity { padding-right: 16px; }
 .context-navigation-host { display: contents; }
 .context-navigation-host ::deep .mo-context-navigation {

@@ -14,7 +14,7 @@
 {
     <section class="system-info-links" aria-labelledby="system-info-links-title">
         <header class="system-info-links__header">
-            <span class="system-info-links__signal"><MudIcon Icon="@Icons.Material.Outlined.Route" /></span>
+            <span class="system-info-links__signal"><MoIcon Size="1.5rem" Icon="@MoIcons.Route" /></span>
             <div>
                 <h2 id="system-info-links-title">@L["CustomLinks:Title"]</h2>
                 <p>@L["CustomLinks:Description"]</p>
@@ -43,7 +43,7 @@
                                    target="@TargetValue(link.Target)"
                                    rel="@LinkRelationship(link.Target)"
                                    title="@L["CustomLinks:Actions:Open"]">
-                                    <span class="system-info-link__icon"><MudIcon Icon="@link.Icon" /></span>
+                                    <span class="system-info-link__icon"><MoIcon Size="1.5rem" Icon="@link.Icon" /></span>
                                     <span class="system-info-link__identity">
                                         <strong>@link.GetDisplayName(L)</strong>
                                         @if (link.GetDescription(L) is { Length: > 0 } description)
@@ -52,7 +52,7 @@
                                         }
                                     </span>
                                     <span class="system-info-link__target">@TargetLabel(link.Target)</span>
-                                    <MudIcon Icon="@Icons.Material.Filled.NorthEast" Size="Size.Small" />
+                                    <MoIcon Icon="@MoIcons.ArrowUpRight" Size="1.25rem" />
                                 </a>
 
                                 @if (link.HasCredentials)
@@ -65,7 +65,7 @@
                                                 <MudButton Variant="Variant.Text"
                                                            Color="Color.Primary"
                                                            Size="Size.Small"
-                                                           StartIcon="@Icons.Material.Filled.Key"
+                                                           StartIcon="@MoIcons.Key"
                                                            OnClick="menu.OpenAsync">
                                                     @L["CustomLinks:Labels:Access"]
                                                 </MudButton>

@@ -3,7 +3,7 @@
 .signalr-workbench-identity { display: flex; align-items: flex-start; gap: 18px; min-width: 0; }
 .signalr-workbench-identity > div { min-width: 0; }
 .signalr-workbench-mark { display: grid; place-items: center; width: 52px; height: 52px; flex: 0 0 auto; margin-top: 4px; border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 26%, var(--mud-palette-lines-default)); border-radius: 14px; color: var(--mud-palette-primary); background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface)); }
-.signalr-workbench-mark ::deep .mud-icon-root { font-size: 28px; }
+.signalr-workbench-mark ::deep :is(.mud-icon-root, .mo-icon) { font-size: 28px; }
 .signalr-workbench-eyebrow { font: 600 10px/1.5 var(--mo-font-family-body); letter-spacing: .09em; color: color-mix(in srgb, var(--mud-palette-primary) 65%, var(--mud-palette-text-primary)); }
 .signalr-workbench-identity h1 { margin: 5px 0 8px; font: 500 32px/1.2 var(--mo-font-family-display); letter-spacing: -.025em; }
 .signalr-workbench-identity p { margin: 0; font-size: 13px; line-height: 1.7; color: color-mix(in srgb, var(--mud-palette-text-secondary) 85%, var(--mud-palette-text-primary)); }
@@ -46,7 +46,7 @@ html[data-theme$="-dark"] .signalr-workbench ::deep .mud-button-filled-primary:n
     .signalr-workbench-header { margin-bottom: 20px; }
     .signalr-workbench-identity { gap: 12px; }
     .signalr-workbench-mark { width: 40px; height: 40px; border-radius: 10px; }
-    .signalr-workbench-mark ::deep .mud-icon-root { font-size: 24px; }
+    .signalr-workbench-mark ::deep :is(.mud-icon-root, .mo-icon) { font-size: 24px; }
     .signalr-workbench-identity h1 { font-size: 27px; }
     .signalr-workbench-summary { gap: 16px; }
     .signalr-workbench-summary > div { flex: 1 1 80px; }

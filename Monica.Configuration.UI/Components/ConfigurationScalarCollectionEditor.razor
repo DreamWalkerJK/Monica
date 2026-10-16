@@ -29,33 +29,33 @@
                                 @DisplayListItem(item)
                             </MudChip>
                             <div class="configuration-scalar-list-actions">
-                                <MudMenu Icon="@Icons.Material.Filled.MoreHoriz"
+                                <MudMenu Icon="@MoIcons.MoreHorizontal"
                                          Size="Size.Small"
                                          Color="Color.Default"
                                          Disabled="@Disabled"
                                          AnchorOrigin="Origin.BottomRight"
                                          TransformOrigin="Origin.TopRight"
                                          title="@L["State:Collections:ItemActions"]">
-                                    <MudMenuItem Icon="@Icons.Material.Filled.KeyboardArrowUp"
+                                    <MudMenuItem Icon="@MoIcons.ChevronUp"
                                                  Disabled="@(item.IsDeleted || itemIndex == 0)"
                                                  OnClick="@(() => MoveListItem(itemId, -1))">
                                         @L["State:Collections:MoveUp"]
                                     </MudMenuItem>
-                                    <MudMenuItem Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                                    <MudMenuItem Icon="@MoIcons.ChevronDown"
                                                  Disabled="@(item.IsDeleted || itemIndex == _listItems.Count - 1)"
                                                  OnClick="@(() => MoveListItem(itemId, 1))">
                                         @L["State:Collections:MoveDown"]
                                     </MudMenuItem>
                                     @if (item.IsDeleted)
                                     {
-                                        <MudMenuItem Icon="@Icons.Material.Filled.Restore"
+                                        <MudMenuItem Icon="@MoIcons.Restore"
                                                      OnClick="@(() => RestoreListItem(itemId))">
                                             @L["State:Collections:RestoreItem"]
                                         </MudMenuItem>
                                     }
                                     else
                                     {
-                                        <MudMenuItem Icon="@Icons.Material.Filled.Delete"
+                                        <MudMenuItem Icon="@MoIcons.Delete"
                                                      OnClick="@(() => RemoveListItem(itemId))">
                                             @L["Common:Actions:Delete"]
                                         </MudMenuItem>
@@ -70,7 +70,7 @@
             <div class="configuration-scalar-collection-draft">
                 @if (ListChoices.Count > 0)
                 {
-                    <MudSelect T="string"
+                    <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string"
                                Value="@_listDraftValue"
                                ValueChanged="OnListDraftChanged"
                                Variant="Variant.Outlined"
@@ -100,7 +100,7 @@
                            Color="Color.Primary"
                            Size="Size.Small"
                            Class="configuration-scalar-collection-action"
-                           StartIcon="@(_editingListItemId is null ? Icons.Material.Filled.Add : Icons.Material.Filled.Check)"
+                           StartIcon="@(_editingListItemId is null ? MoIcons.Add : MoIcons.Check)"
                            Disabled="@Disabled"
                            OnClick="ApplyListDraftAsync">
                     @(_editingListItemId is null ? L["State:Collections:AddItem"] : L["Common:Actions:Apply"])
@@ -152,7 +152,7 @@
                                           Disabled="@(Disabled || item.IsDeleted)" />
                             @if (DictionaryValueChoices.Count > 0)
                             {
-                                <MudSelect T="string"
+                                <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string"
                                            Value="@item.Value"
                                            ValueChanged="@((string? value) => OnDictionaryValueChanged(itemId, value))"
                                            Variant="Variant.Outlined"
@@ -179,7 +179,7 @@
                                               Disabled="@(Disabled || item.IsDeleted)" />
                             }
                             <MudTooltip Text="@(item.IsDeleted ? L["State:Collections:RestoreEntry"] : L["Common:Actions:Delete"])">
-                                <MudIconButton Icon="@(item.IsDeleted ? Icons.Material.Filled.Restore : Icons.Material.Filled.Delete)"
+                                <MudIconButton Icon="@(item.IsDeleted ? MoIcons.Restore : MoIcons.Delete)"
                                                Size="Size.Small"
                                                Color="@(item.IsDeleted ? Color.Success : Color.Error)"
                                                Class="configuration-scalar-dictionary-delete"
@@ -209,7 +209,7 @@
                               Disabled="@Disabled" />
                 @if (DictionaryValueChoices.Count > 0)
                 {
-                    <MudSelect T="string"
+                    <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string"
                                Value="@_newDictionaryValue"
                                ValueChanged="@((string? value) => _newDictionaryValue = value ?? string.Empty)"
                                Variant="Variant.Outlined"
@@ -239,7 +239,7 @@
                            Color="Color.Primary"
                            Size="Size.Small"
                            Class="configuration-scalar-collection-action"
-                           StartIcon="@Icons.Material.Filled.Add"
+                           StartIcon="@MoIcons.Add"
                            Disabled="@Disabled"
                            OnClick="AddDictionaryItemAsync">
                     @L["State:Collections:AddEntry"]

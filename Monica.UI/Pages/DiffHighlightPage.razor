@@ -15,25 +15,25 @@
 <PageTitle>@L["DiffHighlightPage:PageTitle"]</PageTitle>
 <div class="diff-highlight-page" @ref="_pageElement" data-accepted-revision="@_accepted?.Revision" data-draft-revision="@comparison.DraftRevision" data-visit="@_visit">
     <header class="diff-page-identity">
-        <MudIcon Icon="@Icons.Material.Outlined.Compare" Color="Color.Primary" Size="Size.Large" />
+        <MoIcon Icon="@MoIcons.Columns" Style="color:var(--mud-palette-primary)" Size="2.25rem" />
         <div><h1>@L["DiffHighlightPage:Title"]</h1><p>@L["DiffHighlightPage:Description"]</p></div>
     </header>
     <section class="diff-draft-surface" aria-label="@L["DiffHighlightPage:Drafts"]" style="@EditorSizing">
         <div class="diff-draft-commands">
-            <MudSelect T="EDiffHighlightMode" Value="_state.Options.Mode" ValueChanged="ChangeModeAsync" Label="@L["DiffHighlightPage:CompareMode"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+            <MudSelect T="EDiffHighlightMode" Value="_state.Options.Mode" ValueChanged="ChangeModeAsync" Label="@L["DiffHighlightPage:CompareMode"]" Variant="Variant.Outlined" Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Line">@L["DiffHighlightPage:Modes:Line"]</MudSelectItem>
                 <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Character">@L["DiffHighlightPage:Modes:Character"]</MudSelectItem>
                 <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Mixed">@L["DiffHighlightPage:Modes:Mixed"]</MudSelectItem>
             </MudSelect>
-            <MudSelect T="EDiffOutputFormat" Value="_state.Options.OutputFormat" ValueChanged="ChangeFormatAsync" Label="@L["DiffHighlightPage:OutputFormat"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+            <MudSelect T="EDiffOutputFormat" Value="_state.Options.OutputFormat" ValueChanged="ChangeFormatAsync" Label="@L["DiffHighlightPage:OutputFormat"]" Variant="Variant.Outlined" Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Html">@L["DiffHighlightPage:Formats:Html"]</MudSelectItem>
                 <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Markdown">@L["DiffHighlightPage:Formats:Markdown"]</MudSelectItem>
                 <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.PlainText">@L["DiffHighlightPage:Formats:PlainText"]</MudSelectItem>
             </MudSelect>
-            <div class="diff-sample-action"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadSampleAsync">@L["DiffHighlightPage:LoadSample"]</MudButton><span>@L["DiffHighlightPage:SampleHint"]</span></div>
+            <div class="diff-sample-action"><MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh" OnClick="LoadSampleAsync">@L["DiffHighlightPage:LoadSample"]</MudButton><span>@L["DiffHighlightPage:SampleHint"]</span></div>
         </div>
         <div class="diff-rules">
-            <MudExpansionPanels Elevation="0"><MudExpansionPanel Text="@L["DiffHighlightPage:ConfigOptions"]" Icon="@Icons.Material.Outlined.Tune">
+            <MudExpansionPanels Elevation="0"><MudExpansionPanel Text="@L["DiffHighlightPage:ConfigOptions"]" Icon="@MoIcons.Sliders">
                 <div class="diff-rule-fields">
                     <MudSwitch T="bool" Value="_state.Options.IgnoreWhitespace" ValueChanged="ChangeWhitespaceAsync" Label="@L["DiffHighlightPage:IgnoreWhitespace"]" Color="Color.Primary" />
                     <MudSwitch T="bool" Value="_state.Options.IgnoreCase" ValueChanged="ChangeCaseAsync" Label="@L["DiffHighlightPage:IgnoreCase"]" Color="Color.Primary" />
@@ -53,24 +53,24 @@
         <footer class="diff-draft-footer">
             <MudSwitch T="bool" Value="_state.AutoRefresh" ValueChanged="ChangeAutoAsync" Label="@L["DiffHighlightPage:AutoRefresh"]" Color="Color.Primary" />
             <span class="diff-draft-status" role="status" aria-live="polite">@GetDraftStatus(comparison)</span>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Compare" OnClick="CompareAsync" Disabled="@comparison.IsBusy">@L["DiffHighlightPage:ManualRefresh"]</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Columns" OnClick="CompareAsync" Disabled="@comparison.IsBusy">@L["DiffHighlightPage:ManualRefresh"]</MudButton>
         </footer>
     </section>
     @if (comparison.IsFailureCurrent && comparison.Failure is { } failure)
     {
-        <div class="diff-failure"><MudAlert Severity="Severity.Error">@L["DiffHighlightPage:ComparisonFailed"]: @failure.Message</MudAlert></div>
+        <div class="diff-failure"><MudAlert Severity="Severity.Error" Icon="@MoIcons.Error">@L["DiffHighlightPage:ComparisonFailed"]: @failure.Message</MudAlert></div>
     }
     @if (_accepted is not null && _result is not null)
     {
         <div class="diff-accepted-reader">
             <DiffResultPresentation Result="_result" Continuous="true" IsCurrent="@comparison.IsAcceptedCurrent" InputsEmpty="@_accepted.Input.IsEmpty" ComparedAt="@_accepted.ReceivedAt" HeadingId="diff-accepted-heading" CurrentInputsLabel="@L["DiffHighlightPage:CurrentDrafts"]" EarlierInputsLabel="@L["DiffHighlightPage:EarlierDrafts"]">
-                <Actions><MudButton Class="diff-back-to-drafts" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowUpward" OnClick="BackToDraftsAsync">@L["DiffHighlightPage:BackToDrafts"]</MudButton></Actions>
+                <Actions><MudButton Class="diff-back-to-drafts" Variant="Variant.Text" StartIcon="@MoIcons.ArrowUp" OnClick="BackToDraftsAsync">@L["DiffHighlightPage:BackToDrafts"]</MudButton></Actions>
             </DiffResultPresentation>
         </div>
     }
     else
     {
-        <div class="diff-uncomputed"><MudIcon Icon="@Icons.Material.Outlined.Compare" /><p>@L["DiffHighlightPage:EnterTextAndRefresh"]</p></div>
+        <div class="diff-uncomputed"><MoIcon Size="1.5rem" Icon="@MoIcons.Columns" /><p>@L["DiffHighlightPage:EnterTextAndRefresh"]</p></div>
     }
 </div>
 

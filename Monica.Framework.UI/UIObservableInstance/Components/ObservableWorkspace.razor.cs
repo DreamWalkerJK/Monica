@@ -5,6 +5,7 @@ using Monica.Core.ObservableInstance.Models;
 using Monica.Core.Results;
 using Monica.Framework.UI.UIObservableInstance.Dialogs;
 using Monica.Framework.UI.UIObservableInstance.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIObservableInstance.Components;
@@ -17,10 +18,10 @@ public partial class ObservableWorkspace
     public const string EXCEPTIONS_URL = PAGE_URL + "/exceptions";
     private static readonly (string View, string Path, string Icon)[] Routes =
     [
-        ("Overview", PAGE_URL, Icons.Material.Outlined.SpaceDashboard),
-        ("Instances", INSTANCES_URL, Icons.Material.Outlined.Inventory2),
-        ("Groups", GROUPS_URL, Icons.Material.Outlined.Workspaces),
-        ("Exceptions", EXCEPTIONS_URL, Icons.Material.Outlined.ErrorOutline)
+        ("Overview", PAGE_URL, MoIcons.Dashboard),
+        ("Instances", INSTANCES_URL, MoIcons.Package),
+        ("Groups", GROUPS_URL, MoIcons.Workspace),
+        ("Exceptions", EXCEPTIONS_URL, MoIcons.Error)
     ];
     private static readonly HealthState[] HealthStates = [HealthState.Unhealthy, HealthState.Healthy, HealthState.Unknown];
     private readonly object _ownership = new();

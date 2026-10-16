@@ -36,7 +36,7 @@
     @if (Snapshot.SlowestExecutions.Count == 0)
     {
         <div class="analytics-duration__empty">
-            <MudIcon Icon="@Icons.Material.Outlined.Timer" Size="Size.Medium" />
+            <MoIcon Icon="@MoIcons.Timer" Size="1.5rem" />
             <p>@L["Analytics:Slowest:Empty"]</p>
         </div>
     }
@@ -59,7 +59,7 @@
                             </span>
                             <span class="analytics-duration__record">
                                 <span class="analytics-duration__state" data-state="@capture.State.ToString().ToLowerInvariant()">
-                                    <MudIcon Icon="@ExecutionUiPresentation.GetStateIcon(capture.State)" Size="Size.Small" />
+                                    <MoIcon Icon="@ExecutionUiPresentation.GetStateIcon(capture.State)" Size="1.25rem" />
                                     @L[$"ExecutionStates:{capture.State}"]
                                 </span>
                                 <span class="analytics-duration__fact"><span>@L["ExecutionDetail:Instance"]</span><code>@capture.InstanceId</code></span>
@@ -67,7 +67,7 @@
                             </span>
                             <span class="analytics-duration__value">
                                 <b>@FormatDuration(capture.Duration)</b>
-                                <span>@L["Analytics:Slowest:Inspect"]<MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></span>
+                                <span>@L["Analytics:Slowest:Inspect"]<MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" /></span>
                             </span>
                         </span>
                     </MudButton>

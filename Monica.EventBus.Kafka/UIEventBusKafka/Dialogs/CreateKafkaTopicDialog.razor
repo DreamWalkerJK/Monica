@@ -10,7 +10,7 @@
                 <MudText Typo="Typo.body2">@L["Topics:Dialog:CreateHint"]</MudText>
                 @if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">
                         @_errorMessage
                     </MudAlert>
                 }

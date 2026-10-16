@@ -8,7 +8,7 @@
         <SchedulerCompletionTrend Snapshot="@Snapshot" />
         <section class="analytics-dashboard__summary" aria-labelledby="@_summaryHeadingId">
             <header class="analytics-dashboard__heading">
-                <span class="analytics-dashboard__heading-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Assessment" Size="Size.Small" /></span>
+                <span class="analytics-dashboard__heading-icon" aria-hidden="true"><MoIcon Icon="@MoIcons.ChartColumn" Size="1.25rem" /></span>
                 <h2 id="@_summaryHeadingId">@L["Analytics:Summary:Title"]</h2>
             </header>
             <dl class="analytics-dashboard__summary-facts" aria-label="@L["Analytics:Metrics:AriaLabel"]">
@@ -69,7 +69,7 @@
                 @if (group.Items.Count == 0)
                 {
                     <div class="analytics-dashboard__empty">
-                        <MudIcon Icon="@Icons.Material.Outlined.BarChart" Size="Size.Medium" />
+                        <MoIcon Icon="@MoIcons.ChartColumn" Size="1.5rem" />
                         <p>@group.EmptyLabel</p>
                     </div>
                 }
@@ -97,7 +97,7 @@
                                         <b>@value.ToString("N0", CultureInfo.CurrentCulture)</b>
                                         <small>@FormatShare(value, group.TotalValue)</small>
                                     </span>
-                                    <span class="analytics-dashboard__rank-arrow" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></span>
+                                    <span class="analytics-dashboard__rank-arrow" aria-hidden="true"><MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" /></span>
                                 </a>
                             </li>
                         }

@@ -23,7 +23,7 @@
                 <div class="activity-cell activity-state">
                     <span class="activity-state-badge @StateClass(context.State)"><span aria-hidden="true" class="activity-state-dot"></span>@DisplayValue(context.State)</span>
                     <span class="activity-wait @WaitClass(context.Waiting)">
-                        @if (context.Waiting == true) { <MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" Size="Size.Small" /> }
+                        @if (context.Waiting == true) { <MoIcon Icon="@MoIcons.Hourglass" Size="1.25rem" /> }
                         @WaitingText(context.Waiting)
                     </span>
                 </div>
@@ -40,7 +40,7 @@
                     <code class="activity-query-preview">@QueryPreview(context.Query)</code>
                     @if (OnInspect.HasDelegate)
                     {
-                        <MudButton Size="Size.Small" Variant="Variant.Text" EndIcon="@Icons.Material.Outlined.ArrowForward"
+                        <MudButton Size="Size.Small" Variant="Variant.Text" EndIcon="@MoIcons.ArrowRight"
                                    Disabled="InspectDisabled" OnClick="@(() => OnInspect.InvokeAsync(context))"
                                    aria-label="@L["Workbench:Activity:InspectLabel", DisplayValue(context.BackendId), DisplayValue(context.DatabaseName)]">
                             @L["Workbench:Activity:Inspect"]
@@ -57,7 +57,7 @@
         </NoRecordsContent>
         <PagerContent>
             <MudTablePager PageSizeOptions="@PageSizes" RowsPerPageString="@L["Workbench:Activity:PageSize"]"
-                           InfoFormat="@L["Workbench:Activity:PageInfo"]" />
+                           InfoFormat="@L["Workbench:Activity:PageInfo"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
         </PagerContent>
     </MudTable>
 </div>

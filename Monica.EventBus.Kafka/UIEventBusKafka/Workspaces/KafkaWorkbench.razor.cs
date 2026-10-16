@@ -6,6 +6,7 @@ using Monica.EventBus.Kafka.Pages;
 using Monica.EventBus.Kafka.UIEventBusKafka.Dialogs;
 using Monica.EventBus.Kafka.UIEventBusKafka.State;
 using Monica.EventBus.Kafka.UIEventBusKafka.Support;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.EventBus.Kafka.UIEventBusKafka.Workspaces;
@@ -35,11 +36,11 @@ public partial class KafkaWorkbench
 
     private static readonly (KafkaWorkspace Workspace, string Icon)[] NavigationItems =
     [
-        (KafkaWorkspace.Overview, Icons.Material.Outlined.Dashboard),
-        (KafkaWorkspace.Clusters, Icons.Material.Outlined.Dns),
-        (KafkaWorkspace.Topics, Icons.Material.Outlined.Topic),
-        (KafkaWorkspace.ConsumerGroups, Icons.Material.Outlined.PeopleAlt),
-        (KafkaWorkspace.Performance, Icons.Material.Outlined.MonitorHeart)
+        (KafkaWorkspace.Overview, MoIcons.Dashboard),
+        (KafkaWorkspace.Clusters, MoIcons.Server),
+        (KafkaWorkspace.Topics, MoIcons.Folder),
+        (KafkaWorkspace.ConsumerGroups, MoIcons.Users),
+        (KafkaWorkspace.Performance, MoIcons.HeartPulse)
     ];
 
     /// <inheritdoc />

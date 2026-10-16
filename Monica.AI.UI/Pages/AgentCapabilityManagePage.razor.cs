@@ -11,6 +11,7 @@ using Monica.AI.UI.Localization;
 using Monica.AI.UI.Shared.Support;
 using Monica.AI.UI.UIAgentCapabilities.State;
 using Monica.AI.UI.UIMcp.Components;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.AI.UI.Pages;
@@ -192,7 +193,7 @@ public partial class AgentCapabilityManagePage : IAsyncDisposable
     }
 
     private static string GetEntryIcon(AgentCapabilityEntryInfo entry) => entry.Kind == AgentCapabilityKind.Skill
-        ? Icons.Material.Filled.AutoAwesome : Icons.Material.Filled.AccountTree;
+        ? MoIcons.Sparkle : MoIcons.Workflow;
 
     private static Color GetStatusColor(AgentCapabilityEntryInfo entry)
     {

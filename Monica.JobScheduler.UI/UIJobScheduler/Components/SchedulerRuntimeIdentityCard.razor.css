@@ -1,14 +1,14 @@
 .runtime-identity { --identity-muted: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, var(--mud-palette-text-primary)); display: grid; align-content: start; gap: 20px; min-width: 0; padding: 20px; color: var(--mud-palette-text-primary); background: var(--mud-palette-surface); }
 .runtime-identity__heading { display: flex; align-items: start; gap: 10px; min-width: 0; }
 .runtime-identity__heading > div { min-width: 0; }
-.runtime-identity__heading ::deep .mud-icon-root { flex: none; width: 24px; height: 24px; color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)) !important; }
+.runtime-identity__heading ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 24px; height: 24px; color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)) !important; }
 .runtime-identity h2 { margin: 0 0 5px; font-family: var(--mo-font-family-body); font-size: 20px; font-weight: 500; line-height: 1.4; }
 .runtime-identity p { margin: 0; color: var(--identity-muted); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
 .runtime-identity__debug { display: flex; align-items: start; gap: 8px; min-width: 0; padding: 12px; color: color-mix(in srgb, var(--mud-palette-warning) 25%, var(--mud-palette-text-primary)); background: color-mix(in srgb, var(--mud-palette-warning) 8%, var(--mud-palette-surface)); border-inline-start: 3px solid color-mix(in srgb, var(--mud-palette-warning) 45%, var(--mud-palette-text-primary)); }
 .runtime-identity__debug > div { min-width: 0; }
 .runtime-identity__debug strong { font-size: 13px; font-weight: 500; line-height: 1.5; }
 .runtime-identity__debug p { margin-block-start: 3px; color: inherit; }
-.runtime-identity__debug ::deep .mud-icon-root { flex: none; width: 20px; height: 20px; color: inherit !important; }
+.runtime-identity__debug ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 20px; height: 20px; color: inherit !important; }
 .runtime-identity__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; min-width: 0; margin: 0; }
 .runtime-identity__facts > div { display: grid; align-content: start; gap: 5px; min-width: 0; padding-block: 12px; border-block-start: 1px solid var(--mud-palette-lines-default); }
 .runtime-identity__wide { grid-column: 1 / -1; }

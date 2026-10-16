@@ -3,11 +3,11 @@
 <MudStack Spacing="2">
     @if (!Preview.CanApply)
     {
-        <MudAlert Severity="Severity.Error" Dense="true">@L["Validation:PreviewBlocked"]</MudAlert>
+        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@L["Validation:PreviewBlocked"]</MudAlert>
     }
     @foreach (var problem in Preview.Problems)
     {
-        <MudAlert Severity="Severity.Error" Dense="true">
+        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">
             @if (!string.IsNullOrWhiteSpace(problem.DefinitionKey))
             {
                 <MudText Typo="Typo.caption">@($"{problem.DefinitionKey}: ")</MudText>

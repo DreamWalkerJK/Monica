@@ -4,7 +4,7 @@
 
 <section class="terminal-context" aria-labelledby="terminal-context-title">
     <header>
-        <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="Close" aria-label="@L["Actions:CloseContext"]" />
+        <MudIconButton Icon="@MoIcons.Close" OnClick="Close" aria-label="@L["Actions:CloseContext"]" />
         <div><h2 id="terminal-context-title">@(Result is not null ? L["Labels:LatestResult"] : CurrentCommand is not null ? L["Labels:CurrentCommand"] : History ? L["Labels:History"] : L["Labels:SessionHost"])</h2><span class="terminal-context__session">@(InspectedSessionName ?? Session.Name)</span></div>
     </header>
     <div class="terminal-context__body">
@@ -32,7 +32,7 @@
                     {
                         <MudButton Variant="Variant.Text" Disabled="@Disabled" OnClick="@(() => Reuse.InvokeAsync(command))"
                                    aria-label="@L["History:Reuse", command]">
-                            <span class="terminal-history__row"><code>@command</code><MudIcon Icon="@Icons.Material.Outlined.NorthWest" Size="Size.Small" /></span>
+                            <span class="terminal-history__row"><code>@command</code><MoIcon Icon="@MoIcons.ArrowUpLeft" Size="1.25rem" /></span>
                         </MudButton>
                     }
                 </div>

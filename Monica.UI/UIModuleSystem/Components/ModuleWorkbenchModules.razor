@@ -34,9 +34,9 @@
                               Immediate="true"
                               Clearable="true"
                               Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Outlined.Search"
+                              AdornmentIcon="@MoIcons.Search"
                               Variant="Variant.Outlined"
-                              Margin="Margin.Dense" />
+                              Margin="Margin.Dense" ClearIcon="@MoIcons.Close" />
             </div>
             <div class="module-filter-field">
                 <MudSelect T="ModuleCatalogStateFilter"
@@ -44,7 +44,7 @@
                            Value="@Session.ModuleStateFilter"
                            ValueChanged="@SetStateFilter"
                            Variant="Variant.Outlined"
-                           Margin="Margin.Dense">
+                           Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                     @foreach (var state in Enum.GetValues<ModuleCatalogStateFilter>())
                     {
                         <MudSelectItem T="ModuleCatalogStateFilter" Value="@state">@L[$"Enums:CatalogState:{state}"]</MudSelectItem>
@@ -57,7 +57,7 @@
                            Value="@Session.ModuleCapabilityFilter"
                            ValueChanged="@SetCapabilityFilter"
                            Variant="Variant.Outlined"
-                           Margin="Margin.Dense">
+                           Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                     @foreach (var capability in Enum.GetValues<ModuleCatalogCapabilityFilter>())
                     {
                         <MudSelectItem T="ModuleCatalogCapabilityFilter" Value="@capability">@L[$"Enums:CatalogCapability:{capability}"]</MudSelectItem>
@@ -71,7 +71,7 @@
                            ValueChanged="@SetAssemblyFilter"
                            Clearable="true"
                            Variant="Variant.Outlined"
-                           Margin="Margin.Dense">
+                           Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" ClearIcon="@MoIcons.Close">
                     @foreach (var assembly in Session.ModuleAssemblies)
                     {
                         <MudSelectItem T="string" Value="@assembly">@assembly</MudSelectItem>
@@ -101,7 +101,7 @@
                 <div class="module-filter-actions">
                     <MudButton Variant="Variant.Text"
                                Size="Size.Small"
-                               StartIcon="@Icons.Material.Outlined.FilterAltOff"
+                               StartIcon="@MoIcons.FilterOff"
                                OnClick="ResetFilters">
                         @L["Actions:Reset"]
                     </MudButton>
@@ -135,7 +135,7 @@
             <RowTemplate Context="module">
                 <MudTd DataLabel="@L["Modules:Columns:Module"]">
                     <div class="module-name-cell" @key="module.ModuleKey">
-                        <span class="module-glyph @(module.IsUiModule ? "module-glyph--ui" : module.IsWebModule ? "module-glyph--web" : null)" aria-hidden="true"><MudIcon Icon="@ModuleIcon(module)" Size="Size.Small" /></span>
+                        <span class="module-glyph @(module.IsUiModule ? "module-glyph--ui" : module.IsWebModule ? "module-glyph--web" : null)" aria-hidden="true"><MoIcon Icon="@ModuleIcon(module)" Size="1.25rem" /></span>
                         <div class="module-name-cell__identity">
                             <button type="button" class="module-type-name" title="@module.FullTypeName" aria-label="@L["Aria:InspectModule", module.TypeName]" @onclick="@(() => ModuleSelected.InvokeAsync(module))">@module.TypeName</button>
                             <div class="module-full-identity"><IdentifierValue Value="@module.FullTypeName" /></div>
@@ -196,7 +196,7 @@
                 </MudTd>
                 <MudTd DataLabel="@L["Modules:Columns:Actions"]">
                     <div class="module-record-action">
-                        <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
+                        <MudIconButton Icon="@MoIcons.ChevronRight"
                                        Color="Color.Default"
                                        OnClick="@(() => ModuleSelected.InvokeAsync(module))"
                                        aria-label="@L["Aria:InspectModule", module.TypeName]" />
@@ -214,7 +214,7 @@
                        Selected="@Session.ModulePage"
                        SelectedChanged="@SetPage"
                        ShowFirstButton="true"
-                       ShowLastButton="true" />
+                       ShowLastButton="true" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
         <div class="module-page-size">
             <MudSelect T="int"
                        Label="@L["Common:RowsPerPage"]"
@@ -222,7 +222,7 @@
                        ValueChanged="@SetPageSize"
                        Dense="true"
                        Variant="Variant.Outlined"
-                       Margin="Margin.Dense">
+                       Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 <MudSelectItem T="int" Value="25">25</MudSelectItem>
                 <MudSelectItem T="int" Value="50">50</MudSelectItem>
                 <MudSelectItem T="int" Value="100">100</MudSelectItem>
@@ -306,9 +306,9 @@
 
     private static string ModuleIcon(ModuleDiagnosticsModule module) => module switch
     {
-        { IsUiModule: true } => Icons.Material.Outlined.DashboardCustomize,
-        { IsWebModule: true } => Icons.Material.Outlined.Language,
-        _ => Icons.Material.Outlined.Extension
+        { IsUiModule: true } => MoIcons.Dashboard,
+        { IsWebModule: true } => MoIcons.Globe,
+        _ => MoIcons.Puzzle
     };
 
     private static double ModuleCost(ModuleDiagnosticsModule module) =>

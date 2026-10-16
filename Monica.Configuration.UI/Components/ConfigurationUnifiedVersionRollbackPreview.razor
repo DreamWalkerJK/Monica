@@ -10,7 +10,7 @@
     }
     else if (_error is not null)
     {
-        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert>
     }
     else if (_preview is not null)
     {
@@ -25,13 +25,13 @@
         </div>
         @foreach (var problem in _preview.Problems)
         {
-            <MudAlert Severity="Severity.Error" Dense="true"><code>@problem.DefinitionKey</code> @problem.Message</MudAlert>
+            <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true"><code>@problem.DefinitionKey</code> @problem.Message</MudAlert>
         }
         @foreach (var row in _rows)
         {
             <div class="unified-version-rollback-target-owner" @key="row.Target.DefinitionKey">
                 <MudExpansionPanels MultiExpansion="true" Elevation="0" Square="true" Outlined="false" Gutters="false">
-                    <MudExpansionPanel Expanded="@IsExpanded(row.Target.DefinitionKey)" ExpandedChanged="@(expanded => OnExpansionChanged(row.Target.DefinitionKey, expanded))" KeepContentAlive="false">
+                    <MudExpansionPanel Icon="@MoIcons.ChevronDown" Expanded="@IsExpanded(row.Target.DefinitionKey)" ExpandedChanged="@(expanded => OnExpansionChanged(row.Target.DefinitionKey, expanded))" KeepContentAlive="false">
                         <TitleContent>
                             <div class="unified-version-rollback-target-title">
                                 <div><h3>@row.Target.DisplayName</h3><code>@row.Target.DefinitionKey</code></div>
@@ -42,11 +42,11 @@
                             <div class="unified-version-rollback-target-content">
                                 @if (row.Target.Status == ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition)
                                 {
-                                    <MudAlert Severity="Severity.Warning" Dense="true">@L["Versions:Rollback:Messages:MissingDefinitionSkipped"]</MudAlert>
+                                    <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Dense="true">@L["Versions:Rollback:Messages:MissingDefinitionSkipped"]</MudAlert>
                                 }
                                 else if (row.Target.Status == ConfigurationUnifiedVersionApplyTargetStatus.IncompatibleValue)
                                 {
-                                    <MudAlert Severity="Severity.Warning" Dense="true">@L["Versions:Rollback:Messages:IncompatibleValueSkipped"]</MudAlert>
+                                    <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Dense="true">@L["Versions:Rollback:Messages:IncompatibleValueSkipped"]</MudAlert>
                                 }
                                 <dl class="unified-version-rollback-facts">
                                     <div><dt>@L["Versions:Rollback:Fields:CapturedSchemaHash"]</dt><dd><code>@ValueOrEmpty(row.Target.CapturedSchemaHash)</code></dd></div>
@@ -100,7 +100,7 @@
                                 }
                                 @if (row.Target.ValidationIssues.Count > 0)
                                 {
-                                    <MudAlert Severity="@(row.Target.IsSkipped ? Severity.Warning : Severity.Error)" Dense="true">
+                                    <MudAlert Icon="@(row.Target.IsSkipped ? MoIcons.Warning : MoIcons.Error)" Severity="@(row.Target.IsSkipped ? Severity.Warning : Severity.Error)" Dense="true">
                                         <h4>@L["Versions:Rollback:Validation:IssueCount", row.Target.ValidationIssues.Count]</h4>
                                         <ul class="unified-version-rollback-validation-issues">
                                             @foreach (var issue in row.Target.ValidationIssues)
@@ -112,15 +112,15 @@
                                 }
                                 @if (row.Target.Status == ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync)
                                 {
-                                    <MudAlert Severity="Severity.Error" Dense="true">@L["Versions:Rollback:Messages:RuntimeOutOfSync"]</MudAlert>
+                                    <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@L["Versions:Rollback:Messages:RuntimeOutOfSync"]</MudAlert>
                                 }
                                 @if (row.HasSchemaDrift && !row.Target.IsSkipped)
                                 {
-                                    <MudAlert Severity="Severity.Warning" Dense="true">@L["State:Value:SchemaDriftHiddenNotice"]</MudAlert>
+                                    <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Dense="true">@L["State:Value:SchemaDriftHiddenNotice"]</MudAlert>
                                 }
                                 @if (row.HasHiddenChanges)
                                 {
-                                    <MudAlert Severity="Severity.Info" Dense="true">@L["State:Value:HiddenChangedNotice"]</MudAlert>
+                                    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["State:Value:HiddenChangedNotice"]</MudAlert>
                                 }
                                 <p class="unified-version-rollback-direction">@L["Versions:Rollback:Fields:DiffDirection"]</p>
                                 <div class="unified-version-rollback-diff"><DiffViewer OriginText="@row.CurrentText" NewText="@row.TargetText" Options="@_diffOptions" ViewMode="EDiffViewMode.Split" /></div>

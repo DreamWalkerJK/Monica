@@ -21,7 +21,7 @@
     @if (Entries.Count == 0)
     {
         <div class="execution-history__empty">
-            <MudIcon Icon="@Icons.Material.Filled.HistoryToggleOff" />
+            <MoIcon Icon="@MoIcons.ClockFading" Size="1.5rem" />
             <MudText Typo="Typo.body2">@L["ExecutionDetail:EmptyHistory"]</MudText>
         </div>
     }
@@ -33,9 +33,8 @@
                 <li class="execution-history__entry" data-state="@entry.NewState?.ToString().ToLowerInvariant()">
                     <span class="execution-history__rail" aria-hidden="true">
                         <span class="execution-history__node">
-                            <MudIcon Icon="@GetEntryIcon(entry)"
-                                     Color="@GetEntryColor(entry)"
-                                     Size="Size.Small" />
+                            <MoIcon Icon="@GetEntryIcon(entry)"
+                                     Size="1.25rem" Style="@GetEntryIconStyle(entry)" />
                         </span>
                     </span>
                     <article>
@@ -55,14 +54,14 @@
                             @if (entry.PreviousState is not null || entry.NewState is not null)
                             {
                                 <span>
-                                    <MudIcon Icon="@Icons.Material.Filled.SyncAlt" Size="Size.Small" />
+                                    <MoIcon Icon="@MoIcons.ArrowLeftRight" Size="1.25rem" />
                                     <span>@GetTransition(entry)</span>
                                 </span>
                             }
                             @if (!string.IsNullOrWhiteSpace(entry.WorkerInstanceId))
                             {
                                 <span>
-                                    <MudIcon Icon="@Icons.Material.Filled.Computer" Size="Size.Small" />
+                                    <MoIcon Icon="@MoIcons.Monitor" Size="1.25rem" />
                                     <code title="@entry.WorkerInstanceId">@entry.WorkerInstanceId</code>
                                 </span>
                             }
@@ -99,16 +98,27 @@
 
     private static string GetEntryIcon(JobExecutionHistoryEntry entry) => entry.Kind switch
     {
-        JobExecutionHistoryKind.ExecutionLog => Icons.Material.Filled.Terminal,
-        JobExecutionHistoryKind.Cancellation => Icons.Material.Filled.CancelScheduleSend,
+        JobExecutionHistoryKind.ExecutionLog => MoIcons.Terminal,
+        JobExecutionHistoryKind.Cancellation => MoIcons.CancelSchedule,
         _ => entry.NewState switch
         {
             { } state => ExecutionUiPresentation.GetStateIcon(state),
-            _ => Icons.Material.Filled.Circle
+            _ => MoIcons.Circle
         }
     };
 
     private static Color GetEntryColor(JobExecutionHistoryEntry entry) => entry.NewState is { } state
         ? JobSchedulerUiPresentation.GetStateColor(state)
         : ExecutionUiPresentation.GetLogLevelColor(entry.LogLevel);
+
+    private static string GetEntryIconStyle(JobExecutionHistoryEntry entry) => GetEntryColor(entry) switch
+    {
+        Color.Primary => "color:var(--mud-palette-primary);",
+        Color.Secondary => "color:var(--mud-palette-secondary);",
+        Color.Info => "color:var(--mud-palette-info);",
+        Color.Success => "color:var(--mud-palette-success);",
+        Color.Warning => "color:var(--mud-palette-warning);",
+        Color.Error => "color:var(--mud-palette-error);",
+        _ => "color:inherit;"
+    };
 }

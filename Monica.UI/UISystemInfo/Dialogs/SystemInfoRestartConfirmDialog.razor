@@ -5,16 +5,16 @@
 <MudDialog>
     <DialogContent>
         <div class="system-info-restart-dialog">
-            <span class="system-info-restart-dialog__signal"><MudIcon Icon="@Icons.Material.Filled.PowerSettingsNew" Size="Size.Large" /></span>
+            <span class="system-info-restart-dialog__signal"><MoIcon Icon="@MoIcons.Power" Size="2.25rem" /></span>
             <p class="system-info-restart-dialog__eyebrow">@L["Page:Dialogs:Restart:Fact"]</p>
             <h2>@L["Page:Dialogs:Restart:Title"]</h2>
             <p>@L["Page:Dialogs:Restart:Summary"]</p>
             <div class="system-info-restart-dialog__delay">
-                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                <MoIcon Icon="@MoIcons.Clock" Size="1.25rem" />
                 @L["Page:Dialogs:Restart:DelayNotice", DelaySeconds]
             </div>
             <div class="system-info-restart-dialog__fact">
-                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
+                <MoIcon Icon="@MoIcons.Info" Size="1.25rem" />
                 @L["Page:Dialogs:Restart:SupervisorNote"]
             </div>
         </div>
@@ -24,7 +24,7 @@
         <MudButton OnClick="Confirm"
                    Variant="Variant.Filled"
                    Color="Color.Error"
-                   StartIcon="@Icons.Material.Filled.PowerSettingsNew">
+                   StartIcon="@MoIcons.Power">
             @L["Page:Dialogs:Restart:Confirm"]
         </MudButton>
     </DialogActions>

@@ -16,22 +16,22 @@
                 <span>@L["Workbench:Captured"]</span>
                 <time>@(capture is null ? L["Workbench:NoCapture"].Value : DataChannelPresentation.Timestamp(capture.CapturedAt))</time>
             </div>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="RefreshAsync" Disabled="State.IsRefreshing">@L["Common:Actions:Refresh"]</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Refresh" OnClick="RefreshAsync" Disabled="State.IsRefreshing">@L["Common:Actions:Refresh"]</MudButton>
         </div>
     </header>
     <MoWorkbenchNavigation Label="@L["Workbench:Navigation"]">
         <a href="@(UIDataChannelPage.PAGE_URL + ScopeQuery)" aria-current="@(!Exceptions ? "page" : null)">
-            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.Workflow" Size="1.25rem" />
             <span>@L["Workbench:Routes:Channels"]</span>
         </a>
         <a href="@(UIDataChannelExceptionsPage.PAGE_URL + ScopeQuery)" aria-current="@(Exceptions ? "page" : null)">
-            <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.Error" Size="1.25rem" />
             <span>@L["Workbench:Routes:Exceptions"]</span>
         </a>
     </MoWorkbenchNavigation>
     @if (!string.IsNullOrEmpty(State.RefreshError))
     {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">
             <strong>@L["Workbench:ReadFailed"]</strong>
             <p>@State.RefreshError</p>
             <p>@L[capture is null ? "Workbench:UnavailableHelp" : "Workbench:PreviousCaptureHelp"]</p>
@@ -65,7 +65,7 @@
                 <strong>@capture.ExceptionSummary.TotalHistoricalExceptions</strong>
             </div>
             <div class="datachannel-evidence-strip__explanation">
-                <MudIcon Icon="@Icons.Material.Outlined.History" />
+                <MoIcon Icon="@MoIcons.History" Size="1.5rem" />
                 <p>@L["ExceptionWorkbench:RetentionHelp"]</p>
             </div>
         </section>
@@ -101,7 +101,7 @@
         </section>
         <ChannelDirectory Channels="capture.Channels" ChannelId="@ChannelId" IsBusy="IsChannelBusy" OnInspect="InspectPipelineAsync" OnReinitialize="ReinitializeAsync" OnViewExceptions="InspectExceptionsAsync" OnClear="ClearHistoryAsync" />
         <p class="datachannel-scope-note">
-            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />@L["Workbench:ScopeHelp"]</p>
+            <MoIcon Icon="@MoIcons.Info" Size="1.25rem" />@L["Workbench:ScopeHelp"]</p>
     }
 </div>
 

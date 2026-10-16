@@ -26,7 +26,7 @@
     @if (Execution is null)
     {
         <div class="job-latest-panel__empty">
-            <MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" Size="Size.Large" />
+            <MoIcon Icon="@MoIcons.Hourglass" Size="2.25rem" />
             <MudText Typo="Typo.body2">
                 @L["JobDetail:LatestExecution:Empty"]
             </MudText>
@@ -42,7 +42,7 @@
                 <code title="@execution.InstanceId">@execution.InstanceId</code>
             </div>
             <MudButton Variant="Variant.Text"
-                       EndIcon="@Icons.Material.Outlined.OpenInFull"
+                       EndIcon="@MoIcons.Maximize"
                        OnClick="() => OpenAsync(execution.InstanceId)">
                 @L["Executions:Actions:Details"]
             </MudButton>

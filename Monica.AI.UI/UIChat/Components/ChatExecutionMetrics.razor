@@ -4,13 +4,13 @@
 @inject IStringLocalizer<AIResource> L
 
 <div class="execution-metrics" aria-label="@L["Workbench:Metrics"]">
-    <span title="@L["Workbench:Elapsed"]"><MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />@ChatExecutionPresentation.Duration(Elapsed)</span>
+    <span title="@L["Workbench:Elapsed"]"><MoIcon Icon="@MoIcons.Clock" Size="1.25rem" />@ChatExecutionPresentation.Duration(Elapsed)</span>
     <span title="@L["Workbench:FirstToken"]">@L["Workbench:FirstTokenShort"] @ChatExecutionPresentation.Duration(FirstToken)</span>
     <span title="@L["Workbench:InputTokens"]">↓ @ChatExecutionPresentation.Tokens(Input)</span>
     <span title="@L["Workbench:OutputTokens"]">↑ @ChatExecutionPresentation.Tokens(Output)</span>
     @if (Reasoning is { } reasoning)
     {
-        <span title="@L["Workbench:ReasoningTokens"]"><MudIcon Icon="@Icons.Material.Outlined.Psychology" Size="Size.Small" />@ChatExecutionPresentation.Tokens(reasoning)</span>
+        <span title="@L["Workbench:ReasoningTokens"]"><MoIcon Icon="@MoIcons.Brain" Size="1.25rem" />@ChatExecutionPresentation.Tokens(reasoning)</span>
     }
     <span title="@L["Workbench:SpeedHelp"]">@(Speed is { } speed ? $"{speed:0.0}" : "—") @L["Workbench:TokensPerSecond"]</span>
     <span title="@L["Workbench:CacheHelp"]">@L["Workbench:Cache"] @(CacheRatio is { } ratio ? $"{ratio:P0}" : "—")</span>

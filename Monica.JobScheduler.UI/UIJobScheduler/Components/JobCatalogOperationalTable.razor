@@ -17,11 +17,11 @@
                              Dense="true"
                              Color="Color.Primary"
                              Label="@L["Catalog:Selection:SelectPage"]"
-                             aria-label="@L["Catalog:Selection:SelectAll"]" />
+                             aria-label="@L["Catalog:Selection:SelectAll"]" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" />
             }
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Primary"
-                       StartIcon="@Icons.Material.Outlined.Refresh"
+                       StartIcon="@MoIcons.Refresh"
                        OnClick="ReloadAsync">@L["Common:Refresh"]</MudButton>
         </div>
     </header>
@@ -64,9 +64,9 @@
                     <div class="catalog-table__sorts">
                         <MudTableSortLabel T="JobOperationalSummary"
                                            SortLabel="@nameof(JobDefinitionSortField.JobName)"
-                                           InitialDirection="SortDirection.Ascending">@L["Catalog:Columns:Definition"]</MudTableSortLabel>
+                                           InitialDirection="SortDirection.Ascending" SortIcon="@MoIcons.ArrowUp">@L["Catalog:Columns:Definition"]</MudTableSortLabel>
                         <MudTableSortLabel T="JobOperationalSummary"
-                                           SortLabel="@nameof(JobDefinitionSortField.OwnerKey)">@L["Catalog:Columns:Owner"]</MudTableSortLabel>
+                                           SortLabel="@nameof(JobDefinitionSortField.OwnerKey)" SortIcon="@MoIcons.ArrowUp">@L["Catalog:Columns:Owner"]</MudTableSortLabel>
                     </div>
                 </MudTh>
                 <MudTh>@L["Catalog:Columns:Schedule"]</MudTh>
@@ -89,11 +89,11 @@
                                          Disabled="@IsMutating"
                                          Dense="true"
                                          Color="Color.Primary"
-                                         aria-label="@L["Catalog:Selection:SelectJob", effective.JobName]" />
+                                         aria-label="@L["Catalog:Selection:SelectJob", effective.JobName]" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" />
                         }
                         else
                         {
-                            <span class="catalog-table__type-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Bolt" Size="Size.Small" /></span>
+                            <span class="catalog-table__type-icon" aria-hidden="true"><MoIcon Icon="@MoIcons.Zap" Size="1.25rem" /></span>
                         }
                     </div>
                 </MudTd>
@@ -109,7 +109,7 @@
                             <p>@effective.Description</p>
                         }
                         <span class="catalog-table__owner" title="@definition.OwnerKey">
-                            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" />
+                            <MoIcon Icon="@MoIcons.Workflow" Size="1.25rem" />
                             <span>@definition.OwnerKey</span>
                         </span>
                         <button type="button"
@@ -123,7 +123,7 @@
                     <div class="catalog-table__plan">
                         <MudTooltip Text="@GetLifecycleDescription(context)" Placement="Placement.Top" Arrow="true">
                             <span class="catalog-table__lifecycle" data-tone="@GetLifecycleColor(context).ToString().ToLowerInvariant()">
-                                <MudIcon Icon="@GetLifecycleIcon(context)" Size="Size.Small" />
+                                <MoIcon Icon="@GetLifecycleIcon(context)" Size="1.25rem" />
                                 @GetLifecycleLabel(context)
                             </span>
                         </MudTooltip>
@@ -162,7 +162,7 @@
                                 aria-label="@L["Executions:Actions:OpenDetailsFor", effective.JobName, latest.InstanceId]"
                                 @onclick="@(() => OpenLatestExecutionAsync(latest.InstanceId))">
                             <span class="catalog-table__latest-state" data-state="@latest.State.ToString().ToLowerInvariant()">
-                                <MudIcon Icon="@GetStateIcon(latest.State)" Size="Size.Small" />
+                                <MoIcon Icon="@GetStateIcon(latest.State)" Size="1.25rem" />
                                 @L[$"ExecutionStates:{latest.State}"]
                             </span>
                             <time datetime="@latest.CreatedAtUtc.ToString("O")">@TimePresentation.FormatTimestamp(latest.CreatedAtUtc)</time>
@@ -180,7 +180,7 @@
                         @if (IsRecurring(context))
                         {
                             <MudTooltip Text="@GetToggleDisabledTooltip(context)">
-                                <MudIconButton Icon="@(IsOperatorPaused(context) ? Icons.Material.Outlined.PlayCircleOutline : Icons.Material.Outlined.PauseCircleOutline)"
+                                <MudIconButton Icon="@(IsOperatorPaused(context) ? MoIcons.PlayCircle : MoIcons.PauseCircle)"
                                                Color="@(IsOperatorPaused(context) ? Color.Success : Color.Warning)"
                                                Size="Size.Small"
                                                Disabled="@IsMutating"
@@ -189,7 +189,7 @@
                             </MudTooltip>
                         }
                         <MudTooltip Text="@L["Catalog:Actions:Run"]">
-                            <MudIconButton Icon="@Icons.Material.Outlined.PlayArrow"
+                            <MudIconButton Icon="@MoIcons.Play"
                                            Color="Color.Primary"
                                            Size="Size.Small"
                                            Disabled="@(IsMutating || !definition.IsPresent || (!IsRecurring(context) && definition.IsDisabled))"
@@ -197,7 +197,7 @@
                                            aria-label="@L["Catalog:Actions:RunFor", effective.JobName, definition.OwnerKey]" />
                         </MudTooltip>
                         <MudTooltip Text="@L["Catalog:Actions:Details"]">
-                            <MudIconButton Icon="@Icons.Material.Outlined.ArrowOutward"
+                            <MudIconButton Icon="@MoIcons.ArrowUpRight"
                                            Href="@GetDetailHref(context)"
                                            Size="Size.Small"
                                            aria-label="@L["Catalog:Actions:DetailsFor", effective.JobName, definition.OwnerKey]" />
@@ -207,14 +207,14 @@
             </RowTemplate>
             <NoRecordsContent>
                 <div class="catalog-table__empty">
-                    <MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Large" />
+                    <MoIcon Icon="@MoIcons.Package" Size="2.25rem" />
                     <p>@(IsQueryFailed ? L["Catalog:QueryUnavailable"] : EmptyText ?? L["Catalog:Empty"])</p>
                 </div>
             </NoRecordsContent>
             <PagerContent>
                 <MudTablePager PageSizeOptions="@PageSizeOptions"
                                RowsPerPageString="@L["Catalog:Filters:PageSize"]"
-                               InfoFormat="@L["Catalog:Pagination:Range"]" />
+                               InfoFormat="@L["Catalog:Pagination:Range"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
             </PagerContent>
         </MudTable>
     </div>

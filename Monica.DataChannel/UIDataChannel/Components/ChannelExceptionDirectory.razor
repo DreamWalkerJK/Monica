@@ -22,7 +22,7 @@
     }
     <div class="exception-directory__filters">
         <div class="exception-directory__query">
-            <MudTextField T="string" @ref="_searchField" @bind-Value="_query" Immediate="true" Label="@L["ExceptionDirectory:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Clearable="true" />
+            <MudTextField T="string" @ref="_searchField" @bind-Value="_query" Immediate="true" Label="@L["ExceptionDirectory:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Clearable="true" ClearIcon="@MoIcons.Close" />
         </div>
         <div class="exception-directory__states" aria-label="@L["ExceptionDirectory:FiltersLabel"]">
             @foreach (var filter in Filters)
@@ -34,7 +34,7 @@
         <MudButton Size="Size.Small" OnClick="ResetAsync">@L["Directory:Reset"]</MudButton>
     </div>
     <div class="exception-directory__table">
-        <MudDataGrid T="ExceptionDirectoryRow" Items="FilteredRows" Square="true" Elevation="0" Filterable="true" SortMode="SortMode.Multiple" Hover="true" Dense="true" ReadOnly="true" Breakpoint="Breakpoint.Xs" RowsPerPage="10">
+        <MudDataGrid T="ExceptionDirectoryRow" Items="FilteredRows" Square="true" Elevation="0" Filterable="true" SortMode="SortMode.Multiple" Hover="true" Dense="true" ReadOnly="true" Breakpoint="Breakpoint.Xs" RowsPerPage="10" SortIcon="@MoIcons.ArrowUp" DragIndicatorIcon="@MoIcons.GripVertical" FilterIconEmpty="@MoIcons.Filter" FilterIconFilled="@MoIcons.Filter" FilterIconClear="@MoIcons.FilterOff" ColumnOptionsIcon="@MoIcons.MoreVertical">
             <Columns>
                 <PropertyColumn Property="item => item.ChannelId" Title="@L["Exceptions:Columns:ChannelId"]">
                     <CellTemplate>
@@ -52,7 +52,7 @@
                 <TemplateColumn Title="@L["ExceptionDirectory:Evidence"]" Sortable="false">
                     <CellTemplate>
                         <span class="exception-retention" data-retained="@(context.Item.HasExceptions ? "true" : "false")">
-                            <MudIcon Icon="@(context.Item.HasExceptions ? Icons.Material.Outlined.ErrorOutline : Icons.Material.Outlined.RemoveCircleOutline)" Size="Size.Small" />@L[context.Item.HasExceptions ? "ExceptionDirectory:Retained" : "ExceptionDirectory:None"]</span>
+                            <MoIcon Icon="@(context.Item.HasExceptions ? MoIcons.Error : MoIcons.MinusCircle)" Size="1.25rem" />@L[context.Item.HasExceptions ? "ExceptionDirectory:Retained" : "ExceptionDirectory:None"]</span>
                     </CellTemplate>
                 </TemplateColumn>
                 <PropertyColumn Property="item => item.CurrentExceptionCount" Title="@L["Exceptions:Columns:CurrentCount"]" />
@@ -68,7 +68,7 @@
                         <div class="exception-actions">
                             <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="() => OnInspect.InvokeAsync(context.Item.ChannelId)" aria-label="@L["Directory:InspectExceptionsFor", context.Item.ChannelId]">@L["Channel:Actions:Inspect"]</MudButton>
                             <MudTooltip Text="@L["Channel:Actions:ClearHistory"]">
-                                <MudIconButton Icon="@Icons.Material.Outlined.ClearAll" Color="Color.Default" Size="Size.Small" aria-disabled="@(IsBusy(context.Item.ChannelId) ? "true" : "false")" OnClick="() => ClearAsync(context.Item.ChannelId)" aria-label="@L["ExceptionDirectory:ClearFor", context.Item.ChannelId]" />
+                                <MudIconButton Icon="@MoIcons.ClearList" Color="Color.Default" Size="Size.Small" aria-disabled="@(IsBusy(context.Item.ChannelId) ? "true" : "false")" OnClick="() => ClearAsync(context.Item.ChannelId)" aria-label="@L["ExceptionDirectory:ClearFor", context.Item.ChannelId]" />
                             </MudTooltip>
                         </div>
                     </CellTemplate>
@@ -76,7 +76,7 @@
             </Columns>
             <NoRecordsContent>
                 <div class="exception-directory__empty">
-                    <MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Large" />
+                    <MoIcon Icon="@MoIcons.History" Size="2.25rem" />
                     <h3>@L[MissingChannel ? "Directory:MissingChannel" : Summary.ChannelSummaries.Count == 0 ? "Directory:Empty" : "Directory:NoMatches"]</h3>
                     <p>@L[MissingChannel ? "Directory:MissingChannelHelp" : Summary.ChannelSummaries.Count == 0 ? "Directory:EmptyHelp" : "Directory:NoMatchesHelp"]</p>
                 </div>

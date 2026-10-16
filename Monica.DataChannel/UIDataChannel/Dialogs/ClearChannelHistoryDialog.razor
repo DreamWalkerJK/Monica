@@ -4,21 +4,21 @@
     <DialogContent>
         <div class="history-confirmation">
             <div class="history-confirmation__intro">
-                <MudIcon Icon="@Icons.Material.Outlined.DeleteSweep" Color="Color.Warning" Size="Size.Large" />
+                <MoIcon Icon="@MoIcons.ClearList" Size="2.25rem" Style="color:var(--mud-palette-warning);" />
                 <p>@L["ClearHistory:Description"]</p>
             </div>
             <div class="history-confirmation__identity">
                 <span>@L["Exceptions:Columns:ChannelId"]</span>
                 <code>@ChannelId</code>
             </div>
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["ClearHistory:Scope"]</MudAlert>
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["ClearHistory:Scope"]</MudAlert>
             <p class="history-confirmation__help">@L["ClearHistory:LifetimeHelp"]</p>
         </div>
     </DialogContent>
     <DialogActions>
         <div class="history-confirmation-actions">
             <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
-            <MudButton Color="Color.Error" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.ClearAll" OnClick="Confirm">@L["ClearHistory:Confirm"]</MudButton>
+            <MudButton Color="Color.Error" Variant="Variant.Outlined" StartIcon="@MoIcons.ClearList" OnClick="Confirm">@L["ClearHistory:Confirm"]</MudButton>
         </div>
     </DialogActions>
 </MudDialog>

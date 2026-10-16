@@ -1,4 +1,5 @@
 using Monica.Framework.Seeder.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UISeeder.Support;
@@ -35,14 +36,14 @@ public static class SeederDisplay
     /// <summary>Gets the Material icon for an overall run status.</summary>
     public static string Icon(SeederRunStatus status) => status switch
     {
-        SeederRunStatus.Waiting => Icons.Material.Filled.HourglassTop,
-        SeederRunStatus.Running => Icons.Material.Filled.Sync,
-        SeederRunStatus.Aborting => Icons.Material.Filled.CancelScheduleSend,
-        SeederRunStatus.Succeeded => Icons.Material.Filled.TaskAlt,
-        SeederRunStatus.CompletedWithFailures => Icons.Material.Filled.Warning,
-        SeederRunStatus.Aborted => Icons.Material.Filled.Error,
-        SeederRunStatus.Cancelled => Icons.Material.Filled.Cancel,
-        _ => Icons.Material.Filled.Help
+        SeederRunStatus.Waiting => MoIcons.Hourglass,
+        SeederRunStatus.Running => MoIcons.Refresh,
+        SeederRunStatus.Aborting => MoIcons.CancelSchedule,
+        SeederRunStatus.Succeeded => MoIcons.Success,
+        SeederRunStatus.CompletedWithFailures => MoIcons.Warning,
+        SeederRunStatus.Aborted => MoIcons.Error,
+        SeederRunStatus.Cancelled => MoIcons.Error,
+        _ => MoIcons.Help
     };
 
     /// <summary>Gets the semantic color for a seeder status.</summary>
@@ -60,13 +61,13 @@ public static class SeederDisplay
     /// <summary>Gets the Material icon for a seeder status.</summary>
     public static string Icon(SeederStatus status) => status switch
     {
-        SeederStatus.Pending => Icons.Material.Filled.Schedule,
-        SeederStatus.Running => Icons.Material.Filled.PlayCircle,
-        SeederStatus.Succeeded => Icons.Material.Filled.CheckCircle,
-        SeederStatus.Failed => Icons.Material.Filled.Error,
-        SeederStatus.Blocked => Icons.Material.Filled.Block,
-        SeederStatus.Cancelled => Icons.Material.Filled.Cancel,
-        _ => Icons.Material.Filled.Help
+        SeederStatus.Pending => MoIcons.Clock,
+        SeederStatus.Running => MoIcons.PlayCircle,
+        SeederStatus.Succeeded => MoIcons.Success,
+        SeederStatus.Failed => MoIcons.Error,
+        SeederStatus.Blocked => MoIcons.Ban,
+        SeederStatus.Cancelled => MoIcons.Error,
+        _ => MoIcons.Help
     };
 
     /// <summary>Gets the semantic color for an attempt status.</summary>
@@ -107,9 +108,9 @@ public static class SeederDisplay
     /// <summary>Gets the Material icon for Seeder readiness.</summary>
     public static string Icon(SeederReadinessStatus status) => status switch
     {
-        SeederReadinessStatus.Healthy => Icons.Material.Filled.CheckCircle,
-        SeederReadinessStatus.Degraded => Icons.Material.Filled.Warning,
-        SeederReadinessStatus.Unhealthy => Icons.Material.Filled.Error,
-        _ => Icons.Material.Filled.Help
+        SeederReadinessStatus.Healthy => MoIcons.Success,
+        SeederReadinessStatus.Degraded => MoIcons.Warning,
+        SeederReadinessStatus.Unhealthy => MoIcons.Error,
+        _ => MoIcons.Help
     };
 }

@@ -15,7 +15,7 @@
                 @L["JobDetail:Activity:Description"]
             </MudText>
         </div>
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
             @L["JobDetail:Activity:Bounded", Running.ItemLimit]
         </MudChip>
     </header>
@@ -24,7 +24,7 @@
         <section class="job-activity__stream job-activity__stream--running" aria-labelledby="job-running-heading">
             <header>
                 <span class="job-activity__stream-icon" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Outlined.PlayCircle" Size="Size.Small" />
+                    <MoIcon Icon="@MoIcons.PlayCircle" Size="1.25rem" />
                 </span>
                 <div>
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-running-heading">
@@ -39,7 +39,7 @@
 
             @if (Running.Error is not null)
             {
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">
                     @L["JobDetail:Activity:RunningLoadFailed", Running.Error]
                 </MudAlert>
             }
@@ -47,7 +47,7 @@
             @if (Running.Error is null && Running.Items.Count == 0)
             {
                 <div class="job-activity__empty">
-                    <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" />
+                    <MoIcon Icon="@MoIcons.Success" Size="1.25rem" />
                     <span>@L["JobDetail:Activity:RunningEmpty"]</span>
                 </div>
             }
@@ -71,8 +71,8 @@
                             <span class="job-activity__duration">
                                 @TimePresentation.FormatExecutionDuration(execution, ObservedAtUtc)
                             </span>
-                            <MudIcon Icon="@Icons.Material.Outlined.ChevronRight"
-                                     Size="Size.Small"
+                            <MoIcon Icon="@MoIcons.ChevronRight"
+                                     Size="1.25rem"
                                      Class="job-activity__chevron" />
                         </button>
                     }
@@ -83,7 +83,7 @@
         <section class="job-activity__stream job-activity__stream--failed" aria-labelledby="job-failed-heading">
             <header>
                 <span class="job-activity__stream-icon" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Outlined.Error" Size="Size.Small" />
+                    <MoIcon Icon="@MoIcons.Error" Size="1.25rem" />
                 </span>
                 <div>
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-failed-heading">
@@ -98,7 +98,7 @@
 
             @if (Failures.Error is not null)
             {
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">
                     @L["JobDetail:Activity:FailuresLoadFailed", Failures.Error]
                 </MudAlert>
             }
@@ -106,7 +106,7 @@
             @if (Failures.Error is null && Failures.Items.Count == 0)
             {
                 <div class="job-activity__empty">
-                    <MudIcon Icon="@Icons.Material.Outlined.FactCheck" Size="Size.Small" />
+                    <MoIcon Icon="@MoIcons.ClipboardCheck" Size="1.25rem" />
                     <span>@L["JobDetail:Activity:FailuresEmpty"]</span>
                 </div>
             }
@@ -130,8 +130,8 @@
                             <span class="job-activity__duration">
                                 @TimePresentation.FormatExecutionDuration(execution, ObservedAtUtc)
                             </span>
-                            <MudIcon Icon="@Icons.Material.Outlined.ChevronRight"
-                                     Size="Size.Small"
+                            <MoIcon Icon="@MoIcons.ChevronRight"
+                                     Size="1.25rem"
                                      Class="job-activity__chevron" />
                         </button>
                     }

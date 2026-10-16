@@ -40,7 +40,7 @@
             <MudTd DataLabel="@L["Shared:Fields:Type"]">
                 <MudTooltip Text="@context.InstanceTypeFullName" RootClass="cell-tooltip">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="type-cell">
-                        <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Small" Color="Color.Default" />
+                        <MoIcon Icon="@MoIcons.Shapes" Size="1.25rem" Style="color:var(--mud-palette-text-secondary)" />
                         <span class="cell-text">@L.GetInstanceTypeText(context)</span>
                     </MudStack>
                 </MudTooltip>
@@ -70,7 +70,7 @@
             </MudTd>
             <MudTd DataLabel="@L["Shared:Fields:HealthState"]">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                    <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@context.HealthStateColor" />
+                    <MoIcon Icon="@MoIcons.Circle" Size="1.25rem" Style="@context.HealthStateIconStyle" />
                     <MudText Typo="Typo.body2" Color="@context.HealthStateColor">
                         @L.GetHealthStateText(context.HealthState)
                     </MudText>
@@ -80,7 +80,7 @@
                 @if (context.CurrentLogLevel.HasValue)
                 {
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        <MudIcon Icon="@context.LogLevelIcon" Size="Size.Small" Color="@context.LogLevelColor" />
+                        <MoIcon Icon="@context.LogLevelIcon" Size="1.25rem" Style="@context.LogLevelIconStyle" />
                         <MudText Typo="Typo.body2" Color="@context.LogLevelColor" Class="cell-text">
                             @L.GetLogLevelText(context.CurrentLogLevel)
                         </MudText>
@@ -92,7 +92,7 @@
                 }
             </MudTd>
             <MudTd DataLabel="@L["Shared:Fields:Exceptions"]">
-                <MudChip T="string" Color="@context.ExceptionStatusColor" Size="Size.Small" Icon="@(context.HasExceptions ? Icons.Material.Filled.Error : Icons.Material.Filled.CheckCircle)">
+                <MudChip T="string" Color="@context.ExceptionStatusColor" Size="Size.Small" Icon="@(context.HasExceptions ? MoIcons.Error : MoIcons.Success)">
                     @L.GetExceptionStatusText(context)
                 </MudChip>
             </MudTd>
@@ -107,13 +107,13 @@
             @if (!Compact)
             {
                 <MudTd DataLabel="@L["Shared:Fields:Actions"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                    <MudIconButton Icon="@MoIcons.Eye"
                                   Size="Size.Small"
                                   Color="Color.Info"
                                   OnClick="() => OnRowClick.InvokeAsync(context)"
                                   title="@L["Shared:Actions:ViewDetails"]"
                                   aria-label="@L["Shared:Actions:ViewDetails"]" />
-                    <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
+                    <MudIconButton Icon="@MoIcons.ClearList"
                                   Size="Size.Small"
                                   Color="Color.Warning"
                                   OnClick="() => OnClearHistory.InvokeAsync(context)"
@@ -123,11 +123,11 @@
             }
         </RowTemplate>
         <PagerContent>
-            <MudTablePager PageSizeOptions="@(Compact ? new[] { 5, 10, 20 } : new[] { 10, 20, 50, 100 })" />
+            <MudTablePager FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" PageSizeOptions="@(Compact ? new[] { 5, 10, 20 } : new[] { 10, 20, 50, 100 })" />
         </PagerContent>
         <NoRecordsContent>
             <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
-                <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" />
+                <MoIcon Icon="@MoIcons.ClipboardList" Size="2.25rem" Style="color:var(--mud-palette-secondary)" />
                 <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Shared:States:NoInstances"]</MudText>
             </MudStack>
         </NoRecordsContent>

@@ -6,7 +6,7 @@
 
 <section class="runtime-owners" aria-labelledby="runtime-owners-heading">
     <header class="runtime-owners__heading">
-        <MudIcon Icon="@Icons.Material.Outlined.Hub" aria-hidden="true" />
+        <MoIcon Icon="@MoIcons.Network" aria-hidden="true" Size="1.5rem" />
         <div>
             <h2 id="runtime-owners-heading">@L["Runtime:Owners:Title"]</h2>
             <p>@L["Runtime:Owners:Description", SchedulerRuntimePresentation.FormatInterval(Overview.OwnerOnlineThreshold, L)]</p>
@@ -35,13 +35,13 @@
                 <MudTd DataLabel="@L["Runtime:Owners:Owner"]">
                     <a class="runtime-owners__owner-link" href="@CatalogUrl(context.OwnerKey)" aria-label="@L["Runtime:Owners:OpenCatalog", context.OwnerKey]">
                         <code>@context.OwnerKey</code>
-                        <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" aria-hidden="true" />
+                        <MoIcon Icon="@MoIcons.ArrowRight" aria-hidden="true" Size="1.5rem" />
                     </a>
                 </MudTd>
                 <MudTd DataLabel="@L["Runtime:Owners:Liveness"]">
                     <div class="runtime-owners__observation">
                         <span class="runtime-owners__status" data-freshness="@freshness.ToString().ToLowerInvariant()">
-                            <MudIcon Icon="@ObservationIcon(freshness)" aria-hidden="true" />
+                            <MoIcon Icon="@ObservationIcon(freshness)" aria-hidden="true" Size="1.5rem" />
                             @ObservationText(freshness)
                         </span>
                         <div class="runtime-owners__time">
@@ -60,7 +60,7 @@
             </RowTemplate>
             <NoRecordsContent>
                 <div class="runtime-owners__empty">
-                    <MudIcon Icon="@Icons.Material.Outlined.Hub" aria-hidden="true" />
+                    <MoIcon Icon="@MoIcons.Network" aria-hidden="true" Size="1.5rem" />
                     <p>@L["Runtime:Owners:Empty"]</p>
                 </div>
             </NoRecordsContent>
@@ -88,8 +88,8 @@
 
     private static string ObservationIcon(SchedulerOwnerObservationFreshness freshness) => freshness switch
     {
-        SchedulerOwnerObservationFreshness.Recent => Icons.Material.Outlined.CheckCircle,
-        SchedulerOwnerObservationFreshness.Stale => Icons.Material.Outlined.Schedule,
-        _ => Icons.Material.Outlined.WarningAmber
+        SchedulerOwnerObservationFreshness.Recent => MoIcons.Success,
+        SchedulerOwnerObservationFreshness.Stale => MoIcons.Clock,
+        _ => MoIcons.Warning
     };
 }

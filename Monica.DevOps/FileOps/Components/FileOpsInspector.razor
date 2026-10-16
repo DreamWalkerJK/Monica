@@ -10,25 +10,25 @@
         <div class="inspector-identity">
             <h2 tabindex="-1">@NameValue</h2>
             <p class="draft-state @(Controller.IsDirty ? "draft-state-dirty" : "")">
-                <MudIcon Size="Size.Small" Icon="@(Controller.IsDirty ? Icons.Material.Outlined.Edit : File is null ? Icons.Material.Outlined.Description : Icons.Material.Outlined.Check)" />
+                <MoIcon Size="1.25rem" Icon="@(Controller.IsDirty ? MoIcons.Edit : File is null ? MoIcons.FileText : MoIcons.Check)" />
                 @L[File is null ? "Inspector:NoTextLoaded" : Controller.IsDirty ? "Inspector:Unsaved" : "Inspector:Clean"]
             </p>
         </div>
         @if (Entry?.CanDelete == true)
         {
-            <MudMenu Class="inspector-menu" Icon="@Icons.Material.Outlined.MoreVert" AriaLabel="@L["Inspector:Actions"]" Disabled="@Busy">
+            <MudMenu Class="inspector-menu" Icon="@MoIcons.MoreVertical" AriaLabel="@L["Inspector:Actions"]" Disabled="@Busy">
                 <MudMenuItem OnClick="@(() => Delete.InvokeAsync(Entry))">@L["Actions:Delete"]</MudMenuItem>
             </MudMenu>
         }
         @* Keep the native decision's return target focusable; the visit rejects busy Close requests. *@
-        <MudIconButton Class="inspector-close" Icon="@Icons.Material.Outlined.Close" aria-label="@L["Actions:CloseFile"]" aria-disabled="@(Busy ? "true" : "false")" OnClick="@(() => Close.InvokeAsync())" />
+        <MudIconButton Class="inspector-close" Icon="@MoIcons.Close" aria-label="@L["Actions:CloseFile"]" aria-disabled="@(Busy ? "true" : "false")" OnClick="@(() => Close.InvokeAsync())" />
     </header>
     <div class="inspector-actions">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Save" Disabled="@(Busy || File?.CanSave != true || !Controller.IsDirty)" OnClick="@(() => Save.InvokeAsync())">@L["Actions:Save"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Save" Disabled="@(Busy || File?.CanSave != true || !Controller.IsDirty)" OnClick="@(() => Save.InvokeAsync())">@L["Actions:Save"]</MudButton>
         <MudButton Variant="Variant.Text" Disabled="@(Busy || File is null)" OnClick="@(() => Reload.InvokeAsync())">@L["Actions:Reload"]</MudButton>
         @if (CanDownload)
         {
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Download" Disabled="@Busy" OnClick="@(() => Download.InvokeAsync(PathValue))">@L["Actions:Download"]</MudButton>
+            <MudButton Variant="Variant.Text" StartIcon="@MoIcons.Download" Disabled="@Busy" OnClick="@(() => Download.InvokeAsync(PathValue))">@L["Actions:Download"]</MudButton>
         }
     </div>
     <details class="exact-path">
@@ -45,8 +45,8 @@
     @if (Controller.LastRead?.Kind == FileOpsOperationKind.ReadText) { <FileOpsOutcomeView Outcome="@Controller.LastRead" /> }
     @if (Controller.InspectionAttempt is { } attempt && !Same(attempt.FullPath, PathValue))
     { <div class="attempted-file"><p>@L["Inspector:RetainedAfterAttempt"]</p><code>@attempt.FullPath</code></div> }
-    @if (Controller.MetadataStale) { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Inspector:RetainedMetadata"]</MudAlert> }
-    @if (Controller.DiskContentDiffers) { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Inspector:DiskDiffers"]</MudAlert> }
+    @if (Controller.MetadataStale) { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["Inspector:RetainedMetadata"]</MudAlert> }
+    @if (Controller.DiskContentDiffers) { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["Inspector:DiskDiffers"]</MudAlert> }
     @if (File is { } file)
     {
         <section class="disk-evidence" aria-label="@L[Controller.MetadataStale ? "Inspector:RetainedEvidence" : "Inspector:DiskEvidence"]"><dl>
@@ -55,12 +55,12 @@
             <div><dt>@L["Labels:LineCount"]</dt><dd>@file.LineCount</dd></div>
             <div><dt>@L["Inspector:DiskModified"]</dt><dd><time datetime="@file.LastModifiedAt.ToString("O")">@file.LastModifiedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</time></dd></div>
         </dl></section>
-        @if (!file.CanSave) { <p class="read-only-note"><MudIcon Size="Size.Small" Icon="@Icons.Material.Outlined.Lock" />@ReadOnlyReason</p> }
+        @if (!file.CanSave) { <p class="read-only-note"><MoIcon Size="1.25rem" Icon="@MoIcons.Lock" />@ReadOnlyReason</p> }
         <div class="text-editor"><MudTextField T="string" Value="@Controller.DraftText" ValueChanged="@((string value) => DraftChanged.InvokeAsync(value))" Label="@L["Inspector:Text"]" Variant="Variant.Outlined" Immediate="true" Lines="12" ReadOnly="@(!file.CanSave)" spellcheck="false" /></div>
     }
     else
     {
-        <div class="preview-unavailable"><MudIcon Icon="@Icons.Material.Outlined.Description" /><h3>@L["Inspector:Unavailable"]</h3><p>@L["Inspector:UnavailableHint"]</p></div>
+        <div class="preview-unavailable"><MoIcon Icon="@MoIcons.FileText" Size="1.5rem" /><h3>@L["Inspector:Unavailable"]</h3><p>@L["Inspector:UnavailableHint"]</p></div>
         @if (Entry is { } entry) { <dl class="entry-evidence"><div><dt>@L["Columns:Type"]</dt><dd>@(string.IsNullOrEmpty(entry.Extension) ? L["Labels:File"] : entry.Extension)</dd></div><div><dt>@L["Labels:Size"]</dt><dd>@entry.SizeDisplay</dd></div><div><dt>@L["Labels:LastModified"]</dt><dd>@entry.LastModifiedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</dd></div></dl> }
     }
     </div>

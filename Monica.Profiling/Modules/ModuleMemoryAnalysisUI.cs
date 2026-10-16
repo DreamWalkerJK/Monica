@@ -6,6 +6,7 @@ using Monica.Profiling.Localization;
 using Monica.Profiling.Pages;
 using Monica.Profiling.UIMemoryAnalysis.State;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -65,27 +66,27 @@ public class ModuleMemoryAnalysisUI : MonicaModule<ModuleMemoryAnalysisUIOption>
                 var category = registry.RegisterLocalizedCategory<MemoryAnalysisResource>(
                     "Monica.Profiling.MemoryAnalysis", "Pages:MemoryAnalysis:Title", 60,
                     parentId: BuiltInNavigationCategoryIds.Monitor,
-                    icon: Icons.Material.Outlined.Memory,
+                    icon: MoIcons.Cpu,
                     descriptionKey: "Pages:MemoryAnalysis:Description");
                 registry.RegisterLocalizedPage<UIMemoryAnalysisPage, MemoryAnalysisResource>(
                     UIMemoryAnalysisPage.PAGE_URL, "Pages:MemoryAnalysis:Overview:Title",
-                    Icons.Material.Outlined.Memory, category, addToNav: true, navOrder: 10,
+                    MoIcons.Cpu, category, addToNav: true, navOrder: 10,
                     descriptionKey: "Pages:MemoryAnalysis:Overview:Description");
                 registry.RegisterLocalizedPage<UIMemoryGcPage, MemoryAnalysisResource>(
                     UIMemoryGcPage.PAGE_URL, "Pages:MemoryAnalysis:Gc:Title",
-                    Icons.Material.Outlined.Layers, category, addToNav: true, navOrder: 20,
+                    MoIcons.Layers, category, addToNav: true, navOrder: 20,
                     descriptionKey: "Pages:MemoryAnalysis:Gc:Description");
                 registry.RegisterLocalizedPage<UIMemoryHistoryPage, MemoryAnalysisResource>(
                     UIMemoryHistoryPage.PAGE_URL, "Pages:MemoryAnalysis:History:Title",
-                    Icons.Material.Outlined.ShowChart, category, addToNav: true, navOrder: 30,
+                    MoIcons.ChartLine, category, addToNav: true, navOrder: 30,
                     descriptionKey: "Pages:MemoryAnalysis:History:Description");
                 registry.RegisterLocalizedPage<UIMemoryAllocationsPage, MemoryAnalysisResource>(
                     UIMemoryAllocationsPage.PAGE_URL, "Pages:MemoryAnalysis:Allocations:Title",
-                    Icons.Material.Outlined.Category, category, addToNav: includeAllocations, navOrder: 40,
+                    MoIcons.Shapes, category, addToNav: includeAllocations, navOrder: 40,
                     descriptionKey: "Pages:MemoryAnalysis:Allocations:Description");
                 registry.RegisterLocalizedPage<UIMemoryDiagnosticsPage, MemoryAnalysisResource>(
                     UIMemoryDiagnosticsPage.PAGE_URL, "Pages:MemoryAnalysis:Diagnostics:Title",
-                    Icons.Material.Outlined.Build, category, addToNav: true, navOrder: 50,
+                    MoIcons.Wrench, category, addToNav: true, navOrder: 50,
                     descriptionKey: "Pages:MemoryAnalysis:Diagnostics:Description");
             }));
     }

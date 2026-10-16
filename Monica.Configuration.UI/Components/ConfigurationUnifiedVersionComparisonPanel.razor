@@ -2,9 +2,9 @@
 <div class="configuration-version-comparison-panel" aria-busy="@(Loading ? "true" : "false")">
     <header><div><h3>@Title</h3><p>@Subtitle</p></div>@if (Comparison is not null) { <span>@L["Versions:Diff:ChangedDefinitions", Comparison.Changes.Count]</span> }</header>
     @if (Loading) { <div class="configuration-version-comparison-state"><MudProgressLinear Indeterminate="true" /><p>@L["Common:States:Loading"]</p></div> }
-    else if (!string.IsNullOrWhiteSpace(ErrorText)) { <div class="configuration-version-comparison-state"><MudAlert Severity="Severity.Error">@ErrorText</MudAlert></div> }
-    else if (!HasSelection) { <div class="configuration-version-comparison-state"><MudIcon Icon="@Icons.Material.Outlined.CompareArrows" /><p>@L["Versions:Compare:NoSelection"]</p></div> }
-    else if (Comparison is null) { <div class="configuration-version-comparison-state"><MudAlert Severity="Severity.Warning">@L["Versions:Compare:Unavailable"]</MudAlert></div> }
+    else if (!string.IsNullOrWhiteSpace(ErrorText)) { <div class="configuration-version-comparison-state"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@ErrorText</MudAlert></div> }
+    else if (!HasSelection) { <div class="configuration-version-comparison-state"><MoIcon Icon="@MoIcons.ArrowLeftRight" Size="1.5rem" /><p>@L["Versions:Compare:NoSelection"]</p></div> }
+    else if (Comparison is null) { <div class="configuration-version-comparison-state"><MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning">@L["Versions:Compare:Unavailable"]</MudAlert></div> }
     else { <ConfigurationUnifiedVersionDiffPanel Comparison="Comparison" ShowSummaryHeader="false" /> }
 </div>
 @code {

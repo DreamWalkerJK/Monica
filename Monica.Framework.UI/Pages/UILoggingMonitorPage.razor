@@ -16,7 +16,7 @@
         <div><span class="logging-eyebrow">@L["Workbench:Eyebrow"]</span><h1>@L["Workbench:ReaderTitle"]</h1><p>@L["Workbench:ReaderIntro"]</p></div>
         <nav aria-label="@L["Workbench:Navigation"]" class="logging-route-nav">
             <a href="@ReaderUrl" aria-current="page">@L["Workbench:Reader"]</a>
-            <a href="@FilesUrl">@L["Workbench:Files"]<MudIcon Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" /></a>
+            <a href="@FilesUrl">@L["Workbench:Files"]<MoIcon Icon="@MoIcons.ArrowUpRight" Size="1.25rem" /></a>
         </nav>
     </header>
 
@@ -26,7 +26,7 @@
             <h2 id="logging-source-title">@(Source is null ? L["Workbench:SourcePending"].Value : Path.GetFileName(Source.FilePath))</h2>
             <code class="source-path-full">@(Source?.FilePath ?? LoggingService.CurrentLogFilePath)</code>
             <details class="source-path-compact"><summary>@L["Workbench:SourcePath"]</summary><code>@(Source?.FilePath ?? LoggingService.CurrentLogFilePath)</code></details>
-            <span class="source-kind"><MudIcon Icon="@Icons.Material.Outlined.Description" Size="Size.Small" />@L["Workbench:FileFollowing"]</span>
+            <span class="source-kind"><MoIcon Icon="@MoIcons.FileText" Size="1.25rem" />@L["Workbench:FileFollowing"]</span>
         </div>
         <div class="source-status">
             <span class="following-state @(IsRunning ? "is-following" : "")"><i aria-hidden="true"></i>@L[IsRunning ? "Workbench:Following" : "Workbench:Paused"]</span>
@@ -36,20 +36,20 @@
 
     @if (!_initializing && (_error is not null || _snapshot?.Error is not null))
     {
-        <div class="logging-notice is-error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" /><div><strong>@L["Workbench:ReadFailed"]</strong><p>@(_error ?? _snapshot?.Error)</p><span>@L["Workbench:StaleEvidence"]</span></div></div>
+        <div class="logging-notice is-error" role="alert"><MoIcon Icon="@MoIcons.Error" Size="1.5rem" /><div><strong>@L["Workbench:ReadFailed"]</strong><p>@(_error ?? _snapshot?.Error)</p><span>@L["Workbench:StaleEvidence"]</span></div></div>
     }
     else if (!_initializing && _snapshot is { FileExists: false })
     {
-        <div class="logging-notice" role="status"><MudIcon Icon="@Icons.Material.Outlined.FindInPage" /><div><strong>@L["Workbench:FileMissing"]</strong><p>@L["Workbench:MissingHelp"]</p></div><a href="@FilesUrl">@L["Workbench:ChooseFile"]</a></div>
+        <div class="logging-notice" role="status"><MoIcon Icon="@MoIcons.FileSearch" Size="1.5rem" /><div><strong>@L["Workbench:FileMissing"]</strong><p>@L["Workbench:MissingHelp"]</p></div><a href="@FilesUrl">@L["Workbench:ChooseFile"]</a></div>
     }
 
     <section class="logging-reader" aria-label="@L["Workbench:Reader"]">
         <div class="logging-command-rail">
             <div class="reader-primary-actions">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@(IsRunning ? Icons.Material.Outlined.Pause : Icons.Material.Outlined.PlayArrow)" Disabled="@(_busy || _initializing)" OnClick="ToggleFollowingAsync">@L[IsRunning ? "Workbench:Pause" : "Workbench:Follow"]</MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@(_busy || _initializing)" OnClick="ReadLatestAsync">@L["Workbench:ReadLatest"]</MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Class="reader-export-full" StartIcon="@Icons.Material.Outlined.Download" Disabled="@(_busy || _snapshot is null)" OnClick="ExportRetainedAsync">@L["Workbench:ExportRetained"]</MudButton>
-                <MudIconButton Class="reader-export-compact" Color="Color.Primary" Icon="@Icons.Material.Outlined.Download" Disabled="@(_busy || _snapshot is null)" OnClick="ExportRetainedAsync" aria-label="@L["Workbench:ExportRetained"]" title="@L["Workbench:ExportRetained"]" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@(IsRunning ? MoIcons.Pause : MoIcons.Play)" Disabled="@(_busy || _initializing)" OnClick="ToggleFollowingAsync">@L[IsRunning ? "Workbench:Pause" : "Workbench:Follow"]</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh" Disabled="@(_busy || _initializing)" OnClick="ReadLatestAsync">@L["Workbench:ReadLatest"]</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Class="reader-export-full" StartIcon="@MoIcons.Download" Disabled="@(_busy || _snapshot is null)" OnClick="ExportRetainedAsync">@L["Workbench:ExportRetained"]</MudButton>
+                <MudIconButton Class="reader-export-compact" Color="Color.Primary" Icon="@MoIcons.Download" Disabled="@(_busy || _snapshot is null)" OnClick="ExportRetainedAsync" aria-label="@L["Workbench:ExportRetained"]" title="@L["Workbench:ExportRetained"]" />
             </div>
             <div class="reader-preferences">
                 <label><span>@L["Workbench:InitialLines"]</span><select value="@_lineLimit" @onchange="ChangeLineLimitAsync" disabled="@_busy">@foreach (var count in LineCounts) { <option value="@count">@count.ToString("N0")</option> }</select></label>
@@ -57,13 +57,13 @@
             </div>
         </div>
         <div class="logging-search-rail">
-            <div class="reader-search"><MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" /><input aria-label="@L["Workbench:Keyword"]" placeholder="@L["Workbench:KeywordPlaceholder"]" @bind="_keyword" @bind:event="oninput" @onkeydown="SearchKeyDownAsync" /><button type="button" @onclick="ClearFilterAsync" aria-label="@L["Workbench:ClearFilter"]" disabled="@_busy"><MudIcon Icon="@Icons.Material.Outlined.Close" Size="Size.Small" /></button><button type="button" @onclick="ApplyFilterAsync" aria-label="@L["Workbench:Apply"]" title="@L["Workbench:Apply"]" disabled="@_busy"><MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></button></div>
+            <div class="reader-search"><MoIcon Icon="@MoIcons.Search" Size="1.25rem" /><input aria-label="@L["Workbench:Keyword"]" placeholder="@L["Workbench:KeywordPlaceholder"]" @bind="_keyword" @bind:event="oninput" @onkeydown="SearchKeyDownAsync" /><button type="button" @onclick="ClearFilterAsync" aria-label="@L["Workbench:ClearFilter"]" disabled="@_busy"><MoIcon Icon="@MoIcons.Close" Size="1.25rem" /></button><button type="button" @onclick="ApplyFilterAsync" aria-label="@L["Workbench:Apply"]" title="@L["Workbench:Apply"]" disabled="@_busy"><MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" /></button></div>
             <label class="reader-filter"><span>@L["Workbench:Severity"]</span><select value="@_severity" @onchange="ChangeSeverityAsync" disabled="@_busy"><option value="">@L["Workbench:AllLevels"]</option>@foreach (var severity in Enum.GetValues<LogSeverity>()) { <option value="@severity">@L[$"Workbench:Levels:{severity}"]</option> }</select></label>
             <label class="reader-toggle"><input type="checkbox" checked="@_onlyMatches" @onchange="ChangeMatchModeAsync" disabled="@_busy" /><span>@L["Workbench:OnlyMatches"]</span></label>
         </div>
         @if (_context is { } context)
         {
-            <div class="logging-context-banner" role="status"><div><strong>@L["Workbench:FrozenContext", context.TargetLineNumber]</strong><span>@L["Workbench:ContextScope", context.StartLineNumber, context.EndLineNumber]</span><code>@context.Source?.RelativePath</code></div><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.ArrowBack" OnClick="ExitContext">@L["Workbench:BackToReader"]</MudButton></div>
+            <div class="logging-context-banner" role="status"><div><strong>@L["Workbench:FrozenContext", context.TargetLineNumber]</strong><span>@L["Workbench:ContextScope", context.StartLineNumber, context.EndLineNumber]</span><code>@context.Source?.RelativePath</code></div><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.ArrowLeft" OnClick="ExitContext">@L["Workbench:BackToReader"]</MudButton></div>
         }
         @if (_initializing)
         {

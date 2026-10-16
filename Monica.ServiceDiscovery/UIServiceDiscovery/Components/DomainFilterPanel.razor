@@ -6,7 +6,7 @@
 <div class="atlas-domain-filter">
     <div class="atlas-domain-filter__search">
         <MudTextField T="string" @ref="_searchInput" @bind-Value="FilterText" Label="@L["DomainFilter:Labels:Search"]" HelperText="@L["DomainFilter:Labels:SearchHelp"]"
-            Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Immediate="true"
+            Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Immediate="true"
             DebounceInterval="300" OnDebounceIntervalElapsed="OnFilterTextChanged" />
     </div>
     <div class="atlas-domain-filter__choices">
@@ -16,7 +16,7 @@
         </div></div>
         <MudChipSet T="string" SelectionMode="SelectionMode.MultiSelection" SelectedValues="SelectedDomains" SelectedValuesChanged="OnSelectedDomainsChanged">
             @foreach (var domain in AllDomainNames)
-            { <MudChip T="string" Value="domain" Color="Color.Default" Size="Size.Small">@domain</MudChip> }
+            { <MudChip T="string" Value="domain" Color="Color.Default" Size="Size.Small" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@domain</MudChip> }
         </MudChipSet>
     </div>
     <div class="atlas-domain-filter__switches">

@@ -9,26 +9,26 @@
 <div class="memory-workspace" data-memory-route="@Section">
     @if (!Available)
     {
-        <ProfilingModuleUnavailable HeadingId="memory-analysis-unavailable-title" Icon="@Icons.Material.Outlined.Memory"
+        <ProfilingModuleUnavailable HeadingId="memory-analysis-unavailable-title" Icon="@MoIcons.Cpu"
             Eyebrow="@ProfilingL["Unavailable:Eyebrow"]" Title="@ProfilingL["Unavailable:MemoryAnalysis:Title"]"
             Description="@ProfilingL["Unavailable:MemoryAnalysis:Description"]" />
     }
     else
     {
         <header class="memory-workspace-header">
-            <div><span class="memory-workspace-eyebrow"><MudIcon Icon="@Icons.Material.Outlined.Memory" Size="Size.Small" /> @L["Page:Eyebrow"]</span>
+            <div><span class="memory-workspace-eyebrow"><MoIcon Icon="@MoIcons.Cpu" Size="1.25rem" /> @L["Page:Eyebrow"]</span>
                 <h1>@L[TitleKey]</h1><p>@L[DescriptionKey]</p></div>
             @if (Actions is not null) { <div class="memory-workspace-actions">@Actions</div> }
         </header>
         <nav class="memory-route-navigation" aria-label="@L["Page:Navigation"]">
-            <MudNavLink Href="@UIMemoryAnalysisPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Memory">@L["Tabs:Overview"]</MudNavLink>
-            <MudNavLink Href="@UIMemoryGcPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Analytics">@L["Tabs:GcStatistics"]</MudNavLink>
-            <MudNavLink Href="@UIMemoryHistoryPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Timeline">@L["Tabs:Trend"]</MudNavLink>
+            <MudNavLink Href="@UIMemoryAnalysisPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@MoIcons.Cpu">@L["Tabs:Overview"]</MudNavLink>
+            <MudNavLink Href="@UIMemoryGcPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@MoIcons.ChartTrend">@L["Tabs:GcStatistics"]</MudNavLink>
+            <MudNavLink Href="@UIMemoryHistoryPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@MoIcons.ChartLine">@L["Tabs:Trend"]</MudNavLink>
             @if (AllocationEnabled)
             {
-                <MudNavLink Href="@UIMemoryAllocationsPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Category">@L["Tabs:Allocation"]</MudNavLink>
+                <MudNavLink Href="@UIMemoryAllocationsPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@MoIcons.Shapes">@L["Tabs:Allocation"]</MudNavLink>
             }
-            <MudNavLink Href="@UIMemoryDiagnosticsPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Build">@L["Tabs:Diagnostics"]</MudNavLink>
+            <MudNavLink Href="@UIMemoryDiagnosticsPage.PAGE_URL" Match="NavLinkMatch.All" Icon="@MoIcons.Wrench">@L["Tabs:Diagnostics"]</MudNavLink>
         </nav>
         <div class="memory-workspace-content">@ChildContent</div>
     }

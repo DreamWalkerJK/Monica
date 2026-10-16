@@ -26,7 +26,7 @@
                 <MudTooltip Text="@current.CompositionId">
                     <button type="button" class="mo-vl-id-chip" aria-label="@L["Actions:CopyCompositionId"]" @onclick="() => CopyCompositionIdAsync(current.CompositionId)">
                         <span class="mo-vl-mono">@ShortIdentity(current.CompositionId)</span>
-                        <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" />
+                        <MoIcon Size="1.5rem" Icon="@MoIcons.Copy" />
                     </button>
                 </MudTooltip>
                 <span class="mo-vl-sep" aria-hidden="true"></span>
@@ -37,23 +37,23 @@
 
     <div class="mo-vl-actions">
         <label class="baseline-file-button">
-            <MudIcon Icon="@Icons.Material.Outlined.CompareArrows" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.ArrowLeftRight" Size="1.25rem" />
             <span>@L["Actions:ImportBaseline"]</span>
             <InputFile OnChange="@BaselineSelected" accept="application/json,.json" />
         </label>
         <MudButton Variant="Variant.Outlined"
-                   StartIcon="@Icons.Material.Outlined.Download"
+                   StartIcon="@MoIcons.Download"
                    OnClick="@ExportRequested">
             @L["Actions:Export"]
         </MudButton>
         <MudButton Variant="Variant.Filled"
                    Color="Color.Primary"
-                   StartIcon="@Icons.Material.Outlined.Refresh"
+                   StartIcon="@MoIcons.Refresh"
                    OnClick="@RefreshRequested"
                    Disabled="@(Session.LoadState == ModuleSystemWorkbenchLoadState.Refreshing)">
             @L["Actions:Refresh"]
         </MudButton>
-        <MudIconButton Icon="@Icons.Material.Outlined.HelpOutline"
+        <MudIconButton Icon="@MoIcons.Help"
                        OnClick="@HelpRequested"
                        aria-label="@L["Aria:OpenHelp"]" />
     </div>
@@ -62,7 +62,7 @@
 @if (Session.Comparison is { } comparison)
 {
     <div class="comparison-banner">
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Info">
             @L["Comparison:Active",
                 SignedDuration(comparison.TotalDurationDeltaMs),
                 comparison.AddedModules.Count,
@@ -76,7 +76,7 @@
 else if (Session.BaselineError != ModuleDiagnosticsBaselineError.None)
 {
     <div class="comparison-banner">
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Error">
             @L[$"Comparison:Errors:{Session.BaselineError}"]
         </MudAlert>
     </div>
@@ -85,7 +85,7 @@ else if (Session.BaselineError != ModuleDiagnosticsBaselineError.None)
 @if (!string.IsNullOrWhiteSpace(Session.RefreshError))
 {
     <div class="comparison-banner">
-        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">
             @L["Load:RefreshFailed"]
             <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@RefreshRequested">
                 @L["Actions:Retry"]

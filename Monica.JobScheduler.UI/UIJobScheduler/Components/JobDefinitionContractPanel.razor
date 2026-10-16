@@ -11,7 +11,7 @@
             <MudText Typo="Typo.h6" HtmlTag="h2" id="job-contract-heading">@L["JobDetail:Contract:Title"]</MudText>
             <p>@L["JobDetail:Contract:Description"]</p>
         </div>
-        <span class="job-contract-panel__immutable"><MudIcon Icon="@Icons.Material.Outlined.Lock" />@L["JobDetail:Contract:Immutable"]</span>
+        <span class="job-contract-panel__immutable"><MoIcon Icon="@MoIcons.Lock" Size="1.5rem" />@L["JobDetail:Contract:Immutable"]</span>
     </header>
     <div class="job-contract-panel__comparison">
         <div class="job-contract-panel__columns" aria-hidden="true">
@@ -29,7 +29,7 @@
                         @if (fact.Help is { } help)
                         {
                             <MudTooltip Text="@help" Placement="Placement.Top" Arrow="true">
-                                <MudIconButton Icon="@Icons.Material.Outlined.Info" Size="Size.Small" aria-label="@help" />
+                                <MudIconButton Icon="@MoIcons.Info" Size="Size.Small" aria-label="@help" />
                             </MudTooltip>
                         }
                     </dt>

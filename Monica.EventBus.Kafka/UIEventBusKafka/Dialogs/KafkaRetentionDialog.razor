@@ -9,7 +9,7 @@
                 <KafkaDialogContext ClusterId="@ClusterId" TopicName="@Topic.TopicName" />
                 @if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">
                         @_errorMessage
                     </MudAlert>
                 }

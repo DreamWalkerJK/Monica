@@ -4,7 +4,7 @@
 .trajectory-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; padding: 12px 20px; border-bottom: 1px solid var(--mud-palette-lines-default); font-size: 12px; }
 .trajectory-summary > span { display: inline-flex; align-items: center; gap: 6px; color: var(--mud-palette-text-secondary); }
 .trajectory-summary strong { color: var(--mud-palette-text-primary); font-size: 14px; font-variant-numeric: tabular-nums; font-weight: 600; }
-.trajectory-summary ::deep .mud-icon-root { font-size: 16px; }
+.trajectory-summary ::deep :is(.mud-icon-root, .mo-icon) { font-size: 16px; }
 .trajectory-body { display: flex; flex: 1; min-height: 0; min-width: 0; }
 .trajectory-evidence { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; }
 .trajectory-body.has-selection { display: grid; grid-template-columns: minmax(0, 1fr) clamp(340px, 36%, 440px); }
@@ -83,7 +83,7 @@
     .timeline-ticks > span:nth-child(even) { display: none; }
 }
 @container trajectory (width <= 480px) {
-    .trajectory-summary ::deep .mud-icon-root { display: none; }
+    .trajectory-summary ::deep :is(.mud-icon-root, .mo-icon) { display: none; }
     .trajectory-timeline { grid-template-columns: 56px minmax(0, 1fr); padding-right: 12px; }
     .record-content { gap: 6px; }
     .record-result, .record-arrow { display: none; }

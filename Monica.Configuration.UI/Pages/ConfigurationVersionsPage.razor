@@ -9,7 +9,7 @@
 <div class="configuration-versions-page" aria-busy="@(State.Loading ? "true" : "false")">
     <ConfigurationPageHeader Title="@L["Pages:ConfigurationVersions:Title"]" Subtitle="@L["Versions:Subtitle"]">
         <Actions>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@State.Loading" OnClick="ReloadAsync">@L["Common:Actions:Refresh"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh" Disabled="@State.Loading" OnClick="ReloadAsync">@L["Common:Actions:Refresh"]</MudButton>
         </Actions>
     </ConfigurationPageHeader>
     <ConfigurationWorkbenchNavigation ActiveRoute="@PAGE_URL" />
@@ -19,32 +19,32 @@
     }
     else if (State.HasLoadFailure)
     {
-        <section class="configuration-versions-empty"><MudAlert Severity="Severity.Error">@State.ErrorText</MudAlert></section>
+        <section class="configuration-versions-empty"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@State.ErrorText</MudAlert></section>
     }
     else if (State.HasLoadedVersions && !State.HasVersions)
     {
-        <section class="configuration-versions-empty"><MudIcon Icon="@Icons.Material.Outlined.Layers" /><h2>@L["Versions:Empty"]</h2><p>@L["Versions:Workbench:EmptyHelp"]</p></section>
+        <section class="configuration-versions-empty"><MoIcon Icon="@MoIcons.Layers" Size="1.5rem" /><h2>@L["Versions:Empty"]</h2><p>@L["Versions:Workbench:EmptyHelp"]</p></section>
     }
     else if (State.CurrentVersion is { } latest)
     {
         @if (State.Loading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
         <ConfigurationUnifiedVersionCurrentPanel Version="latest" />
         <div class="configuration-versions-tabs">
-            <MudTabs @bind-ActivePanelIndex="_selectedTab" MinimumTabWidth="120px" Elevation="0" Rounded="false" KeepPanelsAlive="false">
-                <MudTabPanel Text="@L["Versions:List:Title"]" Icon="@Icons.Material.Outlined.Layers">
+            <MudTabs PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" @bind-ActivePanelIndex="_selectedTab" MinimumTabWidth="120px" Elevation="0" Rounded="false" KeepPanelsAlive="false">
+                <MudTabPanel Text="@L["Versions:List:Title"]" Icon="@MoIcons.Layers">
                     <ConfigurationUnifiedVersionHistoryPanel Versions="State.Versions" Loading="State.Loading" CurrentVersionLabel="@State.CurrentVersionLabel" LatestVersion="@latest.Version" SelectedVersion="@State.SelectedHistoryVersion" PreviousComparisonVersion="@State.PreviousComparisonVersion" OnVersionSelected="SelectSnapshotAsync" OnComparePrevious="ComparePreviousAsync" OnRollback="RollbackAsync" OnDeleted="ReloadAsync" />
                 </MudTabPanel>
-                <MudTabPanel Text="@L["Versions:Workbench:Comparison"]" Icon="@Icons.Material.Outlined.CompareArrows">
+                <MudTabPanel Text="@L["Versions:Workbench:Comparison"]" Icon="@MoIcons.ArrowLeftRight">
                     <section class="configuration-versions-comparison" aria-label="@L["Versions:Workbench:Comparison"]">
                         <header><span class="configuration-versions-eyebrow">@L["Versions:Workbench:SavedEvidence"]</span><h2>@L["Versions:Workbench:Comparison"]</h2><p>@L["Versions:Workbench:ComparisonHelp"]</p></header>
                         <div class="configuration-versions-pair">
-                            <div><MudSelect T="long?" @bind-Value="_originVersion" Label="@L["Versions:Diff:Origin"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@State.ComparisonLoading">
+                            <div><MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="long?" @bind-Value="_originVersion" Label="@L["Versions:Diff:Origin"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@State.ComparisonLoading">
                                 @foreach (var snapshot in State.Versions) { <MudSelectItem T="long?" Value="@((long?)snapshot.Version)">@SnapshotOption(snapshot)</MudSelectItem> }
                             </MudSelect></div>
-                            <div><MudSelect T="long?" @bind-Value="_targetVersion" Label="@L["Versions:Diff:Target"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@State.ComparisonLoading">
+                            <div><MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="long?" @bind-Value="_targetVersion" Label="@L["Versions:Diff:Target"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@State.ComparisonLoading">
                                 @foreach (var snapshot in State.Versions) { <MudSelectItem T="long?" Value="@((long?)snapshot.Version)">@SnapshotOption(snapshot)</MudSelectItem> }
                             </MudSelect></div>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.CompareArrows" Disabled="@(State.ComparisonLoading || _originVersion is null || _targetVersion is null)" OnClick="CompareAsync">@L["Versions:Workbench:Compare"]</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.ArrowLeftRight" Disabled="@(State.ComparisonLoading || _originVersion is null || _targetVersion is null)" OnClick="CompareAsync">@L["Versions:Workbench:Compare"]</MudButton>
                         </div>
                         <ConfigurationUnifiedVersionComparisonPanel Title="@State.ComparisonTitle" Subtitle="@L["Versions:Workbench:PairHelp"]" HasSelection="@(State.OriginVersion is not null && State.TargetVersion is not null)" Loading="@State.ComparisonLoading" ErrorText="@State.ComparisonError" Comparison="@State.SelectedComparison" />
                     </section>

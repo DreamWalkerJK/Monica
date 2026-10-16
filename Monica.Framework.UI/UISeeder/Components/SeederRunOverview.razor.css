@@ -72,7 +72,7 @@
     background: color-mix(in srgb, var(--mo-color-page-hero-text) 9%, transparent);
 }
 
-.seeder-run-symbol ::deep .mud-icon-root {
+.seeder-run-symbol ::deep :is(.mud-icon-root, .mo-icon) {
     width: 30px;
     height: 30px;
 }
@@ -105,21 +105,21 @@
     line-height: 1.5;
 }
 
-.seeder-run-readiness ::deep .mud-icon-root {
+.seeder-run-readiness ::deep :is(.mud-icon-root, .mo-icon) {
     flex: 0 0 15px;
     width: 15px;
     height: 15px;
 }
 
-.seeder-run-readiness[data-readiness="healthy"] ::deep .mud-icon-root {
+.seeder-run-readiness[data-readiness="healthy"] ::deep :is(.mud-icon-root, .mo-icon) {
     color: var(--mud-palette-success);
 }
 
-.seeder-run-readiness[data-readiness="degraded"] ::deep .mud-icon-root {
+.seeder-run-readiness[data-readiness="degraded"] ::deep :is(.mud-icon-root, .mo-icon) {
     color: var(--mud-palette-warning);
 }
 
-.seeder-run-readiness[data-readiness="unhealthy"] ::deep .mud-icon-root {
+.seeder-run-readiness[data-readiness="unhealthy"] ::deep :is(.mud-icon-root, .mo-icon) {
     color: var(--mud-palette-error);
 }
 
@@ -219,7 +219,7 @@
     overflow-wrap: anywhere;
 }
 
-.seeder-run-trigger ::deep .mud-icon-root {
+.seeder-run-trigger ::deep :is(.mud-icon-root, .mo-icon) {
     flex-shrink: 0;
     margin-top: 2px;
 }
@@ -277,7 +277,7 @@
     .seeder-run-feature-heading { align-items: flex-start; flex-direction: column; gap: 8px; }
     .seeder-run-identity { gap: 14px; margin-top: 20px; }
     .seeder-run-symbol { flex-basis: 42px; width: 42px; height: 42px; }
-    .seeder-run-symbol ::deep .mud-icon-root { width: 26px; height: 26px; }
+    .seeder-run-symbol ::deep :is(.mud-icon-root, .mo-icon) { width: 26px; height: 26px; }
     .seeder-run-state h2 { font-size: 27px; }
     .seeder-run-timing { gap: 12px; }
     .seeder-run-timing dd { font-size: 11px; }

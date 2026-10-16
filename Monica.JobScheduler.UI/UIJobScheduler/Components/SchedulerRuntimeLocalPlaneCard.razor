@@ -4,7 +4,7 @@
 
 <section class="runtime-plane" aria-labelledby="runtime-plane-heading">
     <header class="runtime-plane__heading">
-        <MudIcon Icon="@Icons.Material.Outlined.MonitorHeart" aria-hidden="true" />
+        <MoIcon Icon="@MoIcons.HeartPulse" aria-hidden="true" Size="1.5rem" />
         <div>
             <h2 id="runtime-plane-heading">@L["Runtime:Plane:Title"]</h2>
             <p>@L["Runtime:Plane:Description"]</p>
@@ -16,7 +16,7 @@
             <header>
                 <h3 id="runtime-scheduling-heading">@L["Runtime:Plane:Scheduling"]</h3>
                 <span class="runtime-plane__state" data-ready="@Overview.LocalPlane.SchedulingReady.ToString().ToLowerInvariant()">
-                    <MudIcon Icon="@(Overview.LocalPlane.SchedulingReady ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.HourglassEmpty)" aria-hidden="true" />
+                    <MoIcon Icon="@(Overview.LocalPlane.SchedulingReady ? MoIcons.Success : MoIcons.Hourglass)" aria-hidden="true" Size="1.5rem" />
                     @if (Overview.LocalPlane.SchedulingReady)
                     {
                         <span>@L["Runtime:Plane:Ready"]</span>
@@ -33,7 +33,7 @@
             <header>
                 <h3 id="runtime-worker-heading">@L["Runtime:Plane:Worker"]</h3>
                 <span class="runtime-plane__state" data-ready="@Overview.LocalPlane.WorkerReady.ToString().ToLowerInvariant()">
-                    <MudIcon Icon="@(Overview.LocalPlane.WorkerReady ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.HourglassEmpty)" aria-hidden="true" />
+                    <MoIcon Icon="@(Overview.LocalPlane.WorkerReady ? MoIcons.Success : MoIcons.Hourglass)" aria-hidden="true" Size="1.5rem" />
                     @if (Overview.LocalPlane.WorkerReady)
                     {
                         <span>@L["Runtime:Plane:Ready"]</span>
@@ -55,7 +55,7 @@
         </div>
     </dl>
     <footer class="runtime-plane__scope-note">
-        <MudIcon Icon="@Icons.Material.Outlined.Info" aria-hidden="true" />
+        <MoIcon Icon="@MoIcons.Info" aria-hidden="true" Size="1.5rem" />
         <p>@L["Runtime:Plane:LocalOnly"]</p>
     </footer>
 </section>

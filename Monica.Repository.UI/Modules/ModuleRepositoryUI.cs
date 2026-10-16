@@ -6,6 +6,7 @@ using Monica.Repository.UI.Localization;
 using Monica.Repository.UI.Pages;
 using Monica.Repository.UI.UIRepository.State;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -48,28 +49,28 @@ public sealed class ModuleRepositoryUI : MonicaModule<ModuleRepositoryUIOption>,
                 registry.RegisterLocalizedPage<UIRepositoryDashboardPage, RepositoryUIResource>(
                     UIRepositoryDashboardPage.PAGE_URL,
                     "Workbench:Views:Overview:Label",
-                    Icons.Material.Filled.Storage,
+                    MoIcons.Database,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 35);
                 registry.RegisterLocalizedPage<UIRepositoryActivityPage, RepositoryUIResource>(
                     UIRepositoryActivityPage.PAGE_URL,
                     "Workbench:Views:Activity:Label",
-                    Icons.Material.Outlined.QueryStats,
+                    MoIcons.ChartTrend,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 36);
                 registry.RegisterLocalizedPage<UIRepositoryMigrationsPage, RepositoryUIResource>(
                     UIRepositoryMigrationsPage.PAGE_URL,
                     "Workbench:Views:Migrations:Label",
-                    Icons.Material.Outlined.AccountTree,
+                    MoIcons.Workflow,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 37);
                 registry.RegisterLocalizedPage<UIRepositoryOptionsPage, RepositoryUIResource>(
                     UIRepositoryOptionsPage.PAGE_URL,
                     "Workbench:Views:Options:Label",
-                    Icons.Material.Outlined.Tune,
+                    MoIcons.Sliders,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 38);

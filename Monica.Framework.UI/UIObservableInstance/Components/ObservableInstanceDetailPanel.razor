@@ -9,13 +9,13 @@
 <div class="detail-panel">
     @if (Instance == null)
     {
-        <MudAlert Severity="Severity.Info">@L["Shared:States:NoInstanceSelected"]</MudAlert>
+        <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["Shared:States:NoInstanceSelected"]</MudAlert>
     }
     else
     {
-        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
+        <MudTabs PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
         <!-- Overview Tab -->
-        <MudTabPanel Text="@L["Detail:Tabs:Overview"]" Icon="@Icons.Material.Filled.Dashboard">
+        <MudTabPanel Text="@L["Detail:Tabs:Overview"]" Icon="@MoIcons.Dashboard">
             <MudStack Spacing="3" Class="pa-4">
                 <!-- Identity Information -->
                 <MudPaper Class="pa-3" Elevation="1">
@@ -57,7 +57,7 @@
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudText Typo="Typo.subtitle1" Class="detail-label">@L["Shared:Fields:OverallHealth"]:</MudText>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@Instance.HealthStateColor" />
+                                <MoIcon Icon="@MoIcons.Circle" Size="1.25rem" Style="@Instance.HealthStateIconStyle" />
                                 <MudChip T="string" Color="@Instance.HealthStateColor" Icon="@Instance.HealthStateIcon">
                                     @L.GetHealthStateText(Instance.HealthState)
                                 </MudChip>
@@ -70,7 +70,7 @@
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudText Typo="Typo.subtitle1" Class="detail-label">@L["Shared:Fields:LogLevel"]:</MudText>
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                    <MudIcon Icon="@Instance.LogLevelIcon" Size="Size.Small" Color="@Instance.LogLevelColor" />
+                                    <MoIcon Icon="@Instance.LogLevelIcon" Size="1.25rem" Style="@Instance.LogLevelIconStyle" />
                                     <MudChip T="string" Color="@Instance.LogLevelColor">
                                         @L.GetLogLevelText(Instance.CurrentLogLevel)
                                     </MudChip>
@@ -134,7 +134,7 @@
                 <MudPaper Class="pa-3" Elevation="1">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                         <MudText Typo="Typo.subtitle1">@L["Shared:Fields:ExceptionStatus"]:</MudText>
-                        <MudChip T="string" Color="@Instance.ExceptionStatusColor" Icon="@(Instance.HasExceptions ? Icons.Material.Filled.Error : Icons.Material.Filled.CheckCircle)">
+                        <MudChip T="string" Color="@Instance.ExceptionStatusColor" Icon="@(Instance.HasExceptions ? MoIcons.Error : MoIcons.Success)">
                             @L.GetExceptionStatusText(Instance)
                         </MudChip>
                     </MudStack>
@@ -143,7 +143,7 @@
         </MudTabPanel>
 
         <!-- State History Tab -->
-        <MudTabPanel Text="@L["Detail:Tabs:StateHistory"]" Icon="@Icons.Material.Filled.History">
+        <MudTabPanel Text="@L["Detail:Tabs:StateHistory"]" Icon="@MoIcons.History">
             <MudStack Spacing="2" Class="pa-4">
                 @if (_loadingHistory)
                 {
@@ -157,7 +157,7 @@
         </MudTabPanel>
 
         <!-- Exceptions Tab -->
-        <MudTabPanel Text="@L["Detail:Tabs:Exceptions"]" Icon="@Icons.Material.Filled.Error" BadgeData="@Instance.ExceptionCount" BadgeColor="@(Instance.HasExceptions ? Color.Error : Color.Default)">
+        <MudTabPanel Text="@L["Detail:Tabs:Exceptions"]" Icon="@MoIcons.Error" BadgeData="@Instance.ExceptionCount" BadgeColor="@(Instance.HasExceptions ? Color.Error : Color.Default)">
             <MudStack Spacing="2" Class="pa-4">
                 @if (_loadingExceptions)
                 {

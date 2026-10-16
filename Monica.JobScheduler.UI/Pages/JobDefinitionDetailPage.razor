@@ -8,7 +8,7 @@
 <SchedulerWorkspace Title="@L["Workspace:Pages:JobDetail:Title"]" Description="@L["Workspace:Pages:JobDetail:Description"]" ActivePanelIndex="1">
     <div class="job-detail-page">
         <nav class="job-detail-page__breadcrumb" aria-label="@L["JobDetail:BreadcrumbAriaLabel"]">
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.ArrowBack" Href="@JobCatalogPage.PAGE_URL">@L["JobDetail:Actions:BackToCatalog"]</MudButton>
+            <MudButton Variant="Variant.Text" StartIcon="@MoIcons.ArrowLeft" Href="@JobCatalogPage.PAGE_URL">@L["JobDetail:Actions:BackToCatalog"]</MudButton>
         </nav>
         @if (PageState is { } state)
         {
@@ -22,14 +22,14 @@
                 }
                 else if (state.Error is not null && state.Summary is null)
                 {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">
                         @state.Error
                         <MudButton Variant="Variant.Text" OnClick="RefreshAsync">@L["Common:Retry"]</MudButton>
                     </MudAlert>
                 }
                 else if (state.IsNotFound)
                 {
-                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["JobDetail:NotFound", state.JobKey]</MudAlert>
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["JobDetail:NotFound", state.JobKey]</MudAlert>
                 }
                 else if (state.Summary is { } summary)
                 {
@@ -40,7 +40,7 @@
                         }
                         @if (state.Error is not null)
                         {
-                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">@L["JobDetail:RefreshFailed", state.Error]</MudAlert>
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">@L["JobDetail:RefreshFailed", state.Error]</MudAlert>
                         }
                         <JobDefinitionDetailHeader Summary="@summary" IsRefreshing="@(state.IsLoading || _commandAdmission is not null)" IsMutating="@(state.IsMutating || _commandAdmission is not null)"
                                                    OnRefresh="RefreshAsync" OnInspectSchedule="OpenScheduleInspectorAsync" OnEditPolicy="OpenPolicyAsync"
@@ -54,7 +54,7 @@
                         <JobDefinitionContractPanel Definition="@summary.Definition" />
                         @if (state.AnalyticsError is not null)
                         {
-                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">@L["JobDetail:Health:LoadFailed", state.AnalyticsError]</MudAlert>
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">@L["JobDetail:Health:LoadFailed", state.AnalyticsError]</MudAlert>
                         }
                         @if (state.Analytics is { } analytics)
                         {
@@ -66,7 +66,7 @@
                         @if (state.ObservedAtUtc is { } observedAtUtc)
                         {
                             <footer class="job-detail-page__freshness">
-                                <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />
+                                <MoIcon Icon="@MoIcons.Clock" Size="1.25rem" />
                                 <span>@L["JobDetail:ObservedAt", TimePresentation.FormatTimestamp(observedAtUtc)]</span>
                             </footer>
                         }

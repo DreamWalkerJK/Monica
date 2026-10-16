@@ -7,24 +7,24 @@
 <PageTitle>@L["Pages:ConfigurationDebug:Title"]</PageTitle>
 <div class="configuration-debug-page" aria-busy="@(_loading ? "true" : "false")">
     <ConfigurationPageHeader Title="@L["Pages:ConfigurationDebug:Title"]" Subtitle="@L["Debug:Subtitle"]">
-        <Actions><MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="@_loading" OnClick="LoadAsync">@L["Common:Actions:Refresh"]</MudButton></Actions>
+        <Actions><MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@MoIcons.Refresh" Disabled="@_loading" OnClick="LoadAsync">@L["Common:Actions:Refresh"]</MudButton></Actions>
     </ConfigurationPageHeader>
     <ConfigurationWorkbenchNavigation ActiveRoute="@PAGE_URL" />
     <section class="configuration-debug-feature">
-        <div class="configuration-debug-feature-context"><MudIcon Icon="@Icons.Material.Outlined.DataObject" /><p>@L["Debug:Workbench:Scope"]</p>@if (_debugObservedAtUtc is { } observed) { <div class="configuration-debug-observation"><span>@L["Debug:Workbench:AcceptedAt"]</span><time datetime="@observed.ToString("O")">@observed.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time></div> }</div>
+        <div class="configuration-debug-feature-context"><MoIcon Icon="@MoIcons.Braces" Size="1.5rem" /><p>@L["Debug:Workbench:Scope"]</p>@if (_debugObservedAtUtc is { } observed) { <div class="configuration-debug-observation"><span>@L["Debug:Workbench:AcceptedAt"]</span><time datetime="@observed.ToString("O")">@observed.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time></div> }</div>
         @if (_hasLoadedDebugView)
         {
             <dl class="configuration-debug-summary"><div><dt>@L["Debug:Workbench:LoadedLines"]</dt><dd>@_lines.Count</dd></div><div><dt>@L["Debug:Workbench:SensitiveLines"]</dt><dd>@SensitiveLineCount</dd></div><div><dt>@L["Debug:Workbench:MatchingLines"]</dt><dd>@FilteredLines.Count()</dd></div></dl>
         }
     </section>
     <section class="configuration-debug-ledger">
-        <header class="configuration-debug-filter"><MudTextField T="string" @bind-Value="_searchText" Label="@L["Debug:Workbench:SearchLabel"]" Placeholder="@L["Debug:SearchPlaceholder"]" HelperText="@L["Debug:Workbench:SearchHelp"]" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" /></header>
+        <header class="configuration-debug-filter"><MudTextField ClearIcon="@MoIcons.Close" T="string" @bind-Value="_searchText" Label="@L["Debug:Workbench:SearchLabel"]" Placeholder="@L["Debug:SearchPlaceholder"]" HelperText="@L["Debug:Workbench:SearchHelp"]" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" /></header>
         @if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Info" /> }
-        @if (!string.IsNullOrWhiteSpace(_loadError)) { <div class="configuration-debug-feedback"><MudAlert Severity="Severity.Error">@_loadError</MudAlert></div> }
-        @if (_hasLoadedDebugView && SensitiveLineCount > 0) { <div class="configuration-debug-feedback"><MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">@L["Debug:SensitiveNotice", SensitiveLineCount]</MudAlert></div> }
+        @if (!string.IsNullOrWhiteSpace(_loadError)) { <div class="configuration-debug-feedback"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_loadError</MudAlert></div> }
+        @if (_hasLoadedDebugView && SensitiveLineCount > 0) { <div class="configuration-debug-feedback"><MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">@L["Debug:SensitiveNotice", SensitiveLineCount]</MudAlert></div> }
         @if (_loading && !_hasLoadedDebugView) { <div class="configuration-debug-empty"><MudProgressCircular Indeterminate="true" Size="Size.Small" /><p>@L["Common:States:Loading"]</p></div> }
-        else if (_hasLoadedDebugView && _lines.Count == 0) { <div class="configuration-debug-empty"><MudIcon Icon="@Icons.Material.Outlined.DataObject" /><p>@L["Debug:Empty"]</p></div> }
-        else if (_hasLoadedDebugView && !FilteredLines.Any()) { <div class="configuration-debug-empty"><MudIcon Icon="@Icons.Material.Outlined.SearchOff" /><p>@L["Debug:Workbench:NoMatches"]</p></div> }
+        else if (_hasLoadedDebugView && _lines.Count == 0) { <div class="configuration-debug-empty"><MoIcon Icon="@MoIcons.Braces" Size="1.5rem" /><p>@L["Debug:Empty"]</p></div> }
+        else if (_hasLoadedDebugView && !FilteredLines.Any()) { <div class="configuration-debug-empty"><MoIcon Icon="@MoIcons.SearchOff" Size="1.5rem" /><p>@L["Debug:Workbench:NoMatches"]</p></div> }
         else if (_lines.Count > 0)
         {
             <div class="configuration-debug-lines">
@@ -35,7 +35,7 @@
                         <span class="debug-line-number" aria-hidden="true">@(line.Index + 1)</span><code class="debug-line-content">@line.GetDisplayText(isRevealed)</code>
                         @if (line.IsSensitive)
                         {
-                            <MudTooltip Text="@(isRevealed ? L["Debug:HideSensitive"] : L["Debug:RevealSensitive"])"><MudIconButton Icon="@(isRevealed ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)" Size="Size.Small" Color="Color.Default" Disabled="@_loading" aria-label="@(isRevealed ? L["Debug:HideSensitiveAria", line.Key] : L["Debug:RevealSensitiveAria", line.Key])" aria-pressed="@(isRevealed ? "true" : "false")" OnClick="() => ToggleSensitiveLine(line.Index)" /></MudTooltip>
+                            <MudTooltip Text="@(isRevealed ? L["Debug:HideSensitive"] : L["Debug:RevealSensitive"])"><MudIconButton Icon="@(isRevealed ? MoIcons.EyeOff : MoIcons.Eye)" Size="Size.Small" Color="Color.Default" Disabled="@_loading" aria-label="@(isRevealed ? L["Debug:HideSensitiveAria", line.Key] : L["Debug:RevealSensitiveAria", line.Key])" aria-pressed="@(isRevealed ? "true" : "false")" OnClick="() => ToggleSensitiveLine(line.Index)" /></MudTooltip>
                         }
                     </div>
                 }

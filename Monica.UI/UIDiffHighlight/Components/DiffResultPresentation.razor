@@ -41,14 +41,14 @@
         {
             <div class="diff-result__choices">
                 <MudSelect T="EDiffViewMode" Value="@_view" ValueChanged="ViewChanged" Label="@L["DiffViewer:Layout"]"
-                           Variant="Variant.Outlined" Margin="Margin.Dense" Class="diff-result__view-choice">
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Class="diff-result__view-choice" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                     <MudSelectItem T="EDiffViewMode" Value="EDiffViewMode.Unified">@L["DiffViewer:ViewModes:Unified"]</MudSelectItem>
                     <MudSelectItem T="EDiffViewMode" Value="EDiffViewMode.Split">@L["DiffViewer:ViewModes:Split"]</MudSelectItem>
                 </MudSelect>
                 @if (_view == EDiffViewMode.Unified)
                 {
                     <MudSelect T="EDiffDisplayMode" Value="@_display" ValueChanged="DisplayChanged" Label="@L["DiffViewer:Display"]"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="diff-result__display-choice">
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="diff-result__display-choice" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                         <MudSelectItem T="EDiffDisplayMode" Value="EDiffDisplayMode.Compare">@L["DiffViewer:DisplayModes:Compare"]</MudSelectItem>
                         <MudSelectItem T="EDiffDisplayMode" Value="EDiffDisplayMode.NewOnly">@L["DiffViewer:DisplayModes:NewValue"]</MudSelectItem>
                         <MudSelectItem T="EDiffDisplayMode" Value="EDiffDisplayMode.OldOnly">@L["DiffViewer:DisplayModes:OldValue"]</MudSelectItem>

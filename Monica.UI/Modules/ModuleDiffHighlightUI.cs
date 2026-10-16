@@ -1,3 +1,4 @@
+using Monica.UI.Icons;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -39,7 +40,7 @@ public class ModuleDiffHighlightUI : MonicaModule<ModuleDiffHighlightUIOption>, 
                 registry.RegisterLocalizedPage<DiffHighlightPage, SharedResource>(
                     DiffHighlightPage.DIFF_HIGHLIGHT_URL,
                     "Pages:DiffHighlight:Title",
-                    Icons.Material.Filled.Compare,
+                    MoIcons.Columns,
                     BuiltInNavigationCategoryIds.Debug,
                     addToNav: true,
                     navOrder: 60)));

@@ -9,7 +9,7 @@
     {
         <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="Toggle"
                    aria-expanded="@(_expanded ? "true" : "false")"
-                   StartIcon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">
+                   StartIcon="@(_expanded ? MoIcons.ChevronUp : MoIcons.ChevronDown)">
             @(Running ? L["Workbench:Working"] : L["Workbench:ProcessSummary", Steps.Count])
         </MudButton>
         @if (_expanded)
@@ -19,7 +19,7 @@
                 {
                     <div class="process-step" @key="step.Id">
                         <div class="step-heading">
-                            <MudIcon Icon="@ChatExecutionPresentation.Icon(step.Kind)" Size="Size.Small" Color="@ChatExecutionPresentation.StatusColor(step.Status)" />
+                            <MoIcon Icon="@ChatExecutionPresentation.Icon(step.Kind)" Size="1.25rem" Style="@ChatExecutionPresentation.StatusIconStyle(step.Status)" />
                             <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => OnInspect.InvokeAsync(step))">@ChatExecutionPresentation.Title(step, L)</MudButton>
                             <span>@ChatExecutionPresentation.Status(step.Status, L)</span>
                             <time>@ChatExecutionPresentation.Duration(step.Duration)</time>
@@ -55,7 +55,7 @@
                         }
                         @if (step.Error is { Length: > 0 } error)
                         {
-                            <MudAlert Severity="Severity.Error" Dense="true">@error</MudAlert>
+                            <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@error</MudAlert>
                         }
                     </div>
                 }

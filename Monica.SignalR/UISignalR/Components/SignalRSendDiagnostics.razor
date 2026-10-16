@@ -7,7 +7,7 @@
             <span class="signalr-evidence-scope">@L["UISignalR:SendDiagnostics:Scope"]</span>
             <h2>@L["UISignalR:SendDiagnostics:Title"]</h2>
         </div>
-        <MudButton OnClick="OnRefreshClicked" StartIcon="@Icons.Material.Outlined.Refresh"
+        <MudButton OnClick="OnRefreshClicked" StartIcon="@MoIcons.Refresh"
                    Color="Color.Primary" Size="Size.Small" Variant="Variant.Outlined" Disabled="IsLoading">
             @L["UISignalR:SendDiagnostics:Refresh"]
         </MudButton>
@@ -32,7 +32,7 @@
     {
         @if (LoadFailed)
         {
-            <MudAlert Severity="Severity.Error" Dense="true" Class="signalr-evidence-state">@L["UISignalR:SendDiagnostics:LoadFailed"]</MudAlert>
+            <MudAlert Severity="Severity.Error" Dense="true" Class="signalr-evidence-state" Icon="@MoIcons.Error">@L["UISignalR:SendDiagnostics:LoadFailed"]</MudAlert>
         }
         else if (!IsLoading)
         {
@@ -43,12 +43,12 @@
     {
         @if (LoadFailed)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" Class="signalr-evidence-state">@L["UISignalR:SendDiagnostics:RefreshFailed"]</MudAlert>
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="signalr-evidence-state" Icon="@MoIcons.Warning">@L["UISignalR:SendDiagnostics:RefreshFailed"]</MudAlert>
         }
 
         @if (!Snapshot.IsEnabled)
         {
-            <MudAlert Severity="Severity.Info" Dense="true" Class="signalr-evidence-state">@L["UISignalR:SendDiagnostics:Disabled"]</MudAlert>
+            <MudAlert Severity="Severity.Info" Dense="true" Class="signalr-evidence-state" Icon="@MoIcons.Info">@L["UISignalR:SendDiagnostics:Disabled"]</MudAlert>
         }
         else
         {
@@ -165,7 +165,7 @@
                                                     <PagerContent>
                                                         <MudTablePager PageSizeOptions="@(new[] { 5, 10, 25 })"
                                                                        RowsPerPageString="@L["UISignalR:SendDiagnostics:TargetRowsPerPage"]"
-                                                                       InfoFormat="@L["UISignalR:SendDiagnostics:TargetPageInfo"]" />
+                                                                       InfoFormat="@L["UISignalR:SendDiagnostics:TargetPageInfo"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
                                                     </PagerContent>
                                                 </MudTable>
                                             </div>
@@ -244,8 +244,8 @@
     }
 
     private string GetDetailsToggleIcon(SignalRSendMethodMetricInfo metric) => IsMethodExpanded(metric)
-        ? Icons.Material.Outlined.ExpandLess
-        : Icons.Material.Outlined.ExpandMore;
+        ? MoIcons.ChevronUp
+        : MoIcons.ChevronDown;
 
     private string GetDetailsToggleLabel(SignalRSendMethodMetricInfo metric) => IsMethodExpanded(metric)
         ? L["UISignalR:SendDiagnostics:Details:Collapse"].Value

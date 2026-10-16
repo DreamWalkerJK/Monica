@@ -11,20 +11,20 @@
 <div class="repository-workbench" data-view="@View" aria-busy="@(_busy ? "true" : "false")">
     <header class="repository-heading">
         <div>
-            <span class="repository-eyebrow"><MudIcon Icon="@Icons.Material.Outlined.Storage" Size="Size.Small" />@L["Workbench:Eyebrow"]</span>
+            <span class="repository-eyebrow"><MoIcon Icon="@MoIcons.Database" Size="1.25rem" />@L["Workbench:Eyebrow"]</span>
             <h1>@L[$"Workbench:Views:{View}:Title"]</h1>
             <p>@L[$"Workbench:Views:{View}:Description"]</p>
         </div>
         <div class="repository-refresh">
             <span>@L["Workbench:CapturedAt"]</span>
             <time>@(State.ContextsCapturedAt?.ToString("HH:mm:ss 'UTC'") ?? L["Common:Values:Unavailable"].Value)</time>
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh" Disabled="_busy" OnClick="RefreshAsync">@L["Common:Actions:Refresh"]</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh" Disabled="_busy" OnClick="RefreshAsync">@L["Common:Actions:Refresh"]</MudButton>
         </div>
     </header>
     <nav class="repository-routes" aria-label="@L["Workbench:Navigation"]">
         @foreach (var route in Routes)
         {
-            <a href="@RouteUrl(route.Path)" aria-current="@(View == route.View ? "page" : null)"><MudIcon Icon="@route.Icon" Size="Size.Small" />@L[$"Workbench:Views:{route.View}:Label"]</a>
+            <a href="@RouteUrl(route.Path)" aria-current="@(View == route.View ? "page" : null)"><MoIcon Icon="@route.Icon" Size="1.25rem" />@L[$"Workbench:Views:{route.View}:Label"]</a>
         }
     </nav>
     <div class="repository-scope">
@@ -35,7 +35,7 @@
     </div>
     @if (!string.IsNullOrWhiteSpace(State.ErrorMessage))
     {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@State.ErrorMessage</MudAlert>
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@State.ErrorMessage</MudAlert>
     }
     @if (_busy && State.ContextsCapturedAt is null)
     {
@@ -47,7 +47,7 @@
     }
     else if (State.Contexts.Count == 0)
     {
-        <section class="repository-empty"><MudIcon Icon="@Icons.Material.Outlined.Storage" /><h2>@L["Dashboard:Messages:NoContexts"]</h2><p>@L["Dashboard:Messages:NoContextsDescription"]</p></section>
+        <section class="repository-empty"><MoIcon Icon="@MoIcons.Database" Size="1.5rem" /><h2>@L["Dashboard:Messages:NoContexts"]</h2><p>@L["Dashboard:Messages:NoContextsDescription"]</p></section>
     }
     else
     {
@@ -58,7 +58,7 @@
                 <code>@State.SelectedContext?.Registration.DbContextType.GetCleanFullName()</code>
             </div>
             <div class="repository-context-control">
-                <MudSelect T="string" Value="@(State.SelectedContext?.Registration.ContextId)" ValueChanged="SelectContextAsync" Label="@L["Workbench:ChooseContext"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_busy">
+                <MudSelect T="string" Value="@(State.SelectedContext?.Registration.ContextId)" ValueChanged="SelectContextAsync" Label="@L["Workbench:ChooseContext"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_busy" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                     @foreach (var context in State.Contexts)
                     {
                         <MudSelectItem T="string" Value="@context.Registration.ContextId">@context.Registration.DbContextType.GetCleanFullName() · @context.Registration.AssemblyName</MudSelectItem>
@@ -90,7 +90,7 @@
         {
             @if (State.SelectedContext.HasError)
             {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="repository-read-failure">
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="repository-read-failure" Icon="@MoIcons.Error">
                     <h3>@L["Workbench:Options:ReadFailed"]</h3>
                     <p>@State.SelectedContext.ErrorMessage</p>
                 </MudAlert>
@@ -123,10 +123,10 @@
     public RepositoryWorkbench() => _token = _lifetime.Token;
     private static readonly (string View, string Path, string Icon)[] Routes =
     [
-        ("Overview", "", Icons.Material.Outlined.Storage),
-        ("Activity", "/activity", Icons.Material.Outlined.QueryStats),
-        ("Migrations", "/migrations", Icons.Material.Outlined.AccountTree),
-        ("Options", "/options", Icons.Material.Outlined.Tune)
+        ("Overview", "", MoIcons.Database),
+        ("Activity", "/activity", MoIcons.ChartTrend),
+        ("Migrations", "/migrations", MoIcons.Workflow),
+        ("Options", "/options", MoIcons.Sliders)
     ];
     private string RegistrySummary => State.ContextsCapturedAt is null ? L["Common:Values:Unavailable"].Value : L["Workbench:ContextCount", State.Contexts.Count].Value;
     private string CountOrUnknown(int value) => State.ContextsCapturedAt is null ? L["Common:Values:Unavailable"].Value : value.ToString();

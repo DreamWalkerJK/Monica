@@ -10,7 +10,7 @@
     <DialogContent>
         <div class="configuration-rollback-dialog">
             <section class="configuration-rollback-context">
-                <MudIcon Icon="@Icons.Material.Outlined.Restore" />
+                <MoIcon Icon="@MoIcons.Restore" Size="1.5rem" />
                 <div>
                     <p>@RollbackWarning</p>
                     @if (_group is not null)
@@ -34,8 +34,8 @@
                     <header>
                         <h3>@L["Rollback:PreviewTitle"]</h3>
                         <div class="configuration-rollback-target-counts">
-                            <span data-tone="primary"><MudIcon Icon="@Icons.Material.Outlined.Storage" Size="Size.Small" />@L["History:Dialog:MonicaTargetCount", PreviewRows.Count(row => row.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore)]</span>
-                            <span data-tone="warning"><MudIcon Icon="@Icons.Material.Outlined.Description" Size="Size.Small" />@L["History:Dialog:ExternalTargetCount", PreviewRows.Count(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)]</span>
+                            <span data-tone="primary"><MoIcon Icon="@MoIcons.Database" Size="1.25rem" />@L["History:Dialog:MonicaTargetCount", PreviewRows.Count(row => row.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore)]</span>
+                            <span data-tone="warning"><MoIcon Icon="@MoIcons.FileText" Size="1.25rem" />@L["History:Dialog:ExternalTargetCount", PreviewRows.Count(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)]</span>
                         </div>
                     </header>
                     <div class="configuration-rollback-identities">
@@ -60,7 +60,7 @@
                 <section class="configuration-rollback-validation">
                     @foreach (var problem in _rollbackPreview.Problems)
                     {
-                        <MudAlert Severity="Severity.Error" Dense="true">@problem.Message</MudAlert>
+                        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@problem.Message</MudAlert>
                     }
                     @foreach (var report in _rollbackPreview.ValidationReports)
                     {
@@ -74,7 +74,7 @@
             }
             @if (!string.IsNullOrWhiteSpace(_error))
             {
-                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+                <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert>
             }
             @if (_saving)
             {
@@ -86,7 +86,7 @@
         <div class="configuration-rollback-actions">
             <MudButton OnClick="Cancel" Disabled="@_saving">@L["Common:Actions:Cancel"]</MudButton>
             <MudButton OnClick="RefreshPreviewAsync" Disabled="@(_saving || _loadingGroupRows || _loadingRollbackPreview)">@L["Validation:PreviewRefresh"]</MudButton>
-            <MudButton Color="Color.Default" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Restore"
+            <MudButton Color="Color.Default" Variant="Variant.Filled" StartIcon="@MoIcons.Restore"
                        Class="configuration-rollback-confirm" OnClick="RollbackAsync" Disabled="@(!CanRollback)" aria-label="@L["Rollback:Confirm"]">
                 @L["Rollback:Confirm"]
             </MudButton>

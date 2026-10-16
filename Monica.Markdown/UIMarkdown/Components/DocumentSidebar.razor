@@ -10,7 +10,7 @@
             <h2 class="sidebar-pane-label">@L["MarkdownViewer:Toolbar:DocumentTree"]</h2>
             <span class="sidebar-pane-count">@L["MarkdownViewer:Navbar:KnowledgeBaseDocumentCount", ResolveVisibleDocumentCount()]</span>
         </div>
-        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+        <MudIconButton Icon="@MoIcons.ChevronLeft"
                        Size="Size.Small"
                        OnClick="OnCollapseRequested"
                        title="@L["MarkdownViewer:Navbar:HideSidebar"]"
@@ -22,7 +22,7 @@
         @if (!string.IsNullOrWhiteSpace(TreeError))
         {
             <div class="sidebar-error" role="status">
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Error">
                     <MudText Typo="Typo.body2">@L["MarkdownViewer:States:TreeFailed"]</MudText>
                     <div class="sidebar-error-detail">@TreeError</div>
                 </MudAlert>

@@ -50,7 +50,7 @@
             <div class="key-dialog-tools">
                 <MudButton Variant="Variant.Text"
                            Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.FormatIndentIncrease"
+                           StartIcon="@MoIcons.IndentIncrease"
                            OnClick="FormatJson"
                            Class="state-dialog-primary-text"
                            Disabled="isSaving"
@@ -59,7 +59,7 @@
                 </MudButton>
                 <MudButton Variant="Variant.Text"
                            Color="Color.Secondary"
-                           StartIcon="@Icons.Material.Filled.Compress"
+                           StartIcon="@MoIcons.Minimize"
                            OnClick="MinifyJson"
                            Class="state-dialog-secondary-text"
                            Disabled="isSaving"
@@ -70,7 +70,7 @@
 
             @if (errorMessage != null)
             {
-                <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
+                <MudAlert Severity="Severity.Error" Icon="@MoIcons.Error">@errorMessage</MudAlert>
             }
         </div>
     </DialogContent>

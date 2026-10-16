@@ -4,7 +4,7 @@
 
 <div class="terminal-result">
     <div class="terminal-result__identity"><span>@L["Labels:LatestResult"]</span><code title="@Result.Command">@Result.Command</code></div>
-    <div class="terminal-result__outcome"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@OutcomeColor" Class="@OutcomeClass">@Outcome</MudChip>
+    <div class="terminal-result__outcome"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@OutcomeColor" Class="@OutcomeClass" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@Outcome</MudChip>
         <span>@L["Labels:ExitCode"] <code>@Result.ExitCode</code></span><span>@L["Labels:Duration"] <code>@L["Labels:DurationValue", Result.Duration.TotalSeconds.ToString("0.00")]</code></span></div>
     <MudButton @ref="_details" Size="Size.Small" Variant="Variant.Text" OnClick="DetailsAsync">@L["Actions:Details"]</MudButton>
 </div>

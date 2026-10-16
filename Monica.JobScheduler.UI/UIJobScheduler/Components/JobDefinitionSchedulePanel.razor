@@ -20,7 +20,7 @@
         @if (Declaration.JobType == JobType.Recurring)
         {
             <span class="job-schedule-panel__status" data-tone="@ScheduleStatusColor.ToString().ToLowerInvariant()">
-                <MudIcon Icon="@ScheduleStatusIcon" />@ScheduleStatusLabel
+                <MoIcon Icon="@ScheduleStatusIcon" Size="1.5rem" />@ScheduleStatusLabel
             </span>
         }
     </header>
@@ -35,7 +35,7 @@
                 <strong>@(Summary.NextOccurrenceUtc is { } next ? TimePresentation.FormatTimestamp(next) : L["JobDetail:Schedule:NoNextOccurrence"])</strong>
             </div>
             <MudButton Variant="Variant.Text"
-                       EndIcon="@Icons.Material.Outlined.ArrowForward"
+                       EndIcon="@MoIcons.ArrowRight"
                        OnClick="OnInspectSchedule">
                 @L["JobDetail:Actions:InspectSchedule"]
             </MudButton>
@@ -47,7 +47,7 @@
 
         @if (IsDebugSuppressed)
         {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Info">
                 @L["JobDetail:Schedule:DebugManualOnly"]
             </MudAlert>
         }
@@ -79,7 +79,7 @@
     else
     {
         <div class="job-schedule-panel__triggered">
-            <MudIcon Icon="@Icons.Material.Outlined.Bolt" Size="Size.Large" />
+            <MoIcon Icon="@MoIcons.Zap" Size="2.25rem" />
             <div>
                 <MudText Typo="Typo.subtitle1">@L["JobDetail:Schedule:TriggeredTitle"]</MudText>
                 <MudText Typo="Typo.body2">
@@ -134,10 +134,10 @@
             : JobSchedulerUiPresentation.GetRecurringScheduleStatusColor(Summary.RecurringScheduleStatus);
 
     private string ScheduleStatusIcon => IsOperatorPaused
-        ? Icons.Material.Outlined.PauseCircle
+        ? MoIcons.PauseCircle
         : IsDebugSuppressed
-            ? Icons.Material.Outlined.BugReport
+            ? MoIcons.Bug
             : Summary.RecurringScheduleStatus == JobRecurringScheduleStatus.Scheduled
-                ? Icons.Material.Outlined.Schedule
-                : Icons.Material.Outlined.Info;
+                ? MoIcons.Clock
+                : MoIcons.Info;
 }

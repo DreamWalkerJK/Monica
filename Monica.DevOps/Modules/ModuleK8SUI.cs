@@ -7,6 +7,7 @@ using Monica.DevOps.K8S.Pages;
 using Monica.DevOps.K8S.State;
 using Monica.DevOps.Localization;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -34,7 +35,7 @@ public class ModuleK8SUI : MonicaModule<ModuleK8SUIOption>, IUIModule
                 registry.RegisterLocalizedPage<UIK8SPage, K8SResource>(
                     UIK8SPage.PAGE_URL,
                     "Pages:K8S:Title",
-                    Icons.Material.Filled.Dns,
+                    MoIcons.Server,
                     BuiltInNavigationCategoryIds.Infrastructure,
                     addToNav: true,
                     navOrder: 35,
@@ -42,7 +43,7 @@ public class ModuleK8SUI : MonicaModule<ModuleK8SUIOption>, IUIModule
                 registry.RegisterLocalizedPage<UIK8SPage, K8SResource>(
                     UIK8SRuntimeConfigPage.PAGE_URL,
                     "Workbench:Config:Title",
-                    Icons.Material.Outlined.Tune,
+                    MoIcons.Sliders,
                     BuiltInNavigationCategoryIds.Infrastructure,
                     addToNav: true,
                     navOrder: 35,

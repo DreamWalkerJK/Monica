@@ -16,7 +16,7 @@
             <section class="consumer-metrics-overview" aria-labelledby="consumer-metrics-group-heading">
                 <div class="consumer-metrics-identity">
                     <span class="consumer-metrics-identity__icon" aria-hidden="true">
-                        <MudIcon Icon="@Icons.Material.Filled.Groups" />
+                        <MoIcon Icon="@MoIcons.Users" Size="1.5rem" />
                     </span>
                     <div class="consumer-metrics-identity__copy">
                         <MudText Typo="Typo.overline" Class="consumer-metrics-eyebrow">
@@ -34,7 +34,7 @@
                                          Size="Size.Small"
                                          Variant="Variant.Outlined"
                                          Color="Color.Info"
-                                         Icon="@Icons.Material.Filled.Topic">
+                                         Icon="@MoIcons.Folder" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                     @TopicName
                                 </MudChip>
                             }
@@ -73,7 +73,7 @@
                         </div>
                     </div>
                     <MudButton Variant="Variant.Outlined"
-                               StartIcon="@Icons.Material.Filled.Refresh"
+                               StartIcon="@MoIcons.Refresh"
                                Disabled="@PollingState.IsSampling"
                                OnClick="CaptureAsync"
                                aria-label="@L["Common:Actions:Refresh"]">
@@ -89,7 +89,7 @@
 
             @if (!string.IsNullOrWhiteSpace(PollingState.LastError))
             {
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">
                     @PollingState.LastError
                 </MudAlert>
             }
@@ -103,16 +103,16 @@
             }
             else if (PollingState.Snapshot is null)
             {
-                <KafkaWorkspaceState Icon="@Icons.Material.Outlined.QueryStats" Title="@L["ConsumerGroups:MetricsDialog:Title"]" Description="@L["ConsumerGroups:MetricsDialog:Unavailable"]" />
+                <KafkaWorkspaceState Icon="@MoIcons.ChartTrend" Title="@L["ConsumerGroups:MetricsDialog:Title"]" Description="@L["ConsumerGroups:MetricsDialog:Unavailable"]" />
             }
             else
             {
-                @if (!string.IsNullOrWhiteSpace(PollingState.Snapshot.Message)) { <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@PollingState.Snapshot.Message</MudAlert> }
+                @if (!string.IsNullOrWhiteSpace(PollingState.Snapshot.Message)) { <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@MoIcons.Info">@PollingState.Snapshot.Message</MudAlert> }
                 <section class="consumer-detail-section consumer-summary-section"
                          aria-labelledby="consumer-summary-heading">
                     <div class="consumer-section-title">
                         <span class="consumer-section-title__icon consumer-section-title__icon--summary" aria-hidden="true">
-                            <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" />
+                            <MoIcon Icon="@MoIcons.ChartTrend" Size="1.25rem" />
                         </span>
                         <MudText Typo="Typo.subtitle1" id="consumer-summary-heading">
                             @L["ConsumerGroups:MetricsDialog:SummaryTitle"]
@@ -120,19 +120,19 @@
                     </div>
 
                     <div class="consumer-group-summary">
-                        <KafkaMetricCard Icon="@Icons.Material.Filled.Groups"
+                        <KafkaMetricCard Icon="@MoIcons.Users"
                                          Label="@L["ConsumerGroups:Columns:Members"]"
                                          Value="@(HasGroupDescription ? metrics.MemberCount.ToString() : L["Common:Values:Unavailable"].Value)"
                                          AccentColor="Color.Secondary" />
-                        <KafkaMetricCard Icon="@Icons.Material.Filled.AccountTree"
+                        <KafkaMetricCard Icon="@MoIcons.Workflow"
                                          Label="@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]"
                                          Value="@(HasGroupDescription ? metrics.AssignmentCount.ToString() : L["Common:Values:Unavailable"].Value)"
                                          AccentColor="Color.Info" />
-                        <KafkaMetricCard Icon="@Icons.Material.Filled.HourglassBottom"
+                        <KafkaMetricCard Icon="@MoIcons.Hourglass"
                                          Label="@L["Performance:Columns:Lag"]"
                                          Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(metrics.TotalLag, L["Performance:Values:LagUnknown"])"
                                          AccentColor="@metrics.LagAccentColor" />
-                        <KafkaMetricCard Icon="@Icons.Material.Filled.SouthWest"
+                        <KafkaMetricCard Icon="@MoIcons.ArrowDownLeft"
                                          Label="@L["Performance:Columns:ConsumeRate"]"
                                          Value="@KafkaMetricDisplayFormatter.FormatRate(metrics.ConsumeRatePerSecond, L)"
                                          AccentColor="Color.Primary" />
@@ -143,7 +143,7 @@
                          aria-labelledby="consumer-members-heading">
                     <div class="consumer-section-title">
                         <span class="consumer-section-title__icon consumer-section-title__icon--members" aria-hidden="true">
-                            <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" />
+                            <MoIcon Icon="@MoIcons.Users" Size="1.25rem" />
                         </span>
                         <MudText Typo="Typo.subtitle1" id="consumer-members-heading">
                             @L["ConsumerGroups:MetricsDialog:MembersTitle", HasGroupDescription ? metrics.MemberCount.ToString() : L["Common:Values:Unavailable"].Value]
@@ -152,11 +152,11 @@
 
                     @if (!HasGroupDescription)
                     {
-                        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Groups" Title="@L["ConsumerGroups:Columns:Members"]" Description="@L["ConsumerGroups:MetricsDialog:Unavailable"]" />
+                        <KafkaWorkspaceState Icon="@MoIcons.Users" Title="@L["ConsumerGroups:Columns:Members"]" Description="@L["ConsumerGroups:MetricsDialog:Unavailable"]" />
                     }
                     else if (!metrics.HasMembers)
                     {
-                        <KafkaWorkspaceState Icon="@Icons.Material.Filled.GroupOff"
+                        <KafkaWorkspaceState Icon="@MoIcons.UsersOff"
                                              Title="@L["ConsumerGroups:MetricsDialog:MembersTitle", HasGroupDescription ? metrics.MemberCount.ToString() : L["Common:Values:Unavailable"].Value]"
                                              Description="@L["ConsumerGroups:MetricsDialog:NoMembers"]"
                                              AccentColor="Color.Info" />
@@ -198,7 +198,7 @@
                                         <MudChip T="string"
                                                  Size="Size.Small"
                                                  Variant="Variant.Outlined"
-                                                 Color="@context.LagAccentColor">
+                                                 Color="@context.LagAccentColor" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                             @KafkaMetricDisplayFormatter.FormatOptionalInt64(
                                                 context.TotalLag,
                                                 L["Performance:Values:LagUnknown"])
@@ -209,7 +209,7 @@
                                     </MudTd>
                                 </RowTemplate>
                                 <PagerContent>
-                                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" />
+                                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
                                 </PagerContent>
                             </MudTable>
                         </KafkaTableSurface>
@@ -220,23 +220,23 @@
                          aria-labelledby="consumer-partitions-heading">
                     <div class="consumer-section-title">
                         <span class="consumer-section-title__icon consumer-section-title__icon--partitions" aria-hidden="true">
-                            <MudIcon Icon="@Icons.Material.Filled.TableRows" Size="Size.Small" />
+                            <MoIcon Icon="@MoIcons.Rows" Size="1.25rem" />
                         </span>
                         <MudText Typo="Typo.subtitle1" id="consumer-partitions-heading">
                             @L["ConsumerGroups:MetricsDialog:PartitionsTitle"]
                         </MudText>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" Class="consumer-partition-count">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" Class="consumer-partition-count" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                             @(HasGroupDescription ? metrics.PartitionCount.ToString() : L["Common:Values:Unavailable"].Value)
                         </MudChip>
                     </div>
 
                     @if (!HasGroupDescription)
                     {
-                        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.TableRows" Title="@L["ConsumerGroups:MetricsDialog:PartitionsTitle"]" Description="@L["ConsumerGroups:MetricsDialog:Unavailable"]" />
+                        <KafkaWorkspaceState Icon="@MoIcons.Rows" Title="@L["ConsumerGroups:MetricsDialog:PartitionsTitle"]" Description="@L["ConsumerGroups:MetricsDialog:Unavailable"]" />
                     }
                     else if (!metrics.HasPartitions)
                     {
-                        <KafkaWorkspaceState Icon="@Icons.Material.Filled.TableRows"
+                        <KafkaWorkspaceState Icon="@MoIcons.Rows"
                                              Title="@L["ConsumerGroups:MetricsDialog:PartitionsTitle"]"
                                              Description="@L["ConsumerGroups:MetricsDialog:NoPartitions"]"
                                              AccentColor="Color.Info" />
@@ -289,7 +289,7 @@
                                         <MudChip T="string"
                                                  Size="Size.Small"
                                                  Variant="Variant.Outlined"
-                                                 Color="@context.LagColor">
+                                                 Color="@context.LagColor" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                             @KafkaMetricDisplayFormatter.FormatOptionalInt64(
                                                 context.Partition.Lag,
                                                 L["Performance:Values:LagUnknown"])
@@ -310,7 +310,7 @@
                                     </MudTd>
                                 </RowTemplate>
                                 <PagerContent>
-                                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" />
+                                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
                                 </PagerContent>
                             </MudTable>
                         </KafkaTableSurface>

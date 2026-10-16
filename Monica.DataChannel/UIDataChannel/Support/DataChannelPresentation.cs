@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.Extensions.Localization;
 using Monica.DataChannel.Localization;
 using Monica.DataChannel.UIDataChannel.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.DataChannel.UIDataChannel.Support;
@@ -23,10 +24,10 @@ internal static class DataChannelPresentation
     };
     public static string InitializationIcon(DataChannelStatusInfo channel) => Initialization(channel) switch
     {
-        "Initializing" => Icons.Material.Outlined.Sync,
-        "Unavailable" => Icons.Material.Outlined.ErrorOutline,
-        "Initialized" => Icons.Material.Outlined.CheckCircle,
-        _ => Icons.Material.Outlined.RadioButtonUnchecked
+        "Initializing" => MoIcons.Refresh,
+        "Unavailable" => MoIcons.Error,
+        "Initialized" => MoIcons.Success,
+        _ => MoIcons.Circle
     };
     public static string KindKey(PipelineComponentKind kind) => kind switch
     {

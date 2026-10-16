@@ -3,24 +3,24 @@
 @inject IStringLocalizer<AIResource> L
 
 <div class="reasoning-picker">
-    <MudMenu Label="@Summary" Variant="Variant.Outlined" EndIcon="@Icons.Material.Outlined.UnfoldMore"
+    <MudMenu Label="@Summary" Variant="Variant.Outlined" EndIcon="@MoIcons.UnfoldVertical"
              AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" AriaLabel="@L["Settings:ReasoningLevels"]"
              Disabled="@Disabled" ListClass="pa-0" PopoverClass="mo-reasoning-popover">
         <ChildContent>
             <div class="reasoning-menu" @onclick:stopPropagation="true">
                 <MudTextField T="string" @bind-Value="_search" Immediate="true" Placeholder="@L["Settings:SearchReasoning"]"
-                              aria-label="@L["Settings:SearchReasoning"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                              aria-label="@L["Settings:SearchReasoning"]" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search"
                               Variant="Variant.Text" Margin="Margin.Dense" />
                 <div class="reasoning-options" role="group" aria-label="@L["Settings:ReasoningLevels"]">
                     @foreach (var id in Options.Where(id => id.Contains(_search, StringComparison.OrdinalIgnoreCase)))
                     {
-                        <MudCheckBox T="bool" Value="@Selected.Contains(id, StringComparer.OrdinalIgnoreCase)" ValueChanged="@(value => ToggleAsync(id, value))"
+                        <MudCheckBox CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="bool" Value="@Selected.Contains(id, StringComparer.OrdinalIgnoreCase)" ValueChanged="@(value => ToggleAsync(id, value))"
                                      Label="@id" Dense="true" Color="Color.Primary" />
                     }
                     @if (!Options.Any(id => id.Contains(_search, StringComparison.OrdinalIgnoreCase))) { <p>@L["Settings:NoReasoningMatches"]</p> }
                 </div>
                 <div class="reasoning-default">
-                    <MudSelect T="string" Value="@(DefaultLevel ?? string.Empty)" ValueChanged="@ChangeDefaultAsync" Label="@L["Settings:DefaultReasoning"]"
+                    <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string" Value="@(DefaultLevel ?? string.Empty)" ValueChanged="@ChangeDefaultAsync" Label="@L["Settings:DefaultReasoning"]"
                                Variant="Variant.Outlined" Margin="Margin.Dense">
                         <MudSelectItem T="string" Value="@string.Empty">@L["Settings:ReasoningAuto"]</MudSelectItem>
                         @foreach (var id in Selected) { <MudSelectItem T="string" Value="@id">@id</MudSelectItem> }

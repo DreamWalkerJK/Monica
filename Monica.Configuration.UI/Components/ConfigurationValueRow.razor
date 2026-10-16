@@ -15,7 +15,7 @@
             <div class="configuration-value-name"><h4>@DisplayName</h4>
                 @if (IsExternalEffectiveSource)
                 {
-                    <MudTooltip Text="@EffectiveSourceTooltip"><span class="configuration-inline-icon"><MudIcon Icon="@Icons.Material.Outlined.Layers" Size="Size.Small" /></span></MudTooltip>
+                    <MudTooltip Text="@EffectiveSourceTooltip"><span class="configuration-inline-icon"><MoIcon Icon="@MoIcons.Layers" Size="1.25rem" /></span></MudTooltip>
                 }
             </div>
             <code class="configuration-value-path">@PathLabel</code>
@@ -49,14 +49,14 @@
             else
             {
                 <div class="configuration-value-complex-actions">
-                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Visibility" OnClick="PreviewComplexValue">@L["State:Actions:PreviewValue"]</MudButton>
+                    <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Eye" OnClick="PreviewComplexValue">@L["State:Actions:PreviewValue"]</MudButton>
                     @if (Node.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
                     {
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.DataObject" Disabled="@IsCurrentSourceReadOnly" OnClick="EditComplexValue">@L["State:Actions:EditComplex"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Braces" Disabled="@IsCurrentSourceReadOnly" OnClick="EditComplexValue">@L["State:Actions:EditComplex"]</MudButton>
                     }
                     else
                     {
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.DataObject" Disabled="@IsCurrentSourceReadOnly" OnClick="EditComplexJsonAsync">@L["Common:Actions:EditJson"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Braces" Disabled="@IsCurrentSourceReadOnly" OnClick="EditComplexJsonAsync">@L["Common:Actions:EditJson"]</MudButton>
                     }
                 </div>
             }
@@ -64,12 +64,12 @@
         <div class="configuration-value-actions">
             @if (CanInspectSourceChain)
             {
-                <MudTooltip Text="@L["Sources:Chain:Title"]"><MudIconButton Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" aria-label="@L["Sources:Chain:Title"]" OnClick="OpenSourceChainAsync" /></MudTooltip>
+                <MudTooltip Text="@L["Sources:Chain:Title"]"><MudIconButton Icon="@MoIcons.Workflow" Size="Size.Small" aria-label="@L["Sources:Chain:Title"]" OnClick="OpenSourceChainAsync" /></MudTooltip>
             }
-            <MudTooltip Text="@L["History:Title"]"><MudIconButton Icon="@Icons.Material.Outlined.History" Size="Size.Small" aria-label="@L["History:Title"]" OnClick="OpenHistoryAsync" /></MudTooltip>
+            <MudTooltip Text="@L["History:Title"]"><MudIconButton Icon="@MoIcons.History" Size="Size.Small" aria-label="@L["History:Title"]" OnClick="OpenHistoryAsync" /></MudTooltip>
             @if (HasPendingChanges)
             {
-                <MudTooltip Text="@L["State:Actions:Undo"]"><MudIconButton Icon="@Icons.Material.Outlined.Undo" Size="Size.Small" aria-label="@L["State:Actions:Undo"]" OnClick="Undo" /></MudTooltip>
+                <MudTooltip Text="@L["State:Actions:Undo"]"><MudIconButton Icon="@MoIcons.Undo" Size="Size.Small" aria-label="@L["State:Actions:Undo"]" OnClick="Undo" /></MudTooltip>
             }
         </div>
     </div>

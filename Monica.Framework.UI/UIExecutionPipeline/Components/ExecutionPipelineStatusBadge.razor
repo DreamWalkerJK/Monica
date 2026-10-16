@@ -3,7 +3,7 @@
 @inject IStringLocalizer<ExecutionPipelineResource> L
 
 <span class="@("execution-pipeline-status execution-pipeline-status--" + Size.ToString().ToLowerInvariant())" data-status="@Status">
-    <MudIcon Icon="@ExecutionPipelinePresentation.GetStatusIcon(Status)" Size="Size.Small" />
+    <MoIcon Icon="@ExecutionPipelinePresentation.GetStatusIcon(Status)" Size="1.25rem" />
     <span>@L[$"Page:Statuses:{Status}"]</span>
 </span>
 

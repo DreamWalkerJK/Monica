@@ -6,6 +6,7 @@ using Monica.UI.Shell.Models;
 using Monica.Utilities.Localization;
 using Monica.Utilities.Pages;
 using Monica.Utilities.UIUtilities.State;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -28,14 +29,14 @@ public class ModuleUtilitiesUI : MonicaModule<ModuleUtilitiesUIOption>, IUIModul
                 registry.RegisterLocalizedPage<UIUtilitiesPage, UtilitiesResource>(
                     UIUtilitiesPage.PAGE_URL,
                     "Pages:UtilitiesToolbox:Title",
-                    Icons.Material.Outlined.Lan,
+                    MoIcons.Network,
                     BuiltInNavigationCategoryIds.Infrastructure,
                     addToNav: true,
                     navOrder: 38);
                 registry.RegisterLocalizedPage<UIUtilitiesTextPage, UtilitiesResource>(
                     UIUtilitiesTextPage.PAGE_URL,
                     "Pages:TextTransform:Title",
-                    Icons.Material.Outlined.Code,
+                    MoIcons.Code,
                     BuiltInNavigationCategoryIds.Infrastructure,
                     addToNav: true,
                     navOrder: 39);

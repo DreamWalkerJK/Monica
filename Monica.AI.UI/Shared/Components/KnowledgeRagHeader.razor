@@ -19,7 +19,7 @@
     <MoWorkbenchNavigation Label="@L["KnowledgeWorkbench:Navigation"]">
         @foreach (var route in Routes.Where(route => _allowed.Contains(route.Url)))
         {
-            <a href="@route.Url" aria-current="@(string.Equals(CurrentRoute, route.Url, StringComparison.OrdinalIgnoreCase) ? "page" : null)"><MudIcon Icon="@route.Icon" />@L[route.Label]</a>
+            <a href="@route.Url" aria-current="@(string.Equals(CurrentRoute, route.Url, StringComparison.OrdinalIgnoreCase) ? "page" : null)"><MoIcon Icon="@route.Icon" Size="1.5rem" />@L[route.Label]</a>
         }
     </MoWorkbenchNavigation>
 </div>
@@ -37,10 +37,10 @@
     private long _generation;
     private static readonly (string Url, string Label, string Icon)[] Routes =
     [
-        (KnowledgeBaseManagePage.PAGE_URL, "KnowledgeWorkbench:Knowledge", Icons.Material.Outlined.LibraryBooks),
-        (RAGManagePage.PAGE_URL, "KnowledgeWorkbench:Indexing", Icons.Material.Outlined.PlaylistPlay),
-        (RAGDebugPage.PAGE_URL, "KnowledgeWorkbench:Retrieval:Title", Icons.Material.Outlined.ManageSearch),
-        (RAGChunkersPage.PAGE_URL, "KnowledgeWorkbench:Chunking:Title", Icons.Material.Outlined.AccountTree)
+        (KnowledgeBaseManagePage.PAGE_URL, "KnowledgeWorkbench:Knowledge", MoIcons.Library),
+        (RAGManagePage.PAGE_URL, "KnowledgeWorkbench:Indexing", MoIcons.ListVideo),
+        (RAGDebugPage.PAGE_URL, "KnowledgeWorkbench:Retrieval:Title", MoIcons.TextSearch),
+        (RAGChunkersPage.PAGE_URL, "KnowledgeWorkbench:Chunking:Title", MoIcons.Workflow)
     ];
     protected override async Task OnParametersSetAsync()
     {

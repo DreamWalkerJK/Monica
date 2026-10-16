@@ -28,20 +28,20 @@
                 </MudTd>
                 <MudTd DataLabel="@L["Table:Columns:Duration"]"><span class="health-entry-duration">@L["Common:DurationMilliseconds", context.Duration.TotalMilliseconds]</span></MudTd>
                 <MudTd DataLabel="@L["Table:Columns:Actions"]">
-                    <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" Color="Color.Default"
+                    <MudIconButton Icon="@MoIcons.ChevronRight" Size="Size.Small" Color="Color.Default"
                                    OnClick="@(() => Session.OpenDetailsAsync(context))" aria-label="@L["Actions:DetailsFor", context.Name]" />
                 </MudTd>
             </RowTemplate>
             <NoRecordsContent>
                 <div class="health-table-empty">
-                    <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Size="Size.Large" />
+                    <MoIcon Icon="@MoIcons.SearchOff" Size="2.25rem" />
                     <p>@L["Table:Empty"]</p>
                     <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@ResetFiltersAsync">@L["Actions:ClearFilters"]</MudButton>
                 </div>
             </NoRecordsContent>
         </MudTable>
     </div>
-    <div class="health-registry-footer"><MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" /><span>@L["Overview:AutoRefresh"]</span><span class="health-footer-count">@L["Filters:Results", Session.FilteredEntries.Count, Session.Snapshot?.Entries.Count ?? 0]</span></div>
+    <div class="health-registry-footer"><MoIcon Icon="@MoIcons.Clock" Size="1.25rem" /><span>@L["Overview:AutoRefresh"]</span><span class="health-footer-count">@L["Filters:Results", Session.FilteredEntries.Count, Session.Snapshot?.Entries.Count ?? 0]</span></div>
 </section>
 
 @code {

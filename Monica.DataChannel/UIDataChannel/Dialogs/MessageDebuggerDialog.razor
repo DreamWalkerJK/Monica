@@ -17,7 +17,7 @@
             </header>
             @if (_readError is not null)
             {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@L["Debugger:Messages:ReadFailed", _readError]</MudAlert>
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@L["Debugger:Messages:ReadFailed", _readError]</MudAlert>
             }
             <section class="debugger-controls" aria-label="@L["Debugger:Controls:AriaLabel"]">
                 <div class="debugger-controls__query">
@@ -26,7 +26,7 @@
                 <div class="debugger-controls__capacity">
                     <MudNumericField T="int" Value="_maxQueueSize" ValueChanged="SetCapacity" Label="@L["Debugger:Fields:QueueLength"]" Min="1" Max="1000" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_isListening" />
                 </div>
-                <MudButton Color="@(_isListening ? Color.Error : Color.Primary)" Variant="@(_isListening ? Variant.Outlined : Variant.Filled)" StartIcon="@(_isListening ? Icons.Material.Outlined.Stop : Icons.Material.Outlined.PlayArrow)" OnClick="ToggleListening">@L[_isListening ? "Debugger:Actions:Stop" : "Debugger:Actions:Start"]</MudButton>
+                <MudButton Color="@(_isListening ? Color.Error : Color.Primary)" Variant="@(_isListening ? Variant.Outlined : Variant.Filled)" StartIcon="@(_isListening ? MoIcons.Stop : MoIcons.Play)" OnClick="ToggleListening">@L[_isListening ? "Debugger:Actions:Stop" : "Debugger:Actions:Start"]</MudButton>
                 <p>@L["Debugger:SettingsHelp"]</p>
                 @if (_settingsDirty)
                 {
@@ -41,13 +41,13 @@
                     </div>
                     <div class="debugger-stream__tools">
                         <span>@L["Debugger:MessageCount", _messages.Count]</span>
-                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ClearAll" OnClick="ClearMessages" aria-disabled="@(_messages.Count == 0 || _isExecutingCommand ? "true" : "false")">@L["Debugger:Actions:Clear"]</MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@MoIcons.ClearList" OnClick="ClearMessages" aria-disabled="@(_messages.Count == 0 || _isExecutingCommand ? "true" : "false")">@L["Debugger:Actions:Clear"]</MudButton>
                     </div>
                 </header>
                 @if (_messages.Count == 0)
                 {
                     <div class="debugger-empty">
-                        <MudIcon Icon="@Icons.Material.Outlined.Inbox" Size="Size.Large" />
+                        <MoIcon Icon="@MoIcons.Inbox" Size="2.25rem" />
                         <h4>@L["Debugger:States:NoMessages"]</h4>
                         <p>@L["Debugger:States:NoMessagesDescription"]</p>
                     </div>
@@ -79,13 +79,13 @@
                             <h3 id="debugger-inspector-title">@selected.MessageType</h3>
                             <p>@SourceLabel(selected.Source) · @DataChannelPresentation.Timestamp(selected.Timestamp)</p>
                         </div>
-                        <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="() => _selectedMessage = null" aria-label="@L["Debugger:CloseSelection"]" />
+                        <MudIconButton Icon="@MoIcons.Close" Size="Size.Small" OnClick="() => _selectedMessage = null" aria-label="@L["Debugger:CloseSelection"]" />
                     </header>
                     @if (!_messages.Any(message => message.Sequence == selected.Sequence))
                     {
                         <p class="debugger-detached-note">@L["Debugger:DetachedSelection"]</p>
                     }
-                    <MudTabs Elevation="0" Rounded="false" MinimumTabWidth="var(--datachannel-tab-min-width, 160px)">
+                    <MudTabs Elevation="0" Rounded="false" MinimumTabWidth="var(--datachannel-tab-min-width, 160px)" PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight">
                         <MudTabPanel Text="@L["Debugger:Tabs:FormattedContent"]">
                             <div class="debugger-inspector__tab">
                                 <h4>@L["Debugger:Tabs:FormattedContent"]</h4>

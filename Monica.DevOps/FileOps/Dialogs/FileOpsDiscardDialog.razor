@@ -5,7 +5,7 @@
 <MudDialog DefaultFocus="DefaultFocus.FirstChild" Style="width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:12px">
     <TitleContent><MoDialogHeading Text="@L[IsPolicy ? "Discard:PolicyTitle" : "Discard:Title"]" /></TitleContent>
     <DialogContent><div class="decision-content">
-        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L[IsPolicy ? "Discard:PolicyEffect" : Request?.Reason == FileOpsDiscardReason.UploadReplacement ? "Discard:UploadEffect" : "Discard:Effect"]</MudAlert>
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L[IsPolicy ? "Discard:PolicyEffect" : Request?.Reason == FileOpsDiscardReason.UploadReplacement ? "Discard:UploadEffect" : "Discard:Effect"]</MudAlert>
         @if (Request is { } request)
         { <code>@request.FullPath</code><p>@ReasonText(request.Reason)</p>@if (!string.IsNullOrWhiteSpace(request.DestinationPath) && request.DestinationPath != request.FullPath) { <code>@request.DestinationPath</code> } }
     </div></DialogContent>

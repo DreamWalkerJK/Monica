@@ -11,7 +11,7 @@
 <div class="configuration-history-page">
     <ConfigurationPageHeader Title="@L["Pages:ConfigurationHistory:Title"]" Subtitle="@L["History:Subtitle"]">
         <Actions>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh"
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh"
                    Disabled="@_loading" OnClick="ReloadAsync">@L["Common:Actions:Refresh"]</MudButton>
         </Actions>
     </ConfigurationPageHeader>
@@ -27,12 +27,12 @@
                 <h2>@L["History:Workbench:Records"]</h2>
                 <p>@L["History:Workbench:EvidenceHelp"]</p>
             </div>
-            <div class="configuration-history-scope"><MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Small" /><span>@L["History:Workbench:Scope"]</span></div>
+            <div class="configuration-history-scope"><MoIcon Icon="@MoIcons.History" Size="1.25rem" /><span>@L["History:Workbench:Scope"]</span></div>
         </div>
         <div class="configuration-history-filters" role="search" aria-label="@L["History:Workbench:Filters"]">
             <div class="configuration-history-filter-grid">
                 <div class="configuration-history-definition-filter">
-                    <MudSelect T="string" @bind-Value="_definitionKey" Label="@L["State:Columns:Definition"]" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Disabled="@_loading">
+                    <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" ClearIcon="@MoIcons.Close" T="string" @bind-Value="_definitionKey" Label="@L["State:Columns:Definition"]" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Disabled="@_loading">
                         @foreach (var definition in _definitions)
                         {
                             <MudSelectItem T="string" Value="@definition.DefinitionKey" Disabled="@(!definition.CanManage)">@DefinitionFilterLabel(definition)</MudSelectItem>
@@ -40,36 +40,36 @@
                     </MudSelect>
                 </div>
                 <div class="configuration-history-path-filter"><MudTextField T="string" @bind-Value="_pathText" Label="@L["Value:Path"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@_loading" aria-label="@L["Value:Path"]" /></div>
-                <div><MudDatePicker @bind-Date="_fromDate" Label="@L["History:Filters:From"]" AdornmentAriaLabel="@L["History:Workbench:OpenFrom"]" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@_loading" /></div>
-                <div><MudDatePicker @bind-Date="_toDate" Label="@L["History:Filters:To"]" AdornmentAriaLabel="@L["History:Workbench:OpenTo"]" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@_loading" /></div>
-                <div class="configuration-history-search-action"><MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Search" Disabled="@_loading" OnClick="LoadAsync">@L["Common:Actions:Search"]</MudButton></div>
+                <div><MudDatePicker AdornmentIcon="@MoIcons.Calendar" PreviousIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" @bind-Date="_fromDate" Label="@L["History:Filters:From"]" AdornmentAriaLabel="@L["History:Workbench:OpenFrom"]" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@_loading" /></div>
+                <div><MudDatePicker AdornmentIcon="@MoIcons.Calendar" PreviousIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" @bind-Date="_toDate" Label="@L["History:Filters:To"]" AdornmentAriaLabel="@L["History:Workbench:OpenTo"]" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@_loading" /></div>
+                <div class="configuration-history-search-action"><MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Search" Disabled="@_loading" OnClick="LoadAsync">@L["Common:Actions:Search"]</MudButton></div>
             </div>
             <div class="configuration-history-filter-bottom">
                 <div class="configuration-history-target-filters" role="group" aria-label="@L["History:Filters:Target"]">
                     <MudButton Variant="Variant.Text" Class="@TargetButtonClass(TARGET_FILTER_ALL)" Disabled="@_loading" aria-pressed="@(_targetFilter == TARGET_FILTER_ALL ? "true" : "false")" OnClick="() => SelectTarget(TARGET_FILTER_ALL)">@L["History:Filters:TargetAll"]</MudButton>
-                    <MudButton Variant="Variant.Text" Class="@TargetButtonClass(TARGET_FILTER_MONICA)" Disabled="@_loading" StartIcon="@Icons.Material.Outlined.Storage" aria-pressed="@(_targetFilter == TARGET_FILTER_MONICA ? "true" : "false")" OnClick="() => SelectTarget(TARGET_FILTER_MONICA)">@L["History:Filters:TargetMonica"]</MudButton>
-                    <MudButton Variant="Variant.Text" Class="@TargetButtonClass(TARGET_FILTER_EXTERNAL)" Disabled="@_loading" StartIcon="@Icons.Material.Outlined.Description" aria-pressed="@(_targetFilter == TARGET_FILTER_EXTERNAL ? "true" : "false")" OnClick="() => SelectTarget(TARGET_FILTER_EXTERNAL)">@L["History:Filters:TargetExternal"]</MudButton>
+                    <MudButton Variant="Variant.Text" Class="@TargetButtonClass(TARGET_FILTER_MONICA)" Disabled="@_loading" StartIcon="@MoIcons.Database" aria-pressed="@(_targetFilter == TARGET_FILTER_MONICA ? "true" : "false")" OnClick="() => SelectTarget(TARGET_FILTER_MONICA)">@L["History:Filters:TargetMonica"]</MudButton>
+                    <MudButton Variant="Variant.Text" Class="@TargetButtonClass(TARGET_FILTER_EXTERNAL)" Disabled="@_loading" StartIcon="@MoIcons.FileText" aria-pressed="@(_targetFilter == TARGET_FILTER_EXTERNAL ? "true" : "false")" OnClick="() => SelectTarget(TARGET_FILTER_EXTERNAL)">@L["History:Filters:TargetExternal"]</MudButton>
                 </div>
                 <span>@L["History:Workbench:FilterHelp"]</span>
             </div>
         </div>
         <div class="configuration-history-tabs">
-            <MudTabs @bind-ActivePanelIndex="_selectedTab" Elevation="0" Rounded="false" MinimumTabWidth="120px" KeepPanelsAlive="false">
-                <MudTabPanel Text="@L["History:Tabs:Mutations"]" Icon="@Icons.Material.Outlined.ListAlt">
+            <MudTabs PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" @bind-ActivePanelIndex="_selectedTab" Elevation="0" Rounded="false" MinimumTabWidth="120px" KeepPanelsAlive="false">
+                <MudTabPanel Text="@L["History:Tabs:Mutations"]" Icon="@MoIcons.ClipboardList">
                     <div class="configuration-history-results" aria-busy="@(_loading ? "true" : "false")">
                         <div class="configuration-history-result-heading"><div><h3>@L["History:Workbench:Changes"]</h3><p>@HistoryQuerySummary</p></div>@if (_hasLoadedHistory && !_loading) { <span>@L["History:Workbench:LoadedChanges", _history.Count, _displayHistory.Count]</span> }</div>
-                        @if (_hasLoadedHistory && !string.IsNullOrWhiteSpace(_historyLoadError)) { <div class="configuration-history-query-error"><MudAlert Severity="Severity.Error">@_historyLoadError</MudAlert></div> }
+                        @if (_hasLoadedHistory && !string.IsNullOrWhiteSpace(_historyLoadError)) { <div class="configuration-history-query-error"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_historyLoadError</MudAlert></div> }
                         @if (_loading)
                         {
                             <div class="configuration-history-empty"><MudProgressCircular Size="Size.Medium" Indeterminate="true" Color="Color.Primary" /><p>@L["Common:States:Loading"]</p></div>
                         }
                         else if (!string.IsNullOrWhiteSpace(_historyLoadError) && !_hasLoadedHistory)
                         {
-                            <div class="configuration-history-empty"><MudAlert Severity="Severity.Error">@_historyLoadError</MudAlert></div>
+                            <div class="configuration-history-empty"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_historyLoadError</MudAlert></div>
                         }
                         else if (_displayHistory.Count == 0)
                         {
-                            <div class="configuration-history-empty"><MudIcon Icon="@Icons.Material.Outlined.History" /><h3>@L["History:States:Empty"]</h3><p>@L["History:Workbench:EmptyHelp"]</p></div>
+                            <div class="configuration-history-empty"><MoIcon Icon="@MoIcons.History" Size="1.5rem" /><h3>@L["History:States:Empty"]</h3><p>@L["History:Workbench:EmptyHelp"]</p></div>
                         }
                         else
                         {
@@ -88,7 +88,7 @@
                                         </MudTd>
                                         <MudTd DataLabel="@L["History:Columns:Target"]">
                                             <div class="configuration-history-source">
-                                                <MudTooltip Text="@HistoryTargetTooltip(context.Rows)"><span class="@HistoryTargetClass(context.Rows)"><MudIcon Icon="@HistoryTargetIcon(context.Rows)" Size="Size.Small" />@HistoryTargetLabel(context.Rows)</span></MudTooltip>
+                                                <MudTooltip Text="@HistoryTargetTooltip(context.Rows)"><span class="@HistoryTargetClass(context.Rows)"><MoIcon Icon="@HistoryTargetIcon(context.Rows)" Size="1.25rem" />@HistoryTargetLabel(context.Rows)</span></MudTooltip>
                                                 @if (!string.IsNullOrWhiteSpace(context.Representative.SourceDisplayName)) { <span>@context.Representative.SourceDisplayName</span> }
                                                 @if (!string.IsNullOrWhiteSpace(context.Representative.SourceConfigurationPath)) { <code>@context.Representative.SourceConfigurationPath</code> }
                                             </div>
@@ -101,7 +101,7 @@
                                                 @if (!string.IsNullOrWhiteSpace(context.Representative.Reason)) { <p>@context.Representative.Reason</p> }
                                             </div>
                                         </MudTd>
-                                        <MudTd DataLabel="@L["History:Workbench:Actions"]"><div class="configuration-history-row-actions"><MudTooltip Text="@L["History:Actions:ViewChange"]"><MudIconButton Icon="@Icons.Material.Outlined.CompareArrows" Size="Size.Small" OnClick="() => ShowHistoryAsync(context)" aria-label="@L["History:Actions:ViewChange"]" /></MudTooltip><MudTooltip Text="@RollbackTooltip(CanRollbackHistory(context))"><MudIconButton Icon="@Icons.Material.Outlined.Restore" Size="Size.Small" Color="Color.Warning" Disabled="@(!CanRollbackHistory(context))" OnClick="() => RollbackHistoryAsync(context)" aria-label="@L["Rollback:Confirm"]" /></MudTooltip></div></MudTd>
+                                        <MudTd DataLabel="@L["History:Workbench:Actions"]"><div class="configuration-history-row-actions"><MudTooltip Text="@L["History:Actions:ViewChange"]"><MudIconButton Icon="@MoIcons.ArrowLeftRight" Size="Size.Small" OnClick="() => ShowHistoryAsync(context)" aria-label="@L["History:Actions:ViewChange"]" /></MudTooltip><MudTooltip Text="@RollbackTooltip(CanRollbackHistory(context))"><MudIconButton Icon="@MoIcons.Restore" Size="Size.Small" Color="Color.Warning" Disabled="@(!CanRollbackHistory(context))" OnClick="() => RollbackHistoryAsync(context)" aria-label="@L["Rollback:Confirm"]" /></MudTooltip></div></MudTd>
                                     </RowTemplate>
                                 </MudTable>
                             </div>
@@ -109,21 +109,21 @@
                         @if (_hasLoadedHistory && !_loading) { <footer class="configuration-history-results-footer"><span>@L["History:Workbench:LoadedChanges", _history.Count, _displayHistory.Count]</span>@if (_historyHasMore) { <MudButton Variant="Variant.Outlined" Disabled="@_loadingMoreHistory" OnClick="LoadMoreHistoryAsync">@L["History:Actions:LoadMore"]</MudButton> }</footer> }
                     </div>
                 </MudTabPanel>
-                <MudTabPanel Text="@L["History:Tabs:Groups"]" Icon="@Icons.Material.Outlined.FolderOpen">
+                <MudTabPanel Text="@L["History:Tabs:Groups"]" Icon="@MoIcons.FolderOpen">
                     <div class="configuration-history-results" aria-busy="@(_loading ? "true" : "false")">
                         <div class="configuration-history-result-heading"><div><h3>@L["History:Workbench:Groups"]</h3><p>@GroupQuerySummary</p></div>@if (_hasLoadedGroups && !_loading) { <span>@L["History:Workbench:LoadedGroups", _groups.Count]</span> }</div>
-                        @if (_hasLoadedGroups && !string.IsNullOrWhiteSpace(_groupLoadError)) { <div class="configuration-history-query-error"><MudAlert Severity="Severity.Error">@_groupLoadError</MudAlert></div> }
+                        @if (_hasLoadedGroups && !string.IsNullOrWhiteSpace(_groupLoadError)) { <div class="configuration-history-query-error"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_groupLoadError</MudAlert></div> }
                         @if (_loading)
                         {
                             <div class="configuration-history-empty"><MudProgressCircular Size="Size.Medium" Indeterminate="true" Color="Color.Primary" /><p>@L["Common:States:Loading"]</p></div>
                         }
                         else if (!string.IsNullOrWhiteSpace(_groupLoadError) && !_hasLoadedGroups)
                         {
-                            <div class="configuration-history-empty"><MudAlert Severity="Severity.Error">@_groupLoadError</MudAlert></div>
+                            <div class="configuration-history-empty"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_groupLoadError</MudAlert></div>
                         }
                         else if (_groups.Count == 0)
                         {
-                            <div class="configuration-history-empty"><MudIcon Icon="@Icons.Material.Outlined.FolderOpen" /><h3>@L["Group:Empty"]</h3><p>@L["History:Workbench:EmptyHelp"]</p></div>
+                            <div class="configuration-history-empty"><MoIcon Icon="@MoIcons.FolderOpen" Size="1.5rem" /><h3>@L["Group:Empty"]</h3><p>@L["History:Workbench:EmptyHelp"]</p></div>
                         }
                         else
                         {
@@ -135,7 +135,7 @@
                                         <MudTd DataLabel="@L["Group:Label"]"><div class="configuration-history-audit"><strong>@context.Label</strong><code>@context.GroupId</code>@if (!string.IsNullOrWhiteSpace(context.Reason)) { <p>@context.Reason</p> }<time datetime="@context.CreatedTime.ToString("O")">@context.CreatedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</time><span>@AuditOperator(context.ModifierName, context.ModifierId)</span></div></MudTd>
                                         <MudTd DataLabel="@L["Group:Definitions"]"><div class="configuration-history-group-definitions">@foreach (var definitionKey in context.DefinitionKeys) { <div><MudTooltip Text="@string.Join(Environment.NewLine, DefinitionMetadataLines(definitionKey))"><MudButton Variant="Variant.Text" Color="Color.Primary" Class="configuration-history-definition-link" OnClick="() => NavigateToDefinition(definitionKey, null)">@DefinitionDisplay(definitionKey)</MudButton></MudTooltip><code>@definitionKey</code></div> }</div></MudTd>
                                         <MudTd DataLabel="@L["Group:Status"]"><div class="configuration-history-source"><span class="@GroupStatusClass(context.Status)"><span class="configuration-history-status-dot"></span>@StatusText(context.Status)</span><span aria-label="@L["Group:MutationCount"]">@L["History:Workbench:MutationCount", context.MutationCount]</span>@if (context.RolledBackTime is not null) { <time datetime="@context.RolledBackTime.Value.ToString("O")">@context.RolledBackTime.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</time> }</div></MudTd>
-                                        <MudTd DataLabel="@L["History:Workbench:Actions"]"><div class="configuration-history-row-actions"><MudTooltip Text="@L["Group:ViewHistory"]"><MudIconButton Icon="@Icons.Material.Outlined.ListAlt" Size="Size.Small" OnClick="() => ShowGroupHistoryAsync(context)" aria-label="@L["Group:ViewHistory"]" /></MudTooltip><MudTooltip Text="@RollbackTooltip(CanRollbackGroup(context))"><MudIconButton Icon="@Icons.Material.Outlined.Restore" Size="Size.Small" Color="Color.Warning" Disabled="@(!CanRollbackGroup(context))" OnClick="() => RollbackGroupAsync(context)" aria-label="@L["Rollback:Confirm"]" /></MudTooltip></div></MudTd>
+                                        <MudTd DataLabel="@L["History:Workbench:Actions"]"><div class="configuration-history-row-actions"><MudTooltip Text="@L["Group:ViewHistory"]"><MudIconButton Icon="@MoIcons.ClipboardList" Size="Size.Small" OnClick="() => ShowGroupHistoryAsync(context)" aria-label="@L["Group:ViewHistory"]" /></MudTooltip><MudTooltip Text="@RollbackTooltip(CanRollbackGroup(context))"><MudIconButton Icon="@MoIcons.Restore" Size="Size.Small" Color="Color.Warning" Disabled="@(!CanRollbackGroup(context))" OnClick="() => RollbackGroupAsync(context)" aria-label="@L["Rollback:Confirm"]" /></MudTooltip></div></MudTd>
                                     </RowTemplate>
                                 </MudTable>
                             </div>

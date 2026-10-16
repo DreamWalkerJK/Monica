@@ -4,6 +4,7 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Framework.UI.Pages;
 using Monica.Framework.UI.Localization;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -41,7 +42,7 @@ public class ModuleMapperUI : MonicaModule<ModuleMapperUIOption>, IUIModule
                 registry.RegisterLocalizedPage<UIMapperDebugPage, MapperResource>(
                     UIMapperDebugPage.PAGE_URL,
                     "Pages:MapperDebug:Title",
-                    Icons.Material.Filled.Code,
+                    MoIcons.Code,
                     BuiltInNavigationCategoryIds.Debug,
                     addToNav: true,
                     navOrder: 10));

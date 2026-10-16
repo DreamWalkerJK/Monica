@@ -12,11 +12,11 @@
 }
 else if (!string.IsNullOrWhiteSpace(_error))
 {
-    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert>
 }
 else if (_groups.Count == 0)
 {
-    <MudAlert Severity="Severity.Info">@L["PendingReview:Empty"]</MudAlert>
+    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["PendingReview:Empty"]</MudAlert>
 }
 else
 {
@@ -24,7 +24,7 @@ else
         <MudExpansionPanels MultiExpansion="true" Elevation="0">
             @foreach (var group in _groups)
             {
-                <MudExpansionPanel @key="group.DefinitionKey"
+                <MudExpansionPanel Icon="@MoIcons.ChevronDown" @key="group.DefinitionKey"
                                    Expanded="@group.IsExpanded"
                                    ExpandedChanged="expanded => OnGroupExpandedChanged(group, expanded)"
                                    KeepContentAlive="false">
@@ -85,7 +85,7 @@ else
                                                                 @if (JumpChangeRequested.HasDelegate)
                                                                 {
                                                                     <MudTooltip Text="@L["PendingReview:Actions:JumpToChange"]">
-                                                                        <MudIconButton Icon="@Icons.Material.Filled.NearMe"
+                                                                        <MudIconButton Icon="@MoIcons.Navigation"
                                                                                        Size="Size.Small"
                                                                                        Color="Color.Primary"
                                                                                        aria-label="@L["PendingReview:Actions:JumpToChange"]"
@@ -130,7 +130,7 @@ else
                                 }
                                 else if (!string.IsNullOrWhiteSpace(group.PreviewError))
                                 {
-                                    <MudAlert Severity="Severity.Error" Dense="true">@group.PreviewError</MudAlert>
+                                    <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@group.PreviewError</MudAlert>
                                 }
                                 else if (group.HasPreview)
                                 {
@@ -142,7 +142,7 @@ else
                             }
                             else
                             {
-                                <MudAlert Severity="Severity.Warning" Dense="true">@L["PendingReview:Validation:NoSaveableChanges"]</MudAlert>
+                                <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Dense="true">@L["PendingReview:Validation:NoSaveableChanges"]</MudAlert>
                             }
                         </MudStack>
                     </ChildContent>
@@ -186,8 +186,8 @@ else
         ? L["PendingReview:Actions:ExcludeDefinition"]
         : L["PendingReview:Actions:UndoDefinition"];
     private string RemovalIcon => IsExclusion
-        ? Icons.Material.Filled.RemoveCircleOutline
-        : Icons.Material.Filled.Undo;
+        ? MoIcons.MinusCircle
+        : MoIcons.Undo;
     private Color RemovalColor => IsExclusion ? Color.Error : Color.Warning;
 
     private string MutationKindText(ConfigurationMutationKind kind)

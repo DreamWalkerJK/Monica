@@ -10,7 +10,7 @@
                 aria-pressed="@((SelectedJobType is null).ToString().ToLowerInvariant())"
                 disabled="@IsLoading"
                 @onclick="@(() => JobTypeSelected.InvokeAsync((JobType?)null))">
-            <MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.Package" Size="1.25rem" />
             <span>@L["Catalog:Filters:AnyType"]</span>
             @if (HasFacetEvidence) { <span class="catalog-filter__count">@JobTypeCounts.Values.Sum()</span> }
         </button>
@@ -21,7 +21,7 @@
                     aria-pressed="@((SelectedJobType == type).ToString().ToLowerInvariant())"
                     disabled="@IsLoading"
                     @onclick="@(() => JobTypeSelected.InvokeAsync(type))">
-                <MudIcon Icon="@GetJobTypeIcon(type)" Size="Size.Small" />
+                <MoIcon Icon="@GetJobTypeIcon(type)" Size="1.25rem" />
                 <span>@L[$"JobTypes:{type}"]</span>
                 @if (HasFacetEvidence) { <span class="catalog-filter__count">@JobTypeCounts.GetValueOrDefault(type)</span> }
             </button>
@@ -42,8 +42,8 @@
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Outlined.Search"
-                          OnKeyDown="HandleSearchKeyDown" />
+                          AdornmentIcon="@MoIcons.Search"
+                          OnKeyDown="HandleSearchKeyDown" ClearIcon="@MoIcons.Close" />
         </div>
         <div class="catalog-filter__field">
             <MudSelect T="string"
@@ -54,7 +54,7 @@
                        Clearable="true"
                        Disabled="@IsLoading"
                        Variant="Variant.Outlined"
-                       Margin="Margin.Dense">
+                       Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" ClearIcon="@MoIcons.Close">
                 <MudSelectItem T="string" Value="@((string?)null)">@L["Catalog:Filters:AnyOwner"]</MudSelectItem>
                 @foreach (var owner in OwnerFacets)
                 {
@@ -69,12 +69,12 @@
         </div>
         <div class="catalog-filter__actions">
             <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Outlined.FilterAltOff"
+                       StartIcon="@MoIcons.FilterOff"
                        Disabled="@IsLoading"
                        OnClick="ResetRequested">@L["Catalog:Actions:Reset"]</MudButton>
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
-                       StartIcon="@Icons.Material.Outlined.Search"
+                       StartIcon="@MoIcons.Search"
                        Disabled="@IsLoading"
                        OnClick="SearchRequested">@L["Common:Search"]</MudButton>
         </div>
@@ -139,9 +139,9 @@
 
     private static string GetJobTypeIcon(JobType type) => type switch
     {
-        JobType.Recurring => Icons.Material.Outlined.Update,
-        JobType.Triggered => Icons.Material.Outlined.Bolt,
-        _ => Icons.Material.Outlined.Work
+        JobType.Recurring => MoIcons.History,
+        JobType.Triggered => MoIcons.Zap,
+        _ => MoIcons.Briefcase
     };
 
     private sealed record PolicyOption(bool? Value, string Label, string Tone);

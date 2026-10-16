@@ -21,14 +21,14 @@
                         <h3>@L["Settings:Dialog:ModelIdentity"]</h3>
                         @if (OnDiscover is not null)
                         {
-                            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.AutoFixHigh" aria-disabled="@((Busy || string.IsNullOrWhiteSpace(_name)).ToString().ToLowerInvariant())" OnClick="FetchMetadataAsync">@L["Settings:FillMetadata"]</MudButton>
+                            <MudButton Size="Size.Small" StartIcon="@MoIcons.Wand" aria-disabled="@((Busy || string.IsNullOrWhiteSpace(_name)).ToString().ToLowerInvariant())" OnClick="FetchMetadataAsync">@L["Settings:FillMetadata"]</MudButton>
                         }
                     </div>
                     <p class="form-help">@L["Settings:ModelHelp"]</p>
                 <MudTextField Disabled="@Busy" T="string" @ref="_nameField" @bind-Value="_name" Label="@L["Settings:ModelId"]" Required="true" RequiredError="@L["Common:Validation:Required"]" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
                 <div class="form-grid">
                     <MudTextField Disabled="@Busy" T="string" @bind-Value="_display" Label="@L["Settings:DisplayName"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    <MudSelect Disabled="@Busy" T="AIModelKind" @bind-Value="_kind" Label="@L["Settings:ModelKind"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" Disabled="@Busy" T="AIModelKind" @bind-Value="_kind" Label="@L["Settings:ModelKind"]" Variant="Variant.Outlined" Margin="Margin.Dense">
                         <MudSelectItem T="AIModelKind" Value="@AIModelKind.Chat">@L["Workbench:Chat"]</MudSelectItem>
                         <MudSelectItem T="AIModelKind" Value="@AIModelKind.Embedding">@L["Settings:Embedding"]</MudSelectItem>
                     </MudSelect>
@@ -39,13 +39,13 @@
                     <div class="form-grid">
                     <div>
                         <ModelSettingLabel Label="@L["Workbench:ContextCapacity"]" Help="@L["Settings:ContextLimitHelp"]" />
-                        <MudTextField Disabled="@Busy" T="string" @ref="_contextField" @bind-Value="_contextText" Immediate="true" Placeholder="256K" aria-label="@L["Workbench:ContextCapacity"]"
+                        <MudTextField ClearIcon="@MoIcons.Close" Disabled="@Busy" T="string" @ref="_contextField" @bind-Value="_contextText" Immediate="true" Placeholder="256K" aria-label="@L["Workbench:ContextCapacity"]"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Error="@InvalidContext" ErrorText="@L["Settings:InvalidTokenQuantity"]" />
                         <span class="limit-preview">@TokenPreview(_contextText, _kind == AIModelKind.Chat)</span>
                     </div>
                     <div>
                         <ModelSettingLabel Label="@L["Settings:MaxOutput"]" Help="@L["Settings:OutputLimitHelp"]" />
-                        <MudTextField Disabled="@Busy" T="string" @ref="_outputField" @bind-Value="_outputText" Immediate="true" Placeholder="32K" aria-label="@L["Settings:MaxOutput"]"
+                        <MudTextField ClearIcon="@MoIcons.Close" Disabled="@Busy" T="string" @ref="_outputField" @bind-Value="_outputText" Immediate="true" Placeholder="32K" aria-label="@L["Settings:MaxOutput"]"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Error="@InvalidOutput" ErrorText="@L["Settings:InvalidTokenQuantity"]" />
                         <span class="limit-preview">@TokenPreview(_outputText, false)</span>
                     </div>
@@ -53,7 +53,7 @@
                 </section>
                 @if (_kind == AIModelKind.Embedding)
                 {
-                    <MudNumericField Disabled="@Busy" T="int?" @bind-Value="_dimensions" Label="@L["Settings:EmbeddingDimensions"]" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+                    <MudNumericField ClearIcon="@MoIcons.Close" Disabled="@Busy" T="int?" @bind-Value="_dimensions" Label="@L["Settings:EmbeddingDimensions"]" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
                 }
                 else
                 {
@@ -93,7 +93,7 @@
                                 <div class="reasoning-row" @key="level">
                                     <div class="reasoning-row-heading">
                                         <span>@(string.IsNullOrWhiteSpace(level.Id) ? L["Settings:Dialog:ReasoningLevel"] : level.Id)</span>
-                                        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.Close" Disabled="@Busy" OnClick="@(() => RemoveLevel(level))">@L["Settings:RemoveLevel"]</MudButton>
+                                        <MudButton Size="Size.Small" StartIcon="@MoIcons.Close" Disabled="@Busy" OnClick="@(() => RemoveLevel(level))">@L["Settings:RemoveLevel"]</MudButton>
                                     </div>
                                     <div class="reasoning-fields @(ProviderType == EAIProviderType.Anthropic ? "has-budget" : null)">
                                     <MudTextField Disabled="@Busy" T="string" @bind-Value="level.Id" Label="@L["Settings:LevelId"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
@@ -106,14 +106,14 @@
                                     </div>
                                 </div>
                             }
-                            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.Add" Disabled="@Busy" OnClick="AddLevel">@L["Settings:AddLevel"]</MudButton>
+                            <MudButton Size="Size.Small" StartIcon="@MoIcons.Add" Disabled="@Busy" OnClick="AddLevel">@L["Settings:AddLevel"]</MudButton>
                         </details>
                     }
                 }
             </fieldset>
             @if (_fetching) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
-            @if (_metadataMessage is not null) { <MudAlert Severity="Severity.Info" Dense="true">@_metadataMessage</MudAlert> }
-            @if (_error is not null) { <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert> }
+            @if (_metadataMessage is not null) { <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@_metadataMessage</MudAlert> }
+            @if (_error is not null) { <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@_error</MudAlert> }
         </div>
     </DialogContent>
     <DialogActions>

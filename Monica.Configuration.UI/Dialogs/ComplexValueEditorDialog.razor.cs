@@ -10,6 +10,7 @@ using Monica.Configuration.Serialization;
 using Monica.Configuration.UI.Models;
 using Monica.Configuration.UI.State;
 using Monica.Configuration.UI.Support;
+using Monica.UI.Icons;
 
 namespace Monica.Configuration.UI.Dialogs;
 
@@ -1186,8 +1187,8 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
     private string NestedCollectionIcon(ConfigurationNodeDefinition child)
     {
         return child.NodeKind == ConfigurationNodeKind.Dictionary
-            ? Icons.Material.Filled.DataObject
-            : Icons.Material.Filled.FormatListBulleted;
+            ? MoIcons.Braces
+            : MoIcons.List;
     }
 
     private enum EditorMode

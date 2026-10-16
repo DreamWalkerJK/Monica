@@ -16,7 +16,7 @@
             <h1>@L[$"Workbench:Titles:{Workspace}"]</h1>
             <p>@L[$"Workbench:Descriptions:{Workspace}"]</p>
         </div>
-        <MudButton StartIcon="@Icons.Material.Outlined.Refresh" Variant="Variant.Outlined" Color="Color.Primary"
+        <MudButton StartIcon="@MoIcons.Refresh" Variant="Variant.Outlined" Color="Color.Primary"
                    Disabled="@IsWorking" OnClick="RefreshAsync">@L["Common:Actions:Refresh"]</MudButton>
     </header>
 
@@ -24,7 +24,7 @@
         @foreach (var item in NavigationItems)
         {
             <a href="@WorkspaceUrl(item.Workspace)" aria-current="@(Workspace == item.Workspace ? "page" : null)">
-                <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                <MoIcon Icon="@item.Icon" Size="1.25rem" />
                 <span>@L[$"Workbench:Titles:{item.Workspace}"]</span>
             </a>
         }
@@ -43,7 +43,7 @@
             <div class="kafka-context-selector">
                 <MudSelect T="string" Value="@State.SelectedClusterId" ValueChanged="SelectContextAsync"
                            Label="@L["Workbench:ClusterContext"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                           Disabled="@(IsWorking || State.Clusters.Count == 0)" Clearable="false">
+                           Disabled="@(IsWorking || State.Clusters.Count == 0)" Clearable="false" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                     @foreach (var cluster in State.Clusters)
                     {
                         <MudSelectItem T="string" Value="@cluster.Config.ClusterId">@cluster.Config.DisplayName</MudSelectItem>
@@ -55,7 +55,7 @@
                 </MudSelect>
                 @if (State.SelectedCluster is { Config.HasDirectKafkaAccess: true } selected)
                 {
-                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Cable" Disabled="@IsWorking"
+                    <MudButton Variant="Variant.Text" StartIcon="@MoIcons.Cable" Disabled="@IsWorking"
                                OnClick="@(() => TestClusterAsync(selected))">@L["Clusters:Actions:Test"]</MudButton>
                 }
             </div>
@@ -75,7 +75,7 @@
 
         @if (!string.IsNullOrWhiteSpace(State.ErrorMessage))
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@State.ErrorMessage</MudAlert>
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@State.ErrorMessage</MudAlert>
         }
         <div class="kafka-workspace-body">
             @switch (Workspace)

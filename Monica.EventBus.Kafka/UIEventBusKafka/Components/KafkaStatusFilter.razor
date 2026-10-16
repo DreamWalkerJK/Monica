@@ -1,6 +1,6 @@
 <div class="@RootClass">
     <MudButton Variant="Variant.Outlined" Size="Size.Small"
-               StartIcon="@(Selected ? Icons.Material.Filled.Check : null)"
+               StartIcon="@(Selected ? MoIcons.Check : null)"
                aria-pressed="@Selected.ToString().ToLowerInvariant()" OnClick="OnClick">
         <span class="filter-label">@Text</span><span class="filter-count">@Count</span>
     </MudButton>

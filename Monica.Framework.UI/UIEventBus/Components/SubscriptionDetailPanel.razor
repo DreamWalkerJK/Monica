@@ -8,7 +8,7 @@
     <div class="subscription-inspector">
         <header class="subscription-inspector-identity"><span>@L.GetSubscriptionScopeText(row.Scope) · @L.GetDiscoveryModeText(row.IsAutoDiscovered)</span><h2>@row.EventTypeShortName</h2><code>@row.EventType</code></header>
         <div class="subscription-inspector-capture"><span>@L["Inspector:FrozenCapture"]</span><time>@EventBusPresentation.Timestamp(CapturedAt)</time></div>
-        <MudTabs Elevation="0" Rounded="false">
+        <MudTabs PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" Elevation="0" Rounded="false">
             <MudTabPanel Text="@L["Inspector:Routing"]">
                 <section class="subscription-inspector-section">
                     <div class="subscription-inspector-status"><EventBusStatusBadge Tone="row.StateColor">@L.GetSubscriptionStateText(row.State)</EventBusStatusBadge><p>@L["Inspector:RegistrationHelp"]</p></div>
@@ -49,7 +49,7 @@
                     }
                     else
                     {
-                        <div class="subscription-inspector-empty"><MudIcon Icon="@Icons.Material.Outlined.SensorsOff" /><h3>@L[row.Scope == EventSubscriptionScope.Local ? "Registry:LocalRuntime" : "Registry:NotReported"]</h3><p>@L[row.Scope == EventSubscriptionScope.Local ? "Inspector:LocalHelp" : "SubscriptionDetail:Runtime:NoData"]</p></div>
+                        <div class="subscription-inspector-empty"><MoIcon Icon="@MoIcons.RadioOff" Size="1.5rem" /><h3>@L[row.Scope == EventSubscriptionScope.Local ? "Registry:LocalRuntime" : "Registry:NotReported"]</h3><p>@L[row.Scope == EventSubscriptionScope.Local ? "Inspector:LocalHelp" : "SubscriptionDetail:Runtime:NoData"]</p></div>
                     }
                 </section>
             </MudTabPanel>
@@ -61,7 +61,7 @@
                     }
                     else
                     {
-                        <div class="subscription-inspector-empty"><MudIcon Icon="@Icons.Material.Outlined.DataObject" /><p>@L["Inspector:NoMetadata"]</p></div>
+                        <div class="subscription-inspector-empty"><MoIcon Icon="@MoIcons.Braces" Size="1.5rem" /><p>@L["Inspector:NoMetadata"]</p></div>
                     }
                 </section>
             </MudTabPanel>

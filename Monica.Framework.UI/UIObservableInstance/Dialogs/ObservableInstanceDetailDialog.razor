@@ -5,7 +5,7 @@
 <MudDialog>
     <TitleContent>
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudIcon Icon="@Icons.Material.Filled.Info" />
+            <MoIcon Icon="@MoIcons.Info" Size="1.5rem" />
             <MudText Typo="Typo.h6">@L["Detail:Title"]</MudText>
         </MudStack>
     </TitleContent>
@@ -16,7 +16,7 @@
         }
         else
         {
-            <MudAlert Severity="Severity.Info">@L["Shared:States:NoInstanceSelected"]</MudAlert>
+            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["Shared:States:NoInstanceSelected"]</MudAlert>
         }
     </DialogContent>
     <DialogActions>

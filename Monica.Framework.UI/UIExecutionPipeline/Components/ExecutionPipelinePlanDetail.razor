@@ -4,7 +4,7 @@
 @if (Plan is null)
 {
     <div class="execution-pipeline-plan-detail__empty" data-testid="execution-pipeline-plan-unselected">
-        <MudIcon Icon="@Icons.Material.Outlined.TouchApp" Size="Size.Large" />
+        <MoIcon Icon="@MoIcons.PointerMouse" Size="2.25rem" />
         <p>@L["Page:States:SelectPlan"]</p>
     </div>
 }
@@ -32,7 +32,7 @@ else
         {
             <section class="execution-pipeline-plan-detail__error" role="alert" data-testid="execution-pipeline-plan-error">
                 <div class="execution-pipeline-plan-detail__error-heading">
-                    <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+                    <MoIcon Icon="@MoIcons.Error" Size="1.25rem" />
                     <ExecutionPipelineHelpLabel Text="@L["Page:Plans:Fault"]"
                                                 HelpText="@L["Page:Help:Plans:Fault"]" />
                 </div>

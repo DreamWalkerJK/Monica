@@ -9,7 +9,7 @@
     @if (_controller is not null)
     {
         <FileOpsFamilyHeader Busy="@_controller.IsBusy" PolicyOpen="@_policyOpen" OpenPolicy="OpenPolicyAsync" />
-        @if (_policyAccessDenied) { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" role="status">@L["Policy:AccessDenied"]</MudAlert> }
+        @if (_policyAccessDenied) { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" role="status" Icon="@MoIcons.Warning">@L["Policy:AccessDenied"]</MudAlert> }
         <div class="directory-command-region">
             <div class="directory-command-row">
                 <FileOpsLocation Controller="_controller" Navigate="NavigateAsync" Up="UpAsync" Refresh="RefreshAsync" Changed="CancelFocus" />
@@ -18,7 +18,7 @@
             @if (_controller.Browse is { } browse)
             {
                 <p class="directory-capability" title="@L[browse.IsReadOnly ? "Location:ReadOnlyReason" : browse.CanCreateDirectory || browse.CanUpload ? "Location:WritableReason" : "Location:WriteReason"]">
-                    <MudIcon Size="Size.Small" Icon="@(browse.IsReadOnly ? Icons.Material.Outlined.Lock : Icons.Material.Outlined.FolderOpen)" />
+                    <MoIcon Size="1.25rem" Icon="@(browse.IsReadOnly ? MoIcons.Lock : MoIcons.FolderOpen)" />
                     <span>@L[browse.IsReadOnly ? "Location:ReadOnly" : browse.CanCreateDirectory || browse.CanUpload ? "Location:Writable" : "Location:WritesUnavailable"]</span>
                     <span class="sr-only">@L[browse.IsReadOnly ? "Location:ReadOnlyReason" : browse.CanCreateDirectory || browse.CanUpload ? "Location:WritableReason" : "Location:WriteReason"]</span>
                 </p>
@@ -26,7 +26,7 @@
             @if (_controller.IsBusy && _controller.Browse is not null) { <div class="busy-status" role="status"><MudProgressLinear Color="Color.Primary" Indeterminate="true" aria-label="@(_uploadName is null ? L["Workspace:Working"] : L["Workspace:Uploading", _uploadName])" /><span>@(_uploadName is null ? L["Workspace:Working"] : L["Workspace:Uploading", _uploadName])</span></div> }
         </div>
         @if (_controller.NavigationNotice is { } notice)
-        { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Workspace:ReturnFallback"] @notice.Message</MudAlert> }
+        { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["Workspace:ReturnFallback"] @notice.Message</MudAlert> }
         @if (DirectoryCommand is not null || _controller.LastRead is { Kind: FileOpsOperationKind.LoadPolicy, Succeeded: false })
         {
             <div class="workspace-outcomes">
@@ -38,7 +38,7 @@
             <div class="inventory-column">
                 @if (HasInspector && !_split)
                 {
-                    <MudButton Class="inventory-toggle" Variant="Variant.Outlined" Color="Color.Primary" OnClick="ToggleCatalog" aria-expanded="@(_catalogOpen ? "true" : "false")" aria-controls="file-inventory-body" EndIcon="@(_catalogOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">@L["Workspace:Picker", DirectoryName, _controller.SortedEntries.Count]</MudButton>
+                    <MudButton Class="inventory-toggle" Variant="Variant.Outlined" Color="Color.Primary" OnClick="ToggleCatalog" aria-expanded="@(_catalogOpen ? "true" : "false")" aria-controls="file-inventory-body" EndIcon="@(_catalogOpen ? MoIcons.ChevronUp : MoIcons.ChevronDown)">@L["Workspace:Picker", DirectoryName, _controller.SortedEntries.Count]</MudButton>
                 }
                 <div id="file-inventory-body" class="inventory-body @((HasInspector && !_split && !_catalogOpen) ? "inventory-body-closed" : "")">
                     <FileOpsInventory Controller="_controller" TableMode="_tableMode" Open="OpenAsync" Download="DownloadAsync" Delete="DeleteAsync" DownloadSelection="DownloadSelectionAsync" DeleteSelection="DeleteSelectionAsync" Changed="InventoryChanged" Cleared="SelectionCleared" OpenPolicy="OpenPolicyAsync" />

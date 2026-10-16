@@ -10,6 +10,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -61,28 +62,28 @@ public class ModuleAIUI : MonicaModule<ModuleAIUIOption>, IUIModule
         registry.RegisterLocalizedPage<ChatPage, AIResource>(
             ChatPage.PAGE_URL,
             "Pages:AIChat:Title",
-            Icons.Material.Filled.SmartToy,
+            MoIcons.Bot,
             BuiltInNavigationCategoryIds.AI,
             addToNav: true,
             navOrder: 1);
         registry.RegisterLocalizedPage<ProviderManagePage, AIResource>(
             ProviderManagePage.PAGE_URL,
             "Pages:AIProviderManage:Title",
-            Icons.Material.Filled.Hub,
+            MoIcons.Network,
             BuiltInNavigationCategoryIds.AI,
             addToNav: true,
             navOrder: 2);
         registry.RegisterLocalizedPage<AgentCapabilityManagePage, AIResource>(
             AgentCapabilityManagePage.PAGE_URL,
             "Pages:AISkills:Title",
-            Icons.Material.Filled.Extension,
+            MoIcons.Puzzle,
             BuiltInNavigationCategoryIds.AI,
             addToNav: true,
             navOrder: 3);
         registry.RegisterLocalizedPage<McpCapabilityManagePage, AIResource>(
             McpCapabilityManagePage.PAGE_URL,
             "Pages:AIMcp:Title",
-            Icons.Material.Filled.AccountTree,
+            MoIcons.Workflow,
             BuiltInNavigationCategoryIds.AI,
             addToNav: true,
             navOrder: 4);

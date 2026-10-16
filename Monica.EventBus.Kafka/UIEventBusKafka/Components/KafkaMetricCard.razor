@@ -2,7 +2,7 @@
     <MudPaper Class="mo-self-painted" Outlined="true">
         <div class="kafka-metric-card__header">
             <span class="kafka-metric-card__icon" aria-hidden="true">
-                <MudIcon Icon="@Icon" Size="Size.Small" />
+                <MoIcon Icon="@Icon" Size="1.25rem" />
             </span>
             <MudText Typo="Typo.overline" Class="kafka-metric-card__label">@Label</MudText>
         </div>
@@ -20,7 +20,7 @@
 
 @code {
     /// <summary>
-    /// Gets or sets the Material icon that identifies the metric category.
+    /// Gets or sets the trusted SVG fragment that identifies the metric category.
     /// </summary>
     [Parameter, EditorRequired]
     public string Icon { get; set; } = string.Empty;

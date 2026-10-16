@@ -2,16 +2,16 @@
 @inject IStringLocalizer<EventBusKafkaResource> L
 
 <div class="cluster-workspace">
-    <KafkaWorkspaceHeader Icon="@Icons.Material.Outlined.Storage" Title="@L["Clusters:Title"]" Subtitle="@(State.HasLoadedConfiguration ? L["Clusters:Summary", State.Clusters.Count] : L["Common:Values:Unavailable"])">
+    <KafkaWorkspaceHeader Icon="@MoIcons.Database" Title="@L["Clusters:Title"]" Subtitle="@(State.HasLoadedConfiguration ? L["Clusters:Summary", State.Clusters.Count] : L["Common:Values:Unavailable"])">
         <Actions>
-            <KafkaPrimaryButton StartIcon="@Icons.Material.Filled.Add" Disabled="@IsBusy" OnClick="OnCreate">@L["Clusters:Actions:New"]</KafkaPrimaryButton>
+            <KafkaPrimaryButton StartIcon="@MoIcons.Add" Disabled="@IsBusy" OnClick="OnCreate">@L["Clusters:Actions:New"]</KafkaPrimaryButton>
         </Actions>
     </KafkaWorkspaceHeader>
     <div class="cluster-tools">
         <div class="cluster-search">
             <MudTextField T="string" @bind-Value="_search" Immediate="true" DebounceInterval="200" Clearable="true"
                           Label="@L["Clusters:Search:Label"]" Placeholder="@L["Clusters:Search:Placeholder"]"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                          Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Variant="Variant.Outlined" Margin="Margin.Dense" ClearIcon="@MoIcons.Close" />
         </div>
         @if (State.HasLoadedConfiguration)
         {
@@ -27,16 +27,16 @@
     </div>
     @if (!State.HasLoadedConfiguration)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Storage" Title="@L["Clusters:Title"]" Description="@(State.IsLoading ? L["Page:States:LoadingDescription"] : L["Common:Values:Unavailable"])" />
+        <KafkaWorkspaceState Icon="@MoIcons.Database" Title="@L["Clusters:Title"]" Description="@(State.IsLoading ? L["Page:States:LoadingDescription"] : L["Common:Values:Unavailable"])" />
     }
     else if (State.Clusters.Count == 0)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.Storage" Title="@L["Clusters:Title"]" Description="@L["Clusters:Empty"]" AccentColor="Color.Info"
-                             ActionLabel="@L["Clusters:Actions:New"]" ActionIcon="@Icons.Material.Filled.Add" ActionDisabled="@IsBusy" OnAction="OnCreate" />
+        <KafkaWorkspaceState Icon="@MoIcons.Database" Title="@L["Clusters:Title"]" Description="@L["Clusters:Empty"]" AccentColor="Color.Info"
+                             ActionLabel="@L["Clusters:Actions:New"]" ActionIcon="@MoIcons.Add" ActionDisabled="@IsBusy" OnAction="OnCreate" />
     }
     else if (FilteredClusters.Count == 0)
     {
-        <KafkaWorkspaceState Icon="@Icons.Material.Outlined.SearchOff" Title="@L["Clusters:Search:NoMatches"]" Description="@L["Clusters:Search:Placeholder"]"
+        <KafkaWorkspaceState Icon="@MoIcons.SearchOff" Title="@L["Clusters:Search:NoMatches"]" Description="@L["Clusters:Search:Placeholder"]"
                              ActionLabel="@L["Common:Actions:ResetFilters"]" OnAction="ResetFilters" />
     }
     else
@@ -53,7 +53,7 @@
                         <div class="cluster-identity">
                             <span class="cluster-display-name">@context.Config.DisplayName</span>
                             <span class="cluster-id">@context.Config.ClusterId</span>
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(context.Config.IsDaprBacked ? Color.Info : Color.Primary)">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(context.Config.IsDaprBacked ? Color.Info : Color.Primary)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                 @(context.Config.IsDaprBacked ? L["Clusters:Modes:DaprBacked"] : L["Clusters:Modes:Direct"])
                             </MudChip>
                         </div>
@@ -61,7 +61,7 @@
                     <MudTd DataLabel="@L["Clusters:Columns:Bootstrap"]"><span class="cluster-bootstrap">@GetBootstrapText(context)</span></MudTd>
                     <MudTd DataLabel="@L["Clusters:Columns:Status"]">
                         <div class="cluster-evidence">
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetStatusColor(GetStatus(context))">@GetStatusLabel(GetStatus(context))</MudChip>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetStatusColor(GetStatus(context))" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@GetStatusLabel(GetStatus(context))</MudChip>
                             @if (!string.IsNullOrWhiteSpace(context.ErrorMessage))
                             {
                                 <span class="cluster-error">@context.ErrorMessage</span>
@@ -70,14 +70,14 @@
                     </MudTd>
                     <MudTd DataLabel="@L["Clusters:Columns:Actions"]">
                         <div class="cluster-row-actions">
-                            <MudTooltip Text="@L["Common:Actions:Select"]"><MudIconButton Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" Disabled="@(IsBusy || !context.IsReachable)" OnClick="@(() => OnSelect.InvokeAsync(context))" aria-label="@L["Common:Actions:Select"]" /></MudTooltip>
-                            <MudTooltip Text="@L["Common:Actions:Edit"]"><MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" Disabled="@IsBusy" OnClick="@(() => OnEdit.InvokeAsync(context))" aria-label="@L["Common:Actions:Edit"]" /></MudTooltip>
-                            <MudTooltip Text="@L["Clusters:Actions:Test"]"><MudIconButton Icon="@Icons.Material.Outlined.Cable" Size="Size.Small" Disabled="@(IsBusy || !context.Config.HasDirectKafkaAccess)" OnClick="@(() => OnTest.InvokeAsync(context))" aria-label="@L["Clusters:Actions:Test"]" /></MudTooltip>
-                            <MudTooltip Text="@L["Common:Actions:Delete"]"><MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error" Disabled="@IsBusy" OnClick="@(() => OnDelete.InvokeAsync(context))" aria-label="@L["Common:Actions:Delete"]" /></MudTooltip>
+                            <MudTooltip Text="@L["Common:Actions:Select"]"><MudIconButton Icon="@MoIcons.Success" Size="Size.Small" Disabled="@(IsBusy || !context.IsReachable)" OnClick="@(() => OnSelect.InvokeAsync(context))" aria-label="@L["Common:Actions:Select"]" /></MudTooltip>
+                            <MudTooltip Text="@L["Common:Actions:Edit"]"><MudIconButton Icon="@MoIcons.Edit" Size="Size.Small" Disabled="@IsBusy" OnClick="@(() => OnEdit.InvokeAsync(context))" aria-label="@L["Common:Actions:Edit"]" /></MudTooltip>
+                            <MudTooltip Text="@L["Clusters:Actions:Test"]"><MudIconButton Icon="@MoIcons.Cable" Size="Size.Small" Disabled="@(IsBusy || !context.Config.HasDirectKafkaAccess)" OnClick="@(() => OnTest.InvokeAsync(context))" aria-label="@L["Clusters:Actions:Test"]" /></MudTooltip>
+                            <MudTooltip Text="@L["Common:Actions:Delete"]"><MudIconButton Icon="@MoIcons.Delete" Size="Size.Small" Color="Color.Error" Disabled="@IsBusy" OnClick="@(() => OnDelete.InvokeAsync(context))" aria-label="@L["Common:Actions:Delete"]" /></MudTooltip>
                         </div>
                     </MudTd>
                 </RowTemplate>
-                <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
+                <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /></PagerContent>
             </MudTable>
         </KafkaTableSurface>
     }

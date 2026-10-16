@@ -20,23 +20,23 @@
     @if (DroppedChangeCount > 0)
     {
         <div class="changes-ledger-notice changes-ledger-notice-loss" role="status">
-            <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.Warning" Size="1.25rem" />
             <div><strong>@L["ChangeLedger:FeedLossTitle"]</strong><p>@L["ChangeLedger:FeedLoss", DroppedChangeCount]</p></div>
         </div>
     }
     @if (TruncatedChangeCount > 0)
     {
         <div class="changes-ledger-notice changes-ledger-notice-window">
-            <MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.History" Size="1.25rem" />
             <p>@L["ChangeLedger:WindowTruncated", TruncatedChangeCount, RetentionLimit]</p>
         </div>
     }
 
     <div class="changes-ledger-controls">
-        <MudTextField T="string" Value="@_searchText" ValueChanged="SearchChanged" Immediate="true"
+        <MudTextField ClearIcon="@MoIcons.Close" T="string" Value="@_searchText" ValueChanged="SearchChanged" Immediate="true"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
                       Placeholder="@L["ChangeLedger:Search"]" aria-label="@L["ChangeLedger:Search"]"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+                      Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" />
         <div class="changes-ledger-filter-row">
             <div class="changes-ledger-filters" role="group" aria-label="@L["ChangeLedger:ChangeType"]">
                 <span class="changes-ledger-filter" data-tone="Primary" data-selected="@(_changeType is null ? "true" : "false")">
@@ -56,7 +56,7 @@
             </div>
             @if (HasFilters)
             {
-                <MudButton OnClick="ClearFilters" Size="Size.Small" StartIcon="@Icons.Material.Outlined.FilterAltOff">
+                <MudButton OnClick="ClearFilters" Size="Size.Small" StartIcon="@MoIcons.FilterOff">
                     @L["ChangeLedger:ClearFilters"]
                 </MudButton>
             }
@@ -123,7 +123,7 @@
                 <MudTd DataLabel="@L["ChangeLedger:Evidence"]">
                     <div class="changes-ledger-cell changes-ledger-action">
                         <MudTooltip Text="@L["ChangeLedger:InspectEvidence"]">
-                            <MudIconButton Icon="@Icons.Material.Outlined.ArrowForward" Color="Color.Primary" Size="Size.Small"
+                            <MudIconButton Icon="@MoIcons.ArrowRight" Color="Color.Primary" Size="Size.Small"
                                            OnClick="() => Inspect(context)" aria-label="@L["ChangeLedger:Inspect", context.Subscription.SubscriptionId, L.GetSubscriptionChangeTypeText(context.ChangeType), EventBusPresentation.Timestamp(context.Timestamp)]" />
                         </MudTooltip>
                     </div>
@@ -131,7 +131,7 @@
             </RowTemplate>
             <NoRecordsContent>
                 <div class="changes-ledger-empty">
-                    <MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Large" />
+                    <MoIcon Icon="@MoIcons.History" Size="2.25rem" />
                     <h3>@L[HasFilters ? "ChangeLedger:NoMatches" : "ChangeLedger:Empty"]</h3>
                     <p>@L[HasFilters ? "ChangeLedger:NoMatchesHelp" : "ChangeLedger:EmptyHelp"]</p>
                     @if (HasFilters)
@@ -141,7 +141,7 @@
                 </div>
             </NoRecordsContent>
             <PagerContent>
-                <MudTablePager PageSizeOptions="@PageSizeOptions" RowsPerPageString="@L["ChangeLedger:RowsPerPage"]" InfoFormat="@L["ChangeLedger:PageInfo"]" />
+                <MudTablePager FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" PageSizeOptions="@PageSizeOptions" RowsPerPageString="@L["ChangeLedger:RowsPerPage"]" InfoFormat="@L["ChangeLedger:PageInfo"]" />
             </PagerContent>
         </MudTable>
     </div>

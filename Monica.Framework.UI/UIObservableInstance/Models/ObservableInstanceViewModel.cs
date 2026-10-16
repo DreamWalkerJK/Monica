@@ -146,6 +146,9 @@ public class ObservableInstanceViewModel
     /// </summary>
     public Color LogLevelColor => ObservableInstanceDisplayMapping.GetLogLevelColor(CurrentLogLevel);
 
+    /// <summary>Gets theme-inheriting CSS for the current log level's native icon.</summary>
+    public string LogLevelIconStyle => ObservableInstanceDisplayMapping.IconStyle(LogLevelColor);
+
     /// <summary>
     /// Icon for log level
     /// </summary>
@@ -155,6 +158,9 @@ public class ObservableInstanceViewModel
     /// MudBlazor color for health state
     /// </summary>
     public Color HealthStateColor => ObservableInstanceDisplayMapping.GetHealthStateColor(HealthState);
+
+    /// <summary>Gets theme-inheriting CSS for the current health state's native icon.</summary>
+    public string HealthStateIconStyle => ObservableInstanceDisplayMapping.IconStyle(HealthStateColor);
 
     /// <summary>
     /// Icon for health state

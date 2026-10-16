@@ -1,4 +1,5 @@
 using Monica.ProjectUnits.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIProjectUnits.Models;
@@ -75,26 +76,26 @@ public static class ProjectUnitVisualizationConfig
     {
         return unitType switch
         {
-            EProjectUnitType.ApplicationService => Icons.Material.Outlined.BusinessCenter,
-            EProjectUnitType.CrudApplicationService => Icons.Material.Outlined.EditNote,
-            EProjectUnitType.DomainService => Icons.Material.Outlined.Domain,
-            EProjectUnitType.Repository => Icons.Material.Outlined.Storage,
-            EProjectUnitType.DomainEvent => Icons.Material.Outlined.Event,
-            EProjectUnitType.DomainEventHandler => Icons.Material.Outlined.EventAvailable,
-            EProjectUnitType.LocalEventHandler => Icons.Material.Outlined.EventNote,
-            EProjectUnitType.RecurringJob => Icons.Material.Outlined.Update,
-            EProjectUnitType.TriggeredJob => Icons.Material.Outlined.Schedule,
-            EProjectUnitType.HostedService => Icons.Material.Outlined.Engineering,
-            EProjectUnitType.HttpApi => Icons.Material.Outlined.Http,
-            EProjectUnitType.GrpcApi => Icons.Material.Outlined.Api,
-            EProjectUnitType.Entity => Icons.Material.Outlined.Dataset,
-            EProjectUnitType.RequestDto => Icons.Material.Outlined.DataObject,
-            EProjectUnitType.Configuration => Icons.Material.Outlined.Settings,
-            EProjectUnitType.Seeder => Icons.Material.Outlined.Grass,
-            EProjectUnitType.StateStore => Icons.Material.Outlined.Memory,
-            EProjectUnitType.EventBus => Icons.Material.Outlined.Hub,
-            EProjectUnitType.Actor => Icons.Material.Outlined.Person,
-            _ => Icons.Material.Outlined.Circle
+            EProjectUnitType.ApplicationService => MoIcons.Briefcase,
+            EProjectUnitType.CrudApplicationService => MoIcons.NotebookEdit,
+            EProjectUnitType.DomainService => MoIcons.Building,
+            EProjectUnitType.Repository => MoIcons.Database,
+            EProjectUnitType.DomainEvent => MoIcons.Calendar,
+            EProjectUnitType.DomainEventHandler => MoIcons.CalendarCheck,
+            EProjectUnitType.LocalEventHandler => MoIcons.CalendarDays,
+            EProjectUnitType.RecurringJob => MoIcons.History,
+            EProjectUnitType.TriggeredJob => MoIcons.Clock,
+            EProjectUnitType.HostedService => MoIcons.HardHat,
+            EProjectUnitType.HttpApi => MoIcons.Globe,
+            EProjectUnitType.GrpcApi => MoIcons.Plug,
+            EProjectUnitType.Entity => MoIcons.Table,
+            EProjectUnitType.RequestDto => MoIcons.Braces,
+            EProjectUnitType.Configuration => MoIcons.Settings,
+            EProjectUnitType.Seeder => MoIcons.Sprout,
+            EProjectUnitType.StateStore => MoIcons.Cpu,
+            EProjectUnitType.EventBus => MoIcons.Network,
+            EProjectUnitType.Actor => MoIcons.User,
+            _ => MoIcons.Circle
         };
     }
 

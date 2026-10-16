@@ -10,7 +10,7 @@
         <h2 class="toc-title">@L["MarkdownViewer:Navbar:Outline"]</h2>
         @if (OnClose.HasDelegate)
         {
-            <MudIconButton Icon="@Icons.Material.Filled.Close"
+            <MudIconButton Icon="@MoIcons.Close"
                            Size="Size.Small"
                            OnClick="OnClose"
                            title="@L["MarkdownViewer:Toolbar:HideOutline"]"
@@ -22,9 +22,8 @@
     @if (Document is null)
     {
         <div class="toc-empty-state">
-            <MudIcon Icon="@Icons.Material.Filled.Article"
-                     Size="Size.Large"
-                     Color="Color.Default"
+            <MoIcon Icon="@MoIcons.FileText"
+                     Size="2.25rem"
                      Class="toc-empty-icon" />
             <MudText Typo="Typo.body2" Align="Align.Center" Class="toc-empty-copy">
                 @L["MarkdownViewer:Toolbar:NoDocumentOutline"]
@@ -34,9 +33,8 @@
     else if (_outlineHeadings.Count == 0)
     {
         <div class="toc-empty-state">
-            <MudIcon Icon="@Icons.Material.Filled.FormatListBulleted"
-                     Size="Size.Large"
-                     Color="Color.Default"
+            <MoIcon Icon="@MoIcons.List"
+                     Size="2.25rem"
                      Class="toc-empty-icon" />
             <MudText Typo="Typo.body2" Align="Align.Center" Class="toc-empty-copy">
                 @L["MarkdownViewer:Toolbar:NoOutlineAvailable"]

@@ -19,7 +19,7 @@
                 </section>
                 <section class="log-inspector-text">
                     <div class="log-inspector-text-heading"><h3>@L["Workbench:Inspector:RawTitle"]</h3>
-                        @if (CopyRawRequested.HasDelegate) { <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy" OnClick="@(() => CopyRawRequested.InvokeAsync(line.Raw))">@L["Workbench:Inspector:CopyRaw"]</MudButton> }</div>
+                        @if (CopyRawRequested.HasDelegate) { <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.Copy" OnClick="@(() => CopyRawRequested.InvokeAsync(line.Raw))">@L["Workbench:Inspector:CopyRaw"]</MudButton> }</div>
                     <p class="log-inspector-note">@L["Workbench:Inspector:RawHelp"]</p>
                     <pre class="log-inspector-raw" data-field="Raw" tabindex="0" aria-label="@L["Workbench:Inspector:RawTitle"]">@line.Raw</pre>
                     @if (line.Raw.Length == 0) { <p class="log-inspector-note">@L["Workbench:Inspector:Empty"]</p> }

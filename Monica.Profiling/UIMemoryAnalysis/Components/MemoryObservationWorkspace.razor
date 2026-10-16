@@ -13,7 +13,7 @@
         @if (_state is not null)
         {
             <div class="memory-observation-controls"><MudSwitch T="bool" Value="_state.AutoRefresh" ValueChanged="SetAutoRefresh" Disabled="@(!_state.CanAutoRefresh)" Color="Color.Primary" Label="@L["Page:Actions:AutoRefresh"]" />
-                <MudButton @ref="_refreshButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="RefreshAsync" Disabled="_state.IsLoading">@L["Page:Actions:Refresh"]</MudButton></div>
+                <MudButton @ref="_refreshButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh" OnClick="RefreshAsync" Disabled="_state.IsLoading">@L["Page:Actions:Refresh"]</MudButton></div>
             <div class="memory-observation-freshness"><span>@PollingLabel</span>
                 @if (_state.SnapshotCapturedAt is { } capturedAt) { <span>@L["Page:Captured"] <time data-memory-view-capture datetime="@capturedAt.ToString("O")">@MemoryAnalysisDisplayFormatter.LocalDateTime(capturedAt)</time></span> }
             </div>
@@ -24,7 +24,7 @@
         {
             @if (_state.LoadError is not null)
             {
-                <div class="memory-read-error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" /><div><strong>@L["Page:Messages:RefreshFailed"]</strong><p>@(_state.HasSnapshot ? L["Page:Messages:Retained"] : L["Page:Messages:NoSnapshot"])</p>@if (!string.IsNullOrEmpty(_state.LoadError)) { <p>@_state.LoadError</p> }</div></div>
+                <div class="memory-read-error" role="alert"><MoIcon Icon="@MoIcons.Error" Size="1.25rem" /><div><strong>@L["Page:Messages:RefreshFailed"]</strong><p>@(_state.HasSnapshot ? L["Page:Messages:Retained"] : L["Page:Messages:NoSnapshot"])</p>@if (!string.IsNullOrEmpty(_state.LoadError)) { <p>@_state.LoadError</p> }</div></div>
             }
             @if (Section == "gc")
             {

@@ -7,11 +7,11 @@
 
 <aside class="knowledge-catalog" data-open="@_open.ToString().ToLowerInvariant()" aria-label="@L["KnowledgeWorkbench:Collections"]">
     <button type="button" class="catalog-disclosure" aria-expanded="@_open.ToString().ToLowerInvariant()" aria-controls="@_bodyId" @onclick="() => _open = !_open">
-        <MudIcon Icon="@Icons.Material.Outlined.LibraryBooks" /><span><small>@L["KnowledgeWorkbench:Collections"] · @Items.Count</small><strong>@(Selected?.Name ?? L["RAG:KnowledgeBase:SelectPrompt"].Value)</strong></span><MudIcon Icon="@(_open ? Icons.Material.Outlined.ExpandLess : Icons.Material.Outlined.ExpandMore)" />
+        <MoIcon Icon="@MoIcons.Library" Size="1.5rem" /><span><small>@L["KnowledgeWorkbench:Collections"] · @Items.Count</small><strong>@(Selected?.Name ?? L["RAG:KnowledgeBase:SelectPrompt"].Value)</strong></span><MoIcon Icon="@(_open ? MoIcons.ChevronUp : MoIcons.ChevronDown)" Size="1.5rem" />
     </button>
     <div class="catalog-body" id="@_bodyId">
         <div class="catalog-heading"><h2>@L["KnowledgeWorkbench:Collections"]</h2><span>@Items.Count</span></div>
-        <div class="catalog-search"><MudTextField T="string" @bind-Value="_search" Label="@L["KnowledgeWorkbench:SearchCollections"]" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" /></div>
+        <div class="catalog-search"><MudTextField T="string" @bind-Value="_search" Label="@L["KnowledgeWorkbench:SearchCollections"]" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" /></div>
         @if (IsLoading) { <div class="catalog-message" role="status"><p>@LoadingText</p><MudProgressLinear Indeterminate="true" Color="Color.Primary" /></div> }
         else if (!string.IsNullOrWhiteSpace(ErrorMessage))
         {
@@ -23,7 +23,7 @@
                 @foreach (var item in VisibleItems)
                 {
                     <button type="button" class="catalog-entry" aria-pressed="@string.Equals(Selected?.Id, item.Id, StringComparison.OrdinalIgnoreCase).ToString().ToLowerInvariant()" disabled="@IsDisabled" @onclick="() => SelectAsync(item)">
-                        <span class="catalog-entry-heading"><strong>@item.Name</strong>@if (Selected?.Id == item.Id) { <MudIcon Icon="@Icons.Material.Outlined.Check" /> }</span>
+                        <span class="catalog-entry-heading"><strong>@item.Name</strong>@if (Selected?.Id == item.Id) { <MoIcon Icon="@MoIcons.Check" Size="1.5rem" /> }</span>
                         @if (!string.IsNullOrWhiteSpace(item.Description)) { <span class="catalog-entry-description">@item.Description</span> }
                         <span class="catalog-entry-meta">@L["KnowledgeWorkbench:DocumentCount", item.DocumentCount] <span>·</span> @(HasBinding(item) ? L["KnowledgeWorkbench:ModelBound"] : L["KnowledgeBase:RagStatus:LookupOnly"])</span>
                     </button>

@@ -7,7 +7,7 @@
 .job-schedule-panel__status[data-tone="warning"] { --schedule-tone: var(--mud-palette-warning); }
 .job-schedule-panel__status[data-tone="info"] { --schedule-tone: var(--mud-palette-info); }
 .job-schedule-panel__status[data-tone="success"] { --schedule-tone: var(--mud-palette-success); }
-.job-schedule-panel__status ::deep .mud-icon-root { width: 18px; height: 18px; color: inherit; }
+.job-schedule-panel__status ::deep :is(.mud-icon-root, .mo-icon) { width: 18px; height: 18px; color: inherit; }
 .job-schedule-panel__next { align-items: center; padding: 20px; border-inline-start: 4px solid var(--schedule-ink); background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface)); }
 .job-schedule-panel__next > div { display: grid; gap: 6px; }
 .job-schedule-panel__next ::deep .mud-typography-overline { color: var(--schedule-ink); font-size: .77rem; font-weight: 500; letter-spacing: .035em; }
@@ -23,6 +23,6 @@
 .job-schedule-panel__cron { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
 .job-schedule-panel code { font-family: var(--mo-font-family-mono); font-size: .81rem; overflow-wrap: anywhere; white-space: pre-wrap; }
 .job-schedule-panel__triggered { display: flex; align-items: flex-start; gap: 14px; min-width: 0; padding: 20px; background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface)); }
-.job-schedule-panel__triggered ::deep > .mud-icon-root { color: var(--schedule-ink); flex: 0 0 32px; }
+.job-schedule-panel__triggered ::deep > :is(.mud-icon-root, .mo-icon) { color: var(--schedule-ink); flex: 0 0 32px; }
 @container job-schedule (max-width: 500px) { .job-schedule-panel__heading, .job-schedule-panel__next { display: grid; } .job-schedule-panel__facts { grid-template-columns: minmax(0, 1fr); } .job-schedule-panel__next, .job-schedule-panel__triggered { padding: 16px; } }
 @media (max-width: 600px) { .job-schedule-panel { padding: 16px; } }

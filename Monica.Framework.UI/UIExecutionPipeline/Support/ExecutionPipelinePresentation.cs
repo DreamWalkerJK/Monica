@@ -1,4 +1,5 @@
 using Monica.Core.Execution.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIExecutionPipeline.Support;
@@ -15,9 +16,9 @@ internal static class ExecutionPipelinePresentation
 
     public static string GetStatusIcon(ExecutionPipelinePlanStatus status) => status switch
     {
-        ExecutionPipelinePlanStatus.Building => Icons.Material.Filled.Pending,
-        ExecutionPipelinePlanStatus.Ready => Icons.Material.Filled.CheckCircle,
-        ExecutionPipelinePlanStatus.Faulted => Icons.Material.Filled.Error,
-        _ => Icons.Material.Filled.HelpOutline
+        ExecutionPipelinePlanStatus.Building => MoIcons.Pending,
+        ExecutionPipelinePlanStatus.Ready => MoIcons.Success,
+        ExecutionPipelinePlanStatus.Faulted => MoIcons.Error,
+        _ => MoIcons.Help
     };
 }

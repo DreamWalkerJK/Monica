@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Localization;
 using Monica.ServiceDiscovery.Localization;
 using Monica.ServiceDiscovery.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.ServiceDiscovery.UIServiceDiscovery.Support;
@@ -12,18 +13,18 @@ public static class ServiceStatusExtensions
 {
     private static readonly Dictionary<ServiceStatus, StatusDisplayInfo> Map = new()
     {
-        [ServiceStatus.Running] = new(Color.Success, "Shared:ServiceStatuses:Running", Icons.Material.Filled.CheckCircle),
-        [ServiceStatus.Updating] = new(Color.Info, "Shared:ServiceStatuses:Updating", Icons.Material.Filled.Update),
-        [ServiceStatus.Offline] = new(Color.Default, "Shared:ServiceStatuses:Offline", Icons.Material.Filled.CloudOff),
-        [ServiceStatus.Error] = new(Color.Error, "Shared:ServiceStatuses:Error", Icons.Material.Filled.Error),
-        [ServiceStatus.Unhealthy] = new(Color.Warning, "Shared:ServiceStatuses:Unhealthy", Icons.Material.Filled.HealthAndSafety),
+        [ServiceStatus.Running] = new(Color.Success, "Shared:ServiceStatuses:Running", MoIcons.Success),
+        [ServiceStatus.Updating] = new(Color.Info, "Shared:ServiceStatuses:Updating", MoIcons.History),
+        [ServiceStatus.Offline] = new(Color.Default, "Shared:ServiceStatuses:Offline", MoIcons.CloudOff),
+        [ServiceStatus.Error] = new(Color.Error, "Shared:ServiceStatuses:Error", MoIcons.Error),
+        [ServiceStatus.Unhealthy] = new(Color.Warning, "Shared:ServiceStatuses:Unhealthy", MoIcons.ShieldPlus),
     };
 
     /// <summary>
     /// Default display metadata for unmapped status values.
     /// </summary>
     private static readonly StatusDisplayInfo DefaultInfo =
-        new(Color.Default, "Shared:ServiceStatuses:Unknown", Icons.Material.Filled.Help);
+        new(Color.Default, "Shared:ServiceStatuses:Unknown", MoIcons.Help);
 
     /// <summary>
     /// Gets the display metadata for the status.

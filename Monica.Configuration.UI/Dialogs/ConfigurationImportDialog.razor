@@ -11,7 +11,7 @@
     <TitleContent><MoDialogHeading Text="@L["ImportExport:Import:Title"]" /></TitleContent>
     <DialogContent>
         <p class="configuration-import-intro">@L["Workbench:ImportHelp"]</p>
-        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">@L["Validation:FragmentNotice"]</MudAlert>
+        <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true" Class="mb-3">@L["Validation:FragmentNotice"]</MudAlert>
         <div class="configuration-import-dialog-content">
             <MudStack Spacing="3">
 
@@ -21,7 +21,7 @@
                            FilesChanged="OnFileSelected"
                            MaximumFileCount="1">
                 <CustomContent Context="upload">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="configuration-import-upload" Disabled="_loading" OnClick="upload.OpenFilePickerAsync" StartIcon="@Icons.Material.Outlined.UploadFile">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="configuration-import-upload" Disabled="_loading" OnClick="upload.OpenFilePickerAsync" StartIcon="@MoIcons.FileUpload">
                         <span>@L["ImportExport:Import:Upload"]<small>.json · 10 MB</small></span>
                     </MudButton>
                 </CustomContent>
@@ -34,7 +34,7 @@
 
             @if (!string.IsNullOrWhiteSpace(_error))
             {
-                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+                <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert>
             }
 
             @if (_report is not null && _review is not null)
@@ -68,7 +68,7 @@
                             <MudText Typo="Typo.subtitle2">@L["ImportExport:Diagnostics:Title"]</MudText>
                             @foreach (var diagnostic in _report.AllDiagnostics)
                             {
-                                <MudAlert Severity="@DiagnosticSeverity(diagnostic)" Dense="true">
+                                <MudAlert Icon="@((DiagnosticSeverity(diagnostic)) switch { Severity.Success => MoIcons.Success, Severity.Warning => MoIcons.Warning, Severity.Error => MoIcons.Error, _ => MoIcons.Info })" Severity="@DiagnosticSeverity(diagnostic)" Dense="true">
                                     @diagnostic.Message
                                 </MudAlert>
                             }
@@ -87,7 +87,7 @@
         <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
-                   StartIcon="@Icons.Material.Filled.PlaylistAddCheck"
+                   StartIcon="@MoIcons.ListChecks"
                    Disabled="@(_disposed || _loading || _review?.HasItems is not true)"
                    OnClick="Apply">
             @L["Workbench:ImportStage"]

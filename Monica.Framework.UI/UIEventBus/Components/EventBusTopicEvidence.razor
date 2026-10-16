@@ -24,7 +24,7 @@
         }
         @if (!string.IsNullOrWhiteSpace(status.LastErrorException))
         {
-            <MudExpansionPanels Elevation="0" Outlined="true"><MudExpansionPanel Text="@L["SubscriptionDetail:Runtime:ExceptionDetails"]"><pre>@status.LastErrorException</pre></MudExpansionPanel></MudExpansionPanels>
+            <MudExpansionPanels Elevation="0" Outlined="true"><MudExpansionPanel Icon="@MoIcons.ChevronDown" Text="@L["SubscriptionDetail:Runtime:ExceptionDetails"]"><pre>@status.LastErrorException</pre></MudExpansionPanel></MudExpansionPanels>
         }
         @if (status.RecentErrors.Count > 0)
         {
@@ -36,7 +36,7 @@
                     <article><time>@EventBusPresentation.Timestamp(error.OccurredAt)</time><p>@error.Message</p>
                         @if (!string.IsNullOrWhiteSpace(error.ExceptionText))
                         {
-                            <MudExpansionPanels Elevation="0" Outlined="true"><MudExpansionPanel Text="@L["SubscriptionDetail:Runtime:ExceptionDetails"]"><pre>@error.ExceptionText</pre></MudExpansionPanel></MudExpansionPanels>
+                            <MudExpansionPanels Elevation="0" Outlined="true"><MudExpansionPanel Icon="@MoIcons.ChevronDown" Text="@L["SubscriptionDetail:Runtime:ExceptionDetails"]"><pre>@error.ExceptionText</pre></MudExpansionPanel></MudExpansionPanels>
                         }
                     </article>
                 }

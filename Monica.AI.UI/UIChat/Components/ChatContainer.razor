@@ -14,14 +14,14 @@
     </div>
     @if (State.HasHistoryConflict)
     {
-        <MudAlert Severity="Severity.Warning" Dense="true">
+        <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Dense="true">
             @L["Workbench:HistoryConflict"]
             <MudButton Size="Size.Small" OnClick="@State.ReloadHistoryAsync" Disabled="@State.IsHistoryBusy">@L["Workbench:ReloadHistory"]</MudButton>
         </MudAlert>
     }
     else if (State.HasHistoryLoadFailure)
     {
-        <MudAlert Severity="Severity.Error" Dense="true">
+        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">
             @L["Chat:History:Warnings:StorageUnavailable"]
             <MudButton Size="Size.Small" OnClick="@State.ReloadHistoryAsync" Disabled="@State.IsHistoryBusy">@L["Workbench:ReloadHistory"]</MudButton>
         </MudAlert>

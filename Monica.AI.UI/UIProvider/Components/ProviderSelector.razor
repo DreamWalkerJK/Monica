@@ -4,11 +4,11 @@
 
 <div class="provider-selector">
     <MudMenu Label="@(Providers.FirstOrDefault(p => p.ProviderId == SelectedProviderId)?.DisplayName ?? L["Provider:Label"])"
-             EndIcon="@Icons.Material.Filled.ExpandMore" AriaLabel="@L["Provider:Label"]" Dense="true" Disabled="@Disabled">
+             EndIcon="@MoIcons.ChevronDown" AriaLabel="@L["Provider:Label"]" Dense="true" Disabled="@Disabled">
         @foreach (var provider in Providers)
         {
             <MudMenuItem OnClick="@(() => SelectedProviderIdChanged.InvokeAsync(provider.ProviderId))"
-                         Icon="@(provider.ProviderId == SelectedProviderId ? Icons.Material.Filled.Check : null)">
+                         Icon="@(provider.ProviderId == SelectedProviderId ? MoIcons.Check : null)">
                 @provider.DisplayName
             </MudMenuItem>
         }

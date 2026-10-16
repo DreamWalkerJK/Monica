@@ -12,13 +12,13 @@
             { <li><span>@L[entry.IsDirectory ? "Labels:Directory" : "Labels:File"]</span><code>@entry.FullPath</code></li> }
         </ol>
         @if (Context.AffectsDirtyDraft)
-        { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["DeleteDialog:DirtyLoss"]<code>@Context.InspectedPath</code></MudAlert> }
+        { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["DeleteDialog:DirtyLoss"]<code>@Context.InspectedPath</code></MudAlert> }
         @if (HasDirectories)
         { <MudSwitch T="bool" @bind-Value="_recursive" Color="Color.Warning" Label="@L["BatchDeleteDialog:Recursive"]" /><p>@L["DeleteDialog:DirectoryWarning"]</p> }
         @if (Context.Entries.Count > 1) { <p class="effect">@L["BatchDeleteDialog:NoRollback"]</p> }
     </div></DialogContent>
     <DialogActions><div class="decision-actions">
-        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="@(() => Dialog.Close(DialogResult.Ok(HasDirectories && _recursive)))">@ConfirmText</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@MoIcons.Delete" OnClick="@(() => Dialog.Close(DialogResult.Ok(HasDirectories && _recursive)))">@ConfirmText</MudButton>
         <MudButton OnClick="@(() => Dialog.Cancel())">@L["Common:Cancel"]</MudButton>
     </div></DialogActions>
 </MudDialog>

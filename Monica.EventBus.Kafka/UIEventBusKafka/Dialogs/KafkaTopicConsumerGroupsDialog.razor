@@ -18,7 +18,7 @@
                         </MudText>
                     </div>
                     <MudButton Variant="Variant.Outlined"
-                               StartIcon="@Icons.Material.Filled.Refresh"
+                               StartIcon="@MoIcons.Refresh"
                                Disabled="@_isLoading"
                                aria-label="@L["Common:Actions:Refresh"]"
                                OnClick="LoadAsync">
@@ -28,7 +28,7 @@
 
                 @if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Error">
                         @_errorMessage
                     </MudAlert>
                 }
@@ -42,11 +42,11 @@
                 }
                 else if (!_hasLoaded)
                 {
-                    <KafkaWorkspaceState Icon="@Icons.Material.Outlined.ErrorOutline" Title="@L["Topics:ConsumerGroupsDialog:Title", TopicName]" Description="@L["Topics:ConsumerGroupsDialog:Unavailable"]" AccentColor="Color.Error" />
+                    <KafkaWorkspaceState Icon="@MoIcons.Error" Title="@L["Topics:ConsumerGroupsDialog:Title", TopicName]" Description="@L["Topics:ConsumerGroupsDialog:Unavailable"]" AccentColor="Color.Error" />
                 }
                 else if (_groups.Count == 0)
                 {
-                    <KafkaWorkspaceState Icon="@Icons.Material.Filled.GroupOff"
+                    <KafkaWorkspaceState Icon="@MoIcons.UsersOff"
                                          Title="@L["Topics:ConsumerGroupsDialog:Title", TopicName]"
                                          Description="@L["Topics:ConsumerGroupsDialog:Empty"]"
                                          AccentColor="Color.Info" />
@@ -77,7 +77,7 @@
                                     <MudChip T="string"
                                              Size="Size.Small"
                                              Variant="Variant.Outlined"
-                                             Color="@KafkaConsumerGroupStateDisplay.GetColor(context.State)">
+                                             Color="@KafkaConsumerGroupStateDisplay.GetColor(context.State)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                         @KafkaConsumerGroupStateDisplay.GetText(context.State, L)
                                     </MudChip>
                                 </MudTd>
@@ -90,14 +90,14 @@
                                 <MudTd DataLabel="@L["Common:Columns:Actions"]">
                                     <MudButton Variant="Variant.Text"
                                                Size="Size.Small"
-                                               StartIcon="@Icons.Material.Filled.Analytics"
+                                               StartIcon="@MoIcons.ChartTrend"
                                                aria-label="@L["ConsumerGroups:Actions:ViewDetails", context.GroupId]"
                                                OnClick="@(() => OpenDetailsAsync(context))">
                                         @L["Common:Actions:Details"]
                                     </MudButton>
                                 </MudTd>
                             </RowTemplate>
-                            <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" /></PagerContent>
+                            <PagerContent><MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" RowsPerPageString="@L["Common:Pagination:RowsPerPage"]" InfoFormat="@L["Common:Pagination:InfoFormat"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" /></PagerContent>
                         </MudTable>
                     </KafkaTableSurface>
                 }

@@ -2,11 +2,11 @@
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <MoWorkbenchNavigation Label="@L["Workbench:Navigation"]">
-    <a href="@ConfigurationUiRoutes.STATE_ROUTE" aria-current="@(ActiveRoute == ConfigurationUiRoutes.STATE_ROUTE ? "page" : null)"><MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Small" /><span>@L["Workbench:State"]</span></a>
-    <a href="@ConfigurationUiRoutes.HISTORY_ROUTE" aria-current="@(ActiveRoute == ConfigurationUiRoutes.HISTORY_ROUTE ? "page" : null)"><MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Small" /><span>@L["Workbench:History"]</span></a>
-    <a href="@ConfigurationUiRoutes.VERSIONS_ROUTE" aria-current="@(ActiveRoute == ConfigurationUiRoutes.VERSIONS_ROUTE ? "page" : null)"><MudIcon Icon="@Icons.Material.Outlined.Layers" Size="Size.Small" /><span>@L["Workbench:Versions"]</span></a>
-    <a href="@ConfigurationUiRoutes.STORAGE_ROUTE" aria-current="@(ActiveRoute == ConfigurationUiRoutes.STORAGE_ROUTE ? "page" : null)"><MudIcon Icon="@Icons.Material.Outlined.Storage" Size="Size.Small" /><span>@L["Workbench:Storage"]</span></a>
-    <a href="@ConfigurationUiRoutes.DEBUG_ROUTE" aria-current="@(ActiveRoute == ConfigurationUiRoutes.DEBUG_ROUTE ? "page" : null)"><MudIcon Icon="@Icons.Material.Outlined.DataObject" Size="Size.Small" /><span>@L["Workbench:Debug"]</span></a>
+    <a href="@ConfigurationUiRoutes.STATE_ROUTE" aria-current="@(ActiveRoute == ConfigurationUiRoutes.STATE_ROUTE ? "page" : null)"><MoIcon Icon="@MoIcons.Sliders" Size="1.25rem" /><span>@L["Workbench:State"]</span></a>
+    <a href="@ConfigurationUiRoutes.HISTORY_ROUTE" aria-current="@(ActiveRoute == ConfigurationUiRoutes.HISTORY_ROUTE ? "page" : null)"><MoIcon Icon="@MoIcons.History" Size="1.25rem" /><span>@L["Workbench:History"]</span></a>
+    <a href="@ConfigurationUiRoutes.VERSIONS_ROUTE" aria-current="@(ActiveRoute == ConfigurationUiRoutes.VERSIONS_ROUTE ? "page" : null)"><MoIcon Icon="@MoIcons.Layers" Size="1.25rem" /><span>@L["Workbench:Versions"]</span></a>
+    <a href="@ConfigurationUiRoutes.STORAGE_ROUTE" aria-current="@(ActiveRoute == ConfigurationUiRoutes.STORAGE_ROUTE ? "page" : null)"><MoIcon Icon="@MoIcons.Database" Size="1.25rem" /><span>@L["Workbench:Storage"]</span></a>
+    <a href="@ConfigurationUiRoutes.DEBUG_ROUTE" aria-current="@(ActiveRoute == ConfigurationUiRoutes.DEBUG_ROUTE ? "page" : null)"><MoIcon Icon="@MoIcons.Braces" Size="1.25rem" /><span>@L["Workbench:Debug"]</span></a>
 </MoWorkbenchNavigation>
 
 @code {

@@ -15,7 +15,7 @@
             <button type="button" class="trace-button trace-copy" aria-label="@L["StackTrace:CopyLabel"]"
                     aria-disabled="@(CopyState.CanCopy ? "false" : "true")" aria-busy="@(CopyState.IsCopying ? "true" : "false")"
                     @onclick="CopyToClipboard">
-                <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" aria-hidden="true" />
+                <MoIcon Size="1.5rem" Icon="@MoIcons.Copy" aria-hidden="true" />
                 <span>@L["StackTrace:Copy"]</span>
             </button>
         </div>

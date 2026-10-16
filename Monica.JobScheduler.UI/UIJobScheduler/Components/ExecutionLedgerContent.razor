@@ -15,7 +15,7 @@
     <div class="execution-ledger-content">
         @if (state.Error is not null)
         {
-            <MudAlert Severity="@(state.HasLoadedSnapshot ? Severity.Warning : Severity.Error)" Variant="Variant.Outlined" Dense="true">
+            <MudAlert Severity="@(state.HasLoadedSnapshot ? Severity.Warning : Severity.Error)" Variant="Variant.Outlined" Dense="true" Icon="@(state.HasLoadedSnapshot ? MoIcons.Warning : MoIcons.Error)">
                 @(state.HasLoadedSnapshot ? L["Executions:RefreshFailed", state.Error] : state.Error)
             </MudAlert>
         }
@@ -38,12 +38,12 @@
                                         IsLoading="@(state.IsLoading || state.IsMutating)" HasInvalidCustomRange="@state.HasInvalidCustomRange"
                                         ApplyRequested="ApplyAsync" ResetRequested="ResetAsync" />
                     <div class="execution-ledger-content__scope">
-                        <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.Clock" Size="1.25rem" />
                         <span>@L["Executions:RecordedTimeNotice", TimePresentation.TimeZoneDisplayName]</span>
                     </div>
                     @if (state.HasInvalidCustomRange)
                     {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">@L["Executions:Filters:InvalidRange"]</MudAlert>
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">@L["Executions:Filters:InvalidRange"]</MudAlert>
                     }
                     @if (state.IsQueryFailed && state.HasLoadedSnapshot && state.LoadedQuery is { } query)
                     {

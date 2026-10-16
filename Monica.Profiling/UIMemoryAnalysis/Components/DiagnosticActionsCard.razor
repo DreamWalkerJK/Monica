@@ -3,23 +3,23 @@
 
 <section class="diagnostic-actions-layout">
     <article class="diagnostic-action">
-        <header><span class="diagnostic-action__icon"><MudIcon Icon="@Icons.Material.Outlined.CleaningServices" /></span><div><span class="diagnostic-action__eyebrow">@L["Diagnostics:ManualGc:Eyebrow"]</span><h2>@L["Diagnostics:ManualGc:Title"]</h2></div></header>
+        <header><span class="diagnostic-action__icon"><MoIcon Icon="@MoIcons.Brush" Size="1.5rem" /></span><div><span class="diagnostic-action__eyebrow">@L["Diagnostics:ManualGc:Eyebrow"]</span><h2>@L["Diagnostics:ManualGc:Title"]</h2></div></header>
         <p>@L["Diagnostics:ManualGc:Description"]</p>
         <div class="diagnostic-action__policy" data-manual-gc-policy="@Options?.AllowManualGC">@(Options?.AllowManualGC == true ? L["Diagnostics:Policy:Permitted"] : L["Diagnostics:ManualGc:Disabled"])</div>
-        <div class="diagnostic-action__controls"><div class="diagnostic-generation"><MudSelect T="int" @bind-Value="_generation" Label="@L["Diagnostics:Generation"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(IsLoading || Options?.AllowManualGC != true)">
+        <div class="diagnostic-action__controls"><div class="diagnostic-generation"><MudSelect T="int" @bind-Value="_generation" Label="@L["Diagnostics:Generation"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(IsLoading || Options?.AllowManualGC != true)" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
             <MudSelectItem T="int" Value="-1">@L["Diagnostics:FullCollection"]</MudSelectItem><MudSelectItem T="int" Value="0">@L["Common:Generation",0]</MudSelectItem><MudSelectItem T="int" Value="1">@L["Common:Generation",1]</MudSelectItem><MudSelectItem T="int" Value="2">@L["Common:Generation",2]</MudSelectItem>
-        </MudSelect></div><MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => OnForceGC.InvokeAsync(_generation))" Disabled="@(IsLoading || Options?.AllowManualGC != true)" StartIcon="@Icons.Material.Outlined.CleaningServices">@L["Diagnostics:ManualGc:Action"]</MudButton></div>
+        </MudSelect></div><MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => OnForceGC.InvokeAsync(_generation))" Disabled="@(IsLoading || Options?.AllowManualGC != true)" StartIcon="@MoIcons.Brush">@L["Diagnostics:ManualGc:Action"]</MudButton></div>
         <p class="diagnostic-action__footnote">@L["Diagnostics:ManualGc:Effect"]</p>
     </article>
     <article class="diagnostic-action">
-        <header><span class="diagnostic-action__icon"><MudIcon Icon="@Icons.Material.Outlined.SaveAlt" /></span><div><span class="diagnostic-action__eyebrow">@L["Diagnostics:Dump:Eyebrow"]</span><h2>@L["Diagnostics:Dump:Title"]</h2></div></header>
+        <header><span class="diagnostic-action__icon"><MoIcon Icon="@MoIcons.Download" Size="1.5rem" /></span><div><span class="diagnostic-action__eyebrow">@L["Diagnostics:Dump:Eyebrow"]</span><h2>@L["Diagnostics:Dump:Title"]</h2></div></header>
         <p>@L["Diagnostics:Dump:Description"]</p>
         <div class="diagnostic-action__policy" data-gcdump-policy="@Options?.AllowGcDump">@(Options?.AllowGcDump == true ? L["Diagnostics:Policy:Permitted"] : L["Diagnostics:Dump:Disabled"])</div>
         <div class="diagnostic-prerequisite"><span>@L["Diagnostics:Dump:Requirement"]</span><code>dotnet-gcdump</code><p>@L["Diagnostics:Dump:Prerequisite"]</p></div>
-        <div class="diagnostic-action__controls"><MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnCreateDump" Disabled="@(IsLoading || Options?.AllowGcDump != true)" StartIcon="@Icons.Material.Outlined.SaveAlt">@L["Diagnostics:Dump:Action"]</MudButton></div>
+        <div class="diagnostic-action__controls"><MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnCreateDump" Disabled="@(IsLoading || Options?.AllowGcDump != true)" StartIcon="@MoIcons.Download">@L["Diagnostics:Dump:Action"]</MudButton></div>
         <p class="diagnostic-action__footnote">@L["Diagnostics:Dump:ServerFile"]</p>
     </article>
-    <aside class="diagnostic-action-scope"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" /><p>@L["Diagnostics:Scope"]</p></aside>
+    <aside class="diagnostic-action-scope"><MoIcon Icon="@MoIcons.Info" Size="1.25rem" /><p>@L["Diagnostics:Scope"]</p></aside>
 </section>
 
 @code {

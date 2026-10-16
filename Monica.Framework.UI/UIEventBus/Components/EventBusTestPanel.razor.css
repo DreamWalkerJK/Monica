@@ -1,7 +1,7 @@
 .event-test-bench { min-width: 0; color: var(--mud-palette-text-primary); }
 .event-test-bench ::deep .mud-button-filled-primary { background-color: color-mix(in srgb, var(--mud-palette-primary) 85%, var(--mud-palette-primary-darken)); }
 .event-test-bench ::deep .mud-button-filled-primary .mud-button-label,
-.event-test-bench ::deep .mud-button-filled-primary .mud-icon-root { color: var(--mud-palette-primary-text); }
+.event-test-bench ::deep .mud-button-filled-primary :is(.mud-icon-root, .mo-icon) { color: var(--mud-palette-primary-text); }
 .test-bench-scope { display: flex; align-items: center; gap: 16px; padding: 22px 24px; border: 1px solid var(--mud-palette-lines-default); border-radius: 10px; background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface)); }
 .test-bench-scope-icon { width: 44px; height: 44px; display: grid; place-items: center; flex-shrink: 0; color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-text-primary)); border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-lines-default)); border-radius: 9px; }
 .test-bench-kicker { font-size: 11px; letter-spacing: .1em; font-weight: 650; text-transform: uppercase; color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-text-primary)); }
@@ -40,7 +40,7 @@
 .test-bench-receipts code, .test-bench-receipts time { font-family: var(--mo-font-family-mono); font-size: 11px; }
 .test-bench-listener-help { display: flex; gap: 9px; padding: 18px 24px; border-top: 1px solid var(--mud-palette-lines-default); color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); }
 .test-bench-listener-help p { margin: 0; font-size: 11px; line-height: 1.75; }
-.test-bench-listener-help ::deep .mud-icon-root { flex-shrink: 0; margin-top: 2px; }
+.test-bench-listener-help ::deep :is(.mud-icon-root, .mo-icon) { flex-shrink: 0; margin-top: 2px; }
 .event-test-bench ::deep .mud-input-control { min-width: 0; }
 .event-test-bench ::deep input::placeholder, .event-test-bench ::deep textarea::placeholder { color: color-mix(in srgb, var(--mud-palette-text-secondary) 75%, var(--mud-palette-text-primary)); opacity: 1; }
 .event-test-bench ::deep .mud-input-control:focus-within .mud-input-label { color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)); }

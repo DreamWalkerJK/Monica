@@ -8,6 +8,7 @@ using Monica.Framework.UI.Pages;
 using Monica.Framework.UI.UIEventBus.Dialogs;
 using Monica.Framework.UI.UIEventBus.Models;
 using Monica.Framework.UI.UIEventBus.State;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIEventBus.Components;
@@ -93,11 +94,11 @@ public partial class EventBusWorkbench : IAsyncDisposable
 
     private static string SectionIcon(EventBusWorkbenchView section) => section switch
     {
-        EventBusWorkbenchView.Providers => Icons.Material.Outlined.CloudQueue,
-        EventBusWorkbenchView.Subscriptions => Icons.Material.Outlined.Route,
-        EventBusWorkbenchView.Changes => Icons.Material.Outlined.History,
-        EventBusWorkbenchView.TestTools => Icons.Material.Outlined.Science,
-        _ => Icons.Material.Outlined.Hub
+        EventBusWorkbenchView.Providers => MoIcons.Cloud,
+        EventBusWorkbenchView.Subscriptions => MoIcons.Route,
+        EventBusWorkbenchView.Changes => MoIcons.History,
+        EventBusWorkbenchView.TestTools => MoIcons.Flask,
+        _ => MoIcons.Network
     };
 
     private List<SubscriptionViewModel> FilteredSubscriptions => _queryMissingProvider ? [] :

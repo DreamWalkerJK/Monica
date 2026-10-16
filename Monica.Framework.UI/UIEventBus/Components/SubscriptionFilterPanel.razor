@@ -5,10 +5,10 @@
 
 <div class="subscription-filters">
     <div class="subscription-filter-search">
-        <MudTextField T="string" Value="@Filter?.SearchText" ValueChanged="SearchChanged" Immediate="true"
+        <MudTextField ClearIcon="@MoIcons.Close" T="string" Value="@Filter?.SearchText" ValueChanged="SearchChanged" Immediate="true"
             Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="@L["Registry:SearchPlaceholder"]"
-            aria-label="@L["SubscriptionFilter:Search"]" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
-        <MudSelect T="string" Value="@(SelectedProviderId ?? Filter?.SelectedProvider?.UniqueId ?? All)" ValueChanged="ProviderChanged"
+            aria-label="@L["SubscriptionFilter:Search"]" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" />
+        <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string" Value="@(SelectedProviderId ?? Filter?.SelectedProvider?.UniqueId ?? All)" ValueChanged="ProviderChanged"
             Variant="Variant.Outlined" Margin="Margin.Dense" Label="@L["SubscriptionFilter:Provider"]">
             <MudSelectItem T="string" Value="@All">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
             @if (SelectedProviderId != null && !Providers.Any(provider => provider.UniqueId == SelectedProviderId)) { <MudSelectItem T="string" Value="@SelectedProviderId">@L["Registry:MissingProviderSelection"]</MudSelectItem> }
@@ -19,7 +19,7 @@
         </MudSelect>
     </div>
     <div class="subscription-filter-details">
-        <MudSelect T="string" Value="@(Filter?.TopicRuntimeState?.ToString() ?? All)" ValueChanged="RuntimeChanged"
+        <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string" Value="@(Filter?.TopicRuntimeState?.ToString() ?? All)" ValueChanged="RuntimeChanged"
             Variant="Variant.Outlined" Margin="Margin.Dense" Label="@L["Registry:ReportedRuntime"]">
             <MudSelectItem T="string" Value="@All">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
             @foreach (var runtime in Enum.GetValues<TopicSubscriptionRuntimeState>())
@@ -27,7 +27,7 @@
                 <MudSelectItem T="string" Value="@runtime.ToString()">@L.GetTopicRuntimeStateText(runtime)</MudSelectItem>
             }
         </MudSelect>
-        <MudSelect T="string" Value="@(Filter?.Scope?.ToString() ?? All)" ValueChanged="ScopeChanged"
+        <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string" Value="@(Filter?.Scope?.ToString() ?? All)" ValueChanged="ScopeChanged"
             Variant="Variant.Outlined" Margin="Margin.Dense" Label="@L["SubscriptionFilter:Scope"]">
             <MudSelectItem T="string" Value="@All">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
             @foreach (var scope in Enum.GetValues<EventSubscriptionScope>())
@@ -35,14 +35,14 @@
                 <MudSelectItem T="string" Value="@scope.ToString()">@L.GetSubscriptionScopeText(scope)</MudSelectItem>
             }
         </MudSelect>
-        <MudSelect T="string" Value="@(Filter?.IsAutoDiscovered?.ToString() ?? All)" ValueChanged="DiscoveryChanged"
+        <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string" Value="@(Filter?.IsAutoDiscovered?.ToString() ?? All)" ValueChanged="DiscoveryChanged"
             Variant="Variant.Outlined" Margin="Margin.Dense" Label="@L["SubscriptionFilter:DiscoveryMode"]">
             <MudSelectItem T="string" Value="@All">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
             <MudSelectItem T="string" Value="@bool.TrueString">@L.GetDiscoveryModeText(true)</MudSelectItem>
             <MudSelectItem T="string" Value="@bool.FalseString">@L.GetDiscoveryModeText(false)</MudSelectItem>
         </MudSelect>
         <div class="subscription-exact-key">
-            <MudCheckBox T="bool" Value="@(Filter?.ServiceKey != null)" ValueChanged="ExactKeyChanged" Dense="true" Label="@L["Registry:ExactKey"]" />
+            <MudCheckBox CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="bool" Value="@(Filter?.ServiceKey != null)" ValueChanged="ExactKeyChanged" Dense="true" Label="@L["Registry:ExactKey"]" />
             @if (Filter?.ServiceKey != null)
             {
                 <MudTextField T="string" Value="@Filter.ServiceKey" ValueChanged="KeyChanged" Immediate="true" Margin="Margin.Dense" Variant="Variant.Outlined"
@@ -65,7 +65,7 @@
         </div>
         @if (Filter?.HasAnyFilter == true)
         {
-            <MudButton Size="Size.Small" OnClick="ClearFilter" StartIcon="@Icons.Material.Outlined.FilterAltOff">@L["SubscriptionFilter:Clear"]</MudButton>
+            <MudButton Size="Size.Small" OnClick="ClearFilter" StartIcon="@MoIcons.FilterOff">@L["SubscriptionFilter:Clear"]</MudButton>
         }
     </div>
 </div>

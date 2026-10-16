@@ -11,11 +11,11 @@
     }
     else if (_error is not null)
     {
-        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert>
     }
     else if (_acceptedRowCount == 0)
     {
-        <MudAlert Severity="Severity.Info">@L["History:Dialog:NoPreview"]</MudAlert>
+        <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["History:Dialog:NoPreview"]</MudAlert>
     }
     else
     {

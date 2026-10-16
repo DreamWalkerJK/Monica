@@ -33,7 +33,7 @@ h2:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset
     color: color-mix(in srgb, var(--mud-palette-text-secondary) 72%, var(--mud-palette-text-primary));
 }
 .draft-state-dirty { color: color-mix(in srgb, var(--mud-palette-warning) 42%, var(--mud-palette-text-primary)); }
-.draft-state ::deep .mud-icon-root, .read-only-note ::deep .mud-icon-root { flex-shrink: 0; }
+.draft-state ::deep :is(.mud-icon-root, .mo-icon), .read-only-note ::deep :is(.mud-icon-root, .mo-icon) { flex-shrink: 0; }
 .inspector-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-block: 16px; }
 .inspector-actions ::deep .mud-button-root { min-height: 44px; font-weight: 500; }
 

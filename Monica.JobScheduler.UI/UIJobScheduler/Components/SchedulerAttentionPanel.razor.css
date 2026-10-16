@@ -104,7 +104,7 @@
     background: color-mix(in srgb, var(--attention-tone) 9%, var(--mud-palette-surface));
 }
 
-.attention-panel__item-icon ::deep .mud-icon-root,
+.attention-panel__item-icon ::deep :is(.mud-icon-root, .mo-icon),
 .attention-panel__item ::deep .attention-panel__chevron {
     color: var(--attention-ink);
 }
@@ -160,7 +160,7 @@
     background: var(--mud-palette-action-default-hover);
 }
 
-.attention-panel__clear-icon ::deep .mud-icon-root {
+.attention-panel__clear-icon ::deep :is(.mud-icon-root, .mo-icon) {
     color: color-mix(in srgb, var(--mud-palette-info) 30%, var(--mud-palette-text-primary));
 }
 

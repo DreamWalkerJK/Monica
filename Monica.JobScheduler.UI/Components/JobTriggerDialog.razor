@@ -84,7 +84,7 @@
                                        Variant="Variant.Outlined"
                                        Margin="Margin.Dense"
                                        Disabled="@_isSubmitting"
-                                       Error="@(_availabilityError is not null)" />
+                                       Error="@(_availabilityError is not null)" AdornmentIcon="@MoIcons.Calendar" PreviousIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" ClearIcon="@MoIcons.Close" />
                         <MudTimePicker Time="@_availableTime"
                                        TimeChanged="SetAvailableTime"
                                        Label="@L["Trigger:Delay:Time"]"
@@ -92,7 +92,7 @@
                                        Variant="Variant.Outlined"
                                        Margin="Margin.Dense"
                                        Disabled="@_isSubmitting"
-                                       Error="@(_availabilityError is not null)" />
+                                       Error="@(_availabilityError is not null)" AdornmentIcon="@MoIcons.Clock" ClearIcon="@MoIcons.Close" />
                     </div>
                     @if (_availabilityError is not null)
                     {
@@ -106,7 +106,7 @@
 
             @if (_error is not null)
             {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@_error</MudAlert>
             }
         </div>
     </DialogContent>
@@ -120,7 +120,7 @@
             </MudButton>
             <MudButton Color="Color.Primary"
                        Variant="Variant.Filled"
-                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                       StartIcon="@MoIcons.Play"
                        Disabled="@_isSubmitting"
                        OnClick="TriggerAsync"
                        aria-label="@L["Trigger:Action"]">

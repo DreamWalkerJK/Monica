@@ -7,7 +7,7 @@
     {
         <div class="di-issue-search">
             <div class="di-issue-search-field">
-                <MudTextField T="string"
+                <MudTextField ClearIcon="@MoIcons.Close" T="string"
                               @bind-Value="_searchText"
                               Label="@L["Page:Issues:SearchLabel"]"
                               Placeholder="@L["Page:Issues:SearchPlaceholder"]"
@@ -16,7 +16,7 @@
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Outlined.Search" />
+                              AdornmentIcon="@MoIcons.Search" />
             </div>
             <span class="di-issue-search-count" aria-live="polite">
                 @L["Page:Issues:Showing", VisibleItems.Count, Items.Count]
@@ -35,7 +35,7 @@
         <MudExpansionPanels Elevation="0" Dense="true" MultiExpansion="true" Class="di-issue-panels">
             @foreach (var group in IssueGroups)
             {
-                <MudExpansionPanel Class="di-issue-panel">
+                <MudExpansionPanel Icon="@MoIcons.ChevronDown" Class="di-issue-panel">
                     <TitleContent>
                         <div class="di-issue-title">
                             <span class="@GetSeverityClass(group.Severity)">

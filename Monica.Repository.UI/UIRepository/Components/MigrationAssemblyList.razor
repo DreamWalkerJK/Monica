@@ -9,7 +9,7 @@
                 <MudText Typo="Typo.caption" Color="Color.Secondary">@Subtitle</MudText>
             }
         </div>
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
             @L["Migrations:Lists:Count", Items.Count]
         </MudChip>
     </div>
@@ -28,7 +28,7 @@
                     <MudChip T="string"
                              Size="Size.Small"
                              Color="@GetStateColor(item.State)"
-                             Variant="Variant.Outlined">
+                             Variant="Variant.Outlined" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                         @GetStateText(item.State)
                     </MudChip>
                 </li>

@@ -18,7 +18,7 @@
         <div class="activity-heading__source">
             <span class="activity-provider-name">@ProviderDisplayName</span>
             <span class="activity-source-name">@DisplayValue(ProviderGuide.SourceObject)</span>
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Article"
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@MoIcons.FileText"
                        Disabled="@_openingDialog" OnClick="ShowProviderGuideAsync">
                 @L["Activity:Guide:Button"]
             </MudButton>
@@ -27,7 +27,7 @@
 
     @if (_dialogError is not null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true">@_dialogError</MudAlert>
+        <MudAlert Severity="Severity.Error" Dense="true" Icon="@MoIcons.Error">@_dialogError</MudAlert>
     }
 
     @if (IsLoading)
@@ -43,7 +43,7 @@
         @if (!IsLoading)
         {
             <div class="activity-report activity-report--neutral" role="status">
-                <MudIcon Icon="@Icons.Material.Outlined.ManageSearch" />
+                <MoIcon Icon="@MoIcons.TextSearch" Size="1.5rem" />
                 <div><h3>@L["Activity:Empty"]</h3><p>@L["Workbench:Activity:NotLoadedDescription"]</p></div>
             </div>
         }
@@ -51,7 +51,7 @@
     else if (_snapshot.Support != RepositoryActivitySupport.Supported)
     {
         <div class="activity-report @(_snapshot.Support == RepositoryActivitySupport.Failed ? "activity-report--error" : "activity-report--warning")" role="status">
-            <MudIcon Icon="@(_snapshot.Support == RepositoryActivitySupport.Failed ? Icons.Material.Outlined.ErrorOutline : Icons.Material.Outlined.Info)" />
+            <MoIcon Icon="@(_snapshot.Support == RepositoryActivitySupport.Failed ? MoIcons.Error : MoIcons.Info)" Size="1.5rem" />
             <div>
                 <h3>@(_snapshot.Support == RepositoryActivitySupport.Failed ? L["Workbench:Activity:ReadFailed"] : L["Activity:Guide:Unsupported"])</h3>
                 <p>@(string.IsNullOrWhiteSpace(_snapshot.Message) ? L["Workbench:Activity:ReadUnavailableDescription"].Value : _snapshot.Message)</p>
@@ -98,10 +98,10 @@
                 <MudTextField T="string" @ref="_searchField" Value="@_searchText" ValueChanged="SetSearch"
                               Immediate="true" DebounceInterval="150" Clearable="true"
                               Label="@L["Workbench:Activity:SearchLabel"]" Placeholder="@L["Workbench:Activity:SearchPlaceholder"]"
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="activity-search" />
+                              Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="activity-search" ClearIcon="@MoIcons.Close" />
                 <MudSelect T="ActivitySortKey" Value="@_sortKey" ValueChanged="SetSort"
-                           Label="@L["Activity:Controls:SortBy"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                           Label="@L["Activity:Controls:SortBy"]" Variant="Variant.Outlined" Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                     <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.Runtime">@L["Workbench:Activity:QueryAge"]</MudSelectItem>
                     <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.State">@L["Activity:Sort:State"]</MudSelectItem>
                     <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.User">@L["Activity:Sort:User"]</MudSelectItem>
@@ -110,7 +110,7 @@
                     <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.Query">@L["Activity:Sort:Query"]</MudSelectItem>
                 </MudSelect>
                 <MudSelect T="ActivityGroupMode" Value="@_groupMode" ValueChanged="SetGrouping"
-                           Label="@L["Activity:Controls:GroupBy"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                           Label="@L["Activity:Controls:GroupBy"]" Variant="Variant.Outlined" Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                     <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.None">@L["Activity:Group:None"]</MudSelectItem>
                     <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.State">@L["Activity:Group:State"]</MudSelectItem>
                     <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.Client">@L["Activity:Group:Client"]</MudSelectItem>
@@ -138,11 +138,11 @@
 
             @if (_rows.Count == 0)
             {
-                <div class="activity-ledger-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.Inbox" /><h4>@L["Workbench:Activity:NoRowsTitle"]</h4><p>@L["Workbench:Activity:NoRowsDescription"]</p></div>
+                <div class="activity-ledger-empty" role="status"><MoIcon Icon="@MoIcons.Inbox" Size="1.5rem" /><h4>@L["Workbench:Activity:NoRowsTitle"]</h4><p>@L["Workbench:Activity:NoRowsDescription"]</p></div>
             }
             else if (_filteredRows.Count == 0)
             {
-                <div class="activity-ledger-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.SearchOff" /><h4>@L["Activity:NoMatches"]</h4><p>@L["Workbench:Activity:NoMatchesDescription"]</p><MudButton Variant="Variant.Outlined" OnClick="ClearSearchAsync">@L["Workbench:Activity:ClearSearch"]</MudButton></div>
+                <div class="activity-ledger-empty" role="status"><MoIcon Icon="@MoIcons.SearchOff" Size="1.5rem" /><h4>@L["Activity:NoMatches"]</h4><p>@L["Workbench:Activity:NoMatchesDescription"]</p><MudButton Variant="Variant.Outlined" OnClick="ClearSearchAsync">@L["Workbench:Activity:ClearSearch"]</MudButton></div>
             }
             else if (_groupMode == ActivityGroupMode.None)
             {
@@ -211,7 +211,7 @@
         ?? RepositoryActivityProviderGuideCatalog.Resolve(_snapshot?.ProviderName ?? ProviderName);
     private bool IsPostgreSql => ProviderGuide.ProviderKind == RepositoryActivityProviderKind.PostgreSql;
     private string ProviderDisplayName => DisplayValue(ProviderGuide.DisplayName);
-    private string SortDirectionIcon => _sortDescending ? Icons.Material.Outlined.South : Icons.Material.Outlined.North;
+    private string SortDirectionIcon => _sortDescending ? MoIcons.ArrowDown : MoIcons.ArrowUp;
 
     protected override void OnParametersSet()
     {

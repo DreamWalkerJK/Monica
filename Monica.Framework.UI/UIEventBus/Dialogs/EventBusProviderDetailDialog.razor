@@ -29,7 +29,7 @@
                 </header>
                 <p class="provider-inspector-scope">@L["ProviderInspector:Scope"]</p>
                 <div class="provider-inspector-tabs">
-                    <MudTabs Elevation="0" Rounded="false" ActivePanelIndex="@_activeTabIndex" ActivePanelIndexChanged="OnActiveTabChangedAsync">
+                    <MudTabs PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" Elevation="0" Rounded="false" ActivePanelIndex="@_activeTabIndex" ActivePanelIndexChanged="OnActiveTabChangedAsync">
                         <MudTabPanel Text="@L["Providers:Detail:Tabs:Info"]">
                             <section class="provider-inspector-section">
                                 <dl class="provider-inspector-facts">
@@ -60,15 +60,15 @@
                             <section class="provider-inspector-section">
                                 @if (_provider.OptionDiagnosticsTarget is null)
                                 {
-                                    <div class="provider-inspector-empty"><MudIcon Icon="@Icons.Material.Outlined.Settings" /><p>@L["Providers:Detail:Options:NoDedicatedConfiguration"]</p></div>
+                                    <div class="provider-inspector-empty"><MoIcon Icon="@MoIcons.Settings" Size="1.5rem" /><p>@L["Providers:Detail:Options:NoDedicatedConfiguration"]</p></div>
                                 }
                                 else if (_optionDiagnosticsAccessDenied)
                                 {
-                                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Providers:Detail:Options:AccessDenied"]</MudAlert>
+                                    <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined">@L["Providers:Detail:Options:AccessDenied"]</MudAlert>
                                 }
                                 else if (_optionDiagnosticsFailed)
                                 {
-                                    <div class="provider-inspector-empty" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" /><p>@L["Providers:Detail:Options:LoadFailed"]</p></div>
+                                    <div class="provider-inspector-empty" role="alert"><MoIcon Icon="@MoIcons.Error" Size="1.5rem" /><p>@L["Providers:Detail:Options:LoadFailed"]</p></div>
                                 }
                                 else if (_optionDiagnostics is not null)
                                 {
@@ -84,7 +84,7 @@
                                 }
                                 @if (_provider.OptionDiagnosticsTarget is not null)
                                 {
-                                    <div class="provider-inspector-option-actions"><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="BeginOptionLoadAsync" Disabled="@_retired" aria-disabled="@(_optionLoading ? "true" : "false")" aria-busy="@(_optionLoading ? "true" : "false")">@L["ProviderInspector:ReloadOptions"]</MudButton></div>
+                                    <div class="provider-inspector-option-actions"><MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh" OnClick="BeginOptionLoadAsync" Disabled="@_retired" aria-disabled="@(_optionLoading ? "true" : "false")" aria-busy="@(_optionLoading ? "true" : "false")">@L["ProviderInspector:ReloadOptions"]</MudButton></div>
                                 }
                             </section>
                         </MudTabPanel>
@@ -93,7 +93,7 @@
                                 <p class="provider-inspector-note">@L["ProviderInspector:SubscriptionScope", _subscriptions.Count]</p>
                                 @if (_subscriptions.Count == 0)
                                 {
-                                    <div class="provider-inspector-empty"><MudIcon Icon="@Icons.Material.Outlined.Subscriptions" /><p>@L["Providers:Detail:States:NoSubscriptions"]</p></div>
+                                    <div class="provider-inspector-empty"><MoIcon Icon="@MoIcons.Radio" Size="1.5rem" /><p>@L["Providers:Detail:States:NoSubscriptions"]</p></div>
                                 }
                                 else
                                 {
@@ -111,7 +111,7 @@
                                                 </MudTd>
                                                 <MudTd DataLabel="@L["Providers:Columns:DiscoveryMode"]">@L.GetDiscoveryModeText(context.IsAutoDiscovered)</MudTd>
                                             </RowTemplate>
-                                            <PagerContent><MudTablePager PageSizeOptions="@(new[] { 10, 25, 50 })" /></PagerContent>
+                                            <PagerContent><MudTablePager FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" PageSizeOptions="@(new[] { 10, 25, 50 })" /></PagerContent>
                                         </MudTable>
                                     </div>
                                 }

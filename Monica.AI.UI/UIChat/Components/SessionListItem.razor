@@ -4,7 +4,7 @@
 
 <div class="session-row @(Selected ? "selected" : null) @(Session.IsPinned ? "pinned" : null)" data-session-id="@Session.SessionId">
     <span class="pin-action">
-        <MudIconButton @ref="_pinButton" Icon="@(Session.IsPinned ? Icons.Material.Filled.PushPin : Icons.Material.Outlined.PushPin)"
+        <MudIconButton @ref="_pinButton" Icon="@MoIcons.Pin" aria-pressed="@(Session.IsPinned ? "true" : "false")"
                        Size="Size.Small" Disabled="@Disabled" aria-label="@(Session.IsPinned ? L["Session:Unpin"] : L["Session:Pin"])"
                        title="@(Session.IsPinned ? L["Session:Unpin"] : L["Session:Pin"])" OnClick="@OnPin" />
     </span>
@@ -15,7 +15,7 @@
     <span class="session-tail">
         <time class="session-time" datetime="@Session.UpdatedAt.ToString("O")" title="@Session.UpdatedAt.ToLocalTime().ToString("g")">@GetTimeDisplay()</time>
         <span class="archive-action">
-            <MudIconButton Icon="@Icons.Material.Outlined.Archive" Size="Size.Small" Disabled="@Disabled"
+            <MudIconButton Icon="@MoIcons.Archive" Size="Size.Small" Disabled="@Disabled"
                            aria-label="@L["Session:Archive:Action"]" title="@L["Session:Archive:Action"]" OnClick="@OnArchive" />
         </span>
     </span>

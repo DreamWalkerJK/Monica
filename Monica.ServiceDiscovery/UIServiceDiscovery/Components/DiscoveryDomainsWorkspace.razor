@@ -9,17 +9,17 @@
 @implements IAsyncDisposable
 
 <section class="domain-directory">
-    <header class="domain-directory-heading"><div><span>@L["Workbench:CatalogScope"]</span><h2>@L["Workbench:DomainCatalog"]</h2><p>@L["Workbench:CatalogHelp"]</p></div><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="RefreshAsync" Disabled="@_loading">@L["Shared:Actions:Refresh"]</MudButton></header>
+    <header class="domain-directory-heading"><div><span>@L["Workbench:CatalogScope"]</span><h2>@L["Workbench:DomainCatalog"]</h2><p>@L["Workbench:CatalogHelp"]</p></div><MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh" OnClick="RefreshAsync" Disabled="@_loading">@L["Shared:Actions:Refresh"]</MudButton></header>
     @if (_loading && !_hasCatalog) { <MudProgressLinear Indeterminate="true" /> }
     @if (_catalogError is not null) { <div class="domain-notice" role="alert"><strong>@L["Workbench:CatalogReadFailed"]</strong><p>@_catalogError</p>@if (_hasCatalog) { <p>@L["Workbench:LastSuccessfulCapture"]</p> }</div> }
     <div class="domain-directory-body">
         <aside class="domain-index">
-            <div class="domain-search"><MudTextField T="string" @bind-Value="_search" Placeholder="@L["Workbench:FindDomain"]" aria-label="@L["Workbench:FindDomain"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" /></div>
+            <div class="domain-search"><MudTextField T="string" @bind-Value="_search" Placeholder="@L["Workbench:FindDomain"]" aria-label="@L["Workbench:FindDomain"]" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" /></div>
             <div class="domain-index-label"><span>@L["Workbench:CatalogEntries"]</span><span>@(_hasCatalog ? _domains.Count.ToString() : L["Shared:Values:NotAvailable"].Value)</span></div>
             <nav aria-label="@L["Workbench:DomainCatalog"]">
                 @foreach (var domain in VisibleDomains)
                 {
-                    <button type="button" aria-pressed="@(Selected?.Name.Equals(domain.Name,StringComparison.OrdinalIgnoreCase) == true ? "true" : "false")" @onclick="() => Select(domain.Name)"><span>@(domain.DisplayName ?? domain.Name)</span><code>@domain.Name</code><MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" /></button>
+                    <button type="button" aria-pressed="@(Selected?.Name.Equals(domain.Name,StringComparison.OrdinalIgnoreCase) == true ? "true" : "false")" @onclick="() => Select(domain.Name)"><span>@(domain.DisplayName ?? domain.Name)</span><code>@domain.Name</code><MoIcon Icon="@MoIcons.ChevronRight" Size="1.25rem" /></button>
                 }
             </nav>
             @if (_hasCatalog && _domains.Count == 0) { <p class="domain-index-empty">@L["Workbench:CatalogEmpty"]</p> }
@@ -33,18 +33,18 @@
                 else if (_hasServices)
                 {
                     <div class="domain-service-columns">
-                        <section><header><span>@L["Workbench:Ownership"]</span><h4>@L["Workbench:OwnedServices"]<em>@OwnedServices.Count</em></h4><p>@L["Workbench:OwnedServicesHelp"]</p></header><div class="domain-service-ledger">@foreach (var service in OwnedServices) { <button type="button" @onclick="() => InspectAsync(service)"><span>@service.AppName</span><code>@service.AppId</code><small>@L["Workbench:InstancesCount",service.TotalInstanceCount]</small><MudIcon Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" /></button> } @if (OwnedServices.Count == 0) { <p>@L["Workbench:NoOwnedServices"]</p> }</div></section>
-                        <section><header><span>@L["Workbench:Declarations"]</span><h4>@L["Workbench:DependentServices"]<em>@DependentServices.Count</em></h4><p>@L["Workbench:DependentServicesHelp"]</p></header><div class="domain-service-ledger">@foreach (var service in DependentServices) { <button type="button" @onclick="() => InspectAsync(service)"><span>@service.AppName</span><code>@service.AppId</code><small>@(service.DomainName ?? L["Shared:Values:Unknown"].Value)</small><MudIcon Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" /></button> } @if (DependentServices.Count == 0) { <p>@L["Workbench:NoDependentServices"]</p> }</div></section>
+                        <section><header><span>@L["Workbench:Ownership"]</span><h4>@L["Workbench:OwnedServices"]<em>@OwnedServices.Count</em></h4><p>@L["Workbench:OwnedServicesHelp"]</p></header><div class="domain-service-ledger">@foreach (var service in OwnedServices) { <button type="button" @onclick="() => InspectAsync(service)"><span>@service.AppName</span><code>@service.AppId</code><small>@L["Workbench:InstancesCount",service.TotalInstanceCount]</small><MoIcon Icon="@MoIcons.ArrowUpRight" Size="1.25rem" /></button> } @if (OwnedServices.Count == 0) { <p>@L["Workbench:NoOwnedServices"]</p> }</div></section>
+                        <section><header><span>@L["Workbench:Declarations"]</span><h4>@L["Workbench:DependentServices"]<em>@DependentServices.Count</em></h4><p>@L["Workbench:DependentServicesHelp"]</p></header><div class="domain-service-ledger">@foreach (var service in DependentServices) { <button type="button" @onclick="() => InspectAsync(service)"><span>@service.AppName</span><code>@service.AppId</code><small>@(service.DomainName ?? L["Shared:Values:Unknown"].Value)</small><MoIcon Icon="@MoIcons.ArrowUpRight" Size="1.25rem" /></button> } @if (DependentServices.Count == 0) { <p>@L["Workbench:NoDependentServices"]</p> }</div></section>
                     </div>
                 }
             }
             else if (_hasCatalog)
             {
-                <div class="domain-selection-empty"><MudIcon Icon="@Icons.Material.Outlined.Domain" /><h3>@L[string.IsNullOrWhiteSpace(SelectedDomainName) ? "Workbench:ChooseDomain" : "Workbench:DomainUnlisted"]</h3><p>@L[string.IsNullOrWhiteSpace(SelectedDomainName) ? "Workbench:ChooseDomainHelp" : "Workbench:DomainUnlistedHelp",SelectedDomainName ?? string.Empty]</p>@if (!string.IsNullOrEmpty(SelectedDomainName)) { <code>@SelectedDomainName</code> }</div>
+                <div class="domain-selection-empty"><MoIcon Icon="@MoIcons.Building" Size="1.5rem" /><h3>@L[string.IsNullOrWhiteSpace(SelectedDomainName) ? "Workbench:ChooseDomain" : "Workbench:DomainUnlisted"]</h3><p>@L[string.IsNullOrWhiteSpace(SelectedDomainName) ? "Workbench:ChooseDomainHelp" : "Workbench:DomainUnlistedHelp",SelectedDomainName ?? string.Empty]</p>@if (!string.IsNullOrEmpty(SelectedDomainName)) { <code>@SelectedDomainName</code> }</div>
             }
             else
             {
-                <div class="domain-selection-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.Domain" /><h3>@L[_loading ? "Workbench:LoadingRegistry" : "Workbench:CatalogReadFailed"]</h3><p>@L["Workbench:CatalogUnavailable"]</p></div>
+                <div class="domain-selection-empty" role="status"><MoIcon Icon="@MoIcons.Building" Size="1.5rem" /><h3>@L[_loading ? "Workbench:LoadingRegistry" : "Workbench:CatalogReadFailed"]</h3><p>@L["Workbench:CatalogUnavailable"]</p></div>
             }
         </div>
     </div>

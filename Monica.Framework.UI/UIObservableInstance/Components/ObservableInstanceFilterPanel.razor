@@ -7,7 +7,7 @@
         <!-- Title with Active Filter Badge -->
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Primary" />
+                <MoIcon Icon="@MoIcons.ListFilter" Style="color:var(--mud-palette-primary)" Size="1.5rem" />
                 <MudText Typo="Typo.h6">@L["Filter:Title"]</MudText>
                 @if (Filter?.HasAnyFilter == true)
                 {
@@ -18,7 +18,7 @@
             </MudStack>
             @if (Filter?.HasAnyFilter == true)
             {
-                <MudButton StartIcon="@Icons.Material.Filled.Clear"
+                <MudButton StartIcon="@MoIcons.Close"
                           Size="Size.Small"
                           Color="Color.Default"
                           OnClick="ClearFilters">
@@ -32,33 +32,33 @@
             <MudGrid>
                 <!-- Search Text -->
                 <MudItem xs="12" md="6" lg="4">
-                    <MudTextField T="string"
+                    <MudTextField ClearIcon="@MoIcons.Close" T="string"
                                  Label="@L["Filter:Fields:Search"]"
                                  @bind-Value="Filter.SearchText"
                                  Immediate="true"
                                  Placeholder="@L["Filter:Fields:SearchPlaceholder"]"
                                  Adornment="Adornment.Start"
-                                 AdornmentIcon="@Icons.Material.Filled.Search"
+                                 AdornmentIcon="@MoIcons.Search"
                                  Clearable="true"
                                  OnClearButtonClick="OnFilterChanged" />
                 </MudItem>
 
                 <!-- Group ID Filter -->
                 <MudItem xs="12" md="6" lg="4">
-                    <MudTextField T="string"
+                    <MudTextField ClearIcon="@MoIcons.Close" T="string"
                                  Label="@L["Filter:Fields:Group"]"
                                  @bind-Value="Filter.GroupId"
                                  Immediate="true"
                                  Placeholder="@L["Filter:Fields:GroupPlaceholder"]"
                                  Adornment="Adornment.Start"
-                                 AdornmentIcon="@Icons.Material.Filled.Group"
+                                 AdornmentIcon="@MoIcons.Users"
                                  Clearable="true"
                                  OnClearButtonClick="OnFilterChanged" />
                 </MudItem>
 
                 <!-- Health State Filter -->
                 <MudItem xs="12" md="6" lg="4">
-                    <MudSelect T="HealthState?"
+                    <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" ClearIcon="@MoIcons.Close" T="HealthState?"
                               Label="@L["Filter:Fields:HealthState"]"
                               @bind-Value="Filter.HealthStateFilter"
                               AnchorOrigin="Origin.BottomCenter"
@@ -67,19 +67,19 @@
                         <MudSelectItem T="HealthState?" Value="@(null)">@L["Filter:Options:All"]</MudSelectItem>
                         <MudSelectItem T="HealthState?" Value="@HealthState.Healthy">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Success" />
+                                <MoIcon Icon="@MoIcons.Circle" Size="1.25rem" Style="color:var(--mud-palette-success)" />
                                 <span>@L.GetHealthStateText(HealthState.Healthy)</span>
                             </MudStack>
                         </MudSelectItem>
                         <MudSelectItem T="HealthState?" Value="@HealthState.Unhealthy">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Error" />
+                                <MoIcon Icon="@MoIcons.Circle" Size="1.25rem" Style="color:var(--mud-palette-error)" />
                                 <span>@L.GetHealthStateText(HealthState.Unhealthy)</span>
                             </MudStack>
                         </MudSelectItem>
                         <MudSelectItem T="HealthState?" Value="@HealthState.Unknown">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Default" />
+                                <MoIcon Icon="@MoIcons.Circle" Size="1.25rem" Style="color:var(--mud-palette-text-secondary)" />
                                 <span>@L.GetHealthStateText(HealthState.Unknown)</span>
                             </MudStack>
                         </MudSelectItem>
@@ -88,7 +88,7 @@
 
                 <!-- Log Level Filter -->
                 <MudItem xs="12" md="6" lg="4">
-                    <MudSelect T="Microsoft.Extensions.Logging.LogLevel"
+                    <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" ClearIcon="@MoIcons.Close" T="Microsoft.Extensions.Logging.LogLevel"
                               Label="@L["Filter:Fields:LogLevel"]"
                               MultiSelection="true"
                               SelectedValues="@SelectedLogLevels"
@@ -110,14 +110,14 @@
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="h-100">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Filter:Options:QuickFilters"]</MudText>
                         <MudChip T="string"
-                                 Icon="@Icons.Material.Filled.Error"
+                                 Icon="@MoIcons.Error"
                                  Color="@(Filter?.ShowCriticalErrorOnly == true ? Color.Error : Color.Default)"
                                  Variant="@(Filter?.ShowCriticalErrorOnly == true ? Variant.Filled : Variant.Outlined)"
                                  OnClick="ToggleCriticalErrorFilter">
                             @L["Filter:Options:CriticalErrorOnly"]
                         </MudChip>
                         <MudChip T="string"
-                                 Icon="@Icons.Material.Filled.Warning"
+                                 Icon="@MoIcons.Warning"
                                  Color="@(Filter?.ShowUnhealthyOnly == true ? Color.Warning : Color.Default)"
                                  Variant="@(Filter?.ShowUnhealthyOnly == true ? Variant.Filled : Variant.Outlined)"
                                  OnClick="ToggleUnhealthyFilter">

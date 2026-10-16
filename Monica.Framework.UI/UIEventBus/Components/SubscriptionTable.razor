@@ -50,7 +50,7 @@
                     OnTest="() => OnTest.InvokeAsync(context)" IsTestListening="ActiveTestListenerIds.Contains(context.SubscriptionId)" />
             </div></MudTd>
         </RowTemplate>
-        <PagerContent><MudTablePager PageSizeOptions="@(new[] { 10, 20, 50, 100 })" /></PagerContent>
+        <PagerContent><MudTablePager FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" PageSizeOptions="@(new[] { 10, 20, 50, 100 })" /></PagerContent>
         <NoRecordsContent><div class="subscription-empty">@L[HasRegistrations ? "Registry:NoMatches" : "Registry:EmptyHost"]</div></NoRecordsContent>
     </MudTable>
 </div>

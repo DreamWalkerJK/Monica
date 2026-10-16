@@ -9,7 +9,7 @@
         </div>
         @if (!string.IsNullOrWhiteSpace(CountText))
         {
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@CountText</MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@CountText</MudChip>
         }
     </div>
     @if (Items.Count == 0)

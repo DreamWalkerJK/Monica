@@ -53,6 +53,22 @@ Raw `MarkupString` descendants do not acquire Blazor isolation attributes. Put r
 
 Reject unsupported elements/attributes, unexpected coordinate systems, IDs, external references, executable content, embedded HTML, and event handlers before emitting markup. Generation validates trusted source assets; it is not an upload sanitizer. Keep label encoding and the fixed view box, focusability, and accessibility semantics owned by the component even when callers supply additional attributes.
 
-Shell icons use this shared catalog; do not recreate `ShellIcons` or duplicate a glyph in a component. `Shared/Components/Branding/MonicaIcon.razor` remains a distinct theme-aware brand drawing with its own view box. Migrate a coherent component or page scope, including relevant explicit control slots; direct `MudIcon` replacement does not cover every internal Mud default or establish whole-repository migration.
+Shell and module icons use this shared catalog; do not recreate `ShellIcons`, duplicate glyph markup in a component, or introduce new Material catalog references in Monica-owned production code. `Shared/Components/Branding/MonicaIcon.razor` remains a distinct theme-aware brand drawing with its own view box.
+
+## Migrate a component or module
+
+Use native `MoIcon` for a Monica-owned standalone glyph. Keep existing interactive controls such as `MudIconButton`, `MudButton`, `MudMenu`, and input adornments, supplying `MoIcons` fragments to their public icon parameters. This retains the control's keyboard handling, accessible name, disabled state, and hit area. The [consumer contract](../../monica-infra-ui/references/icons.md#configure-mud-control-slots) lists supported slots and the exact upstream limitations.
+
+Choose the catalog entry by meaning. Existing Material names and their filled/outlined variants are migration clues, not the new API vocabulary: copy uses `Copy`, downward expansion uses `ChevronDown`, and completed status uses `Success`. Preserve meaningful distinctions such as checked, unchecked, mixed, play, pause, stop, success, and error. State labels and semantic theme colors still belong to their existing owners.
+
+When replacing direct `MudIcon` markup:
+
+1. Preserve conditions, loops, localized labels, tooltip ownership, classes, and data hooks. Convert `Color` to inherited owner color or an existing semantic palette variable; `MoIcon` has no MudBlazor `Color` parameter.
+2. Preserve the actual CSS size and alignment. `MoIcon` uses `1em` dimensions and a CSS font size controlled by `--mo-icon-size`; existing owner classes can still set font size. Use `Size` for an explicit length. Do not let a generic replacement size override a deliberately larger hero or smaller status glyph.
+3. Update affected `.mud-icon-root` or size-class selectors to `.mo-icon` at the owner. Keep `::deep` where parent CSS isolation must reach a child component root. Keep selectors for Mud-rendered interactive icon slots when those roots still exist.
+4. Cover explicit icon values in C#, navigation registrations, presentation helpers, and control-specific parameters as well as Razor tags. Check empty/loading/error states, dynamic severity, and selected/unselected branches.
+5. Run browser smoke checks across representative module pages, both theme modes, compact and expanded navigation, menus, clear buttons, selection states, and inherited disabled color.
+
+Treat coverage of Monica-owned icon sources and coverage of private MudBlazor markup as separate evidence. MudBlazor 9.11 contains private, hardcoded glyphs that its enclosing components do not expose through public icon parameters. Keep those limitations explicit; a source scan with no Material references in Monica does not prove every rendered vendor glyph has changed. Do not fork the dependency, use reflection, or patch rendered SVG paths to make a broader coverage claim.
 
 Use the focused generator checks in `scripts/test_mo_icons.py` for deterministic output, invalid input, duplicate names, stale generation, and source-contract behavior. Follow the normal repository gate and skill validators for implementation/guidance changes. UI rendering tests require an explicit user request; use browser smoke checks for this component and its actual consumers.

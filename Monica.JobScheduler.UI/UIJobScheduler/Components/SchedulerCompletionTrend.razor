@@ -22,10 +22,10 @@
         </div>
         <div class="analytics-trend__modes" role="group" aria-label="@L["Analytics:Trend:ViewAriaLabel"]">
             <MudButton Variant="Variant.Text" Size="Size.Small" Class="@GetModeClass(ChartMode.Bars)"
-                       StartIcon="@Icons.Material.Outlined.BarChart" aria-pressed="@IsPressed(ChartMode.Bars)"
+                       StartIcon="@MoIcons.ChartColumn" aria-pressed="@IsPressed(ChartMode.Bars)"
                        OnClick="@(() => _mode = ChartMode.Bars)">@L["Analytics:Trend:Bars"]</MudButton>
             <MudButton Variant="Variant.Text" Size="Size.Small" Class="@GetModeClass(ChartMode.Lines)"
-                       StartIcon="@Icons.Material.Outlined.ShowChart" aria-pressed="@IsPressed(ChartMode.Lines)"
+                       StartIcon="@MoIcons.ChartLine" aria-pressed="@IsPressed(ChartMode.Lines)"
                        OnClick="@(() => _mode = ChartMode.Lines)">@L["Analytics:Trend:Lines"]</MudButton>
         </div>
     </header>
@@ -43,7 +43,7 @@
     @if (Snapshot.CompletedTerminalCount == 0)
     {
         <div class="analytics-trend__empty">
-            <MudIcon Icon="@Icons.Material.Outlined.InsertChart" Size="Size.Medium" />
+            <MoIcon Icon="@MoIcons.ChartColumn" Size="1.5rem" />
             <p>@L["Analytics:Trend:NoCompletions"]</p>
         </div>
     }
@@ -116,7 +116,7 @@
 
     <div class="analytics-trend__data">
         <MudExpansionPanels Elevation="0" Dense="true">
-            <MudExpansionPanel Text="@L["Analytics:Trend:ViewData"]">
+            <MudExpansionPanel Text="@L["Analytics:Trend:ViewData"]" Icon="@MoIcons.ChevronDown">
                 <div class="analytics-trend__table" role="region" aria-label="@L["Analytics:Trend:DataAriaLabel"]">
                     <MudTable T="JobExecutionAnalyticsBucket" Items="@Snapshot.Trend" Dense="true" Hover="true"
                               Breakpoint="Breakpoint.None" Elevation="0">

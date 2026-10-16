@@ -13,10 +13,10 @@
 <PageTitle>@L["KnowledgeWorkbench:Chunking:Title"]</PageTitle>
 <div class="rag-chunkers-page">
     <KnowledgeRagHeader Title="@L["KnowledgeWorkbench:Chunking:Title"]" Description="@L["KnowledgeWorkbench:Chunking:Description"]" CurrentRoute="@PAGE_URL">
-        <Actions><MudButton @ref="_refreshButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="LoadStateAsync" aria-disabled="@((_isLoading || _isTesting || MutationBusy) ? "true" : "false")">@L["ProviderManage:Refresh"]</MudButton></Actions>
+        <Actions><MudButton @ref="_refreshButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh" OnClick="LoadStateAsync" aria-disabled="@((_isLoading || _isTesting || MutationBusy) ? "true" : "false")">@L["ProviderManage:Refresh"]</MudButton></Actions>
     </KnowledgeRagHeader>
     @if (_isLoading) { <div class="loading-state" role="status"><MudProgressCircular Indeterminate="true" Size="Size.Small" /> @L["KnowledgeWorkbench:Chunking:Loading"]</div> }
-    else if (!string.IsNullOrWhiteSpace(_loadError)) { <MudAlert Severity="Severity.Error">@_loadError <MudButton OnClick="LoadStateAsync">@L["KnowledgeWorkbench:Retrieval:Retry"]</MudButton></MudAlert> }
+    else if (!string.IsNullOrWhiteSpace(_loadError)) { <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_loadError <MudButton OnClick="LoadStateAsync">@L["KnowledgeWorkbench:Retrieval:Retry"]</MudButton></MudAlert> }
     else
     {
         <div class="chunking-workspaces">
@@ -29,7 +29,7 @@
                         <article class="route-editor" @key="route.Extension">
                             <div class="route-identity"><code class="extension-key">@route.Extension</code><div><span>@L["RAG:Chunker:Current"]</span><strong>@ChunkerName(route.CurrentChunkerId)</strong><code>@route.CurrentChunkerId</code></div></div>
                             <div class="route-controls">
-                                <MudSelect T="string" @ref="route.TargetControl" Value="@route.SelectedChunkerId" ValueChanged="@((string target) => OnRouteTargetChangedAsync(route, target))" Label="@L["RAG:Chunker:Target"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@MutationBusy">
+                                <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string" @ref="route.TargetControl" Value="@route.SelectedChunkerId" ValueChanged="@((string target) => OnRouteTargetChangedAsync(route, target))" Label="@L["RAG:Chunker:Target"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@MutationBusy">
                                     @foreach (var candidate in route.CandidateChunkerIds) { <MudSelectItem T="string" Value="@candidate">@ChunkerName(candidate) · @candidate</MudSelectItem> }
                                 </MudSelect>
                                 <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => ApplyRouteChangeAsync(route))" Disabled="@(!route.IsApplying && (route.IsPreviewing || !Changed(route)))" aria-disabled="@(MutationBusy ? "true" : "false")">@(route.IsApplying ? L["KnowledgeWorkbench:Chunking:Applying"] : L["RAG:Chunker:Apply"])</MudButton>
@@ -38,12 +38,12 @@
                             {
                                 <div class="route-impact" aria-live="polite">
                                     @if (route.IsPreviewing) { <div class="inline-loading"><MudProgressCircular Indeterminate="true" Size="Size.Small" /> @L["KnowledgeWorkbench:Chunking:CheckingImpact"]</div> }
-                                    else if (!string.IsNullOrWhiteSpace(route.Error)) { <MudAlert Severity="Severity.Error" Dense="true">@route.Error</MudAlert><MudButton Size="Size.Small" Disabled="@MutationBusy" OnClick="@(() => RetryPreviewAsync(route))">@L["KnowledgeWorkbench:Chunking:RetryPreview"]</MudButton> }
+                                    else if (!string.IsNullOrWhiteSpace(route.Error)) { <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@route.Error</MudAlert><MudButton Size="Size.Small" Disabled="@MutationBusy" OnClick="@(() => RetryPreviewAsync(route))">@L["KnowledgeWorkbench:Chunking:RetryPreview"]</MudButton> }
                                     else if (route.Preview is { } preview)
                                     {
                                         @if (preview.AffectedDocumentCount > 0)
                                         {
-                                            <MudAlert Severity="Severity.Warning" Dense="true">@L["KnowledgeWorkbench:Chunking:ImpactCount", preview.AffectedDocumentCount]</MudAlert>
+                                            <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Dense="true">@L["KnowledgeWorkbench:Chunking:ImpactCount", preview.AffectedDocumentCount]</MudAlert>
                                             <p>@L["KnowledgeWorkbench:Chunking:AffectedBases"]</p><div class="affected-bases">@foreach (var id in preview.AffectedKnowledgeBaseIds) { <code>@id</code> }</div>
                                         }
                                         else { <p class="zero-impact">@L["KnowledgeWorkbench:Chunking:ZeroImpact"]</p> }
@@ -59,19 +59,19 @@
             <section class="test-panel">
                 <h2>@L["RAG:Chunker:TestTitle"]</h2><p class="section-description">@L["KnowledgeWorkbench:Chunking:TestHint"]</p>
                 <div class="test-form">
-                    <MudSelect T="string" @bind-Value="_testChunkerId" Label="@L["RAG:Chunker:TestChunker"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(_chunkers.Count == 0)">
+                    <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string" @bind-Value="_testChunkerId" Label="@L["RAG:Chunker:TestChunker"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(_chunkers.Count == 0)">
                         @foreach (var chunker in _chunkers) { <MudSelectItem T="string" Value="@chunker.ChunkerId">@chunker.DisplayName · @chunker.ChunkerId</MudSelectItem> }
                     </MudSelect>
                     <MudTextField T="string" @bind-Value="_testDocumentName" Immediate="true" Label="@L["RAG:Chunker:TestDocument"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
                     <MudTextField T="string" @bind-Value="_testContent" Immediate="true" Label="@L["RAG:Chunker:TestContent"]" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="10" />
-                    <div class="test-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Science" Disabled="@(_isTesting || string.IsNullOrWhiteSpace(_testChunkerId))" OnClick="RunChunkerTestAsync">@(_isTesting ? L["KnowledgeWorkbench:Chunking:Testing"] : L["RAG:Chunker:RunTest"])</MudButton></div>
+                    <div class="test-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Flask" Disabled="@(_isTesting || string.IsNullOrWhiteSpace(_testChunkerId))" OnClick="RunChunkerTestAsync">@(_isTesting ? L["KnowledgeWorkbench:Chunking:Testing"] : L["RAG:Chunker:RunTest"])</MudButton></div>
                 </div>
                 @if (_isTesting) { <div class="inline-loading" role="status"><MudProgressCircular Indeterminate="true" Size="Size.Small" /> @L["KnowledgeWorkbench:Chunking:Testing"]</div> }
-                else if (!string.IsNullOrWhiteSpace(_testError)) { <MudAlert Severity="Severity.Error">@_testError</MudAlert> }
+                else if (!string.IsNullOrWhiteSpace(_testError)) { <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_testError</MudAlert> }
                 else if (_testResult is { } test)
                 {
                     <div class="test-result"><strong>@L["RAG:Chunker:TestChunkCount", test.Chunks.Count]</strong><p>@test.DocumentName · @ChunkerName(test.ChunkerId)</p><code>@test.ChunkerId</code>
-                        @if (TestInputsChanged) { <MudAlert Severity="Severity.Info" Dense="true">@L["KnowledgeWorkbench:Chunking:TestChanged"]</MudAlert> }
+                        @if (TestInputsChanged) { <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["KnowledgeWorkbench:Chunking:TestChanged"]</MudAlert> }
                         <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="ShowTestChunkPreviewAsync">@L["KnowledgeWorkbench:Chunking:InspectBoundaries"]</MudButton>
                     </div>
                 }

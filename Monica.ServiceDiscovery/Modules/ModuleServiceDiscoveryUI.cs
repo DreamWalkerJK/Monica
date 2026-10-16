@@ -7,6 +7,7 @@ using Monica.ServiceDiscovery.Pages;
 using Monica.ServiceDiscovery.UIServiceDiscovery.State;
 using Monica.ServiceDiscovery.UIServiceDiscovery.Support;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -40,22 +41,22 @@ public class ModuleServiceDiscoveryUI : MonicaModule<ModuleServiceDiscoveryUIOpt
                 navigation.RegisterLocalizedPage<UIServiceDiscoveryPage, ServiceDiscoveryResource>(
                     UIServiceDiscoveryPage.SERVICE_DISCOVERY_DEBUG_URL,
                     "Pages:ServiceDiscovery:Title",
-                    Icons.Material.Filled.CloudQueue,
+                    MoIcons.Cloud,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 40,
                     descriptionKey: "Workbench:Views:Registry:Description");
                 navigation.RegisterLocalizedPage<UIServiceDiscoveryAtlasPage, ServiceDiscoveryResource>(
-                    UIServiceDiscoveryAtlasPage.PAGE_URL, "Workbench:Views:Atlas:Title", Icons.Material.Outlined.ScatterPlot,
+                    UIServiceDiscoveryAtlasPage.PAGE_URL, "Workbench:Views:Atlas:Title", MoIcons.ChartScatter,
                     BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 41, descriptionKey: "Workbench:Views:Atlas:Description");
                 navigation.RegisterLocalizedPage<UIServiceDiscoveryDependenciesPage, ServiceDiscoveryResource>(
-                    UIServiceDiscoveryDependenciesPage.PAGE_URL, "Workbench:Views:Dependencies:Title", Icons.Material.Outlined.AccountTree,
+                    UIServiceDiscoveryDependenciesPage.PAGE_URL, "Workbench:Views:Dependencies:Title", MoIcons.Workflow,
                     BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 42, descriptionKey: "Workbench:Views:Dependencies:Description");
                 navigation.RegisterLocalizedPage<UIServiceDiscoveryDomainsPage, ServiceDiscoveryResource>(
-                    UIServiceDiscoveryDomainsPage.PAGE_URL, "Workbench:Views:Domains:Title", Icons.Material.Outlined.Domain,
+                    UIServiceDiscoveryDomainsPage.PAGE_URL, "Workbench:Views:Domains:Title", MoIcons.Building,
                     BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 43, descriptionKey: "Workbench:Views:Domains:Description");
                 navigation.RegisterLocalizedPage<UIServiceDiscoveryHostPage, ServiceDiscoveryResource>(
-                    UIServiceDiscoveryHostPage.PAGE_URL, "Workbench:Views:Host:Title", Icons.Material.Outlined.Computer,
+                    UIServiceDiscoveryHostPage.PAGE_URL, "Workbench:Views:Host:Title", MoIcons.Monitor,
                     BuiltInNavigationCategoryIds.Monitor, addToNav: true, navOrder: 44, descriptionKey: "Workbench:Views:Host:Description");
             }));
     }

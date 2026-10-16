@@ -5,6 +5,7 @@ using Monica.Configuration.UI.Dialogs;
 using Monica.Configuration.UI.Models;
 using Monica.Configuration.UI.Support;
 using Monica.Core.Results;
+using Monica.UI.Icons;
 using MudBlazor;
 
 namespace Monica.Configuration.UI.Pages;
@@ -691,7 +692,7 @@ public partial class ConfigurationHistoryPage
     private static string HistoryTargetIcon(IReadOnlyList<ConfigurationValueHistory> rows)
     {
         return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
-            ? Icons.Material.Filled.Description
-            : Icons.Material.Filled.Storage;
+            ? MoIcons.FileText
+            : MoIcons.Database;
     }
 }

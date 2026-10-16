@@ -1,3 +1,4 @@
+using Monica.UI.Icons;
 using Microsoft.Extensions.Localization;
 using Monica.Core.Localization.Models;
 
@@ -19,9 +20,9 @@ public record SystemInfoCustomLink
     public required string Url { get; init; }
 
     /// <summary>
-    /// Gets the MudBlazor Material icon name.
+    /// Gets the trusted, developer-owned SVG fragment displayed for this link.
     /// </summary>
-    public string Icon { get; init; } = MudBlazor.Icons.Material.Filled.Link;
+    public string Icon { get; init; } = MoIcons.Link;
 
     /// <summary>
     /// Gets the optional description shown under the link.

@@ -20,7 +20,7 @@
         <div class="signalr-invoker-method">
             <MudSelect T="string" Value="@SelectedMethodName" ValueChanged="ChangeSelectedMethodAsync"
                        Label="@L["UISignalR:MethodInvoker:MethodLabel"]" Variant="Variant.Outlined"
-                       Margin="Margin.Dense" Disabled="_isInvoking">
+                       Margin="Margin.Dense" Disabled="_isInvoking" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 @foreach (var method in HubMethods)
                 {
                     <MudSelectItem Value="@method.Name">@method.DisplayName</MudSelectItem>
@@ -62,7 +62,7 @@
             <p class="signalr-invoker-connect-help">@L["UISignalR:MethodInvoker:ConnectHelp"]</p>
         }
         <div class="signalr-invoker-actions">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.PlayArrow"
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Play"
                        OnClick="InvokeMethodAsync" Disabled="@(_isInvoking || !IsConnected || SelectedMethod is null || !AreParametersValid())">
                 @L[_isInvoking ? "UISignalR:MethodInvoker:Invoking" : "UISignalR:MethodInvoker:Invoke"]
             </MudButton>

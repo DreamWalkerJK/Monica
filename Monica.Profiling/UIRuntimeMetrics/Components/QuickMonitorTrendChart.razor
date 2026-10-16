@@ -9,8 +9,8 @@
             <div><span class="runtime-section-eyebrow">@L["Trend:Eyebrow"]</span><h2 id="runtime-history-title">@L["Trend:Title"]</h2><p>@L["Trend:Scope"]</p></div>
             <div class="runtime-metric-controls">
                 <MudChipSet T="string" SelectedValues="_selectedMetrics" SelectedValuesChanged="OnMetricSelectionChanged" SelectionMode="SelectionMode.MultiSelection">
-                    <MudChip T="string" Value="@("cpu")" Color="Color.Primary">@L["Trend:Metrics:Cpu"]</MudChip>
-                    <MudChip T="string" Value="@("memory")" Color="Color.Primary">@L["Trend:Metrics:Memory"]</MudChip>
+                    <MudChip T="string" Value="@("cpu")" Color="Color.Primary" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@L["Trend:Metrics:Cpu"]</MudChip>
+                    <MudChip T="string" Value="@("memory")" Color="Color.Primary" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@L["Trend:Metrics:Memory"]</MudChip>
                 </MudChipSet>
             </div>
         </header>
@@ -24,7 +24,7 @@
         </div>
         @if (_selectedMetrics.Count == 0)
         {
-            <div class="runtime-history-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.ShowChart" /><h3>@L["Trend:NoSelectionTitle"]</h3><p>@L["Trend:NoSelection"]</p></div>
+            <div class="runtime-history-empty" role="status"><MoIcon Icon="@MoIcons.ChartLine" Size="1.5rem" /><h3>@L["Trend:NoSelectionTitle"]</h3><p>@L["Trend:NoSelection"]</p></div>
         }
         else if (Points.Count >= 2)
         {
@@ -47,7 +47,7 @@
         }
         else
         {
-            <div class="runtime-history-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.ShowChart" /><h3>@EmptyTitle</h3><p>@EmptyHelp</p></div>
+            <div class="runtime-history-empty" role="status"><MoIcon Icon="@MoIcons.ChartLine" Size="1.5rem" /><h3>@EmptyTitle</h3><p>@EmptyHelp</p></div>
         }
         <p class="runtime-history-note">@L["Trend:MeasurementHelp"]</p>
     </section>
@@ -75,7 +75,7 @@
                                 <td data-label="@L["Recent:Columns:Threads"]">@point.ThreadCount</td>
                                 <td data-label="@L["Recent:Columns:GcTime"]">@RuntimeMetricsDisplayFormatter.Percent(point.TimeInGcPercent)</td>
                                 <td data-label="@L["Recent:Columns:AllocationRate"]">@RuntimeMetricsDisplayFormatter.ReportedAllocationRate(point.AllocationRateBps)</td>
-                                <td class="runtime-sample-action"><MudIconButton Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" Color="Color.Primary"
+                                <td class="runtime-sample-action"><MudIconButton Icon="@MoIcons.ArrowUpRight" Size="Size.Small" Color="Color.Primary"
                                     aria-label="@L["Recent:Inspect", RuntimeMetricsDisplayFormatter.MachineTime(point.Timestamp)]"
                                     OnClick="@(() => InspectAsync(point))" Disabled="@(CapturedAt is null)" /></td>
                             </tr>
@@ -86,7 +86,7 @@
             <footer class="runtime-ledger-footer"><span>@L["Recent:Range", FirstVisible, LastVisible, Points.Count]</span>
                 @if (PageCount > 1)
                 {
-                    <MudPagination Count="PageCount" Selected="_page" SelectedChanged="ChangePage" ShowFirstButton="true" ShowLastButton="true" Size="Size.Small" Color="Color.Primary" aria-label="@L["Recent:Pagination"]" />
+                    <MudPagination Count="PageCount" Selected="_page" SelectedChanged="ChangePage" ShowFirstButton="true" ShowLastButton="true" Size="Size.Small" Color="Color.Primary" aria-label="@L["Recent:Pagination"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
                 }
             </footer>
         }

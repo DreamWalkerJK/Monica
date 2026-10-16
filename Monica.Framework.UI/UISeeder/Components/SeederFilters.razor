@@ -3,7 +3,7 @@
 <div class="seeder-filters" role="group" aria-label="@L["Filters:AriaLabel"]">
     <div class="seeder-filter-fields">
         <div class="seeder-filter-field seeder-filter-field--search">
-            <MudTextField T="string"
+            <MudTextField ClearIcon="@MoIcons.Close" T="string"
                           Value="@Session.SearchText"
                           ValueChanged="@Session.SetSearchTextAsync"
                           Label="@L["Filters:SearchLabel"]"
@@ -13,10 +13,10 @@
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Outlined.Search" />
+                          AdornmentIcon="@MoIcons.Search" />
         </div>
         <div class="seeder-filter-field">
-            <MudSelect T="SeederStatus?"
+            <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" ClearIcon="@MoIcons.Close" T="SeederStatus?"
                        Value="@Session.StatusFilter"
                        ValueChanged="@Session.SetStatusFilterAsync"
                        Label="@L["Filters:StatusLabel"]"
@@ -31,7 +31,7 @@
             </MudSelect>
         </div>
         <div class="seeder-filter-field">
-            <MudSelect T="SeederCriticality?"
+            <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" ClearIcon="@MoIcons.Close" T="SeederCriticality?"
                        Value="@Session.CriticalityFilter"
                        ValueChanged="@Session.SetCriticalityFilterAsync"
                        Label="@L["Filters:CriticalityLabel"]"
@@ -44,7 +44,7 @@
             </MudSelect>
         </div>
         <div class="seeder-filter-field">
-            <MudSelect T="SeederFailureBehavior?"
+            <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" ClearIcon="@MoIcons.Close" T="SeederFailureBehavior?"
                        Value="@Session.FailureBehaviorFilter"
                        ValueChanged="@Session.SetFailureBehaviorFilterAsync"
                        Label="@L["Filters:FailureBehaviorLabel"]"

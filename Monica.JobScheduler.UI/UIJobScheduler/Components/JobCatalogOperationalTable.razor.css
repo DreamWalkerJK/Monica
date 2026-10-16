@@ -61,7 +61,7 @@
 .catalog-table__identity-name { color: var(--mud-palette-text-primary); font-family: var(--mo-font-family-body); font-size: 15px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; text-decoration: none; }
 .catalog-table__identity p { margin: 0; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .catalog-table__owner { display: flex; align-items: start; gap: 6px; min-width: 0; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); font-size: 12px; line-height: 1.5; }
-.catalog-table__owner ::deep .mud-icon-root { flex: none; width: 15px; height: 15px; margin-block-start: 2px; }
+.catalog-table__owner ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 15px; height: 15px; margin-block-start: 2px; }
 .catalog-table__owner > span { min-width: 0; overflow-wrap: anywhere; }
 .catalog-table__identity-key { display: block; width: 100%; min-width: 0; max-width: 100%; padding: 0; border: 0; background: transparent; color: color-mix(in srgb, var(--mud-palette-text-secondary) 80%, var(--mud-palette-text-primary)); font-family: var(--mo-font-family-mono); font-size: 11px; line-height: 1.6; text-align: start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .catalog-table__identity-name:hover,
@@ -77,7 +77,7 @@
 .catalog-table__lifecycle[data-tone="success"] { --lifecycle-tone: var(--mud-palette-success); }
 .catalog-table__lifecycle[data-tone="warning"] { --lifecycle-tone: var(--mud-palette-warning); }
 .catalog-table__lifecycle[data-tone="info"] { --lifecycle-tone: var(--mud-palette-info); }
-.catalog-table__lifecycle ::deep .mud-icon-root { flex: none; width: 16px; height: 16px; margin-block-start: 1px; }
+.catalog-table__lifecycle ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 16px; height: 16px; margin-block-start: 1px; }
 .catalog-table__cron { min-width: 0; }
 .catalog-table__cron ::deep code { max-width: 100%; white-space: normal; overflow-wrap: anywhere; color: var(--mud-palette-text-primary); font-family: var(--mo-font-family-mono); font-size: 12px; }
 .catalog-table__cron ::deep .mud-icon-button { flex: none; width: 28px; height: 28px; padding: 4px; color: color-mix(in srgb, var(--mud-palette-info) 45%, var(--mud-palette-text-primary)); }

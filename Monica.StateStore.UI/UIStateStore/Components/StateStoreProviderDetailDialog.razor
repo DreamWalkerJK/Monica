@@ -31,8 +31,8 @@
                          ApplyEffectsToContainer="false"
                          MinimumTabWidth="0px"
                          ActivePanelIndex="@_activeTabIndex"
-                         ActivePanelIndexChanged="OnActiveTabChanged">
-                    <MudTabPanel Text="@L["ProviderDetail:Tabs:Overview"]" Icon="@Icons.Material.Outlined.Info">
+                         ActivePanelIndexChanged="OnActiveTabChanged" PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight">
+                    <MudTabPanel Text="@L["ProviderDetail:Tabs:Overview"]" Icon="@MoIcons.Info">
                         <div class="provider-dialog__tab-content">
                             <dl class="provider-dialog__overview">
                                 <div class="provider-dialog__stat">
@@ -64,14 +64,14 @@
                                 <div class="provider-dialog__chips">
                                     @foreach (var capability in GetCapabilityLabels(Provider))
                                     {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@capability</MudChip>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@capability</MudChip>
                                     }
                                 </div>
                             </div>
                         </div>
                     </MudTabPanel>
 
-                    <MudTabPanel Text="@L["ProviderDetail:Tabs:Options"]" Icon="@Icons.Material.Outlined.Settings">
+                    <MudTabPanel Text="@L["ProviderDetail:Tabs:Options"]" Icon="@MoIcons.Settings">
                         <div class="provider-dialog__tab-content">
                             <div class="provider-dialog__section">
                                 <div class="provider-dialog__section-header">
@@ -85,19 +85,19 @@
 
                                 @if (Provider.OptionDiagnosticsTarget is null)
                                 {
-                                    <MudAlert Class="state-dialog-info" Severity="Severity.Info" Variant="Variant.Outlined">
+                                    <MudAlert Class="state-dialog-info" Severity="Severity.Info" Variant="Variant.Outlined" Icon="@MoIcons.Info">
                                         @L["ProviderDetail:Messages:ConfigurationShared"]
                                     </MudAlert>
                                 }
                                 else if (_optionDiagnosticsAccessDenied)
                                 {
-                                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">
                                         @L["ProviderDetail:Messages:ConfigurationAccessDenied"]
                                     </MudAlert>
                                 }
                                 else if (_optionDiagnosticsFailed)
                                 {
-                                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">
                                         @L["ProviderDetail:Messages:ConfigurationLoadFailed"]
                                         <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="LoadOptionDiagnosticsAsync">
                                             @L["ProviderDetail:Actions:RetryConfiguration"]
@@ -108,7 +108,7 @@
                                 {
                                     @if (_optionDiagnostics.ProfileResolution == ModuleOptionProfileResolution.DefaultFallback)
                                     {
-                                        <MudAlert Class="state-dialog-info" Severity="Severity.Info" Variant="Variant.Outlined">
+                                        <MudAlert Class="state-dialog-info" Severity="Severity.Info" Variant="Variant.Outlined" Icon="@MoIcons.Info">
                                             @L[
                                                 "ProviderDetail:Messages:ConfigurationDefaultProfileFallback",
                                                 _optionDiagnostics.RequestedProfileName ?? Provider.ServiceKey ?? string.Empty]

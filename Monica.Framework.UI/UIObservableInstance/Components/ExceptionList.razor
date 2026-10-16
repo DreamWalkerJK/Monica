@@ -6,7 +6,7 @@
 <div class="exception-list">
     @if (Exceptions == null || !Exceptions.Any())
     {
-        <MudAlert Severity="Severity.Success">@L["Shared:States:NoExceptions"]</MudAlert>
+        <MudAlert Icon="@MoIcons.Success" Severity="Severity.Success">@L["Shared:States:NoExceptions"]</MudAlert>
     }
     else
     {
@@ -19,11 +19,11 @@
             @foreach (var exception in Exceptions)
             {
                 <MudExpansionPanels>
-                    <MudExpansionPanel>
+                    <MudExpansionPanel Icon="@MoIcons.ChevronDown">
                         <TitleContent>
                             <div class="exception-summary">
                                 <span class="exception-summary-icon" aria-hidden="true">
-                                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                                    <MoIcon Icon="@MoIcons.Error" Style="color:var(--mud-palette-error)" Size="1.5rem" />
                                 </span>
                                 <div class="exception-summary-content">
                                     <div class="exception-summary-identity">
@@ -94,7 +94,7 @@
                                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:Previous"]:</MudText>
                                                     <MudText Typo="Typo.caption">@exception.PreviousStateDisplay</MudText>
                                                 </MudPaper>
-                                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" />
+                                                <MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" />
                                                 <MudPaper Class="pa-2 flex-grow-1" Elevation="0" Outlined="true">
                                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:After"]:</MudText>
                                                     <MudText Typo="Typo.caption">@exception.CurrentStateDisplay</MudText>

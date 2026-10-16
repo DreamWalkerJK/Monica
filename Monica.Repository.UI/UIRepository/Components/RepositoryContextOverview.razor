@@ -5,7 +5,7 @@
 
 @if (Snapshot is null)
 {
-    <MudAlert Severity="Severity.Info">@L["Overview:Empty"]</MudAlert>
+    <MudAlert Severity="Severity.Info" Icon="@MoIcons.Info">@L["Overview:Empty"]</MudAlert>
 }
 else if (ShowOptionsOnly)
 {
@@ -15,11 +15,11 @@ else
 {
     <div class="repository-connection-workspace">
         <section class="connection-decision" data-state="@(Snapshot.CanConnect ? "connected" : Snapshot.HasError ? "unknown" : "disconnected")">
-            <div class="connection-decision__title"><MudIcon Icon="@(Snapshot.CanConnect ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.ErrorOutline)" /><span>@L["Workbench:Overview:Probe"]</span></div>
+            <div class="connection-decision__title"><MoIcon Icon="@(Snapshot.CanConnect ? MoIcons.Success : MoIcons.Error)" Size="1.5rem" /><span>@L["Workbench:Overview:Probe"]</span></div>
             <h3>@(Snapshot.CanConnect ? L["Overview:Values:Connected"] : Snapshot.HasError ? L["Workbench:Overview:Incomplete"] : L["Overview:Values:Disconnected"])</h3>
             <p>@L["Workbench:Overview:ProbeNote"]</p>
             <div class="connection-address"><span>@L["Overview:Connection:Database"]</span><strong>@Value(Snapshot.Connection?.Database)</strong><span>@L["Overview:Connection:DataSource"]</span><code>@Value(Snapshot.Connection?.DataSource)</code></div>
-            <div class="connection-string-heading"><h4>@L["Overview:Connection:ConnectionString"]</h4><MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="IsBusy" StartIcon="@(RevealConnectionStrings ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)" OnClick="OnToggleReveal">@(RevealConnectionStrings ? L["Overview:Connection:Hide"] : L["Overview:Connection:Reveal"])</MudButton></div>
+            <div class="connection-string-heading"><h4>@L["Overview:Connection:ConnectionString"]</h4><MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="IsBusy" StartIcon="@(RevealConnectionStrings ? MoIcons.EyeOff : MoIcons.Eye)" OnClick="OnToggleReveal">@(RevealConnectionStrings ? L["Overview:Connection:Hide"] : L["Overview:Connection:Reveal"])</MudButton></div>
             <pre class="connection-string">@Value(RevealConnectionStrings ? Snapshot.Connection?.RevealedConnectionString ?? Snapshot.Connection?.MaskedConnectionString : Snapshot.Connection?.MaskedConnectionString)</pre>
         </section>
         <section class="connection-facts">
@@ -44,16 +44,16 @@ else
             {
                 <p>@L[Activity?.Support == RepositoryActivitySupport.Failed ? "Workbench:Overview:SessionsFailed" : "Overview:Pool:SessionsUnavailable"]</p>
             }
-            <a href="@ActivityUrl">@L["Workbench:Overview:InspectActivity"] <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></a>
+            <a href="@ActivityUrl">@L["Workbench:Overview:InspectActivity"] <MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" /></a>
         </section>
         <section class="connection-migrations">
             <div><span class="connection-eyebrow">@L["Workbench:Overview:Schema"]</span><h3>@L["Migrations:Title"]</h3><p>@L["Migrations:ContextNote", Value(Snapshot.MigrationAssembly)]</p></div>
             <div class="connection-migration-count"><span>@L["Overview:Metrics:Pending"]</span><strong>@(Snapshot.PendingMigrationCount?.ToString() ?? L["Overview:Values:Unknown"].Value)</strong></div>
-            <a href="@MigrationsUrl">@L["Workbench:Overview:InspectMigrations"] <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" /></a>
+            <a href="@MigrationsUrl">@L["Workbench:Overview:InspectMigrations"] <MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" /></a>
         </section>
         @if (Snapshot.HasError)
         {
-            <div class="connection-error"><MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@Snapshot.ErrorMessage</MudAlert></div>
+            <div class="connection-error"><MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@Snapshot.ErrorMessage</MudAlert></div>
         }
     </div>
 }

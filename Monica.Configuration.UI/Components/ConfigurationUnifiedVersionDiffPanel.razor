@@ -10,11 +10,11 @@
     }
     else if (_session?.Prepared is not { } prepared)
     {
-        <MudAlert Severity="Severity.Error">@L["Common:Errors:LoadFailed"]</MudAlert>
+        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@L["Common:Errors:LoadFailed"]</MudAlert>
     }
     else if (prepared.Rows.Count == 0)
     {
-        <MudAlert Severity="Severity.Info">@L["Versions:Diff:NoChanges"]</MudAlert>
+        <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["Versions:Diff:NoChanges"]</MudAlert>
     }
     else
     {
@@ -53,13 +53,13 @@
 
                         @if (row.HasSchemaDrift)
                         {
-                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                            <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
                                 @L["State:Value:SchemaDriftHiddenNotice"]
                             </MudAlert>
                         }
                         @if (row.HasHiddenChanges)
                         {
-                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
                                 @L["State:Value:HiddenChangedNotice"]
                             </MudAlert>
                         }

@@ -1,3 +1,4 @@
+using Monica.UI.Icons;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -57,23 +58,23 @@ public class ModuleSystemUI : MonicaModule<ModuleSystemUIOption>, IUIModule
             "Navigation:Title",
             order: 10,
             parentId: BuiltInNavigationCategoryIds.Module,
-            icon: Icons.Material.Filled.AccountTree,
+            icon: MoIcons.Workflow,
             descriptionKey: "Navigation:Description");
 
         registry.RegisterLocalizedPage<ModuleSystemPage, ModuleSystemResource>(
             ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
             "Sections:Overview",
-            Icons.Material.Filled.Dashboard,
+            MoIcons.Dashboard,
             workbenchCategory,
             addToNav: true,
             navOrder: 10,
             accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>),
             descriptionKey: "Navigation:Descriptions:Overview");
-        RegisterSection("overview", "Sections:Overview", "Navigation:Descriptions:Overview", Icons.Material.Filled.Dashboard, 10, addToNav: false);
-        RegisterSection("performance", "Sections:Performance", "Navigation:Descriptions:Performance", Icons.Material.Filled.Timeline, 20);
-        RegisterSection("modules", "Sections:Modules", "Navigation:Descriptions:Modules", Icons.Material.Filled.ViewModule, 30);
-        RegisterSection("dependencies", "Sections:Dependencies", "Navigation:Descriptions:Dependencies", Icons.Material.Filled.AccountTree, 40);
-        RegisterSection("discovery", "Sections:Discovery", "Navigation:Descriptions:Discovery", Icons.Material.Filled.FindInPage, 50);
+        RegisterSection("overview", "Sections:Overview", "Navigation:Descriptions:Overview", MoIcons.Dashboard, 10, addToNav: false);
+        RegisterSection("performance", "Sections:Performance", "Navigation:Descriptions:Performance", MoIcons.ChartLine, 20);
+        RegisterSection("modules", "Sections:Modules", "Navigation:Descriptions:Modules", MoIcons.Grid, 30);
+        RegisterSection("dependencies", "Sections:Dependencies", "Navigation:Descriptions:Dependencies", MoIcons.Workflow, 40);
+        RegisterSection("discovery", "Sections:Discovery", "Navigation:Descriptions:Discovery", MoIcons.FileSearch, 50);
 
         void RegisterSection(string segment, string labelKey, string descriptionKey, string icon, int order, bool addToNav = true)
         {

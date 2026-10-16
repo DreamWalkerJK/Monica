@@ -18,7 +18,7 @@
                     <p>@DataChannelPresentation.Group(Channel.GroupId, L)</p>
                 </div>
                 <span class="pipeline-state" data-state="@DataChannelPresentation.Initialization(Channel)">
-                    <MudIcon Icon="@DataChannelPresentation.InitializationIcon(Channel)" Size="Size.Small" />@L[$"Channel:States:{DataChannelPresentation.Initialization(Channel)}"]</span>
+                    <MoIcon Icon="@DataChannelPresentation.InitializationIcon(Channel)" Size="1.25rem" />@L[$"Channel:States:{DataChannelPresentation.Initialization(Channel)}"]</span>
             </header>
             <div class="pipeline-inspector__capture">
                 <span>@L["Workbench:Captured"] <time>@DataChannelPresentation.Timestamp(Channel.CapturedAt)</time>
@@ -28,15 +28,15 @@
             <div class="pipeline-inspector__actions">
                 @if (OnReinitialize is not null)
                 {
-                    <MudButton Size="Size.Small" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="() => RunAsync(() => OnReinitialize(Channel.Id, _token))" Disabled="_busy">@L["Channel:Actions:Reinitialize"]</MudButton>
+                    <MudButton Size="Size.Small" StartIcon="@MoIcons.Refresh" OnClick="() => RunAsync(() => OnReinitialize(Channel.Id, _token))" Disabled="_busy">@L["Channel:Actions:Reinitialize"]</MudButton>
                 }
                 @if (OnViewExceptions is not null)
                 {
-                    <MudButton Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.ErrorOutline" OnClick="() => RunAsync(() => OnViewExceptions(Channel.Id, _token))" aria-disabled="@(_busy ? "true" : "false")">@L["Channel:Actions:ViewExceptions"] (@Channel.ExceptionCount)</MudButton>
+                    <MudButton Size="Size.Small" Color="Color.Primary" StartIcon="@MoIcons.Error" OnClick="() => RunAsync(() => OnViewExceptions(Channel.Id, _token))" aria-disabled="@(_busy ? "true" : "false")">@L["Channel:Actions:ViewExceptions"] (@Channel.ExceptionCount)</MudButton>
                 }
             </div>
             <div class="pipeline-inspector__tabs">
-                <MudTabs Elevation="0" Rounded="false" KeepPanelsAlive="true" MinimumTabWidth="var(--datachannel-tab-min-width, 160px)">
+                <MudTabs Elevation="0" Rounded="false" KeepPanelsAlive="true" MinimumTabWidth="var(--datachannel-tab-min-width, 160px)" PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight">
                     <MudTabPanel Text="@L["PipelineInspector:Tabs:Pipeline"]">
                         <div class="pipeline-tab">
                             <h3>@L["PipelineInspector:MessagePath"]</h3>
@@ -45,14 +45,14 @@
                                 <div>
                                     <span>@L["PipelineInspector:FromInner"]</span>
                                     <code>@Channel.InnerEndpoint.TypeName</code>
-                                    <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" />
+                                    <MoIcon Icon="@MoIcons.ArrowRight" Size="1.5rem" />
                                     <code>@Channel.OuterEndpoint.TypeName</code>
                                     <small>@L["PipelineInspector:ToOuter"]</small>
                                 </div>
                                 <div>
                                     <span>@L["PipelineInspector:FromOuter"]</span>
                                     <code>@Channel.OuterEndpoint.TypeName</code>
-                                    <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" />
+                                    <MoIcon Icon="@MoIcons.ArrowRight" Size="1.5rem" />
                                     <code>@Channel.InnerEndpoint.TypeName</code>
                                     <small>@L["PipelineInspector:ToInner"]</small>
                                 </div>
@@ -149,7 +149,7 @@
                                                     @if (context.CanDebugMessages && OnOpenDebugger is not null)
                                                     {
                                                         <MudTooltip Text="@L["Debugger:Actions:Open"]">
-                                                            <MudIconButton Icon="@Icons.Material.Outlined.BugReport" Color="Color.Primary" Size="Size.Small" aria-disabled="@(_busy ? "true" : "false")" OnClick="() => RunAsync(() => OnOpenDebugger(context, _token))" aria-label="@L["Debugger:Actions:Open"]" />
+                                                            <MudIconButton Icon="@MoIcons.Bug" Color="Color.Primary" Size="Size.Small" aria-disabled="@(_busy ? "true" : "false")" OnClick="() => RunAsync(() => OnOpenDebugger(context, _token))" aria-label="@L["Debugger:Actions:Open"]" />
                                                         </MudTooltip>
                                                     }
                                                     @foreach (var action in GetActions(context))

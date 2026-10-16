@@ -4,17 +4,17 @@
 @inject IStringLocalizer<AIResource> L
 
 <section class="import-shelf" aria-label="@L["KnowledgeWorkbench:AddSources"]">
-    <div class="import-heading"><MudIcon Icon="@Icons.Material.Outlined.NoteAdd" /><div><h3>@L["KnowledgeWorkbench:AddSources"]</h3><p>@L["KnowledgeWorkbench:ImportHint"]</p></div></div>
+    <div class="import-heading"><MoIcon Icon="@MoIcons.FilePlus" Size="1.5rem" /><div><h3>@L["KnowledgeWorkbench:AddSources"]</h3><p>@L["KnowledgeWorkbench:ImportHint"]</p></div></div>
     <div class="import-methods">
         <div class="markdown-import">
-            <MudSelect T="string" @bind-Value="SelectedMarkdownGroup" Label="@L["RAG:Indexing:MarkdownGroup"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(PageState.IsMarkdownGroupsLoading || PageState.MarkdownGroups.Count == 0)">
+            <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string" @bind-Value="SelectedMarkdownGroup" Label="@L["RAG:Indexing:MarkdownGroup"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(PageState.IsMarkdownGroupsLoading || PageState.MarkdownGroups.Count == 0)">
                 @foreach (var group in PageState.MarkdownGroups) { <MudSelectItem T="string" Value="@group">@group</MudSelectItem> }
             </MudSelect>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.FolderOpen" OnClick="PageState.ShowDocumentImportDialogAsync" Disabled="@string.IsNullOrEmpty(SelectedMarkdownGroup)">@L["KnowledgeBase:DocumentImport:Add"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.FolderOpen" OnClick="PageState.ShowDocumentImportDialogAsync" Disabled="@string.IsNullOrEmpty(SelectedMarkdownGroup)">@L["KnowledgeBase:DocumentImport:Add"]</MudButton>
         </div>
         <div class="file-import">
             <MudFileUpload T="IBrowserFile" Accept=".txt,.md,.pdf" MaximumFileCount="1" FilesChanged="PageState.UploadFileAsync">
-                <CustomContent Context="upload"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.UploadFile" OnClick="upload.OpenFilePickerAsync">@L["RAG:Indexing:UploadFile"]</MudButton></CustomContent>
+                <CustomContent Context="upload"><MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.FileUpload" OnClick="upload.OpenFilePickerAsync">@L["RAG:Indexing:UploadFile"]</MudButton></CustomContent>
             </MudFileUpload>
             <span>@L["KnowledgeWorkbench:UploadHint"]</span>
         </div>

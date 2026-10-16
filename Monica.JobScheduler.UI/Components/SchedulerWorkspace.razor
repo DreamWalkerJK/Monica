@@ -14,13 +14,13 @@
         </div>
         <div class="scheduler-workspace__metadata">
             <div class="scheduler-workspace__context">
-                <MudIcon Icon="@Icons.Material.Outlined.Layers" aria-hidden="true" />
+                <MoIcon Icon="@MoIcons.Layers" aria-hidden="true" Size="1.5rem" />
                 <span title="@SchedulerOptions.Value.SchedulerScopeKey">
                     @L["Workspace:Scope", SchedulerOptions.Value.SchedulerScopeKey]
                 </span>
             </div>
             <div class="scheduler-workspace__context">
-                <MudIcon Icon="@Icons.Material.Outlined.Schedule" aria-hidden="true" />
+                <MoIcon Icon="@MoIcons.Clock" aria-hidden="true" Size="1.5rem" />
                 <span title="@TimePresentation.TimeZoneDisplayName">
                     @L["Workspace:TimeZone", TimePresentation.TimeZoneId]
                 </span>
@@ -32,7 +32,7 @@
         @foreach (var route in ROUTES)
         {
             <a href="@route.Url" aria-current="@(IsCurrentRoute(route.Url) ? "page" : null)">
-                <MudIcon Icon="@route.Icon" aria-hidden="true" />
+                <MoIcon Icon="@route.Icon" aria-hidden="true" Size="1.5rem" />
                 <span>@L[route.LabelKey]</span>
             </a>
         }
@@ -46,11 +46,11 @@
 @code {
     private static readonly (string Url, string LabelKey, string Icon)[] ROUTES =
     [
-        ("/job-scheduler", "Workspace:Navigation:Overview", Icons.Material.Outlined.SpaceDashboard),
-        ("/job-scheduler/catalog", "Workspace:Navigation:Catalog", Icons.Material.Outlined.Inventory2),
-        ("/job-scheduler/executions", "Workspace:Navigation:Executions", Icons.Material.Outlined.ReceiptLong),
-        ("/job-scheduler/statistics", "Workspace:Navigation:Statistics", Icons.Material.Outlined.QueryStats),
-        ("/job-scheduler/runtime", "Workspace:Navigation:Runtime", Icons.Material.Outlined.MonitorHeart)
+        ("/job-scheduler", "Workspace:Navigation:Overview", MoIcons.Dashboard),
+        ("/job-scheduler/catalog", "Workspace:Navigation:Catalog", MoIcons.Package),
+        ("/job-scheduler/executions", "Workspace:Navigation:Executions", MoIcons.Receipt),
+        ("/job-scheduler/statistics", "Workspace:Navigation:Statistics", MoIcons.ChartTrend),
+        ("/job-scheduler/runtime", "Workspace:Navigation:Runtime", MoIcons.HeartPulse)
     ];
 
     /// <summary>

@@ -52,7 +52,7 @@
 
             @if (ReadOnly && !string.IsNullOrWhiteSpace(originalKey.Error))
             {
-                <MudAlert Severity="@(originalKey.RawValue is null ? Severity.Error : Severity.Warning)">
+                <MudAlert Severity="@(originalKey.RawValue is null ? Severity.Error : Severity.Warning)" Icon="@(originalKey.RawValue is null ? MoIcons.Error : MoIcons.Warning)">
                     @(originalKey.RawValue is null ? originalKey.Error : L["KeyExplorer:Messages:ValueRefreshFailed", originalKey.Error])
                 </MudAlert>
                 @if (originalKey.RawValue is not null)
@@ -79,7 +79,7 @@
                 <div class="key-dialog-tools">
                     <MudButton Variant="Variant.Text"
                                Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.FormatIndentIncrease"
+                               StartIcon="@MoIcons.IndentIncrease"
                                OnClick="FormatJson"
                            Class="state-dialog-primary-text"
                                Disabled="isSaving"
@@ -88,7 +88,7 @@
                     </MudButton>
                     <MudButton Variant="Variant.Text"
                                Color="Color.Secondary"
-                               StartIcon="@Icons.Material.Filled.Compress"
+                               StartIcon="@MoIcons.Minimize"
                                OnClick="MinifyJson"
                            Class="state-dialog-secondary-text"
                                Disabled="isSaving"
@@ -100,7 +100,7 @@
 
             @if (errorMessage != null)
             {
-                <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
+                <MudAlert Severity="Severity.Error" Icon="@MoIcons.Error">@errorMessage</MudAlert>
             }
         </div>
     </DialogContent>

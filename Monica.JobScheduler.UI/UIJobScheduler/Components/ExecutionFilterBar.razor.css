@@ -23,7 +23,7 @@
 .execution-filter__state:hover:not(:disabled) { border-color: color-mix(in srgb, var(--state-tone) 45%, var(--mud-palette-text-primary)); background-color: color-mix(in srgb, var(--state-tone) 8%, var(--mud-palette-surface)); }
 .execution-filter__state:focus-visible { outline: 2px solid color-mix(in srgb, var(--mud-palette-primary) 55%, var(--mud-palette-text-primary)); outline-offset: 2px; }
 .execution-filter__state:disabled { cursor: progress; color: var(--mud-palette-action-disabled); }
-.execution-filter__state ::deep .mud-icon-root { flex: none; width: 17px; height: 17px; }
+.execution-filter__state ::deep :is(.mud-icon-root, .mo-icon) { flex: none; width: 17px; height: 17px; }
 
 @container execution-filter (max-width: 850px) {
     .execution-filter__query { grid-template-columns: repeat(2, minmax(0, 1fr)); }

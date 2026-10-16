@@ -11,13 +11,13 @@
         <div><span class="eventbus-workbench-kicker">@L["Workbench:Eyebrow"]</span><h1>@Title</h1><p>@Description</p></div>
         <div class="eventbus-workbench-controls">
             <div class="eventbus-capture"><span>@L["Workbench:Captured"]</span><time>@(capture?.CapturedAt is { } captured ? EventBusPresentation.Timestamp(captured) : L["Workbench:NoCapture"].Value)</time></div>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="RefreshAsync" aria-disabled="@(State.IsRefreshing || _retired ? "true" : "false")">@L["Page:Header:Refresh"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh" OnClick="RefreshAsync" aria-disabled="@(State.IsRefreshing || _retired ? "true" : "false")">@L["Page:Header:Refresh"]</MudButton>
         </div>
     </header>
     <MoWorkbenchNavigation Class="eventbus-workbench-nav" Label="@L["Workbench:Navigation"]">
         @foreach (var section in Enum.GetValues<EventBusWorkbenchView>())
         {
-            <a href="@Route(section)" aria-current="@(View == section ? "page" : null)" data-view="@(section)"><MudIcon Icon="@SectionIcon(section)" Size="Size.Small" /><span>@SectionTitle(section)</span>
+            <a href="@Route(section)" aria-current="@(View == section ? "page" : null)" data-view="@(section)"><MoIcon Icon="@SectionIcon(section)" Size="1.25rem" /><span>@SectionTitle(section)</span>
                 @if (capture is { } navigationCapture && section == EventBusWorkbenchView.Subscriptions) { <span class="eventbus-nav-count">@navigationCapture.Subscriptions.Count</span> }
             </a>
         }
@@ -25,7 +25,7 @@
     <div class="eventbus-workbench-sampling"><span>@L["Workbench:Scope"]</span><MudSwitch T="bool" Value="_autoRefresh" ValueChanged="AutoRefreshChanged" Color="Color.Primary" Size="Size.Small" Label="@L["Workbench:AutoRefresh"]" /></div>
     @if (State.RefreshError != null)
     {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined"><strong>@L["Workbench:ReadFailed"]</strong><p>@State.RefreshError</p><p>@L[capture == null ? "Workbench:UnavailableHelp" : "Workbench:PreviousCaptureHelp"]</p></MudAlert>
+        <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Variant="Variant.Outlined"><strong>@L["Workbench:ReadFailed"]</strong><p>@State.RefreshError</p><p>@L[capture == null ? "Workbench:UnavailableHelp" : "Workbench:PreviousCaptureHelp"]</p></MudAlert>
     }
     @if (capture is null)
     {
@@ -43,7 +43,7 @@
     {
         <section class="eventbus-registry">
             <SubscriptionFilterPanel Filter="_filter" Providers="capture.Providers.ToList()" Subscriptions="capture.Subscriptions" OnFilterChanged="FilterChanged" SelectedProviderId="@_activeProviderId" OnProviderSelectionChanged="ProviderSelectionChanged" />
-            @if (_queryMissingProvider) { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Registry:ProviderMissing"]</MudAlert> }
+            @if (_queryMissingProvider) { <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Variant="Variant.Outlined">@L["Registry:ProviderMissing"]</MudAlert> }
             @if (EventType != null || Topic != null)
             {
                 <div class="eventbus-route-selection"><span>@L["Registry:ExactRoute"]</span><div class="eventbus-route-constraints">

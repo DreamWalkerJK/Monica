@@ -5,7 +5,7 @@
     <TitleContent>
         <div class="policy-workbench__title">
             <div class="policy-workbench__title-icon">
-                <MudIcon Icon="@Icons.Material.Outlined.Tune" />
+                <MoIcon Icon="@MoIcons.Sliders" Size="1.5rem" />
             </div>
             <div>
                 <MoDialogHeading Text="@L["Policy:Title"]" />
@@ -31,21 +31,21 @@
                 </header>
 
                 <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true"
-                          Icon="@Icons.Material.Outlined.Lock">
+                          Icon="@MoIcons.Lock">
                     @L["Policy:ImmutableNotice"]
                 </MudAlert>
 
                 @if (_state.HasConflict)
                 {
                     <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true"
-                              Icon="@Icons.Material.Outlined.MergeType">
+                              Icon="@MoIcons.Merge">
                         @L["Policy:Conflict:DraftsPreserved",
                             _state.ConflictPreviousPolicyRevision ?? L["Common:NotAvailable"].Value,
                             _state.Definition.Policy.ConcurrencyStamp]
                     </MudAlert>
                     @if (_state.HasSameFieldConflict)
                     {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">
                             @L["Policy:Conflict:SameField"]
                         </MudAlert>
                     }
@@ -56,7 +56,7 @@
                         @L["Policy:Provenance:Help"]
                     </MudText>
                     <MudButton Variant="Variant.Text"
-                               StartIcon="@Icons.Material.Outlined.RestorePage"
+                               StartIcon="@MoIcons.FileRestore"
                                Disabled="@_isSaving"
                                OnClick="ResetAll">
                         @L["Policy:Actions:ResetAll"]
@@ -65,7 +65,7 @@
 
                 <section class="policy-section" aria-labelledby="policy-general-heading">
                     <OperationalPolicySectionHeading HeadingId="policy-general-heading"
-                                                     Icon="@Icons.Material.Outlined.Badge"
+                                                     Icon="@MoIcons.BadgeId"
                                                      Title="@L["Policy:Sections:General"]"
                                                      Description="@L["Policy:Sections:GeneralHelp"]" />
                     <OperationalPolicyProvenanceHeader />
@@ -74,7 +74,7 @@
                         <div class="policy-row__label">@L["Policy:Fields:Enabled"]</div>
                         <div data-label="@L["Policy:Provenance:Declared"]">
                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                     Color="@(!_state.Definition.Declaration.IsDisabledByDefault ? Color.Success : Color.Warning)">
+                                     Color="@(!_state.Definition.Declaration.IsDisabledByDefault ? Color.Success : Color.Warning)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                 @EnabledLabel(!_state.Definition.Declaration.IsDisabledByDefault)
                             </MudChip>
                         </div>
@@ -82,7 +82,7 @@
                             <MudSelect T="bool?" Value="@_state.DisabledOverride"
                                        ValueChanged="SetDisabledOverride"
                                        Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@_isSaving"
-                                       aria-label="@L["Policy:Fields:Enabled"]">
+                                       aria-label="@L["Policy:Fields:Enabled"]" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                                 <MudSelectItem T="bool?" Value="@(null)">@L["Policy:InheritDefault"]</MudSelectItem>
                                 <MudSelectItem T="bool?" Value="@(false)">@L["Policy:ForceEnabled"]</MudSelectItem>
                                 <MudSelectItem T="bool?" Value="@(true)">@L["Policy:ForceDisabled"]</MudSelectItem>
@@ -90,7 +90,7 @@
                         </div>
                         <div data-label="@L["Policy:Provenance:Effective"]">
                             <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
-                                     Color="@(!_state.EffectiveDisabled ? Color.Success : Color.Warning)">
+                                     Color="@(!_state.EffectiveDisabled ? Color.Success : Color.Warning)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">
                                 @EnabledLabel(!_state.EffectiveDisabled)
                             </MudChip>
                         </div>
@@ -112,7 +112,7 @@
                                                        || _state.DisplayNameDraft.Length > JobDeclaration.JOB_NAME_MAX_LENGTH))"
                                           ErrorText="@L["Policy:Validation:DisplayNameRequired"]"
                                           aria-label="@L["Policy:Fields:DisplayName"]" />
-                            <MudIconButton Icon="@Icons.Material.Outlined.Restore" Size="Size.Small"
+                            <MudIconButton Icon="@MoIcons.Restore" Size="Size.Small"
                                            Disabled="@(_isSaving || _state.IsDisplayNameInherited)"
                                            OnClick="ResetDisplayName"
                                            aria-label="@L["Policy:Actions:ResetField"]" />
@@ -126,7 +126,7 @@
                         <div class="policy-row__override" data-label="@L["Policy:Provenance:Override"]">
                             <MudSelect T="JobDescriptionOverrideMode" Value="@_state.DescriptionMode" ValueChanged="SetDescriptionMode"
                                        Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@_isSaving"
-                                       Label="@L["Policy:Fields:DescriptionMode"]">
+                                       Label="@L["Policy:Fields:DescriptionMode"]" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                                 @foreach (var mode in Enum.GetValues<JobDescriptionOverrideMode>())
                                 {
                                     <MudSelectItem T="JobDescriptionOverrideMode" Value="@mode">
@@ -153,7 +153,7 @@
                 {
                     <section class="policy-section" aria-labelledby="policy-schedule-heading">
                         <OperationalPolicySectionHeading HeadingId="policy-schedule-heading"
-                                                         Icon="@Icons.Material.Outlined.EventRepeat"
+                                                         Icon="@MoIcons.CalendarSync"
                                                          Title="@L["Policy:Sections:Schedule"]"
                                                          Description="@L["Policy:Sections:ScheduleHelp"]" />
                         <OperationalPolicyScheduleEditor Draft="@schedule"
@@ -166,7 +166,7 @@
                 @if (_state.HasScheduleTypeConflict)
                 {
                     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined"
-                              Icon="@Icons.Material.Outlined.SyncProblem">
+                              Icon="@MoIcons.SyncOff">
                         <div class="policy-workbench__schedule-conflict">
                             <span>@L["Policy:Conflict:ScheduleTypeChanged"]</span>
                             <MudButton Variant="Variant.Outlined" Color="Color.Warning"
@@ -179,7 +179,7 @@
 
                 <section class="policy-section" aria-labelledby="policy-execution-heading">
                     <OperationalPolicySectionHeading HeadingId="policy-execution-heading"
-                                                     Icon="@Icons.Material.Outlined.Speed"
+                                                     Icon="@MoIcons.Gauge"
                                                      Title="@L["Policy:Sections:Execution"]"
                                                      Description="@L["Policy:Sections:ExecutionHelp"]" />
                     <OperationalPolicyProvenanceHeader />
@@ -239,7 +239,7 @@
                                     @L["Policy:Actions:Override"]
                                 </MudButton>
                             }
-                            <MudIconButton Icon="@Icons.Material.Outlined.Restore" Size="Size.Small"
+                            <MudIconButton Icon="@MoIcons.Restore" Size="Size.Small"
                                            Disabled="@(_isSaving || !_state.HasTimeoutOverride)"
                                            OnClick="ResetTimeout"
                                            aria-label="@L["Policy:Actions:ResetField"]" />
@@ -247,14 +247,14 @@
                         <div data-label="@L["Policy:Provenance:Effective"]"><code>@FormatDuration(_state.EffectiveTimeout)</code></div>
                     </div>
 
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true">
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true" Icon="@MoIcons.Info">
                         @L["Policy:Execution:ProspectiveNotice"]
                     </MudAlert>
                 </section>
 
                 <section class="policy-section" aria-labelledby="policy-retention-heading">
                     <OperationalPolicySectionHeading HeadingId="policy-retention-heading"
-                                                     Icon="@Icons.Material.Outlined.History"
+                                                     Icon="@MoIcons.History"
                                                      Title="@L["Policy:Sections:Retention"]"
                                                      Description="@L["Policy:Sections:RetentionHelp"]" />
                     <OperationalPolicyProvenanceHeader />
@@ -279,7 +279,7 @@
                                              ErrorText="@L["Policy:Validation:NumericMinimum", L["Policy:Fields:MaxDays"], 1]"
                                              Disabled="@_isSaving" Placeholder="@L["Policy:InheritDefault"]"
                                              aria-label="@L["Policy:Fields:MaxDays"]" />
-                            <MudIconButton Icon="@Icons.Material.Outlined.Restore" Size="Size.Small"
+                            <MudIconButton Icon="@MoIcons.Restore" Size="Size.Small"
                                            Disabled="@(_isSaving || _state.MaxRetentionDays is null)"
                                            OnClick="ResetMaxRetentionDays"
                                            aria-label="@L["Policy:Actions:ResetField"]" />
@@ -290,7 +290,7 @@
 
                 @if (_error is not null)
                 {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@MoIcons.Error">@_error</MudAlert>
                 }
             </div>
         }
@@ -305,7 +305,7 @@
                     @L["Common:Cancel"]
                 </MudButton>
                 <span class="policy-workbench__primary-action">
-                    <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Save"
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@MoIcons.Save"
                                Disabled="@(_isSaving || _state is null || !_state.CanSave)" OnClick="SaveAsync">
                         @(_isSaving ? L["Common:Saving"] : L["Common:Save"])
                     </MudButton>

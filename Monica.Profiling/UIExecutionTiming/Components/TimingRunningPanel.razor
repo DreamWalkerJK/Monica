@@ -10,7 +10,7 @@
     {
         <div class="timing-running-search"><MudTextField T="string" @ref="_searchField" Value="_query" ValueChanged="SearchChanged" Immediate="true"
             DebounceInterval="180" Label="@L["Running:Search"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-            Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+            Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" />
             @if (_query.Length != 0) { <MudButton Variant="Variant.Text" OnClick="ClearSearchAsync">@L["Common:Clear"]</MudButton> }
         </div>
     }
@@ -32,7 +32,7 @@
                     <div class="timing-active-age"><span>@L["Columns:RunningFor"]</span>
                         <strong>@ExecutionTimingDisplayFormatter.FormatRunningDuration(operation, CapturedAt)</strong>
                         <small>@L["Running:AgeBasis"]</small></div>
-                    <MudIconButton Icon="@Icons.Material.Outlined.ArrowForward" Color="Color.Primary" Size="Size.Small"
+                    <MudIconButton Icon="@MoIcons.ArrowRight" Color="Color.Primary" Size="Size.Small"
                                    aria-label="@L["Common:Inspect", operation.InvocationId]"
                                    OnClick="@(() => OnInspect.InvokeAsync(new TimingRunningEvidence(operation, CapturedAt)))" />
                 </article>
@@ -41,14 +41,14 @@
     }
     else
     {
-        <div class="timing-running-empty" role="status"><MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" Size="Size.Small" />
+        <div class="timing-running-empty" role="status"><MoIcon Icon="@MoIcons.Hourglass" Size="1.25rem" />
             <span>@(Operations.Count == 0 ? L["Running:Empty"] : L["Common:NoMatches"])</span></div>
     }
     <footer class="timing-running-footer"><span>@L["Running:CapturedHelp"]</span>
         @if (PageCount > 1)
         {
             <MudPagination Count="@PageCount" Selected="_page" SelectedChanged="ChangePage" ShowFirstButton="true" ShowLastButton="true"
-                           Color="Color.Primary" Size="Size.Small" aria-label="@L["Running:Pagination"]" />
+                           Color="Color.Primary" Size="Size.Small" aria-label="@L["Running:Pagination"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
         }
     </footer>
 </section>

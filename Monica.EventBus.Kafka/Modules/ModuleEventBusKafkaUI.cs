@@ -7,6 +7,7 @@ using Monica.EventBus.Kafka.Localization;
 using Monica.EventBus.Kafka.Pages;
 using Monica.EventBus.Kafka.UIEventBusKafka.State;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -49,27 +50,27 @@ public sealed class ModuleEventBusKafkaUI : MonicaModule<ModuleEventBusKafkaUIOp
                 var category = registry.RegisterLocalizedCategory<EventBusKafkaResource>(
                     "monica.kafka", "Pages:EventBusKafka:Title", 38,
                     parentId: BuiltInNavigationCategoryIds.Infrastructure,
-                    icon: Icons.Material.Outlined.Storage,
+                    icon: MoIcons.Database,
                     descriptionKey: "Workbench:CategoryDescription");
                 registry.RegisterLocalizedPage<UIEventBusKafkaPage, EventBusKafkaResource>(
                     UIEventBusKafkaPage.PAGE_URL,
                     "Workbench:Titles:Overview",
-                    Icons.Material.Outlined.Dashboard,
+                    MoIcons.Dashboard,
                     category,
                     addToNav: true,
                     navOrder: 0,
                     descriptionKey: "Workbench:Descriptions:Overview");
                 registry.RegisterLocalizedPage<UIEventBusKafkaClustersPage, EventBusKafkaResource>(
-                    UIEventBusKafkaClustersPage.PAGE_URL, "Workbench:Titles:Clusters", Icons.Material.Outlined.Dns,
+                    UIEventBusKafkaClustersPage.PAGE_URL, "Workbench:Titles:Clusters", MoIcons.Server,
                     category, addToNav: true, navOrder: 1, descriptionKey: "Workbench:Descriptions:Clusters");
                 registry.RegisterLocalizedPage<UIEventBusKafkaTopicsPage, EventBusKafkaResource>(
-                    UIEventBusKafkaTopicsPage.PAGE_URL, "Workbench:Titles:Topics", Icons.Material.Outlined.Topic,
+                    UIEventBusKafkaTopicsPage.PAGE_URL, "Workbench:Titles:Topics", MoIcons.Folder,
                     category, addToNav: true, navOrder: 2, descriptionKey: "Workbench:Descriptions:Topics");
                 registry.RegisterLocalizedPage<UIEventBusKafkaConsumerGroupsPage, EventBusKafkaResource>(
-                    UIEventBusKafkaConsumerGroupsPage.PAGE_URL, "Workbench:Titles:ConsumerGroups", Icons.Material.Outlined.PeopleAlt,
+                    UIEventBusKafkaConsumerGroupsPage.PAGE_URL, "Workbench:Titles:ConsumerGroups", MoIcons.Users,
                     category, addToNav: true, navOrder: 3, descriptionKey: "Workbench:Descriptions:ConsumerGroups");
                 registry.RegisterLocalizedPage<UIEventBusKafkaPerformancePage, EventBusKafkaResource>(
-                    UIEventBusKafkaPerformancePage.PAGE_URL, "Workbench:Titles:Performance", Icons.Material.Outlined.MonitorHeart,
+                    UIEventBusKafkaPerformancePage.PAGE_URL, "Workbench:Titles:Performance", MoIcons.HeartPulse,
                     category, addToNav: true, navOrder: 4, descriptionKey: "Workbench:Descriptions:Performance");
             }));
     }

@@ -25,7 +25,7 @@
     </div>
     @if (_failure is not null)
     {
-        <div class="terminal-transcript__failure"><MudAlert Severity="Severity.Error" Dense="true">@L["Messages:BrowserFailure", _failure]</MudAlert></div>
+        <div class="terminal-transcript__failure"><MudAlert Severity="Severity.Error" Dense="true" Icon="@MoIcons.Error">@L["Messages:BrowserFailure", _failure]</MudAlert></div>
     }
 </div>
 

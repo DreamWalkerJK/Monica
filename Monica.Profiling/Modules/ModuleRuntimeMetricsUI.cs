@@ -6,6 +6,7 @@ using Monica.Profiling.Localization;
 using Monica.Profiling.Pages;
 using Monica.Profiling.UIRuntimeMetrics.State;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -48,7 +49,7 @@ public class ModuleRuntimeMetricsUI : MonicaModule<ModuleRuntimeMetricsUIOption>
                 registry.RegisterLocalizedPage<UIRuntimeMetricsPage, RuntimeMetricsResource>(
                     UIRuntimeMetricsPage.PAGE_URL,
                     "Pages:RuntimeMetrics:Title",
-                    Icons.Material.Outlined.Speed,
+                    MoIcons.Gauge,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 10,

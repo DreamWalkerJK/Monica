@@ -3,15 +3,15 @@
 
 <div class="trajectory-workspace @(Selected is not null ? "has-selection" : null)" data-row-height="@LedgerRowHeight" style="--trajectory-row-height: @(LedgerRowHeight)px" @ref="_root">
     <div class="trajectory-toolbar">
-        <MudTextField T="string" Value="@_query" ValueChanged="Search" Placeholder="@L["Workbench:SearchTrajectory"]" Immediate="true" DebounceInterval="180" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true" />
+        <MudTextField ClearIcon="@MoIcons.Close" T="string" Value="@_query" ValueChanged="Search" Placeholder="@L["Workbench:SearchTrajectory"]" Immediate="true" DebounceInterval="180" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true" />
         <MudButton Size="Size.Small" OnClick="ToggleAll">@(_folded.Count > 0 ? L["Workbench:ExpandAll"] : L["Workbench:FoldAll"])</MudButton>
-        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.VerticalAlignBottom" OnClick="FollowTailAsync">@L["Workbench:FollowTail"]</MudButton>
+        <MudButton Size="Size.Small" StartIcon="@MoIcons.ArrowDownToLine" OnClick="FollowTailAsync">@L["Workbench:FollowTail"]</MudButton>
     </div>
     <div class="trajectory-summary" aria-label="@L["Workbench:TrajectorySummary"]">
-        <span title="@L["Workbench:RecordedDurationHelp"]"><MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" /><span>@L["Workbench:TrajectoryDuration"]</span><strong>@ChatExecutionPresentation.Duration(_projection.RecordedDuration)</strong></span>
-        <span><MudIcon Icon="@Icons.Material.Outlined.Forum" Size="Size.Small" /><span>@L["Workbench:TrajectoryTurns"]</span><strong>@_projection.TurnCount</strong></span>
-        <span title="@L["Workbench:ModelCallsHelp"]"><MudIcon Icon="@Icons.Material.Outlined.AutoAwesome" Size="Size.Small" /><span>@L["Workbench:TrajectoryCalls"]</span><strong>@_projection.ModelCalls</strong></span>
-        <span><MudIcon Icon="@Icons.Material.Outlined.Build" Size="Size.Small" /><span>@L["Workbench:Tools"]</span><strong>@_projection.ToolCalls</strong></span>
+        <span title="@L["Workbench:RecordedDurationHelp"]"><MoIcon Icon="@MoIcons.Clock" Size="1.25rem" /><span>@L["Workbench:TrajectoryDuration"]</span><strong>@ChatExecutionPresentation.Duration(_projection.RecordedDuration)</strong></span>
+        <span><MoIcon Icon="@MoIcons.Messages" Size="1.25rem" /><span>@L["Workbench:TrajectoryTurns"]</span><strong>@_projection.TurnCount</strong></span>
+        <span title="@L["Workbench:ModelCallsHelp"]"><MoIcon Icon="@MoIcons.Sparkle" Size="1.25rem" /><span>@L["Workbench:TrajectoryCalls"]</span><strong>@_projection.ModelCalls</strong></span>
+        <span><MoIcon Icon="@MoIcons.Wrench" Size="1.25rem" /><span>@L["Workbench:Tools"]</span><strong>@_projection.ToolCalls</strong></span>
     </div>
     <div class="trajectory-body @(Selected is not null ? "has-selection" : null)">
         <div class="trajectory-evidence">
@@ -19,12 +19,12 @@
             <summary>@L["Workbench:TimelineElapsed"]</summary>
             <div class="timeline-toolbar">
                 <span class="timeline-heading">@L["Workbench:TimelineElapsed"]</span>
-                <MudTooltip Text="@L["Workbench:TimelineHelp"]"><MudIconButton Icon="@Icons.Material.Outlined.HelpOutline" Size="Size.Small" aria-label="@L["Workbench:TimelineHelp"]" /></MudTooltip>
+                <MudTooltip Text="@L["Workbench:TimelineHelp"]"><MudIconButton Icon="@MoIcons.Help" Size="Size.Small" aria-label="@L["Workbench:TimelineHelp"]" /></MudTooltip>
                 <div class="timeline-actions">
-                    <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Pan(-.4)))" aria-label="@L["Workbench:PanEarlier"]" />
-                    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Pan(.4)))" aria-label="@L["Workbench:PanLater"]" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Zoom(2)))" aria-label="@L["Workbench:ZoomOut"]" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Zoom(.5)))" aria-label="@L["Workbench:ZoomIn"]" />
+                    <MudIconButton Icon="@MoIcons.ChevronLeft" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Pan(-.4)))" aria-label="@L["Workbench:PanEarlier"]" />
+                    <MudIconButton Icon="@MoIcons.ChevronRight" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Pan(.4)))" aria-label="@L["Workbench:PanLater"]" />
+                    <MudIconButton Icon="@MoIcons.Minus" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Zoom(2)))" aria-label="@L["Workbench:ZoomOut"]" />
+                    <MudIconButton Icon="@MoIcons.Add" Size="Size.Small" OnClick="@(() => ChangeViewport(() => _viewport.Zoom(.5)))" aria-label="@L["Workbench:ZoomIn"]" />
                     <MudButton Size="Size.Small" OnClick="@(() => ChangeViewport(_viewport.Reset))">@L["Workbench:ResetZoom"]</MudButton>
                 </div>
             </div>
@@ -67,7 +67,7 @@
                     @if (row.Group is { } group)
                     {
                         <button type="button" class="ledger-group" @onclick="@(() => ToggleTurn(group.Id))" aria-expanded="@(!_folded.Contains(group.Id) || !string.IsNullOrWhiteSpace(_query) ? "true" : "false")">
-                            <MudIcon Icon="@(_folded.Contains(group.Id) && string.IsNullOrWhiteSpace(_query) ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" Size="Size.Small" />
+                            <MoIcon Icon="@(_folded.Contains(group.Id) && string.IsNullOrWhiteSpace(_query) ? MoIcons.ChevronRight : MoIcons.ChevronDown)" Size="1.25rem" />
                             <strong>@(group.TurnNumber is { } number ? L["Workbench:TrajectoryTurn", number] : L["Workbench:Compaction"])</strong>
                             <span>@L["Workbench:TrajectoryTurnCounts", group.ModelCalls, group.ToolCalls]</span>
                         </button>
@@ -101,7 +101,7 @@
         @if (Selected is { } selected)
         {
             <aside class="trajectory-inspector">
-                <div class="inspector-navigation"><MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="ClearSelectionAsync">@L["Workbench:BackToLedger"]</MudButton></div>
+                <div class="inspector-navigation"><MudButton Size="Size.Small" StartIcon="@MoIcons.ArrowLeft" OnClick="ClearSelectionAsync">@L["Workbench:BackToLedger"]</MudButton></div>
                 <ChatExecutionInspector @key="selected.Id" Step="@selected.Step" Message="@selected.Message" MessageHeading="@(selected.HeadingKey is { } heading ? L[heading].Value : L[selected.RoleKey].Value)" RecordedAt="@selected.StartedAt" SessionId="@Session.SessionId" />
             </aside>
         }

@@ -21,7 +21,7 @@
             @if (!string.IsNullOrWhiteSpace(Result.SectionPath)) { <span>@Result.SectionPath</span> }
         </div>
         <p class="result-text">@Result.Text</p>
-        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Description" OnClick="HandleClick" aria-label="@L["KnowledgeWorkbench:Retrieval:ViewSource", Result.SourceName ?? L["RAG:Search:Result:UnknownSource"].Value]">@L["RAG:Search:Result:ViewInDocument"]</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@MoIcons.FileText" OnClick="HandleClick" aria-label="@L["KnowledgeWorkbench:Retrieval:ViewSource", Result.SourceName ?? L["RAG:Search:Result:UnknownSource"].Value]">@L["RAG:Search:Result:ViewInDocument"]</MudButton>
     </div>
     </div>
 </article>

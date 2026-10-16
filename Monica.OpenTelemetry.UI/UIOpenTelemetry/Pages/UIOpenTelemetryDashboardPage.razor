@@ -15,15 +15,15 @@
 <PageTitle>@L["Page:Title"]</PageTitle>
 <div class="telemetry-workspace">
     <header class="telemetry-heading">
-        <div><p class="telemetry-eyebrow"><MudIcon Icon="@Icons.Material.Outlined.Sensors" Size="Size.Small" />@L["Workbench:Eyebrow"]</p><h1>@L["Page:Title"]</h1><p class="telemetry-intro">@L["Workbench:Intro"]</p></div>
+        <div><p class="telemetry-eyebrow"><MoIcon Icon="@MoIcons.Radio" Size="1.25rem" />@L["Workbench:Eyebrow"]</p><h1>@L["Page:Title"]</h1><p class="telemetry-intro">@L["Workbench:Intro"]</p></div>
         @if (_state is not null)
         {
             <div class="telemetry-controls">
                 <div class="telemetry-refresh-row">
-                    <div class="telemetry-refresh-choice"><MudSelect T="string" Value="@AutoRefreshValue" ValueChanged="SetAutoRefreshAsync" Variant="Variant.Outlined" Dense="true" aria-label="@L["Filter:AutoRefresh"]">
+                    <div class="telemetry-refresh-choice"><MudSelect T="string" Value="@AutoRefreshValue" ValueChanged="SetAutoRefreshAsync" Variant="Variant.Outlined" Dense="true" aria-label="@L["Filter:AutoRefresh"]" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                         <MudSelectItem T="string" Value="@("off")">@L["Workbench:Manual"]</MudSelectItem><MudSelectItem T="string" Value="@("1s")">@L["Filter:Refresh1s"]</MudSelectItem><MudSelectItem T="string" Value="@("5s")">@L["Filter:Refresh5s"]</MudSelectItem>
                     </MudSelect></div>
-                    <MudButton @ref="_refreshButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="RefreshAsync" Disabled="_state.IsLoading">@L["Action:Refresh"]</MudButton>
+                    <MudButton @ref="_refreshButton" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@MoIcons.Refresh" OnClick="RefreshAsync" Disabled="_state.IsLoading">@L["Action:Refresh"]</MudButton>
                 </div>
                 <small>@L[_state.AutoRefreshInterval is null ? "Workbench:ReadingPaused" : "Workbench:ReadingActive"]</small>
                 @if (_state.SnapshotCapturedAt is { } adopted) { <small>@L["Workbench:ViewRead"] <time datetime="@adopted.ToString("O")">@adopted.ToLocalTime().ToString("HH:mm:ss")</time></small> }
@@ -38,7 +38,7 @@
     {
         @if (_state.Error is not null)
         {
-            <div class="telemetry-read-error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" /><div><strong>@L["Status:LoadFailed"]</strong><p>@L[_state.HasSnapshot ? "Workbench:RetainedAfterFailure" : "Workbench:NoSnapshot"]</p><p>@_state.Error</p></div></div>
+            <div class="telemetry-read-error" role="alert"><MoIcon Icon="@MoIcons.Error" Size="1.25rem" /><div><strong>@L["Status:LoadFailed"]</strong><p>@L[_state.HasSnapshot ? "Workbench:RetainedAfterFailure" : "Workbench:NoSnapshot"]</p><p>@_state.Error</p></div></div>
         }
         @if (_state.Snapshot is { } snapshot)
         {
@@ -63,7 +63,7 @@
             </div>
             <section class="telemetry-export">
                 <div><h2>@L["Workbench:ExportTitle"]</h2><p>@L["Workbench:ExportHelp"]</p></div>
-                <div class="telemetry-export-actions"><MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.DataObject" Disabled="_copyBusy" OnClick="CopyJsonAsync">@L["Action:CopyAsJson"]</MudButton><MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.ContentCopy" Disabled="_copyBusy" OnClick="CopyPrometheusAsync">@L["Action:CopyAsPrometheus"]</MudButton></div>
+                <div class="telemetry-export-actions"><MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@MoIcons.Braces" Disabled="_copyBusy" OnClick="CopyJsonAsync">@L["Action:CopyAsJson"]</MudButton><MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@MoIcons.Copy" Disabled="_copyBusy" OnClick="CopyPrometheusAsync">@L["Action:CopyAsPrometheus"]</MudButton></div>
             </section>
         }
         else if (_state.IsLoading)

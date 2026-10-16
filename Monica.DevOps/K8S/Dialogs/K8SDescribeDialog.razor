@@ -13,7 +13,7 @@
     <TitleContent><MoDialogHeading @ref="_heading" Text="@L["DescribeDialog:Title", GetResourceDisplayName(Details.Summary.Kind, Details.Summary.Name), Details.Summary.Namespace]" /></TitleContent>
     <DialogContent>
         <div class="k8s-inspector">
-            <MudTabs Elevation="0" Rounded="false" KeepPanelsAlive="true">
+            <MudTabs Elevation="0" Rounded="false" KeepPanelsAlive="true" PrevIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight">
                 <MudTabPanel Text="@L["Inspector:Summary"]">
                     <div class="tab-body">
                         <dl class="facts">
@@ -63,7 +63,7 @@
                             <MudText Typo="Typo.body2">@L["DescribeDialog:PodStatusDescription"]</MudText>
                             @if (UnhealthyPodCount > 0)
                             {
-                                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["DescribeDialog:PodsNeedAttention", UnhealthyPodCount]</MudAlert>
+                                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@MoIcons.Warning">@L["DescribeDialog:PodsNeedAttention", UnhealthyPodCount]</MudAlert>
                             }
                             @if (Details.RelatedPods.Count == 0)
                             {
@@ -81,9 +81,9 @@
                                         <MudTd DataLabel="@L["DescribeDialog:Pod"]"><div class="pod-evidence"><span>@context.Name</span><span>@L["DescribeDialog:Workload"]: @GetPodWorkloadDisplayName(context)</span></div></MudTd>
                                         <MudTd DataLabel="@L["Inspector:State"]"><div class="pod-evidence">
                                             <span>@L["DescribeDialog:Phase"]:</span>
-                                            <MudChip T="string" Color="@GetPodPhaseColor(context)" Variant="Variant.Outlined" Size="Size.Small">@context.PhaseDisplay</MudChip>
+                                            <MudChip T="string" Color="@GetPodPhaseColor(context)" Variant="Variant.Outlined" Size="Size.Small" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@context.PhaseDisplay</MudChip>
                                             <span>@L["DescribeDialog:Ready"]: @context.ReadyDisplay</span>
-                                            <MudChip T="string" Color="@(context.IsReady ? Color.Success : Color.Warning)" Variant="Variant.Outlined" Size="Size.Small">@(context.IsReady ? L["DescribeDialog:ReadyStateReady"] : L["DescribeDialog:ReadyStateNotReady"])</MudChip>
+                                            <MudChip T="string" Color="@(context.IsReady ? Color.Success : Color.Warning)" Variant="Variant.Outlined" Size="Size.Small" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@(context.IsReady ? L["DescribeDialog:ReadyStateReady"] : L["DescribeDialog:ReadyStateNotReady"])</MudChip>
                                         </div></MudTd>
                                         <MudTd DataLabel="@L["Inspector:RestartsStarted"]"><div class="pod-evidence"><span>@L["DescribeDialog:Restarts"]: @context.RestartCount</span><span>@L["DescribeDialog:Started"]: @context.StartTimeDisplay</span></div></MudTd>
                                         <MudTd DataLabel="@L["Inspector:Placement"]"><div class="pod-evidence"><span>@L["DescribeDialog:Node"]: @DisplayValue(context.NodeName)</span><span>@L["DescribeDialog:PodIp"]: @DisplayValue(context.PodIp)</span></div></MudTd>

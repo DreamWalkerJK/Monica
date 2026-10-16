@@ -29,7 +29,7 @@
                                 <span>@L.FormatSeederAttemptsSummary(seeder.Attempts, seeder.MaxAttempts)</span>
                             </div>
                         </div>
-                        <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                        <MudIconButton Icon="@MoIcons.Close"
                                        Size="Size.Small"
                                        OnClick="@CloseDetailsAsync"
                                        aria-label="@L["Actions:Close"]" />
@@ -41,7 +41,7 @@
                          tabindex="0">
                         <section class="seeder-detail-section seeder-timing-field" aria-labelledby="seeder-timing-title">
                             <header class="seeder-detail-section-heading">
-                                <h3 id="seeder-timing-title"><MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />@L["Details:Timing:Title"]</h3>
+                                <h3 id="seeder-timing-title"><MoIcon Icon="@MoIcons.Clock" Size="1.25rem" />@L["Details:Timing:Title"]</h3>
                             </header>
                             <div class="seeder-timing-duration">
                                 <span>@L["Details:Timing:Duration"]</span>
@@ -61,7 +61,7 @@
 
                         <section class="seeder-detail-section" aria-labelledby="seeder-policy-title">
                             <header class="seeder-detail-section-heading">
-                                <h3 id="seeder-policy-title"><MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Small" />@L["Details:Policy:Title"]</h3>
+                                <h3 id="seeder-policy-title"><MoIcon Icon="@MoIcons.Sliders" Size="1.25rem" />@L["Details:Policy:Title"]</h3>
                             </header>
                             <dl class="seeder-detail-facts seeder-policy-facts">
                                 <div>
@@ -97,7 +97,7 @@
 
                         <section class="seeder-detail-section" aria-labelledby="seeder-dependencies-title">
                             <header class="seeder-detail-section-heading">
-                                <h3 id="seeder-dependencies-title"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" />@L["Details:Dependencies:Title"]</h3>
+                                <h3 id="seeder-dependencies-title"><MoIcon Icon="@MoIcons.Workflow" Size="1.25rem" />@L["Details:Dependencies:Title"]</h3>
                                 <span>@seeder.Dependencies.Length</span>
                             </header>
                             @if (seeder.Dependencies.Length == 0)
@@ -134,7 +134,7 @@
 
                         <section class="seeder-detail-section" aria-labelledby="seeder-attempts-title">
                             <header class="seeder-detail-section-heading">
-                                <h3 id="seeder-attempts-title"><MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Small" />@L["Details:Attempts:Title"]</h3>
+                                <h3 id="seeder-attempts-title"><MoIcon Icon="@MoIcons.History" Size="1.25rem" />@L["Details:Attempts:Title"]</h3>
                                 <span>@L.FormatSeederRecordedAttempts(seeder.AttemptHistory.Length)</span>
                             </header>
                             @if (seeder.AttemptHistory.Length == 0)
@@ -192,7 +192,7 @@
                         {
                             <section class="seeder-detail-section seeder-final-diagnostic" aria-labelledby="seeder-error-title">
                                 <header class="seeder-detail-section-heading">
-                                    <h3 id="seeder-error-title"><MudIcon Icon="@Icons.Material.Outlined.BugReport" Size="Size.Small" />@L["Details:Error:Title"]</h3>
+                                    <h3 id="seeder-error-title"><MoIcon Icon="@MoIcons.Bug" Size="1.25rem" />@L["Details:Error:Title"]</h3>
                                 </header>
                                 <dl class="seeder-detail-error">
                                     <div>

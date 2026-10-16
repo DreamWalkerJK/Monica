@@ -5,14 +5,14 @@
 
 <MudDialog Visible="@Open" VisibleChanged="@OpenChanged" Options="@DialogOptions" ContentClass="pa-0" Style="max-height:calc(100dvh - 24px);margin:12px">
     <TitleContent>
-        <div class="archive-title"><MudIcon Icon="@Icons.Material.Outlined.Inventory2" /><span>@L["Session:Archive:Title"]</span></div>
+        <div class="archive-title"><MoIcon Icon="@MoIcons.Package" Size="1.5rem" /><span>@L["Session:Archive:Title"]</span></div>
     </TitleContent>
     <DialogContent>
         <div class="archive-manager" aria-busy="@_working.ToString().ToLowerInvariant()">
             <p class="archive-description">@L["Session:Archive:Description"]</p>
             @if (HasConflict)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true">@L["Session:Archive:Conflict"]</MudAlert>
+                <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Dense="true">@L["Session:Archive:Conflict"]</MudAlert>
             }
             @if (_confirmationIds is { } confirmation)
             {
@@ -22,19 +22,19 @@
             else
             {
                 <div class="archive-search">
-                    <MudTextField T="string" Value="@_search" ValueChanged="@SearchChanged" Immediate="true"
+                    <MudTextField ClearIcon="@MoIcons.Close" T="string" Value="@_search" ValueChanged="@SearchChanged" Immediate="true"
                                   Placeholder="@L["Session:Archive:Search"]" aria-label="@L["Session:Archive:Search"]"
-                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                                  Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Disabled="@_working" />
                 </div>
                 @if (Sessions.Count == 0)
                 {
-                    <div class="archive-empty"><MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Large" /><strong>@L["Session:Archive:Empty"]</strong><span>@L["Session:Archive:EmptyHint"]</span></div>
+                    <div class="archive-empty"><MoIcon Icon="@MoIcons.Package" Size="2.25rem" /><strong>@L["Session:Archive:Empty"]</strong><span>@L["Session:Archive:EmptyHint"]</span></div>
                 }
                 else
                 {
                     <div class="archive-selection-bar">
-                        <MudCheckBox T="bool" Value="@AllVisibleSelected" ValueChanged="@SelectVisible" Disabled="@(ActionsDisabled || VisibleSessions.Count == 0)"
+                        <MudCheckBox CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="bool" Value="@AllVisibleSelected" ValueChanged="@SelectVisible" Disabled="@(ActionsDisabled || VisibleSessions.Count == 0)"
                                      Dense="true" Label="@L["Session:Archive:SelectVisible"]" />
                         <span>@L["Session:Archive:Selected", _selected.Count]</span>
                     </div>
@@ -46,14 +46,14 @@
                         @foreach (var session in VisibleSessions)
                         {
                             <div class="archive-row" @key="session.SessionId">
-                                <MudCheckBox T="bool" Value="@_selected.Contains(session.SessionId)" ValueChanged="@(value => SelectSession(session.SessionId, value))"
+                                <MudCheckBox CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="bool" Value="@_selected.Contains(session.SessionId)" ValueChanged="@(value => SelectSession(session.SessionId, value))"
                                              Dense="true" Disabled="@ActionsDisabled" aria-label="@L["Session:Archive:SelectConversation", session.Title]" />
                                 <div class="archive-row-content">
                                     <span class="archive-row-title" title="@session.Title">@session.Title</span>
                                     <span class="archive-row-date">@L["Session:Archive:ArchivedOn", session.ArchivedAt?.ToLocalTime().ToString("g") ?? string.Empty]</span>
                                 </div>
                                 <span class="restore-action">
-                                    <MudIconButton Icon="@Icons.Material.Outlined.Unarchive" Size="Size.Small" Disabled="@ActionsDisabled"
+                                    <MudIconButton Icon="@MoIcons.Unarchive" Size="Size.Small" Disabled="@ActionsDisabled"
                                                    aria-label="@L["Session:Archive:RestoreConversation", session.Title]" title="@L["Session:Archive:Restore"]"
                                                    OnClick="@(() => RestoreAsync([session.SessionId]))" />
                                 </span>
@@ -61,9 +61,9 @@
                         }
                     </div>
                     <div class="archive-bulk-actions">
-                        <MudButton Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Outlined.DeleteForever"
+                        <MudButton Variant="Variant.Text" Color="Color.Error" StartIcon="@MoIcons.Delete"
                                    Disabled="@(ActionsDisabled || _selected.Count == 0)" OnClick="@BeginDelete">@L["Session:Archive:DeleteSelected"]</MudButton>
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Unarchive"
+                        <MudButton Variant="Variant.Outlined" StartIcon="@MoIcons.Unarchive"
                                    Disabled="@(ActionsDisabled || _selected.Count == 0)" OnClick="@(() => RestoreAsync(_selected.ToArray()))">@L["Session:Archive:RestoreSelected"]</MudButton>
                     </div>
                 }

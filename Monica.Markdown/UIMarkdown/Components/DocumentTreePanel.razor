@@ -13,7 +13,7 @@
                       aria-label="@L["MarkdownViewer:Placeholders:SearchFiles"]"
                       Placeholder="@L["MarkdownViewer:Placeholders:SearchFiles"]"
                       Adornment="Adornment.Start"
-                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      AdornmentIcon="@MoIcons.Search"
                       Variant="Variant.Outlined"
                       Margin="Margin.Dense"
                       Immediate="true"
@@ -24,9 +24,8 @@
         @if (_treeItems is null || _treeItems.Count == 0)
         {
             <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4 empty-state">
-                <MudIcon Icon="@Icons.Material.Filled.SearchOff"
-                         Size="Size.Large"
-                         Color="Color.Default"
+                <MoIcon Icon="@MoIcons.SearchOff"
+                         Size="2.25rem"
                          Class="tree-empty-icon" />
                 <MudText Typo="Typo.body2" Color="Color.Default" Class="tree-empty-text">
                     @(HasSearchText
@@ -44,7 +43,7 @@
                          Hover="true"
                          Dense="true"
                          Ripple="false"
-                         Class="doc-tree-view">
+                         Class="doc-tree-view" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus">
                 <ItemTemplate>
                     <MudTreeViewItem T="MarkdownDocumentNodeData"
                                      Items="@context.Children"
@@ -55,7 +54,7 @@
                                      Icon="@GetIcon(context.Value)"
                                      IconColor="Color.Inherit"
                                      Expanded="@context.Expanded"
-                                     ExpandedChanged="@((bool expanded) => OnExpandedChanged(context, expanded))" />
+                                     ExpandedChanged="@((bool expanded) => OnExpandedChanged(context, expanded))" ExpandButtonIcon="@MoIcons.ChevronRight" LoadingIcon="@MoIcons.Refresh" />
                 </ItemTemplate>
             </MudTreeView>
         }
@@ -141,8 +140,8 @@
 
     private static string GetIcon(MarkdownDocumentNodeData? data) =>
         data?.IsDocument == true
-            ? Icons.Material.Outlined.Description
-            : Icons.Material.Outlined.Folder;
+            ? MoIcons.FileText
+            : MoIcons.Folder;
 
     private static string GetTextClass(MarkdownDocumentNodeData? data) =>
         data?.IsDocument == true

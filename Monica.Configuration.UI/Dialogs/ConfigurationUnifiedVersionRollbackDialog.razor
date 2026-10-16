@@ -8,7 +8,7 @@
     <DialogContent>
         <div class="unified-version-rollback-dialog">
             <header class="unified-version-rollback-context">
-                <MudIcon Icon="@Icons.Material.Outlined.Restore" />
+                <MoIcon Icon="@MoIcons.Restore" Size="1.5rem" />
                 <div>
                     <h3>@VersionLabel</h3>
                     @if (_preview is not null)
@@ -23,11 +23,11 @@
             }
             @if (!string.IsNullOrWhiteSpace(_error))
             {
-                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+                <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert>
             }
             @if (_preview is not null)
             {
-                <MudAlert Severity="@PreviewMessageSeverity" Variant="Variant.Outlined">@PreviewMessage</MudAlert>
+                <MudAlert Icon="@((PreviewMessageSeverity) switch { Severity.Success => MoIcons.Success, Severity.Warning => MoIcons.Warning, Severity.Error => MoIcons.Error, _ => MoIcons.Info })" Severity="@PreviewMessageSeverity" Variant="Variant.Outlined">@PreviewMessage</MudAlert>
                 <ConfigurationUnifiedVersionRollbackPreview Preview="@_preview" LoadingChanged="OnPreviewLoadingChanged" />
                 <div class="unified-version-rollback-reason">
                     <MudTextField T="string" @bind-Value="_reason" Label="@L["Group:Reason"]" Variant="Variant.Outlined" Lines="2" Disabled="@(_saving || _reloading)" />
@@ -44,13 +44,13 @@
             <MudButton OnClick="Cancel" Disabled="@(_saving || _reloading)">@L["Common:Actions:Cancel"]</MudButton>
             @if (HasRuntimeOutOfSync)
             {
-                <MudButton Color="Color.Default" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Sync"
+                <MudButton Color="Color.Default" Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh"
                            OnClick="ReloadAndRefreshAsync" Disabled="@(_loading || _saving || _reloading)">
                     @L["Versions:Rollback:Actions:ReloadAndRefresh"]
                 </MudButton>
             }
-            <MudButton StartIcon="@Icons.Material.Outlined.Refresh" OnClick="RefreshPreviewAsync" Disabled="@(_loading || _saving || _reloading)">@L["Common:Actions:Refresh"]</MudButton>
-            <MudButton Color="Color.Default" Variant="Variant.Filled" Class="unified-version-rollback-apply" StartIcon="@Icons.Material.Outlined.Restore"
+            <MudButton StartIcon="@MoIcons.Refresh" OnClick="RefreshPreviewAsync" Disabled="@(_loading || _saving || _reloading)">@L["Common:Actions:Refresh"]</MudButton>
+            <MudButton Color="Color.Default" Variant="Variant.Filled" Class="unified-version-rollback-apply" StartIcon="@MoIcons.Restore"
                        OnClick="ApplyAsync" Disabled="@(!CanApply)">@L["Versions:Rollback:Actions:Apply"]</MudButton>
         </div>
     </DialogActions>

@@ -5,7 +5,7 @@
     <div class="table-header-section">
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
             <MudText Typo="Typo.subtitle1">@L["Page:Components:Files:Title"]</MudText>
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Refresh" OnClick="HandleRefresh" Disabled="@IsLoading">@L["Page:Components:Files:Refresh"]</MudButton>
+            <MudButton Variant="Variant.Text" StartIcon="@MoIcons.Refresh" OnClick="HandleRefresh" Disabled="@IsLoading">@L["Page:Components:Files:Refresh"]</MudButton>
         </MudStack>
         <MudText Typo="Typo.caption" Color="Color.Secondary">
             @L["Page:Components:Files:Directory", DisplayDirectory ?? L["Page:Components:Files:NotConfigured"]]
@@ -27,14 +27,14 @@
                 <MudTd>
                     <MudButton Variant="Variant.Text"
                                Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Download"
+                               StartIcon="@MoIcons.Download"
                                OnClick="() => HandleDownload(context.RelativePath)">
                         @L["Page:Components:Files:Download"]
                     </MudButton>
                 </MudTd>
             </RowTemplate>
             <NoRecordsContent>
-                <MudAlert Severity="Severity.Info" Dense="true">@L["Page:Components:Files:Empty"]</MudAlert>
+                <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Page:Components:Files:Empty"]</MudAlert>
             </NoRecordsContent>
         </MudTable>
     </div>

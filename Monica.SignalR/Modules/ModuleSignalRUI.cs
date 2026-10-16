@@ -8,6 +8,7 @@ using Monica.SignalR.Pages;
 using Monica.SignalR.UISignalR.State;
 using Monica.SignalR.UISignalR.Support;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -55,7 +56,7 @@ public class ModuleSignalRUI : MonicaModule<ModuleSignalRUIOption>, IUIModule
                 registry.RegisterLocalizedPage<UISignalRDebugPage, SignalRResource>(
                     UISignalRDebugPage.PAGE_URL,
                     "Pages:SignalRDebug:Title",
-                    Icons.Material.Filled.Settings,
+                    MoIcons.Settings,
                     BuiltInNavigationCategoryIds.Debug,
                     addToNav: true,
                     navOrder: 20)));

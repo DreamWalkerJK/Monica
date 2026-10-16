@@ -14,7 +14,7 @@
                 <p class="source-group">@L["KnowledgeDialogs:SourceGroup", source.GroupKey]</p>
             }
             <MudTextField T="string" @bind-Value="_filter" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Label="@L["KnowledgeDialogs:FilterSources"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+                          Label="@L["KnowledgeDialogs:FilterSources"]" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" />
             <div class="selection-header">
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     @L["RAG:DocumentSelection:Selected", SelectedDocuments.Count]
@@ -39,7 +39,7 @@
                 @foreach (var doc in FilteredDocuments)
                 {
                     <div class="document-item">
-                        <MudCheckBox T="bool"
+                        <MudCheckBox CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="bool"
                                      aria-label="@doc.Title"
                                      Value="@SelectedDocuments.Contains(doc.RelativePath)"
                                      ValueChanged="@((bool value) => ToggleDocument(doc.RelativePath, value))"

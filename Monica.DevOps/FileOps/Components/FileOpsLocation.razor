@@ -7,8 +7,8 @@
     <div class="location-line">
         <div class="location-identity">
             <div class="location-root">
-                <MudIconButton Icon="@Icons.Material.Outlined.ArrowUpward" aria-label="@L["Location:Up"]" Disabled="@(Busy || Browse?.ParentPath is null)" OnClick="@(() => Up.InvokeAsync())" />
-                <MudMenu Label="@RootName" AriaLabel="@L["Location:Root", RootName]" StartIcon="@Icons.Material.Outlined.Folder" EndIcon="@Icons.Material.Filled.ExpandMore" Disabled="@Busy" Class="root-choice" title="@Browse?.CurrentRootPath">
+                <MudIconButton Icon="@MoIcons.ArrowUp" aria-label="@L["Location:Up"]" Disabled="@(Busy || Browse?.ParentPath is null)" OnClick="@(() => Up.InvokeAsync())" />
+                <MudMenu Label="@RootName" AriaLabel="@L["Location:Root", RootName]" StartIcon="@MoIcons.Folder" EndIcon="@MoIcons.ChevronDown" Disabled="@Busy" Class="root-choice" title="@Browse?.CurrentRootPath">
                     @foreach (var root in Controller.RuntimeConfig?.AllowedRoots ?? [])
                     { <MudMenuItem OnClick="@(() => Navigate.InvokeAsync(root))"><span class="exact-root">@root</span></MudMenuItem> }
                 </MudMenu>
@@ -19,7 +19,7 @@
                 <span aria-hidden="true">/</span>
                 @if (accepted.Breadcrumbs.Count > 4)
                 {
-                    <MudMenu Icon="@Icons.Material.Filled.MoreHoriz" AriaLabel="@L["Location:Ancestors"]" Disabled="@Busy">
+                    <MudMenu Icon="@MoIcons.MoreHorizontal" AriaLabel="@L["Location:Ancestors"]" Disabled="@Busy">
                         @foreach (var segment in accepted.Breadcrumbs.Skip(1).Take(accepted.Breadcrumbs.Count - 3))
                         { <MudMenuItem OnClick="@(() => Navigate.InvokeAsync(segment.Path))">@segment.Name <span class="exact-root">@segment.Path</span></MudMenuItem> }
                     </MudMenu><span aria-hidden="true">/</span>
@@ -36,8 +36,8 @@
         }
         </div>
         <div class="location-tools">
-            <MudTooltip Text="@L["Location:GoToPath"]"><MudIconButton Icon="@Icons.Material.Outlined.EditLocationAlt" aria-label="@L["Location:GoToPath"]" Disabled="@Busy" OnClick="TogglePath" /></MudTooltip>
-            <MudTooltip Text="@L["Actions:Refresh"]"><MudIconButton Icon="@Icons.Material.Outlined.Refresh" aria-label="@L["Actions:Refresh"]" Disabled="@Busy" OnClick="@(() => Refresh.InvokeAsync())" /></MudTooltip>
+            <MudTooltip Text="@L["Location:GoToPath"]"><MudIconButton Icon="@MoIcons.MapPinEdit" aria-label="@L["Location:GoToPath"]" Disabled="@Busy" OnClick="TogglePath" /></MudTooltip>
+            <MudTooltip Text="@L["Actions:Refresh"]"><MudIconButton Icon="@MoIcons.Refresh" aria-label="@L["Actions:Refresh"]" Disabled="@Busy" OnClick="@(() => Refresh.InvokeAsync())" /></MudTooltip>
         </div>
     </div>
     @if (_pathOpen || Browse is null || PathFailed)
@@ -45,7 +45,7 @@
         <div class="path-row">
             <MudTextField T="string" Value="@Controller.ProposedPath" ValueChanged="SetPath" Label="@L["Workspace:PathInput"]" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" ReadOnly="@Busy" OnKeyDown="PathKeyAsync" Error="@PathFailed" ErrorText="@(PathFailed ? Controller.LastRead?.Message : null)" spellcheck="false" />
             <MudButton Variant="Variant.Outlined" Disabled="@(Busy || string.IsNullOrWhiteSpace(Controller.ProposedPath))" OnClick="@(() => Navigate.InvokeAsync(Controller.ProposedPath))">@L["Actions:Browse"]</MudButton>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" aria-label="@L["Location:DismissPath"]" Disabled="@(!CanDismissPath)" OnClick="DismissPathAsync" />
+            <MudIconButton Icon="@MoIcons.Close" aria-label="@L["Location:DismissPath"]" Disabled="@(!CanDismissPath)" OnClick="DismissPathAsync" />
         </div>
     }
 </section>

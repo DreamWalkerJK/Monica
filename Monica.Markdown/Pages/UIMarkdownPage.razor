@@ -23,18 +23,18 @@
         else if (PageState.CatalogError is not null)
         {
             <div class="doc-center-state">
-                <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Color="Color.Error" />
+                <MoIcon Icon="@MoIcons.Error" Size="1.5rem" Style="color:var(--mud-palette-error);" />
                 <h1>@L["MarkdownViewer:States:CatalogFailed"]</h1><p>@PageState.CatalogError</p>
-                <MudButton OnClick="PageState.ReloadAsync" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh">@L["MarkdownViewer:Actions:Refresh"]</MudButton>
+                <MudButton OnClick="PageState.ReloadAsync" Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh">@L["MarkdownViewer:Actions:Refresh"]</MudButton>
             </div>
         }
         else if (PageState.Groups is null || PageState.Groups.Count == 0)
         {
             <div class="doc-center-state">
-                <MudIcon Icon="@Icons.Material.Outlined.FolderOff" />
+                <MoIcon Icon="@MoIcons.FolderOff" Size="1.5rem" />
                 <h1>@L["MarkdownViewer:States:NoKnowledgeBasesRegistered"]</h1>
                 <p>@L["MarkdownViewer:States:NoLibrariesDescription"]</p>
-                <MudButton OnClick="PageState.ReloadAsync" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh">@L["MarkdownViewer:Actions:Refresh"]</MudButton>
+                <MudButton OnClick="PageState.ReloadAsync" Variant="Variant.Outlined" StartIcon="@MoIcons.Refresh">@L["MarkdownViewer:Actions:Refresh"]</MudButton>
             </div>
         }
         else

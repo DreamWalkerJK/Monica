@@ -18,7 +18,7 @@
     <div class="allocation-controls">
         <header class="allocation-collector">
             <span class="allocation-eyebrow">@L["Allocation:Eyebrow"]</span>
-            <MudIcon Icon="@Icons.Material.Outlined.Category" Class="allocation-collector__icon" aria-hidden="true" />
+            <MoIcon Icon="@MoIcons.Shapes" Class="allocation-collector__icon" aria-hidden="true" Size="1.5rem" />
             <h2>@L["Allocation:Title"]</h2>
             <p class="allocation-collector__status" data-collector-status="@(State.LiveSnapshot is null ? "unknown" : State.IsCollecting ? "collecting" : "idle")">
                 <span class="allocation-status-dot" aria-hidden="true"></span>
@@ -35,19 +35,19 @@
                 {
                     <div class="allocation-mode-field">
                         <MudSelect T="AllocationSamplingMode" Value="State.SelectedMode" ValueChanged="@(value => State.SelectedMode = value)"
-                                   Disabled="@Busy" Label="@L["Allocation:SamplingMode"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                   Disabled="@Busy" Label="@L["Allocation:SamplingMode"]" Variant="Variant.Outlined" Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                             <MudSelectItem Value="AllocationSamplingMode.Low">@L["Allocation:Modes:Low"]</MudSelectItem>
                             <MudSelectItem Value="AllocationSamplingMode.High">@L["Allocation:Modes:High"]</MudSelectItem>
                         </MudSelect>
                     </div>
-                    <MudButton Variant="Variant.Filled" Color="Color.Default" OnClick="StartCollection" Disabled="@(Busy || !State.CanStartCollection)" StartIcon="@Icons.Material.Outlined.PlayArrow">@L["Allocation:Actions:Start"]</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Default" OnClick="StartCollection" Disabled="@(Busy || !State.CanStartCollection)" StartIcon="@MoIcons.Play">@L["Allocation:Actions:Start"]</MudButton>
                 }
                 else
                 {
                     <span class="allocation-observed-mode">@GetModeDisplayName(State.CurrentMode)</span>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="StopCollection" Disabled="@Busy" StartIcon="@Icons.Material.Outlined.Stop">@L["Allocation:Actions:Stop"]</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="StopCollection" Disabled="@Busy" StartIcon="@MoIcons.Stop">@L["Allocation:Actions:Stop"]</MudButton>
                 }
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="TakeHeapSnapshotAsync" Disabled="@(Busy || !State.CanTakeHeapSnapshot)" StartIcon="@Icons.Material.Outlined.CameraAlt">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="TakeHeapSnapshotAsync" Disabled="@(Busy || !State.CanTakeHeapSnapshot)" StartIcon="@MoIcons.Camera">
                     @(State.IsSnapshotting ? L["Allocation:Actions:Snapshotting"] : L["Allocation:Actions:Snapshot"])
                 </MudButton>
             </div>
@@ -58,15 +58,15 @@
                 <p>@L[State.CanTakeHeapSnapshot ? "Allocation:Capabilities:Heap" : "Allocation:Capabilities:HeapVersion"]</p>
             </div>
             <div class="allocation-actions__secondary">
-                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RefreshData" Disabled="@Busy" StartIcon="@Icons.Material.Outlined.Refresh">@L["Allocation:Actions:Refresh"]</MudButton>
-                <MudButton Variant="Variant.Text" OnClick="ResetData" Disabled="@(Busy || State.IsCollecting)" StartIcon="@Icons.Material.Outlined.DeleteOutline">@L["Allocation:Actions:Reset"]</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RefreshData" Disabled="@Busy" StartIcon="@MoIcons.Refresh">@L["Allocation:Actions:Refresh"]</MudButton>
+                <MudButton Variant="Variant.Text" OnClick="ResetData" Disabled="@(Busy || State.IsCollecting)" StartIcon="@MoIcons.Delete">@L["Allocation:Actions:Reset"]</MudButton>
             </div>
         </div>
     </div>
 
     @if (State.LoadError is not null)
     {
-        <div class="allocation-error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" /><div>
+        <div class="allocation-error" role="alert"><MoIcon Icon="@MoIcons.Error" Size="1.25rem" /><div>
             <strong>@L["Allocation:Messages:LoadFailed"]</strong><p>@L["Allocation:Errors:Retained"]</p>
             @if (!string.IsNullOrEmpty(State.LoadError)) { <p>@State.LoadError</p> }
         </div></div>
@@ -113,28 +113,28 @@
         <p class="allocation-duration-help">@L["Allocation:Sources:DurationHelp"]</p>
         @if (!string.IsNullOrEmpty(snapshot?.ErrorMessage))
         {
-            <div class="allocation-error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" /><div><strong>@L["Allocation:Errors:SourceFailed"]</strong><p>@snapshot.ErrorMessage</p></div></div>
+            <div class="allocation-error" role="alert"><MoIcon Icon="@MoIcons.Error" Size="1.25rem" /><div><strong>@L["Allocation:Errors:SourceFailed"]</strong><p>@snapshot.ErrorMessage</p></div></div>
         }
         @if (snapshot?.DroppedEventCount > 0)
         {
-            <p class="allocation-coverage-note"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />@L["Allocation:DroppedEvents", MemoryAnalysisDisplayFormatter.Count(snapshot.DroppedEventCount)]</p>
+            <p class="allocation-coverage-note"><MoIcon Icon="@MoIcons.Info" Size="1.25rem" />@L["Allocation:DroppedEvents", MemoryAnalysisDisplayFormatter.Count(snapshot.DroppedEventCount)]</p>
         }
         <div class="allocation-filter">
             <div class="allocation-search-field">
                 <MudTextField T="string" @ref="_searchField" Value="State.SearchQuery" ValueChanged="@(value => State.SearchQuery = value)"
                               Label="@L["Allocation:Ranking:Search"]" Placeholder="@L["Allocation:Ranking:SearchPlaceholder"]"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" DebounceInterval="0" Clearable="true"
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+                              Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" ClearIcon="@MoIcons.Close" />
             </div>
             <div class="allocation-order-field">
-                <MudSelect T="TypeAllocationSortOrder" Value="State.SortOrder" ValueChanged="@(value => State.SortOrder = value)" Label="@L["Allocation:Ranking:Order"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelect T="TypeAllocationSortOrder" Value="State.SortOrder" ValueChanged="@(value => State.SortOrder = value)" Label="@L["Allocation:Ranking:Order"]" Variant="Variant.Outlined" Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                     <MudSelectItem Value="TypeAllocationSortOrder.BytesDescending">@L["Allocation:Ranking:Sort:Bytes"]</MudSelectItem>
                     <MudSelectItem Value="TypeAllocationSortOrder.CountDescending">@L["Allocation:Ranking:Sort:Count"]</MudSelectItem>
                     <MudSelectItem Value="TypeAllocationSortOrder.NameAscending">@L["Allocation:Ranking:Sort:Name"]</MudSelectItem>
                 </MudSelect>
             </div>
             <div class="allocation-page-size-field">
-                <MudSelect T="int" Value="State.TopN" ValueChanged="@(value => State.TopN = value)" Label="@L["Allocation:Ranking:Limit"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelect T="int" Value="State.TopN" ValueChanged="@(value => State.TopN = value)" Label="@L["Allocation:Ranking:Limit"]" Variant="Variant.Outlined" Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                     <MudSelectItem Value="5">5</MudSelectItem><MudSelectItem Value="10">10</MudSelectItem><MudSelectItem Value="30">30</MudSelectItem><MudSelectItem Value="60">60</MudSelectItem><MudSelectItem Value="100">100</MudSelectItem><MudSelectItem Value="200">200</MudSelectItem>
                 </MudSelect>
             </div>
@@ -157,14 +157,14 @@
                                 <td data-label="@countLabel" class="allocation-number">@MemoryAnalysisDisplayFormatter.Count(type.AllocationCount)</td>
                                 <td data-label="@bytesLabel" class="allocation-number">@MemoryAnalysisDisplayFormatter.Bytes(type.TotalBytes)</td>
                                 <td data-label="@L["Allocation:Ranking:Columns:Share"]" class="allocation-number">@MemoryAnalysisDisplayFormatter.RatioPercent(type.TotalBytes, snapshot!.TotalBytes)</td>
-                                <td class="allocation-inspect"><MudIconButton Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" aria-label="@L["Allocation:Ranking:Inspect", type.TypeName]" OnClick="@(() => InspectTypeAsync(view, type))" /></td>
+                                <td class="allocation-inspect"><MudIconButton Icon="@MoIcons.ArrowRight" Size="Size.Small" aria-label="@L["Allocation:Ranking:Inspect", type.TypeName]" OnClick="@(() => InspectTypeAsync(view, type))" /></td>
                             </tr>
                         }
                     </tbody>
                 </MudSimpleTable>
                 <footer class="allocation-pager">
                     <span>@L["Allocation:Ranking:Range", view.FirstVisible, view.LastVisible, view.Count]</span>
-                    <MudPagination Count="view.PageCount" Selected="view.Page" SelectedChanged="State.SetPage" Color="Color.Default" Size="Size.Small" ShowFirstButton="true" ShowLastButton="true" BoundaryCount="0" MiddleCount="1" aria-label="@L["Allocation:Ranking:Pagination"]" />
+                    <MudPagination Count="view.PageCount" Selected="view.Page" SelectedChanged="State.SetPage" Color="Color.Default" Size="Size.Small" ShowFirstButton="true" ShowLastButton="true" BoundaryCount="0" MiddleCount="1" aria-label="@L["Allocation:Ranking:Pagination"]" FirstIcon="@MoIcons.FirstPage" BeforeIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" LastIcon="@MoIcons.LastPage" />
                 </footer>
             }
             else
@@ -176,7 +176,7 @@
                     }
                     else
                     {
-                        <MudIcon Icon="@Icons.Material.Outlined.Category" aria-hidden="true" />
+                        <MoIcon Icon="@MoIcons.Shapes" aria-hidden="true" Size="1.5rem" />
                         <h3>@EmptyTitle(view)</h3><p>@EmptyHelp(view)</p>
                     }
                 </div>

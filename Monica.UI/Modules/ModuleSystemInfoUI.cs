@@ -1,3 +1,4 @@
+using Monica.UI.Icons;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -63,7 +64,7 @@ public static class ModuleSystemInfoUIBuilderExtensions
             {
                 Name = LocalizedText.Plain(name),
                 Url = url,
-                Icon = icon ?? Icons.Material.Filled.Link,
+                Icon = icon ?? MoIcons.Link,
                 Description = LocalizedText.PlainOrNull(description),
                 Category = LocalizedText.PlainOrNull(category),
                 Order = order,
@@ -89,7 +90,7 @@ public static class ModuleSystemInfoUIBuilderExtensions
                 Name = LocalizedText.Resource(SWAGGER_LINK_NAME_KEY, "API Management"),
                 // TODO: Replace this hardcoded route after the Swagger module exposes its UI path as an option.
                 Url = "/swagger",
-                Icon = Icons.Material.Filled.Api,
+                Icon = MoIcons.Plug,
                 Description = LocalizedText.Resource(SWAGGER_LINK_DESCRIPTION_KEY, "View and test API endpoints."),
                 Category = LocalizedText.Resource(SWAGGER_LINK_CATEGORY_KEY, "Monica"),
                 Order = order,
@@ -155,7 +156,7 @@ public class ModuleSystemInfoUI : MonicaModule<ModuleSystemInfoUIOption>, IWebHo
                 registry.RegisterLocalizedPage<UISystemInfoPage, SystemInfoResource>(
                     UISystemInfoPage.PAGE_URL,
                     "Pages:SystemInfo:Title",
-                    Icons.Material.Filled.Info,
+                    MoIcons.Info,
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 50,

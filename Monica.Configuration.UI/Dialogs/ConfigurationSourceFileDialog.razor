@@ -8,11 +8,11 @@
     <DialogContent>
         <div class="configuration-source-file" aria-busy="@(_loading ? "true" : "false")">
             @if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Info" /> }
-            @if (_error is not null) { <MudAlert Severity="Severity.Error">@_error</MudAlert> }
+            @if (_error is not null) { <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert> }
             @if (_fileView is not null)
             {
                 <header class="configuration-source-file-target">
-                    <MudIcon Icon="@Icons.Material.Outlined.Description" />
+                    <MoIcon Icon="@MoIcons.FileText" Size="1.5rem" />
                     <div><h3>@_fileView.Source.DisplayName</h3><code>@_fileView.Source.SourceKey</code><div class="configuration-source-file-badges"><span data-tone="@(_fileView.Source.IsWritable ? "info" : "secondary")">@(_fileView.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])</span>@if (_fileView.HasRedactions) { <span data-tone="warning">@L["Sources:File:Redacted"]</span> }</div></div>
                 </header>
                 <dl class="configuration-source-file-facts">

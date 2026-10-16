@@ -127,7 +127,7 @@
 .allocation-summary__bytes { background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface)); }
 .allocation-duration-help { font-size: 11px; line-height: 1.8; color: var(--allocation-secondary); margin: 12px 0 24px; max-width: 110ch; }
 .allocation-coverage-note { display: flex; gap: 8px; font-size: 12px; line-height: 1.7; color: var(--allocation-secondary); margin-bottom: 18px; }
-.allocation-coverage-note ::deep .mud-icon-root { flex: 0 0 auto; margin-top: 2px; }
+.allocation-coverage-note ::deep :is(.mud-icon-root, .mo-icon) { flex: 0 0 auto; margin-top: 2px; }
 
 .allocation-filter { display: grid; grid-template-columns: minmax(0, 1fr) 175px 130px; gap: 12px; min-width: 0; }
 .allocation-filter > div { min-width: 0; }
@@ -160,7 +160,7 @@
 .allocation-pager ::deep .mud-pagination .mud-button-root { min-width: 28px; }
 
 .allocation-empty { min-width: 0; padding: 34px 26px; display: grid; justify-items: start; gap: 10px; background: color-mix(in srgb, var(--mud-palette-background) 50%, var(--mud-palette-surface)); }
-.allocation-empty ::deep .mud-icon-root { color: var(--allocation-secondary); }
+.allocation-empty ::deep :is(.mud-icon-root, .mo-icon) { color: var(--allocation-secondary); }
 .allocation-empty h3 { margin: 5px 0 0; font-size: 16px; font-weight: 500; line-height: 1.5; }
 .allocation-empty p { margin: 0; color: var(--allocation-secondary); font-size: 13px; line-height: 1.8; max-width: 80ch; }
 .allocation-registry-help { margin: 16px 0 0; color: var(--allocation-secondary); font-size: 11px; line-height: 1.8; max-width: 110ch; }

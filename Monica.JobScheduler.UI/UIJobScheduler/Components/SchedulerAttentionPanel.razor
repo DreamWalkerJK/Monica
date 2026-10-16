@@ -23,7 +23,7 @@
     @if (attentionCategoryCount == 0)
     {
         <div class="attention-panel__clear">
-            <span class="attention-panel__clear-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.FactCheck" /></span>
+            <span class="attention-panel__clear-icon" aria-hidden="true"><MoIcon Icon="@MoIcons.ClipboardCheck" Size="1.5rem" /></span>
             <div>
                 <strong>@L["Overview:Attention:ClearTitle"]</strong>
                 <small>@L["Overview:Attention:ClearDescription"]</small>
@@ -36,37 +36,37 @@
             @if (failedCount > 0)
             {
                 <a href="/job-scheduler/executions?states=Failed" class="attention-panel__item" data-tone="error">
-                    <span class="attention-panel__item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Error" Size="Size.Small" /></span>
+                    <span class="attention-panel__item-icon" aria-hidden="true"><MoIcon Icon="@MoIcons.Error" Size="1.25rem" /></span>
                     <span class="attention-panel__item-copy">
                         <strong>@L["Overview:Attention:Failed"]</strong>
                         <small>@L["Overview:Attention:FailedDescription"]</small>
                     </span>
                     <b>@failedCount</b>
-                    <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" Class="attention-panel__chevron" />
+                    <MoIcon Icon="@MoIcons.ChevronRight" Size="1.25rem" Class="attention-panel__chevron" />
                 </a>
             }
             @if (skippedCount > 0)
             {
                 <a href="/job-scheduler/executions?states=Skipped" class="attention-panel__item" data-tone="warning">
-                    <span class="attention-panel__item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.SkipNext" Size="Size.Small" /></span>
+                    <span class="attention-panel__item-icon" aria-hidden="true"><MoIcon Icon="@MoIcons.SkipNext" Size="1.25rem" /></span>
                     <span class="attention-panel__item-copy">
                         <strong>@L["Overview:Attention:Skipped"]</strong>
                         <small>@L["Overview:Attention:SkippedDescription"]</small>
                     </span>
                     <b>@skippedCount</b>
-                    <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" Class="attention-panel__chevron" />
+                    <MoIcon Icon="@MoIcons.ChevronRight" Size="1.25rem" Class="attention-panel__chevron" />
                 </a>
             }
             @if (absentCount > 0)
             {
                 <a href="/job-scheduler/catalog?present=false" class="attention-panel__item" data-tone="info">
-                    <span class="attention-panel__item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.CloudOff" Size="Size.Small" /></span>
+                    <span class="attention-panel__item-icon" aria-hidden="true"><MoIcon Icon="@MoIcons.CloudOff" Size="1.25rem" /></span>
                     <span class="attention-panel__item-copy">
                         <strong>@L["Overview:Attention:Absent"]</strong>
                         <small>@L["Overview:Attention:AbsentDescription"]</small>
                     </span>
                     <b>@absentCount</b>
-                    <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" Class="attention-panel__chevron" />
+                    <MoIcon Icon="@MoIcons.ChevronRight" Size="1.25rem" Class="attention-panel__chevron" />
                 </a>
             }
         </div>

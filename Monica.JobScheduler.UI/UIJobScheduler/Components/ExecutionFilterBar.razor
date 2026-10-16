@@ -15,8 +15,8 @@
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Outlined.Search"
-                          OnKeyDown="HandleSearchKeyDownAsync" />
+                          AdornmentIcon="@MoIcons.Search"
+                          OnKeyDown="HandleSearchKeyDownAsync" ClearIcon="@MoIcons.Close" />
         </div>
         <div class="execution-filter__field">
             <MudSelect T="TRange"
@@ -26,7 +26,7 @@
                        Label="@L["Executions:Filters:TimeRange"]"
                        Disabled="@IsLoading"
                        Variant="Variant.Outlined"
-                       Margin="Margin.Dense">
+                       Margin="Margin.Dense" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 @foreach (var range in TimeRanges)
                 {
                     <MudSelectItem T="TRange" Value="@range">@TimeRangeLabel(range)</MudSelectItem>
@@ -35,12 +35,12 @@
         </div>
         <div class="execution-filter__actions">
             <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Outlined.FilterAltOff"
+                       StartIcon="@MoIcons.FilterOff"
                        Disabled="@IsLoading"
                        OnClick="ResetAsync">@L["Executions:Actions:Reset"]</MudButton>
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
-                       StartIcon="@Icons.Material.Outlined.Search"
+                       StartIcon="@MoIcons.Search"
                        Disabled="@(IsLoading || HasInvalidCustomRange)"
                        OnClick="ApplyAsync">@L["Executions:Actions:Apply"]</MudButton>
         </div>
@@ -57,7 +57,7 @@
                                Clearable="true"
                                Disabled="@IsLoading"
                                Variant="Variant.Outlined"
-                               Margin="Margin.Dense" />
+                               Margin="Margin.Dense" AdornmentIcon="@MoIcons.Calendar" PreviousIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" ClearIcon="@MoIcons.Close" />
             </div>
             <div class="execution-filter__field">
                 <MudDatePicker Date="@CustomEndDate"
@@ -67,7 +67,7 @@
                                Clearable="true"
                                Disabled="@IsLoading"
                                Variant="Variant.Outlined"
-                               Margin="Margin.Dense" />
+                               Margin="Margin.Dense" AdornmentIcon="@MoIcons.Calendar" PreviousIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" ClearIcon="@MoIcons.Close" />
             </div>
         </div>
     }
@@ -80,7 +80,7 @@
                 aria-pressed="@((SelectedStates.Count == 0).ToString().ToLowerInvariant())"
                 disabled="@IsLoading"
                 @onclick="ClearStatesAsync">
-            <MudIcon Icon="@Icons.Material.Outlined.SelectAll" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.SelectAll" Size="1.25rem" />
             <span>@L["Executions:Filters:AnyState"]</span>
         </button>
         @foreach (var state in Enum.GetValues<JobExecutionState>())
@@ -91,7 +91,7 @@
                     aria-pressed="@(SelectedStates.Contains(state).ToString().ToLowerInvariant())"
                     disabled="@IsLoading"
                     @onclick="@(() => ToggleStateAsync(state))">
-                <MudIcon Icon="@GetStateIcon(state)" Size="Size.Small" />
+                <MoIcon Icon="@GetStateIcon(state)" Size="1.25rem" />
                 <span>@L[$"ExecutionStates:{state}"]</span>
             </button>
         }

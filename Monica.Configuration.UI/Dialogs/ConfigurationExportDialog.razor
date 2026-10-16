@@ -50,7 +50,7 @@
 
             @if (!string.IsNullOrWhiteSpace(_error))
             {
-                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+                <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_error</MudAlert>
             }
 
             @if (_exporting)
@@ -63,7 +63,7 @@
         <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
-                   StartIcon="@Icons.Material.Filled.Download"
+                   StartIcon="@MoIcons.Download"
                    Disabled="@_exporting"
                    OnClick="DownloadAsync">
             @(_exporting ? L["Common:States:Loading"] : L["Common:Actions:Download"])

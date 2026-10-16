@@ -6,9 +6,9 @@
     <TitleContent><MoDialogHeading Text="@L["Dialogs:ComplexEditor:Title"]" /></TitleContent>
     <DialogContent>
         <div class="configuration-complex-editor">
-            <MudAlert Severity="Severity.Info" Dense="true">@L["Validation:FragmentNotice"]</MudAlert>
+            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Validation:FragmentNotice"]</MudAlert>
             <MudStack Spacing="2">
-                <MudAlert Severity="@ReloadSeverity" Variant="Variant.Outlined">
+                <MudAlert Icon="@((ReloadSeverity) switch { Severity.Success => MoIcons.Success, Severity.Warning => MoIcons.Warning, Severity.Error => MoIcons.Error, _ => MoIcons.Info })" Severity="@ReloadSeverity" Variant="Variant.Outlined">
                     @ReloadBehaviorMessage
                 </MudAlert>
 
@@ -35,14 +35,14 @@
                 <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" Class="configuration-editor-modes">
                     <MudButton Variant="@ModeVariant(EditorMode.Visual)"
                                Color="@ModeColor(EditorMode.Visual)"
-                               StartIcon="@Icons.Material.Outlined.AccountTree"
+                               StartIcon="@MoIcons.Workflow"
                                aria-pressed="@(_mode == EditorMode.Visual ? "true" : "false")"
                                OnClick="() => SetMode(EditorMode.Visual)">
                         @L["Dialogs:ComplexEditor:Modes:Visual"]
                     </MudButton>
                     <MudButton Variant="@ModeVariant(EditorMode.Patch)"
                                Color="@ModeColor(EditorMode.Patch)"
-                               StartIcon="@Icons.Material.Outlined.Difference"
+                               StartIcon="@MoIcons.FileDiff"
                                aria-pressed="@(_mode == EditorMode.Patch ? "true" : "false")"
                                OnClick="() => SetMode(EditorMode.Patch)">
                         @L["Dialogs:ComplexEditor:Modes:Patch"]
@@ -65,7 +65,7 @@
                                         @if (_navigationStack.Count > 0)
                                         {
                                             <MudTooltip Text="@L["Common:Actions:Back"]">
-                                                <MudIconButton aria-label="@L["Common:Actions:Back"]" Icon="@Icons.Material.Outlined.ArrowBack"
+                                                <MudIconButton aria-label="@L["Common:Actions:Back"]" Icon="@MoIcons.ArrowLeft"
                                                                Size="Size.Small"
                                                                OnClick="GoBack" />
                                             </MudTooltip>
@@ -85,7 +85,7 @@
 
                                     <MudButton Variant="Variant.Outlined"
                                                Color="Color.Primary"
-                                               StartIcon="@Icons.Material.Outlined.Add"
+                                               StartIcon="@MoIcons.Add"
                                                OnClick="AddEntry">
                                         @AddEntryLabel
                                     </MudButton>
@@ -93,7 +93,7 @@
                                     <div class="configuration-entry-list">
                                         @if (CurrentEntries.Count == 0)
                                         {
-                                            <MudAlert Severity="Severity.Info" Dense="true">@L["Dialogs:ComplexEditor:EmptyCollection"]</MudAlert>
+                                            <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info" Dense="true">@L["Dialogs:ComplexEditor:EmptyCollection"]</MudAlert>
                                         }
                                         else
                                         {
@@ -125,7 +125,7 @@
                                     <MudPaper Outlined="true" Square="true" Elevation="0" Class="configuration-collection-panel">
                                 @if (CurrentEntries.Count == 0)
                                 {
-                                    <MudAlert Severity="Severity.Info">@L["Dialogs:ComplexEditor:SelectEntry"]</MudAlert>
+                                    <MudAlert Icon="@MoIcons.Info" Severity="Severity.Info">@L["Dialogs:ComplexEditor:SelectEntry"]</MudAlert>
                                 }
                                 else
                                 {
@@ -146,18 +146,18 @@
                                                             @if (_focusNode.NodeKind == ConfigurationNodeKind.List)
                                                             {
                                                                 <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:MoveUp"]">
-                                                                    <MudIconButton aria-label="@L["Dialogs:ComplexEditor:Actions:MoveUp"]" Icon="@Icons.Material.Outlined.KeyboardArrowUp"
+                                                                    <MudIconButton aria-label="@L["Dialogs:ComplexEditor:Actions:MoveUp"]" Icon="@MoIcons.ChevronUp"
                                                                                    Size="Size.Small"
                                                                                    OnClick="() => MoveListEntry(entry, -1)" />
                                                                 </MudTooltip>
                                                                 <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:MoveDown"]">
-                                                                    <MudIconButton aria-label="@L["Dialogs:ComplexEditor:Actions:MoveDown"]" Icon="@Icons.Material.Outlined.KeyboardArrowDown"
+                                                                    <MudIconButton aria-label="@L["Dialogs:ComplexEditor:Actions:MoveDown"]" Icon="@MoIcons.ChevronDown"
                                                                                    Size="Size.Small"
                                                                                    OnClick="() => MoveListEntry(entry, 1)" />
                                                                 </MudTooltip>
                                                             }
                                                             <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:Remove"]">
-                                                                <MudIconButton aria-label="@L["Dialogs:ComplexEditor:Actions:Remove"]" Icon="@Icons.Material.Outlined.Delete"
+                                                                <MudIconButton aria-label="@L["Dialogs:ComplexEditor:Actions:Remove"]" Icon="@MoIcons.Delete"
                                                                                Size="Size.Small"
                                                                                Color="Color.Error"
                                                                                OnClick="() => RemoveEntry(entry)" />
@@ -177,7 +177,7 @@
                                                                         @if (!string.IsNullOrWhiteSpace(field.Description))
                                                                         {
                                                                             <MudTooltip Text="@field.Description">
-                                                                                <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                                                                                <MudIconButton Icon="@MoIcons.Info"
                                                                                                Size="Size.Small"
                                                                                                Color="Color.Info"
                                                                                                Variant="Variant.Text"
@@ -213,7 +213,7 @@
                                                                         @if (!string.IsNullOrWhiteSpace(collectionSection.Node.Description))
                                                                         {
                                                                             <MudTooltip Text="@collectionSection.Node.Description">
-                                                                                <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                                                                                <MudIconButton Icon="@MoIcons.Info"
                                                                                                Size="Size.Small"
                                                                                                Color="Color.Info"
                                                                                                Variant="Variant.Text"
@@ -242,7 +242,7 @@
                                                                         @if (!string.IsNullOrWhiteSpace(objectSection.Node.Description))
                                                                         {
                                                                             <MudTooltip Text="@objectSection.Node.Description">
-                                                                                <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                                                                                <MudIconButton Icon="@MoIcons.Info"
                                                                                                Size="Size.Small"
                                                                                                Color="Color.Info"
                                                                                                Variant="Variant.Text"
@@ -267,7 +267,7 @@
                                                                                         @if (!string.IsNullOrWhiteSpace(field.Description))
                                                                                         {
                                                                                             <MudTooltip Text="@field.Description">
-                                                                                                <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                                                                                                <MudIconButton Icon="@MoIcons.Info"
                                                                                                                Size="Size.Small"
                                                                                                                Color="Color.Info"
                                                                                                                Variant="Variant.Text"
@@ -304,7 +304,7 @@
                                                                                     @if (!string.IsNullOrWhiteSpace(collectionSection.Node.Description))
                                                                                     {
                                                                                         <MudTooltip Text="@collectionSection.Node.Description">
-                                                                                            <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                                                                                            <MudIconButton Icon="@MoIcons.Info"
                                                                                                            Size="Size.Small"
                                                                                                            Color="Color.Info"
                                                                                                            Variant="Variant.Text"
@@ -387,7 +387,7 @@
         {
             <MudButton Color="Color.Default"
                        Variant="Variant.Text"
-                       StartIcon="@Icons.Material.Outlined.Restore"
+                       StartIcon="@MoIcons.Restore"
                        Disabled="@(_changes.Count == 0)"
                        OnClick="ResetVisualChanges">
                 @L["Dialogs:ComplexEditor:Actions:Reset"]
@@ -395,7 +395,7 @@
         }
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
-                   StartIcon="@Icons.Material.Outlined.Save"
+                   StartIcon="@MoIcons.Save"
                    Disabled="@(!CanStage)"
                    OnClick="Apply">
             @StageButtonText

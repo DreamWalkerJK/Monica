@@ -19,7 +19,7 @@
     <section class="overview-score" aria-label="@L["Aria:SummaryMetrics"]">
         <div class="score-feature">
             <div class="score-lede">
-                <span class="score-symbol" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Route" /></span>
+                <span class="score-symbol" aria-hidden="true"><MoIcon Size="1.5rem" Icon="@MoIcons.Route" /></span>
                 <p class="mo-vl-eyebrow">@(startupDuration.HasValue ? L["Overview:Score:Eyebrow:Startup"] : L["Overview:Score:Eyebrow:Composition"])</p>
                 <MoDisplayValue Value="@DisplayValue(recordedDuration)"
                                 Unit="@DisplayUnit(recordedDuration)"
@@ -76,13 +76,13 @@
                               Value="@_search"
                               ValueChanged="@OnSearchChanged"
                               Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Outlined.Search"
+                              AdornmentIcon="@MoIcons.Search"
                               Label="@L["Overview:Ledger:SearchPlaceholder"]"
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Immediate="true"
                               Clearable="true"
-                              Class="ledger-search" />
+                              Class="ledger-search" ClearIcon="@MoIcons.Close" />
                 <div class="mo-vl-chips" role="group" aria-label="@L["Overview:Ledger:FilterAria"]">
                     <MoFilterChip Label="@L["Common:All"]" Selected="@(_filter == LedgerFilter.All)" SelectedChanged="@(() => SetFilter(LedgerFilter.All))" />
                     <MoFilterChip Label="@L["Overview:Ledger:Filter:HasStartupWork"]" Selected="@(_filter == LedgerFilter.HasStartupWork)" SelectedChanged="@(() => SetFilter(LedgerFilter.HasStartupWork))" />
@@ -113,7 +113,7 @@
                 <div class="findings-list">
                     @if (snapshot.Findings.IsEmpty)
                     {
-                        <p class="compact-empty-state"><MudIcon Icon="@Icons.Material.Outlined.Checklist" Size="Size.Small" /><span>@L["Overview:Findings:Empty"]</span></p>
+                        <p class="compact-empty-state"><MoIcon Icon="@MoIcons.ListChecks" Size="1.25rem" /><span>@L["Overview:Findings:Empty"]</span></p>
                     }
                     else
                     {
@@ -136,7 +136,7 @@
                         @if (snapshot.Findings.Length > MaxVisibleFindings)
                         {
                             <MudExpansionPanels Class="finding-overflow">
-                                <MudExpansionPanel Text="@L["Overview:Findings:Remaining", snapshot.Findings.Length - MaxVisibleFindings]">
+                                <MudExpansionPanel Text="@L["Overview:Findings:Remaining", snapshot.Findings.Length - MaxVisibleFindings]" Icon="@MoIcons.ChevronDown">
                                     <div class="finding-overflow-list">
                                         @foreach (var finding in snapshot.Findings.Skip(MaxVisibleFindings))
                                         {
@@ -174,7 +174,7 @@
                 <div class="depth-body">
                     @if (DepthRows.Count == 0)
                     {
-                        <p class="compact-empty-state"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" /><span>@L["Overview:Depth:Empty"]</span></p>
+                        <p class="compact-empty-state"><MoIcon Icon="@MoIcons.Workflow" Size="1.25rem" /><span>@L["Overview:Depth:Empty"]</span></p>
                     }
                     else
                     {

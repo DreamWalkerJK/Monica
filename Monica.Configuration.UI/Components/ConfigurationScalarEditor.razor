@@ -28,7 +28,7 @@
     }
     else if (Node.ValueKind == ConfigurationValueKind.DateTime)
     {
-        <MudDatePicker @key="EditorInstanceKey"
+        <MudDatePicker AdornmentIcon="@MoIcons.Calendar" PreviousIcon="@MoIcons.ChevronLeft" NextIcon="@MoIcons.ChevronRight" @key="EditorInstanceKey"
                        Date="@_dateValue"
                        DateChanged="OnDateChanged"
                        aria-label="@EditorLabel"
@@ -54,7 +54,7 @@
                               Placeholder="@L["State:Editor:TimeSpanPlaceholder"]"
                               Error="@HasError"
                               Adornment="Adornment.End"
-                              AdornmentIcon="@Icons.Material.Filled.Schedule"
+                              AdornmentIcon="@MoIcons.Clock"
                               OnAdornmentClick="OpenTimePicker"
                               Disabled="@Disabled" />
                 <MudPopover Open="@_timePickerOpen"
@@ -62,7 +62,7 @@
                             TransformOrigin="Origin.TopRight"
                             Class="configuration-time-picker-popover">
                     <MudStack Spacing="2" Class="configuration-time-picker-menu">
-                        <MudTimePicker PickerVariant="PickerVariant.Static"
+                        <MudTimePicker AdornmentIcon="@MoIcons.Clock" PickerVariant="PickerVariant.Static"
                                        Time="@_pickerDraftTime"
                                        TimeChanged="OnTimePickerDraftChanged"
                                        TimeFormat="HH:mm"
@@ -93,7 +93,7 @@
     }
     else if (EnumValues.Count > 0)
     {
-        <MudSelect @key="EditorInstanceKey"
+        <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" @key="EditorInstanceKey"
                    T="string"
                    aria-label="@EditorLabel"
                    Value="@_textValue"
@@ -132,7 +132,7 @@
             <div class="configuration-regex-hint">
                 <MudTooltip Text="@L["State:Editor:RegexPatternTooltip"]">
                     <span class="configuration-regex-badge">
-                        <MudIcon Icon="@Icons.Material.Filled.Functions" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.Sigma" Size="1.25rem" />
                         <span>@L["State:Editor:RegexPattern"]</span>
                     </span>
                 </MudTooltip>
@@ -159,7 +159,7 @@
             <div class="configuration-editor-hint">
                 <MudTooltip Text="@L["State:Editor:EditorHintTooltip", Node.EditorHint]">
                     <span class="configuration-editor-hint-badge">
-                        <MudIcon Icon="@Icons.Material.Filled.EditAttributes" Size="Size.Small" />
+                        <MoIcon Icon="@MoIcons.ToggleLeft" Size="1.25rem" />
                         <span>@Node.EditorHint</span>
                     </span>
                 </MudTooltip>
@@ -239,7 +239,7 @@
     private string EditorInstanceKey => $"{Node.RelativePath.ToCanonicalString()}:{Node.ValueKind}:{_editorResetVersion}";
 
     private string? SensitiveAdornmentIcon => Node.IsSensitive
-        ? _showSensitive ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility
+        ? _showSensitive ? MoIcons.EyeOff : MoIcons.Eye
         : null;
 
     private string? Placeholder => Node.IsSensitive && string.IsNullOrWhiteSpace(_textValue)

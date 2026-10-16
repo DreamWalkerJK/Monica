@@ -7,6 +7,7 @@ using Monica.DevOps.FileOps.Pages;
 using Monica.DevOps.FileOps.State;
 using Monica.DevOps.Localization;
 using Monica.UI.Shell.Models;
+using Monica.UI.Icons;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -35,14 +36,14 @@ public class ModuleFileOpsUI : MonicaModule<ModuleFileOpsUIOption>, IUIModule
                 registry.RegisterLocalizedPage<UIFileOpsPage, FileOpsResource>(
                     UIFileOpsPage.PAGE_URL,
                     "Pages:FileOps:Title",
-                    Icons.Material.Filled.Folder,
+                    MoIcons.Folder,
                     BuiltInNavigationCategoryIds.Infrastructure,
                     addToNav: true,
                     navOrder: 36);
                 registry.RegisterLocalizedPage<UIFileOpsPolicyPage, FileOpsResource>(
                     UIFileOpsPolicyPage.PAGE_URL,
                     "Pages:FileOpsPolicy:Title",
-                    Icons.Material.Filled.Tune,
+                    MoIcons.Sliders,
                     BuiltInNavigationCategoryIds.Infrastructure,
                     addToNav: false,
                     navOrder: 37);

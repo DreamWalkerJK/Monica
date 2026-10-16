@@ -23,11 +23,11 @@
     else if (_renderState == GraphRenderState.Failed)
     {
         <div class="graph-placeholder graph-failed" role="alert">
-            <MudIcon Icon="@Icons.Material.Outlined.BrokenImage" Color="Color.Error" />
+            <MoIcon Size="1.5rem" Icon="@MoIcons.ImageOff" Style="color:var(--mud-palette-error)" />
             <span>@L["Dependencies:Graph:Failed"]</span>
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Primary"
-                       StartIcon="@Icons.Material.Outlined.Refresh"
+                       StartIcon="@MoIcons.Refresh"
                        OnClick="@RetryAsync">
                 @L["Actions:Retry"]
             </MudButton>

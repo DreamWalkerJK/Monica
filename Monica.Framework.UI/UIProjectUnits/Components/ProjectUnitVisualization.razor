@@ -18,13 +18,13 @@
         </div>
         <div class="graph-heading__actions">
             <button type="button" class="graph-action" disabled="@_loading" @onclick="LoadProjectUnitsAsync">
-                <MudIcon Icon="@Icons.Material.Outlined.Refresh" Size="Size.Small" />@L["ProjectUnitVisualization:Actions:RefreshTooltip"]
+                <MoIcon Icon="@MoIcons.Refresh" Size="1.25rem" />@L["ProjectUnitVisualization:Actions:RefreshTooltip"]
             </button>
             <button type="button" class="graph-action" aria-expanded="@(_showFilterPanel ? "true" : "false")" @onclick="ToggleFilterPanel">
-                <MudIcon Icon="@Icons.Material.Outlined.FilterAlt" Size="Size.Small" />@L["ProjectUnitVisualization:Actions:FilterSettingsTooltip"]
+                <MoIcon Icon="@MoIcons.Filter" Size="1.25rem" />@L["ProjectUnitVisualization:Actions:FilterSettingsTooltip"]
             </button>
             <button type="button" class="graph-action" aria-expanded="@(_showLayoutPanel ? "true" : "false")" @onclick="ToggleLayoutPanel">
-                <MudIcon Icon="@Icons.Material.Outlined.Dashboard" Size="Size.Small" />@L["ProjectUnitVisualization:Actions:LayoutSettingsTooltip"]
+                <MoIcon Icon="@MoIcons.Dashboard" Size="1.25rem" />@L["ProjectUnitVisualization:Actions:LayoutSettingsTooltip"]
             </button>
         </div>
     </header>
@@ -43,7 +43,7 @@
     {
         var relatedUnit = _allProjectUnits.FirstOrDefault(unit => unit.Key == _relatedToNodeId);
         <div class="graph-related-scope" role="status">
-            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" />
+            <MoIcon Icon="@MoIcons.Workflow" Size="1.25rem" />
             <div><span>@L["ProjectUnitVisualization:Workspace:ConnectedScope"]</span><strong>@(relatedUnit?.Title ?? _relatedToNodeId)</strong><p>@L["ProjectUnitVisualization:Workspace:ConnectedScopeHint"]</p></div>
             <button type="button" class="graph-text-action" @onclick="ClearRelatedFilterClick">@L["ProjectUnitVisualization:ContextMenu:ClearRelatedFilter"]</button>
         </div>
@@ -54,10 +54,10 @@
             <div class="graph-canvas-toolbar">
                 <div class="graph-scope"><strong>@_filteredUnits.Count</strong><span>@L["ProjectUnitVisualization:Workspace:VisibleUnits", _allProjectUnits.Count]</span><span class="graph-scope__divider" aria-hidden="true"></span><strong>@_visibleRelationships.Count</strong><span>@L["ProjectUnitVisualization:Workspace:DirectedEdges"]</span></div>
                 <div class="graph-camera-controls">
-                    <button type="button" class="graph-camera-button" disabled="@(_loading || _filteredUnits.Count == 0)" @onclick="FitView" title="@L["ProjectUnitVisualization:Workspace:Fit"]" aria-label="@L["ProjectUnitVisualization:Workspace:Fit"]"><MudIcon Icon="@Icons.Material.Outlined.FitScreen" Size="Size.Small" /></button>
-                    <button type="button" class="graph-camera-button" disabled="@_loading" @onclick="ZoomOut" title="@L["ProjectUnitVisualization:Workspace:ZoomOut"]" aria-label="@L["ProjectUnitVisualization:Workspace:ZoomOut"]"><MudIcon Icon="@Icons.Material.Outlined.Remove" Size="Size.Small" /></button>
-                    <button type="button" class="graph-camera-button" disabled="@_loading" @onclick="ZoomIn" title="@L["ProjectUnitVisualization:Workspace:ZoomIn"]" aria-label="@L["ProjectUnitVisualization:Workspace:ZoomIn"]"><MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /></button>
-                    <button type="button" class="graph-camera-button" disabled="@_loading" @onclick="ResetView" title="@L["ProjectUnitVisualization:Actions:ResetViewTooltip"]" aria-label="@L["ProjectUnitVisualization:Actions:ResetViewTooltip"]"><MudIcon Icon="@Icons.Material.Outlined.RestartAlt" Size="Size.Small" /></button>
+                    <button type="button" class="graph-camera-button" disabled="@(_loading || _filteredUnits.Count == 0)" @onclick="FitView" title="@L["ProjectUnitVisualization:Workspace:Fit"]" aria-label="@L["ProjectUnitVisualization:Workspace:Fit"]"><MoIcon Icon="@MoIcons.Scan" Size="1.25rem" /></button>
+                    <button type="button" class="graph-camera-button" disabled="@_loading" @onclick="ZoomOut" title="@L["ProjectUnitVisualization:Workspace:ZoomOut"]" aria-label="@L["ProjectUnitVisualization:Workspace:ZoomOut"]"><MoIcon Icon="@MoIcons.Minus" Size="1.25rem" /></button>
+                    <button type="button" class="graph-camera-button" disabled="@_loading" @onclick="ZoomIn" title="@L["ProjectUnitVisualization:Workspace:ZoomIn"]" aria-label="@L["ProjectUnitVisualization:Workspace:ZoomIn"]"><MoIcon Icon="@MoIcons.Add" Size="1.25rem" /></button>
+                    <button type="button" class="graph-camera-button" disabled="@_loading" @onclick="ResetView" title="@L["ProjectUnitVisualization:Actions:ResetViewTooltip"]" aria-label="@L["ProjectUnitVisualization:Actions:ResetViewTooltip"]"><MoIcon Icon="@MoIcons.Restart" Size="1.25rem" /></button>
                 </div>
             </div>
             <div class="graph-canvas-owner" aria-busy="@(_loading ? "true" : "false")">
@@ -68,18 +68,18 @@
                 }
                 else if (!string.IsNullOrEmpty(_loadError))
                 {
-                    <div class="graph-canvas-state graph-canvas-state--error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" /><strong>@L["ProjectUnitVisualization:Workspace:LoadError"]</strong><p>@_loadError</p></div>
+                    <div class="graph-canvas-state graph-canvas-state--error" role="alert"><MoIcon Icon="@MoIcons.Error" Size="1.5rem" /><strong>@L["ProjectUnitVisualization:Workspace:LoadError"]</strong><p>@_loadError</p></div>
                 }
                 else if (_filteredUnits.Count == 0)
                 {
-                    <div class="graph-canvas-state"><MudIcon Icon="@Icons.Material.Outlined.Hub" /><strong>@L[_allProjectUnits.Count == 0 ? "ProjectUnitVisualization:Workspace:EmptyCatalog" : "ProjectUnitVisualization:Workspace:NoMatches"]</strong><p>@L[_allProjectUnits.Count == 0 ? "ProjectUnitVisualization:Workspace:EmptyCatalogHint" : "ProjectUnitVisualization:Workspace:NoMatchesHint"]</p>@if (_allProjectUnits.Count > 0){<button type="button" class="graph-action" @onclick="() => ClearAllFiltersAsync(null)">@L["ProjectUnitVisualization:ContextMenu:ClearAllFilters"]</button>}</div>
+                    <div class="graph-canvas-state"><MoIcon Icon="@MoIcons.Network" Size="1.5rem" /><strong>@L[_allProjectUnits.Count == 0 ? "ProjectUnitVisualization:Workspace:EmptyCatalog" : "ProjectUnitVisualization:Workspace:NoMatches"]</strong><p>@L[_allProjectUnits.Count == 0 ? "ProjectUnitVisualization:Workspace:EmptyCatalogHint" : "ProjectUnitVisualization:Workspace:NoMatchesHint"]</p>@if (_allProjectUnits.Count > 0){<button type="button" class="graph-action" @onclick="() => ClearAllFiltersAsync(null)">@L["ProjectUnitVisualization:ContextMenu:ClearAllFilters"]</button>}</div>
                 }
             </div>
             <footer class="graph-canvas-footer"><div class="graph-legend"><span><i class="graph-legend__simple" aria-hidden="true"></i>@L["ProjectUnitVisualization:Legend:SimpleUnit"]</span><span><i class="graph-legend__complex" aria-hidden="true"></i>@L["ProjectUnitVisualization:Legend:ComplexUnit"]</span></div><p>@L["ProjectUnitVisualization:Workspace:CanvasHint"]</p></footer>
         </section>
 
         <aside class="graph-selected-evidence" aria-label="@L["ProjectUnitVisualization:Workspace:SelectedLabel"]">
-            <div class="graph-evidence-heading"><span class="graph-eyebrow">@L["ProjectUnitVisualization:Workspace:SelectedLabel"]</span><MudIcon Icon="@Icons.Material.Outlined.TravelExplore" Size="Size.Small" /></div>
+            <div class="graph-evidence-heading"><span class="graph-eyebrow">@L["ProjectUnitVisualization:Workspace:SelectedLabel"]</span><MoIcon Icon="@MoIcons.Globe" Size="1.25rem" /></div>
             @if (GetEvidenceUnit() is { } evidenceUnit)
             {
                 <span class="graph-unit-type">@L.GetProjectUnitTypeText(evidenceUnit.UnitType)</span>
@@ -88,26 +88,26 @@
                 @if (!_filteredUnits.Any(unit => unit.Key == evidenceUnit.Key)){<p class="graph-scope-note">@L["ProjectUnitVisualization:Workspace:OutsideScope"]</p>}
                 <dl class="graph-unit-facts"><div><dt>@L["ProjectUnitVisualization:Workspace:Dependencies"]</dt><dd>@evidenceUnit.Dependencies.Count</dd></div><div><dt>@L["ProjectUnitVisualization:Workspace:Dependents"]</dt><dd>@evidenceUnit.DependedByCount</dd></div><div><dt>@L["ProjectUnitVisualization:Workspace:Methods"]</dt><dd>@evidenceUnit.MethodCount</dd></div></dl>
                 <div class="graph-selected-actions">
-                    <button type="button" class="graph-action graph-action--primary" @onclick="() => ShowContextDetailsAsync(evidenceUnit)"><MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />@L["ProjectUnitVisualization:ContextMenu:Details"]</button>
-                    <button type="button" class="graph-action" disabled="@(!_filteredUnits.Any(unit => unit.Key == evidenceUnit.Key))" @onclick="() => FocusOnNodeAsync(evidenceUnit)"><MudIcon Icon="@Icons.Material.Outlined.CenterFocusStrong" Size="Size.Small" />@L["ProjectUnitVisualization:ContextMenu:FocusNode"]</button>
+                    <button type="button" class="graph-action graph-action--primary" @onclick="() => ShowContextDetailsAsync(evidenceUnit)"><MoIcon Icon="@MoIcons.Info" Size="1.25rem" />@L["ProjectUnitVisualization:ContextMenu:Details"]</button>
+                    <button type="button" class="graph-action" disabled="@(!_filteredUnits.Any(unit => unit.Key == evidenceUnit.Key))" @onclick="() => FocusOnNodeAsync(evidenceUnit)"><MoIcon Icon="@MoIcons.Focus" Size="1.25rem" />@L["ProjectUnitVisualization:ContextMenu:FocusNode"]</button>
                     <button type="button" class="graph-text-action" @onclick="() => FilterByTypeAsync(evidenceUnit)">@L["ProjectUnitVisualization:ContextMenu:FilterByType"]</button>
                     <button type="button" class="graph-text-action" @onclick="() => ShowRelatedNodesAsync(evidenceUnit)">@L["ProjectUnitVisualization:ContextMenu:ShowRelatedNodes"]</button>
-                    <button type="button" class="graph-text-action" @onclick="() => CopyFullNameAsync(evidenceUnit)"><MudIcon Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" />@L["ProjectUnitVisualization:ContextMenu:CopyFullName"]</button>
+                    <button type="button" class="graph-text-action" @onclick="() => CopyFullNameAsync(evidenceUnit)"><MoIcon Icon="@MoIcons.Copy" Size="1.25rem" />@L["ProjectUnitVisualization:ContextMenu:CopyFullName"]</button>
                 </div>
                 <div class="graph-selected-relations">
-                    <section><h4>@L["ProjectUnitVisualization:Workspace:Dependencies"] <span>@evidenceUnit.Dependencies.Count</span></h4><div class="graph-relation-list">@foreach(var reference in evidenceUnit.Dependencies){<button type="button" class="graph-relation" @onclick="() => SelectReference(reference.Key)"><span>@reference.Title</span><code>@reference.Key</code><MudIcon Icon="@Icons.Material.Outlined.ArrowOutward" Size="Size.Small" /></button>}@if(evidenceUnit.Dependencies.Count == 0){<p>@L["ProjectUnitVisualization:Workspace:NoDependencies"]</p>}</div></section>
-                    <section><h4>@L["ProjectUnitVisualization:Workspace:Dependents"] <span>@evidenceUnit.DependedByCount</span></h4><div class="graph-relation-list">@foreach(var dependent in GetIncomingUnits(evidenceUnit)){<button type="button" class="graph-relation" @onclick="() => SelectReference(dependent.Key)"><span>@dependent.Title</span><code>@dependent.Key</code><MudIcon Icon="@Icons.Material.Outlined.ArrowDownward" Size="Size.Small" /></button>}@if(evidenceUnit.DependedByCount == 0){<p>@L["ProjectUnitVisualization:Workspace:NoDependents"]</p>}</div></section>
+                    <section><h4>@L["ProjectUnitVisualization:Workspace:Dependencies"] <span>@evidenceUnit.Dependencies.Count</span></h4><div class="graph-relation-list">@foreach(var reference in evidenceUnit.Dependencies){<button type="button" class="graph-relation" @onclick="() => SelectReference(reference.Key)"><span>@reference.Title</span><code>@reference.Key</code><MoIcon Icon="@MoIcons.ArrowUpRight" Size="1.25rem" /></button>}@if(evidenceUnit.Dependencies.Count == 0){<p>@L["ProjectUnitVisualization:Workspace:NoDependencies"]</p>}</div></section>
+                    <section><h4>@L["ProjectUnitVisualization:Workspace:Dependents"] <span>@evidenceUnit.DependedByCount</span></h4><div class="graph-relation-list">@foreach(var dependent in GetIncomingUnits(evidenceUnit)){<button type="button" class="graph-relation" @onclick="() => SelectReference(dependent.Key)"><span>@dependent.Title</span><code>@dependent.Key</code><MoIcon Icon="@MoIcons.ArrowDown" Size="1.25rem" /></button>}@if(evidenceUnit.DependedByCount == 0){<p>@L["ProjectUnitVisualization:Workspace:NoDependents"]</p>}</div></section>
                 </div>
             }
             else
             {
-                <div class="graph-selection-empty"><MudIcon Icon="@Icons.Material.Outlined.NearMe" /><h3>@L["ProjectUnitVisualization:Workspace:SelectUnit"]</h3><p>@L["ProjectUnitVisualization:Workspace:SelectUnitHint"]</p><button type="button" class="graph-action" @onclick="ToggleNativeEvidence">@L["ProjectUnitVisualization:Workspace:NativeEvidence"]</button></div>
+                <div class="graph-selection-empty"><MoIcon Icon="@MoIcons.Navigation" Size="1.5rem" /><h3>@L["ProjectUnitVisualization:Workspace:SelectUnit"]</h3><p>@L["ProjectUnitVisualization:Workspace:SelectUnitHint"]</p><button type="button" class="graph-action" @onclick="ToggleNativeEvidence">@L["ProjectUnitVisualization:Workspace:NativeEvidence"]</button></div>
             }
         </aside>
     </div>
 
     <section class="graph-native-evidence" aria-labelledby="@(_graphContainerId + "-native-title")">
-        <header><div><span class="graph-eyebrow">@L["ProjectUnitVisualization:Workspace:NativeEyebrow"]</span><h3 id="@(_graphContainerId + "-native-title")">@L["ProjectUnitVisualization:Workspace:NativeEvidence"]</h3><p>@L["ProjectUnitVisualization:Workspace:NativeHint"]</p></div><button type="button" class="graph-action" aria-expanded="@(_showNativeEvidence ? "true" : "false")" @onclick="ToggleNativeEvidence"><MudIcon Icon="@(_showNativeEvidence ? Icons.Material.Outlined.ExpandLess : Icons.Material.Outlined.ExpandMore)" Size="Size.Small" />@L[_showNativeEvidence ? "ProjectUnitVisualization:Workspace:HideEvidence" : "ProjectUnitVisualization:Workspace:ShowEvidence"]</button></header>
+        <header><div><span class="graph-eyebrow">@L["ProjectUnitVisualization:Workspace:NativeEyebrow"]</span><h3 id="@(_graphContainerId + "-native-title")">@L["ProjectUnitVisualization:Workspace:NativeEvidence"]</h3><p>@L["ProjectUnitVisualization:Workspace:NativeHint"]</p></div><button type="button" class="graph-action" aria-expanded="@(_showNativeEvidence ? "true" : "false")" @onclick="ToggleNativeEvidence"><MoIcon Icon="@(_showNativeEvidence ? MoIcons.ChevronUp : MoIcons.ChevronDown)" Size="1.25rem" />@L[_showNativeEvidence ? "ProjectUnitVisualization:Workspace:HideEvidence" : "ProjectUnitVisualization:Workspace:ShowEvidence"]</button></header>
         @if (_showNativeEvidence)
         {
             <div class="graph-native-tabs" role="group" aria-label="@L["ProjectUnitVisualization:Workspace:NativeEvidence"]"><button type="button" aria-pressed="@(!_showRelationships ? "true" : "false")" @onclick="() => SetEvidenceView(false)">@L["ProjectUnitVisualization:Workspace:UnitsTab", _filteredUnits.Count]</button><button type="button" aria-pressed="@(_showRelationships ? "true" : "false")" @onclick="() => SetEvidenceView(true)">@L["ProjectUnitVisualization:Workspace:RelationshipsTab", _visibleRelationships.Count]</button><button type="button" class="graph-text-action" @onclick="() => ClearAllFiltersAsync(null)">@L["ProjectUnitVisualization:ContextMenu:ClearAllFilters"]</button></div>
@@ -154,7 +154,7 @@
                             <tr>
                                 <th scope="col">@L["ProjectUnitVisualization:Workspace:SourceColumn"]</th>
                                 <th scope="col" class="graph-direction-cell">
-                                    <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" />
+                                    <MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" />
                                     <span class="graph-sr-only">@L["ProjectUnitVisualization:Workspace:DependencyDirection"]</span>
                                 </th>
                                 <th scope="col">@L["ProjectUnitVisualization:Workspace:TargetColumn"]</th>
@@ -171,7 +171,7 @@
                                         </button>
                                     </td>
                                     <td class="graph-direction-cell">
-                                        <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" />
+                                        <MoIcon Icon="@MoIcons.ArrowRight" Size="1.25rem" />
                                         <span class="graph-sr-only">@L["ProjectUnitVisualization:Workspace:DependencyDirection"]</span>
                                     </td>
                                     <td>
@@ -187,7 +187,7 @@
                 }
                 @if (EvidenceCount == 0){<p class="graph-ledger-empty">@L["ProjectUnitVisualization:Workspace:NoEvidence"]</p>}
             </div>
-            <footer class="graph-evidence-pager"><span>@L["ProjectUnitVisualization:Workspace:PageRange", EvidenceCount == 0 ? 0 : _evidencePage * EVIDENCE_PAGE_SIZE + 1, Math.Min((_evidencePage + 1) * EVIDENCE_PAGE_SIZE, EvidenceCount), EvidenceCount]</span><div><button type="button" class="graph-camera-button" aria-label="@L["ProjectUnitVisualization:Workspace:PreviousPage"]" disabled="@(_evidencePage == 0)" @onclick="() => ChangeEvidencePage(-1)"><MudIcon Icon="@Icons.Material.Outlined.ChevronLeft" Size="Size.Small" /></button><button type="button" class="graph-camera-button" aria-label="@L["ProjectUnitVisualization:Workspace:NextPage"]" disabled="@((_evidencePage + 1) * EVIDENCE_PAGE_SIZE >= EvidenceCount)" @onclick="() => ChangeEvidencePage(1)"><MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" /></button></div></footer>
+            <footer class="graph-evidence-pager"><span>@L["ProjectUnitVisualization:Workspace:PageRange", EvidenceCount == 0 ? 0 : _evidencePage * EVIDENCE_PAGE_SIZE + 1, Math.Min((_evidencePage + 1) * EVIDENCE_PAGE_SIZE, EvidenceCount), EvidenceCount]</span><div><button type="button" class="graph-camera-button" aria-label="@L["ProjectUnitVisualization:Workspace:PreviousPage"]" disabled="@(_evidencePage == 0)" @onclick="() => ChangeEvidencePage(-1)"><MoIcon Icon="@MoIcons.ChevronLeft" Size="1.25rem" /></button><button type="button" class="graph-camera-button" aria-label="@L["ProjectUnitVisualization:Workspace:NextPage"]" disabled="@((_evidencePage + 1) * EVIDENCE_PAGE_SIZE >= EvidenceCount)" @onclick="() => ChangeEvidencePage(1)"><MoIcon Icon="@MoIcons.ChevronRight" Size="1.25rem" /></button></div></footer>
         }
     </section>
 </section>
@@ -649,30 +649,30 @@
     private List<ContextMenuItem<ProjectUnitSummary>> BuildContextMenuItems(ProjectUnitSummary unit)
     {
         var builder = ContextMenuBuilder<ProjectUnitSummary>.Create()
-            .AddItem(L["ProjectUnitVisualization:ContextMenu:Details"], Icons.Material.Outlined.Info, ShowContextDetailsAsync)
-            .AddItem(L["ProjectUnitVisualization:ContextMenu:FocusNode"], Icons.Material.Outlined.CenterFocusStrong, FocusOnNodeAsync)
-            .AddItem(L["ProjectUnitVisualization:ContextMenu:FilterByType"], Icons.Material.Outlined.FilterAlt, FilterByTypeAsync);
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:Details"], MoIcons.Info, ShowContextDetailsAsync)
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:FocusNode"], MoIcons.Focus, FocusOnNodeAsync)
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:FilterByType"], MoIcons.Filter, FilterByTypeAsync);
 
         if (!string.IsNullOrEmpty(_relatedToNodeId))
         {
             if (_relatedToNodeId == unit.Key)
             {
-                builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ClearRelatedFilter"], Icons.Material.Outlined.Clear, ClearRelatedFilterAsync);
+                builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ClearRelatedFilter"], MoIcons.Close, ClearRelatedFilterAsync);
             }
             else
             {
-                builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ShowOtherRelatedNodes"], Icons.Material.Outlined.AccountTree, ShowRelatedNodesAsync);
+                builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ShowOtherRelatedNodes"], MoIcons.Workflow, ShowRelatedNodesAsync);
             }
         }
         else
         {
-            builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ShowRelatedNodes"], Icons.Material.Outlined.AccountTree, ShowRelatedNodesAsync);
+            builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ShowRelatedNodes"], MoIcons.Workflow, ShowRelatedNodesAsync);
         }
 
         builder
-            .AddItem(L["ProjectUnitVisualization:ContextMenu:ClearAllFilters"], Icons.Material.Outlined.ClearAll, ClearAllFiltersAsync)
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:ClearAllFilters"], MoIcons.ClearList, ClearAllFiltersAsync)
             .AddDivider()
-            .AddItem(L["ProjectUnitVisualization:ContextMenu:CopyFullName"], Icons.Material.Outlined.ContentCopy, CopyFullNameAsync);
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:CopyFullName"], MoIcons.Copy, CopyFullNameAsync);
 
         return builder.Build();
     }

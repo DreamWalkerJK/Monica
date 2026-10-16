@@ -6,30 +6,30 @@
 <header class="reader-toolbar">
     <button type="button" class="reader-library-button" @onclick="OnOpenGroupSwitcher"
             title="@CurrentGroup?.Title" aria-label="@L["MarkdownViewer:Navbar:OpenKnowledgeBaseSwitcher"]">
-        <MudIcon Icon="@Icons.Material.Outlined.MenuBook" />
+        <MoIcon Icon="@MoIcons.Book" Size="1.5rem" />
         <span class="reader-library-copy"><span class="reader-library-name">@(CurrentGroup?.Title ?? L["MarkdownViewer:Navbar:UnknownKnowledgeBase"])</span>
         <span class="reader-library-count">@L["MarkdownViewer:Navbar:KnowledgeBaseDocumentCount", CurrentGroup?.ResolveLanguage(CurrentCulture)?.DocumentCount ?? CurrentGroup?.DocumentCount ?? 0]</span></span>
-        <MudIcon Icon="@Icons.Material.Outlined.ExpandMore" Size="Size.Small" />
+        <MoIcon Icon="@MoIcons.ChevronDown" Size="1.25rem" />
     </button>
     <div class="reader-tool-actions">
-        <MudButton OnClick="OnToggleSidebar" StartIcon="@Icons.Material.Outlined.FolderOpen" Class="reader-documents-button"
+        <MudButton OnClick="OnToggleSidebar" StartIcon="@MoIcons.FolderOpen" Class="reader-documents-button"
             aria-label="@(IsSidebarVisible ? L["MarkdownViewer:Navbar:HideSidebar"] : L["MarkdownViewer:Navbar:ShowSidebar"])"
             aria-expanded="@IsSidebarVisible.ToString().ToLowerInvariant()" aria-pressed="@IsSidebarVisible.ToString().ToLowerInvariant()"><span class="reader-button-label">@L["MarkdownViewer:Toolbar:DocumentTree"]</span></MudButton>
-        <MudButton OnClick="OnOpenDocumentSearch" StartIcon="@Icons.Material.Outlined.Search" Variant="Variant.Outlined"
+        <MudButton OnClick="OnOpenDocumentSearch" StartIcon="@MoIcons.Search" Variant="Variant.Outlined"
             Class="reader-search-button">@L["MarkdownViewer:Toolbar:SearchPlaceholder"]</MudButton>
         @if (ShowLanguageSwitcher)
         {
-            <MudMenu Label="@LanguageLabel" StartIcon="@Icons.Material.Outlined.Language" EndIcon="@Icons.Material.Outlined.ExpandMore"
+            <MudMenu Label="@LanguageLabel" StartIcon="@MoIcons.Globe" EndIcon="@MoIcons.ChevronDown"
                 AriaLabel="@L["MarkdownViewer:Toolbar:SwitchLanguage"]" Variant="Variant.Text" Dense="true"
                 AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="reader-language-menu">
                 @foreach (var language in Languages)
                 {
                     <MudMenuItem role="menuitem" OnClick="@(() => OnLanguageChanged.InvokeAsync(language.Culture))"
-                        Icon="@(string.Equals(language.Culture, CurrentCulture, StringComparison.OrdinalIgnoreCase) ? Icons.Material.Outlined.Check : null)">@language.DisplayName</MudMenuItem>
+                        Icon="@(string.Equals(language.Culture, CurrentCulture, StringComparison.OrdinalIgnoreCase) ? MoIcons.Check : null)">@language.DisplayName</MudMenuItem>
                 }
             </MudMenu>
         }
-        <MudButton OnClick="OnToggleOutline" StartIcon="@Icons.Material.Outlined.Toc" Disabled="@(!HasOutline)"
+        <MudButton OnClick="OnToggleOutline" StartIcon="@MoIcons.ListTree" Disabled="@(!HasOutline)"
             aria-label="@(IsOutlineVisible ? L["MarkdownViewer:Toolbar:HideOutline"] : L["MarkdownViewer:Toolbar:ShowOutline"])"
             aria-pressed="@IsOutlineVisible.ToString().ToLowerInvariant()"
             aria-expanded="@IsOutlineVisible.ToString().ToLowerInvariant()"

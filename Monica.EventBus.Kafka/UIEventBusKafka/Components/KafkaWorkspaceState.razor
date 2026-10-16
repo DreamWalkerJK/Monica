@@ -1,6 +1,6 @@
 <section class="@RootClass" role="@Role" aria-live="polite">
     <span class="kafka-workspace-state__icon" aria-hidden="true">
-        <MudIcon Icon="@Icon" />
+        <MoIcon Icon="@Icon" Size="1.5rem" />
     </span>
     <div class="kafka-workspace-state__copy">
         <MudText Typo="Typo.subtitle1">@Title</MudText>
@@ -21,7 +21,7 @@
 
 @code {
     /// <summary>
-    /// Gets or sets the Material icon that identifies the state.
+    /// Gets or sets the trusted SVG fragment that identifies the state.
     /// </summary>
     [Parameter, EditorRequired]
     public string Icon { get; set; } = string.Empty;

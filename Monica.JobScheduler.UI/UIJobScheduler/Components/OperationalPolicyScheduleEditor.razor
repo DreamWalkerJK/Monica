@@ -16,7 +16,7 @@
                        Variant="Variant.Outlined"
                        Margin="Margin.Dense"
                        Disabled="@Disabled"
-                       Class="schedule-editor__format">
+                       Class="schedule-editor__format" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                 <MudSelectItem T="CronExpressionMode" Value="CronExpressionMode.FiveFields">
                     @L["Policy:Schedule:FiveFields"]
                 </MudSelectItem>
@@ -34,7 +34,7 @@
             <div class="schedule-editor__column schedule-editor__column--operator">
                 <div class="schedule-editor__column-heading">
                     <span>@L["Policy:Provenance:Override"]</span>
-                    <MudIconButton Icon="@Icons.Material.Outlined.Restore"
+                    <MudIconButton Icon="@MoIcons.Restore"
                                    Size="Size.Small"
                                    Disabled="@(Disabled || Draft.OverrideExpression is null)"
                                    OnClick="ResetExpressionAsync"
@@ -64,7 +64,7 @@
 
         @if (_conversionFailure is not null)
         {
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@MoIcons.Warning">
                 @_conversionFailure
             </MudAlert>
         }
@@ -82,7 +82,7 @@
         <MudAlert Severity="@(IsDraftValid ? Severity.Success : Severity.Error)"
                   Variant="Variant.Outlined"
                   Dense="true"
-                  Icon="@(IsDraftValid ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Error)">
+                  Icon="@(IsDraftValid ? MoIcons.Success : MoIcons.Error)">
             @if (!IsDraftValid)
             {
                 @ValidationError
@@ -99,7 +99,7 @@
     </div>
 
     <div class="schedule-editor__timezone">
-        <MudIcon Icon="@Icons.Material.Outlined.LockClock" Color="Color.Info" />
+        <MoIcon Icon="@MoIcons.Lock" Size="1.5rem" Style="color:var(--mud-palette-info);" />
         <div>
             <MudText Typo="Typo.caption">@L["Policy:Schedule:ConfiguredTimeZone"]</MudText>
             <code>@Draft.TimeZoneId</code>
@@ -123,14 +123,14 @@
     </div>
 
     <MudExpansionPanels Elevation="0" Outlined="true" Dense="true" Class="schedule-editor__builders">
-        <MudExpansionPanel Text="@L["Policy:Schedule:SimpleSettings:Title"]">
+        <MudExpansionPanel Text="@L["Policy:Schedule:SimpleSettings:Title"]" Icon="@MoIcons.ChevronDown">
             <div class="schedule-editor__simple-settings">
                 <MudSelect T="CronSimpleScheduleMode"
                            @bind-Value="@_simpleSettings.Mode"
                            Label="@L["Policy:Schedule:SimpleSettings:Mode"]"
                            Variant="Variant.Outlined"
                            Margin="Margin.Dense"
-                           Disabled="@Disabled">
+                           Disabled="@Disabled" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                     @foreach (var mode in Enum.GetValues<CronSimpleScheduleMode>())
                     {
                         <MudSelectItem T="CronSimpleScheduleMode" Value="@mode">
@@ -168,7 +168,7 @@
                         {
                             <MudSelect T="int" @bind-Value="@_simpleSettings.DayOfWeek"
                                        Label="@L["Policy:Schedule:Fields:DayOfWeek"]"
-                                       Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled">
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp">
                                 @for (var day = 0; day < 7; day++)
                                 {
                                     <MudSelectItem T="int" Value="@day">@L[$"Policy:Schedule:Weekdays:{day}"]</MudSelectItem>
@@ -211,15 +211,15 @@
                 }
 
                 <span class="schedule-editor__primary-action">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.AutoFixHigh"
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@MoIcons.Wand"
                                OnClick="ApplySimpleSettingsAsync" Disabled="@Disabled">@L["Policy:Schedule:SimpleSettings:Apply"]</MudButton>
                 </span>
             </div>
         </MudExpansionPanel>
 
-        <MudExpansionPanel Text="@L["Policy:Schedule:Syntax:Title"]">
+        <MudExpansionPanel Text="@L["Policy:Schedule:Syntax:Title"]" Icon="@MoIcons.ChevronDown">
             <div class="schedule-editor__syntax">
-                <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true">
+                <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true" Icon="@MoIcons.Info">
                     @L["Policy:Schedule:Syntax:RuntimeContract"]
                 </MudAlert>
                 <div class="schedule-editor__syntax-scroll">
@@ -282,7 +282,7 @@
             <code>@FormatUtc(Draft.AuthoritativeNextOccurrenceUtc)</code>
             <small>@L["Policy:Schedule:AuthoritativeObservedAt", FormatUtc(Draft.ObservedAtUtc)]</small>
         </div>
-        <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Color="Color.Warning" />
+        <MoIcon Icon="@MoIcons.ArrowRight" Size="1.5rem" Style="color:var(--mud-palette-warning);" />
         <div>
             <span>@L["Policy:Schedule:ProposedNext"]</span>
             @if (IsPaused)
@@ -298,7 +298,7 @@
         </div>
     </div>
     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true"
-              Icon="@Icons.Material.Outlined.Update">
+              Icon="@MoIcons.History">
         @L["Policy:Schedule:ProspectiveWarning"]
     </MudAlert>
 

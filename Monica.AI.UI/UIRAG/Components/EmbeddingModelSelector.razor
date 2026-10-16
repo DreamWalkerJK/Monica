@@ -4,9 +4,9 @@
 @inject IStringLocalizer<AIResource> L
 
 <div class="embedding-model-selector-wrapper">
-    <MudSelect T="string" Value="@SelectedModelKey" ValueChanged="OnModelChanged" Label="@L["RAG:EmbeddingModel:Label"]"
+    <MudSelect OpenIcon="@MoIcons.ChevronDown" CloseIcon="@MoIcons.ChevronUp" CheckedIcon="@MoIcons.SquareCheck" UncheckedIcon="@MoIcons.Square" IndeterminateIcon="@MoIcons.SquareMinus" T="string" Value="@SelectedModelKey" ValueChanged="OnModelChanged" Label="@L["RAG:EmbeddingModel:Label"]"
                ToStringFunc="FormatSelection" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
-               Disabled="@(!HasAvailableModels || IsDisabled)" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Memory" Class="model-select">
+               Disabled="@(!HasAvailableModels || IsDisabled)" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Cpu" Class="model-select">
         @foreach (var model in AvailableModels)
         {
             <MudSelectItem T="string" Value="@model.ModelKey" aria-label="@GetOptionDescription(model)">

@@ -24,7 +24,7 @@
     .diagnostics-table-wrapper ::deep .mud-table-head th:nth-child(6) { width:12%; }
 }
 .test-result { display:flex; align-items:flex-start; gap:6px; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
-.test-result ::deep .mud-icon-root { flex-shrink:0; margin-top:2px; }
+.test-result ::deep :is(.mud-icon-root, .mo-icon) { flex-shrink:0; margin-top:2px; }
 .test-result.success { color:var(--mud-palette-success); }
 .test-result.failed { color:var(--mud-palette-error); }
 .embedding-diagnostics-root ::deep .mud-button-root[aria-disabled="true"] { color:var(--mud-palette-action-disabled); border-color:var(--mud-palette-action-disabled-background); cursor:progress; }
