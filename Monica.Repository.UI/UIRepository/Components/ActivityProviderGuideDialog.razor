@@ -64,7 +64,7 @@
                     <div class="activity-guide__table-boundary">
                         <MudTable T="string" Items="@Guide.SelectedColumns" Dense="true" Hover="true"
                                   Square="true" Elevation="0" Breakpoint="Breakpoint.Xs"
-                                  AriaLabel="@L["Activity:Guide:ColumnsTitle"].Value">
+                                  TableAttributes="@(new Dictionary<string, object?> { ["aria-label"] = L["Activity:Guide:ColumnsTitle"].Value })">
                             <HeaderContent>
                                 <MudTh>@L["Workbench:Activity:Guide:ColumnName"]</MudTh>
                                 <MudTh>@L["Workbench:Activity:Guide:ColumnMeaning"]</MudTh>

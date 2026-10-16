@@ -14,10 +14,6 @@ public sealed class HermesTealTheme : ThemeDefinitionBase
 
     public override string Description => "Editorial dark teal dashboard inspired by the Hermes Agent web UI.";
 
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Default;
-
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.MonokaiSublime;
-
     public override MudTheme CreateTheme()
     {
         return new MudTheme
@@ -38,10 +34,11 @@ public sealed class HermesTealTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteLight CreateLightPalette()
+    private static MudMarkdownPaletteLight CreateLightPalette()
     {
-        return new PaletteLight
+        return new MudMarkdownPaletteLight
         {
+            CodeHighlight = MudCodeHighlightThemes.Light.LightPlus,
             Primary = "#14302c",
             PrimaryLighten = "#20423d",
             PrimaryDarken = "#0d221f",
@@ -123,10 +120,11 @@ public sealed class HermesTealTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteDark CreateDarkPalette()
+    private static MudMarkdownPaletteDark CreateDarkPalette()
     {
-        return new PaletteDark
+        return new MudMarkdownPaletteDark
         {
+            CodeHighlight = MudCodeHighlightThemes.Dark.Monokai,
             Primary = "#ffe6cb",
             PrimaryLighten = "#fff0df",
             PrimaryDarken = "#e8cfb3",

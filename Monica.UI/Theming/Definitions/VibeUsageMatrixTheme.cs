@@ -14,10 +14,6 @@ public sealed class VibeUsageMatrixTheme : ThemeDefinitionBase
 
     public override string Description => "Terminal-green hacker console inspired by the VibeUsage dashboard.";
 
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
-
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.MonokaiSublime;
-
     public override MudTheme CreateTheme()
     {
         return new MudTheme
@@ -38,10 +34,11 @@ public sealed class VibeUsageMatrixTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteLight CreateLightPalette()
+    private static MudMarkdownPaletteLight CreateLightPalette()
     {
-        return new PaletteLight
+        return new MudMarkdownPaletteLight
         {
+            CodeHighlight = MudCodeHighlightThemes.Light.GitHub,
             Primary = "#00852c",
             PrimaryLighten = "#199e44",
             PrimaryDarken = "#006321",
@@ -123,10 +120,11 @@ public sealed class VibeUsageMatrixTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteDark CreateDarkPalette()
+    private static MudMarkdownPaletteDark CreateDarkPalette()
     {
-        return new PaletteDark
+        return new MudMarkdownPaletteDark
         {
+            CodeHighlight = MudCodeHighlightThemes.Dark.Monokai,
             Primary = "#00ff41",
             PrimaryLighten = "#4dff7b",
             PrimaryDarken = "#00d638",

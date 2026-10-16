@@ -18,7 +18,7 @@
                   Hover="true"
                   Breakpoint="Breakpoint.None"
                   Elevation="0"
-                  AriaLabel="@L["Table:Title"]"
+                  TableAttributes="@(new Dictionary<string, object?> { ["aria-label"] = L["Table:Title"].Value })"
                   Class="seeder-execution-table">
             <HeaderContent>
                 <MudTh>@L["Table:Columns:Name"]</MudTh>

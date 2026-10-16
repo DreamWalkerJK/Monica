@@ -47,7 +47,7 @@ When a native grid receives recreated reference models, use its public `Comparer
 
 ## Verify the actual responsive threshold
 
-Read `MudTableBase.cs`, `Styles/components/_table.scss`, and `Styles/abstracts/_variables.scss` in the installed MudBlazor source before aligning local cell CSS with `Breakpoint`. In v9.0.0, `Breakpoint.Xs` emits `mud-xs-table`, which stacks at `max-width: 600px`; `Breakpoint.Sm` emits `mud-sm-table`, which stacks at `960px`. Match stacked spacing, `DataLabel` behavior, and first-cell treatment to that actual threshold, and verify immediately above and below it. Selecting `Sm` does not mean the table will remain a column table until 600px.
+Read `MudTableBase.cs`, `Styles/components/_table.scss`, and `Styles/abstracts/_variables.scss` in the installed MudBlazor source before aligning local cell CSS with `Breakpoint`. In v9.11.0, `Breakpoint.Xs` emits `mud-xs-table`, which stacks at `max-width: 600px`; `Breakpoint.Sm` emits `mud-sm-table`, which stacks at `960px`. Match stacked spacing, `DataLabel` behavior, and first-cell treatment to that actual threshold, and verify immediately above and below it. Selecting `Sm` does not mean the table will remain a column table until 600px.
 
 Keep long-value wrapping separate from generated stacked labels. A cell's `overflow-wrap: anywhere` is inherited by its native `DataLabel` `::before` flex item and can split an ordinary short label within a word. At that table's actual stacked breakpoint, give the label normal word wrapping and retain its native automatic minimum size while values remain shrinkable. Measure the pseudo-label and inspect the rendered words before adding fixed widths or flex overrides; normal multiword label wrapping is preferable to breaking individual words.
 

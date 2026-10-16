@@ -11,17 +11,15 @@ public class FreshTheme : ThemeDefinitionBase
     public override MonicaThemeKind Kind => MonicaThemeKind.Fresh;
     public override string DisplayName => "小清新";
     public override string Description => "清爽柔和的主题，给人以舒适宁静的感觉";
-    
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Googlecode;
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.AtomOneDark;
 
     public override MudTheme CreateTheme()
     {
         return new MudTheme()
         {
             Typography = MonicaTypographyDefaults.CreateFallback(),
-            PaletteLight = new PaletteLight()
+            PaletteLight = new MudMarkdownPaletteLight()
             {
+                CodeHighlight = MudCodeHighlightThemes.Light.LightPlus,
                 // Main color: Mint Green (Fresh & Natural)
                 Primary = "#2d7b60",
                 PrimaryLighten = "#4e9b7f",
@@ -120,8 +118,9 @@ public class FreshTheme : ThemeDefinitionBase
                 GrayDark = "#6B7280",
                 GrayDarker = "#4B5563"
             },
-            PaletteDark = new PaletteDark()
+            PaletteDark = new MudMarkdownPaletteDark()
             {
+                CodeHighlight = MudCodeHighlightThemes.Dark.OneDark,
                 // Main color: Mint Green
                 Primary = "#7CE3B9",
                 PrimaryLighten = "#9DF2CE",

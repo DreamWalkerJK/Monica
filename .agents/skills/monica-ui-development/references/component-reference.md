@@ -1,4 +1,4 @@
-# MudBlazor v9.0.0 Component Reference
+# MudBlazor v9 Component Reference
 
 This document provides a quick reference for MudBlazor v9 components.
 
@@ -216,7 +216,7 @@ This document provides a quick reference for MudBlazor v9 components.
 
 ## Measurement time series
 
-For MudBlazor v9.0.0, use `MudChart<double>` with `ChartType.Timeseries`, `ChartSeries<double>.Data` containing `(DateTime, double)[]`, and explicit `TimeSeriesChartOptions`. The native time-series chart places points using elapsed timestamp milliseconds; timestamp strings on a categorical Line chart instead represent equally spaced sample order. Choose the representation deliberately and preserve every retained observation, or disclose any reduction and retain access to the complete data.
+For MudBlazor v9.11.0, use `MudChart<double>` with `ChartType.Timeseries`, `ChartSeries<double>.Data` containing `(DateTime, double)[]`, and explicit `TimeSeriesChartOptions`. The native time-series chart places points using elapsed timestamp milliseconds; timestamp strings on a categorical Line chart instead represent equally spaced sample order. Choose the representation deliberately and preserve every retained observation, or disclose any reduction and retain access to the complete data.
 
 Construct typed options directly. The legacy `ChartOptions` conversion copies legend, tooltip and palette settings but does not transfer axis controls. `TimeSeriesChartOptions` defaults to five-minute label spacing and `HH:mm` axis/tooltips; choose a positive spacing for the actual span and include seconds or milliseconds when needed. Keep timestamps on one explicit basis, preferably UTC for elapsed-time geometry: the native component does not normalize `DateTime` kinds or time zones. Put the date and time basis with the window, and preserve the exact instant and an explicit offset in inspection. Empty data and a single distinct timestamp need their own states rather than invented points or a fabricated time span.
 

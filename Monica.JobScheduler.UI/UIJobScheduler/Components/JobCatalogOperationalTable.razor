@@ -44,7 +44,7 @@
                   Hover="true"
                   Breakpoint="Breakpoint.Xs"
                   SortLabel="@L["Catalog:SortLabel"]"
-                  AriaLabel="@L["Catalog:Title"]"
+                  TableAttributes="@(new Dictionary<string, object?> { ["aria-label"] = L["Catalog:Title"].Value })"
                   HorizontalScrollbar="true"
                   Elevation="0"
                   Square="true"

@@ -2,6 +2,26 @@
 
 This document provides complete guidance for migrating from MudBlazor v8 to v9.
 
+## Current 9.x integration contracts
+
+MudBlazor 9.11 routes attributes for the native `<table>` through `TableAttributes`.
+Replace the obsolete `MudTable.AriaLabel` parameter:
+
+```razor
+<MudTable T="Row" Items="@rows"
+          TableAttributes="@(new Dictionary<string, object?> { ["aria-label"] = L["TableName"].Value })">
+    @* Existing table content *@
+</MudTable>
+```
+
+Plain unmatched attributes go to the outer component wrapper, so verify the name
+on the rendered table itself.
+
+MudBlazor.Markdown 9.10 uses `MudMarkdownThemeProvider` and the `CodeHighlight`
+settings on `MudMarkdownPaletteLight`/`MudMarkdownPaletteDark`. Migrate themes to
+the [native Markdown theming contract](theme-css-guide.md#markdown-and-code-highlighting);
+the following sections describe the original v8-to-v9 API migration.
+
 ## Important: Breaking Changes Overview
 
 MudBlazor v9.0.0 introduces **significant breaking changes**. The compiler will NOT always catch these changes at compile time if you're using dynamic invocation or reflection. Ensure thorough testing after migration.

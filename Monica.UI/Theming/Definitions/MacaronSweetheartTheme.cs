@@ -29,10 +29,6 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
 
     public override string Description => "粉嫩马卡龙色系，圆润俏皮的甜美手写风格";
 
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
-
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.AtomOneDark;
-
     public override MudTheme CreateTheme()
     {
         return new MudTheme
@@ -62,10 +58,11 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteLight CreateLightPalette()
+    private static MudMarkdownPaletteLight CreateLightPalette()
     {
-        return new PaletteLight
+        return new MudMarkdownPaletteLight
         {
+            CodeHighlight = MudCodeHighlightThemes.Light.GitHub,
             Primary = "#ad416b",
             PrimaryLighten = "#c9698c",
             PrimaryDarken = "#8b2f53",
@@ -147,10 +144,11 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteDark CreateDarkPalette()
+    private static MudMarkdownPaletteDark CreateDarkPalette()
     {
-        return new PaletteDark
+        return new MudMarkdownPaletteDark
         {
+            CodeHighlight = MudCodeHighlightThemes.Dark.OneDark,
             Primary = "#FFB1CA",
             PrimaryLighten = "#FFD2E0",
             PrimaryDarken = "#E889AA",

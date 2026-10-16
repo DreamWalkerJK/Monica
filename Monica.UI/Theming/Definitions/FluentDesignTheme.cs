@@ -18,12 +18,6 @@ public sealed class FluentDesignTheme : ThemeDefinitionBase
     public override string Description => "Fluent Design styling with Mica-inspired layers, acrylic flyouts, Segoe typography, and soft rounded controls.";
 
     /// <inheritdoc />
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
-
-    /// <inheritdoc />
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.GithubDark;
-
-    /// <inheritdoc />
     public override MudTheme CreateTheme()
     {
         return new MudTheme
@@ -44,10 +38,11 @@ public sealed class FluentDesignTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteLight CreateLightPalette()
+    private static MudMarkdownPaletteLight CreateLightPalette()
     {
-        return new PaletteLight
+        return new MudMarkdownPaletteLight
         {
+            CodeHighlight = MudCodeHighlightThemes.Light.GitHub,
             Primary = "#0067c0",
             PrimaryLighten = "#2f8edb",
             PrimaryDarken = "#005a9e",
@@ -129,10 +124,11 @@ public sealed class FluentDesignTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteDark CreateDarkPalette()
+    private static MudMarkdownPaletteDark CreateDarkPalette()
     {
-        return new PaletteDark
+        return new MudMarkdownPaletteDark
         {
+            CodeHighlight = MudCodeHighlightThemes.Dark.GitHub,
             Primary = "#60cdff",
             PrimaryLighten = "#8cddff",
             PrimaryDarken = "#3aa0d8",

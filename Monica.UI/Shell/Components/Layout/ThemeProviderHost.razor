@@ -5,7 +5,7 @@
 @using Monica.UI.Shell.Support
 @implements IAsyncDisposable
 
-<MudThemeProvider Theme="@ThemeService.CurrentTheme" IsDarkMode="@ThemeService.IsDarkMode" />
+<MudMarkdownThemeProvider Theme="@ThemeService.CurrentTheme" IsDarkMode="@ThemeService.IsDarkMode" />
 
 <div class="@ThemeService.GetThemeCssClass()" data-theme="@ThemeService.GetThemeDataAttribute()">
     @ChildContent

@@ -23,18 +23,8 @@ public interface IThemeDefinition
     string Description { get; }
     
     /// <summary>
-    /// Create MudTheme instance
+    /// Creates a MudBlazor theme, including code-highlight colors on Markdown palettes.
     /// </summary>
     /// <returns>Configured MudTheme instance</returns>
     MudTheme CreateTheme();
-    
-    /// <summary>
-    /// Get the Code Blocks theme in light mode
-    /// </summary>
-    CodeBlockTheme LightCodeBlockTheme { get; }
-    
-    /// <summary>
-    /// Get the Code Blocks theme in dark mode
-    /// </summary>
-    CodeBlockTheme DarkCodeBlockTheme { get; }
 }

@@ -16,10 +16,6 @@ public sealed class ZenInkTheme : ThemeDefinitionBase
 
     public override string Description => "极简中国水墨画风格，大面积留白与笔触之美";
 
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Ascetic;
-
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.AtomOneDark;
-
     public override MudTheme CreateTheme()
     {
         return new MudTheme
@@ -49,10 +45,11 @@ public sealed class ZenInkTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteLight CreateLightPalette()
+    private static MudMarkdownPaletteLight CreateLightPalette()
     {
-        return new PaletteLight
+        return new MudMarkdownPaletteLight
         {
+            CodeHighlight = MudCodeHighlightThemes.Light.PaperColor,
             Primary = "#3f5f50", // Deep Cyan-Green
             PrimaryLighten = "#5c8773",
             PrimaryDarken = "#253b31",
@@ -134,10 +131,11 @@ public sealed class ZenInkTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteDark CreateDarkPalette()
+    private static MudMarkdownPaletteDark CreateDarkPalette()
     {
-        return new PaletteDark
+        return new MudMarkdownPaletteDark
         {
+            CodeHighlight = MudCodeHighlightThemes.Dark.OneDark,
             Primary = "#6a9c86", // Lighter Cyan-Green for dark mode
             PrimaryLighten = "#8bc2aa",
             PrimaryDarken = "#78ab94",
