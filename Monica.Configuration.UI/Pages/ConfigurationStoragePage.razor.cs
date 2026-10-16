@@ -33,6 +33,17 @@ public partial class ConfigurationStoragePage
     private DateTimeOffset? _storeStatesObservedAtUtc => _state?.StoreStates.ObservedAtUtc;
     private DateTimeOffset? _sourceInventoriesObservedAtUtc => _state?.SourceInventories.ObservedAtUtc;
 
+    private IReadOnlyList<StoreDossier> StoreDossiers => _overview is not { } overview ? []
+        : new[]
+        {
+            (Label: L["Storage:Roles:EffectiveValues"].Value, Store: overview.EffectiveValueStore),
+            (Label: L["Storage:Roles:History"].Value, Store: overview.HistoryStore),
+            (Label: L["Storage:Roles:Metadata"].Value, Store: overview.MetadataStore)
+        }
+        .GroupBy(static role => role.Store.StoreKey, StringComparer.OrdinalIgnoreCase)
+        .Select(static group => new StoreDossier(group.First().Store, group.Select(static role => role.Label).ToArray()))
+        .ToArray();
+
     protected override async Task OnInitializedAsync()
     {
         _state = new(Facade, L["Common:Errors:LoadFailed"], _operations);
@@ -180,4 +191,6 @@ public partial class ConfigurationStoragePage
         IReadOnlyList<ConfigurationSourceInventoryItem> Items,
         int EffectiveCount,
         int UnmanagedCount);
+
+    private sealed record StoreDossier(ConfigurationStoreDescriptor Store, IReadOnlyList<string> Roles);
 }

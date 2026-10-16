@@ -1,5 +1,7 @@
 # Inspect and change managed values
 
+Configuration UI timestamps follow [page time display](../../monica-infra-ui/references/time-display.md). History date filters interpret complete calendar dates in the configured Clock zone, use per-boundary timezone rules and retain inclusive end-date semantics; invalid or ambiguous calendar boundaries produce a validation message. Saved-snapshot scopes show their count and a short preview; expand to search complete definition identities. Group and operator identifiers remain selectable in disclosures, and ledger search still matches the full identities. Storage roles sharing one StoreKey share one descriptor, capability list and latest-operation block.
+
 Register `AddConfiguration(plan)` using the [input plan and store](bootstrap-and-stores.md). `ConfigurationFacade` owns inspection, preview, mutation, history, rollback, and reload. Check each returned `Res<T>`; a failed apply can carry a structured rejection in its original `Data`, and a persisted operation can report `PostCommitIssues`.
 
 ## Find the winning source

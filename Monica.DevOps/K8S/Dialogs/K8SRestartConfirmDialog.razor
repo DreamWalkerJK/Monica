@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.DevOps.Localization
 @using Monica.DevOps.K8S.Models
 @using Monica.UI.Shared.Components.Dialogs
@@ -34,7 +35,7 @@
                             <RowTemplate>
                                 <MudTd DataLabel="@L["DescribeDialog:Workload"]">@GetDisplayName(context.Kind, context.Name)</MudTd>
                                 <MudTd DataLabel="@L["DescribeDialog:ReadyDesired"]">@context.ReplicaStatus</MudTd>
-                                <MudTd DataLabel="@L["DescribeDialog:LastRestart"]">@context.LastRestartedAtDisplay</MudTd>
+                                <MudTd DataLabel="@L["DescribeDialog:LastRestart"]">@UiTime.Format(context.LastRestartedAtUtc)</MudTd>
                             </RowTemplate>
                         </MudTable>
                     }
@@ -62,7 +63,7 @@
                         <div class="disclosure-body"><MudText Typo="Typo.body2">@L["OperationReview:CommandArgumentsHelp"]</MudText><div class="command-output"><pre>@string.Join(Environment.NewLine, Preview.CommandPreview)</pre></div></div>
                     </MudExpansionPanel>
                 </MudExpansionPanels>
-                <MudText Typo="Typo.body2">@L["OperationReview:GeneratedAt", Preview.GeneratedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")]</MudText>
+                <MudText Typo="Typo.body2">@L["OperationReview:GeneratedAt", UiTime.Format(Preview.GeneratedAtUtc)]</MudText>
                 <MudText Typo="Typo.body2">@L["OperationReview:ExecutionRechecks"]</MudText>
             </MudStack>
         </div>

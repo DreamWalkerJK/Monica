@@ -91,7 +91,7 @@ Build these as shared Monica components or shared CSS roles once, then reuse the
 - **Dot distribution:** small squares per counted item, tinted by role intensity, with the exact count beside each row.
 - **Semantic callout:** soft state fill, a tinted icon tile, a title, and a body that links the responsible record.
 - **Filter chips:** pill toggles; pressed uses the primary soft fill. Status filters keep the [semantic filter contract](monica-workbench-design-language.md#preserve-semantic-color-in-status-filters).
-- **Inspector sheet:** a temporary panel inset about 12px from the viewport edges, with a 16px radius and a lightly blurred scrim. Inside: a display total, a split meter with a legend, a key–value identity group, and relation chips that navigate to related records.
+- **Inspector sheet:** a full-height temporary panel attached to the right viewport edge, with a square outer frame and a lightly blurred scrim. Pad the real content wrapper in every tab; native boxless tab panels cannot own an inset. Inside: a display total, a split meter with a legend, a key–value identity group, and relation chips that navigate to related records.
 - **Icons:** 1.5px stroke outlines at 16–18px, consistent across shell and page.
 
 Use MudBlazor pickers for themed record selection. Styling an HTML `select` field does not style its operating-system popup. When committing a selection opens another context, use `SelectionOnEnter="true"` so arrow keys only move the highlight and Enter commits the selection; verify that Escape dismisses the popup without changing the selected record. Inspect the open popup, selected-value presenter, long labels, keyboard selection and dismissal in the browser, including the exact intermediate width reported by the user.

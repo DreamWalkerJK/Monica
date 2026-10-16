@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.DevOps.K8S.Models
 @using Monica.DevOps.Localization
 @inject IStringLocalizer<K8SResource> L
@@ -5,7 +6,7 @@
 <div class="k8s-operation-evidence">
     <MudAlert Severity="@(Failure is null ? Severity.Success : Severity.Error)" Variant="Variant.Outlined" Icon="@(Failure is null ? MoIcons.Success : MoIcons.Error)">
         <strong>@L[Failure is null ? "Workbench:Operation:Completed" : "Workbench:Operation:Failed"]</strong>
-        <div class="operation-context">@Namespace · @Scope · @CompletedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</div>
+        <div class="operation-context">@Namespace · @Scope · @UiTime.Format(CompletedAt)</div>
         <p>@(Failure ?? L["Workbench:Operation:Readiness"].Value)</p>
         @if (Failure is not null) { <p>@L["Workbench:Operation:Partial"]</p> }
         @if (Failure is null)

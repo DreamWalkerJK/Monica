@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @attribute [Route(PAGE_URL)]
 @using Monica.AI.Mcp.Models
 @using Monica.AI.UI.Shared.Components
@@ -163,7 +164,7 @@
                         {
                             <MudAlert Icon="@(result.Success ? MoIcons.Success : MoIcons.Error)" Severity="@(result.Success ? Severity.Success : Severity.Error)" Dense="true">@FormatConnectivityMessage(result)</MudAlert>
                             <dl class="probe-facts">
-                                <div><dt>@L["Capabilities:Administration:TestedAt"]</dt><dd title="@result.TestedAt.ToLocalTime().ToString("O")">@result.TestedAt.ToLocalTime().ToString("g")</dd></div>
+                                <div><dt>@L["Capabilities:Administration:TestedAt"]</dt><dd title="@UiTime.Format(result.TestedAt)">@UiTime.Format(result.TestedAt)</dd></div>
                                 <div><dt>@L["Capabilities:Administration:Duration", result.Duration.TotalMilliseconds.ToString("0")]</dt><dd>@L["Capabilities:Administration:ToolCount", result.ToolCount]</dd></div>
                             </dl>
                             @if (result.ToolNames is { Count: > 0 } toolNames) { <p class="technical">@string.Join(", ", toolNames)</p> }

@@ -19,6 +19,7 @@ using Monica.Modules;
 using Monica.Testing.Localization;
 using Monica.Testing.UI;
 using Monica.UI.Shell.State;
+using Test.Monica.JobScheduler.UI.Support;
 using MudBlazor;
 using MudBlazor.Services;
 
@@ -67,6 +68,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
         Access = new TestJobSchedulerUiAccess(isAuthorized);
         Services.AddSingleton<IJobSchedulerUiAccess>(Access);
         Services.AddSingleton(facade);
+        Services.AddSingleton(SchedulerTimePresentationTests.CreateUiTimeFormatter());
         Services.AddScoped<SchedulerTimePresentation>();
         Services.AddScoped<SchedulerOverviewPageStateFactory>();
         Services.AddScoped<JobCatalogPageStateFactory>();

@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.ServiceDiscovery.Facades
 @using Monica.ServiceDiscovery.Localization
 @using Monica.ServiceDiscovery.Models
@@ -28,7 +29,7 @@
         <div class="domain-detail-workspace">
             @if (Selected is { } selected)
             {
-                <header class="domain-identity"><span>@L["Workbench:SelectedDomain"]</span><h3>@(selected.DisplayName ?? selected.Name)</h3><code>@selected.Name</code><p>@(selected.Description ?? L["Workbench:NoCatalogDescription"].Value)</p>@if (_catalogCapturedAt is { } stamp) { <small>@L["Workbench:CapturedUTC"] · <time>@stamp.ToString("HH:mm:ss")</time></small> }</header>
+                <header class="domain-identity"><span>@L["Workbench:SelectedDomain"]</span><h3>@(selected.DisplayName ?? selected.Name)</h3><code>@selected.Name</code><p>@(selected.Description ?? L["Workbench:NoCatalogDescription"].Value)</p>@if (_catalogCapturedAt is { } stamp) { <small>@L["Workbench:CapturedUTC"] · <time>@UiTime.FormatTime(stamp)</time></small> }</header>
                 @if (_servicesError is not null) { <div class="domain-notice" role="alert"><strong>@L["Workbench:DomainServicesFailed"]</strong><p>@_servicesError</p><p>@L["Workbench:DomainServicesUnavailable"]</p></div> }
                 else if (_hasServices)
                 {

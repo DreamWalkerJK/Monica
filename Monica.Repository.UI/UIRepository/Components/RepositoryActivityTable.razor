@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using System.Globalization
 @using System.Diagnostics.CodeAnalysis
 @using Microsoft.Extensions.Logging
@@ -345,7 +346,7 @@
     };
     private string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? L["Common:Values:Unavailable"] : value;
     private string CountValue(int? value) => value?.ToString("N0", CultureInfo.CurrentCulture) ?? L["Common:Values:Unavailable"];
-    private string FormatCapture(DateTimeOffset? value) => value?.ToLocalTime().ToString("g", CultureInfo.CurrentCulture) ?? L["Common:Values:Unavailable"];
+    private string FormatCapture(DateTimeOffset? value) => UiTime.Format(value) ?? L["Common:Values:Unavailable"];
     private static bool Contains(string? value, string search) => !string.IsNullOrWhiteSpace(value) && value.Contains(search, StringComparison.OrdinalIgnoreCase);
 
     private Task ShowProviderGuideAsync()

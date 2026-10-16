@@ -5,8 +5,6 @@ description: Register and use Monica Blazor UI modules, the shell, icons, Markdo
 
 # Monica UI hosting
 
-The shell hosts feature pages; Markdown adds searchable document groups.
-
 | Task | Read |
 | --- | --- |
 | Compose the shell, add feature pages, configure navigation, or authorize operational pages | [Shell and access](references/shell-and-access.md) |
@@ -24,6 +22,7 @@ The shell hosts feature pages; Markdown adds searchable document groups.
 | Read and copy captured exception or diagnostic text inside an existing UI | [Embedded diagnostic text](references/stack-trace.md) |
 | Theme the standalone Swagger reference or add application destinations to its toolbar | [Swagger workbench](references/swagger-ui.md) |
 | Set theme/language defaults or integrate custom page localization | [Theme and localization](references/theme-and-localization.md) |
+| Configure page timestamp formats and deployment timezone display | [Page time display](references/time-display.md) |
 
 Use `$monica-ui-development` for components and `$monica-ui-localization` for translations; configure underlying services through their infrastructure skills.
 

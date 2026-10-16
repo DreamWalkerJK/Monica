@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @attribute [Route(PAGE_URL)]
 @implements IAsyncDisposable
 @using System.Globalization
@@ -202,8 +203,8 @@
     private DotNetObjectReference<UIMapperDebugPage>? _callback;
 
     private string ReadState => _read is null ? (_error is null ? "reading" : "failed") : _read.Rows.IsEmpty ? "empty" : "populated";
-    private string ShortReceipt => _read?.ReceivedAt.ToString("T", CultureInfo.CurrentCulture) ?? string.Empty;
-    private string FullReceipt => _read is null ? string.Empty : _read.ReceivedAt.ToString("F", CultureInfo.CurrentCulture) + _read.ReceivedAt.ToString(" zzz", CultureInfo.InvariantCulture);
+    private string ShortReceipt => _read is null ? string.Empty : UiTime.FormatTime(_read.ReceivedAt);
+    private string FullReceipt => _read is null ? string.Empty : UiTime.Format(_read.ReceivedAt);
     private string RegistryCount => string.IsNullOrWhiteSpace(_query)
         ? L["Page:Registry:Count", _read!.ReportedCount]
         : L["Page:Registry:FilteredCount", _visibleRows.Count, _read!.ReportedCount];

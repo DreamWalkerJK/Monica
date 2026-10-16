@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Microsoft.Extensions.Localization
 @using Monica.Markdown.Localization
 @using Monica.Markdown.Models
@@ -37,9 +38,9 @@
     </div>
     @if (Document is not null)
     {
-        <span class="reader-last-edited" title="@Document.LastModifiedUtc.ToLocalTime().ToString("g")">
+        <span class="reader-last-edited" title="@UiTime.Format(Document.LastModifiedUtc)">
             <MoIcon Icon="@MoIcons.Clock" Size="1rem" />
-            @L["MarkdownViewer:Metadata:Modified"] @Document.LastModifiedUtc.ToLocalTime().ToString("d")
+            @L["MarkdownViewer:Metadata:Modified"] @UiTime.FormatDate(Document.LastModifiedUtc)
         </span>
     }
 </header>

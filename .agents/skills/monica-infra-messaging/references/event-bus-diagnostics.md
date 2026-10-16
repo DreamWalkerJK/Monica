@@ -1,5 +1,7 @@
 # Inspect EventBus diagnostics
 
+Capture, notification and test-result timestamps follow the shell's [page time display policy](../../monica-infra-ui/references/time-display.md). Runtime instants and retained diagnostic payloads remain exact. Provider implementation identity stays available in the heading tooltip and detail view; the directory states its count semantics once.
+
 `monica.AddEventBusUI()` composes the EventBus monitor, provider discovery, scoped capture state and diagnostic test service, localization, and shell navigation. It requires the EventBus distributed-provider feature even when the host's business subscriptions are local. Select a real distributed provider when testing external delivery, or use `UseNoOpDistributedEventBus()` only to satisfy composition without external transport. The workbench has five independently addressable routes:
 
 | Route | Evidence or operations |

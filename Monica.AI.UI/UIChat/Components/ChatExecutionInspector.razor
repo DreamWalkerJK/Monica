@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using System.Text.Json
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
@@ -11,7 +12,7 @@
         <div class="inspector-body">
         @if (RecordedAt is { } time)
         {
-            <dl class="facts"><dt>@L["Workbench:RecordedAt"]</dt><dd>@time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff")</dd></dl>
+            <dl class="facts"><dt>@L["Workbench:RecordedAt"]</dt><dd>@UiTime.Format(time)</dd></dl>
         }
         @foreach (var part in selectedMessage.Parts)
         {
@@ -33,7 +34,7 @@
         <header class="inspector-heading"><span>@ChatExecutionPresentation.Title(step, L)</span><MudChip T="string" Size="Size.Small" Color="@(step.Status == ChatExecutionStatus.AwaitingApproval ? Color.Warning : ChatExecutionPresentation.StatusColor(step.Status))" Variant="Variant.Text">@ChatExecutionPresentation.Status(step.Status, L)</MudChip></header>
         <div class="inspector-body">
             <section class="inspector-section"><h3>@L["Workbench:Details"]</h3>
-                <dl class="facts"><dt>@L["Workbench:Started"]</dt><dd>@step.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff")</dd><dt>@L["Workbench:Elapsed"]</dt><dd>@ChatExecutionPresentation.Duration(step.Duration)</dd></dl>
+                <dl class="facts"><dt>@L["Workbench:Started"]</dt><dd>@UiTime.Format(step.StartedAt)</dd><dt>@L["Workbench:Elapsed"]</dt><dd>@ChatExecutionPresentation.Duration(step.Duration)</dd></dl>
                 @if (step.Request is { } request)
                 {
                     <dl class="facts">

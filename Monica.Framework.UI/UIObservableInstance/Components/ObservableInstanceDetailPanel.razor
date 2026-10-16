@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.Core.Results;
 @using Monica.Framework.UI.Localization
 @using Monica.Framework.UI.UIObservableInstance.Models
@@ -96,7 +97,7 @@
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:StateChangedAt"]</MudText>
-                            <MudText Typo="Typo.body2">@Instance.StateChangedAtDisplay</MudText>
+                            <MudText Typo="Typo.body2">@UiTime.Format(Instance.StateChangedAt)</MudText>
                         </MudItem>
                     </MudGrid>
                 </MudPaper>
@@ -121,7 +122,7 @@
                         </MudItem>
                         <MudItem xs="6" md="3">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:RegisteredAt"]</MudText>
-                            <MudText Typo="Typo.body2">@Instance.RegisteredAtDisplay</MudText>
+                            <MudText Typo="Typo.body2">@UiTime.Format(Instance.RegisteredAt)</MudText>
                         </MudItem>
                         <MudItem xs="12">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:RunningDuration"]</MudText>

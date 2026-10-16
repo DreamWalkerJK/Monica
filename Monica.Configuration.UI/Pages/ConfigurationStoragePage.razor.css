@@ -457,12 +457,13 @@
 
 .configuration-store-dossiers {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
     gap: 20px;
     min-width: 0;
 }
 
 .configuration-store-dossier {
+    container-type: inline-size;
     display: grid;
     align-content: start;
     gap: 20px;
@@ -473,7 +474,16 @@
     background: var(--mud-palette-surface);
 }
 
-.configuration-store-dossier > header > span {
+.configuration-store-roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.configuration-store-roles > span {
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface));
     font-size: 12px;
     font-weight: 550;
     color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-text-primary));
@@ -772,6 +782,11 @@
     margin: 10px 0 0;
     line-height: 1.65;
     color: var(--storage-muted);
+}
+
+@container (min-width: 620px) {
+    .configuration-store-dossier .configuration-storage-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .configuration-store-capabilities { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
 }
 
 @media (max-width: 600px) {

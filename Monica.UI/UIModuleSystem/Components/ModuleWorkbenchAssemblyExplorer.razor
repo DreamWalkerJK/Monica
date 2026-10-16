@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Microsoft.Extensions.Localization
 @using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.UI.Localization
@@ -60,7 +61,7 @@
             <details class="assembly-configuration">
                 <summary>
                     <span class="assembly-configuration__label"><MoIcon Icon="@MoIcons.Sliders" Size="1.25rem" />@L["Discovery:Inventory:Configuration:Title"]</span>
-                    <span class="assembly-captured-at">@L["Discovery:Inventory:Configuration:CapturedAt", inventory.CapturedAtUtc.ToLocalTime().ToString("g")]</span>
+                    <span class="assembly-captured-at">@L["Discovery:Inventory:Configuration:CapturedAt", UiTime.Format(inventory.CapturedAtUtc)]</span>
                     <span class="assembly-configuration__expand" aria-hidden="true"><MoIcon Icon="@MoIcons.ChevronDown" Size="1.25rem" /></span>
                 </summary>
                 <dl class="assembly-configuration-facts">

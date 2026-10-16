@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.DevOps.K8S.Dialogs
 @using Monica.DevOps.K8S.Facades
 @using Monica.DevOps.K8S.Models
@@ -98,14 +99,18 @@
                             <PropertyColumn Property="x => x.ClusterIp" Title="@L["Columns:ClusterIp"]" />
                             <PropertyColumn Property="x => x.PortsDisplay" Title="@L["Columns:Ports"]" />
                             <PropertyColumn Property="x => x.SelectorDisplay" Title="@L["Columns:Selector"]" />
-                            <PropertyColumn Property="x => x.LastRestartedAtDisplay" Title="@L["Workbench:Inventory:BackingTime"]" />
+                            <PropertyColumn Property="x => x.LastRestartedAtUtc" Title="@L["Workbench:Inventory:BackingTime"]">
+                                <CellTemplate>@UiTime.Format(context.Item.LastRestartedAtUtc)</CellTemplate>
+                            </PropertyColumn>
                         }
                         else
                         {
                             <PropertyColumn Property="x => x.ImagesDisplay" Title="@L["Columns:Images"]" />
                             <PropertyColumn Property="x => x.SelectorDisplay" Title="@L["Columns:Selector"]" />
                             <PropertyColumn Property="x => x.ReplicaStatus" Title="@L["Columns:Replicas"]" />
-                            <PropertyColumn Property="x => x.LastRestartedAtDisplay" Title="@L["Workbench:Inventory:WorkloadTime"]" />
+                            <PropertyColumn Property="x => x.LastRestartedAtUtc" Title="@L["Workbench:Inventory:WorkloadTime"]">
+                                <CellTemplate>@UiTime.Format(context.Item.LastRestartedAtUtc)</CellTemplate>
+                            </PropertyColumn>
                         }
                         <TemplateColumn Title="@L["Columns:Actions"]" Sortable="false" Filterable="false">
                             <CellTemplate><div class="k8s-row-actions" @onclick:stopPropagation="true">
@@ -235,7 +240,7 @@
         _ => "Workbench:Activity:Reading"
     }];
     private string CaptureLabel(K8SResourceListResult capture) => L["Workbench:Inventory:Capture", KindLabel(capture.ResourceType), capture.Namespace, capture.Items.Count, FormatTime(capture.FetchedAtUtc)];
-    private static string FormatTime(DateTimeOffset value) => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
+    private string FormatTime(DateTimeOffset value) => UiTime.Format(value);
 
     private string GetOutcomeScope(K8SOperationOutcome outcome)
     {

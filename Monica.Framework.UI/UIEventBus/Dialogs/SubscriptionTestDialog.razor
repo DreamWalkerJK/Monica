@@ -1,3 +1,4 @@
+@inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.Core.Results
 @using Monica.EventBus.Models
 @using Monica.Framework.UI.UIEventBus.Models
@@ -51,7 +52,7 @@
                             <MudButton Variant="Variant.Outlined" Color="@(_listenerSnapshot.IsListening ? Color.Warning : Color.Primary)" StartIcon="@(_listenerSnapshot.IsListening ? MoIcons.StopCircle : MoIcons.Play)" OnClick="ToggleListeningAsync" Disabled="@Inactive" aria-disabled="@BusyAttribute" aria-busy="@(_listenerBusy ? "true" : "false")">@(_listenerSnapshot.IsListening ? L["SubscriptionTestDialog:Actions:StopListening"] : L["SubscriptionTestDialog:Actions:StartListening"])</MudButton>
                             <MudButton Color="Color.Default" OnClick="ClearMessages" Disabled="@Inactive" aria-disabled="@(_commandBusy || _listenerSnapshot.MessageCount == 0 ? "true" : "false")">@L["SubscriptionTestDialog:Actions:Clear"]</MudButton>
                         </div>
-                        <div class="runtime-test-retained"><strong>@L["TestBench:Retained", _listenerSnapshot.MessageCount]</strong>@if (_listenerSnapshot.StartedAt is { } startedAt) { <span>@L["RuntimeTest:Started", startedAt.ToString("HH:mm:ss")]</span> }</div>
+                        <div class="runtime-test-retained"><strong>@L["TestBench:Retained", _listenerSnapshot.MessageCount]</strong>@if (_listenerSnapshot.StartedAt is { } startedAt) { <span>@L["RuntimeTest:Started", UiTime.FormatTime(startedAt)]</span> }</div>
                         @if (_listenerSnapshot.MessageCount == 0)
                         {
                             <div class="runtime-test-empty"><MoIcon Icon="@MoIcons.Inbox" Size="1.5rem" /><h4>@L["SubscriptionTestDialog:States:NoMessages"]</h4><p>@L["RuntimeTest:EmptyHelp"]</p></div>
@@ -62,7 +63,7 @@
                                 @foreach (var message in _listenerSnapshot.Messages.Reverse())
                                 {
                                     <li @key="message">
-                                        <header><span><MoIcon Icon="@MoIcons.ArrowDownLeft" Size="1.25rem" />@L["TestBench:Received"]</span><time>@message.ReceivedAt.ToString("HH:mm:ss.fff")</time></header>
+                                        <header><span><MoIcon Icon="@MoIcons.ArrowDownLeft" Size="1.25rem" />@L["TestBench:Received"]</span><time>@UiTime.FormatTime(message.ReceivedAt)</time></header>
                                         <dl><div><dt>@L["SubscriptionTestDialog:Fields:TopicName"]</dt><dd><code>@message.TopicName</code></dd></div><div><dt>@L["SubscriptionTestDialog:Fields:EventType"]</dt><dd><code>@message.EventType</code></dd></div></dl>
                                         <pre>@message.PayloadJson</pre>
                                     </li>

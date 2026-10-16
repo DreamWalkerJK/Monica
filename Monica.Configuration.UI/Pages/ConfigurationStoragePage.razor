@@ -20,7 +20,7 @@
                         <div><span class="configuration-storage-feature-label">@L["Storage:Workbench:SourcesTab"]</span><h2>@L["Sources:Runtime:Title"]</h2><p>@L["Sources:Runtime:Subtitle"]</p></div>
                         <div class="configuration-source-observation">
                             @if (_hasLoadedSourceInventories) { <strong>@L["Storage:Workbench:SourceCount", _sourceInventories.Count]</strong> }
-                            @if (_sourceInventoriesObservedAtUtc is { } observed) { <span>@L["Storage:Workbench:AcceptedAt"]</span><time datetime="@observed.ToString("O")">@observed.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time> }
+                            @if (_sourceInventoriesObservedAtUtc is { } observed) { <span>@L["Storage:Workbench:AcceptedAt"]</span><time datetime="@observed.ToString("O")">@TimeDisplay.Format(observed)</time> }
                         </div>
                     </header>
                     <div class="configuration-source-evidence">
@@ -120,20 +120,20 @@
             </MudTabPanel>
             <MudTabPanel Text="@L["Storage:Workbench:StoresTab"]" Icon="@MoIcons.Database">
                 <section class="configuration-store-workspace">
-                    <header><div><h2>@L["Storage:Workbench:StoresTab"]</h2><p>@L["Storage:Workbench:OverviewHelp"]</p></div>@if (_overviewObservedAtUtc is { } observed) { <div class="configuration-storage-observation"><span>@L["Storage:Workbench:AcceptedAt"]</span><time datetime="@observed.ToString("O")">@observed.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time></div> }</header>
+                    <header><div><h2>@L["Storage:Workbench:StoresTab"]</h2><p>@L["Storage:Workbench:OverviewHelp"]</p></div>@if (_overviewObservedAtUtc is { } observed) { <div class="configuration-storage-observation"><span>@L["Storage:Workbench:AcceptedAt"]</span><time datetime="@observed.ToString("O")">@TimeDisplay.Format(observed)</time></div> }</header>
                     @if (!string.IsNullOrWhiteSpace(_overviewLoadError)) { <div class="configuration-storage-feedback"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_overviewLoadError</MudAlert></div> }
                     @if (!string.IsNullOrWhiteSpace(_storeStateLoadError)) { <div class="configuration-storage-feedback"><MudAlert Icon="@MoIcons.Error" Severity="Severity.Error">@_storeStateLoadError</MudAlert></div> }
                     @if (_overview is not null)
                     {
                         <div class="configuration-store-dossiers">
-                            @foreach (var role in new[] { (Label: L["Storage:Roles:EffectiveValues"].Value, Store: _overview.EffectiveValueStore), (Label: L["Storage:Roles:History"].Value, Store: _overview.HistoryStore), (Label: L["Storage:Roles:Metadata"].Value, Store: _overview.MetadataStore) })
+                            @foreach (var dossier in StoreDossiers)
                             {
-                                var state = _states.FirstOrDefault(candidate => string.Equals(candidate.StoreKey, role.Store.StoreKey, StringComparison.OrdinalIgnoreCase));
-                                <article class="configuration-store-dossier">
-                                    <header><span>@role.Label</span><h3>@role.Store.DisplayName</h3></header>
-                                    <dl class="configuration-storage-facts"><div><dt>@L["Storage:Workbench:StoreKey"]</dt><dd><code>@role.Store.StoreKey</code></dd></div><div><dt>@L["Storage:Workbench:Kind"]</dt><dd>@role.Store.Kind</dd></div><div><dt>@L["Storage:Workbench:WriteAccess"]</dt><dd>@(role.Store.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])</dd></div></dl>
+                                var state = _states.FirstOrDefault(candidate => string.Equals(candidate.StoreKey, dossier.Store.StoreKey, StringComparison.OrdinalIgnoreCase));
+                                <article class="configuration-store-dossier" @key="dossier.Store.StoreKey">
+                                    <header><div class="configuration-store-roles">@foreach (var label in dossier.Roles) { <span>@label</span> }</div><h3>@dossier.Store.DisplayName</h3></header>
+                                    <dl class="configuration-storage-facts"><div><dt>@L["Storage:Workbench:StoreKey"]</dt><dd><code>@dossier.Store.StoreKey</code></dd></div><div><dt>@L["Storage:Workbench:Kind"]</dt><dd>@dossier.Store.Kind</dd></div><div><dt>@L["Storage:Workbench:WriteAccess"]</dt><dd>@(dossier.Store.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])</dd></div></dl>
                                     <dl class="configuration-store-capabilities">
-                                        @foreach (var capability in new[] { (Label: L["Storage:Capabilities:EffectiveValues"].Value, Supported: role.Store.SupportsEffectiveValues), (Label: L["Storage:Capabilities:History"].Value, Supported: role.Store.SupportsHistory), (Label: L["Storage:Capabilities:Metadata"].Value, Supported: role.Store.SupportsMetadata), (Label: L["Storage:Notifications:Title"].Value, Supported: role.Store.SupportsNotifications) })
+                                        @foreach (var capability in new[] { (Label: L["Storage:Capabilities:EffectiveValues"].Value, Supported: dossier.Store.SupportsEffectiveValues), (Label: L["Storage:Capabilities:History"].Value, Supported: dossier.Store.SupportsHistory), (Label: L["Storage:Capabilities:Metadata"].Value, Supported: dossier.Store.SupportsMetadata), (Label: L["Storage:Notifications:Title"].Value, Supported: dossier.Store.SupportsNotifications) })
                                         { <div data-supported="@(capability.Supported ? "true" : "false")"><dt>@capability.Label</dt><dd><MoIcon Icon="@(capability.Supported ? MoIcons.Success : MoIcons.MinusCircle)" Size="1.25rem" />@(capability.Supported ? L["Storage:Workbench:Supported"] : L["Storage:Workbench:NotSupported"])</dd></div> }
                                     </dl>
                                     <section class="configuration-store-operation" data-outcome="@(!_hasLoadedStoreStates || !HasRecordedOperation(state) ? "unknown" : state!.LastOperationSucceeded ? "success" : "error")">
@@ -143,7 +143,7 @@
                                         else
                                         {
                                             <strong>@(state!.LastOperationSucceeded ? L["Storage:State:Succeeded"] : L["Storage:State:Failed"])</strong>
-                                            <dl><div><dt>@L["Storage:Workbench:OperationTime"]</dt><dd>@if (state!.LastOperationTime is { } recorded) { <time datetime="@recorded.ToString("O")">@recorded.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time> } else { @L["Storage:Workbench:NotAvailable"] }</dd></div></dl>
+                                            <dl><div><dt>@L["Storage:Workbench:OperationTime"]</dt><dd>@if (state!.LastOperationTime is { } recorded) { <time datetime="@recorded.ToString("O")">@TimeDisplay.Format(recorded)</time> } else { @L["Storage:Workbench:NotAvailable"] }</dd></div></dl>
                                             @if (state.LastError is not null) { <dl><div><dt>@L["Storage:Workbench:OperationError"]</dt><dd>@state.LastError</dd></div></dl> }
                                         }
                                     </section>
@@ -174,7 +174,7 @@
                                                 else
                                                 {
                                                     <strong>@(state.LastOperationSucceeded ? L["Storage:State:Succeeded"] : L["Storage:State:Failed"])</strong>
-                                                    <dl><div><dt>@L["Storage:Workbench:OperationTime"]</dt><dd>@if (state.LastOperationTime is { } recorded) { <time datetime="@recorded.ToString("O")">@recorded.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time> } else { @L["Storage:Workbench:NotAvailable"] }</dd></div></dl>
+                                                    <dl><div><dt>@L["Storage:Workbench:OperationTime"]</dt><dd>@if (state.LastOperationTime is { } recorded) { <time datetime="@recorded.ToString("O")">@TimeDisplay.Format(recorded)</time> } else { @L["Storage:Workbench:NotAvailable"] }</dd></div></dl>
                                                     @if (state.LastError is not null) { <dl><div><dt>@L["Storage:Workbench:OperationError"]</dt><dd>@state.LastError</dd></div></dl> }
                                                 }
                                             </section>
@@ -184,7 +184,7 @@
                             }
                         </section>
                     }
-                    @if (_storeStatesObservedAtUtc is { } operationsObserved) { <footer class="configuration-storage-observation"><span>@L["Storage:Workbench:LatestOperation"] · @L["Storage:Workbench:AcceptedAt"]</span><time datetime="@operationsObserved.ToString("O")">@operationsObserved.ToString("yyyy-MM-dd HH:mm:ss.fff zzz")</time></footer> }
+                    @if (_storeStatesObservedAtUtc is { } operationsObserved) { <footer class="configuration-storage-observation"><span>@L["Storage:Workbench:LatestOperation"] · @L["Storage:Workbench:AcceptedAt"]</span><time datetime="@operationsObserved.ToString("O")">@TimeDisplay.Format(operationsObserved)</time></footer> }
                 </section>
             </MudTabPanel>
         </MudTabs>
