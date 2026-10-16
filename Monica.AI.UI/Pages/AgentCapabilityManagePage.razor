@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.Json
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @attribute [Route(PAGE_URL)]
 @using Monica.AI.Mcp.Models
@@ -209,7 +210,7 @@
                                 }
                                 @if (!string.IsNullOrWhiteSpace(context.ParametersSchemaJson))
                                 {
-                                    <MudExpansionPanels Elevation="0" Dense="true" Class="schema-panels"><MudExpansionPanel Text="@L["Capabilities:Tool:Schema"]" Icon="@MoIcons.Braces"><pre class="diagnostic-block">@context.ParametersSchemaJson</pre></MudExpansionPanel></MudExpansionPanels>
+                                    <MudExpansionPanels Elevation="0" Dense="true" Class="schema-panels"><MudExpansionPanel Text="@L["Capabilities:Tool:Schema"]" Icon="@MoIcons.Braces"><MoJson Value="@context.ParametersSchemaJson" ShowLineNumbers="false" /></MudExpansionPanel></MudExpansionPanels>
                                 }
                             </MudTd>
                         </RowTemplate>

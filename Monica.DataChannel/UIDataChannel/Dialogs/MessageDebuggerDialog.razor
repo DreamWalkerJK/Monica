@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.Json
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.DataChannel.Models
 @using Monica.DataChannel.Middlewares
@@ -90,7 +91,7 @@
                         <MudTabPanel Text="@L["Debugger:Tabs:FormattedContent"]">
                             <div class="debugger-inspector__tab">
                                 <h4>@L["Debugger:Tabs:FormattedContent"]</h4>
-                                <pre class="debugger-payload">@selected.FormattedContent</pre>
+                                <MoJson Value="@selected.FormattedContent" AllowPlainText="true" />
                             </div>
                         </MudTabPanel>
                         <MudTabPanel Text="@L["Debugger:Tabs:PayloadSnapshot"]">

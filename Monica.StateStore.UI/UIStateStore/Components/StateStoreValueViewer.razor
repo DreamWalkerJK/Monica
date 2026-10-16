@@ -1,15 +1,14 @@
+@using Monica.UI.Shared.Components.Json
 @using System.Text.Json
-@using System.Text.RegularExpressions
-@using Monica.StateStore.UI.Support
 @inject IStringLocalizer<StateStoreResource> L
 
 <div class="value-viewer">
     <header><strong>@L["KeyExplorer:Labels:ValuePreview"]</strong><div class="value-tools"><div class="view-switch" role="group" aria-label="@L["Workbench:ValueViews"]">
-        @foreach (var mode in new[] { (Id: "Formatted", Label: L["Workbench:Formatted"]), (Id: "Fields", Label: L["Workbench:Fields"]), (Id: "Raw", Label: L["Workbench:Raw"]) })
+        @foreach (var mode in new[] { (Id: "Formatted", Label: "JSON"), (Id: "Fields", Label: L["Workbench:Fields"]) })
         {
             <button type="button" disabled="@(mode.Id == "Fields" && !HasFields)" aria-pressed="@(_mode == mode.Id ? "true" : "false")" @onclick="() => _mode = mode.Id">@mode.Label</button>
         }
-    </div><MudIconButton Icon="@MoIcons.Copy" Size="Size.Small" OnClick="OnCopy" aria-label="@L["Workbench:CopyValue"]" /></div></header>
+    </div>@if (_mode == "Fields") { <MudIconButton Icon="@MoIcons.Copy" Size="Size.Small" OnClick="OnCopy" aria-label="@L["Workbench:CopyValue"]" /> }</div></header>
     @if (_mode == "Fields" && HasFields)
     {
         <div class="json-fields">
@@ -18,7 +17,7 @@
                 <div class="json-field"><code>@field.Name</code><div>
                     @if (field.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
                     {
-                        <details><summary>@L[field.Value.ValueKind == JsonValueKind.Object ? "Workbench:Object" : "Workbench:Array"]</summary><pre>@JsonSerializer.Serialize(field.Value, JsonOptions)</pre></details>
+                        <details><summary>@L[field.Value.ValueKind == JsonValueKind.Object ? "Workbench:Object" : "Workbench:Array"]</summary><MoJson Value="@field.Value.GetRawText()" ShowToolbar="false" ShowLineNumbers="false" ShowStatus="false" MaxHeight="240px" /></details>
                     }
                     else { <code class="@ValueClass(field.Value.ValueKind)">@field.Value.GetRawText()</code> }
                 </div></div>
@@ -27,13 +26,7 @@
     }
     else
     {
-        <div class="code-view" tabindex="0" aria-label="@L["Workbench:ValueContent"]">
-            @{ var number = 0; }
-            @foreach (var line in (_mode == "Raw" ? Value : _formatted).Replace("\r", string.Empty).Split('\n'))
-            {
-                <div class="code-line"><span class="line-number" aria-hidden="true">@(++number)</span><code>@foreach (var token in Tokens(line)) { <span class="@token.Kind">@token.Text</span> }</code></div>
-            }
-        </div>
+        <div class="json-preview"><MoJson Value="@Value" AllowPlainText="true" ShowToolbar="true" /></div>
     }
 </div>
 
@@ -44,17 +37,16 @@
     [Parameter] public string? Identity { get; set; }
     /// <summary>Gets or sets the action that copies the original value rather than its formatted projection.</summary>
     [Parameter] public EventCallback OnCopy { get; set; }
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private string? _source, _identity;
-    private string _mode = "Formatted", _formatted = string.Empty;
+    private string _mode = "Formatted";
     private JsonElement? _root;
     private bool HasFields => _root?.ValueKind is JsonValueKind.Object or JsonValueKind.Array;
     protected override void OnParametersSet()
     {
         if (_identity != Identity) { _identity = Identity; _mode = "Formatted"; }
         if (_source == Value) return;
-        _source = Value; _formatted = Value; _root = null;
-        try { using var json = JsonDocument.Parse(Value); _root = json.RootElement.Clone(); _formatted = JsonSerializer.Serialize(_root.Value, JsonOptions); }
+        _source = Value; _root = null;
+        try { using var json = JsonDocument.Parse(Value); _root = json.RootElement.Clone(); }
         catch (JsonException) { }
         if (_mode == "Fields" && !HasFields) _mode = "Formatted";
     }
@@ -72,18 +64,4 @@
     {
         JsonValueKind.String => "json-string", JsonValueKind.Number => "json-number", _ => "json-literal"
     };
-    private IEnumerable<(string Text, string? Kind)> Tokens(string line)
-    {
-        if (_root is null) { yield return (line, null); yield break; }
-        var cursor = 0;
-        foreach (Match match in StateStoreJsonTokens.Pattern().Matches(line))
-        {
-            if (match.Index > cursor) yield return (line[cursor..match.Index], null);
-            var kind = match.Value[0] == '"' ? (match.Value.TrimEnd().EndsWith(':') ? "json-key" : "json-string")
-                : match.Value is "true" or "false" or "null" ? "json-literal" : "json-number";
-            yield return (match.Value, kind);
-            cursor = match.Index + match.Length;
-        }
-        if (cursor < line.Length) yield return (line[cursor..], null);
-    }
 }

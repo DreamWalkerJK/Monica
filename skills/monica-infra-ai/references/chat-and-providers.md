@@ -1,5 +1,7 @@
 # Chat, providers, and history
 
+Tool arguments/results, request options and parameter schemas use the shared [JSON viewer](../../monica-infra-ui/references/json.md). Non-JSON tool output remains encoded plain text; copy retains the original evidence.
+
 Chat session, archive and execution receipts use the shell's [Clock-based page time display](../../monica-infra-ui/references/time-display.md). Persisted conversation instants remain unchanged.
 
 Register `AddAI()` for code-driven chat, then add a real provider with `AddOpenAIProvider(...)`, `AddAnthropicProvider(...)`, or `AddProvider<TProvider>(...)`. `AddFakeProvider(...)` supports development. `AddAIUI()` adds chat and management pages plus knowledge-base inventory, skill, MCP, localization, and shell dependencies, but does not choose provider credentials, models, or deployment storage and identity. Its pages are an application interface; code callers use `ChatFacade` and the other facades directly. Register modules inside one `builder.AddMonica(...)` callback; a Web host completes Monica with `app.UseMonica()` and `app.MapMonica()`.

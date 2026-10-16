@@ -1,3 +1,4 @@
+@using Monica.UI.Shared.Components.Json
 @using Monica.UI.Shared.Components.States
 @inject Monica.UI.Shared.Services.MoTimeFormatter UiTime
 @using Monica.Core.Results
@@ -35,7 +36,7 @@
                     <section class="runtime-test-publish">
                         <header class="runtime-test-heading"><span>01</span><div><h3>@L["RuntimeTest:Compose"]</h3><p>@L["RuntimeTest:ValidationHelp"]</p></div></header>
                         <div class="runtime-test-editor">
-                            <MudTextField T="string" @bind-Value="_jsonPayload" Label="@L["SubscriptionTestDialog:Fields:JsonSample"]" Variant="Variant.Outlined" Immediate="true" Lines="12" Class="runtime-test-json" Disabled="@(Inactive || _commandBusy)" />
+                            <MoJson @bind-Value="_jsonPayload" ReadOnly="false" Rows="12" Label="@L["SubscriptionTestDialog:Fields:JsonSample"]" Disabled="@(Inactive || _commandBusy)" />
                             @if (!string.IsNullOrWhiteSpace(_validationMessage))
                             {
                                 <p class="runtime-test-validation" data-error="@(_hasValidationError ? "true" : "false")" role="status">@_validationMessage</p>
@@ -66,7 +67,7 @@
                                     <li @key="message">
                                         <header><span><MoIcon Icon="@MoIcons.ArrowDownLeft" Size="1.25rem" />@L["TestBench:Received"]</span><time>@UiTime.FormatTime(message.ReceivedAt)</time></header>
                                         <dl><div><dt>@L["SubscriptionTestDialog:Fields:TopicName"]</dt><dd><code>@message.TopicName</code></dd></div><div><dt>@L["SubscriptionTestDialog:Fields:EventType"]</dt><dd><code>@message.EventType</code></dd></div></dl>
-                                        <pre>@message.PayloadJson</pre>
+                                        <MoJson Value="@message.PayloadJson" ShowLineNumbers="false" />
                                     </li>
                                 }
                             </ol>
