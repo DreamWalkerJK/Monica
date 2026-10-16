@@ -4,13 +4,20 @@
 
 ```csharp
 monica.AddResultEnvelope(options => options.ExposeDiagnosticDetails = true);
-monica.AddChainTracing(options => options.ServiceName = "orders-api")
+monica.AddChainTracing(options =>
+    {
+        options.ServiceName = "orders-api";
+        options.ServiceVersion = typeof(Program).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+    })
     .UseControllerTracing()
     .UseExecutionTracing()
     .AttachControllerTraceMetadata();
 ```
 
 `UseControllerTracing()` records MVC actions, `UseExecutionTracing()` traces business operations returning `IResultEnvelope`, and `AttachControllerTraceMetadata()` attaches correlation to both normal results and responses produced by the exception handler. `ServiceName` identifies the local chain's owner, such as a Dapr app ID. `UseRpcTracing()` separately enables actor-invocation middleware on a Web host. Chain capture limits default to `MaxChainDepth = 50` and `MaxNodeCount = 1000`.
+
+Each chain root includes `timestamp`, the UTC instant when that chain started, serialized as a `DateTimeOffset` with its offset preserved even when the host uses timezone-free `DateTime` formatting. Completion or repeated attachment does not change this timestamp. Set `ServiceVersion` to the deployed host assembly's informational or product version, preferably using the same source as service discovery, to include the full version and commit hash in `serviceVersion`. It defaults to `null`; null or whitespace values are omitted. The example requires `using System.Reflection;` and uses the host's `Program` assembly. `timestamp` is recorded even without `ServiceName`; `service`, `timestamp`, and `serviceVersion` appear only on each chain's root, including remote roots retained inside a `remote` response, and follow the chain's diagnostic visibility policy.
 
 Use `UseDatabaseTracing()` only when EF Core command nodes are needed. It registers `ChainTracingDbCommandInterceptor` in DI; the application's DbContext configuration must also attach that interceptor. Controller, execution, database, and RPC integrations are separate choices, so a chain with no SQL nodes may have an unattached interceptor. Inspect local trace IDs and the owning service before diagnosing missing remote nodes.
 
