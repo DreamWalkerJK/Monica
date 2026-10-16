@@ -3,8 +3,14 @@
 @using Monica.UI.Localization
 @inject IStringLocalizer<ModuleSystemResource> L
 
-<section class="relationship-list">
-    <MudText Typo="Typo.subtitle2">@Title</MudText>
+<section class="relationship-list @(Compact ? "relationship-list--compact" : null)">
+    <MudText Typo="Typo.subtitle2">
+        @Title
+        @if (Compact)
+        {
+            <span class="relationship-count">@Modules.Count</span>
+        }
+    </MudText>
     @if (Modules.Count == 0)
     {
         <span>@(string.IsNullOrWhiteSpace(EmptyText) ? L["ModuleDrawer:Dependencies:Empty"] : EmptyText)</span>
@@ -15,14 +21,14 @@
         {
             @if (ModuleSelected.HasDelegate)
             {
-                <button type="button" class="relationship-button" @onclick="@(() => ModuleSelected.InvokeAsync(module))">
+                <button type="button" class="relationship-button" title="@(Compact ? module.FullTypeName : null)" aria-label="@(Compact ? module.FullTypeName : null)" @onclick="@(() => ModuleSelected.InvokeAsync(module))">
                     <strong>@module.TypeName</strong>
                     <code title="@module.FullTypeName">@module.FullTypeName</code>
                 </button>
             }
             else
             {
-                <div>
+                <div title="@(Compact ? module.FullTypeName : null)">
                     <strong>@module.TypeName</strong>
                     <code title="@module.FullTypeName">@module.FullTypeName</code>
                 </div>
@@ -36,4 +42,10 @@
     [Parameter, EditorRequired] public IReadOnlyList<ModuleDiagnosticsModule> Modules { get; set; } = [];
     [Parameter] public string? EmptyText { get; set; }
     [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    /// <summary>
+    /// Displays related modules as wrapping identity chips with a count in the heading.
+    /// Defaults to <see langword="false"/> to retain the full relationship rows.
+    /// </summary>
+    [Parameter] public bool Compact { get; set; }
 }
