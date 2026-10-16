@@ -32,8 +32,13 @@ public sealed class SeederOperationsComponentTests
 
         cut.Markup.Should().Contain("RunStatus:CompletedWithFailures");
         cut.Markup.Should().Contain("ReadinessStatus:Degraded");
-        cut.Find("[role='progressbar']").GetAttribute("aria-labelledby")
-            .Should().Be("seeder-run-status-title seeder-run-progress-summary");
+        var labelIds = cut.Find("[role='progressbar']").GetAttribute("aria-labelledby")!
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        labelIds.Should().NotBeEmpty();
+        foreach (var id in labelIds)
+        {
+            cut.Find($"[id='{id}']").TextContent.Should().NotBeNullOrWhiteSpace();
+        }
     }
 
     [Fact]

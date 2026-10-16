@@ -197,11 +197,11 @@ public sealed class ProviderOptionDiagnosticsTests
         _ = context.Render<StateStoreProviderDetailDialog>(parameters => parameters
             .Add(component => component.IsVisible, true)
             .Add(component => component.Provider, CreateStateStoreProvider()));
-        surface.WaitForAssertion(() => FindTab(surface, "ProviderDetail:Tabs:ConfigOptions").Should().NotBeNull());
+        surface.WaitForAssertion(() => FindTab(surface, "ProviderDetail:Tabs:Options").Should().NotBeNull());
 
         surface.Markup.Should().NotContain("ProviderDetail:Messages:ConfigurationLoadFailed");
 
-        FindTab(surface, "ProviderDetail:Tabs:ConfigOptions").Click();
+        FindTab(surface, "ProviderDetail:Tabs:Options").Click();
 
         surface.WaitForAssertion(() =>
             surface.Markup.Should().Contain("ProviderDetail:Messages:ConfigurationLoadFailed"));
@@ -215,9 +215,9 @@ public sealed class ProviderOptionDiagnosticsTests
         _ = context.Render<StateStoreProviderDetailDialog>(parameters => parameters
             .Add(component => component.IsVisible, true)
             .Add(component => component.Provider, CreateStateStoreProvider()));
-        surface.WaitForAssertion(() => FindTab(surface, "ProviderDetail:Tabs:ConfigOptions").Should().NotBeNull());
+        surface.WaitForAssertion(() => FindTab(surface, "ProviderDetail:Tabs:Options").Should().NotBeNull());
 
-        FindTab(surface, "ProviderDetail:Tabs:ConfigOptions").Click();
+        FindTab(surface, "ProviderDetail:Tabs:Options").Click();
 
         surface.WaitForAssertion(() =>
         {
@@ -235,13 +235,13 @@ public sealed class ProviderOptionDiagnosticsTests
         _ = context.Render<StateStoreProviderDetailDialog>(parameters => parameters
             .Add(component => component.IsVisible, true)
             .Add(component => component.Provider, CreateStateStoreProvider()));
-        surface.WaitForAssertion(() => FindTab(surface, "ProviderDetail:Tabs:ConfigOptions").Should().NotBeNull());
+        surface.WaitForAssertion(() => FindTab(surface, "ProviderDetail:Tabs:Options").Should().NotBeNull());
 
-        FindTab(surface, "ProviderDetail:Tabs:ConfigOptions").Click();
+        FindTab(surface, "ProviderDetail:Tabs:Options").Click();
         surface.WaitForAssertion(() => authorization.CallCount.Should().Be(1));
 
         FindTab(surface, "ProviderDetail:Tabs:Overview").Click();
-        FindTab(surface, "ProviderDetail:Tabs:ConfigOptions").Click();
+        FindTab(surface, "ProviderDetail:Tabs:Options").Click();
 
         surface.WaitForAssertion(() => authorization.CallCount.Should().Be(2));
     }

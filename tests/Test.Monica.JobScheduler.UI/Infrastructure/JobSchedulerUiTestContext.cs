@@ -56,6 +56,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
             NullLogger<JobSchedulerFacade>.Instance);
 
         Services.AddMudServices();
+        Services.AddSingleton<IStringLocalizer<global::Monica.UI.Localization.SharedResource>, EchoStringLocalizer<global::Monica.UI.Localization.SharedResource>>();
         Services.AddSingleton<IStringLocalizer<JobSchedulerResource>, EchoStringLocalizer<JobSchedulerResource>>();
         Services.AddSingleton<IThemeState, TestThemeState>();
         Services.AddSingleton<IOptions<ModuleJobSchedulerOption>>(Options.Create(schedulerOptions));
@@ -80,13 +81,15 @@ public sealed class JobSchedulerUiTestContext : BunitContext
         {
             Services.AddSingleton(workerInsight);
         }
-        _ = Render<MudPopoverProvider>();
+        PopoverProvider = Render<MudPopoverProvider>();
         DialogProvider = Render<MudDialogProvider>();
     }
 
     public InMemoryJobSchedulerStore Store { get; }
 
     public IRenderedComponent<MudDialogProvider> DialogProvider { get; }
+
+    public IRenderedComponent<MudPopoverProvider> PopoverProvider { get; }
 
     internal TestJobSchedulerUiAccess Access { get; }
 
