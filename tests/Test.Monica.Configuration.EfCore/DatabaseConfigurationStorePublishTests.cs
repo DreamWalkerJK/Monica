@@ -162,6 +162,29 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     }
 
     [Fact]
+    public async Task PublishAsync_WhenValidationRevisionChanges_ShouldIdentifyItWithoutChangingStructuralSchema()
+    {
+        var databasePath = await CreateMigratedDatabaseAsync();
+        await using var stores = CreateStores(databasePath, 1);
+        var original = CreateDefinition("Test.ValidationRevision") with
+        {
+            ValidationContract = new() { Capability = ConfigurationValidationCapability.ObjectCode, Revision = "before-code" }
+        };
+        var changed = original with { ValidationContract = original.ValidationContract with { Revision = "after-code" } };
+
+        await stores.Items[0].PublishAsync(CreatePublication([original]), TestContext.Current.CancellationToken);
+        await stores.Items[0].PublishAsync(CreatePublication([changed]), TestContext.Current.CancellationToken);
+
+        var overview = await GetOverviewAsync(stores, original.DefinitionKey);
+        overview.SchemaVersion.Should().Be(1);
+        overview.DefinitionRevision.Should().Be(2);
+        var history = overview.RevisionHistories[0];
+        history.ChangeKind.Should().Be(ConfigurationDefinitionPublishChangeKind.MetadataChanged);
+        history.ChangeSummaryJson.Should().Contain("ValidationContract.Revision").And.Contain("before-code").And.Contain("after-code");
+        history.PreviousSchemaHash.Should().Be(history.NewSchemaHash);
+    }
+
+    [Fact]
     public async Task PublishAsync_WhenSchemaChanges_ShouldIncrementSchemaVersionAndRecordSchemaHistory()
     {
         var databasePath = await CreateMigratedDatabaseAsync();

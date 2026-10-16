@@ -70,15 +70,16 @@ internal sealed class ConfigurationSourceInspector(
     /// <summary>
     /// Gets all source values for one managed configuration path.
     /// </summary>
-    public ConfigurationSourceChain GetSourceChain(ConfigurationDefinition definition, LogicalPath logicalPath)
+    public ConfigurationSourceChain GetSourceChain(ConfigurationDefinition definition, LogicalPath logicalPath, bool includeSensitive = false)
     {
-        return GetSourceChains(definition, [logicalPath])[0];
+        return GetSourceChains(definition, [logicalPath], includeSensitive)[0];
     }
 
     /// <inheritdoc />
     public IReadOnlyList<ConfigurationSourceChain> GetSourceChains(
         ConfigurationDefinition definition,
-        IReadOnlyList<LogicalPath> logicalPaths)
+        IReadOnlyList<LogicalPath> logicalPaths,
+        bool includeSensitive = false)
     {
         if (logicalPaths.Count == 0)
         {
@@ -116,7 +117,7 @@ internal sealed class ConfigurationSourceInspector(
                 pathProjector.Project(definition.SectionPath, logicalPath),
                 sources,
                 providers,
-                root))
+                root, includeSensitive))
             .ToArray();
     }
 
@@ -206,7 +207,7 @@ internal sealed class ConfigurationSourceInspector(
     /// Gets all visible configuration values supplied by each runtime source.
     /// </summary>
     public async Task<IReadOnlyList<ConfigurationSourceInventory>> GetSourceInventoriesAsync(
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, bool includeSensitive = false)
     {
         if (runtimeContext.Root is not { } root)
         {
@@ -245,7 +246,7 @@ internal sealed class ConfigurationSourceInspector(
                             entries,
                             source.SourceKey,
                             configurationPath,
-                            isSensitive);
+                            isSensitive, includeSensitive);
                         continue;
                     }
 
@@ -259,7 +260,7 @@ internal sealed class ConfigurationSourceInspector(
                             ConfigurationPath = configurationPath,
                             RelativeConfigurationPath = RelativeConfigurationPath(definition.SectionPath, configurationPath),
                             NodeLabel = node?.DisplayName ?? node?.Name,
-                            DisplayValue = isSensitive ? null : value,
+                            DisplayValue = isSensitive && !includeSensitive ? null : value,
                             IsSensitive = isSensitive
                         }));
 
@@ -318,7 +319,8 @@ internal sealed class ConfigurationSourceInspector(
         IList<SourceInventoryEntry> entries,
         string sourceKey,
         string configurationPath,
-        bool isSensitive)
+        bool isSensitive,
+        bool includeSensitive)
     {
         if (!isSensitive)
         {
@@ -341,7 +343,7 @@ internal sealed class ConfigurationSourceInspector(
             {
                 Item = existing.Item with
                 {
-                    DisplayValue = null,
+                    DisplayValue = includeSensitive ? existing.Item.DisplayValue : null,
                     IsSensitive = true
                 }
             };
@@ -352,7 +354,7 @@ internal sealed class ConfigurationSourceInspector(
     /// <summary>
     /// Gets a display-safe JSON file view.
     /// </summary>
-    public async Task<ConfigurationSourceFileView> GetSourceFileViewAsync(string sourceKey, CancellationToken cancellationToken)
+    public async Task<ConfigurationSourceFileView> GetSourceFileViewAsync(string sourceKey, CancellationToken cancellationToken, bool includeSensitive = false)
     {
         var source = GetRequiredSource(sourceKey);
         if (source.Kind != ConfigurationSourceKind.JsonFile || string.IsNullOrWhiteSpace(source.PhysicalPath))
@@ -371,7 +373,9 @@ internal sealed class ConfigurationSourceInspector(
         var root = NormalizeKnownRegexPatternPaths(
             JsonNode.Parse(text, documentOptions: JSON_DOCUMENT_OPTIONS) ?? new JsonObject(),
             definitions);
-        root = RedactKnownSensitivePaths(root, definitions, out var redacted);
+        var redacted = false;
+        if (!includeSensitive)
+            root = RedactKnownSensitivePaths(root, definitions, out redacted);
         return new ConfigurationSourceFileView
         {
             Source = source,
@@ -400,7 +404,8 @@ internal sealed class ConfigurationSourceInspector(
         string configurationPath,
         IReadOnlyList<RuntimeConfigurationSource> sources,
         IReadOnlyList<IConfigurationProvider> providers,
-        IConfigurationRoot activeRoot)
+        IConfigurationRoot activeRoot,
+        bool includeSensitive)
     {
         var targetNode = ConfigurationSchemaNavigator.ResolveNode(definition.Root, logicalPath);
         var isSensitive = ConfigurationSchemaNavigator.IsSensitivePath(definition.Root, logicalPath);
@@ -412,7 +417,7 @@ internal sealed class ConfigurationSourceInspector(
                 source.Descriptor,
                 targetNode,
                 configurationPath,
-                isSensitive);
+                isSensitive, includeSensitive);
             if (value is null)
             {
                 continue;
@@ -493,7 +498,8 @@ internal sealed class ConfigurationSourceInspector(
         ConfigurationSourceDescriptor source,
         ConfigurationNodeDefinition? targetNode,
         string configurationPath,
-        bool isSensitive)
+        bool isSensitive,
+        bool includeSensitive)
     {
         if (targetNode?.NodeKind == ConfigurationNodeKind.Scalar || targetNode is null)
         {
@@ -501,7 +507,7 @@ internal sealed class ConfigurationSourceInspector(
                 ? new ConfigurationSourceValue
                 {
                     Source = source,
-                    DisplayValue = isSensitive ? null : DisplayScalarValue(targetNode, value),
+                    DisplayValue = isSensitive && !includeSensitive ? null : DisplayScalarValue(targetNode, value),
                     IsSensitive = isSensitive
                 }
                 : null;
@@ -522,13 +528,13 @@ internal sealed class ConfigurationSourceInspector(
                 return new ConfigurationSourceValue
                 {
                     Source = source,
-                    DisplayValue = isSensitive ? null : explicitContainer,
+                    DisplayValue = isSensitive && !includeSensitive ? null : explicitContainer,
                     IsSensitive = isSensitive
                 };
             }
         }
 
-        var node = BuildProviderJsonNode(provider, targetNode, configurationPath);
+        var node = BuildProviderJsonNode(provider, targetNode, configurationPath, includeSensitive);
         if (node is null)
         {
             return null;
@@ -537,7 +543,7 @@ internal sealed class ConfigurationSourceInspector(
         return new ConfigurationSourceValue
         {
             Source = source,
-            DisplayValue = isSensitive ? null : node.ToJsonString(READABLE_JSON_OPTIONS),
+            DisplayValue = isSensitive && !includeSensitive ? null : node.ToJsonString(READABLE_JSON_OPTIONS),
             IsSensitive = isSensitive
         };
     }
@@ -545,29 +551,32 @@ internal sealed class ConfigurationSourceInspector(
     private static JsonNode? BuildProviderJsonNode(
         IConfigurationProvider provider,
         ConfigurationNodeDefinition schema,
-        string configurationPath)
+        string configurationPath,
+        bool includeSensitive)
     {
-        return schema.NodeKind switch
+        var node = schema.NodeKind switch
         {
-            ConfigurationNodeKind.Scalar => BuildProviderScalarNode(provider, schema, configurationPath),
-            ConfigurationNodeKind.Object => BuildProviderObjectNode(provider, schema, configurationPath),
-            ConfigurationNodeKind.Dictionary => BuildProviderDictionaryNode(provider, schema, configurationPath),
-            ConfigurationNodeKind.List => BuildProviderListNode(provider, schema, configurationPath),
+            ConfigurationNodeKind.Scalar => BuildProviderScalarNode(provider, schema, configurationPath, includeSensitive),
+            ConfigurationNodeKind.Object => BuildProviderObjectNode(provider, schema, configurationPath, includeSensitive),
+            ConfigurationNodeKind.Dictionary => BuildProviderDictionaryNode(provider, schema, configurationPath, includeSensitive),
+            ConfigurationNodeKind.List => BuildProviderListNode(provider, schema, configurationPath, includeSensitive),
             _ => null
         };
+        return node is not null && schema.IsSensitive && !includeSensitive ? JsonValue.Create("***") : node;
     }
 
     private static JsonNode? BuildProviderScalarNode(
         IConfigurationProvider provider,
         ConfigurationNodeDefinition schema,
-        string configurationPath)
+        string configurationPath,
+        bool includeSensitive)
     {
         if (!provider.TryGet(configurationPath, out var value))
         {
             return null;
         }
 
-        if (schema.IsSensitive)
+        if (schema.IsSensitive && !includeSensitive)
         {
             return JsonValue.Create("***");
         }
@@ -585,7 +594,8 @@ internal sealed class ConfigurationSourceInspector(
     private static JsonNode? BuildProviderObjectNode(
         IConfigurationProvider provider,
         ConfigurationNodeDefinition schema,
-        string configurationPath)
+        string configurationPath,
+        bool includeSensitive)
     {
         var result = new JsonObject();
         foreach (var child in schema.Children)
@@ -593,7 +603,7 @@ internal sealed class ConfigurationSourceInspector(
             var childPath = string.IsNullOrWhiteSpace(configurationPath)
                 ? child.Name
                 : $"{configurationPath}:{child.Name}";
-            var childNode = BuildProviderJsonNode(provider, child, childPath);
+            var childNode = BuildProviderJsonNode(provider, child, childPath, includeSensitive);
             if (childNode is not null)
             {
                 result[child.Name] = childNode;
@@ -606,7 +616,8 @@ internal sealed class ConfigurationSourceInspector(
     private static JsonNode? BuildProviderDictionaryNode(
         IConfigurationProvider provider,
         ConfigurationNodeDefinition schema,
-        string configurationPath)
+        string configurationPath,
+        bool includeSensitive)
     {
         if (schema.DictionaryTemplate is null)
         {
@@ -617,7 +628,7 @@ internal sealed class ConfigurationSourceInspector(
         foreach (var childKey in GetOrderedProviderChildKeys(provider, configurationPath))
         {
             var childPath = $"{configurationPath}:{childKey}";
-            var childNode = BuildProviderJsonNode(provider, schema.DictionaryTemplate.ValueTemplate, childPath);
+            var childNode = BuildProviderJsonNode(provider, schema.DictionaryTemplate.ValueTemplate, childPath, includeSensitive);
             if (childNode is not null)
             {
                 result[childKey] = childNode;
@@ -630,7 +641,8 @@ internal sealed class ConfigurationSourceInspector(
     private static JsonNode? BuildProviderListNode(
         IConfigurationProvider provider,
         ConfigurationNodeDefinition schema,
-        string configurationPath)
+        string configurationPath,
+        bool includeSensitive)
     {
         if (schema.ListTemplate is null)
         {
@@ -641,7 +653,7 @@ internal sealed class ConfigurationSourceInspector(
         foreach (var childKey in GetOrderedProviderChildKeys(provider, configurationPath))
         {
             var childPath = $"{configurationPath}:{childKey}";
-            var childNode = BuildProviderJsonNode(provider, schema.ListTemplate.ItemTemplate, childPath);
+            var childNode = BuildProviderJsonNode(provider, schema.ListTemplate.ItemTemplate, childPath, includeSensitive);
             if (childNode is not null)
             {
                 result.Add(childNode);

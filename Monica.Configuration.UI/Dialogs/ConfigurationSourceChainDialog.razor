@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using Monica.Configuration.UI.Localization
 @using Monica.UI.Shared.Components.Dialogs
 @inject ConfigurationFacade Facade
@@ -126,7 +127,7 @@
         {
             await _operations.RunAsync(async token =>
             {
-                var result = await Facade.GetSourceChainAsync(definitionKey, path);
+                var result = await Facade.GetSourceChainAsync(definitionKey, path, Visibility.ShowSensitiveValues);
                 token.ThrowIfCancellationRequested();
                 _operations.TryApply(() =>
                 {
@@ -176,7 +177,7 @@
 
     private static string SourcePath(ConfigurationSourceDescriptor source) => source.PhysicalPath ?? source.SourcePath ?? source.ProviderType;
 
-    private string DisplayValue(ConfigurationSourceValue value) => value.IsSensitive
+    private string DisplayValue(ConfigurationSourceValue value) => Visibility.ShouldMask(value.IsSensitive)
         ? L["State:Value:Sensitive"] : value.DisplayValue ?? L["Value:States:Empty"];
 
     private static string SourceCardClass(ConfigurationSourceValue value) => value.IsEffective

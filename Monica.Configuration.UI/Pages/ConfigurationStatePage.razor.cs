@@ -619,7 +619,7 @@ public partial class ConfigurationStatePage
         _externalEffectiveSources.Clear();
         try
         {
-            var result = await Facade.GetDefinitionStateAsync(summary.DefinitionKey);
+            var result = await Facade.GetDefinitionStateAsync(summary.DefinitionKey, Visibility.ShowSensitiveValues);
             if (route.IsRetired || generation != _selectionGeneration || valueGeneration != _valueReadGeneration) return;
             if (result.IsFailed(out var error, out var definitionState))
             {
@@ -656,7 +656,7 @@ public partial class ConfigurationStatePage
 
         var generation = ++_valueReadGeneration;
 
-        var result = await Facade.GetDefinitionStateAsync(definition.DefinitionKey);
+        var result = await Facade.GetDefinitionStateAsync(definition.DefinitionKey, Visibility.ShowSensitiveValues);
         if (route.IsRetired || generation != _valueReadGeneration
             || !string.Equals(_selectedSummary?.DefinitionKey, definition.DefinitionKey, StringComparison.Ordinal)) return;
         if (result.IsFailed(out var error, out var definitionState))
@@ -705,7 +705,7 @@ public partial class ConfigurationStatePage
             .ToArray();
         var result = await Facade.GetSourceChainsAsync(
             definition.DefinitionKey,
-            nodes.Select(static node => node.RelativePath).ToArray());
+            nodes.Select(static node => node.RelativePath).ToArray(), Visibility.ShowSensitiveValues);
         if (route.IsRetired || generation != _valueReadGeneration || !ReferenceEquals(definition, _selectedDefinition)) return;
         if (result.IsFailed(out _, out var sourceChains))
         {
@@ -1479,7 +1479,7 @@ public partial class ConfigurationStatePage
                 continue;
             }
 
-            var rootValueResult = await Facade.GetEffectiveValueAsync(definitionChanges.Key, LogicalPath.Root);
+            var rootValueResult = await Facade.GetEffectiveValueAsync(definitionChanges.Key, LogicalPath.Root, Visibility.ShowSensitiveValues);
             if (route.IsRetired) return;
             if (rootValueResult.IsFailed(out _, out var rootValue))
             {
@@ -1497,7 +1497,7 @@ public partial class ConfigurationStatePage
                     continue;
                 }
 
-                var effectiveValueResult = await Facade.GetEffectiveValueAsync(change.DefinitionKey, change.LogicalPath);
+                var effectiveValueResult = await Facade.GetEffectiveValueAsync(change.DefinitionKey, change.LogicalPath, Visibility.ShowSensitiveValues);
                 if (route.IsRetired) return;
                 if (effectiveValueResult.IsFailed(out _, out var effectiveValue))
                 {

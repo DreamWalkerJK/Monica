@@ -98,6 +98,7 @@ public sealed class ModuleConfigurationUI : MonicaModule<ModuleConfigurationUIOp
         services.AddScoped<ConfigurationPendingChangeCompactor>();
         services.AddScoped<ConfigurationJsonDraftService>();
         services.AddScoped<ConfigurationParameterPackageService>();
+        services.AddSingleton<ConfigurationValueVisibility>();
     }
 }
 
@@ -106,6 +107,17 @@ public sealed class ModuleConfigurationUI : MonicaModule<ModuleConfigurationUIOp
 /// </summary>
 public class ModuleConfigurationUIOption : ModuleOptions<ModuleConfigurationUI>
 {
+    /// <summary>
+    /// Gets or sets whether the operator UI displays all configuration values without sensitive-value masking.
+    /// </summary>
+    /// <remarks>
+    /// Disabled by default. Enabling this reveals annotated values, historical and unknown-schema values,
+    /// JSON editors and previews, source inventories and files, exports, and raw diagnostics. It also allows
+    /// copying sensitive text. This is a host configuration setting, not a per-user reveal preference.
+    /// It does not alter stored values, sensitivity annotations, validation, or write authorization.
+    /// </remarks>
+    public bool ShowSensitiveValues { get; set; }
+
     /// <summary>
     /// Gets or sets whether saving a configuration mutation group requires an additional confirmation that lists
     /// the logical services affected by the changed definitions.

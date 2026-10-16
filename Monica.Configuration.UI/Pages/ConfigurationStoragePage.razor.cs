@@ -35,7 +35,7 @@ public partial class ConfigurationStoragePage
 
     protected override async Task OnInitializedAsync()
     {
-        _state = new(Facade, L["Common:Errors:LoadFailed"], _operations);
+        _state = new(Facade, L["Common:Errors:LoadFailed"], _operations, Visibility.ShowSensitiveValues);
         await LoadAsync();
     }
 
@@ -140,7 +140,7 @@ public partial class ConfigurationStoragePage
 
     private string DisplayValue(ConfigurationSourceInventoryItem item)
     {
-        return item.IsSensitive ? L["State:Value:Sensitive"] : item.DisplayValue ?? L["Value:States:Empty"];
+        return Visibility.ShouldMask(item.IsSensitive) ? L["State:Value:Sensitive"] : item.DisplayValue ?? L["Value:States:Empty"];
     }
 
     private ConfigurationSourceDescriptor? OverridingSourceFor(

@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using System.Globalization
 @inject ConfigurationFacade Facade
 @inject IStringLocalizer<ConfigurationUIResource> L
@@ -105,7 +106,7 @@
                                         <ul class="unified-version-rollback-validation-issues">
                                             @foreach (var issue in row.Target.ValidationIssues)
                                             {
-                                                <li><code>@(issue.DetailsHidden ? L["Versions:Rollback:Fields:HiddenPath"] : DisplayPath(row, issue.LogicalPath))</code><span>@(issue.DetailsHidden || ShouldHidePath(row, issue.LogicalPath) ? L["Versions:Rollback:Validation:DetailHidden"] : L["Versions:Rollback:Validation:Incompatible"])</span></li>
+                                                <li><code>@(Visibility.ShouldMask(issue.DetailsHidden) ? L["Versions:Rollback:Fields:HiddenPath"] : DisplayPath(row, issue.LogicalPath))</code><span>@(Visibility.ShouldMask(issue.DetailsHidden) || ShouldHidePath(row, issue.LogicalPath) ? L["Versions:Rollback:Validation:DetailHidden"] : L["Versions:Rollback:Validation:Incompatible"])</span></li>
                                             }
                                         </ul>
                                     </MudAlert>
@@ -114,9 +115,9 @@
                                 {
                                     <MudAlert Icon="@MoIcons.Error" Severity="Severity.Error" Dense="true">@L["Versions:Rollback:Messages:RuntimeOutOfSync"]</MudAlert>
                                 }
-                                @if (row.HasSchemaDrift && !row.Target.IsSkipped)
+                                @if (row.HasSchemaDrift && !row.Target.IsSkipped && !Visibility.ShowSensitiveValues)
                                 {
-                                    <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Dense="true">@L["State:Value:SchemaDriftHiddenNotice"]</MudAlert>
+                                    <MudAlert Icon="@MoIcons.Warning" Severity="Severity.Warning" Dense="true">@L["State:Value:SchemaDriftNotice"]</MudAlert>
                                 }
                                 @if (row.HasHiddenChanges)
                                 {
@@ -217,11 +218,11 @@
         definitions.TryGetValue(target.DefinitionKey, out var definition);
         var drift = ConfigurationUnifiedVersionValuePrivacy.HasSchemaDrift(target, definition);
         var display = ConfigurationUnifiedVersionJsonFormatter.FormatComparisonForDisplay(target.CurrentJson, target.TargetJson, definition,
-            L["State:Value:Sensitive"], L["State:Value:Hidden"], L["State:Value:HiddenBeforeChange"], L["State:Value:HiddenAfterChange"], drift);
+            L["State:Value:Sensitive"], L["State:Value:Hidden"], L["State:Value:HiddenBeforeChange"], L["State:Value:HiddenAfterChange"], Visibility.ShowSensitiveValues);
         return new(target, display.OriginText, display.TargetText, display.HasHiddenChanges, drift);
     }
     private bool ShouldHidePath(RollbackPreviewRow row, string path) => ConfigurationUnifiedVersionValuePrivacy.ShouldHidePath(
-        _definitions.GetValueOrDefault(row.Target.DefinitionKey), path, row.HasSchemaDrift);
+        _definitions.GetValueOrDefault(row.Target.DefinitionKey), path, Visibility.ShowSensitiveValues);
     private string DisplayPath(RollbackPreviewRow row, string path) => ShouldHidePath(row, path) ? L["Versions:Rollback:Fields:HiddenPath"]
         : string.IsNullOrWhiteSpace(path) ? L["Versions:Rollback:Fields:DefinitionRoot"] : path;
     private string ValueOrEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? L["Common:States:Empty"] : value;

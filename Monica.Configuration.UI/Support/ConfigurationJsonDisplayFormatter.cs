@@ -14,15 +14,16 @@ internal static class ConfigurationJsonDisplayFormatter
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
-    public static string Format(JsonNode? node, ConfigurationNodeDefinition schema, string redactedLabel)
+    public static string Format(JsonNode? node, ConfigurationNodeDefinition schema, string redactedLabel, bool showSensitiveValues = false)
     {
-        var redacted = RedactSensitive(ConfigurationRegexTextCodec.NormalizeJsonNode(schema, node), schema, redactedLabel);
+        var normalized = ConfigurationRegexTextCodec.NormalizeJsonNode(schema, node);
+        var redacted = showSensitiveValues ? normalized : RedactSensitive(normalized, schema, redactedLabel);
         return redacted?.ToJsonString(ReadableJsonOptions) ?? "null";
     }
 
-    public static string Format(string? json, ConfigurationNodeDefinition schema, string redactedLabel)
+    public static string Format(string? json, ConfigurationNodeDefinition schema, string redactedLabel, bool showSensitiveValues = false)
     {
-        return Format(ParseJson(json), schema, redactedLabel);
+        return Format(ParseJson(json), schema, redactedLabel, showSensitiveValues);
     }
 
     private static JsonNode? RedactSensitive(JsonNode? node, ConfigurationNodeDefinition schema, string redactedLabel)

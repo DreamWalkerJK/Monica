@@ -18,9 +18,9 @@ internal sealed class ConfigurationStoragePageState : IAsyncDisposable
     private readonly Func<Task<Res<IReadOnlyList<ConfigurationSourceInventory>>>> _inventories;
 
     internal ConfigurationStoragePageState(ConfigurationFacade facade, string unavailableText,
-        ConfigurationOperationLifetime lifetime)
+        ConfigurationOperationLifetime lifetime, bool showSensitiveValues = false)
         : this(facade.GetStorageOverviewAsync, facade.GetStoreStatesAsync,
-            facade.GetConfigurationSourceInventoriesAsync, unavailableText, lifetime: lifetime) { }
+            () => facade.GetConfigurationSourceInventoriesAsync(showSensitiveValues), unavailableText, lifetime: lifetime) { }
 
     internal ConfigurationStoragePageState(Func<Task<Res<ConfigurationStorageOverview>>> overview,
         Func<Task<Res<IReadOnlyList<ConfigurationStoreState>>>> storeStates,

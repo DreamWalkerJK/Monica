@@ -13,6 +13,29 @@ namespace Test.Monica.Configuration.Services;
 public sealed class ConfigurationEffectiveStateReaderTests
 {
     [Fact]
+    public async Task ReadValueAsync_WhenSensitiveValuesAreRequested_ShouldRevealValuesAndKeepAnnotations()
+    {
+        var definition = CreateDefinition("Definition.Disclosure", "Published", ConfigurationDefinitionOrigin.PublishedMetadata);
+        var store = CreateStore();
+        store.GetAsync(definition.DefinitionKey, TestContext.Current.CancellationToken)
+            .Returns(CreateDocument(definition, "captured", 9));
+        var reader = CreateReader(store, Substitute.For<IConfigurationSourceInspector>(), new ConfigurationBuilder().Build());
+        var path = LogicalPath.FromProperties("SecretGroup", "Token");
+
+        var masked = await reader.ReadValueAsync(definition, path, TestContext.Current.CancellationToken);
+        var revealed = await reader.ReadValueAsync(definition, path, TestContext.Current.CancellationToken, includeSensitive: true);
+        var aggregate = await reader.ReadValueAsync(definition, LogicalPath.Root, TestContext.Current.CancellationToken, includeSensitive: true);
+        var state = await reader.ReadDefinitionAsync(definition, TestContext.Current.CancellationToken, includeSensitive: true);
+
+        masked.DisplayValue.Should().BeNull();
+        revealed.DisplayValue.Should().Be("captured-secret");
+        revealed.IsSensitive.Should().BeTrue();
+        aggregate.DisplayValue.Should().Contain("captured-dictionary-secret");
+        GetValue(state, "SecretGroup.Token").DisplayValue.Should().Be("captured-secret");
+        definition.Root.Children.Single(node => node.Name == "SecretGroup").Children.Single().IsSensitive.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task ReadDefinitionsAsync_WhenDefinitionsArePublished_ShouldUseOneBulkReadAndPreserveStateOrder()
     {
         var firstDefinition = CreateDefinition("Definition.B", "Published:B", ConfigurationDefinitionOrigin.PublishedMetadata);

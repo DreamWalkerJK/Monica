@@ -37,7 +37,7 @@ public sealed record ConfigurationSourceValue
     public required ConfigurationSourceDescriptor Source { get; init; }
 
     /// <summary>
-    /// Gets the source value. Sensitive values are null.
+    /// Gets the source value. Sensitive values are null unless the read explicitly requests disclosure.
     /// </summary>
     public string? DisplayValue { get; init; }
 
@@ -47,7 +47,7 @@ public sealed record ConfigurationSourceValue
     public bool IsEffective { get; init; }
 
     /// <summary>
-    /// Gets whether the display value was redacted.
+    /// Gets whether the schema marks this value as sensitive, even when disclosure was requested.
     /// </summary>
     public bool IsSensitive { get; init; }
 }
@@ -145,12 +145,12 @@ public sealed record ConfigurationSourceInventoryItem
     public string? NodeLabel { get; init; }
 
     /// <summary>
-    /// Gets the display-safe source value. Sensitive values are null.
+    /// Gets the source value. Sensitive values are null unless the read explicitly requests disclosure.
     /// </summary>
     public string? DisplayValue { get; init; }
 
     /// <summary>
-    /// Gets whether the source value was redacted.
+    /// Gets whether the schema marks this value as sensitive, even when disclosure was requested.
     /// </summary>
     public bool IsSensitive { get; init; }
 
@@ -161,7 +161,7 @@ public sealed record ConfigurationSourceInventoryItem
 }
 
 /// <summary>
-/// Describes a display-safe configuration file payload.
+/// Describes a normalized configuration file payload with sensitive values masked by default.
 /// </summary>
 public sealed record ConfigurationSourceFileView
 {
@@ -171,7 +171,7 @@ public sealed record ConfigurationSourceFileView
     public required ConfigurationSourceDescriptor Source { get; init; }
 
     /// <summary>
-    /// Gets the normalized JSON content. Known sensitive paths are redacted.
+    /// Gets normalized JSON content. Known sensitive paths are redacted unless disclosure was requested.
     /// </summary>
     public required string Content { get; init; }
 

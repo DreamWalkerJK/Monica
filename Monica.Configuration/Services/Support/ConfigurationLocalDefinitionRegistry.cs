@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 
 namespace Monica.Configuration.Services.Support;
 
@@ -95,9 +96,13 @@ internal sealed record ConfigurationLocalDefinitionDescriptor(
         var root = Build(type, schema);
         var nodes = Enumerate(root).ToArray();
         var code = nodes.Any(node => typeof(IValidatableObject).IsAssignableFrom(node.Type));
-        var revisionInput = string.Join("\n", nodes.Select(node =>
-                $"{node.Type.AssemblyQualifiedName}|{node.Type.Module.ModuleVersionId:D}")
-            .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal));
+        // Portable contracts are fully described by their schema. Build IDs belong only to executable
+        // object rules; including them for ordinary options creates publication churn after every rebuild.
+        var revisionInput = code
+            ? string.Join("\n", nodes.Select(node =>
+                    $"{node.Type.AssemblyQualifiedName}|{node.Type.Module.ModuleVersionId:D}")
+                .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+            : ConfigurationDefinitionSchemaCodec.SerializeHashInput(string.Empty, string.Empty, schema);
         return new ConfigurationValidationContract
         {
             Capability = code ? ConfigurationValidationCapability.ObjectCode : ConfigurationValidationCapability.PortableOnly,

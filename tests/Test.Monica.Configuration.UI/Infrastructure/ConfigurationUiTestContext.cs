@@ -4,6 +4,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Facades;
 using Monica.Configuration.UI.Localization;
+using Monica.Configuration.UI.Support;
 using Monica.Testing.Localization;
 using Monica.Modules;
 using MudBlazor;
@@ -21,6 +22,7 @@ internal sealed class ConfigurationUiTestContext : BunitContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddMudServices();
+        Services.AddSingleton<ConfigurationValueVisibility>();
         Services.AddSingleton<IStringLocalizer<ConfigurationUIResource>, EchoStringLocalizer<ConfigurationUIResource>>();
         Services.AddSingleton<IOptions<ModuleConfigurationUIOption>>(Options.Create(option ?? new ModuleConfigurationUIOption()));
         if (facade is not null)

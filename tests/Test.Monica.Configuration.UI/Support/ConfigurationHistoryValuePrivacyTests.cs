@@ -5,7 +5,7 @@ namespace Test.Monica.Configuration.UI.Support;
 
 public sealed class ConfigurationHistoryValuePrivacyTests
 {
-    private const string DefinitionKey = " owner:上海/config?revision=1#opaque%25 ";
+    private const string DefinitionKey = " owner:涓婃捣/config?revision=1#opaque%25 ";
     private const string SchemaHash = "current-schema";
     private const string Redacted = "redacted";
 
@@ -55,18 +55,49 @@ public sealed class ConfigurationHistoryValuePrivacyTests
     [InlineData(1, "CURRENT-SCHEMA")]
     [InlineData(1, null)]
     [InlineData(1, " ")]
-    public void IsSensitive_WhenSchemaIdentityIsUnproven_ShouldRedactEvenOrdinaryNodes(int schemaVersion, string? schemaHash)
+    public void IsSensitive_WhenHistoricalSchemaDiffers_ShouldKeepKnownOrdinaryNodesReadable(int schemaVersion, string? schemaHash)
     {
         var root = Node("Root") with { Children = [Node("Value")] };
         var row = Row(LogicalPath.FromProperties("Value")) with { SchemaVersion = schemaVersion, SchemaHash = schemaHash };
 
-        AssertRedacted(row, Definition(root));
+        Assert.False(ConfigurationHistoryValuePrivacy.IsSensitive(row, Definitions(Definition(root))));
     }
 
     [Fact]
     public void IsSensitive_WhenDefinitionIsMissing_ShouldRedactLegacyAndUnavailableMetadata()
     {
         AssertRedacted(Row(LogicalPath.FromProperties("Value")), null);
+    }
+
+    [Fact]
+    public void BuildSnapshots_WhenConsumerOriginatorCollectionHasOlderSchema_ShouldKeepPublicItemValuesReadable()
+    {
+        var collection = Node("ConsumerOriginator") with
+        {
+            NodeKind = ConfigurationNodeKind.List,
+            ListTemplate = new()
+            {
+                ItemTemplate = Node("Item") with
+                {
+                    NodeKind = ConfigurationNodeKind.Object,
+                    Children = [Node("MsgType"), Node("Originators")]
+                }
+            }
+        };
+        var definition = Definition(Node("Root") with { Children = [collection] });
+        var row = Row(LogicalPath.FromProperties("ConsumerOriginator")) with
+        {
+            SchemaVersion = 99,
+            SchemaHash = "older-schema",
+            OldValue = ConfigurationStoredValue.FromJson("""[{"MsgType":"CHG","Originators":"ZGACZQZX"}]"""),
+            NewValue = ConfigurationStoredValue.FromJson("""[{"MsgType":"CHG","Originators":"ZSHAZMFP"}]""")
+        };
+
+        var snapshots = ComparisonSnapshots([row], definition);
+
+        Assert.Contains("ZGACZQZX", snapshots[0]);
+        Assert.Contains("ZSHAZMFP", snapshots[1]);
+        Assert.DoesNotContain(Redacted, snapshots[0] + snapshots[1]);
     }
 
     [Theory]
@@ -78,7 +109,7 @@ public sealed class ConfigurationHistoryValuePrivacyTests
         var root = Node("Root") with { Children = [Node("Value")] };
         var path = LogicalPath.FromProperties("Value").Append(missingKind switch
         {
-            "dictionary" => new DictionaryKeySegment("tenant:上海/?%#"),
+            "dictionary" => new DictionaryKeySegment("tenant:涓婃捣/?%#"),
             "list" => new ListIndexSegment(0),
             _ => new PropertySegment("Missing")
         });
@@ -115,7 +146,7 @@ public sealed class ConfigurationHistoryValuePrivacyTests
 
     [Theory]
     [MemberData(nameof(UnprovenCollapsedSchemaCases))]
-    public void BuildSnapshots_WhenCollapsedPathContainsUnprovenSchema_ShouldRedactEveryComparison(
+    public void BuildSnapshots_WhenCollapsedPathContainsOlderSchema_ShouldKeepChronologicalValuesReadable(
         bool rootPath, int unprovenIndex, string unprovenKind)
     {
         var path = rootPath ? LogicalPath.Root : LogicalPath.FromProperties("Branch", "Value");
@@ -132,9 +163,13 @@ public sealed class ConfigurationHistoryValuePrivacyTests
         };
         var definitions = Definitions(definition);
         for (var index = 0; index < rows.Length; index++)
-            Assert.Equal(index == unprovenIndex, ConfigurationHistoryValuePrivacy.IsSensitive(rows[index], definitions));
+            Assert.False(ConfigurationHistoryValuePrivacy.IsSensitive(rows[index], definitions));
 
-        AssertCollapsedRedacted(rows, definition);
+        var snapshots = ComparisonSnapshots([rows[2], rows[0], rows[1]], definition);
+        Assert.Contains("before-marker-0", snapshots[0]);
+        Assert.Contains("after-marker-2", snapshots[1]);
+        Assert.Contains("current-grouped-2", snapshots[2]);
+        foreach (var snapshot in snapshots) Assert.DoesNotContain(Redacted, snapshot);
     }
 
     [Theory]
@@ -173,7 +208,7 @@ public sealed class ConfigurationHistoryValuePrivacyTests
     }
 
     [Fact]
-    public void BuildSnapshots_WhenOnlyOneCollapsedPathIsUnproven_ShouldKeepOtherPathsAndTargetsReadable()
+    public void BuildSnapshots_WhenOneCollapsedPathHasLegacySchema_ShouldKeepAllPublicPathsReadable()
     {
         var definition = Definition(Node("Root") with
         {
@@ -191,21 +226,14 @@ public sealed class ConfigurationHistoryValuePrivacyTests
         {
             HistoryId = "safe-target",
             TargetKind = ConfigurationMutationTargetKind.ExternalConfigurationSource,
-            SourcePhysicalPath = "review:source/上海?revision=1#%25",
+            SourcePhysicalPath = "review:source/涓婃捣?revision=1#%25",
             OldValue = ConfigurationStoredValue.FromJson("\"safe-target-before\""),
             NewValue = ConfigurationStoredValue.FromJson("\"safe-target-after\"")
         };
         var snapshots = ComparisonSnapshots([.. rows, safePath, safeTarget], definition);
-        foreach (var snapshot in snapshots)
-        {
-            Assert.Contains(Redacted, snapshot);
-            foreach (var index in new[] { 0, 1, 2 })
-            {
-                Assert.DoesNotContain($"before-marker-{index}", snapshot);
-                Assert.DoesNotContain($"after-marker-{index}", snapshot);
-                Assert.DoesNotContain($"current-grouped-{index}", snapshot);
-            }
-        }
+        foreach (var snapshot in snapshots) Assert.DoesNotContain(Redacted, snapshot);
+        Assert.Contains("before-marker-0", snapshots[0]);
+        Assert.Contains("after-marker-2", snapshots[1]);
         Assert.Contains("safe-path-before", snapshots[0]);
         Assert.Contains("safe-target-before", snapshots[0]);
         Assert.Contains("safe-path-after", snapshots[1]);
@@ -301,14 +329,14 @@ public sealed class ConfigurationHistoryValuePrivacyTests
 
     private static ConfigurationPathSegment ItemSegment(string kind) => kind switch
     {
-        "dictionary" => new DictionaryKeySegment(" tenant:上海/?%# "),
-        "list-key" => new ListItemKeySegment(" item:上海/?%# "),
+        "dictionary" => new DictionaryKeySegment(" tenant:涓婃捣/?%# "),
+        "list-key" => new ListItemKeySegment(" item:涓婃捣/?%# "),
         _ => new ListIndexSegment(0)
     };
 
     private static ConfigurationValueHistory Row(LogicalPath path) => new()
     {
-        HistoryId = " history:上海/?revision=1#%25 ", DefinitionKey = DefinitionKey, LogicalPath = path,
+        HistoryId = " history:涓婃捣/?revision=1#%25 ", DefinitionKey = DefinitionKey, LogicalPath = path,
         SchemaVersion = 1, SchemaHash = SchemaHash, OldValue = ConfigurationStoredValue.FromJson("\"before-marker\""),
         NewValue = ConfigurationStoredValue.FromJson("\"after-marker\"")
     };

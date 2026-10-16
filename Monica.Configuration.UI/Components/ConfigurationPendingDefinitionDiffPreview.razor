@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using System.Text.Json.Nodes
 @using System.Text
 @using Monica.Configuration.Services.Support
@@ -362,7 +363,7 @@ else
 
     private async Task<string> LoadOriginJsonAsync(string definitionKey)
     {
-        var result = await Facade.GetEffectiveValueAsync(definitionKey, LogicalPath.Root);
+        var result = await Facade.GetEffectiveValueAsync(definitionKey, LogicalPath.Root, Visibility.ShowSensitiveValues);
         if (result.IsFailed(out var error, out var value))
         {
             throw new InvalidOperationException($"{L["Common:Errors:LoadFailed"]}: {error.Message}");
@@ -393,7 +394,7 @@ else
 
     private string FormatForDisplay(string json, ConfigurationDefinition definition)
     {
-        return ConfigurationJsonDisplayFormatter.Format(json, definition.Root, L["State:Value:Sensitive"].Value);
+        return ConfigurationJsonDisplayFormatter.Format(json, definition.Root, L["State:Value:Sensitive"].Value, Visibility.ShowSensitiveValues);
     }
 
     private static Color PatchColor(ConfigurationMutationKind kind)

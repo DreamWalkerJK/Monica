@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using System.Reflection
 @using System.Text.Json
 @using System.Text.Json.Serialization
@@ -19,10 +20,13 @@
         <MudStack Spacing="3">
             <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ImportExport:Export:Subtitle"]</MudText>
 
+            @if (!Visibility.ShowSensitiveValues)
+            {
             <MudSwitch T="bool"
                        @bind-Value="_includeSensitive"
                        Color="Color.Warning"
                        Label="@L["ImportExport:Export:IncludeSensitive"]" />
+            }
 
             <MudGrid Spacing="2">
                 <MudItem xs="12" md="4">
@@ -106,6 +110,7 @@
 
     protected override void OnInitialized()
     {
+        _includeSensitive = Visibility.ShowSensitiveValues;
         _downloadInteropSession = new ConfigurationDownloadInteropSession(JSRuntime);
         _exportedBy = UserContext.UserName;
         _environmentName = HostEnvironment.EnvironmentName;

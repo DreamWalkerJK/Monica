@@ -16,7 +16,8 @@ namespace Monica.Configuration.UI.Support;
 internal sealed class ConfigurationParameterPackageService(
     ConfigurationFacade facade,
     ConfigurationJsonDraftService draftService,
-    IStringLocalizer<ConfigurationUIResource> localizer)
+    IStringLocalizer<ConfigurationUIResource> localizer,
+    ConfigurationValueVisibility visibility)
 {
     /// <summary>
     /// Creates a versioned export document from current runtime effective values.
@@ -28,6 +29,7 @@ internal sealed class ConfigurationParameterPackageService(
         ConfigurationExportRequest request,
         IProgress<ConfigurationPackageProgress>? progress = null)
     {
+        var includeSensitive = request.IncludeSensitive || visibility.ShowSensitiveValues;
         var definitions = await LoadExportDefinitionsAsync(request, progress);
 
         var exportedDefinitions = new List<ConfigurationExportDefinition>();
@@ -45,7 +47,7 @@ internal sealed class ConfigurationParameterPackageService(
                 redactedPathCount,
                 definition.DisplayName,
                 definition.DefinitionKey);
-            var exportedDefinition = await CreateExportDefinitionAsync(definition, request.IncludeSensitive);
+            var exportedDefinition = await CreateExportDefinitionAsync(definition, includeSensitive);
             exportedDefinitions.Add(exportedDefinition);
             exportedDefinitionCount++;
             redactedPathCount += exportedDefinition.RedactedPaths.Count;
@@ -65,7 +67,7 @@ internal sealed class ConfigurationParameterPackageService(
             ExportedBy = request.ExportedBy,
             SystemVersion = request.SystemVersion,
             EnvironmentName = request.EnvironmentName,
-            IncludeSensitive = request.IncludeSensitive,
+            IncludeSensitive = includeSensitive,
             Definitions = exportedDefinitions
         };
     }
@@ -244,7 +246,7 @@ internal sealed class ConfigurationParameterPackageService(
         long? effectiveStoreVersion,
         IReadOnlyList<LogicalPath> paths)
     {
-        var result = await facade.GetSourceChainsAsync(definition.DefinitionKey, paths);
+        var result = await facade.GetSourceChainsAsync(definition.DefinitionKey, paths, visibility.ShowSensitiveValues);
         if (result.IsFailed(out var error, out var chains))
         {
             throw new InvalidOperationException(error.Message);
@@ -433,7 +435,8 @@ internal sealed class ConfigurationParameterPackageService(
         ConfigurationDefinition definition,
         bool includeSensitive)
     {
-        var effectiveValue = await LoadEffectiveValueAsync(definition.DefinitionKey, LogicalPath.Root);
+        // Read the complete document before field-level redaction; a masked root cannot reconstruct public siblings.
+        var effectiveValue = await LoadEffectiveValueAsync(definition.DefinitionKey, LogicalPath.Root, includeSensitive: true);
         var scalarValues = await LoadScalarEffectiveValuesAsync(definition, definition.Root, effectiveValue);
         var root = ParseJson(effectiveValue.DisplayValue) ?? ConfigurationPendingValueDocumentBuilder.CreateDefaultJsonFor(definition.Root);
         IReadOnlyList<string> redactedPaths = [];
@@ -480,10 +483,11 @@ internal sealed class ConfigurationParameterPackageService(
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>
     /// <param name="path">The logical path.</param>
+    /// <param name="includeSensitive">Overrides the host disclosure setting for an explicit export request.</param>
     /// <returns>The effective value.</returns>
-    public async Task<ConfigurationEffectiveValue> LoadEffectiveValueAsync(string definitionKey, LogicalPath path)
+    public async Task<ConfigurationEffectiveValue> LoadEffectiveValueAsync(string definitionKey, LogicalPath path, bool? includeSensitive = null)
     {
-        var result = await facade.GetEffectiveValueAsync(definitionKey, path);
+        var result = await facade.GetEffectiveValueAsync(definitionKey, path, includeSensitive ?? visibility.ShowSensitiveValues);
         if (result.IsFailed(out var error, out var effectiveValue))
         {
             throw new InvalidOperationException(error.Message);

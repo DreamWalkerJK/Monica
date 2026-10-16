@@ -20,7 +20,7 @@ public partial class ConfigurationSourceFileDialog
     private string? _error => _state?.Read.Error;
     private bool _loading => _state?.Read.Loading ?? true;
 
-    protected override void OnInitialized() => _state = new(Facade, L["Common:Errors:LoadFailed"], _operations);
+    protected override void OnInitialized() => _state = new(Facade, L["Common:Errors:LoadFailed"], _operations, Visibility.ShowSensitiveValues);
 
     protected override async Task OnParametersSetAsync()
     {

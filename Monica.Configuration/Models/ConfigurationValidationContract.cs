@@ -55,7 +55,8 @@ public sealed record ConfigurationValidationContract
     public ConfigurationValidationCapability Capability { get; init; } = ConfigurationValidationCapability.Unknown;
 
     /// <summary>
-    /// Gets the owner revision of executable validation, independently of the structural schema hash.
+    /// Gets the validation revision, independently of the structural schema hash. Portable-only contracts use
+    /// stable schema content; contracts with object rules include executable assembly identities.
     /// Unknown historical contracts have no revision.
     /// </summary>
     public string? Revision { get; init; }

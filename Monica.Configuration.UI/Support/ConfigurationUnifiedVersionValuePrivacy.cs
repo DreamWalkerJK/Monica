@@ -2,11 +2,11 @@ using Monica.Configuration.Models;
 
 namespace Monica.Configuration.UI.Support;
 
-/// <summary>Requires current schema authority before exposing raw unified-version snapshot values or paths.</summary>
+/// <summary>Separates captured schema drift from current field sensitivity and explicit host disclosure.</summary>
 /// <remarks>
-/// A facade snapshot is not API-redacted. Missing or blank schema identity, a version/hash mismatch, an
-/// unresolved path, or a payload without its matching captured document fails closed. Sensitivity includes
-/// every ancestor and the complete selected subtree, including dictionary and list templates.
+/// A facade snapshot is not API-redacted. Drift remains diagnostic evidence rather than a sensitivity marker.
+/// Unless disclosure is enabled, missing definitions and unresolved paths remain hidden. Sensitivity includes
+/// every ancestor and the selected subtree, including dictionary and list templates.
 /// </remarks>
 internal static class ConfigurationUnifiedVersionValuePrivacy
 {
@@ -21,9 +21,10 @@ internal static class ConfigurationUnifiedVersionValuePrivacy
         || !SameSchemaHash(target.CapturedSchemaHash, target.CurrentSchemaHash)
         || !SameSchemaHash(target.CurrentSchemaHash, definition.SchemaHash);
 
-    internal static bool ShouldHidePath(ConfigurationDefinition? definition, string logicalPath, bool schemaUnproven)
+    internal static bool ShouldHidePath(ConfigurationDefinition? definition, string logicalPath, bool showSensitiveValues = false)
     {
-        if (schemaUnproven || definition is null) return true;
+        if (showSensitiveValues) return false;
+        if (definition is null) return true;
         try
         {
             var current = definition.Root;

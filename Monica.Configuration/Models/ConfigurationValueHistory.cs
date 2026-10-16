@@ -99,8 +99,9 @@ public sealed record ConfigurationValueHistory
     /// Gets the exact schema hash used to validate and persist this mutation.
     /// </summary>
     /// <remarks>
-    /// Null identifies a legacy history row whose schema identity cannot be proven. Consumers must redact its
-    /// values and must not apply it as a rollback command without an explicit migration or compatibility review.
+    /// Null identifies a legacy history row whose original schema identity cannot be proven. Display may use
+    /// current field sensitivity or an explicit disclosure setting. Rollback still requires compatibility review
+    /// and validation against the current contract.
     /// </remarks>
     public string? SchemaHash { get; init; }
 

@@ -252,8 +252,7 @@
                                                 @L["DefinitionPublication:RevisionHistory:SchemaUnchanged", _selectedHistory.NewSchemaVersion, _selectedHistory.DefinitionRevision]
                                             </MudAlert>
                                         }
-                                        else
-                                        {
+                                        <div>
                                             <MudText Typo="Typo.subtitle2">@L["DefinitionPublication:RevisionHistory:SchemaDiff"]</MudText>
                                             <div class="configuration-definition-publication-diff">
                                                 <DiffViewer OriginText="@FormatJson(_selectedHistory.PreviousSchemaJson)"
@@ -261,7 +260,7 @@
                                                             Options="@_diffOptions"
                                                             ViewMode="EDiffViewMode.Unified" />
                                             </div>
-                                        }
+                                        </div>
                                     </div>
                                 </div>
                             }

@@ -1,3 +1,4 @@
+@inject ConfigurationValueVisibility Visibility
 @using Monica.UI.Shared.Components.Dialogs
 @implements IAsyncDisposable
 @inject ConfigurationFacade Facade
@@ -21,7 +22,10 @@
                     @if (_fileView.Source.PhysicalPath is not null) { <div class="configuration-source-file-fact-wide"><dt>@L["Sources:File:PhysicalPath"]</dt><dd><code>@_fileView.Source.PhysicalPath</code></dd></div> }
                     @if (_fileView.Source.SourcePath is not null) { <div class="configuration-source-file-fact-wide"><dt>@L["Sources:File:DeclaredPath"]</dt><dd><code>@_fileView.Source.SourcePath</code></dd></div> }
                 </dl>
-                <p class="configuration-source-file-redaction">@L["Sources:File:RedactionHelp"]</p>
+                @if (!Visibility.ShowSensitiveValues)
+                {
+                    <p class="configuration-source-file-redaction">@L["Sources:File:RedactionHelp"]</p>
+                }
                 <section class="configuration-source-file-content"><header><h4>@L["Sources:File:Content"]</h4></header><pre class="configuration-source-json">@_fileView.Content</pre></section>
             }
             else

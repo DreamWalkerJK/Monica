@@ -19,7 +19,8 @@ namespace Monica.Configuration.UI.Support;
 internal sealed class ConfigurationJsonDraftService(
     ConfigurationFacade facade,
     IStringLocalizer<ConfigurationUIResource> localizer,
-    ConfigurationPendingChangeCompactor changeCompactor)
+    ConfigurationPendingChangeCompactor changeCompactor,
+    ConfigurationValueVisibility visibility)
 {
     /// <summary>
     /// Analyzes one JSON snapshot against a definition scope.
@@ -100,7 +101,7 @@ internal sealed class ConfigurationJsonDraftService(
     {
         baseline = null;
         redactedPaths = [];
-        if (scopeNode.IsSensitive
+        if (visibility.ShouldMask(scopeNode.IsSensitive)
             || !string.Equals(effectiveValue.DefinitionKey, definition.DefinitionKey, StringComparison.OrdinalIgnoreCase)
             || !effectiveValue.LogicalPath.Equals(scopeNode.RelativePath))
             return false;
@@ -135,7 +136,7 @@ internal sealed class ConfigurationJsonDraftService(
                 || !scalar.LogicalPath.Equals(path))
                 return false;
 
-            if (child.IsSensitive || scalar.IsSensitive)
+            if (visibility.ShouldMask(child.IsSensitive || scalar.IsSensitive))
             {
                 result[child.Name] = localizer["ImportExport:RedactedValue"].Value;
                 redactions.Add(path.ToCanonicalString());
@@ -177,7 +178,7 @@ internal sealed class ConfigurationJsonDraftService(
     {
         var paths = new List<string>();
         var clone = ConfigurationRegexTextCodec.NormalizeJsonNode(schema, node);
-        var redacted = RedactConcreteNode(clone, schema, schema.RelativePath, paths);
+        var redacted = visibility.ShowSensitiveValues ? clone : RedactConcreteNode(clone, schema, schema.RelativePath, paths);
         redactedPaths = paths;
         return redacted;
     }
@@ -189,7 +190,7 @@ internal sealed class ConfigurationJsonDraftService(
     /// <returns>Canonical sensitive logical paths.</returns>
     public IReadOnlyList<LogicalPath> CollectSensitivePaths(ConfigurationNodeDefinition scopeNode)
     {
-        return EnumerateSensitivePaths(scopeNode).ToArray();
+        return visibility.ShowSensitiveValues ? [] : EnumerateSensitivePaths(scopeNode).ToArray();
     }
 
     private static IEnumerable<LogicalPath> EnumerateSensitivePaths(ConfigurationNodeDefinition node)
