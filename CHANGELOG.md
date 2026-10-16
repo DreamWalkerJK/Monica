@@ -6,7 +6,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ## [Unreleased]
 
-## [1.0.0-rc.13] - 2026-10-17
+## [1.0.0-rc.14] - 2026-10-17
 
 ### Added
 
@@ -24,6 +24,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ### Fixed
 
+- Guide release smoke checks resolve the executable from the bundle manifest instead of assuming an obsolete directory, and retain failed command diagnostics.
 - Configuration source inspection retains sensitivity controls when moving into its own page; JSON drafts retain their analysis and apply gates.
 - Chat composer sizing, document navigation, empty-state alignment, provider selection, hover feedback, shell scroll containment, and built-in theme scrollbars are consistent across viewport sizes.
 
