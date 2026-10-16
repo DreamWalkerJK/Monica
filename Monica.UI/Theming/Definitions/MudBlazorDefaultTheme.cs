@@ -10,9 +10,6 @@ public class MudBlazorDefaultTheme : ThemeDefinitionBase
     public override MonicaThemeKind Kind => MonicaThemeKind.MudBlazor;
     public override string DisplayName => "MudBlazor默认主题";
     public override string Description => "保留MudBlazor视觉结构，并使用Monica离线基础字体";
-    
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Default;
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.Dark;
 
     public override MudTheme CreateTheme()
     {
@@ -25,8 +22,9 @@ public class MudBlazorDefaultTheme : ThemeDefinitionBase
             Shadows = MonicaShadowDefaults.Create()
         };
     }
-    private readonly PaletteLight _lightPalette = new()
+    private readonly MudMarkdownPaletteLight _lightPalette = new()
     {
+        CodeHighlight = MudCodeHighlightThemes.Light.LightPlus,
         Black = "#110e2d",
         Primary = "#594ae2",
         PrimaryContrastText = "#ffffff",
@@ -48,8 +46,9 @@ public class MudBlazorDefaultTheme : ThemeDefinitionBase
 
     };
 
-    private readonly PaletteDark _darkPalette = new()
+    private readonly MudMarkdownPaletteDark _darkPalette = new()
     {
+        CodeHighlight = MudCodeHighlightThemes.Dark.DarkPlus,
         Primary = "#9d91ff",
         PrimaryDarken = "#8b7dff",
         PrimaryContrastText = "#171427",

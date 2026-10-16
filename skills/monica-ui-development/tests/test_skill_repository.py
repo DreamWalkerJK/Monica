@@ -31,7 +31,6 @@ class SkillRepositoryTests(unittest.TestCase):
         (self.caller / "Monica.slnx").write_text("<Solution />", encoding="utf-8")
         self.environment = os.environ.copy()
         self.environment["PYTHONDONTWRITEBYTECODE"] = "1"
-        self.environment.pop("MUDBLAZOR_SOURCE_PATH", None)
 
     def scripts_at(self, location: str, *, detached: bool = False) -> Path:
         root = self.sandbox / "custom-installed-target" if detached else self.repository
@@ -54,12 +53,12 @@ sys.argv = {[str(scripts / filename), *arguments]!r}
 runpy.run_path(sys.argv[0], run_name='__main__')
 """)
 
-    def configure_source(self) -> None:
+    def source_root(self) -> Path:
         source = self.sandbox / "mudblazor-source"
         marker = source / "src/MudBlazor/Components/ThemeProvider/MudThemeProvider.razor.cs"
-        marker.parent.mkdir(parents=True)
+        marker.parent.mkdir(parents=True, exist_ok=True)
         marker.write_text('var css = "--mud-palette-primary: value;";', encoding="utf-8")
-        self.environment["MUDBLAZOR_SOURCE_PATH"] = str(source)
+        return source
 
     def styles(self) -> Path:
         root = self.sandbox / "consumer/styles"
@@ -92,27 +91,29 @@ runpy.run_path(sys.argv[0], run_name='__main__')
                 scripts = self.scripts_at(location)
                 result = self.python(scripts, """
 import json
-import mudblazor_skill_state as state
+import sync_mud_css_variables as generator
+import validate_mud_css_variables as validator
 import subset_ui_font as font
-print(json.dumps([str(state.PROJECT_ROOT), str(state.VARIABLES_JSON_FILE), str(font.DEFAULT_SOURCE_FONT), str(font.DEFAULT_TARGET_FONT), [str(path) for path in font.discover_default_localization_dirs()]]))
+print(json.dumps([str(generator.REPO_ROOT), str(generator.OUTPUT_JSON), str(validator.DEFAULT_VARIABLES_FILE), str(font.DEFAULT_SOURCE_FONT), str(font.DEFAULT_TARGET_FONT), [str(path) for path in font.discover_default_localization_dirs()]]))
 """)
                 self.assertEqual(0, result.returncode, result.stderr)
-                root, cache, source, target, directories = json.loads(result.stdout)
+                root, cache, validator_cache, source, target, directories = json.loads(result.stdout)
                 self.assertEqual(str(self.repository), root)
                 self.assertEqual(str(self.repository / ".tmp/monica-ui-development/mudblazor-css-variables.json"), cache)
+                self.assertEqual(cache, validator_cache)
                 self.assertEqual(str(self.repository / ".tmp/monica-ui-font-sources/zcool_qingke_huangyou.ttf"), source)
                 self.assertEqual(str(self.repository / "Monica.UI/wwwroot/fonts/Komi-ZCOOL-QingKe-HuangYou.woff2"), target)
                 self.assertEqual([str(resource.parent.parent)], directories)
         self.assertEqual([], list(self.sandbox.rglob(".tmp")))
 
     def test_generator_and_validator_reuse_one_repository_catalog(self) -> None:
-        self.configure_source()
+        source = self.source_root()
         styles = self.styles()
         cache = self.repository / ".tmp/monica-ui-development/mudblazor-css-variables.json"
         for location in LOCATIONS:
             with self.subTest(location=location):
                 scripts = self.scripts_at(location)
-                generated = self.cli(scripts, "sync_mud_css_variables.py")
+                generated = self.cli(scripts, "sync_mud_css_variables.py", "--source-root", str(source))
                 self.assertEqual(0, generated.returncode, generated.stdout + generated.stderr)
                 self.assertTrue(cache.is_file())
                 self.assertIn(str(cache), generated.stdout)
@@ -121,15 +122,14 @@ print(json.dumps([str(state.PROJECT_ROOT), str(state.VARIABLES_JSON_FILE), str(f
                 self.assertEqual("PASSED", json.loads(validated.stdout)["summary"]["status"])
         self.assertEqual([cache.parent.parent], list(self.sandbox.rglob(".tmp")))
 
-    def test_detached_imports_help_and_source_checker_remain_available(self) -> None:
+    def test_detached_imports_and_help_remain_available(self) -> None:
         scripts = self.detach()
         result = self.python(scripts, """
 import json
-import mudblazor_skill_state as state
 import subset_ui_font as font
-import sync_mud_css_variables
-import validate_mud_css_variables
-print(json.dumps([state.PROJECT_ROOT, state.STATE_DIR, state.VARIABLES_JSON_FILE, font.REPO_ROOT]))
+import sync_mud_css_variables as generator
+import validate_mud_css_variables as validator
+print(json.dumps([generator.REPO_ROOT, generator.OUTPUT_JSON, validator.DEFAULT_VARIABLES_FILE, font.REPO_ROOT]))
 """)
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual([None] * 4, json.loads(result.stdout))
@@ -137,19 +137,13 @@ print(json.dumps([state.PROJECT_ROOT, state.STATE_DIR, state.VARIABLES_JSON_FILE
             with self.subTest(filename=filename):
                 help_result = self.cli(scripts, filename, "--help")
                 self.assertEqual(0, help_result.returncode, help_result.stderr)
-        unset = self.cli(scripts, "check_mudblazor_source.py", "--json")
-        self.assertEqual(1, unset.returncode, unset.stderr)
-        self.assertEqual("mudblazor_source_path_unset", json.loads(unset.stdout)["error_code"])
-        self.configure_source()
-        available = self.cli(scripts, "check_mudblazor_source.py", "--json")
-        self.assertEqual(0, available.returncode, available.stderr)
-        self.assertTrue(json.loads(available.stdout)["ok"])
         self.assertEqual([], list(self.sandbox.rglob(".tmp")))
 
     def test_detached_missing_defaults_are_execution_time_flag_diagnostics(self) -> None:
         scripts = self.detach()
         for filename, arguments, flag in (
-            ("sync_mud_css_variables.py", (), "--output-json"),
+            ("sync_mud_css_variables.py", (), "--source-root"),
+            ("sync_mud_css_variables.py", ("--source-root", "input-source"), "--output-json"),
             ("validate_mud_css_variables.py", (), "--variables-file"),
             ("subset_ui_font.py", (), "--source-font"),
             ("subset_ui_font.py", ("--source-font", "input.ttf"), "--target-font"),
@@ -168,19 +162,40 @@ print(json.dumps([state.PROJECT_ROOT, state.STATE_DIR, state.VARIABLES_JSON_FILE
             with self.subTest(detached=detached):
                 scripts = self.detach() if detached else self.scripts_at("skills")
                 destination = self.sandbox / f"task-{detached}/catalog/mud.json"
-                self.environment.pop("MUDBLAZOR_SOURCE_PATH", None)
-                failed = self.cli(scripts, "sync_mud_css_variables.py", "--output-json", str(destination))
+                failed = self.cli(scripts, "sync_mud_css_variables.py", "--source-root", str(self.sandbox / "missing-source"), "--output-json", str(destination))
                 self.assertEqual(1, failed.returncode, failed.stderr)
                 self.assertFalse(destination.parent.exists())
-                self.configure_source() if not detached else None
-                if detached:
-                    self.environment["MUDBLAZOR_SOURCE_PATH"] = str(self.sandbox / "mudblazor-source")
-                generated = self.cli(scripts, "sync_mud_css_variables.py", "--output-json", str(destination))
+                generated = self.cli(scripts, "sync_mud_css_variables.py", "--source-root", str(self.source_root()), "--output-json", str(destination))
                 self.assertEqual(0, generated.returncode, generated.stdout + generated.stderr)
                 self.assertEqual(["--mud-palette-primary"], json.loads(destination.read_text(encoding="utf-8"))["variables"])
                 validated = self.cli(scripts, "validate_mud_css_variables.py", "--root", str(styles), "--variables-file", str(destination), "--json")
                 self.assertEqual(0, validated.returncode, validated.stdout + validated.stderr)
                 self.assertEqual("PASSED", json.loads(validated.stdout)["summary"]["status"])
+        self.assertEqual([], list(self.sandbox.rglob(".tmp")))
+
+    def test_generator_requires_source_and_extracts_only_selected_input(self) -> None:
+        scripts = self.detach()
+        destination = self.sandbox / "selected-output/mud.json"
+        missing = self.cli(scripts, "sync_mud_css_variables.py", "--output-json", str(destination))
+        self.assertEqual(2, missing.returncode)
+        self.assertIn("--source-root", missing.stderr)
+        self.assertFalse(destination.parent.exists())
+
+        source = self.source_root()
+        empty_source = self.sandbox / "empty-source"
+        marker = empty_source / "src/MudBlazor/Components/ThemeProvider/MudThemeProvider.razor.cs"
+        marker.parent.mkdir(parents=True)
+        marker.write_text("// --mud-palette-primary: ignored;", encoding="utf-8")
+        empty = self.cli(scripts, "sync_mud_css_variables.py", "--source-root", str(empty_source), "--output-json", str(destination))
+        self.assertEqual(1, empty.returncode, empty.stdout + empty.stderr)
+        self.assertFalse(destination.parent.exists())
+
+        # Relative inputs and outputs belong to the caller, even with a decoy solution.
+        generated = self.cli(scripts, "sync_mud_css_variables.py", "--source-root", os.path.relpath(source, self.caller), "--output-json", os.path.relpath(destination, self.caller))
+        self.assertEqual(0, generated.returncode, generated.stdout + generated.stderr)
+        payload = json.loads(destination.read_text(encoding="utf-8"))
+        self.assertEqual(str(source), payload["source_root"])
+        self.assertEqual(["--mud-palette-primary"], payload["variables"])
         self.assertEqual([], list(self.sandbox.rglob(".tmp")))
 
     def test_explicit_font_paths_and_reporting_work_with_and_without_repository(self) -> None:

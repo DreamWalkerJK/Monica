@@ -10,14 +10,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from check_mudblazor_source import (
-    REQUIRED_RELATIVE_FILE,
-    print_failure_details,
-    resolve_mudblazor_source,
-)
-from mudblazor_skill_state import VARIABLES_JSON_FILE
+from skill_repository import find_repository_root
 
-OUTPUT_JSON = VARIABLES_JSON_FILE
+REPO_ROOT = find_repository_root(__file__)
+OUTPUT_JSON = REPO_ROOT / ".tmp/monica-ui-development/mudblazor-css-variables.json" if REPO_ROOT else None
+SOURCE_RELATIVE_FILE = Path("src/MudBlazor/Components/ThemeProvider/MudThemeProvider.razor.cs")
 CONST_PATTERN = re.compile(r'private const string\s+(\w+)\s*=\s*"([^"]+)";')
 PLACEHOLDER_PATTERN = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 VAR_TEMPLATE_PATTERN = re.compile(
@@ -58,6 +55,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Initialize or update MudBlazor CSS variable JSON from MudBlazor source."
     )
+    parser.add_argument(
+        "--source-root", type=Path, required=True,
+        help="Read-only MudBlazor source root matching the resolved package version.",
+    )
     parser.add_argument("--force", action="store_true", help="Rewrite JSON even when unchanged.")
     parser.add_argument(
         "--output-json", type=Path, default=OUTPUT_JSON,
@@ -68,17 +69,14 @@ def main() -> int:
         parser.error("No Monica repository default; pass --output-json <catalog-path>.")
     output_json = args.output_json.expanduser().resolve()
 
-    resolution = resolve_mudblazor_source()
-    if not resolution.is_available:
-        print("[ERROR] MudBlazor source is not available through MUDBLAZOR_SOURCE_PATH.")
-        print_failure_details(resolution)
-        print("Run scripts/check_mudblazor_source.py for detailed diagnostics.")
+    resolved_root = args.source_root.expanduser().resolve()
+    source_file = resolved_root / SOURCE_RELATIVE_FILE
+    try:
+        source_text = source_file.read_text(encoding="utf-8")
+    except OSError as exc:
+        print(f"[ERROR] Cannot read MudBlazor theme source: {source_file} ({exc})", file=sys.stderr)
         return 1
 
-    resolved_root = resolution.source_root
-    assert resolved_root is not None
-    source_file = resolved_root / REQUIRED_RELATIVE_FILE
-    source_text = source_file.read_text(encoding="utf-8")
     variables = extract_mud_variables(source_text)
     if not variables:
         print("[ERROR] No MudBlazor CSS variables were extracted from source.")

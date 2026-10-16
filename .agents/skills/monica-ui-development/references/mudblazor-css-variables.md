@@ -1,6 +1,10 @@
 ﻿# MudBlazor CSS Variables Reference
 
-This document provides a complete reference for MudBlazor CSS variables used in theming.
+Use these common theme roles as a reading aid. The installed MudBlazor source owns
+the available variables and stock values; Monica theme definitions override those
+values. Generate the validation catalog from that exact source using the
+[repository tooling](repository-tooling.md) rather than maintaining a checked-in
+machine-specific snapshot.
 
 ## Palette Variables
 

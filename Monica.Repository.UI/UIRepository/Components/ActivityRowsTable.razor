@@ -3,7 +3,7 @@
 
 <div class="activity-rows-table">
     <MudTable T="RepositoryActivityRow" Items="Rows" Dense="false" Hover="true" Elevation="0" Square="true"
-              Breakpoint="Breakpoint.Xs" Class="activity-table" AriaLabel="@L["Workbench:Activity:TableLabel"]"
+              Breakpoint="Breakpoint.Xs" Class="activity-table" TableAttributes="@(new Dictionary<string, object?> { ["aria-label"] = L["Workbench:Activity:TableLabel"].Value })"
               @bind-RowsPerPage="_pageSize" @bind-CurrentPage="_currentPage">
         <HeaderContent>
             <MudTh Class="activity-session-column">@L["Workbench:Activity:Session"]</MudTh>

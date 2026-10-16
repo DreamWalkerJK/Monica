@@ -58,7 +58,7 @@
                 <div class="configuration-sources-evidence">
                     <MudTable T="ConfigurationDefinitionSourceContribution"
                               Items="@_contributions"
-                              AriaLabel="@L["Sources:Definition:Subtitle", _definitionDisplayName]"
+                              TableAttributes="@(new Dictionary<string, object?> { ["aria-label"] = L["Sources:Definition:Subtitle", _definitionDisplayName].Value })"
                               Breakpoint="Breakpoint.Xs"
                               Dense="false"
                               Hover="true"

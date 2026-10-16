@@ -11,9 +11,6 @@ public sealed class DefaultTheme : ThemeDefinitionBase
     public override string DisplayName => "Default";
     public override string Description => "Vivid signal colors, technical typography, and clear operational hierarchy.";
 
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.GithubDark;
-
     public override MudTheme CreateTheme() => new()
     {
         PaletteLight = CreateLightPalette(),
@@ -31,8 +28,9 @@ public sealed class DefaultTheme : ThemeDefinitionBase
         Typography = MonicaTypographyDefaults.CreatePrecision()
     };
 
-    private static PaletteLight CreateLightPalette() => new()
+    private static MudMarkdownPaletteLight CreateLightPalette() => new()
     {
+        CodeHighlight = MudCodeHighlightThemes.Light.GitHub,
         Primary = "#7257f5",
         PrimaryLighten = "#8b74ff",
         PrimaryDarken = "#5841d2",
@@ -112,8 +110,9 @@ public sealed class DefaultTheme : ThemeDefinitionBase
     // Dark mode restores the deep Zinc + Indigo scheme of Monica's former default theme
     // (demo.monica.dpdns.org): a near-black Zinc 950 canvas with Zinc 900 surfaces,
     // Indigo primary, and Tailwind-scale signal colors.
-    private static PaletteDark CreateDarkPalette() => new()
+    private static MudMarkdownPaletteDark CreateDarkPalette() => new()
     {
+        CodeHighlight = MudCodeHighlightThemes.Dark.GitHub,
         Primary = "#6366f1", // Indigo 500
         PrimaryLighten = "#818cf8", // Indigo 400
         PrimaryDarken = "#7579f4", // Hover fill retains contrast with the dark primary foreground.

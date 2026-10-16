@@ -18,9 +18,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from mudblazor_skill_state import VARIABLES_JSON_FILE
+from skill_repository import find_repository_root
 
-DEFAULT_VARIABLES_FILE = VARIABLES_JSON_FILE
+REPO_ROOT = find_repository_root(__file__)
+DEFAULT_VARIABLES_FILE = REPO_ROOT / ".tmp/monica-ui-development/mudblazor-css-variables.json" if REPO_ROOT else None
 
 IGNORED_DIRS = {".git", ".tmp", "bin", "obj", ".pending"}
 SCAN_GLOBS = ("*.css", "*.razor")
@@ -275,7 +276,7 @@ def main() -> int:
     except Exception as exc:  # noqa: BLE001
         print(f"[ERROR] {exc}", file=sys.stderr)
         print(
-            "Run scripts/sync_mud_css_variables.py to initialize or update the variable list.",
+            "Run scripts/sync_mud_css_variables.py --source-root <exact-source-root> to generate the variable list.",
             file=sys.stderr,
         )
         return 1

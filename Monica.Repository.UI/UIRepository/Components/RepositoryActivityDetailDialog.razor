@@ -68,7 +68,7 @@
                 <div class="activity-detail__table-boundary">
                     <MudTable T="EvidenceField" Items="@SessionFields" Dense="true" Hover="true"
                               Square="true" Elevation="0" Breakpoint="Breakpoint.Xs"
-                              AriaLabel="@L["Workbench:Activity:Inspector:EvidenceTitle"].Value">
+                              TableAttributes="@(new Dictionary<string, object?> { ["aria-label"] = L["Workbench:Activity:Inspector:EvidenceTitle"].Value })">
                         <HeaderContent>
                             <MudTh>@L["Workbench:Activity:Inspector:Field"]</MudTh>
                             <MudTh>@L["Workbench:Activity:Inspector:Value"]</MudTh>

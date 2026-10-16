@@ -3,14 +3,18 @@
 These scripts ship with the skill. Run the selected script using its actual installed
 path; `scripts/` below means the scripts directory beside this reference's skill.
 
-## Source lookup is independent of repository defaults
+## Inspect the resolved dependency source
 
-Set `MUDBLAZOR_SOURCE_PATH` to a local MudBlazor v9.0.0 checkout. Run
-`python scripts/check_mudblazor_source.py --json` to verify the required source marker.
-The source checker works in installed or copied skills outside a Monica checkout.
-It does not create a cache or require `Monica.slnx`. An unset or unavailable source
-produces a structured diagnostic and nonzero exit status; verify the checkout's
-version when exact-source work is planned.
+Read the project's resolved MudBlazor package version from package metadata or
+`obj/project.assets.json`. When `inspect-dependency-source` is available, follow
+that skill to resolve the package and inspect its returned source path and commit
+evidence. Otherwise use an ordinary local checkout verified against the exact
+package version and published repository commit. A folder name or a source marker
+alone does not establish its version. Keep dependency source read-only.
+
+This skill owns Monica UI conventions and CSS validation; it does not manage a
+second source catalog, require another skill to be installed, or configure a
+machine-specific source environment variable.
 
 ## Default paths belong to the containing Monica checkout
 
@@ -23,10 +27,10 @@ and requesting help still work.
 
 The default CSS catalog is
 `<repository>/.tmp/monica-ui-development/mudblazor-css-variables.json`.
-Generate it from the configured source, then check style usage:
+Generate it from the verified source path, then check style usage:
 
 ```text
-python scripts/sync_mud_css_variables.py
+python scripts/sync_mud_css_variables.py --source-root <exact-source-root>
 python scripts/validate_mud_css_variables.py --root <style-root>
 ```
 
@@ -34,20 +38,26 @@ Outside a Monica checkout, or when a task owns another catalog destination, sele
 the same explicit file for generation and validation:
 
 ```text
-python scripts/sync_mud_css_variables.py --output-json <task-cache>/mudblazor-css-variables.json
+python scripts/sync_mud_css_variables.py --source-root <exact-source-root> --output-json <task-cache>/mudblazor-css-variables.json
 python scripts/validate_mud_css_variables.py --root <style-root> --variables-file <task-cache>/mudblazor-css-variables.json
 ```
 
 Explicit file options take precedence over repository defaults. Relative explicit
 file paths resolve from the caller's working directory. The generator creates only
 the selected destination's parent directory, after source validation and successful
-variable extraction. `MUDBLAZOR_SOURCE_PATH` selects the read-only input; it does
-not own the output cache. If no repository default is available and the relevant
-file option is omitted, command execution reports the required flag. The validator's
+variable extraction. `--source-root` is required and selects the read-only input;
+the generator extracts variables without establishing package provenance. If no
+repository default is available and the relevant file option is omitted, command
+execution reports the required flag. The validator's
 `--root` selects scanned styles; it does not silently relocate the catalog.
 
 The validator's `--fix` performs deterministic safe substitutions. Without it,
 validation reads the selected catalog and styles and writes no cache.
+
+The catalog covers variables emitted by `MudThemeProvider`; component-local
+variables such as `--mud-drawer-width` have separate source owners. Review a
+reported name against that component before treating it as invalid. Scan the
+owning style root rather than archived browser evidence or bundled vendor CSS.
 
 ## Font subset defaults and explicit paths
 

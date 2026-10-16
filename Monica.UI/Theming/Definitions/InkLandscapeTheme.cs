@@ -15,10 +15,6 @@ public sealed class InkLandscapeTheme : ThemeDefinitionBase
 
     public override string Description => "水墨留白风格，沉静克制";
 
-    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Ascetic;
-
-    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.AtomOneDark;
-
     public override MudTheme CreateTheme()
     {
         return new MudTheme
@@ -48,10 +44,11 @@ public sealed class InkLandscapeTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteLight CreateLightPalette()
+    private static MudMarkdownPaletteLight CreateLightPalette()
     {
-        return new PaletteLight
+        return new MudMarkdownPaletteLight
         {
+            CodeHighlight = MudCodeHighlightThemes.Light.PaperColor,
             Primary = "#2f3a34",
             PrimaryLighten = "#526158",
             PrimaryDarken = "#1d2722",
@@ -133,10 +130,11 @@ public sealed class InkLandscapeTheme : ThemeDefinitionBase
         };
     }
 
-    private static PaletteDark CreateDarkPalette()
+    private static MudMarkdownPaletteDark CreateDarkPalette()
     {
-        return new PaletteDark
+        return new MudMarkdownPaletteDark
         {
+            CodeHighlight = MudCodeHighlightThemes.Dark.OneDark,
             Primary = "#c5d0bd",
             PrimaryLighten = "#dce4d6",
             PrimaryDarken = "#aab8a1",

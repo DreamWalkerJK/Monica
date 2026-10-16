@@ -29,6 +29,30 @@ The theme token is generated from `MonicaThemeKind.ToCssToken()`, for example:
 - CSS should define theme tokens, surfaces, borders, typography accents, and shared component structure
 - Color palettes, typography defaults, and MudBlazor tokens should still be rooted in the `MudTheme` returned by the C# definition
 
+### Markdown and code highlighting
+
+`ThemeProviderHost` uses `MudMarkdownThemeProvider` with the active `MudTheme` and
+dark-mode state. Theme definitions return `MudMarkdownPaletteLight` and
+`MudMarkdownPaletteDark` through `MudTheme.PaletteLight` and `PaletteDark`, and set
+each palette's `CodeHighlight` from `MudCodeHighlightThemes.Light` or `.Dark`:
+
+```csharp
+PaletteLight = new MudMarkdownPaletteLight
+{
+    CodeHighlight = MudCodeHighlightThemes.Light.GitHub
+},
+PaletteDark = new MudMarkdownPaletteDark
+{
+    CodeHighlight = MudCodeHighlightThemes.Dark.GitHub
+}
+```
+
+The provider emits native Markdown and code-highlight theme variables when the
+theme or mode changes. Keep syntax colors in these palettes; put Monica-specific
+Markdown layout and presentation in the owning CSS and import it through
+`mo-theme-main.css`. Verify code blocks after switching themes and
+light/dark mode, including content rendered after the switch.
+
 ### Shared typography roles
 
 `Monica.UI/wwwroot/css/mo-fonts.css` owns shared local font faces and the public typography roles. `--mo-font-family-body` resolves from the active MudBlazor `--mud-typography-default-family`; `--mo-font-family-display` resolves from `--mud-typography-h1-family`. Their offline baseline stacks are fallbacks when MudBlazor has not supplied those variables. Theme definitions remain the source of the selected families; do not repeat a theme's font list in feature CSS or add per-theme public-role overrides. `--mo-font-family-mono` retains its purpose-specific diagnostic/code family.
@@ -45,7 +69,7 @@ During native theme switching, inspect the computed family on the element that p
 4. Add localized name and description entries for theme selection UI under `Theme:Options:{EnumValue}:Name` and `Theme:Options:{EnumValue}:Description`.
 5. Create `Monica.UI/wwwroot/css/themes/mo-theme-{theme-token}.css`.
 6. Import the new CSS file from `Monica.UI/wwwroot/css/mo-theme-main.css`.
-7. If the theme needs a custom markdown/code-block presentation, add the corresponding markdown CSS file and register the code-block theme through the definition.
+7. Set the light/dark Markdown palettes' `CodeHighlight` presets. If the theme needs additional Markdown layout or presentation, include it in the theme stylesheet imported by `mo-theme-main.css`.
 8. Verify persisted theme switching through `ThemeState` and browser storage.
 
 ## CSS Structure Rules

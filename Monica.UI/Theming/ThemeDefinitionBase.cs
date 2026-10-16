@@ -3,7 +3,7 @@ using MudBlazor;
 namespace Monica.UI.Theming;
 
 /// <summary>
-/// Theme base class - provides the default code block theme implementation
+/// Base contract for Monica theme metadata and palette creation.
 /// </summary>
 public abstract class ThemeDefinitionBase : IThemeDefinition
 {
@@ -23,20 +23,8 @@ public abstract class ThemeDefinitionBase : IThemeDefinition
     public abstract string Description { get; }
     
     /// <summary>
-    /// Create MudTheme instance
+    /// Creates a MudBlazor theme, including code-highlight colors on Markdown palettes.
     /// </summary>
     /// <returns>Configured MudTheme instance</returns>
     public abstract MudTheme CreateTheme();
-    
-    /// <summary>
-    /// Get the Code Blocks theme in light mode
-    /// Github theme is used by default, subclasses can be rewritten
-    /// </summary>
-    public virtual CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
-    
-    /// <summary>
-    /// Get the Code Blocks theme in dark mode
-    /// The GithubDark theme is used by default and can be overridden by subclasses
-    /// </summary>
-    public virtual CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.GithubDark;
 }
