@@ -86,8 +86,8 @@ Build these as shared Monica components or shared CSS roles once, then reuse the
 - **Fact grid:** two-by-two or one-by-four contiguous facts sharing one border, with hairline internal separators, a short label, and a light 24px value. These are not separate cards.
 - **Lanes:** a label column with name and duration, a track on a real axis with tick labels and faint grid lines, scope brackets naming aggregate intervals, a dashed marker line with an inverse flag for a threshold or ready instant, a hover crosshair with an exact readout, keyboard-selectable lanes, and a caption bar reporting the selected lane.
 - **Two-role meter:** a 6px stacked bar against one stated shared scale, with role values captioned beneath in the diagnostic family.
-- **Ranked ledger:** mono rank, record name, provenance metadata with capability badges, meter, right-aligned total, and a chevron affordance. Show the top N with an explicit expand control, and summarize the remainder in the footer.
-- **Spine:** ordered nodes colored by role, joined by a 1.5px connector, each with a name, a sublabel, and a duration.
+- **Ranked ledger:** mono rank, record name, provenance metadata with capability badges, meter, right-aligned total, and a chevron affordance. Show the top N with an explicit expand control, and summarize the remainder in the footer. Supply a stable record key independently of display names and provenance; simple type names can collide within one assembly. State such as a disabled module must not disable inspection of its evidence.
+- **Spine:** ordered nodes colored by role, with a separate connector rail, a readable subject, an informative sublabel, and a duration. Keep the connector out of text and meter bounds. At narrow widths, put category and duration on one line and let the subject use the full remaining width. Wrap long identifiers; omit a sublabel that only repeats the subject.
 - **Dot distribution:** small squares per counted item, tinted by role intensity, with the exact count beside each row.
 - **Semantic callout:** soft state fill, a tinted icon tile, a title, and a body that links the responsible record.
 - **Filter chips:** pill toggles; pressed uses the primary soft fill. Status filters keep the [semantic filter contract](monica-workbench-design-language.md#preserve-semantic-color-in-status-filters).
@@ -111,3 +111,5 @@ Before treating a page as done, compare its capture with the previous version an
 - Side by side with the old capture, the page does not read as the same panels holding different numbers.
 
 These checks add to the contrast, containment, honesty, and accessibility checks in the working-interface language; they never replace them.
+
+For a timing signature, group detailed records into a small set of meaningful lanes before exposing individual stages through an explicit inspection control. Draw every interval from its actual offsets, including concurrent intervals. An aggregate sum is not an elapsed envelope. Values with independent origins, such as application startup duration and composition-relative trace offsets, cannot share an axis without a verified origin translation; present the independent duration separately when that translation is unavailable.

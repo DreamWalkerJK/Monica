@@ -1,4 +1,4 @@
-@* Two-role meter: a 6px stacked bar against one stated shared scale, with role values captioned beneath in the diagnostic family. *@
+@* Two-role meter against one stated shared scale, with optional captions in the diagnostic family. *@
 <div class="mo-vl-meter @Class"
      role="meter"
      tabindex="0"
@@ -9,7 +9,7 @@
      aria-valuetext="@AccessibleDescription">
     @if (PrimaryWidth > 0)
     {
-        <span class="mo-vl-meter__seg mo-vl-meter__seg--primary" style="@WidthStyle(PrimaryWidth)"></span>
+        <span class="mo-vl-meter__seg mo-vl-meter__seg--@PrimarySegmentClass" style="@WidthStyle(PrimaryWidth)"></span>
     }
     @if (SecondaryWidth > 0)
     {
@@ -21,7 +21,7 @@
     <p class="mo-vl-meter-cap">
         @if (PrimaryCaption is not null)
         {
-            <span class="mo-vl-meter-cap--primary"><i aria-hidden="true"></i>@PrimaryCaption</span>
+            <span class="mo-vl-meter-cap--@PrimarySegmentClass"><i aria-hidden="true"></i>@PrimaryCaption</span>
         }
         @if (SecondaryCaption is not null)
         {
@@ -40,6 +40,9 @@
     /// <summary>Gets or sets the stated shared scale both values are measured against; non-positive disables the bar.</summary>
     [Parameter] public double ScaleMaximum { get; set; }
 
+    /// <summary>Gets or sets the palette role of the primary segment, such as Warning for a budget that only has one measured value.</summary>
+    [Parameter] public MoVisualRole PrimaryRole { get; set; } = MoVisualRole.Primary;
+
     /// <summary>Gets or sets the palette role of the second segment when Info is already used by the page's role map.</summary>
     [Parameter] public MoVisualRole SecondaryRole { get; set; } = MoVisualRole.Info;
 
@@ -56,10 +59,22 @@
     [Parameter] public string? Class { get; set; }
 
     private double PrimaryWidth => PercentOf(PrimaryValue);
-    private double SecondaryWidth => PercentOf(SecondaryValue);
+    private double SecondaryWidth => Math.Min(PercentOf(SecondaryValue), 100 - PrimaryWidth);
     private double TotalPercent => Math.Min(100, PrimaryWidth + SecondaryWidth);
 
-    private string SecondarySegmentClass => SecondaryRole == MoVisualRole.Secondary ? "secondary" : "info";
+    private string PrimarySegmentClass => SegmentClass(PrimaryRole);
+    private string SecondarySegmentClass => SegmentClass(SecondaryRole);
+
+    private static string SegmentClass(MoVisualRole role) => role switch
+    {
+        MoVisualRole.Info => "info",
+        MoVisualRole.Secondary => "secondary",
+        MoVisualRole.Success => "success",
+        MoVisualRole.Warning => "warning",
+        MoVisualRole.Error => "error",
+        MoVisualRole.Neutral => "neutral",
+        _ => "primary",
+    };
 
     private double PercentOf(double value) => ScaleMaximum <= 0
         ? 0
