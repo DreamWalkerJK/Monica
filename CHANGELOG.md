@@ -6,7 +6,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ## [Unreleased]
 
-## [1.0.0-rc.14] - 2026-10-17
+## [1.0.0-rc.15] - 2026-10-17
 
 ### Added
 
