@@ -47,12 +47,12 @@
                             }
                             else
                             {
-                                <MudList T="string" Dense="true">
+                                <ul class="related-workloads__list">
                                     @foreach (var workload in Details.RelatedWorkloads)
                                     {
-                                        <MudListItem T="string">@L["DescribeDialog:RelatedWorkloadChip", GetResourceDisplayName(workload.Kind, workload.Name), workload.ReplicaStatus, UiTime.Format(workload.LastRestartedAtUtc)]</MudListItem>
+                                        <li>@L["DescribeDialog:RelatedWorkloadChip", GetResourceDisplayName(workload.Kind, workload.Name), workload.ReplicaStatus, UiTime.Format(workload.LastRestartedAtUtc)]</li>
                                     }
-                                </MudList>
+                                </ul>
                             }
                         </section>
                     </div>

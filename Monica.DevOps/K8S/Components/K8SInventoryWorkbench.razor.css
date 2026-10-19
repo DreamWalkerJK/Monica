@@ -2,14 +2,16 @@
 .k8s-inventory { min-width: 0; border: 1px solid var(--mud-palette-lines-default); border-radius: 12px; background: var(--mud-palette-surface); overflow: clip; }
 .k8s-scope { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr); gap: 24px; padding: 20px 24px; background: var(--mud-palette-primary); color: var(--mud-palette-primary-text); }
 .k8s-scope-identity { display: flex; align-items: flex-start; gap: 14px; min-width: 0; }
-.k8s-scope-identity > ::deep :is(.mud-icon-root, .mo-icon) { margin-top: 14px; width: 22px; height: 22px; }
+.k8s-scope-identity > ::deep :is(.mud-icon-root, .mo-icon) { margin-top: 9px; width: 22px; height: 22px; }
 .k8s-namespace-field { flex: 1; min-width: 0; --mud-palette-text-primary: var(--mud-palette-primary-text); --mud-palette-text-secondary: var(--mud-palette-primary-text); --mud-palette-primary: var(--mud-palette-primary-text); --mud-palette-action-default: var(--mud-palette-primary-text); }
+.k8s-namespace-field ::deep .mud-input-control { margin: 0; }
 .k8s-namespace-field ::deep .mud-input-outlined:not(.mud-disabled) { background: transparent; }
 .k8s-namespace-field ::deep .mud-input-outlined-border { border-color: color-mix(in srgb, var(--mud-palette-primary-text) 65%, transparent); }
 .mud-selected-item:not(.mud-list-item-disabled) .k8s-select-option-label { color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-text-primary)); }
 .k8s-execution-context { margin-top: 10px; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
 .k8s-execution-context span { font-family: var(--mo-font-family-mono); }
 .k8s-namespace-actions { min-width: 0; }
+.k8s-namespace-actions ::deep .mud-button-root { min-height: 40px; }
 .k8s-namespace-actions ::deep .mud-button-root:not(:disabled):not(.mud-disabled):not([aria-disabled="true"]) { background: transparent !important; color: var(--mud-palette-primary-text) !important; border-color: color-mix(in srgb, var(--mud-palette-primary-text) 65%, transparent) !important; }
 .k8s-namespace-actions ::deep .mud-button-root:not(:disabled):not(.mud-disabled):not([aria-disabled="true"]):focus-visible { outline: 2px solid var(--mud-palette-primary-text); outline-offset: 2px; }
 .k8s-namespace-actions p { margin: 10px 0 0; font-size: 13px; line-height: 1.5; }

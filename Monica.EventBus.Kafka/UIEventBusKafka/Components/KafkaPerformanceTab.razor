@@ -7,19 +7,24 @@
     <section class="performance-sampling">
         <div class="performance-sampling-copy"><p>@L["Performance:Evidence:OffsetBased"]</p></div>
         <div class="performance-controls">
-            <MudSwitch T="bool" Value="@State.IsPerformanceAutoRefreshEnabled" ValueChanged="SetAutoRefreshAsync" Color="Color.Primary"
-                       Disabled="@(IsBusy || !State.CanAdminSelectedCluster)" Label="@L["Performance:Live:AutoRefresh"]" />
+            <div class="performance-auto-refresh">
+                <MudSwitch T="bool" Value="@State.IsPerformanceAutoRefreshEnabled" ValueChanged="SetAutoRefreshAsync" Color="Color.Primary"
+                           Disabled="@(IsBusy || !State.CanAdminSelectedCluster)" Label="@L["Performance:Live:AutoRefresh"]" />
+            </div>
             <div class="performance-interval-control">
                 <MudNumericField T="int" Value="@State.PerformanceRefreshIntervalSeconds" ValueChanged="SetRefreshIntervalAsync"
-                                 Label="@L["Performance:Live:IntervalSeconds"]" HelperText="@L["Performance:Live:IntervalHint", KafkaPerformancePollingState.MinimumRefreshIntervalSeconds, KafkaPerformancePollingState.MaximumRefreshIntervalSeconds]"
+                                 Label="@L["Performance:Live:IntervalSeconds"]" HelperId="performance-interval-hint"
                                  Min="@KafkaPerformancePollingState.MinimumRefreshIntervalSeconds" Max="@KafkaPerformancePollingState.MaximumRefreshIntervalSeconds"
                                  Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(IsBusy || !State.CanAdminSelectedCluster || !State.IsPerformanceAutoRefreshEnabled)" />
             </div>
-            <KafkaPrimaryButton StartIcon="@MoIcons.HeartPulse"
-                       Disabled="@(IsBusy || State.IsPerformanceSampling || !State.CanAdminSelectedCluster)" OnClick="OnCapture">
-                @if (State.IsPerformanceSampling) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                @L["Performance:Actions:Capture"]
-            </KafkaPrimaryButton>
+            <div class="performance-capture">
+                <KafkaPrimaryButton StartIcon="@MoIcons.HeartPulse"
+                           Disabled="@(IsBusy || State.IsPerformanceSampling || !State.CanAdminSelectedCluster)" OnClick="OnCapture">
+                    @if (State.IsPerformanceSampling) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                    @L["Performance:Actions:Capture"]
+                </KafkaPrimaryButton>
+            </div>
+            <p class="performance-interval-hint" id="performance-interval-hint">@L["Performance:Live:IntervalHint", KafkaPerformancePollingState.MinimumRefreshIntervalSeconds, KafkaPerformancePollingState.MaximumRefreshIntervalSeconds]</p>
         </div>
     </section>
     @if (!string.IsNullOrWhiteSpace(State.PerformanceSamplingError ?? State.LatestPerformanceError))

@@ -210,7 +210,9 @@
                                 }
                                 @if (!string.IsNullOrWhiteSpace(context.ParametersSchemaJson))
                                 {
-                                    <MudExpansionPanels Elevation="0" Dense="true" Class="schema-panels"><MudExpansionPanel Text="@L["Capabilities:Tool:Schema"]" Icon="@MoIcons.Braces"><MoJson Value="@context.ParametersSchemaJson" ShowLineNumbers="false" /></MudExpansionPanel></MudExpansionPanels>
+                                    <div class="schema-disclosure">
+                                        <MudExpansionPanels Elevation="0" Dense="true"><MudExpansionPanel Text="@L["Capabilities:Tool:Schema"]" Icon="@MoIcons.Braces"><MoJson Value="@context.ParametersSchemaJson" ShowLineNumbers="false" /></MudExpansionPanel></MudExpansionPanels>
+                                    </div>
                                 }
                             </MudTd>
                         </RowTemplate>
