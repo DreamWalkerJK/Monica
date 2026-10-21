@@ -108,15 +108,18 @@
     border-bottom: 1px solid var(--mud-palette-divider);
     background: var(--mud-palette-surface);
 }
+.inspector-content ::deep .mud-tabs-tabbar-inner { padding-inline: 20px; }
 .inspector-content ::deep .mud-tab {
     min-height: 44px;
-    padding: 10px 17px;
+    padding: 10px 12px;
     font-family: var(--mo-font-family-body, var(--mud-typography-default-family));
     font-size: 13px;
     font-weight: 500;
     text-transform: none;
     letter-spacing: 0;
+    color: var(--mud-palette-text-secondary);
 }
+.inspector-content ::deep .mud-tab.mud-tab-active { color: var(--mud-palette-text-primary); background: transparent; }
 .inspector-content ::deep .mud-tabs-panels {
     flex: 1 1 auto;
     min-width: 0;
@@ -174,22 +177,36 @@
 .pod-evidence:first-child { padding-top: 0; }
 .pod-topline { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
 .pod-topline h3 { min-width: 0; flex: 1 1 180px; margin: 0; font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
-.pod-dot { width: 7px; height: 7px; border-radius: 50%; }
-.pod-dot.is-ready { background: var(--mud-palette-success); }
-.pod-dot.needs-attention { background: var(--mud-palette-warning); }
 .pod-metadata { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 14px; margin-top: 9px; font-size: 12px; line-height: 1.6; color: var(--mud-palette-text-secondary); }
 .diagnostic { font-family: var(--mo-font-family-mono); overflow-wrap: anywhere; }
 .pod-issue { margin: 12px 0 0; padding: 9px 12px; background: color-mix(in srgb, var(--mud-palette-warning) 10%, var(--mud-palette-surface)); color: color-mix(in srgb, var(--mud-palette-warning) 35%, var(--mud-palette-text-primary)); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
 .pod-evidence ::deep .pod-describe { margin-top: 7px; }
-.inspector-content ::deep .mud-chip-outlined.mud-chip-color-info { color: color-mix(in srgb, var(--mud-palette-info) 45%, var(--mud-palette-text-primary)); }
-.inspector-content ::deep .mud-chip-outlined.mud-chip-color-success { color: color-mix(in srgb, var(--mud-palette-success) 45%, var(--mud-palette-text-primary)); }
-.inspector-content ::deep .mud-chip-outlined.mud-chip-color-warning { color: color-mix(in srgb, var(--mud-palette-warning) 45%, var(--mud-palette-text-primary)); }
-.inspector-content ::deep .mud-chip-outlined.mud-chip-color-error { color: color-mix(in srgb, var(--mud-palette-error) 45%, var(--mud-palette-text-primary)); }
+:where(.inspector-content) ::deep .pod-state-badge { --pod-state-role: var(--mud-palette-text-secondary); }
+.inspector-content ::deep .pod-state-badge.mud-chip-color-info { --pod-state-role: var(--mud-palette-info); }
+.inspector-content ::deep .pod-state-badge.mud-chip-color-success { --pod-state-role: var(--mud-palette-success); }
+.inspector-content ::deep .pod-state-badge.mud-chip-color-warning { --pod-state-role: var(--mud-palette-warning); }
+.inspector-content ::deep .pod-state-badge.mud-chip-color-error { --pod-state-role: var(--mud-palette-error); }
+.inspector-content ::deep .pod-state-badge.mud-chip {
+    border: 0;
+    background-color: color-mix(in srgb, var(--pod-state-role) 12%, var(--mud-palette-surface)) !important;
+    color: color-mix(in srgb, var(--pod-state-role) 40%, var(--mud-palette-text-primary)) !important;
+    font-weight: 500;
+}
 .describe-output { min-width: 0; max-width: 100%; overflow-x: auto; background: var(--mud-palette-background); border: 1px solid var(--mud-palette-divider); }
 .describe-output pre { margin: 0; padding: 16px; white-space: pre; font: 12px/1.8 var(--mo-font-family-mono); }
 .inspector-footer { flex-shrink: 0; padding: 15px 20px; border-top: 1px solid var(--mud-palette-divider); background: var(--mud-palette-surface); }
 .inspector-footer p { margin: 0 0 10px; color: var(--mud-palette-text-secondary); font-size: 12px; }
 .inspector-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.inspector-actions ::deep .inspector-operation.mud-button-root:not(:disabled):not(.mud-disabled) {
+    border: 1px solid color-mix(in srgb, var(--mo-vl-role) 30%, var(--mud-palette-divider));
+    background-color: color-mix(in srgb, var(--mo-vl-role) 10%, var(--mud-palette-surface)) !important;
+    color: color-mix(in srgb, var(--mo-vl-role) 40%, var(--mud-palette-text-primary)) !important;
+}
+.inspector-actions ::deep .inspector-operation.mud-button-root:not(:disabled):not(.mud-disabled):is(:hover, :focus-visible) {
+    border-color: var(--mo-vl-role);
+    background-color: color-mix(in srgb, var(--mo-vl-role) 17%, var(--mud-palette-surface)) !important;
+}
+.inspector-actions ::deep .inspector-operation .mud-button-label { color: inherit; }
 .inspector-actions ::deep .footer-close { margin-inline-start: auto; }
 @media (max-width: 600px) {
     .inspector-heading { padding: 20px 18px 16px; gap: 10px; }

@@ -144,12 +144,12 @@
                                         {
                                             <article class="pod-evidence">
                                                 <div class="pod-topline">
-                                                    <i class="pod-dot @(pod.IsReady ? "is-ready" : "needs-attention")" aria-hidden="true"></i>
+                                                    <i class="mo-vl-status-dot @((pod.IsReady ? MoVisualRole.Success : MoVisualRole.Warning).ToCssClass())" aria-hidden="true"></i>
                                                     <h3>@pod.Name</h3>
-                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(pod.IsReady ? Color.Success : Color.Warning)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@(pod.IsReady ? L["DescribeDialog:ReadyStateReady"] : L["DescribeDialog:ReadyStateNotReady"]) @pod.ReadyDisplay</MudChip>
+                                                    <MudChip T="string" Class="pod-state-badge" Size="Size.Small" Variant="Variant.Filled" Color="@(pod.IsReady ? Color.Success : Color.Warning)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@(pod.IsReady ? L["DescribeDialog:ReadyStateReady"] : L["DescribeDialog:ReadyStateNotReady"]) @pod.ReadyDisplay</MudChip>
                                                 </div>
                                                 <div class="pod-metadata">
-                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@PodPhaseColor(pod)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@pod.PhaseDisplay</MudChip>
+                                                    <MudChip T="string" Class="pod-state-badge" Size="Size.Small" Variant="Variant.Filled" Color="@PodPhaseColor(pod)" CheckedIcon="@MoIcons.Check" CloseIcon="@MoIcons.Close">@pod.PhaseDisplay</MudChip>
                                                     <span>@L["Inspector:RestartCount", pod.RestartCount]</span>
                                                     <span class="diagnostic">@DisplayValue(pod.NodeName) · @DisplayValue(pod.PodIp)</span>
                                                     <span>@L["Inspector:StartedAt", UiTime.Format(pod.StartTimeUtc)]</span>
@@ -181,9 +181,9 @@
                             <p>@L["Inspector:BackingScope", Details.RelatedWorkloads.Count]</p>
                         }
                         <div class="inspector-actions">
-                            <MudButton Color="Color.Warning" Variant="Variant.Outlined" Size="Size.Small" StartIcon="@MoIcons.Restart" Disabled="@ActionDisabled("restart")" aria-disabled="@ActionAriaDisabled("restart")" OnClick="@(() => RunOperationAsync("restart", OnRestart))">@L["Actions:Restart"]</MudButton>
-                            <MudButton Color="Color.Error" Variant="Variant.Outlined" Size="Size.Small" StartIcon="@MoIcons.ChevronDown" Disabled="@ActionDisabled("down")" aria-disabled="@ActionAriaDisabled("down")" OnClick="@(() => RunOperationAsync("down", OnScaleDown))">@L["Workbench:Operation:ScaleToZero"]</MudButton>
-                            <MudButton Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" StartIcon="@MoIcons.ChevronUp" Disabled="@ActionDisabled("up")" aria-disabled="@ActionAriaDisabled("up")" OnClick="@(() => RunOperationAsync("up", OnScaleUp))">@L["Workbench:Operation:RestoreReplicas"]</MudButton>
+                            <MudButton Class="inspector-operation mo-vl-role--warning" Color="Color.Warning" Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.Restart" Disabled="@ActionDisabled("restart")" aria-disabled="@ActionAriaDisabled("restart")" OnClick="@(() => RunOperationAsync("restart", OnRestart))">@L["Actions:Restart"]</MudButton>
+                            <MudButton Class="inspector-operation mo-vl-role--error" Color="Color.Error" Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.ChevronDown" Disabled="@ActionDisabled("down")" aria-disabled="@ActionAriaDisabled("down")" OnClick="@(() => RunOperationAsync("down", OnScaleDown))">@L["Workbench:Operation:ScaleToZero"]</MudButton>
+                            <MudButton Class="inspector-operation mo-vl-role--primary" Color="Color.Primary" Variant="Variant.Text" Size="Size.Small" StartIcon="@MoIcons.ChevronUp" Disabled="@ActionDisabled("up")" aria-disabled="@ActionAriaDisabled("up")" OnClick="@(() => RunOperationAsync("up", OnScaleUp))">@L["Workbench:Operation:RestoreReplicas"]</MudButton>
                             <MudButton Class="footer-close" Variant="Variant.Text" Size="Size.Small" OnClick="CloseAsync" aria-disabled="@(HasPendingAction ? "true" : null)">@L["Common:Close"]</MudButton>
                         </div>
                     </footer>

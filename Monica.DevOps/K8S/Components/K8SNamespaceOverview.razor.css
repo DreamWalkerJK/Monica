@@ -29,9 +29,22 @@
 .k8s-section-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 16px; }
 .k8s-section-heading h2 { font-size: 15.5px; font-weight: 600; margin: 0; }
 .k8s-section-heading > span { color: var(--mud-palette-text-secondary); font-size: 12px; }
-.k8s-restart-waves ::deep .mo-vl-spine { margin-bottom: 0; }
-.k8s-restart-waves ::deep .mo-vl-spine-name { font-size: 13px; overflow-wrap: anywhere; }
-.k8s-restart-waves ::deep .mo-vl-spine-name small { font-size: 12px; }
+.k8s-wave-spine { list-style: none; margin: 0; padding: 0; }
+.k8s-wave-spine > li { position: relative; }
+.k8s-wave-spine > li + li::before { content: ''; position: absolute; inset-inline-start: 13px; top: -10px; height: 18px; width: 1px; background: var(--mud-palette-divider); pointer-events: none; }
+.k8s-wave { width: 100%; display: grid; grid-template-columns: 12px minmax(0, 1fr) minmax(90px, 160px) 34px; align-items: center; gap: 0 12px; padding: 6px 8px; border: 0; border-radius: 9px; background: transparent; color: var(--mud-palette-text-primary); font: inherit; text-align: start; cursor: pointer; }
+.k8s-wave:enabled:hover { background: color-mix(in srgb, var(--mud-palette-text-primary) 3%, var(--mud-palette-surface)); }
+.k8s-wave:disabled { cursor: default; }
+.k8s-wave[aria-pressed="true"] { background: color-mix(in srgb, var(--mud-palette-primary) 9%, var(--mud-palette-surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mud-palette-primary) 32%, var(--mud-palette-surface)); }
+.k8s-wave-node { box-sizing: border-box; width: 12px; height: 12px; border: 2px solid var(--mud-palette-warning); border-radius: 50%; background: var(--mud-palette-surface); }
+.k8s-wave.is-big .k8s-wave-node { background: var(--mud-palette-warning); box-shadow: 0 0 0 4px color-mix(in srgb, var(--mud-palette-warning) 18%, transparent); }
+.k8s-wave-copy { min-width: 0; }
+.k8s-wave-copy strong { display: block; font-size: 13.5px; font-weight: 500; overflow-wrap: anywhere; }
+.k8s-wave-copy > span { display: block; color: var(--mud-palette-text-secondary); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8s-wave-comparison { min-width: 0; height: 8px; }
+.k8s-wave-segments { display: flex; gap: 2px; height: 100%; }
+.k8s-wave-segments > i { min-width: 0; flex-basis: 0; border-radius: 2px; background: var(--mo-vl-role); }
+.k8s-wave-count { font-size: 20px; font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; text-align: end; }
 .k8s-inline-link { border: 0; background: transparent; padding: 0; font: inherit; color: color-mix(in srgb, var(--mud-palette-primary) 65%, var(--mud-palette-text-primary)); cursor: pointer; }
 .k8s-more-waves { font-size: 12px; margin: 8px 0 0 32px; }
 .k8s-exposure-meter { display: flex; gap: 2px; height: 10px; border-radius: 6px; overflow: hidden; background: var(--mud-palette-background-grey); }
@@ -47,13 +60,8 @@
 .k8s-exposure-legend small { display: block; font-size: 12px; overflow-wrap: anywhere; }
 @container k8s-inventory (max-width: 1000px) { .k8s-overview { grid-template-columns: minmax(260px, .9fr) minmax(0, 1.2fr); } .k8s-exposure-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container k8s-inventory (max-width: 760px) { .k8s-overview { grid-template-columns: minmax(0, 1fr); } .k8s-health { border-right: 0; border-bottom: 1px solid var(--mud-palette-lines-default); } .k8s-health, .k8s-restart-waves, .k8s-exposure { padding: 20px; } }
+@container k8s-inventory (max-width: 480px) { .k8s-wave { grid-template-columns: 12px minmax(0, 1fr) minmax(48px, 84px) 28px; column-gap: 8px; } }
 @media (prefers-reduced-motion: reduce) { .k8s-workload-dot:hover { transform: none; } }
 
 .k8s-state-dot.is-neutral { background: var(--mud-palette-text-secondary); box-shadow: none; }
 .exposure-other { --exposure-color: var(--mud-palette-secondary); }
-.k8s-restart-waves ::deep .mo-vl-spine-item { padding-top: 6px; padding-bottom: 6px; }
-.k8s-restart-waves ::deep .mo-vl-spine-detail { font-family: var(--mud-typography-default-family); font-size: 20px; font-weight: 350; }
-.k8s-restart-waves ::deep .mo-vl-spine-node { position: static; }
-.k8s-restart-waves ::deep button.mo-vl-spine-node::before { content: ''; position: absolute; inset: 0; border-radius: 4px; }
-.k8s-restart-waves ::deep button.mo-vl-spine-node:hover::before { background: color-mix(in srgb, var(--mud-palette-warning) 5%, transparent); }
-.k8s-restart-waves ::deep button.mo-vl-spine-node:focus-visible::before { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }

@@ -48,7 +48,7 @@
         @if (Visit.NamespaceCapture is { } overviewCapture)
         {
             @if (!Visit.ContextMatchesNamespaceCapture) { <p class="k8s-read-status">@L["Redesign:RetainedOverview", overviewCapture.Namespace, FormatTime(overviewCapture.FetchedAtUtc)]</p> }
-            <fieldset class="k8s-overview-controls" disabled="@(!Visit.ContextMatchesNamespaceCapture || Visit.IsBusy && Visit.Activity != K8SInventoryActivity.Inspecting)"><K8SNamespaceOverview Items="@overviewCapture.Items" OnInspect="InspectAsync" OnExposureSelected="FilterExposureAsync" OnAttentionSelected="FilterAttentionAsync" OnRestartSelected="FilterRestartAsync" /></fieldset>
+            <fieldset class="k8s-overview-controls" disabled="@(!Visit.ContextMatchesNamespaceCapture || Visit.IsBusy && Visit.Activity != K8SInventoryActivity.Inspecting)"><K8SNamespaceOverview Items="@overviewCapture.Items" SelectedRestartWindow="@_restartWindow" OnInspect="InspectAsync" OnExposureSelected="FilterExposureAsync" OnAttentionSelected="FilterAttentionAsync" OnRestartSelected="FilterRestartAsync" /></fieldset>
         }
     </section>
     <section class="k8s-inventory">
