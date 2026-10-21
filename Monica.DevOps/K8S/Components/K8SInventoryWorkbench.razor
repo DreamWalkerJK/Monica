@@ -55,14 +55,20 @@
         <div class="k8s-inventory-tools">
             <fieldset disabled="@Visit.IsBusy" class="k8s-kind-buttons" role="group" aria-label="@L["Workbench:Inventory:Kind"]">
                 @foreach (var kind in Kinds)
-                { <MoFilterChip Label="@KindLabel(kind)" Count="@KindCount(kind)" Selected="@(Visit.ResourceType == kind)" Role="@K8SInventoryPresentation.KindRole(kind)" ShowDot="true" SelectedChanged="@(_ => ChangeKindAsync(kind))" /> }
+                {
+                    <button type="button" class="k8s-kind-button @K8SInventoryPresentation.KindRole(kind).ToCssClass()" aria-pressed="@(Visit.ResourceType == kind ? "true" : "false")" @onclick="() => ChangeKindAsync(kind)">
+                        <i aria-hidden="true"></i><span>@KindLabel(kind)</span>
+                        @if (KindCount(kind) is { } count) { <span class="k8s-kind-count">@count</span> }
+                    </button>
+                }
             </fieldset>
             <MudButton Variant="Variant.Text" StartIcon="@MoIcons.Refresh" Disabled="@(Visit.IsBusy || !Visit.NamespaceExists)" OnClick="Visit.RefreshListAsync">@L["Workbench:Inventory:RefreshList"]</MudButton>
-            <div class="k8s-search"><MudTextField T="string" Disabled="@Visit.IsBusy" Placeholder="@L["Redesign:Search"]" aria-label="@L["Forms:SearchCurrentList"]" Value="@Visit.Search" ValueChanged="SearchAsync" Immediate="true" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Variant="Variant.Outlined" Margin="Margin.Dense" ClearIcon="@MoIcons.Close" /></div>
+            <div class="k8s-search"><MudTextField T="string" @ref="_searchField" Disabled="@Visit.IsBusy" Placeholder="@L["Redesign:Search"]" aria-label="@L["Forms:SearchCurrentList"]" Value="@Visit.Search" ValueChanged="SearchAsync" Immediate="true" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@MoIcons.Search" Variant="Variant.Outlined" Margin="Margin.Dense" ClearIcon="@MoIcons.Close" /></div>
         </div>
         @if (Visit.Capture is { } filterCapture)
         {
             <fieldset disabled="@Visit.IsBusy" class="k8s-inventory-filters" role="group" aria-label="@L["Redesign:Filters"]">
+                <div class="k8s-filter-chips">
                 @if (filterCapture.ResourceType == K8SResourceType.Service)
                 {
                     @foreach (var exposure in ExposureKinds)
@@ -72,6 +78,8 @@
                 @if (filterCapture.ResourceType == K8SResourceType.Service)
                 { <MoFilterChip Label="@L["Redesign:Unbound"]" Count="@filterCapture.Items.Count(x => x.RelatedWorkloads.Count == 0)" ShowDot="true" Selected="@_unboundOnly" SelectedChanged="SetUnbound" /> }
                 @if (_restartWindow is not null) { <MoFilterChip Label="@L["Redesign:RestartFilter"]" Role="MoVisualRole.Warning" Selected="true" SelectedChanged="@(_ => ClearRestartFilter())" /> }
+                <MudButton Class="k8s-clear-filters" Variant="Variant.Text" Color="Color.Primary" aria-disabled="@(!_filterWork.IsCompleted ? "true" : null)" OnClick="@(() => ClearFiltersAsync())">@L["Redesign:ClearFilters"]</MudButton>
+                </div>
                 <span class="k8s-filter-spacer"></span>
                 @if (filterCapture.ResourceType == K8SResourceType.Service && filterCapture.Items.Any(K8SInventoryPresentation.IsSidecar))
                 { <button class="k8s-fold-sidecars" aria-pressed="@(_hideSidecars ? "true" : "false")" @onclick="ToggleSidecars">@L[_hideSidecars ? "Redesign:ShowSidecars" : "Redesign:HideSidecars", filterCapture.Items.Count(K8SInventoryPresentation.IsSidecar)]</button> }
@@ -153,7 +161,7 @@
                             </div></CellTemplate>
                         </TemplateColumn>
                     </Columns>
-                    <NoRecordsContent><MoContentState Compact="true">@L["Workbench:Inventory:NoMatches"]</MoContentState></NoRecordsContent>
+                    <NoRecordsContent><MoContentState Compact="true"><p>@L["Workbench:Inventory:NoMatches"]</p><MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="@(Visit.IsBusy || !_filterWork.IsCompleted)" OnClick="@(() => ClearFiltersAsync(true))">@L["Redesign:ClearFilters"]</MudButton></MoContentState></NoRecordsContent>
                     <PagerContent><div class="k8s-pager">
                         <MudDataGridPager T="K8SResourceSummary" PageSizeOptions="PageSizes" RowsPerPageString="@L["Workbench:Pager:Rows"]" InfoFormat="@L["Workbench:Pager:Info"]" ShowNavigation="false" />
                         <div class="k8s-pager-buttons">
@@ -187,11 +195,13 @@
     private K8SInventoryVisitController Visit = null!;
     private K8SDialogOwner _dialogs = null!;
     private MudDataGrid<K8SResourceSummary>? _grid;
+    private MudTextField<string>? _searchField;
     private Task _initialization = Task.CompletedTask;
     private Task _browserWork = Task.CompletedTask;
     private Task _parameterWork = Task.CompletedTask;
     private Task _inspectionWork = Task.CompletedTask;
     private Task _operationWork = Task.CompletedTask;
+    private Task _filterWork = Task.CompletedTask;
     private K8SResourceIdentity? _inspectionOrigin;
     private OperationLaunchOrigin? _operationOrigin;
 
@@ -299,6 +309,25 @@
     }
     private void ResetPage() => _grid?.NavigateTo(Page.First);
     private void ResetFilters() { _exposureFilter = null; _attentionOnly = false; _unboundOnly = false; _restartWindow = null; ResetPage(); }
+    private Task ClearFiltersAsync(bool focusSearch = false)
+    {
+        if (_retired || Visit.IsRetired || Visit.IsBusy || !_filterWork.IsCompleted) return Task.CompletedTask;
+        return _filterWork = ClearCoreAsync();
+
+        async Task ClearCoreAsync()
+        {
+            // Move focus before the recovery button disappears when records return.
+            if (focusSearch && _searchField is { } search) await search.FocusAsync();
+            if (_retired || Visit.IsRetired || Visit.IsBusy) return;
+            Visit.SetSearch(string.Empty);
+            ResetFilters();
+            var grid = _grid;
+            if (grid is not null) await grid.ClearFiltersAsync();
+            if (_retired || Visit.IsRetired) return;
+            if (ReferenceEquals(grid, _grid)) ResetPage();
+            await PersistAsync();
+        }
+    }
     private void SetAttention(bool selected) { _attentionOnly = selected; ResetPage(); }
     private void SetUnbound(bool selected) { _unboundOnly = selected; ResetPage(); }
     private void ToggleExposure(string exposure) { _exposureFilter = _exposureFilter == exposure ? null : exposure; ResetPage(); }
@@ -430,7 +459,7 @@
         var inspector = _inspector?.DisposeAsync().AsTask() ?? Task.CompletedTask;
         var dialogs = _dialogs.DisposeAsync().AsTask();
         var visit = Visit.DisposeAsync().AsTask();
-        try { await Task.WhenAll(inspector, dialogs, visit, _initialization, _browserWork, _parameterWork, _inspectionWork, _operationWork); }
+        try { await Task.WhenAll(inspector, dialogs, visit, _initialization, _browserWork, _parameterWork, _inspectionWork, _operationWork, _filterWork); }
         finally { _inspectionOrigin = null; _operationOrigin = null; }
     }
 }
