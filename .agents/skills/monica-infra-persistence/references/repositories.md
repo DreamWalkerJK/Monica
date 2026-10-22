@@ -36,6 +36,16 @@ The repository implements `IRepositoryDetailsConfigurator<TEntity>`, so native C
 
 `tests/Test.Monica.Repository/Persistence/Services/EfRepositoryTests.cs` covers default details, overridden graphs, CRUD query integration, and tracked operation commits.
 
+## Validate native provider access
+
+Provider APIs that bypass EF command interceptors, such as binary COPY, must call
+`RepositoryDbContext<TContext>.ValidateDatabaseAccess()` immediately before database I/O. This reuses
+the checks for failed saves, terminal or rollback-only operations, selected transaction participants,
+and physical adapters sharing their transaction owner's connection and transaction. Validation
+does not access the database, start or commit a transaction, or apply save policies. The technical
+adapter still supplies provider prerequisites and calls `IUnitOfWorkManager.Current?.MarkRollbackOnly()`
+when execution fails, so catching a provider error cannot allow the operation to commit.
+
 ## Inspect repository registrations
 
 To inspect these registrations through `AddRepositoryUI()`, use [Repository diagnostics](repository-diagnostics.md) for the four task routes, exact context identity, provider activity scope, and migration command outcomes.
