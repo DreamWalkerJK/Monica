@@ -37,7 +37,7 @@ python3 scripts/sync_agent_skills.py --check
 python3 scripts/test_agent_skills.py
 ```
 
-Edit Monica-owned skills only under `skills/<name>/`. Their matching `.agents/skills/<name>` and `.claude/skills/<name>` directories are generated projections and must not be edited directly. The generator owns only catalog-managed Monica directories: unrelated external skills, files, and caches in either projection root are preserved and ignored by projection checks. Monica-owned skills use portable `SKILL.md` frontmatter containing only `name` and `description`. Skill release versions live in `.monica/agent-skill-catalog.json` and `.monica/agent-skill-index.json`, not in skill frontmatter.
+Edit Monica-owned skills only under `skills/<name>/`. The `.agents/` and `.claude/` roots are untracked local agent state: their `.agents/skills/<name>` and `.claude/skills/<name>` subdirectories are generated projections and must not be edited or committed. Run `python3 scripts/sync_agent_skills.py --write` after cloning to project repository-local skills for agents. The generator owns only catalog-managed Monica directories: unrelated external skills, files, and caches in either projection root are preserved and ignored by projection checks. Monica-owned skills use portable `SKILL.md` frontmatter containing only `name` and `description`. Skill release versions live in `.monica/agent-skill-catalog.json` and `.monica/agent-skill-index.json`, not in skill frontmatter.
 
 Nine `monica-infra-*` skills own reusable consumer guidance for persistence, messaging, jobs, configuration, hosting, observability, AI, web, and UI. Keep framework-authoring contracts in their distinct skills.
 
