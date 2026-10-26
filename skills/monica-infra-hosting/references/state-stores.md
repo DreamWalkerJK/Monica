@@ -18,7 +18,7 @@ builder.AddMonica(monica =>
 });
 ```
 
-`UseDaprStateStoreProvider(options => options.StateStoreName = "app-state")` instead uses the Dapr sidecar and requires a state-store component with the same name. Dapr's client module brings in sidecar readiness monitoring. Redis also supports Sentinel and cluster connection methods. Configure credentials and endpoints from host configuration. Typed distributed values follow the host's canonical JSON contract; changing that contract can make persisted values unreadable.
+`UseDaprStateStoreProvider(options => options.StateStoreName = "app-state")` instead uses the Dapr sidecar and requires a state-store component with the same name. Dapr's client module brings in sidecar readiness monitoring. Redis also supports Sentinel and cluster connection methods. Configure credentials and endpoints from host configuration. Typed distributed values follow the host's canonical JSON contract; changing that contract can make persisted values unreadable. The canonical contract always emits `required` members, including nullable ones written as an explicit `null`, so required-marked typed values round-trip even when the host omits nulls for optional members.
 
 Single-key Dapr reads treat the Redis `nil` response for the requested key and store as missing state, including when the sidecar reports it as an `Internal` gRPC failure. Typed reads return `default(T)`, raw reads return `null`, and ETag reads return an empty ETag. Conditional creation can then proceed through its normal missing-key path. Other failures, including connection, authentication, wrong-type, and cancellation errors, remain failures; write failures are never converted into missing state.
 
