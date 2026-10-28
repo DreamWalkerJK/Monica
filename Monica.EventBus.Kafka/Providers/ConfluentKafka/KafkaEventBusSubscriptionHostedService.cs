@@ -3,6 +3,7 @@ using Confluent.Kafka;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Core.ExceptionHandling.Exceptions;
 using Monica.Core.HostedService.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.EventBus.Abstractions;
@@ -128,15 +129,6 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
                 {
                     continue;
                 }
-                if (result.Message.Value is null)
-                {
-                    RewindOrThrow(() => consumer.Seek(result.TopicPartitionOffset),
-                        new EventMessageDeserializationException(
-                            $"Kafka message on topic '{topicConsumer.TopicName}' has a null body."));
-                    throw new EventMessageDeserializationException(
-                        $"Kafka message on topic '{topicConsumer.TopicName}' has a null body.");
-                }
-
                 string? Header(string name)
                 {
                     var value = result.Message.Headers?.LastOrDefault(header => header.Key == name);
@@ -150,15 +142,33 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
                     ServiceKey,
                     Header("traceparent"),
                     Header("tracestate"));
-                await CommitAfterHandlingAsync(
-                    () => HandleExternalMessageAsync(
-                        new EventMessage(metadata, EventSubscriptionScope.Distributed,
-                            Encoding.UTF8.GetBytes(result.Message.Value)),
-                        cancellationToken),
+                var processed = await CommitAfterHandlingAsync(
+                    () => result.Message.Value is null
+                        ? Task.FromException(new EventMessageDeserializationException(
+                            $"Kafka message on topic '{topicConsumer.TopicName}' has a null body."))
+                        : HandleExternalMessageAsync(
+                            new EventMessage(metadata, EventSubscriptionScope.Distributed,
+                                Encoding.UTF8.GetBytes(result.Message.Value)),
+                            cancellationToken),
                     () => consumer.Commit(result),
-                    () => consumer.Seek(result.TopicPartitionOffset));
+                    () => consumer.Seek(result.TopicPartitionOffset),
+                    failure =>
+                    {
+                        TopicStatusStore.ReportError(ServiceKey, topicConsumer.TopicName,
+                            $"Permanently rejected Kafka message {metadata.MessageId} at {result.TopicPartitionOffset}",
+                            failure);
+                        RecordState($"Permanently rejected Kafka message for topic {topicConsumer.TopicName}",
+                            HostedServiceState.Degraded, failure);
+                        Logger.LogError(failure,
+                            "Permanently rejected Kafka message {MessageId} at {TopicPartitionOffset}; skipping delivery " +
+                            "(ServiceKey: {ServiceKey})",
+                            metadata.MessageId, result.TopicPartitionOffset, ServiceKey ?? "default");
+                    });
 
-                TopicStatusStore.ReportMessageProcessed(ServiceKey, topicConsumer.TopicName);
+                if (processed)
+                {
+                    TopicStatusStore.ReportMessageProcessed(ServiceKey, topicConsumer.TopicName);
+                }
 
                 if (!hasProvenHealthy)
                 {
@@ -200,18 +210,29 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
         // coordinator. Consumer.Dispose uses NO_CONSUMER_CLOSE instead.
     }
 
-    internal static async Task CommitAfterHandlingAsync(
-        Func<Task> handle, Action commit, Action rewind)
+    internal static async Task<bool> CommitAfterHandlingAsync(
+        Func<Task> handle, Action commit, Action rewind, Action<Exception> reject)
     {
         try
         {
-            await handle();
+            var processed = true;
+            try
+            {
+                await handle();
+            }
+            catch (Exception failure) when (failure is BusinessException or EventMessageDeserializationException)
+            {
+                // Classify only handler failures, after its transaction and scope have unwound.
+                reject(failure);
+                processed = false;
+            }
+
             commit();
+            return processed;
         }
         catch (Exception failure)
         {
-            // Broker offsets advance only after the complete handler operation commits.
-            // Rewind so a failed delivery retains the same identity on this consumer.
+            // A retryable handler failure or failed offset commit must retain the same delivery identity.
             RewindOrThrow(rewind, failure);
             throw;
         }
